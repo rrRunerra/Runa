@@ -5,6 +5,7 @@ import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
 import { Button, cn, Input, Label, PixelBlast } from "@runa/ui";
+import { useRouter } from "next/navigation";
 
 export default function Page() {
   const [identifier, setIdentifier] = useState("");
@@ -12,6 +13,7 @@ export default function Page() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +35,11 @@ export default function Page() {
       }
       setMessage(`❌ ${errorMessage}`);
     } else if (res?.ok) {
-      window.location.href = "/";
+      const callbackUrl = new URLSearchParams(window.location.search).get(
+        "callbackUrl",
+      );
+
+      router.push(callbackUrl || "/dash");
     }
 
     setLoading(false);
@@ -121,6 +127,7 @@ export default function Page() {
                     id="password"
                     type={showPassword ? "text" : "password"}
                     value={password}
+                    maxLength={64}
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     disabled={loading}

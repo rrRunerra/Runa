@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button, cn, Input, Label, PixelBlast, useAlert } from "@runa/ui";
 import { Loader2, User, Mail, Lock, Eye, EyeOff } from "lucide-react";
-import api from "@runa/api";
 
 export default function Page() {
   const [email, setEmail] = useState("");
@@ -106,7 +105,11 @@ export default function Page() {
   };
 
   const isPasswordValid =
-    errors.length && errors.uppercase && errors.number && errors.special;
+    errors.length &&
+    errors.maxLength &&
+    errors.uppercase &&
+    errors.number &&
+    errors.special;
 
   return (
     <div className="relative flex min-h-svh w-full items-center justify-center p-6 md:p-10 overflow-hidden font-sans">
@@ -231,6 +234,7 @@ export default function Page() {
                     id="password"
                     type={showPassword ? "text" : "password"}
                     value={password}
+                    maxLength={64}
                     onChange={(e) => {
                       setPassword(e.target.value);
                       validatePassword(e.target.value);
@@ -273,6 +277,7 @@ export default function Page() {
                     <ul className="grid grid-cols-1 gap-2">
                       {[
                         { key: "length", label: "Min 16 characters" },
+                        { key: "maxLength", label: "Max 64 characters" },
                         { key: "uppercase", label: "One uppercase letter" },
                         { key: "number", label: "Two numbers" },
                         { key: "special", label: "One special character" },

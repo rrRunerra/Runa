@@ -1,5 +1,6 @@
 import { getServerSession, NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { functional, IConnection } from "../../api";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -14,28 +15,22 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Missing credentials");
         }
 
-        const res = await fetch(
-          `http://localhost:${process.env.NEST_PORT}/auth/login`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              identifier: credentials.identifier,
-              password: credentials.password,
-            }),
-          },
-        );
+        const connection: IConnection = {
+          host: `http://localhost:${process.env.NEST_PORT}`,
+        };
 
-        const data = await res.json();
-        if (!res.ok || !data.user) {
-          throw new Error(data.message || "Login failed");
+        const res = await functional.auth.login(connection, {
+          identifier: credentials.identifier,
+          password: credentials.password,
+        });
+
+        if (!res.user) {
+          throw new Error("Login failed");
         }
 
         return {
-          ...data.user,
-          accessToken: data.token,
+          ...res.user,
+          accessToken: res.token,
         };
       },
     }),
