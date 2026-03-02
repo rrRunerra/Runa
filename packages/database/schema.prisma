@@ -1,0 +1,262 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider = "postgresql"
+}
+
+model User {
+    id                String                @id @default(uuid())
+    createdAt         DateTime              @default(now())
+    updatedAt         DateTime              @updatedAt
+    email             String                @unique
+    username          String                @unique
+    passwordHash      String
+    passwordChangedAt DateTime?
+    private           Boolean               @default(false)
+    role              Role                  @default(USER)
+    displayName       String?
+    avatarUrl         String?
+    apiKeys           ApiKey[]
+    connections       Connections[]
+    animeList         AquilaAnimeUserList[]
+
+    @@index([id])
+    @@index([username])
+}
+
+model ApiKey {
+    id         String    @id @default(uuid())
+    createdAt  DateTime  @default(now())
+    updatedAt  DateTime  @updatedAt
+    keyHash    String
+    keyPrefix  String
+    name       String
+    lastUsedAt DateTime?
+    userId     String
+    user       User      @relation(fields: [userId], references: [id])
+
+    @@unique([keyPrefix])
+    @@index([userId])
+    @@index([keyPrefix])
+}
+
+model Connections {
+    id           String             @id @default(uuid())
+    userId       String
+    connectionId String?
+    createdAt    DateTime           @default(now())
+    updatedAt    DateTime           @updatedAt
+    provider     ConnectionProvider
+    username     String?
+    accessToken  String?
+    expiresAt    DateTime?
+    refreshToken String?
+    user         User               @relation(fields: [userId], references: [id])
+
+    @@unique([userId, provider])
+    @@index([userId])
+}
+
+model LynxHomeworkExists {
+    id             Int    @id @default(autoincrement())
+    superID        String
+    title          String
+    forumChannelID String
+    forumID        String
+    guilID         String
+
+    @@index([superID])
+    @@index([forumChannelID])
+    @@index([forumID])
+    @@index([guilID])
+}
+
+model LynxHomeWorkChannels {
+    guildId  String @id
+    channels Json   @db.Json
+
+    @@index([guildId])
+}
+
+model LynxRngRigConfig {
+    id             String @id @default(cuid())
+    ignoredNumbers Json   @db.Json
+}
+
+model LynxKickHistory {
+    id        String   @id @default(cuid())
+    userId    String
+    guildId   String
+    moderator String
+    reason    String
+    createdAt DateTime @default(now())
+
+    @@index([userId])
+    @@index([guildId])
+}
+
+model LynxBanHistory {
+    id        String    @id @default(cuid())
+    userId    String
+    guildId   String
+    moderator String
+    reason    String
+    duration  Int
+    until     DateTime?
+    createdAt DateTime  @default(now())
+
+    @@index([userId])
+    @@index([guildId])
+}
+
+model LynxClearBatch {
+    id          String               @id @default(cuid())
+    guildId     String
+    channelId   String
+    moderatorId String
+    createdAt   DateTime             @default(now())
+    messages    LynxClearedMessage[]
+
+    @@index([guildId])
+    @@index([channelId])
+}
+
+model LynxClearedMessage {
+    id          String         @id @default(cuid())
+    batchId     String
+    authorId    String
+    username    String
+    avatarUrl   String?
+    content     String?
+    embeds      Json?          @db.Json
+    attachments Json?          @db.Json
+    createdAt   DateTime       @default(now())
+    timestamp   DateTime
+    batch       LynxClearBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+    @@index([batchId])
+}
+
+model LynxLogs {
+    id        Int         @id @default(autoincrement())
+    type      LynxLogType
+    message   String
+    context   String?
+    metadata  Json?       @db.Json
+    createdAt DateTime    @default(now())
+}
+
+enum Role {
+    USER
+    ADMIN
+    MODERATOR
+}
+
+enum ConnectionProvider {
+    ANILIST
+    MAL
+    SIMKL
+}
+
+enum LynxLogType {
+    INFO
+    WARN
+    ERROR
+    DEBUG
+    VERBOSE
+}
+
+// AQUILA
+
+model AquilaAnime {
+    id        Int  @id @default(autoincrement())
+    anilistId Int? @unique
+    malId     Int? @unique
+
+    titleEnglish String? @db.Text
+    titleRomaji  String? @db.Text
+    titleNative  String? @db.Text
+
+    coverImageLarge      String? @db.Text
+    coverImageExtraLarge String? @db.Text
+
+    bannerImage String? @db.Text
+    description String? @db.Text
+
+    startDateYear  Int?
+    startDateMonth Int?
+    startDateDay   Int?
+
+    endDateYear  Int?
+    endDateMonth Int?
+    endDateDay   Int?
+
+    season     String?
+    seasonYear Int?
+
+    episodes Int?
+    duration Int?
+    genres   String[] @db.Text
+    tags     Json?    @db.Json
+
+    source  String?
+    format  AnimeFormat @default(UNKNOWN)
+    status  AnimeStatus @default(NOT_YET_RELEASED)
+    isAdult Boolean?    @db.Boolean
+
+    relations  Json?    @db.Json
+    characters Json?    @db.Json
+    studios    String[] @db.Text
+
+    updatedAt       DateTime              @updatedAt
+    aquilaUserLists AquilaAnimeUserList[]
+
+    @@index([anilistId])
+    @@index([malId])
+    @@index([titleEnglish])
+}
+
+model AquilaAnimeUserList {
+    id        Int     @id @default(autoincrement())
+    userId    String
+    animeId   Int
+    malId     Int?
+    anilistId Int?
+    status    String  @default("PLANNING")
+    progress  Int
+    score     Int
+    notes     String? @db.Text
+    rewatched Int?
+
+    startDate Int?
+    endDate   Int?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    user  User        @relation(fields: [userId], references: [id])
+    anime AquilaAnime @relation(fields: [animeId], references: [id])
+
+    @@index([userId])
+    @@index([animeId])
+}
+
+enum AnimeFormat {
+    TV
+    TV_SHORT
+    MOVIE
+    SPECIAL
+    OVA
+    ONA
+    MUSIC
+    UNKNOWN
+}
+
+enum AnimeStatus {
+    FINISHED
+    RELEASING
+    NOT_YET_RELEASED
+    CANCELLED
+}

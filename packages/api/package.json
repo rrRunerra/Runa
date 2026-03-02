@@ -1,0 +1,25 @@
+{
+  "name": "@runa/api",
+  "version": "0.0.1",
+  "description": "Auto-generated Nestia SDK for the Runa backend",
+  "private": true,
+  "main": "./index.ts",
+  "types": "./index.ts",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "scripts": {},
+  "dependencies": {
+    "@nestia/core": "^10.0.2",
+    "@nestia/fetcher": "^10.0.2",
+    "@nestia/sdk": "^10.0.2",
+    "@nestjs/common": "^11.0.1",
+    "@nestjs/core": "^11.0.1",
+    "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/swagger": "^11.2.6",
+    "axios": "^1.6.0",
+    "nestia": "^10.0.2",
+    "reflect-metadata": "^0.2.2",
+    "typia": "^11.0.3"
+  }
+}

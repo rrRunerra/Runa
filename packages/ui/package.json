@@ -1,0 +1,35 @@
+{
+  "name": "@runa/ui",
+  "version": "1.0.0",
+  "description": "",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@base-ui/react": "1.2.0",
+    "@types/three": "^0.183.1",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "lucide-react": "0.576.0",
+    "postprocessing": "^6.38.3",
+    "radix-ui": "1.4.3",
+    "shadcn": "3.8.5",
+    "tailwind-merge": "3.5.0",
+    "three": "^0.183.2",
+    "tw-animate-css": "1.4.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.2.1",
+    "@types/node": "^20.19.35",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "^9.39.3",
+    "tailwindcss": "^4.2.1",
+    "typescript": "^5.9.3"
+  }
+}
