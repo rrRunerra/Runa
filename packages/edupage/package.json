@@ -1,0 +1,16 @@
+{
+  "name": "@runa/edupage",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./index.ts",
+      "require": "./index.ts",
+      "types": "./types/edupage-api.d.ts"
+    }
+  },
+  "dependencies": {
+    "edupage-api": "^0.8.3"
+  }
+}

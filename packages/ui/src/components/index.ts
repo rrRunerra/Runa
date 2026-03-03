@@ -43,4 +43,6 @@ export * from "./ui/toggle-group";
 export * from "./ui/textarea";
 export * from "./ui/tooltip";
 
+export * from "./ui/separator";
+
 export * from "./reactbits/PixelBlast";

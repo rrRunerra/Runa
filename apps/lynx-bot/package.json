@@ -1,0 +1,33 @@
+{
+  "name": "lynx-bot",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts --dev",
+    "build": "echo 'Add build script here'",
+    "test": "echo 'Add test script here'",
+    "lint": "echo 'Add lint script here'"
+  },
+  "dependencies": {
+    "@nestjs/common": "^11.1.15",
+    "@nestjs/core": "^11.1.15",
+    "@runa/database": "workspace:*",
+    "@runa/edupage": "workspace:*",
+    "cors": "^2.8.6",
+    "discord.js": "^14.25.1",
+    "dotenv": "^17.3.1",
+    "download": "^8.0.0",
+    "express": "^5.2.1",
+    "glob": "^13.0.6",
+    "html-to-text": "^9.0.5",
+    "yt-dlp-exec": "^1.0.2"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.19",
+    "@types/download": "^8.0.5",
+    "@types/express": "^5.0.6",
+    "@types/html-to-text": "^9.0.4",
+    "tsx": "^4.21.0"
+  }
+}
