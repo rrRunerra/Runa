@@ -1,4 +1,4 @@
-import { Card, CardHeader, CardTitle, CardContent, Badge } from "@astral/ui";
+import { Card, CardHeader, CardTitle, CardContent, Badge } from "@runa/ui";
 import Link from "next/link";
 import { ChevronLeft, Key, Info, Activity } from "lucide-react";
 
@@ -46,7 +46,7 @@ export default async function ApiPage({
       {/* Header */}
       <div className="relative z-10 flex flex-col gap-4">
         <Link
-          href="/lynx/apis"
+          href="/apis"
           className="flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
         >
           <ChevronLeft className="w-4 h-4 mr-1" />

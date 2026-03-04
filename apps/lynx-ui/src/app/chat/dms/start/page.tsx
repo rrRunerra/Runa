@@ -10,20 +10,20 @@ function StartDmContent() {
 
   useEffect(() => {
     if (!userId) {
-      router.push("/lynx/chat/dms");
+      router.push("/chat/dms");
       return;
     }
 
-    fetch(`/api/lynx/chat/dms/start?userId=${userId}`)
+    fetch(`/api/chat/dms/start?userId=${userId}`)
       .then((res) => res.json())
       .then((data) => {
         if (data.id) {
-          router.replace(`/lynx/chat/dms/${data.id}`);
+          router.replace(`/chat/dms/${data.id}`);
         } else {
-          router.push("/lynx/chat/dms");
+          router.push("/chat/dms");
         }
       })
-      .catch(() => router.push("/lynx/chat/dms"));
+      .catch(() => router.push("/chat/dms"));
   }, [userId, router]);
 
   return (

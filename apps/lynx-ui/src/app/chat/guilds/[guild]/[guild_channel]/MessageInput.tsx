@@ -22,9 +22,7 @@ export default function MessageInput({
     setIsSending(true);
     try {
       const isDm = !guildId;
-      const url = isDm
-        ? "/api/lynx/chat/dms/sendMessage"
-        : "/api/lynx/chat/sendMessage";
+      const url = isDm ? "/api/chat/dms/sendMessage" : "/api/chat/sendMessage";
       const body = isDm
         ? { channelId, content: content.trim() } // Adapt Lynx API to handle channelId
         : { guild: guildId, channel: channelId, content: content.trim() };

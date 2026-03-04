@@ -2,22 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "../../../../packages/ui/src/index.css";
 
-import {
-  AlertProvider,
-  ConfirmProvider,
-  NavigationProvider,
-  Button,
-} from "@runa/ui";
-
-import {
-  Sidebar,
-  SidebarProvider,
-  SidebarFooter,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/sidebar";
+import { SidebarInset } from "@/components/sidebar";
 import Providers from "./providers";
 import LynxSideBar from "@/components/LynxSideBar";
 import { lynxSidebarConfig } from "@/config/lynxSidebarConfig";

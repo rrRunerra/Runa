@@ -6,20 +6,23 @@ import {
   deleteDatabaseRow,
   updateDatabaseRow,
 } from "@/actions/database";
-import { Card, CardHeader, CardTitle, CardContent } from "@astral/ui";
-import { Loader2, Database, Trash2, Edit, Save, X } from "lucide-react";
-import { Button } from "@astral/ui";
 import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  Button,
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
-} from "@astral/ui";
-import { Input } from "@astral/ui";
-import { Label } from "@astral/ui";
-import { useAlert } from "@/context/AlertContext";
-import { Textarea } from "@astral/ui";
+  Input,
+  Label,
+  Textarea,
+  useAlert,
+} from "@runa/ui";
+import { Loader2, Database, Trash2, Edit } from "lucide-react";
 
 interface DatabaseViewerProps {
   modelName: string;

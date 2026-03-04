@@ -1,4 +1,4 @@
-import { Card, CardHeader, CardTitle, CardContent, Badge } from "@astral/ui";
+import { Card, CardHeader, CardTitle, CardContent, Badge } from "@runa/ui";
 import Link from "next/link";
 import { ChevronLeft, Zap, Info, Radio } from "lucide-react";
 

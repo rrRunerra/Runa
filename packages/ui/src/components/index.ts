@@ -46,3 +46,5 @@ export * from "./ui/tooltip";
 export * from "./ui/separator";
 
 export * from "./reactbits/PixelBlast";
+
+export * from "./CommandOptions";

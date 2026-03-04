@@ -1,13 +1,7 @@
 "use client";
 
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@astral/ui";
-import { ChevronRight, Settings, ScrollText, Dice1 } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardDescription } from "@runa/ui";
+import { ChevronRight, ScrollText, Dice1 } from "lucide-react";
 import Link from "next/link";
 
 export default function ConfigPage() {
@@ -16,13 +10,13 @@ export default function ConfigPage() {
       title: "Homework Channels",
       description:
         "Configure subject-specific channels for homework assignments.",
-      href: "/lynx/config/homework",
+      href: "/config/homework",
       icon: <ScrollText className="w-5 h-5" />,
     },
     {
       title: "RNG Rig",
       description: "Manage ignored numbers for the random generator command.",
-      href: "/lynx/config/rng",
+      href: "/config/rng",
       icon: <Dice1 className="w-5 h-5" />,
     },
   ];

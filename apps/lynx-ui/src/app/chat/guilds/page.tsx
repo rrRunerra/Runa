@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardHeader, CardTitle, CardContent } from "@astral/ui";
+import { Card, CardHeader, CardTitle, CardContent } from "@runa/ui";
 import { ChevronRight, ChevronLeft, Server } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState, Suspense } from "react";
@@ -15,7 +15,7 @@ function GuildsContent() {
 
   useEffect(() => {
     async function getGuilds() {
-      const res = await fetch("/api/lynx/chat/getGuilds");
+      const res = await fetch("/api/chat/getGuilds");
       const data = await res.json();
       setGuilds(data.guilds);
     }
@@ -27,7 +27,7 @@ function GuildsContent() {
       {/* Header */}
       <div className="relative z-10 flex flex-col gap-4">
         <Link
-          href="/lynx/chat"
+          href="/chat"
           className="flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
         >
           <ChevronLeft className="w-4 h-4 mr-1" />
@@ -49,7 +49,7 @@ function GuildsContent() {
         {guilds.map((guild) => (
           <Link
             key={guild.id}
-            href={`/lynx/chat/guilds/${guild.id}${intent === "dm" ? "/dms" : ""}`}
+            href={`/chat/guilds/${guild.id}${intent === "dm" ? "/dms" : ""}`}
           >
             <Card className="h-full hover:scale-[1.02] transition-transform duration-300 cursor-pointer group bg-card border-border shadow-sm">
               <CardHeader>

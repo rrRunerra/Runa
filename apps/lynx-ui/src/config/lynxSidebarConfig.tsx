@@ -71,53 +71,53 @@ export const lynxSidebarConfig: NavbarConfig = [
     items: [
       {
         label: "Commands",
-        href: "/lynx/commands",
+        href: "/commands",
         icon: <Command className="h-4 w-4" />,
         subtitle: "List of all commands",
         children: commands?.error
           ? undefined
           : commands?.map((command: Record<string, string>) => ({
               label: command.name,
-              href: `/lynx/commands/${command.name}`,
+              href: `/commands/${command.name}`,
               subtitle: `View details and docs for ${command.name} command`,
             })),
       },
       {
         label: "Events",
-        href: "/lynx/events",
+        href: "/events",
         icon: <EventIcon className="h-4 w-4" />,
         subtitle: "List of all events",
         children: events?.error
           ? undefined
           : events?.map((event: Record<string, string>) => ({
               label: event.name,
-              href: `/lynx/events/${event.name}`,
+              href: `/events/${event.name}`,
               subtitle: `View details and docs for ${event.name} event`,
             })),
       },
       {
         label: "Crons",
-        href: "/lynx/crons",
+        href: "/crons",
         icon: <CronsIcon className="h-4 w-4" />,
         subtitle: "List of all crons",
         children: crons?.error
           ? undefined
           : crons?.map((cron: Record<string, string>) => ({
               label: cron.name,
-              href: `/lynx/crons/${cron.name}`,
+              href: `/crons/${cron.name}`,
               subtitle: `View details and docs for ${cron.name} cron`,
             })),
       },
       {
         label: "APIs",
-        href: "/lynx/apis",
+        href: "/apis",
         icon: <Key className="h-4 w-4" />,
         subtitle: "List of all registered APIs",
         children: apis?.error
           ? undefined
           : apis?.map((api: Record<string, string>) => ({
               label: api.name,
-              href: `/lynx/apis/${encodeURIComponent(api.name)}`,
+              href: `/apis/${encodeURIComponent(api.name)}`,
               subtitle: `View details and docs for ${api.name} API`,
             })),
       },
@@ -129,43 +129,43 @@ export const lynxSidebarConfig: NavbarConfig = [
     items: [
       {
         label: "Logs",
-        href: "/lynx/logs",
+        href: "/logs",
         icon: <Logs className="h-4 w-4" />,
         subtitle: "List of all logs",
         children: [
           {
             label: "All",
-            href: "/lynx/logs/all",
+            href: "/logs/all",
             icon: <ScrollText className="h-4 w-4" />,
             subtitle: "View all system logs",
           },
           {
             label: "Errors",
-            href: "/lynx/logs/error",
+            href: "/logs/error",
             icon: <CircleX className="h-4 w-4" />,
             subtitle: "View error logs and exceptions",
           },
           {
             label: "Warnings",
-            href: "/lynx/logs/warn",
+            href: "/logs/warn",
             icon: <AlertTriangle className="h-4 w-4" />,
             subtitle: "View system warnings",
           },
           {
             label: "Info",
-            href: "/lynx/logs/info",
+            href: "/logs/info",
             icon: <Info className="h-4 w-4" />,
             subtitle: "View informational logs",
           },
           {
             label: "Debug",
-            href: "/lynx/logs/debug",
+            href: "/logs/debug",
             icon: <Bug className="h-4 w-4" />,
             subtitle: "View debug traces",
           },
           {
             label: "Verbose",
-            href: "/lynx/logs/verbose",
+            href: "/logs/verbose",
             icon: <List className="h-4 w-4" />,
             subtitle: "View verbose logs",
           },
@@ -173,33 +173,27 @@ export const lynxSidebarConfig: NavbarConfig = [
       },
       {
         label: "Databases",
-        href: "/lynx/databases",
+        href: "/databases",
         icon: <Database className="h-4 w-4" />,
         children: databases?.error
           ? undefined
           : databases?.map((database: string) => ({
               label: database,
-              href: `/lynx/databases/${database}`,
+              href: `/databases/${database}`,
               subtitle: `Manage ${database} database`,
             })),
       },
       {
         label: "Configuration",
-        href: "/lynx/config",
+        href: "/config",
         icon: <Settings className="h-4 w-4" />,
         subtitle: "Lynx configuration",
         children: [
           {
             label: "Homework",
-            href: "/lynx/config/homework",
+            href: "/config/homework",
             icon: <ScrollText className="h-4 w-4" />,
             subtitle: "Configure homework channels",
-          },
-          {
-            label: "RNG Rig",
-            href: "/lynx/config/rng",
-            icon: <Dice1 className="h-4 w-4" />,
-            subtitle: "Configure RNG ignored numbers",
           },
         ],
       },
@@ -211,19 +205,19 @@ export const lynxSidebarConfig: NavbarConfig = [
     items: [
       {
         label: "Chat",
-        href: "/lynx/chat",
+        href: "/chat",
         icon: <MessageSquare className="h-4 w-4" />,
         subtitle: "Send messages in guilds",
         children: [
           {
             label: "Guilds",
-            href: "/lynx/chat/guilds",
+            href: "/chat/guilds",
             icon: <Dice1 className="h-4 w-4" />,
             subtitle: "Send messages in guilds",
           },
           {
             label: "Direct Messages",
-            href: "/lynx/chat/dms",
+            href: "/chat/dms",
             icon: <Dice1 className="h-4 w-4" />,
             subtitle: "Send messages in DMs",
           },

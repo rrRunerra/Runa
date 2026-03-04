@@ -7,10 +7,10 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
-} from "@astral/ui";
-import { Input } from "@astral/ui";
-import { Button } from "@astral/ui";
-import { useAlert } from "@/context/AlertContext";
+  Input,
+  Button,
+  useAlert,
+} from "@runa/ui";
 import { Loader2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
@@ -39,7 +39,7 @@ export default function HomeworkConfigPage() {
         return;
       }
 
-      const response = await fetch("/api/lynx/config/homework", {
+      const response = await fetch("/api/config/homework", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -77,7 +77,7 @@ export default function HomeworkConfigPage() {
     <div className="max-w-4xl mx-auto py-8 px-4">
       <div className="mb-8">
         <Link
-          href="/lynx/config"
+          href="/config"
           className="flex items-center text-sm text-muted-foreground hover:text-primary mb-4 transition-colors"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />

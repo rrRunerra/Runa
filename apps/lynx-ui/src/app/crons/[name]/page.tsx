@@ -1,4 +1,4 @@
-import { Card, CardHeader, CardTitle, CardContent, Badge } from "@astral/ui";
+import { Card, CardHeader, CardTitle, CardContent, Badge } from "@runa/ui";
 import Link from "next/link";
 import { ChevronLeft, Timer, FileText, Settings2 } from "lucide-react";
 
@@ -40,7 +40,7 @@ export default async function CronPage({
       {/* Header */}
       <div className="relative z-10 flex flex-col gap-4">
         <Link
-          href="/lynx/crons"
+          href="/crons"
           className="flex items-center text-sm text-zinc-400 hover:text-white transition-colors w-fit"
         >
           <ChevronLeft className="w-4 h-4 mr-1" />

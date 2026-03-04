@@ -1,6 +1,5 @@
 import { prisma } from "@runa/database";
 import { LogTerminal } from "@/components/LogTerminal";
-import { Link, ChevronLeft } from "lucide-react";
 
 export default async function LogsPage() {
   const limit = 50;

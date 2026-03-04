@@ -1,4 +1,4 @@
-import { Card, CardHeader, CardTitle, cn } from "@astral/ui";
+import { Card, CardHeader, CardTitle, cn } from "@runa/ui";
 import { ChevronRight, ChevronLeft, User as UserIcon } from "lucide-react";
 import Link from "next/link";
 
@@ -33,7 +33,7 @@ export default async function MemberGridPage({
     <div className="container mx-auto p-8 space-y-8 relative">
       <div className="relative z-10 flex flex-col gap-4">
         <Link
-          href={`/lynx/chat/guilds/${guild}`}
+          href={`/chat/guilds/${guild}`}
           className="flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
         >
           <ChevronLeft className="w-4 h-4 mr-1" />
@@ -53,10 +53,7 @@ export default async function MemberGridPage({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
         {members && members.length > 0 ? (
           members.map((member) => (
-            <Link
-              key={member.id}
-              href={`/lynx/chat/dms/start?userId=${member.id}`}
-            >
+            <Link key={member.id} href={`/chat/dms/start?userId=${member.id}`}>
               <Card className="h-full hover:scale-[1.02] transition-transform duration-300 cursor-pointer group overflow-hidden bg-card border-border shadow-sm">
                 <CardHeader>
                   <div className="flex items-center justify-between">

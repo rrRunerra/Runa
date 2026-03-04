@@ -1,4 +1,4 @@
-import { Card, CardHeader, CardTitle, cn } from "@astral/ui";
+import { Card, CardHeader, CardTitle, cn } from "@runa/ui";
 import {
   ChevronRight,
   ChevronLeft,
@@ -34,7 +34,7 @@ export default async function DmListPage() {
     <div className="container mx-auto p-8 space-y-8 relative">
       <div className="relative z-10 flex flex-col gap-4">
         <Link
-          href="/lynx/chat"
+          href="/chat"
           className="flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
         >
           <ChevronLeft className="w-4 h-4 mr-1" />
@@ -49,7 +49,7 @@ export default async function DmListPage() {
               Your recent conversations and active DM channels.
             </p>
           </div>
-          <Link href="/lynx/chat/guilds?intent=dm">
+          <Link href="/chat/guilds?intent=dm">
             <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium transition-all shadow-lg shadow-primary/20 active:scale-95">
               <Plus className="w-4 h-4" />
               New Message
@@ -61,7 +61,7 @@ export default async function DmListPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
         {dms && dms.length > 0 ? (
           dms.map((dm) => (
-            <Link key={dm.id} href={`/lynx/chat/dms/${dm.id}`}>
+            <Link key={dm.id} href={`/chat/dms/${dm.id}`}>
               <Card className="h-full hover:scale-[1.02] transition-transform duration-300 cursor-pointer group overflow-hidden bg-card border-border shadow-sm">
                 <CardHeader>
                   <div className="flex items-center justify-between">

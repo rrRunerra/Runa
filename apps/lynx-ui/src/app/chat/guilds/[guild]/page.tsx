@@ -1,4 +1,4 @@
-import { Card, CardHeader, CardTitle, Badge, cn } from "@astral/ui";
+import { Card, CardHeader, CardTitle, Badge, cn } from "@runa/ui";
 import { ChevronRight, ChevronLeft, Hash, Volume2 } from "lucide-react";
 import Link from "next/link";
 
@@ -60,7 +60,7 @@ export default async function ChannelsPage({
       {/* Header */}
       <div className="relative z-10 flex flex-col gap-4">
         <Link
-          href="/lynx/chat/guilds"
+          href="/chat/guilds"
           className="flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
         >
           <ChevronLeft className="w-4 h-4 mr-1" />
@@ -86,7 +86,7 @@ export default async function ChannelsPage({
               return (
                 <Link
                   key={channel.id}
-                  href={`/lynx/chat/guilds/${guild}/${channel.id}`}
+                  href={`/chat/guilds/${guild}/${channel.id}`}
                 >
                   <Card className="h-full hover:scale-[1.02] transition-transform duration-300 cursor-pointer group overflow-hidden bg-card border-border shadow-sm">
                     <CardHeader>

@@ -73,7 +73,7 @@ export default async function DmChatPage({
       {/* Header and Navigation */}
       <div className="flex flex-col gap-4 border-b border-zinc-800 pb-5">
         <Link
-          href="/lynx/chat/dms"
+          href="/chat/dms"
           className="flex items-center text-xs text-zinc-500 hover:text-white transition-colors w-fit -ml-1"
         >
           <ChevronLeft className="w-3.5 h-3.5 mr-1" />

@@ -1,5 +1,5 @@
-import { prisma, LynxLogType } from "@astral/database";
-import { LogTerminal } from "../../../components/logs/LogTerminal";
+import { prisma, LynxLogType } from "@runa/database";
+import { LogTerminal } from "@/components/LogTerminal";
 
 export default async function VerboseLogsPage() {
   const limit = 50;

@@ -1,7 +1,12 @@
 "use client";
 
-import { Card, CardHeader, CardTitle, CardContent } from "@astral/ui";
-import { useNavigation } from "@/hooks/useNavigation";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  useNavigation,
+} from "@runa/ui";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
