@@ -8,7 +8,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "userId is required" }, { status: 400 });
   }
 
-  const lynxApiUrl = process.env.LYNX_API_URL || "http://localhost:4444";
+  const lynxApiUrl = process.env.LYNX_API_URL;
   try {
     const res = await fetch(`${lynxApiUrl}/dms/start?userId=${userId}`, {
       cache: "no-store",

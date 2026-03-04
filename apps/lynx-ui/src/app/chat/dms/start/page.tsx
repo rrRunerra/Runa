@@ -31,7 +31,7 @@ function StartDmContent() {
       <div className="flex flex-col items-center gap-4">
         <div className="w-8 h-8 border-2 border-zinc-700 border-t-blue-500 rounded-full animate-spin" />
         <p className="text-sm font-medium animate-pulse">
-          Initializing Direct Message...
+          Initializing Direct Message…
         </p>
       </div>
     </div>

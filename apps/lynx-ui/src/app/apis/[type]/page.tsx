@@ -1,20 +1,15 @@
 import { Card, CardHeader, CardTitle, CardContent, Badge } from "@runa/ui";
-import Link from "next/link";
-import { ChevronLeft, Key, Info, Activity } from "lucide-react";
+import { Key, Info, Activity } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 async function getApi(name: string) {
   try {
-    // We need to encode the name because it might contain slashes
-    const encodedName = encodeURIComponent(name);
-    const res = await fetch(
-      `http://localhost:4444/apis/getApi/${encodedName}`,
-      {
-        cache: "force-cache",
-      },
-    );
+    const res = await fetch(`${process.env.LYNX_API_URL}/apis/getApi/${name}`, {
+      cache: "force-cache",
+    });
     if (!res.ok) return null;
     return res.json();
   } catch (error) {
@@ -29,53 +24,40 @@ export default async function ApiPage({
   params: Promise<{ type: string }>;
 }) {
   const { type } = await params;
-  // Next.js params are already decoded, but let's be safe
-  const name = decodeURIComponent(type);
-  const api = await getApi(name);
+  const api = await getApi(type);
 
   if (!api) {
     return (
-      <div className="container mx-auto p-8 text-zinc-400">
-        API endpoint not found
+      <div className="container mx-auto p-8 text-muted-foreground">
+        API not found
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-8 space-y-8 relative">
-      {/* Header */}
-      <div className="relative z-10 flex flex-col gap-4">
-        <Link
-          href="/apis"
-          className="flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
-        >
-          <ChevronLeft className="w-4 h-4 mr-1" />
-          Back to APIs
-        </Link>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
-            <Key className="w-8 h-8 text-muted-foreground" />
-            {api.name}
-          </h1>
-          <p className="text-muted-foreground mt-2 text-lg">
-            Detailed API documentation
-          </p>
-        </div>
-      </div>
+    <div className="container mx-auto p-8 space-y-8">
+      <PageHeader
+        title={api.name || api.url}
+        description="Detailed API documentation"
+        backHref="/apis"
+        backLabel="Back to APIs"
+      >
+        <Key className="w-8 h-8 text-muted-foreground mr-3" />
+      </PageHeader>
 
       {/* Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative z-10">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Info */}
         <div className="lg:col-span-2 space-y-6">
           <Card>
-            <CardHeader>
+            <CardHeader className="p-6">
               <CardTitle className="text-xl text-foreground flex items-center gap-2">
                 <Info className="w-5 h-5 text-muted-foreground" />
                 Documentation
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="p-4 rounded-lg bg-muted border border-border text-foreground leading-relaxed overflow-x-auto prose prose-stone dark:prose-invert max-w-none">
+            <CardContent className="p-6 pt-0 space-y-4">
+              <div className="p-4 rounded-lg bg-muted/50 border border-border text-foreground leading-relaxed overflow-x-auto prose prose-invert prose-zinc max-w-none">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
@@ -139,13 +121,13 @@ export default async function ApiPage({
         {/* Sidebar Status/Config */}
         <div className="space-y-6">
           <Card>
-            <CardHeader>
+            <CardHeader className="p-6">
               <CardTitle className="text-xl text-foreground flex items-center gap-2">
                 <Activity className="w-5 h-5 text-muted-foreground" />
                 Status
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-6 pt-0 space-y-4">
               <div className="flex items-center justify-between py-2 border-b border-border">
                 <span className="text-muted-foreground">Status</span>
                 <Badge
@@ -161,8 +143,8 @@ export default async function ApiPage({
               </div>
               <div className="flex items-center justify-between py-2 border-b border-border">
                 <span className="text-muted-foreground">Route</span>
-                <span className="text-foreground font-mono text-sm break-all ml-4">
-                  {api.name}
+                <span className="text-foreground font-mono text-sm">
+                  {api.url}
                 </span>
               </div>
             </CardContent>

@@ -1,12 +1,8 @@
-import { Card, CardHeader, CardTitle, cn } from "@runa/ui";
-import {
-  ChevronRight,
-  ChevronLeft,
-  MessageSquare,
-  User as UserIcon,
-  Plus,
-} from "lucide-react";
+import { Card, CardHeader, CardTitle, Button } from "@runa/ui";
+import { ChevronRight, MessageSquare, User as UserIcon } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
+import { PageHeader } from "@/components/PageHeader";
 
 interface DMChannel {
   id: string;
@@ -31,51 +27,38 @@ export default async function DmListPage() {
   const dms = await getActiveDms();
 
   return (
-    <div className="container mx-auto p-8 space-y-8 relative">
-      <div className="relative z-10 flex flex-col gap-4">
-        <Link
-          href="/chat"
-          className="flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
-        >
-          <ChevronLeft className="w-4 h-4 mr-1" />
-          Back to Chat
+    <div className="container mx-auto p-8 space-y-8">
+      <PageHeader
+        title="Direct Messages"
+        description="Your recent conversations and active DM channels."
+        backHref="/chat"
+        backLabel="Back to Chat"
+      >
+        <Link href="/chat/guilds?intent=dm">
+          <Button>
+            <span className="flex items-center gap-2">New Message</span>
+          </Button>
         </Link>
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">
-              Direct Messages
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Your recent conversations and active DM channels.
-            </p>
-          </div>
-          <Link href="/chat/guilds?intent=dm">
-            <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-medium transition-all shadow-lg shadow-primary/20 active:scale-95">
-              <Plus className="w-4 h-4" />
-              New Message
-            </button>
-          </Link>
-        </div>
-      </div>
+      </PageHeader>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {dms && dms.length > 0 ? (
           dms.map((dm) => (
             <Link key={dm.id} href={`/chat/dms/${dm.id}`}>
               <Card className="h-full hover:scale-[1.02] transition-transform duration-300 cursor-pointer group overflow-hidden bg-card border-border shadow-sm">
-                <CardHeader>
+                <CardHeader className="p-6">
                   <div className="flex items-center justify-between">
-                    <div className="w-12 h-12 rounded-full border border-border overflow-hidden bg-accent/10">
+                    <div className="w-12 h-12 rounded-full border border-border overflow-hidden bg-accent/10 flex items-center justify-center">
                       {dm.recipient.avatarURL ? (
-                        <img
+                        <Image
                           src={dm.recipient.avatarURL}
                           alt=""
+                          width={48}
+                          height={48}
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                          <UserIcon className="w-6 h-6" />
-                        </div>
+                        <UserIcon className="w-6 h-6 text-muted-foreground" />
                       )}
                     </div>
                     <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />

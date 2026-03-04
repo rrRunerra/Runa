@@ -9,9 +9,9 @@ export const apps: AppConfig[] = [
     description: "Discord bot management",
     href: `${process.env.NEXT_PUBLIC_LYNX}`,
     Card: ({ className }) => (
-      <div className="bg-linear-to-br from-indigo-500/20 to-purple-500/20 hover:from-indigo-500/30 hover:to-purple-500/30 hover:shadow-indigo-500/20 hover:border-indigo-500/50 group h-full transform rounded-2xl border border-white/10 p-6 backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:shadow-xl">
+      <div className="bg-linear-to-br from-indigo-500/20 to-purple-500/20 hover:from-indigo-500/30 hover:to-purple-500/30 hover:shadow-indigo-500/20 hover:border-indigo-500/50 group h-full transform rounded-2xl border border-white/10 p-6 backdrop-blur-sm transition-transform duration-300 hover:scale-105 hover:shadow-xl">
         <div className="flex flex-col items-center gap-4 text-center">
-          <div className="bg-indigo-500/20 text-indigo-400 group-hover:bg-indigo-500/30 group-hover:scale-110 rounded-full p-4 transition-all duration-300">
+          <div className="bg-indigo-500/20 text-indigo-400 group-hover:bg-indigo-500/30 group-hover:scale-110 rounded-full p-4 transition-transform duration-300">
             <Bot className="size-8" />
           </div>
           <div>

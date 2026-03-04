@@ -15,8 +15,8 @@ export default function DatabasesPage() {
   const databasesItem = getItem("Administration", "Databases");
 
   return (
-    <div className="container mx-auto p-8 space-y-8 relative">
-      <div className="flex flex-col gap-2 relative z-10">
+    <div className="container mx-auto p-8 space-y-8">
+      <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">
           Databases
         </h1>
@@ -25,23 +25,25 @@ export default function DatabasesPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {databasesItem?.children && databasesItem.children.length > 0 ? (
           databasesItem.children.map((category) => (
             <Link key={category.href} href={category.href}>
               <Card className="h-full hover:scale-[1.02] transition-transform duration-300 cursor-pointer group bg-card border-border shadow-sm">
-                <CardHeader>
+                <CardHeader className="p-6">
                   <div className="flex items-center justify-between">
-                    <div className="p-2.5 rounded-lg border border-border bg-accent/10 text-primary relative overflow-hidden">
-                      <div className="relative z-10">{databasesItem.icon}</div>
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 rounded-lg border border-border bg-accent/10 text-primary flex items-center justify-center">
+                        {databasesItem.icon}
+                      </div>
+                      <CardTitle className="text-xl text-foreground">
+                        {category.label}
+                      </CardTitle>
                     </div>
                     <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
                   </div>
-                  <CardTitle className="mt-4 text-xl text-foreground">
-                    {category.label}
-                  </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-6 pt-0">
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     {category.subtitle}
                   </p>
@@ -50,7 +52,7 @@ export default function DatabasesPage() {
             </Link>
           ))
         ) : (
-          <div className="col-span-full text-center text-zinc-400 py-10">
+          <div className="col-span-full text-center text-muted-foreground py-10">
             No databases found.
           </div>
         )}

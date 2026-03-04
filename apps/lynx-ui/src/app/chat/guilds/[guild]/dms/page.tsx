@@ -1,6 +1,8 @@
 import { Card, CardHeader, CardTitle, cn } from "@runa/ui";
-import { ChevronRight, ChevronLeft, User as UserIcon } from "lucide-react";
+import { ChevronRight, User as UserIcon } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
+import { PageHeader } from "@/components/PageHeader";
 
 interface GuildMember {
   id: string;
@@ -30,38 +32,28 @@ export default async function MemberGridPage({
   const members = await getGuildUsers(guild);
 
   return (
-    <div className="container mx-auto p-8 space-y-8 relative">
-      <div className="relative z-10 flex flex-col gap-4">
-        <Link
-          href={`/chat/guilds/${guild}`}
-          className="flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
-        >
-          <ChevronLeft className="w-4 h-4 mr-1" />
-          Back to Channels
-        </Link>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            Choose a Member
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Select a member from this guild to start a Direct Message
-            conversation.
-          </p>
-        </div>
-      </div>
+    <div className="container mx-auto p-8 space-y-8">
+      <PageHeader
+        title="Choose a Member"
+        description="Select a member from this guild to start a Direct Message conversation."
+        backHref={`/chat/guilds/${guild}`}
+        backLabel="Back to Channels"
+      />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {members && members.length > 0 ? (
           members.map((member) => (
             <Link key={member.id} href={`/chat/dms/start?userId=${member.id}`}>
               <Card className="h-full hover:scale-[1.02] transition-transform duration-300 cursor-pointer group overflow-hidden bg-card border-border shadow-sm">
-                <CardHeader>
+                <CardHeader className="p-6">
                   <div className="flex items-center justify-between">
                     <div className="relative">
-                      <div className="w-12 h-12 rounded-full border border-border overflow-hidden bg-accent/10">
-                        <img
+                      <div className="w-12 h-12 rounded-full border border-border overflow-hidden bg-accent/10 flex items-center justify-center">
+                        <Image
                           src={member.avatarURL}
                           alt=""
+                          width={48}
+                          height={48}
                           className="w-full h-full object-cover"
                         />
                       </div>

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 export async function GET() {
-  const lynxApiUrl = process.env.LYNX_API_URL || "http://localhost:4444";
+  const lynxApiUrl = process.env.LYNX_API_URL;
   try {
     const res = await fetch(`${lynxApiUrl}/dms/getDms`, {
       cache: "no-store",

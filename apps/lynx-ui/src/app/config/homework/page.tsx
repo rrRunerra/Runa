@@ -11,8 +11,8 @@ import {
   Button,
   useAlert,
 } from "@runa/ui";
-import { Loader2, ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { Loader2 } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 
 export default function HomeworkConfigPage() {
   const [guildId, setGuildId] = useState("");
@@ -74,30 +74,23 @@ export default function HomeworkConfigPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
-      <div className="mb-8">
-        <Link
-          href="/config"
-          className="flex items-center text-sm text-muted-foreground hover:text-primary mb-4 transition-colors"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Configuration
-        </Link>
-        <h1 className="text-3xl font-bold mb-2">Homework Configuration</h1>
-        <p className="text-muted-foreground">
-          Configure the channels for homework assignments.
-        </p>
-      </div>
+    <div className="container mx-auto p-8 space-y-8">
+      <PageHeader
+        title="Homework Configuration"
+        description="Configure the channels for homework assignments."
+        backHref="/config"
+        backLabel="Back to Configuration"
+      />
 
       <Card>
-        <CardHeader>
+        <CardHeader className="p-6">
           <CardTitle>HomeWork Channels</CardTitle>
           <CardDescription>
             Enter the Guild ID and the JSON configuration for subjects and
             channels.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="guildId" className="text-sm font-medium">
@@ -108,6 +101,7 @@ export default function HomeworkConfigPage() {
                 placeholder="Enter Guild ID"
                 value={guildId}
                 onChange={(e) => setGuildId(e.target.value)}
+                autoComplete="off"
                 required
               />
             </div>
@@ -142,7 +136,7 @@ export default function HomeworkConfigPage() {
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
+                  Saving…
                 </>
               ) : (
                 "Save Configuration"

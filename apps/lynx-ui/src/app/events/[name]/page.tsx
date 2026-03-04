@@ -1,15 +1,18 @@
 import { Card, CardHeader, CardTitle, CardContent, Badge } from "@runa/ui";
-import Link from "next/link";
-import { ChevronLeft, Zap, Info, Radio } from "lucide-react";
+import { Zap, Info, Radio } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 async function getEvent(name: string) {
   try {
-    const res = await fetch(`http://localhost:4444/events/getEvent/${name}`, {
-      cache: "force-cache",
-    });
+    const res = await fetch(
+      `${process.env.LYNX_API_URL}/events/getEvent/${name}`,
+      {
+        cache: "force-cache",
+      },
+    );
     if (!res.ok) return null;
     return res.json();
   } catch (error) {
@@ -28,64 +31,51 @@ export default async function EventPage({
 
   if (!event) {
     return (
-      <div className="container mx-auto p-8 text-zinc-400">Event not found</div>
+      <div className="container mx-auto p-8 text-muted-foreground">
+        Event not found
+      </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-8 space-y-8 relative">
-      {/* Background */}
-      <div className="absolute inset-0 z-0 pointer-events-none opacity-30" />
-
-      {/* Header */}
-      <div className="relative z-10 flex flex-col gap-4">
-        <Link
-          href="/lynx/events"
-          className="flex items-center text-sm text-zinc-400 hover:text-white transition-colors w-fit"
-        >
-          <ChevronLeft className="w-4 h-4 mr-1" />
-          Back to Events
-        </Link>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight bg-linear-to-r from-white to-zinc-400 bg-clip-text text-transparent flex items-center gap-3">
-            <Zap className="w-8 h-8 text-zinc-400" />
-            {event.name}
-          </h1>
-          <p className="text-zinc-400 mt-2 text-lg">{event.description}</p>
-        </div>
-      </div>
+    <div className="container mx-auto p-8 space-y-8">
+      <PageHeader
+        title={event.name}
+        description={event.description}
+        backHref="/events"
+        backLabel="Back to Events"
+      />
 
       {/* Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative z-10">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Info */}
         <div className="lg:col-span-2 space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-xl text-zinc-100 flex items-center gap-2">
-                <Info className="w-5 h-5 text-zinc-400" />
+            <CardHeader className="p-6">
+              <CardTitle className="text-xl text-foreground flex items-center gap-2">
                 Details
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="p-4 rounded-lg bg-zinc-950/50 border border-zinc-800 text-zinc-300 leading-relaxed overflow-x-auto prose prose-invert prose-zinc max-w-none">
+            <CardContent className="p-6 pt-0 space-y-4">
+              <div className="p-4 rounded-lg bg-muted/50 border border-border text-foreground leading-relaxed overflow-x-auto prose prose-invert prose-zinc max-w-none">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
                     h1: ({ ...props }) => (
                       <h1
-                        className="text-xl font-bold mb-4 text-white"
+                        className="text-xl font-bold mb-4 text-foreground"
                         {...props}
                       />
                     ),
                     h2: ({ ...props }) => (
                       <h2
-                        className="text-lg font-semibold mb-3 text-zinc-100"
+                        className="text-lg font-semibold mb-3 text-foreground"
                         {...props}
                       />
                     ),
                     h3: ({ ...props }) => (
                       <h3
-                        className="text-md font-medium mb-2 text-zinc-200"
+                        className="text-md font-medium mb-2 text-foreground"
                         {...props}
                       />
                     ),
@@ -105,17 +95,17 @@ export default async function EventPage({
                       />
                     ),
                     li: ({ ...props }) => (
-                      <li className="text-zinc-400" {...props} />
+                      <li className="text-muted-foreground" {...props} />
                     ),
                     code: ({ ...props }) => (
                       <code
-                        className="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-200 font-mono text-xs"
+                        className="bg-accent px-1.5 py-0.5 rounded text-accent-foreground font-mono text-xs"
                         {...props}
                       />
                     ),
                     pre: ({ ...props }) => (
                       <pre
-                        className="bg-zinc-900 p-4 rounded-lg border border-zinc-800 mb-4 overflow-x-auto"
+                        className="bg-accent/50 p-4 rounded-lg border border-border mb-4 overflow-x-auto"
                         {...props}
                       />
                     ),
@@ -131,15 +121,15 @@ export default async function EventPage({
         {/* Sidebar Status/Config */}
         <div className="space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-xl text-zinc-100 flex items-center gap-2">
-                <Radio className="w-5 h-5 text-zinc-400" />
+            <CardHeader className="p-6">
+              <CardTitle className="text-xl text-foreground flex items-center gap-2">
+                <Radio className="w-5 h-5 text-muted-foreground" />
                 Configuration
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between py-2 border-b border-zinc-800">
-                <span className="text-zinc-400">Status</span>
+            <CardContent className="p-6 pt-0 space-y-4">
+              <div className="flex items-center justify-between py-2 border-b border-border">
+                <span className="text-muted-foreground">Status</span>
                 <Badge
                   variant={event.enabled ? "default" : "destructive"}
                   className={
@@ -151,14 +141,14 @@ export default async function EventPage({
                   {event.enabled ? "Active" : "Disabled"}
                 </Badge>
               </div>
-              <div className="flex items-center justify-between py-2 border-b border-zinc-800">
-                <span className="text-zinc-400">Trigger Type</span>
-                <span className="text-zinc-200 font-medium">
+              <div className="flex items-center justify-between py-2 border-b border-border">
+                <span className="text-muted-foreground">Trigger Type</span>
+                <span className="text-foreground font-medium">
                   {event.type || "Default"}
                 </span>
               </div>
-              <div className="flex items-center justify-between py-2 border-b border-zinc-800">
-                <span className="text-zinc-400">Execution</span>
+              <div className="flex items-center justify-between py-2 border-b border-border">
+                <span className="text-muted-foreground">Execution</span>
                 <Badge
                   variant="outline"
                   className={

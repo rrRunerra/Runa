@@ -12,6 +12,20 @@ try {
 const nextConfig: NextConfig = {
   reactCompiler: true,
   transpilePackages: ["@runa/ui"],
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "cdn.discordapp.com",
+        pathname: "/avatars/**",
+      },
+      {
+        protocol: "https",
+        hostname: "cdn.discordapp.com",
+        pathname: "/icons/**",
+      },
+    ],
+  },
 };
 
 export default nextConfig;

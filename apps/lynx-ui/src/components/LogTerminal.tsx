@@ -170,14 +170,18 @@ export function LogTerminal({
           </span>
         </div>
         <div className="flex flex-col gap-1">
-          <span className="text-xs uppercase text-muted-foreground/60">
+          <label
+            htmlFor="context-filter"
+            className="text-xs uppercase text-muted-foreground/60"
+          >
             Context Filter
-          </span>
+          </label>
           <input
+            id="context-filter"
             type="text"
             value={contextFilter}
             onChange={(e) => setContextFilter(e.target.value)}
-            placeholder="Filter by context..."
+            placeholder="Filter by context…"
             className="bg-transparent border-b border-border text-foreground focus:outline-none focus:border-primary transition-colors w-full placeholder:text-muted-foreground/50"
           />
         </div>
@@ -253,7 +257,7 @@ export function LogTerminal({
             ref={observerTarget}
             className="h-4 py-2 flex items-center justify-center text-muted-foreground text-xs"
           >
-            {loading ? "Loading..." : hasMore ? "" : "End of logs"}
+            {loading ? "Loading…" : hasMore ? "" : "End of logs"}
           </div>
         </div>
       </div>

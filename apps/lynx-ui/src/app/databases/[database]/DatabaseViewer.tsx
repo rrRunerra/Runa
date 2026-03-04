@@ -12,17 +12,26 @@ import {
   CardTitle,
   CardContent,
   Button,
+  Input,
+  Label,
+  Textarea,
+  useAlert,
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  cn,
+} from "@runa/ui";
+import { Loader2, Database, Trash2, Edit, MoreHorizontal } from "lucide-react";
+
+import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Input,
-  Label,
-  Textarea,
-  useAlert,
-} from "@runa/ui";
-import { Loader2, Database, Trash2, Edit } from "lucide-react";
+} from "@/components/dialog";
 
 interface DatabaseViewerProps {
   modelName: string;
@@ -260,59 +269,70 @@ export function DatabaseViewer({ modelName }: DatabaseViewerProps) {
         </CardHeader>
         <CardContent>
           <div className="relative overflow-x-auto rounded-lg border border-border">
-            <table className="w-full text-sm text-left text-muted-foreground">
-              <thead className="text-xs text-foreground uppercase bg-muted/50">
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-muted/50 border-b border-border">
                 <tr>
-                  {columns.map((col) => (
-                    <th key={col} className="px-6 py-3 border-b border-border">
-                      {col}
+                  {Object.keys(rows[0] || {}).map((key) => (
+                    <th
+                      key={key}
+                      className="px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider"
+                    >
+                      {key}
                     </th>
                   ))}
-                  <th className="px-6 py-3 border-b border-border text-right">
-                    Actions
-                  </th>
+                  <th className="px-6 py-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody>
-                {rows.map((row, idx) => (
+              <tbody className="divide-y divide-border bg-card">
+                {rows.map((row, i) => (
                   <tr
-                    key={idx}
-                    className="bg-card/30 border-b border-border hover:bg-accent/50 transition-colors"
+                    key={i}
+                    className="hover:bg-muted/30 transition-colors group"
                   >
-                    {columns.map((col) => (
+                    {Object.values(row).map((val, j) => (
                       <td
-                        key={`${idx}-${col}`}
-                        className="px-6 py-4 whitespace-nowrap max-w-[300px] truncate"
-                        title={
-                          typeof row[col] === "object"
-                            ? JSON.stringify(row[col])
-                            : String(row[col])
-                        }
+                        key={j}
+                        className="px-6 py-4 whitespace-nowrap text-sm text-foreground/80"
                       >
-                        {typeof row[col] === "object"
-                          ? JSON.stringify(row[col])
-                          : String(row[col])}
+                        {val === null
+                          ? "null"
+                          : typeof val === "object"
+                            ? JSON.stringify(val)
+                            : String(val)}
                       </td>
                     ))}
                     <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-accent"
-                          onClick={() => handleEditClick(row)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive hover:text-destructive/80 hover:bg-destructive/10"
-                          onClick={() => handleDelete(row)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-white/5 border border-transparent hover:border-white/5 rounded-full transition-all"
+                          >
+                            <MoreHorizontal className="w-4 h-4" />
+                            <span className="sr-only">Open menu</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-32">
+                          <DropdownMenuItem
+                            onSelect={(e) => {
+                              e.preventDefault();
+                              handleEditClick(row);
+                            }}
+                          >
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            variant="destructive"
+                            onClick={() => handleDelete(row)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </td>
                   </tr>
                 ))}
@@ -334,73 +354,91 @@ export function DatabaseViewer({ modelName }: DatabaseViewerProps) {
         open={!!editingRow}
         onOpenChange={(open) => !open && setEditingRow(null)}
       >
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Row</DialogTitle>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-zinc-950/90 border border-white/5 shadow-2xl backdrop-blur-2xl">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-xl font-semibold tracking-tight">
+              Edit Row
+            </DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+
+          <div className="flex flex-col gap-6 py-2">
             {editingRow &&
               Object.keys(editingRow).map((key) => {
-                const currentRow = editingRow!;
-                const isPrimaryKey = key === getPrimaryKey(currentRow);
-                const originalValue = currentRow[key];
+                const isPrimaryKey = key === getPrimaryKey(editingRow);
+                const originalValue = editingRow[key];
                 const isObject =
-                  typeof originalValue === "object" && originalValue !== null;
-                let value = editFormData[key];
+                  originalValue !== null && typeof originalValue === "object";
+                const value = editFormData[key];
 
-                if (isObject && typeof value !== "string") {
-                  value = JSON.stringify(value, null, 2);
-                }
                 const displayValue =
-                  value === null || value === undefined ? "" : String(value);
+                  value === null || value === undefined
+                    ? ""
+                    : typeof value === "object"
+                      ? JSON.stringify(value, null, 2)
+                      : String(value);
+
+                const useTextarea =
+                  isObject ||
+                  (typeof originalValue === "string" &&
+                    originalValue.length > 50);
 
                 return (
-                  <div
-                    key={key}
-                    className="grid grid-cols-4 items-center gap-4"
-                  >
+                  <div key={key} className="flex flex-col gap-2.5">
                     <Label
                       htmlFor={key}
-                      className="text-right text-muted-foreground"
+                      className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 ml-1"
                     >
-                      {key}
-                    </Label>
-                    <div className="col-span-3">
-                      {isObject ? (
-                        <Textarea
-                          id={key}
-                          value={displayValue}
-                          onChange={(e) =>
-                            handleEditChange(key, e.target.value)
-                          }
-                          className="font-mono text-xs"
-                          rows={4}
-                        />
-                      ) : (
-                        <Input
-                          id={key}
-                          value={displayValue}
-                          onChange={(e) =>
-                            handleEditChange(key, e.target.value)
-                          }
-                          disabled={isPrimaryKey}
-                          className={isPrimaryKey ? "opacity-50" : ""}
-                        />
+                      {key}{" "}
+                      {isPrimaryKey && (
+                        <span className="text-[10px] lowercase font-normal opacity-50 ml-1">
+                          (Primary Key)
+                        </span>
                       )}
-                    </div>
+                    </Label>
+                    {useTextarea ? (
+                      <Textarea
+                        id={key}
+                        value={displayValue}
+                        onChange={(e) => handleEditChange(key, e.target.value)}
+                        disabled={isPrimaryKey}
+                        className={cn(
+                          "min-h-[120px] bg-zinc-900/50 border-white/5 focus:border-white/10 ring-0 focus-visible:ring-1 focus-visible:ring-white/10 transition-all resize-none font-mono text-sm leading-relaxed p-4 rounded-xl",
+                          isPrimaryKey &&
+                            "opacity-40 cursor-not-allowed bg-zinc-950",
+                        )}
+                      />
+                    ) : (
+                      <Input
+                        id={key}
+                        value={displayValue}
+                        onChange={(e) => handleEditChange(key, e.target.value)}
+                        disabled={isPrimaryKey}
+                        className={cn(
+                          "bg-zinc-900/50 border-white/5 h-12 px-4 focus:border-white/10 ring-0 focus-visible:ring-1 focus-visible:ring-white/10 transition-all font-sans rounded-xl",
+                          isPrimaryKey &&
+                            "opacity-40 cursor-not-allowed bg-zinc-950",
+                        )}
+                      />
+                    )}
                   </div>
                 );
               })}
           </div>
-          <DialogFooter>
+
+          <DialogFooter className="mt-8 gap-3 sm:gap-0">
             <Button
-              variant="outline"
+              variant="ghost"
               onClick={() => setEditingRow(null)}
               disabled={isSaving}
+              className="hover:bg-white/5 text-muted-foreground hover:text-white transition-colors"
             >
               Cancel
             </Button>
-            <Button onClick={handleSaveEdit} disabled={isSaving}>
+            <Button
+              onClick={handleSaveEdit}
+              disabled={isSaving}
+              className="bg-white text-zinc-950 hover:bg-zinc-200 font-medium transition-all shadow-[0_0_20px_-5px_rgba(255,255,255,0.3)] hover:shadow-[0_0_25px_-5px_rgba(255,255,255,0.4)]"
+            >
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Changes
             </Button>

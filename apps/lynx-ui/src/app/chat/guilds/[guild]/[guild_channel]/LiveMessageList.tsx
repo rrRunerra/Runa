@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { FileText } from "lucide-react";
+import Image from "next/image";
 
 const MarkdownComponents: Record<string, React.FC<any>> = {
   // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -41,7 +42,7 @@ function MessageMedia({ attachment }: { attachment: Attachment }) {
           if (text) {
             const lines = text.split("\n").slice(0, 15);
             setTextPreview(
-              lines.join("\n") + (text.split("\n").length > 15 ? "\n..." : ""),
+              lines.join("\n") + (text.split("\n").length > 15 ? "\n…" : ""),
             );
           }
         })
@@ -52,10 +53,11 @@ function MessageMedia({ attachment }: { attachment: Attachment }) {
   if (isImage) {
     return (
       <div className="mt-1 rounded-md overflow-hidden border border-border max-w-[280px]">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src={attachment.url}
           alt={attachment.name}
+          width={280}
+          height={200}
           className="w-full h-auto object-contain"
         />
       </div>
@@ -177,15 +179,23 @@ function MessageEmbed({ embed }: { embed: Embed }) {
 
       {embed.image && !embed.video && (
         <div className="mt-1.5 rounded overflow-hidden border border-border max-w-[300px]">
-          <img src={embed.image.url} alt="Embed" className="w-full h-auto" />
+          <Image
+            src={embed.image.url}
+            alt="Embed"
+            width={300}
+            height={200}
+            className="w-full h-auto"
+          />
         </div>
       )}
 
       {embed.thumbnail && !embed.image && !embed.video && (
         <div className="mt-1.5 rounded overflow-hidden border border-border max-w-[150px]">
-          <img
+          <Image
             src={embed.thumbnail.url}
             alt="Thumbnail"
+            width={150}
+            height={150}
             className="w-full h-auto"
           />
         </div>
@@ -194,9 +204,11 @@ function MessageEmbed({ embed }: { embed: Embed }) {
       {embed.footer && (
         <div className="flex items-center gap-1.5 mt-1.5 pt-1.5 border-t border-border">
           {embed.footer.icon_url && (
-            <img
+            <Image
               src={embed.footer.icon_url}
               alt=""
+              width={14}
+              height={14}
               className="w-3.5 h-3.5 rounded-full"
             />
           )}
@@ -240,12 +252,9 @@ export default function LiveMessageList({
   }, [initialMessages]);
 
   useEffect(() => {
-    // Connect to Lynx SSE stream
-    const lynxApiUrl =
-      process.env.NEXT_PUBLIC_LYNX_API_URL || "http://localhost:4444";
     const streamUrl = guildId
-      ? `${lynxApiUrl}/guilds/${guildId}/channels/${channelId}/stream`
-      : `${lynxApiUrl}/dms/${channelId}/stream`;
+      ? `/api/chat/guilds/${guildId}/channels/${channelId}/stream`
+      : `/api/chat/dms/${channelId}/stream`;
 
     const eventSource = new EventSource(streamUrl);
 
@@ -283,9 +292,11 @@ export default function LiveMessageList({
             <div className="shrink-0 pt-0.5">
               <div className="w-8 h-8 rounded-full bg-accent/20 overflow-hidden border border-border shadow-sm">
                 {message.author.avatarURL ? (
-                  <img
+                  <Image
                     src={message.author.avatarURL}
                     alt=""
+                    width={32}
+                    height={32}
                     className="w-full h-full object-cover"
                   />
                 ) : (

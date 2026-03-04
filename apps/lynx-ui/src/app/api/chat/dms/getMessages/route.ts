@@ -11,7 +11,7 @@ export async function GET(req: Request) {
     );
   }
 
-  const lynxApiUrl = process.env.LYNX_API_URL || "http://localhost:4444";
+  const lynxApiUrl = process.env.LYNX_API_URL;
   try {
     const res = await fetch(
       `${lynxApiUrl}/dms/getMessages?channelId=${channelId}`,

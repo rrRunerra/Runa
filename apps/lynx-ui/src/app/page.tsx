@@ -230,6 +230,8 @@
 //   );
 // }
 
+import { redirect } from "next/navigation";
+
 export default function Home() {
-  return <div>aesrytu</div>;
+  redirect("/commands");
 }

@@ -22,8 +22,8 @@ export default function ConfigPage() {
   ];
 
   return (
-    <div className="container mx-auto p-8 space-y-8 relative">
-      <div className="flex flex-col gap-2 relative z-10">
+    <div className="container mx-auto p-8 space-y-8">
+      <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold tracking-tight text-foreground">
           Configuration
         </h1>
@@ -32,21 +32,23 @@ export default function ConfigPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {configs.map((config) => (
           <Link key={config.href} href={config.href}>
             <Card className="h-full hover:scale-[1.02] transition-transform duration-300 cursor-pointer group bg-card border-border shadow-sm">
-              <CardHeader>
+              <CardHeader className="p-6">
                 <div className="flex items-center justify-between">
-                  <div className="p-2.5 rounded-lg border border-border bg-accent/10 text-primary relative overflow-hidden">
-                    <div className="relative z-10">{config.icon}</div>
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-lg border border-border bg-accent/10 text-primary flex items-center justify-center">
+                      {config.icon}
+                    </div>
+                    <CardTitle className="text-xl text-foreground">
+                      {config.title}
+                    </CardTitle>
                   </div>
                   <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
                 </div>
-                <CardTitle className="mt-4 text-xl text-foreground">
-                  {config.title}
-                </CardTitle>
-                <CardDescription className="text-muted-foreground mt-2">
+                <CardDescription className="text-muted-foreground mt-2 pl-14">
                   {config.description}
                 </CardDescription>
               </CardHeader>

@@ -83,7 +83,7 @@ export default function LynxSideBar({
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
                   size="lg"
-                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground hover:bg-sidebar-accent transition-all duration-200"
+                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground hover:bg-sidebar-accent transition-colors duration-200"
                 >
                   <div className="bg-primary text-primary-foreground flex aspect-square size-8 items-center justify-center rounded-md shadow-sm">
                     {activeApp.logo}
@@ -310,7 +310,7 @@ export default function LynxSideBar({
               <SidebarMenuButton
                 size="lg"
                 onClick={() => signIn()}
-                className="border border-border shadow-sm hover:bg-sidebar-accent transition-all"
+                className="border border-border shadow-sm hover:bg-sidebar-accent transition-colors"
               >
                 <LogIn className="size-4" />
                 <span className="font-medium">Log in</span>

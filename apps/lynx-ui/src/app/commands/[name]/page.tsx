@@ -6,9 +6,7 @@ import {
   Badge,
   CommandOptions,
 } from "@runa/ui";
-import Link from "next/link";
 import {
-  ChevronLeft,
   Terminal,
   Shield,
   Clock,
@@ -18,6 +16,7 @@ import {
   Lock,
   MessageSquare,
 } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -54,39 +53,28 @@ export default async function CommandPage({
 
   return (
     <div className="container mx-auto p-8 space-y-8 relative">
-      {/* Header */}
-      <div className="relative z-10 flex flex-col gap-4">
-        <Link
-          href="/commands"
-          className="flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
-        >
-          <ChevronLeft className="w-4 h-4 mr-1" />
-          Back to Commands
-        </Link>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-3">
-            <Terminal className="w-8 h-8 text-muted-foreground" />
-            {command.name}
-          </h1>
-          <p className="text-muted-foreground mt-2 text-lg">
-            {command.description}
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title={command.name}
+        description={command.description}
+        backHref="/commands"
+        backLabel="Back to Commands"
+      >
+        <Terminal className="w-8 h-8 text-muted-foreground mr-3" />
+      </PageHeader>
 
       {/* Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 relative z-10">
         {/* Main Info */}
         <div className="lg:col-span-2 space-y-6">
           <Card>
-            <CardHeader>
+            <CardHeader className="p-6">
               <CardTitle className="text-xl text-foreground flex items-center gap-2">
                 <Book className="w-5 h-5 text-muted-foreground" />
                 Documentation
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="p-4 rounded-lg bg-muted border border-border text-foreground leading-relaxed overflow-x-auto prose prose-stone dark:prose-invert max-w-none">
+            <CardContent className="p-6 pt-0 space-y-4">
+              <div className="p-4 rounded-lg bg-muted/50 border border-border text-foreground leading-relaxed overflow-x-auto prose prose-stone dark:prose-invert max-w-none">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
@@ -167,12 +155,12 @@ export default async function CommandPage({
           {/* Options/Arguments if any */}
           {command.options && command.options.length > 0 && (
             <Card>
-              <CardHeader>
+              <CardHeader className="p-6">
                 <CardTitle className="text-xl text-foreground">
                   Options
                 </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-6 pt-0">
                 <CommandOptions options={command.options} />
               </CardContent>
             </Card>
@@ -181,13 +169,13 @@ export default async function CommandPage({
           {/* Subcommands */}
           {command.subCommands && command.subCommands.length > 0 && (
             <Card>
-              <CardHeader>
+              <CardHeader className="p-6">
                 <CardTitle className="text-xl text-foreground flex items-center gap-2">
                   <Terminal className="w-5 h-5 text-muted-foreground" />
                   Subcommands
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="p-6 pt-0">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {command.subCommands.map(
                     (
@@ -252,13 +240,13 @@ export default async function CommandPage({
 
           {/* Permissions */}
           <Card>
-            <CardHeader>
+            <CardHeader className="p-6">
               <CardTitle className="text-xl text-foreground flex items-center gap-2">
                 <Lock className="w-5 h-5 text-muted-foreground" />
                 Permissions
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="p-6 pt-0 space-y-6">
               <div>
                 <span className="text-muted-foreground text-sm block mb-2">
                   User Permissions
@@ -312,13 +300,13 @@ export default async function CommandPage({
         {/* Sidebar Status/Config */}
         <div className="space-y-6">
           <Card>
-            <CardHeader>
+            <CardHeader className="p-6">
               <CardTitle className="text-xl text-foreground flex items-center gap-2">
                 <Shield className="w-5 h-5 text-muted-foreground" />
                 Configuration
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-6 pt-0 space-y-4">
               <div className="flex items-center justify-between py-2 border-b border-border">
                 <span className="text-muted-foreground">Status</span>
                 <Badge
@@ -373,14 +361,14 @@ export default async function CommandPage({
 
           {/* Restrictions */}
           <Card>
-            <CardHeader>
+            <CardHeader className="p-6">
               <CardTitle className="text-xl text-foreground flex items-center gap-2">
                 <Users className="w-5 h-5 text-muted-foreground" />
                 Restrictions
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
+            <CardContent className="p-6 pt-0 space-y-4">
+              <div className="space-y-2 py-2 border-b border-border">
                 <div className="flex items-center gap-2 text-muted-foreground text-sm">
                   <Server className="w-4 h-4" /> Server Only
                 </div>
@@ -403,7 +391,7 @@ export default async function CommandPage({
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 py-2 border-b border-border">
                 <div className="flex items-center gap-2 text-muted-foreground text-sm">
                   <Users className="w-4 h-4" /> User Only
                 </div>
@@ -426,7 +414,7 @@ export default async function CommandPage({
                 </div>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 py-2 border-b border-border">
                 <div className="flex items-center gap-2 text-muted-foreground text-sm">
                   <Clock className="w-4 h-4" /> Cooldown Excluded
                 </div>
