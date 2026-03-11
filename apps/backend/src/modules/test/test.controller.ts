@@ -1,4 +1,4 @@
-import { Controller, Get, Req, UseGuards } from '@nestjs/common';
+import { Controller, Req, UseGuards } from '@nestjs/common';
 import { TypedRoute } from '@nestia/core';
 import { Public } from '../../common/decorators/public.decorator';
 import { DualAuthGuard } from 'src/common/guards/auth.guard';
