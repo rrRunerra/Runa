@@ -3,6 +3,8 @@ import { ChevronRight, MessageSquare, User as UserIcon } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { PageHeader } from "@/components/PageHeader";
+import { auth } from "@runa/auth";
+import AccessDenied from "@/components/AccessDenied";
 
 interface DMChannel {
   id: string;
@@ -25,6 +27,11 @@ async function getActiveDms(): Promise<DMChannel[]> {
 
 export default async function DmListPage() {
   const dms = await getActiveDms();
+
+  const session = await auth();
+  if (!session || session.user.role !== "ADMIN") {
+    return <AccessDenied />;
+  }
 
   return (
     <div className="container mx-auto p-8 space-y-8">

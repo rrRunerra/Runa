@@ -2,6 +2,8 @@ import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import MessageInput from "./MessageInput";
 import LiveMessageList from "./LiveMessageList";
+import { auth } from "@runa/auth";
+import AccessDenied from "@/components/AccessDenied";
 
 async function getChatContext(guildId: string, channelId: string) {
   const token = process.env.LYNX_TOKEN!;
@@ -41,6 +43,11 @@ export default async function Page({
   const { guild, guild_channel } = await params;
   let data: any[] = []; // eslint-disable-line @typescript-eslint/no-explicit-any
   let error: string | null = null;
+
+  const session = await auth();
+  if (!session || session.user.role !== "ADMIN") {
+    return <AccessDenied />;
+  }
 
   const [context, messagesRes] = await Promise.all([
     getChatContext(guild, guild_channel),
@@ -83,25 +90,25 @@ export default async function Page({
       <div className="flex flex-col gap-4 border-b border-zinc-800 pb-5">
         <Link
           href={`/chat/guilds/${guild}`}
-          className="flex items-center text-xs text-zinc-500 hover:text-white transition-colors w-fit -ml-1"
+          className="flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
         >
-          <ChevronLeft className="w-3.5 h-3.5 mr-1" />
+          <ChevronLeft className="w-4 h-4 mr-1" />
           Back to Channels
         </Link>
 
         <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2 text-xs text-zinc-500 font-medium overflow-hidden whitespace-nowrap">
-            <span className="hover:text-zinc-300 cursor-pointer transition-colors truncate">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground font-medium overflow-hidden whitespace-nowrap">
+            <span className="hover:text-foreground cursor-pointer transition-colors truncate">
               {context.guildName}
             </span>
-            <span className="text-zinc-700">/</span>
-            <span className="text-white font-semibold flex items-center gap-1">
-              <span className="text-zinc-500 font-normal">#</span>
+            <span className="text-muted-foreground/50">/</span>
+            <span className="text-foreground font-semibold flex items-center gap-1">
+              <span className="text-muted-foreground font-normal">#</span>
               {context.channelName}
             </span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            <span className="text-zinc-500 font-light opacity-50">#</span>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-2 mt-1">
+            <span className="text-muted-foreground font-light opacity-50">#</span>
             {context.channelName}
           </h1>
         </div>

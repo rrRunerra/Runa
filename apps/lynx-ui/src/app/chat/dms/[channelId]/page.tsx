@@ -2,6 +2,8 @@ import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import MessageInput from "../../guilds/[guild]/[guild_channel]/MessageInput";
 import LiveMessageList from "../../guilds/[guild]/[guild_channel]/LiveMessageList";
+import { auth } from "@runa/auth";
+import AccessDenied from "@/components/AccessDenied";
 
 async function getDmContext(channelId: string) {
   const token = process.env.LYNX_TOKEN!;
@@ -32,6 +34,11 @@ export default async function DmChatPage({
   const { channelId } = await params;
   let data: any[] = []; // eslint-disable-line @typescript-eslint/no-explicit-any
   let error: string | null = null;
+
+  const session = await auth();
+  if (!session || session.user.role !== "ADMIN") {
+    return <AccessDenied />;
+  }
 
   const [context, messagesRes] = await Promise.all([
     getDmContext(channelId),

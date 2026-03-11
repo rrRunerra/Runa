@@ -1,3 +1,4 @@
+/// <reference path="./next-auth.d.ts" />
 import { getServerSession, NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { functional, IConnection } from "../../api";
@@ -16,7 +17,9 @@ export const authOptions: NextAuthOptions = {
         }
 
         const connection: IConnection = {
-          host: `http://localhost:${process.env.NEST_PORT}`,
+          host:
+            process.env.NEST_API_URL ??
+            `http://localhost:${process.env.NEST_PORT}`,
         };
 
         const res = await functional.auth.login(connection, {
@@ -45,6 +48,39 @@ export const authOptions: NextAuthOptions = {
   },
 
   callbacks: {
+    async redirect({ url, baseUrl }) {
+      // Allows relative callback URLs
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      const allowedOrigins = [
+        process.env.NEXT_PUBLIC_AUTH,
+        process.env.NEXT_PUBLIC_LYNX,
+      ].filter(Boolean) as string[];
+
+      try {
+        const urlObj = new URL(url);
+        if (
+          allowedOrigins.some((origin) => {
+            try {
+              return urlObj.origin === new URL(origin).origin;
+            } catch {
+              return false;
+            }
+          })
+        ) {
+          return url;
+        }
+      } catch (e) {
+        // Fallback
+      }
+
+      // Default NextAuth behavior
+      try {
+        if (new URL(url).origin === baseUrl) return url;
+      } catch {
+        // Fallback
+      }
+      return baseUrl;
+    },
     async jwt({ token, user, trigger, session }) {
       if (trigger === "update" && session) {
         if (session.displayName) token.displayName = session.displayName;
@@ -101,13 +137,31 @@ export const authOptions: NextAuthOptions = {
           role: token.role,
         };
         session.accessToken = token.accessToken;
-        session.passwordChangedAt = token.passwordChangedAt;
+        session.user.passwordChangedAt = token.passwordChangedAt;
       }
       return session;
     },
   },
 
-  debug: true,
+  debug: process.env.NODE_ENV !== "production",
 };
 
 export const auth = () => getServerSession(authOptions);
+
+interface AuthUser {
+  id: string;
+
+  email?: string | null;
+
+  username?: string | null;
+
+  displayName?: string | null;
+
+  avatarUrl?: string | null;
+
+  role?: string | null;
+
+  accessToken?: string | null;
+
+  passwordChangedAt?: string | Date | null;
+}

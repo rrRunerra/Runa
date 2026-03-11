@@ -10,11 +10,17 @@ import {
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { useEffect } from "react";
+import AccessDenied from "@/components/AccessDenied";
 
 export default function LogsPage() {
   const { getItem } = useNavigation();
-  const { data: session } = useSession();
   const logsItem = getItem("Administration", "Logs");
+
+  const { data: session, status } = useSession();
+  if (status == "unauthenticated") {
+    return <AccessDenied />;
+  }
 
   return (
     <div className="container mx-auto p-8 space-y-8">

@@ -257,33 +257,32 @@ export default function LynxSideBar({
                   align="end"
                   sideOffset={12}
                 >
-                  <Link href={`/astral/users/${session.user.username}`}>
-                    <DropdownMenuLabel className="p-0 font-normal">
-                      <div className="flex items-center gap-3 px-2 py-2 text-left text-sm bg-sidebar-accent/50 rounded-md mb-2">
-                        <Avatar className="h-9 w-9 rounded-md border border-border/50">
-                          <AvatarImage
-                            src={session?.user?.avatarUrl ?? ""}
-                            alt={session?.user?.username}
-                          />
-                          <AvatarFallback className="rounded-md bg-primary/10 text-primary">
-                            {session?.user?.username?.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="grid flex-1 text-left text-sm leading-tight">
-                          <span className="truncate font-semibold text-foreground">
-                            {session?.user?.username}
-                          </span>
-                          <span className="truncate text-xs text-muted-foreground">
-                            {session?.user?.email}
-                          </span>
-                        </div>
+                  <DropdownMenuLabel className="p-0 font-normal">
+                    <div className="flex items-center gap-3 px-2 py-2 text-left text-sm bg-sidebar-accent/50 rounded-md mb-2">
+                      <Avatar className="h-9 w-9 rounded-md border border-border/50">
+                        <AvatarImage
+                          src={session?.user?.avatarUrl ?? ""}
+                          alt={session?.user?.username}
+                        />
+                        <AvatarFallback className="rounded-md bg-primary/10 text-primary">
+                          {session?.user?.username?.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="grid flex-1 text-left text-sm leading-tight">
+                        <span className="truncate font-semibold text-foreground">
+                          {session?.user?.username}
+                        </span>
+                        <span className="truncate text-xs text-muted-foreground">
+                          {session?.user?.email}
+                        </span>
                       </div>
-                    </DropdownMenuLabel>
-                  </Link>
+                    </div>
+                  </DropdownMenuLabel>
+
                   <DropdownMenuSeparator className="bg-border/50" />
                   <DropdownMenuGroup>
                     <DropdownMenuItem
-                      className="cursor-pointer gap-2"
+                      className="cursor-pointer gap-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200"
                       onSelect={() => {
                         setActiveTab("api-keys");
                         setSettingsOpen(true);
@@ -296,7 +295,7 @@ export default function LynxSideBar({
                   <DropdownMenuSeparator className="bg-border/50" />
                   <DropdownMenuItem
                     className="cursor-pointer gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive focus:bg-destructive/10 focus:text-destructive transition-colors duration-200"
-                    onClick={() => signOut()}
+                    onClick={() => signOut({ redirect: false })}
                   >
                     <LogOut className="size-4" />
                     <span className="font-medium">Log out</span>
@@ -309,7 +308,11 @@ export default function LynxSideBar({
             <SidebarMenuItem>
               <SidebarMenuButton
                 size="lg"
-                onClick={() => signIn()}
+                onClick={() => {
+                  signIn("Credentials", {
+                    callbackUrl: `${window.location.href}`,
+                  });
+                }}
                 className="border border-border shadow-sm hover:bg-sidebar-accent transition-colors"
               >
                 <LogIn className="size-4" />

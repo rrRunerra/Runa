@@ -2,11 +2,18 @@
 
 import { useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
+import AccessDenied from "@/components/AccessDenied";
 
 function StartDmContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const userId = searchParams.get("userId");
+
+  const { data: session, status } = useSession();
+  if (status == "unauthenticated" || session?.user.role !== "ADMIN") {
+    return <AccessDenied />;
+  }
 
   useEffect(() => {
     if (!userId) {

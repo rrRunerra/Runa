@@ -10,8 +10,8 @@
     "lint": "echo 'Add lint script here'"
   },
   "dependencies": {
-    "@nestjs/common": "^11.1.15",
-    "@nestjs/core": "^11.1.15",
+    "@nestjs/common": "^11.1.16",
+    "@nestjs/core": "^11.1.16",
     "@runa/database": "workspace:*",
     "@runa/edupage": "workspace:*",
     "cors": "^2.8.6",

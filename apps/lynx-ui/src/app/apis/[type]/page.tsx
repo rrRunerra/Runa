@@ -41,9 +41,7 @@ export default async function ApiPage({
         description="Detailed API documentation"
         backHref="/apis"
         backLabel="Back to APIs"
-      >
-        <Key className="w-8 h-8 text-muted-foreground mr-3" />
-      </PageHeader>
+      ></PageHeader>
 
       {/* Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

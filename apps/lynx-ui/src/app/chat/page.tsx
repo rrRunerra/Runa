@@ -1,5 +1,6 @@
 "use client";
 
+import AccessDenied from "@/components/AccessDenied";
 import {
   Card,
   CardHeader,
@@ -8,11 +9,17 @@ import {
   useNavigation,
 } from "@runa/ui";
 import { ChevronRight } from "lucide-react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 
 export default function ChatPage() {
   const { getItem } = useNavigation();
   const chatItem = getItem("General", "Chat");
+
+  const { data: session, status } = useSession();
+  if (status == "unauthenticated" || session?.user.role !== "ADMIN") {
+    return <AccessDenied />;
+  }
 
   return (
     <div className="container mx-auto p-8 space-y-8">
@@ -26,8 +33,8 @@ export default function ChatPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {chatItem?.children && chatItem.children.length > 0 ? (
           chatItem.children.map((category) => (
-            <Link key={category.href} href={category.href}>
-              <Card className="h-full hover:scale-[1.02] transition-transform duration-300 cursor-pointer group bg-card border-border shadow-sm">
+            <Link key={category.href} href={category.href} className="block h-full">
+              <Card className="h-full hover:scale-[1.02] transform-gpu backface-visibility-hidden transition-all duration-300 cursor-pointer group shadow-sm">
                 <CardHeader className="p-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">

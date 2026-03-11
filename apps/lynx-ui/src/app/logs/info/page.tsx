@@ -1,7 +1,14 @@
 import { prisma, LynxLogType } from "@runa/database";
 import { LogTerminal } from "@/components/LogTerminal";
+import { auth } from "@runa/auth";
+import AccessDenied from "@/components/AccessDenied";
 
 export default async function InfoLogsPage() {
+  const session = await auth();
+  if (!session || session.user.role !== "ADMIN") {
+    return <AccessDenied />;
+  }
+
   const limit = 50;
   const initialLogs = await prisma.lynxLogs.findMany({
     where: {

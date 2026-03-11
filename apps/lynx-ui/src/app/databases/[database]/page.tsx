@@ -1,5 +1,7 @@
 import { PageHeader } from "@/components/PageHeader";
 import { DatabaseViewer } from "./DatabaseViewer";
+import AccessDenied from "@/components/AccessDenied";
+import { auth } from "@runa/auth";
 
 export default async function DatabasePage({
   params,
@@ -7,6 +9,11 @@ export default async function DatabasePage({
   params: Promise<{ database: string }>;
 }) {
   const { database } = await params;
+
+  const session = await auth();
+  if (!session || session.user.role !== "ADMIN") {
+    return <AccessDenied />;
+  }
 
   return (
     <div className="container mx-auto p-8 space-y-8">

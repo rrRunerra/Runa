@@ -39,7 +39,37 @@ export default function Page() {
         "callbackUrl",
       );
 
-      router.push(callbackUrl || "/dash");
+      let safeRedirect = "/dash";
+      if (callbackUrl) {
+        if (callbackUrl.startsWith("/")) {
+          safeRedirect = callbackUrl;
+        } else {
+          try {
+            const url = new URL(callbackUrl);
+            const allowedOrigins = [
+              process.env.NEXT_PUBLIC_AUTH,
+              process.env.NEXT_PUBLIC_LYNX,
+              "http://localhost:3000",
+              "http://localhost:3001",
+            ].filter(Boolean) as string[];
+
+            if (
+              allowedOrigins.some((origin) => {
+                try {
+                  return url.origin === new URL(origin).origin;
+                } catch {
+                  return false;
+                }
+              })
+            ) {
+              safeRedirect = callbackUrl;
+            }
+          } catch (e) {
+            // Invalid URL, fallback to /dash
+          }
+        }
+      }
+      router.push(safeRedirect);
     }
 
     setLoading(false);

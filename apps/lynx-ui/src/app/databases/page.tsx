@@ -1,5 +1,6 @@
 "use client";
 
+import AccessDenied from "@/components/AccessDenied";
 import {
   Card,
   CardHeader,
@@ -8,11 +9,17 @@ import {
   useNavigation,
 } from "@runa/ui";
 import { ChevronRight } from "lucide-react";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 
 export default function DatabasesPage() {
   const { getItem } = useNavigation();
   const databasesItem = getItem("Administration", "Databases");
+
+  const { data: session, status } = useSession();
+  if (status == "unauthenticated" || session?.user.role !== "ADMIN") {
+    return <AccessDenied />;
+  }
 
   return (
     <div className="container mx-auto p-8 space-y-8">

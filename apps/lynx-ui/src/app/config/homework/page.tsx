@@ -13,12 +13,19 @@ import {
 } from "@runa/ui";
 import { Loader2 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { useSession } from "next-auth/react";
+import AccessDenied from "@/components/AccessDenied";
 
 export default function HomeworkConfigPage() {
   const [guildId, setGuildId] = useState("");
   const [jsonInput, setJsonInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { showAlert } = useAlert();
+
+  const { data: session, status } = useSession();
+  if (status == "unauthenticated" || session?.user.role !== "ADMIN") {
+    return <AccessDenied />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/PageHeader";
+import { useSession } from "next-auth/react";
+import AccessDenied from "@/components/AccessDenied";
 
 function GuildsContent() {
   const searchParams = useSearchParams();
@@ -13,6 +15,11 @@ function GuildsContent() {
   const [guilds, setGuilds] = useState<
     { id: string; name: string; iconUrl: string }[]
   >([]);
+
+  const { data: session, status } = useSession();
+  if (status == "unauthenticated" || session?.user.role !== "ADMIN") {
+    return <AccessDenied />;
+  }
 
   useEffect(() => {
     async function getGuilds() {
@@ -41,8 +48,9 @@ function GuildsContent() {
           <Link
             key={guild.id}
             href={`/chat/guilds/${guild.id}${intent === "dm" ? "/dms" : ""}`}
+            className="block h-full"
           >
-            <Card className="h-full hover:scale-[1.02] transition-transform duration-300 cursor-pointer group bg-card border-border shadow-sm">
+            <Card className="h-full hover:scale-[1.02] transform-gpu backface-visibility-hidden transition-all duration-300 cursor-pointer group shadow-sm">
               <CardHeader className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">

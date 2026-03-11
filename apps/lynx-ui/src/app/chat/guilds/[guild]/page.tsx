@@ -1,6 +1,9 @@
+import AccessDenied from "@/components/AccessDenied";
+import { auth } from "@runa/auth";
 import { Card, CardHeader, CardTitle, Badge, cn } from "@runa/ui";
 import { ChevronRight, ChevronLeft, Hash, Volume2 } from "lucide-react";
 import Link from "next/link";
+import { PageHeader } from "@/components/PageHeader";
 
 // TYPE 2 = VOICE
 // TYPE 0 = TEXT
@@ -55,26 +58,20 @@ export default async function ChannelsPage({
   const { guild } = await params;
   const channels: Channel[] = await getChannels(guild);
 
+  const session = await auth();
+  if (!session || session.user.role !== "ADMIN") {
+    return <AccessDenied />;
+  }
+
   return (
     <div className="container mx-auto p-8 space-y-8 relative">
-      {/* Header */}
-      <div className="relative z-10 flex flex-col gap-4">
-        <Link
-          href="/chat/guilds"
-          className="flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
-        >
-          <ChevronLeft className="w-4 h-4 mr-1" />
-          Back to Guilds
-        </Link>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">
-            Channels
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Select a channel in Guild {guild} to send messages
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Channels"
+        description={`Select a channel in Guild ${guild} to send messages`}
+        backHref="/chat/guilds"
+        backLabel="Back to Guilds"
+        className="relative z-10"
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
         {channels && channels.length > 0 ? (
@@ -87,27 +84,33 @@ export default async function ChannelsPage({
                 <Link
                   key={channel.id}
                   href={`/chat/guilds/${guild}/${channel.id}`}
+                  className="block h-full"
                 >
-                  <Card className="h-full hover:scale-[1.02] transition-transform duration-300 cursor-pointer group overflow-hidden bg-card border-border shadow-sm">
-                    <CardHeader>
+                  <Card className="h-full hover:scale-[1.02] transform-gpu backface-visibility-hidden transition-all duration-300 cursor-pointer group shadow-sm overflow-hidden bg-card border-border">
+                    <CardHeader className="p-6">
                       <div className="flex items-center justify-between">
-                        <div
-                          className={cn(
-                            "p-2.5 rounded-lg border relative overflow-hidden transition-colors",
-                            isVoice
-                              ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500"
-                              : "bg-primary/10 border-primary/20 text-primary",
-                            channel.nsfw &&
-                              "bg-destructive/10 border-destructive/20 text-destructive",
-                          )}
-                        >
-                          <div className="relative z-10">
-                            {isVoice ? (
-                              <Volume2 className="w-5 h-5" />
-                            ) : (
-                              <Hash className="w-5 h-5" />
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={cn(
+                              "p-2.5 rounded-lg border flex items-center justify-center transition-colors",
+                              isVoice
+                                ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500"
+                                : "bg-primary/10 border-primary/20 text-primary",
+                              channel.nsfw &&
+                                "bg-destructive/10 border-destructive/20 text-destructive",
                             )}
+                          >
+                            <div className="relative z-10">
+                              {isVoice ? (
+                                <Volume2 className="w-5 h-5" />
+                              ) : (
+                                <Hash className="w-5 h-5" />
+                              )}
+                            </div>
                           </div>
+                          <CardTitle className="text-xl text-foreground flex items-center gap-2 truncate">
+                            {channel.name}
+                          </CardTitle>
                         </div>
                         <div className="flex items-center gap-2">
                           {channel.nsfw && (
@@ -121,9 +124,6 @@ export default async function ChannelsPage({
                           <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
                         </div>
                       </div>
-                      <CardTitle className="mt-4 text-xl text-foreground flex items-center gap-2 truncate">
-                        {channel.name}
-                      </CardTitle>
                     </CardHeader>
                   </Card>
                 </Link>
