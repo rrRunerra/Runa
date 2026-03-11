@@ -1,11 +1,7 @@
 import {
-  ApplicationCommandOptionChannelTypesMixin,
-  ApplicationCommandOptionType,
-  ChannelType,
   ChatInputCommandInteraction,
   EmbedBuilder,
   MessageFlags,
-  PermissionFlagsBits,
 } from "discord.js";
 import { Command } from "../../structures/Command";
 import { client } from "../../index";
