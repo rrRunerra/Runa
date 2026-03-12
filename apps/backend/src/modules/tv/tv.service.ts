@@ -71,6 +71,9 @@ export class TvService {
   }
 
   public async getTv(id: string): Promise<Media> {
+    if (!/^\d+$/.test(id)) {
+      throw new Error('Invalid id format');
+    }
     if (!this.token) {
       await this.setTheTvDbToken();
     }

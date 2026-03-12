@@ -76,9 +76,9 @@ export class EdupageUtils {
 
   private extractVideoId(link: string): string | null {
     const regex =
-      /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|\S*?[?&]v=)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+      /youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})|youtu\.be\/([a-zA-Z0-9_-]{11})/;
     const match = link.match(regex);
-    return match ? match[1] : null;
+    return match ? match[1] || match[2] : null;
   }
 
   public chunkString(str: string, length: number): string[] {

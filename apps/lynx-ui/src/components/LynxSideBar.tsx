@@ -1,17 +1,6 @@
 "use client";
 
-import {
-  BadgeCheck,
-  Bell,
-  Bot,
-  ChevronRight,
-  ChevronsUpDown,
-  HomeIcon,
-  Key,
-  LogIn,
-  LogOut,
-  Settings,
-} from "lucide-react";
+import { ChevronRight, ChevronsUpDown, Key, LogIn, LogOut } from "lucide-react";
 import { signIn, signOut, useSession } from "next-auth/react";
 import Link from "next/link";
 import React, { useState } from "react";
@@ -36,7 +25,6 @@ import {
   NavbarConfig,
   useNavigation,
 } from "@runa/ui";
-import { usePathname } from "next/navigation";
 import {
   Sidebar,
   SidebarHeader,
@@ -53,7 +41,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "./sidebar";
-import { apps } from "@/config/apps";
+import { apps } from "../../../../appConfig";
 
 export default function LynxSideBar({
   navConfig,
@@ -66,11 +54,9 @@ export default function LynxSideBar({
   const { navbarConfig } = useNavigation(navConfig as any);
 
   const { isMobile } = useSidebar();
-  const pathname = usePathname();
 
   const [activeApp, setActiveApp] = useState(apps[0]);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("appearance");
 
   if (!activeApp) return null;
 
@@ -284,7 +270,6 @@ export default function LynxSideBar({
                     <DropdownMenuItem
                       className="cursor-pointer gap-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200"
                       onSelect={() => {
-                        setActiveTab("api-keys");
                         setSettingsOpen(true);
                       }}
                     >

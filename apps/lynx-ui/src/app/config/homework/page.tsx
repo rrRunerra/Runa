@@ -23,7 +23,7 @@ export default function HomeworkConfigPage() {
   const { showAlert } = useAlert();
 
   const { data: session, status } = useSession();
-  if (status == "unauthenticated" || session?.user.role !== "ADMIN") {
+  if (status === "unauthenticated" || session?.user.role !== "ADMIN") {
     return <AccessDenied />;
   }
 

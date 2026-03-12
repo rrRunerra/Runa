@@ -35,6 +35,6 @@ export default class PingCommand extends Command {
       content: `Ping?`,
       flags: MessageFlags.Ephemeral,
     });
-    interaction.editReply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [embed] });
   }
 }

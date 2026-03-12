@@ -23,9 +23,11 @@ export class APIHandler extends Handler {
       path.resolve(filepath),
     );
 
+    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(",") || [];
     this.app.use(
       cors({
-        origin: "*",
+        origin: allowedOrigins.length > 0 ? allowedOrigins : false,
+        credentials: true,
       }),
     );
     this.app.use(express.json());

@@ -6,6 +6,12 @@ export async function GET(req: NextRequest) {
   if (!guild) {
     return NextResponse.json({ error: "GuildID is required" }, { status: 400 });
   }
+  if (!/^\d{17,20}$/.test(guild)) {
+    return NextResponse.json(
+      { error: "Invalid guild format" },
+      { status: 400 },
+    );
+  }
   const token = process.env.LYNX_TOKEN!;
 
   const res = await fetch(

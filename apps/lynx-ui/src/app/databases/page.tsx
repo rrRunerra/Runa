@@ -17,7 +17,7 @@ export default function DatabasesPage() {
   const databasesItem = getItem("Administration", "Databases");
 
   const { data: session, status } = useSession();
-  if (status == "unauthenticated" || session?.user.role !== "ADMIN") {
+  if (status === "unauthenticated" || session?.user.role !== "ADMIN") {
     return <AccessDenied />;
   }
 

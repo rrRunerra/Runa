@@ -40,7 +40,7 @@ export async function getDatabaseRows(
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : "Failed to fetch data";
-    console.error(`Error fetching rows for ${modelName}:`, error);
+    console.error({ modelName }, "Error fetching rows:", error);
     return { error: message };
   }
 }
@@ -64,7 +64,7 @@ export async function deleteDatabaseRow(
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : "Failed to delete row";
-    console.error(`Error deleting row from ${modelName}:`, error);
+    console.error({ modelName }, "Error deleting row:", error);
     return { error: message };
   }
 }
@@ -93,7 +93,7 @@ export async function updateDatabaseRow(
   } catch (error: unknown) {
     const message =
       error instanceof Error ? error.message : "Failed to update row";
-    console.error(`Error updating row in ${modelName}:`, error);
+    console.error({ modelName }, "Error updating row:", error);
     return { error: message };
   }
 }

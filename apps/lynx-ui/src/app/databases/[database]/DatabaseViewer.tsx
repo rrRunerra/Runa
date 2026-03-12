@@ -92,11 +92,9 @@ export function DatabaseViewer({ modelName }: DatabaseViewerProps) {
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasMore && !loading) {
-          setPage((prev) => {
-            const nextPage = prev + 1;
-            fetchRows(nextPage);
-            return nextPage;
-          });
+          const nextPage = page + 1;
+          setPage(nextPage);
+          fetchRows(nextPage);
         }
       },
       { threshold: 1.0 },
@@ -107,7 +105,7 @@ export function DatabaseViewer({ modelName }: DatabaseViewerProps) {
     }
 
     return () => observer.disconnect();
-  }, [hasMore, loading]);
+  }, [hasMore, loading, page]);
 
   const handleDelete = async (row: Record<string, unknown>) => {
     if (!confirm("Are you sure you want to delete this row?")) return;

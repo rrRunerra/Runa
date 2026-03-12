@@ -8,6 +8,13 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "guildId is required" }, { status: 400 });
   }
 
+  if (!/^\d{17,20}$/.test(guildId)) {
+    return NextResponse.json(
+      { error: "Invalid guildId format" },
+      { status: 400 },
+    );
+  }
+
   const lynxApiUrl = process.env.LYNX_API_URL;
   try {
     const res = await fetch(`${lynxApiUrl}/guilds/${guildId}/getUsers`, {

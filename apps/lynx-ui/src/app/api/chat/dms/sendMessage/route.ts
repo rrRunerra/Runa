@@ -11,6 +11,19 @@ export async function POST(req: Request) {
     );
   }
 
+  if (userId && !/^\d{17,20}$/.test(userId)) {
+    return NextResponse.json(
+      { error: "Invalid userId format" },
+      { status: 400 },
+    );
+  }
+  if (channelId && !/^\d{17,20}$/.test(channelId)) {
+    return NextResponse.json(
+      { error: "Invalid channelId format" },
+      { status: 400 },
+    );
+  }
+
   const lynxApiUrl = process.env.LYNX_API_URL;
   try {
     const res = await fetch(`${lynxApiUrl}/dms/sendMessage`, {
