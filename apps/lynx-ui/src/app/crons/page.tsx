@@ -2,9 +2,9 @@
 
 import {
   Card,
+  CardContent,
   CardHeader,
   CardTitle,
-  CardContent,
   useNavigation,
 } from "@runa/ui";
 import { ChevronRight } from "lucide-react";

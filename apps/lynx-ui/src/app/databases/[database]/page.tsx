@@ -1,7 +1,7 @@
+import { auth } from "@runa/auth";
+import AccessDenied from "@/components/AccessDenied";
 import { PageHeader } from "@/components/PageHeader";
 import { DatabaseViewer } from "./DatabaseViewer";
-import AccessDenied from "@/components/AccessDenied";
-import { auth } from "@runa/auth";
 
 export default async function DatabasePage({
   params,

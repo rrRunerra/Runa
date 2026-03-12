@@ -1,10 +1,10 @@
-import { Card, CardHeader, CardTitle, Button } from "@runa/ui";
-import { ChevronRight, MessageSquare, User as UserIcon } from "lucide-react";
-import Link from "next/link";
-import Image from "next/image";
-import { PageHeader } from "@/components/PageHeader";
 import { auth } from "@runa/auth";
+import { Button, Card, CardHeader, CardTitle } from "@runa/ui";
+import { ChevronRight, MessageSquare, User as UserIcon } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 import AccessDenied from "@/components/AccessDenied";
+import { PageHeader } from "@/components/PageHeader";
 
 interface DMChannel {
   id: string;

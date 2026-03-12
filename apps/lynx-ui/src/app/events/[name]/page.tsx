@@ -1,9 +1,8 @@
-import { Card, CardHeader, CardTitle, CardContent, Badge } from "@runa/ui";
-import { Zap, Info, Radio } from "lucide-react";
-import { PageHeader } from "@/components/PageHeader";
-
+import { Badge, Card, CardContent, CardHeader, CardTitle } from "@runa/ui";
+import { Radio } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { PageHeader } from "@/components/PageHeader";
 
 async function getEvent(name: string) {
   try {

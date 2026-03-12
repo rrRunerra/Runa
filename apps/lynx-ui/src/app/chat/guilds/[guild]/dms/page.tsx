@@ -1,10 +1,10 @@
-import { Card, CardHeader, CardTitle, cn } from "@runa/ui";
-import { ChevronRight, User as UserIcon } from "lucide-react";
-import Link from "next/link";
-import Image from "next/image";
-import { PageHeader } from "@/components/PageHeader";
 import { auth } from "@runa/auth";
+import { Card, CardHeader, CardTitle, cn } from "@runa/ui";
+import { ChevronRight } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
 import AccessDenied from "@/components/AccessDenied";
+import { PageHeader } from "@/components/PageHeader";
 
 interface GuildMember {
   id: string;
@@ -50,31 +50,35 @@ export default async function MemberGridPage({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {members && members.length > 0 ? (
           members.map((member) => (
-            <Link key={member.id} href={`/chat/dms/start?userId=${member.id}`} className="block h-full">
+            <Link
+              key={member.id}
+              href={`/chat/dms/start?userId=${member.id}`}
+              className="block h-full"
+            >
               <Card className="h-full hover:scale-[1.02] transform-gpu backface-visibility-hidden transition-all duration-300 cursor-pointer group shadow-sm overflow-hidden bg-card border-border">
                 <CardHeader className="p-6">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="relative">
                         <div className="w-12 h-12 rounded-full border border-border overflow-hidden flex items-center justify-center bg-accent/10">
-                        <Image
-                          src={member.avatarURL}
-                          alt=""
-                          width={48}
-                          height={48}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div
-                        className={cn(
-                          "absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-card",
-                          member.status === "online"
-                            ? "bg-emerald-500"
-                            : member.status === "idle"
-                              ? "bg-yellow-500"
-                              : member.status === "dnd"
-                                ? "bg-rose-500"
-                                : "bg-zinc-500",
+                          <Image
+                            src={member.avatarURL}
+                            alt=""
+                            width={48}
+                            height={48}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div
+                          className={cn(
+                            "absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-card",
+                            member.status === "online"
+                              ? "bg-emerald-500"
+                              : member.status === "idle"
+                                ? "bg-yellow-500"
+                                : member.status === "dnd"
+                                  ? "bg-rose-500"
+                                  : "bg-zinc-500",
                           )}
                         />
                       </div>

@@ -1,8 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@astral/database";
+import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { useSession } from "next-auth/react";
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);

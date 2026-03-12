@@ -1,9 +1,9 @@
+import { auth } from "@runa/auth";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
-import MessageInput from "./MessageInput";
-import LiveMessageList from "./LiveMessageList";
-import { auth } from "@runa/auth";
 import AccessDenied from "@/components/AccessDenied";
+import LiveMessageList from "./LiveMessageList";
+import MessageInput from "./MessageInput";
 
 async function getChatContext(guildId: string, channelId: string) {
   const token = process.env.LYNX_TOKEN!;
@@ -108,7 +108,9 @@ export default async function Page({
             </span>
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-2 mt-1">
-            <span className="text-muted-foreground font-light opacity-50">#</span>
+            <span className="text-muted-foreground font-light opacity-50">
+              #
+            </span>
             {context.channelName}
           </h1>
         </div>

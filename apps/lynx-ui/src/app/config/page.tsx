@@ -1,7 +1,7 @@
 "use client";
 
-import { Card, CardHeader, CardTitle, CardDescription } from "@runa/ui";
-import { ChevronRight, ScrollText, Dice1 } from "lucide-react";
+import { Card, CardDescription, CardHeader, CardTitle } from "@runa/ui";
+import { ChevronRight, Dice1, ScrollText } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import AccessDenied from "@/components/AccessDenied";

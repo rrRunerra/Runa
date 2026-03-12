@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "../../../../packages/ui/src/index.css";
 
-import { SidebarInset } from "@/components/sidebar";
-import Providers from "./providers";
 import LynxSideBar from "@/components/LynxSideBar";
+import { SidebarInset } from "@/components/sidebar";
 import { lynxSidebarConfig } from "@/config/lynxSidebarConfig";
+import Providers from "./providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",

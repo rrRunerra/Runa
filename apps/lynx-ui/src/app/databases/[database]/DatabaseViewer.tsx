@@ -1,29 +1,29 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
 import {
-  getDatabaseRows,
-  deleteDatabaseRow,
-  updateDatabaseRow,
-} from "@/actions/database";
-import {
+  Button,
   Card,
+  CardContent,
   CardHeader,
   CardTitle,
-  CardContent,
-  Button,
+  cn,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
   Input,
   Label,
   Textarea,
   useAlert,
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  cn,
 } from "@runa/ui";
-import { Loader2, Database, Trash2, Edit, MoreHorizontal } from "lucide-react";
+import { Database, Edit, Loader2, MoreHorizontal, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  deleteDatabaseRow,
+  getDatabaseRows,
+  updateDatabaseRow,
+} from "@/actions/database";
 
 import {
   Dialog,
@@ -86,7 +86,7 @@ export function DatabaseViewer({ modelName }: DatabaseViewerProps) {
     Promise.resolve().then(() => {
       fetchRows(1, true);
     });
-  }, [modelName]);
+  }, [fetchRows]);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -105,7 +105,7 @@ export function DatabaseViewer({ modelName }: DatabaseViewerProps) {
     }
 
     return () => observer.disconnect();
-  }, [hasMore, loading, page]);
+  }, [hasMore, loading, page, fetchRows]);
 
   const handleDelete = async (row: Record<string, unknown>) => {
     if (!confirm("Are you sure you want to delete this row?")) return;
@@ -144,14 +144,14 @@ export function DatabaseViewer({ modelName }: DatabaseViewerProps) {
   const handleSaveEdit = async () => {
     setIsSaving(true);
     const keyField = getPrimaryKey(editingRow!);
-    const idValue = editingRow![keyField];
+    const idValue = editingRow?.[keyField];
 
     // Process data: coerce types to match original row types
     const processedData: Record<string, unknown> = {};
     const errors: string[] = [];
 
     Object.keys(editingRow!).forEach((key) => {
-      const originalValue = editingRow![key];
+      const originalValue = editingRow?.[key];
       const newValue = editFormData[key];
       const originalType = typeof originalValue;
 
@@ -166,7 +166,7 @@ export function DatabaseViewer({ modelName }: DatabaseViewerProps) {
         if (typeof newValue === "string") {
           try {
             processedData[key] = JSON.parse(newValue);
-          } catch (e) {
+          } catch (_e) {
             errors.push(`${key}: Invalid JSON format`);
             processedData[key] = newValue;
           }
@@ -179,7 +179,7 @@ export function DatabaseViewer({ modelName }: DatabaseViewerProps) {
       // Handle number fields
       if (originalType === "number") {
         const parsed = Number(newValue);
-        if (isNaN(parsed)) {
+        if (Number.isNaN(parsed)) {
           errors.push(`${key}: Expected a number`);
           processedData[key] = newValue;
         } else {
@@ -254,7 +254,7 @@ export function DatabaseViewer({ modelName }: DatabaseViewerProps) {
     );
   }
 
-  const columns = rows.length > 0 ? Object.keys(rows[0]) : [];
+  const _columns = rows.length > 0 ? Object.keys(rows[0]) : [];
 
   return (
     <div className="space-y-6">

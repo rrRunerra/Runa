@@ -6,7 +6,6 @@ import {
   EmbedBuilder,
   Events,
   MessageFlags,
-  PermissionFlagsBits,
   PermissionsBitField,
 } from "discord.js";
 import { Event } from "../structures/Event";

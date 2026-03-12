@@ -56,24 +56,23 @@ Synchronizes local command definitions with Discord.
     );
 
     if (globalCommandList.size > 0) {
-      const globalCommands: any = await rest
+      await rest
         .put(Routes.applicationCommands(clientId), {
           body: this.GetJson(globalCommandList),
         })
-        .then((c: any) => {
-          this.logger.log(`Succesfully loaded ${c.length} global (/) commands`);
+        .then((c: unknown) => {
+          this.logger.log(
+            `Succesfully loaded ${(c as { length: number }).length} global (/) commands`,
+          );
         });
     }
 
     if (serverCommandList.size > 0) {
       for (const command of serverCommandList.values()) {
         for (const serverId of command.serverOnly) {
-          const cmd: any = await rest.put(
-            Routes.applicationGuildCommands(clientId, serverId),
-            {
-              body: this.GetJson(new Collection([[command.name, command]])),
-            },
-          );
+          await rest.put(Routes.applicationGuildCommands(clientId, serverId), {
+            body: this.GetJson(new Collection([[command.name, command]])),
+          });
           this.logger.log(
             `Loaded command: ${command.name} in server: ${serverId}`,
           );
@@ -85,15 +84,17 @@ Synchronizes local command definitions with Discord.
     }
 
     if (devCommandList.size > 0) {
-      const devCommands: any = await rest
+      await rest
         .put(
           Routes.applicationGuildCommands(clientId, process.env.DEV_SERVER!),
           {
             body: this.GetJson(devCommandList),
           },
         )
-        .then((c: any) => {
-          this.logger.log(`Succesfully loaded ${c.length} dev (/) commands`);
+        .then((c: unknown) => {
+          this.logger.log(
+            `Succesfully loaded ${(c as { length: number }).length} dev (/) commands`,
+          );
         });
     }
   }

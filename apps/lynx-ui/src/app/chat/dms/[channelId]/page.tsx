@@ -1,9 +1,9 @@
+import { auth } from "@runa/auth";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
-import MessageInput from "../../guilds/[guild]/[guild_channel]/MessageInput";
-import LiveMessageList from "../../guilds/[guild]/[guild_channel]/LiveMessageList";
-import { auth } from "@runa/auth";
 import AccessDenied from "@/components/AccessDenied";
+import LiveMessageList from "../../guilds/[guild]/[guild_channel]/LiveMessageList";
+import MessageInput from "../../guilds/[guild]/[guild_channel]/MessageInput";
 
 async function getDmContext(channelId: string) {
   const token = process.env.LYNX_TOKEN!;

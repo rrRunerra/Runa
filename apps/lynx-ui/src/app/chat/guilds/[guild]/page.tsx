@@ -1,8 +1,8 @@
-import AccessDenied from "@/components/AccessDenied";
 import { auth } from "@runa/auth";
-import { Card, CardHeader, CardTitle, Badge, cn } from "@runa/ui";
-import { ChevronRight, ChevronLeft, Hash, Volume2 } from "lucide-react";
+import { Badge, Card, CardHeader, CardTitle, cn } from "@runa/ui";
+import { ChevronRight, Hash, Volume2 } from "lucide-react";
 import Link from "next/link";
+import AccessDenied from "@/components/AccessDenied";
 import { PageHeader } from "@/components/PageHeader";
 
 // TYPE 2 = VOICE

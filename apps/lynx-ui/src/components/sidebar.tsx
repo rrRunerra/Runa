@@ -1,25 +1,25 @@
 "use client";
 
-import * as React from "react";
-import { cva, type VariantProps } from "class-variance-authority";
-
-import { PanelLeftIcon } from "lucide-react";
 import {
   Button,
   cn,
   Input,
+  Separator,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
   Skeleton,
+  Slot,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-  Separator,
-  Slot,
   useIsMobile,
 } from "@runa/ui";
+import { cva, type VariantProps } from "class-variance-authority";
+
+import { PanelLeftIcon } from "lucide-react";
+import * as React from "react";
 
 import { Sheet } from "./sheet";
 
@@ -89,7 +89,7 @@ function SidebarProvider({
   // Helper to toggle the sidebar.
   const toggleSidebar = React.useCallback(() => {
     return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open);
-  }, [isMobile, setOpen, setOpenMobile]);
+  }, [isMobile, setOpen]);
 
   // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {
@@ -180,7 +180,7 @@ function SidebarProvider({
       window.removeEventListener("touchmove", handleTouchMove);
       window.removeEventListener("touchend", handleTouchEnd);
     };
-  }, [isMobile, openMobile, setOpenMobile]);
+  }, [isMobile, openMobile]);
 
   // We add a state so that we can do data-state="expanded" or "collapsed".
   // This makes it easier to style the sidebar with Tailwind classes.
@@ -196,7 +196,7 @@ function SidebarProvider({
       setOpenMobile,
       toggleSidebar,
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar],
+    [state, open, setOpen, isMobile, openMobile, toggleSidebar],
   );
 
   return (

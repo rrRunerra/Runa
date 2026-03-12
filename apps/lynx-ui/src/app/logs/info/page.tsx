@@ -1,7 +1,7 @@
-import { prisma, LynxLogType } from "@runa/database";
-import { LogTerminal } from "@/components/LogTerminal";
 import { auth } from "@runa/auth";
+import { LynxLogType, prisma } from "@runa/database";
 import AccessDenied from "@/components/AccessDenied";
+import { LogTerminal } from "@/components/LogTerminal";
 
 export default async function InfoLogsPage() {
   const session = await auth();
@@ -20,7 +20,7 @@ export default async function InfoLogsPage() {
     take: limit + 1,
   });
 
-  let nextCursor: number | undefined = undefined;
+  let nextCursor: number | undefined;
   if (initialLogs.length > limit) {
     const nextItem = initialLogs.pop();
     nextCursor = nextItem?.id;

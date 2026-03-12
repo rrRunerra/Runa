@@ -1,7 +1,7 @@
 // app/api/getMessages/route.ts
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   const res = await fetch(`${process.env.LYNX_API_URL}/guilds`, {
     method: "GET",
     headers: { "Content-Type": "application/json" },

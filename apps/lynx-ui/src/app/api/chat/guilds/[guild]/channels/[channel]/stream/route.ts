@@ -1,9 +1,9 @@
 export const dynamic = "force-dynamic";
 
-import { NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 
 export async function GET(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ guild: string; channel: string }> },
 ) {
   const { guild, channel } = await params;

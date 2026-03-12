@@ -1,6 +1,6 @@
 "use server";
 
-import { prisma, LynxLogType } from "@runa/database";
+import { LynxLogType, prisma } from "@runa/database";
 
 export interface LogStats {
   total: number;

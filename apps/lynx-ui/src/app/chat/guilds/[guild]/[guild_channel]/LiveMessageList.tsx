@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { FileText } from "lucide-react";
 import Image from "next/image";
+import { useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const MarkdownComponents: Record<string, React.FC<any>> = {
   // eslint-disable-line @typescript-eslint/no-explicit-any

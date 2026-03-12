@@ -1,25 +1,24 @@
 import {
+  Badge,
   Card,
+  CardContent,
   CardHeader,
   CardTitle,
-  CardContent,
-  Badge,
   CommandOptions,
 } from "@runa/ui";
 import {
-  Terminal,
-  Shield,
-  Clock,
   Book,
-  Users,
-  Server,
+  Clock,
   Lock,
   MessageSquare,
+  Server,
+  Shield,
+  Terminal,
+  Users,
 } from "lucide-react";
-import { PageHeader } from "@/components/PageHeader";
-
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { PageHeader } from "@/components/PageHeader";
 
 async function getCommand(name: string) {
   try {

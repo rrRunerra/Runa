@@ -1,10 +1,5 @@
 "use client";
 
-import { ChevronRight, ChevronsUpDown, Key, LogIn, LogOut } from "lucide-react";
-import { signIn, signOut, useSession } from "next-auth/react";
-import Link from "next/link";
-import React, { useState } from "react";
-
 import {
   Avatar,
   AvatarFallback,
@@ -22,26 +17,31 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  NavbarConfig,
+  type NavbarConfig,
   useNavigation,
 } from "@runa/ui";
+import { ChevronRight, ChevronsUpDown, Key, LogIn, LogOut } from "lucide-react";
+import Link from "next/link";
+import { signIn, signOut, useSession } from "next-auth/react";
+import type React from "react";
+import { useState } from "react";
+import { apps } from "../../../../appConfig";
 import {
   Sidebar,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuItem,
-  useSidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
   SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
   SidebarMenuAction,
   SidebarMenuButton,
+  SidebarMenuItem,
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
+  useSidebar,
 } from "./sidebar";
-import { apps } from "../../../../appConfig";
 
 export default function LynxSideBar({
   navConfig,
@@ -144,7 +144,7 @@ export default function LynxSideBar({
                             <Link href={item.href}>
                               {item.icon}
                               {item.label.length > 18
-                                ? item.label.slice(0, 18) + "..."
+                                ? `${item.label.slice(0, 18)}...`
                                 : item.label}
                             </Link>
                           </SidebarMenuButton>
@@ -153,7 +153,7 @@ export default function LynxSideBar({
                             <SidebarMenuButton tooltip={item.label}>
                               {item.icon}
                               {item.label.length > 18
-                                ? item.label.slice(0, 18) + "..."
+                                ? `${item.label.slice(0, 18)}...`
                                 : item.label}
                               <ChevronRight className="ml-auto size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                             </SidebarMenuButton>
@@ -178,7 +178,7 @@ export default function LynxSideBar({
                                       <Link href={child.href}>
                                         {child.icon}
                                         {child.label.length > 16
-                                          ? child.label.slice(0, 16) + "..."
+                                          ? `${child.label.slice(0, 16)}...`
                                           : child.label}
                                       </Link>
                                     </SidebarMenuSubButton>

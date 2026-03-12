@@ -1,4 +1,4 @@
-import { Theme } from "@astral/types";
+import type { Theme } from "@astral/types";
 
 export const THEMES: Theme[] = [
   {

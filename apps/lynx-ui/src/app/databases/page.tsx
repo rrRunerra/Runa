@@ -1,16 +1,16 @@
 "use client";
 
-import AccessDenied from "@/components/AccessDenied";
 import {
   Card,
+  CardContent,
   CardHeader,
   CardTitle,
-  CardContent,
   useNavigation,
 } from "@runa/ui";
 import { ChevronRight } from "lucide-react";
-import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
+import AccessDenied from "@/components/AccessDenied";
 
 export default function DatabasesPage() {
   const { getItem } = useNavigation();

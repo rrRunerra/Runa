@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { Send, Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { Button } from "@runa/ui";
+import { Loader2, Send } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 export default function MessageInput({
   guildId,

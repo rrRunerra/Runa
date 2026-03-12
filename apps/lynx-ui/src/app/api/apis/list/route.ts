@@ -1,7 +1,6 @@
-import { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   const data = await fetch(`${process.env.LYNX_API_URL}/apis/list`, {
     cache: "force-cache",
   });

@@ -1,7 +1,7 @@
-import { prisma } from "@runa/database";
-import { LogTerminal } from "@/components/LogTerminal";
 import { auth } from "@runa/auth";
+import { prisma } from "@runa/database";
 import AccessDenied from "@/components/AccessDenied";
+import { LogTerminal } from "@/components/LogTerminal";
 
 export default async function LogsPage() {
   const session = await auth();
@@ -17,7 +17,7 @@ export default async function LogsPage() {
     take: limit + 1,
   });
 
-  let nextCursor: number | undefined = undefined;
+  let nextCursor: number | undefined;
   if (initialLogs.length > limit) {
     const nextItem = initialLogs.pop();
     nextCursor = nextItem?.id;

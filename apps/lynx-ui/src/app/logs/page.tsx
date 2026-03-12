@@ -2,15 +2,14 @@
 
 import {
   Card,
+  CardContent,
   CardHeader,
   CardTitle,
-  CardContent,
   useNavigation,
 } from "@runa/ui";
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { useEffect } from "react";
 import AccessDenied from "@/components/AccessDenied";
 
 export default function LogsPage() {
@@ -18,7 +17,7 @@ export default function LogsPage() {
   const logsItem = getItem("Administration", "Logs");
 
   const { data: session, status } = useSession();
-  if (status == "unauthenticated") {
+  if (status === "unauthenticated") {
     return <AccessDenied />;
   }
 

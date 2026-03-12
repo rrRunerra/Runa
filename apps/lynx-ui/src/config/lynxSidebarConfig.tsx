@@ -1,22 +1,20 @@
 "use client";
-import { NavbarConfig } from "@runa/ui";
+import { CronsIcon, EventIcon, type NavbarConfig } from "@runa/ui";
 import {
-  Key,
-  Logs,
-  ScrollText,
-  Info,
-  Bug,
-  Database,
-  Settings,
-  Dice1,
-  Command,
-  CircleX,
   AlertTriangle,
+  Bug,
+  CircleX,
+  Command,
+  Database,
+  Dice1,
+  Info,
+  Key,
   List,
+  Logs,
   MessageSquare,
+  ScrollText,
+  Settings,
 } from "lucide-react";
-import { EventIcon } from "@runa/ui";
-import { CronsIcon } from "@runa/ui";
 
 async function safeFetch(url: string, fallback: Record<string, unknown>) {
   try {

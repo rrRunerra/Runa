@@ -1,5 +1,5 @@
-import type { NextConfig } from "next";
 import dotenv from "dotenv";
+import type { NextConfig } from "next";
 
 try {
   dotenv.config({ path: "../../.env" });

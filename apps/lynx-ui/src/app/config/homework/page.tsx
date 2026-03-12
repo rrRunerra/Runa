@@ -1,20 +1,20 @@
 "use client";
 
-import { useState } from "react";
 import {
+  Button,
   Card,
+  CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
-  CardDescription,
-  CardContent,
   Input,
-  Button,
   useAlert,
 } from "@runa/ui";
 import { Loader2 } from "lucide-react";
-import { PageHeader } from "@/components/PageHeader";
 import { useSession } from "next-auth/react";
+import { useState } from "react";
 import AccessDenied from "@/components/AccessDenied";
+import { PageHeader } from "@/components/PageHeader";
 
 export default function HomeworkConfigPage() {
   const [guildId, setGuildId] = useState("");
@@ -36,7 +36,7 @@ export default function HomeworkConfigPage() {
       let parsedChannels;
       try {
         parsedChannels = JSON.parse(jsonInput);
-      } catch (err) {
+      } catch (_err) {
         showAlert({
           type: "error",
           title: "Invalid JSON",

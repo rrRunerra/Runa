@@ -1,5 +1,5 @@
+import { ArrowLeft, ShieldAlert } from "lucide-react";
 import Link from "next/link";
-import { ShieldAlert, ArrowLeft } from "lucide-react";
 
 interface AccessDeniedProps {
   title?: string;

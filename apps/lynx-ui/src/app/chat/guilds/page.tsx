@@ -3,11 +3,11 @@
 import { Card, CardHeader, CardTitle } from "@runa/ui";
 import { ChevronRight, Server } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { PageHeader } from "@/components/PageHeader";
 import { useSession } from "next-auth/react";
+import { Suspense, useEffect, useState } from "react";
 import AccessDenied from "@/components/AccessDenied";
+import { PageHeader } from "@/components/PageHeader";
 
 function GuildsContent() {
   const searchParams = useSearchParams();
@@ -17,7 +17,7 @@ function GuildsContent() {
   >([]);
 
   const { data: session, status } = useSession();
-  if (status == "unauthenticated" || session?.user.role !== "ADMIN") {
+  if (status === "unauthenticated" || session?.user.role !== "ADMIN") {
     return <AccessDenied />;
   }
 

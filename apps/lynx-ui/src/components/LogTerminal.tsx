@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
-import { LogEntry, getLogs } from "../actions/getLogs";
-import { LogStats, getLogStats } from "../actions/getLogStats";
+import type { LynxLogType } from "@runa/database";
 import { cn } from "@runa/ui";
-import { LynxLogType } from "@runa/database";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { getLogStats, type LogStats } from "../actions/getLogStats";
+import { getLogs, type LogEntry } from "../actions/getLogs";
 
 interface LogTerminalProps {
   initialLogs: LogEntry[];
@@ -19,7 +19,7 @@ export function LogTerminal({
 }: LogTerminalProps) {
   // Use a Map to ensure uniqueness by ID if StrictMode fires twice
   const [logs, setLogs] = useState<LogEntry[]>(initialLogs);
-  const [ids, setIds] = useState(new Set(initialLogs.map((l) => l.id)));
+  const [_ids, setIds] = useState(new Set(initialLogs.map((l) => l.id)));
 
   const [cursor, setCursor] = useState<number | undefined | null>(
     initialCursor,
@@ -73,7 +73,7 @@ export function LogTerminal({
     };
     fetchFirstBatch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedContext, type]);
+  }, [debouncedContext, type, initialLogs, logs]);
 
   const loadMoreLogs = useCallback(async () => {
     if (loading || !hasMore || cursor === null || cursor === undefined) return;

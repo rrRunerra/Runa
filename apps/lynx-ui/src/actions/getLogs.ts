@@ -1,6 +1,6 @@
 "use server";
 
-import { prisma, LynxLogs, LynxLogType } from "@runa/database";
+import { type LynxLogs, type LynxLogType, prisma } from "@runa/database";
 
 export type LogEntry = LynxLogs;
 
@@ -24,7 +24,7 @@ export async function getLogs(
       },
     });
 
-    let nextCursor: number | undefined = undefined;
+    let nextCursor: number | undefined;
     if (logs.length > limit) {
       const nextItem = logs.pop();
       nextCursor = nextItem?.id;
