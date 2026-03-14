@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../providers/database/prisma.service';
 import type { Media, SearchMedia } from '../../common/types/types';
+import { NotFoundError } from 'rxjs';
 
 @Injectable()
 export class MangaService {
@@ -53,7 +54,7 @@ export class MangaService {
       id: item.id.toString(),
       title: {
         romaji: item.title.romaji,
-        english: item.title.english,
+        english: item.title.english ?? '',
       },
       coverImage: {
         large: item.coverImage.large,
@@ -161,6 +162,10 @@ export class MangaService {
     const data: AniListGetResponse = await aniListRes.json();
     const media = data.data.Media;
 
+    if (!media) {
+      throw new NotFoundError('Manga not found');
+    }
+
     return {
       id: media.id.toString(),
       title: media.title,
@@ -176,10 +181,11 @@ export class MangaService {
       genres: media.genres,
       source: media.source,
       tags: media.tags?.map((tag) => ({
-        id: tag.name, // Manga tags don't have IDs in the current query, using name
+        id: tag.name.toString(), // Manga tags don't have IDs in the current query, using name
         name: tag.name,
         rank: tag.rank,
       })),
+
       averageScore: media.averageScore,
       popularity: media.popularity,
       favourites: media.favourites,
@@ -190,7 +196,11 @@ export class MangaService {
         format: edge.node.format,
         type: edge.node.type,
       })),
-      externalLinks: media.externalLinks,
+      externalLinks: media.externalLinks.map((link) => ({
+        id: link.id.toString(),
+        url: link.url,
+        site: link.site,
+      })),
       trailers: [],
       staff: media.staff?.edges.map((edge) => ({
         id: edge.node.id.toString(),

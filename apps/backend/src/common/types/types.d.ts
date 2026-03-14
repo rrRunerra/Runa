@@ -2,7 +2,7 @@ export interface SearchMedia {
   id: string;
   title: {
     romaji: string;
-    english: string;
+    english?: string;
   };
   coverImage: {
     large: string;
@@ -67,35 +67,34 @@ export interface Media {
   id: string;
   title: {
     romaji: string;
-    english?: string;
-    native?: string;
+    english?: string | null;
+    native?: string | null;
   };
   coverImage: {
-    extraLarge?: string;
-    large: string;
-    color?: string;
+    extraLarge?: string | null;
+    large: string | null;
   };
-  bannerImage?: string;
+  bannerImage?: string | null;
   format: string;
   status: string;
   description: string;
-  startDate?: { year: number; month: number; day: number };
-  endDate?: { year: number; month: number; day: number };
-  season?: string;
-  seasonYear?: number;
-  episodes?: number;
-  duration?: number;
-  chapters?: number;
-  volumes?: number;
-  runtime?: number;
-  budget?: string;
-  boxOffice?: string;
-  genres: string[];
-  source?: string;
-  tags?: { name: string; rank?: number }[];
-  averageScore?: number;
-  popularity?: number;
-  favourites?: number;
+  startDate?: { year: number | null; month: number | null; day: number | null };
+  endDate?: { year: number | null; month: number | null; day: number | null };
+  season?: string | null;
+  seasonYear?: number | null;
+  episodes?: number | null;
+  duration?: number | null;
+  chapters?: number | null;
+  volumes?: number | null;
+  runtime?: number | null;
+  budget?: string | null;
+  boxOffice?: string | null;
+  genres: string[] | null;
+  source?: string | null;
+  tags?: { name: string; rank?: number }[] | null;
+  averageScore?: number | null;
+  popularity?: number | null;
+  favourites?: number | null;
   relations?: MediaRelation[];
   characters?: MediaCharacter[];
   trailers?: MediaTrailer[];

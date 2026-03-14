@@ -24,7 +24,7 @@ import { ChevronRight, ChevronsUpDown, Key, LogIn, LogOut } from "lucide-react";
 import Link from "next/link";
 import { signIn, signOut, useSession } from "next-auth/react";
 import type React from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { apps } from "../../../../appConfig";
 import {
   Sidebar,
@@ -58,6 +58,12 @@ export default function LynxSideBar({
   const [activeApp, setActiveApp] = useState(apps[0]);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  useEffect(() => {
+    const origin = window.location.origin;
+    const app = apps.find((app) => new URL(app.href).origin === origin);
+    if (app) setActiveApp(app);
+  }, []);
+
   if (!activeApp) return null;
 
   return (
@@ -86,7 +92,7 @@ export default function LynxSideBar({
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent
-                className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-xl bg-popover text-popover-foreground border border-border/50 shadow-md p-2"
+                className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-xl bg-popover text-popover-foreground shadow-md p-2"
                 align="start"
                 side={isMobile ? "bottom" : "right"}
                 sideOffset={12}
@@ -121,8 +127,8 @@ export default function LynxSideBar({
               : c.role === session?.user?.role,
           )
           .map((section, sectionIdx) => (
-            <SidebarGroup key={sectionIdx} className="mb-4">
-              <SidebarGroupLabel className="text-muted-foreground text-xs font-semibold uppercase tracking-wider mb-2">
+            <SidebarGroup key={sectionIdx} className="mb-1">
+              <SidebarGroupLabel className="text-muted-foreground text-xs font-semibold uppercase tracking-wider mb-1">
                 {section.section}
               </SidebarGroupLabel>
               <SidebarMenu className="gap-1.5">
@@ -238,7 +244,7 @@ export default function LynxSideBar({
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
-                  className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg bg-popover text-popover-foreground shadow-md border border-border/50"
+                  className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg bg-popover text-popover-foreground shadow-md p-2"
                   side={isMobile ? "bottom" : "right"}
                   align="end"
                   sideOffset={12}
@@ -266,20 +272,22 @@ export default function LynxSideBar({
                   </DropdownMenuLabel>
 
                   <DropdownMenuSeparator className="bg-border/50" />
+
                   <DropdownMenuGroup>
                     <DropdownMenuItem
-                      className="cursor-pointer gap-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200"
-                      onSelect={() => {
-                        setSettingsOpen(true);
-                      }}
+                      className="cursor-pointer gap-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200 p-2 rounded-md"
+                      asChild
                     >
-                      <Key className="size-4" />
-                      Api keys
+                      <Link href="/connections">
+                        <Key className="size-4" />
+                        Connections
+                      </Link>
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
+
                   <DropdownMenuSeparator className="bg-border/50" />
                   <DropdownMenuItem
-                    className="cursor-pointer gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive focus:bg-destructive/10 focus:text-destructive transition-colors duration-200"
+                    className="cursor-pointer gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive focus:bg-destructive/10 focus:text-destructive transition-colors duration-200 p-2 rounded-md"
                     onClick={() => signOut({ redirect: false })}
                   >
                     <LogOut className="size-4" />

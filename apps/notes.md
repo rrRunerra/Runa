@@ -11,3 +11,6 @@ LYNX:
 
 BACKEND:
 Port: 4000
+
+AQUILA:
+Port: 3002

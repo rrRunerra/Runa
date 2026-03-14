@@ -141,10 +141,10 @@ export class MovieService {
       characters:
         movie.characters?.map((c: any) => ({
           id: c.id.toString(),
-          name: c.name,
-          personName: c.personName,
-          image: c.image,
-          role: c.peopleType,
+          name: c.name ?? '',
+          personName: c.personName ?? '',
+          image: c.image ?? '',
+          role: c.peopleType ?? '',
         })) || [],
       studios:
         movie.studios?.map((s: any) => ({

@@ -8,7 +8,6 @@ import type { IConnection } from "@nestia/fetcher";
 import { PlainFetcher } from "@nestia/fetcher/lib/PlainFetcher";
 import type { Primitive, Resolved } from "typia";
 
-import type { SearchAnimeDto } from "../../../../apps/backend/src/modules/anime/dto/search-anime.dto";
 import type { AnimeSearchEntity } from "../../../../apps/backend/src/modules/anime/entities/anime-search.entity";
 import type { AnimeEntity } from "../../../../apps/backend/src/modules/anime/entities/anime.entity";
 
@@ -29,7 +28,7 @@ export async function search(
   });
 }
 export namespace search {
-  export type Query = Resolved<SearchAnimeDto>;
+  export type Query = Resolved<{ name: string }>;
   export type Output = Primitive<AnimeSearchEntity>;
 
   export const METADATA = {

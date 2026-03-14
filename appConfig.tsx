@@ -1,4 +1,4 @@
-import { Bot } from "lucide-react";
+import { Bot, List } from "lucide-react";
 import React from "react";
 
 export const apps: App[] = [
@@ -8,6 +8,13 @@ export const apps: App[] = [
     description: "Discord bot management",
     href: `${process.env.NEXT_PUBLIC_LYNX}`,
     color: "bg-purple-800",
+  },
+  {
+    name: "Aquila",
+    logo: <List className="size-4" />,
+    description: "Media tracker",
+    href: `${process.env.NEXT_PUBLIC_AQUILA}`,
+    color: "bg-blue-800",
   },
 ];
 

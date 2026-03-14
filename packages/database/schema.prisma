@@ -42,9 +42,15 @@ model ApiKey {
     @@index([keyPrefix])
 }
 
+enum AppOrigin {
+    AQUILA
+    LYNX
+}
+
 model Connections {
     id           String             @id @default(uuid())
     userId       String
+    appOrigin    AppOrigin
     connectionId String?
     createdAt    DateTime           @default(now())
     updatedAt    DateTime           @updatedAt

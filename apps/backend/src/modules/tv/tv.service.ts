@@ -155,7 +155,7 @@ export class TvService {
           id: c.id.toString(),
           name: c.name,
           personName: c.personName,
-          image: c.image,
+          image: c.image ?? '',
           role: c.peopleType,
         })) || [],
       studios:

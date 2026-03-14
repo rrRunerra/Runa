@@ -33,7 +33,9 @@ export type NavbarConfig = NavSection[];
 
 interface NavigationContextType {
   navbarConfig: NavbarConfig;
-  setNavbarConfig: (config: NavbarConfig) => void;
+  setNavbarConfig: (
+    config: NavbarConfig | ((prev: NavbarConfig) => NavbarConfig),
+  ) => void;
   getSection: (sectionName: string) => NavSection | undefined;
   getItem: (
     sectionName: string,

@@ -1,7 +1,7 @@
-import { prisma } from "@astral/database";
+import { prisma } from "@runa/database";
 import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@runa/auth";
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);

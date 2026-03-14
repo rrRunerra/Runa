@@ -61,7 +61,7 @@ export class AnimeService {
       id: item.id.toString(),
       title: {
         romaji: item.title.romaji,
-        english: item.title.english,
+        english: item.title.english ?? '',
       },
       coverImage: {
         large: item.coverImage.large,
