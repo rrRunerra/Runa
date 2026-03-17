@@ -1,3 +1,4 @@
+import { ConnectionLinkedTo } from '@runa/database';
 import {
   IsEnum,
   IsNotEmpty,
@@ -8,8 +9,8 @@ import {
 
 export enum ConnectionProvider {
   ANILIST = 'ANILIST',
-  THETVDB = 'THETVDB',
   MAL = 'MAL',
+  SIMKL = 'SIMKL',
 }
 
 export class UpsertConnectionDto {
@@ -40,4 +41,8 @@ export class UpsertConnectionDto {
   @IsString()
   @IsOptional()
   userId?: string;
+
+  @IsEnum(ConnectionLinkedTo)
+  @IsOptional()
+  linkedTo?: ConnectionLinkedTo;
 }

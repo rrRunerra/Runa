@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../providers/database/prisma.service';
-import { ConnectionProvider } from '@runa/database';
+import { ConnectionLinkedTo, ConnectionProvider } from '@runa/database';
 
 @Injectable()
 export class ConnectionService {
@@ -18,9 +18,12 @@ export class ConnectionService {
     return upper;
   }
 
-  async findAll(userId: string) {
+  async findAll(userId: string, linkedTo?: ConnectionLinkedTo) {
     return this.prisma.client.connections.findMany({
-      where: { userId },
+      where: {
+        userId,
+        linkedTo: linkedTo ?? undefined,
+      },
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
@@ -43,6 +46,7 @@ export class ConnectionService {
       refreshToken?: string;
       expiresAt?: Date;
       connectionId?: string;
+      linkedTo?: ConnectionLinkedTo;
     },
   ) {
     const provider = this.toProvider(data.provider);
@@ -57,6 +61,7 @@ export class ConnectionService {
         refreshToken: data.refreshToken,
         expiresAt: data.expiresAt,
         connectionId: data.connectionId,
+        linkedTo: data.linkedTo,
       },
       create: {
         userId,
@@ -66,6 +71,7 @@ export class ConnectionService {
         refreshToken: data.refreshToken,
         expiresAt: data.expiresAt,
         connectionId: data.connectionId,
+        linkedTo: data.linkedTo,
       },
     });
 
@@ -77,6 +83,7 @@ export class ConnectionService {
       createdAt: connection.createdAt,
       updatedAt: connection.updatedAt,
       expiresAt: connection.expiresAt,
+      linkedTo: connection.linkedTo,
     };
   }
 

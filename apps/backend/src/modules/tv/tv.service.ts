@@ -189,8 +189,8 @@ export class TvService {
                   ep.overviewTranslations?.find(
                     (t: any) => t.language === 'eng',
                   )?.overview || ep.overview,
-                image: ep.image,
-                airDate: ep.aired,
+                image: ep.image ?? '',
+                airDate: ep.aired ?? '',
               }))
               .sort((a: any, b: any) => a.number - b.number);
 

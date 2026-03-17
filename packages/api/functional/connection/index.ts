@@ -6,6 +6,7 @@
 //================================================================
 import type { IConnection } from "@nestia/fetcher";
 import { PlainFetcher } from "@nestia/fetcher/lib/PlainFetcher";
+import type { ConnectionLinkedTo } from "@runa/database";
 import type { Primitive } from "typia";
 
 import type { RemoveConnectionDto } from "../../../../apps/backend/src/modules/connection/dto/remove-connection.dto";
@@ -20,11 +21,12 @@ import type { ConnectionEntity } from "../../../../apps/backend/src/modules/conn
  */
 export async function findAll(
   connection: IConnection,
+  linkedTo?: ConnectionLinkedTo,
 ): Promise<findAll.Output> {
   return PlainFetcher.fetch(connection, {
     ...findAll.METADATA,
     template: findAll.METADATA.path,
-    path: findAll.path(),
+    path: findAll.path(linkedTo),
   });
 }
 export namespace findAll {
@@ -41,7 +43,20 @@ export namespace findAll {
     status: 200,
   } as const;
 
-  export const path = () => "/connection";
+  export const path = (linkedTo?: ConnectionLinkedTo) => {
+    const variables: URLSearchParams = new URLSearchParams();
+    for (const [key, value] of Object.entries({
+      linkedTo: linkedTo,
+    } as any))
+      if (undefined === value) continue;
+      else if (Array.isArray(value))
+        value.forEach((elem: any) => variables.append(key, String(elem)));
+      else variables.set(key, String(value));
+    const location: string = "/connection";
+    return 0 === variables.size
+      ? location
+      : `${location}?${variables.toString()}`;
+  };
 }
 
 /**

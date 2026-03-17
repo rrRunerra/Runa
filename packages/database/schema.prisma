@@ -42,24 +42,24 @@ model ApiKey {
     @@index([keyPrefix])
 }
 
-enum AppOrigin {
-    AQUILA
+enum ConnectionLinkedTo {
     LYNX
+    AQUILA
 }
 
 model Connections {
-    id           String             @id @default(uuid())
+    id           String              @id @default(uuid())
     userId       String
-    appOrigin    AppOrigin
     connectionId String?
-    createdAt    DateTime           @default(now())
-    updatedAt    DateTime           @updatedAt
+    createdAt    DateTime            @default(now())
+    updatedAt    DateTime            @updatedAt
     provider     ConnectionProvider
+    linkedTo     ConnectionLinkedTo?
     username     String?
     accessToken  String?
     expiresAt    DateTime?
     refreshToken String?
-    user         User               @relation(fields: [userId], references: [id])
+    user         User                @relation(fields: [userId], references: [id])
 
     @@unique([userId, provider])
     @@index([userId])

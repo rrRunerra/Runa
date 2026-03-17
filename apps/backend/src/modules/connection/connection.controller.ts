@@ -7,7 +7,9 @@ import {
   Param,
   UseGuards,
   Req,
+  Query,
 } from '@nestjs/common';
+import { ConnectionLinkedTo } from '@runa/database';
 import { ConnectionService } from './connection.service';
 import { DualAuthGuard } from '../../common/guards/auth.guard';
 import { TypedRoute } from '@nestia/core';
@@ -21,12 +23,15 @@ export class ConnectionController {
   constructor(private readonly connectionService: ConnectionService) {}
 
   @TypedRoute.Get()
-  async findAll(@Req() req: any): Promise<ConnectionEntity[]> {
+  async findAll(
+    @Req() req: any,
+    @Query('linkedTo') linkedTo?: ConnectionLinkedTo,
+  ): Promise<ConnectionEntity[]> {
     // Check if system override is provided in headers (safer for GET than Body)
     const userIdOverride = req.headers['x-user-id'];
     const userId =
       req.user.id === 'system' && userIdOverride ? userIdOverride : req.user.id;
-    return this.connectionService.findAll(userId);
+    return this.connectionService.findAll(userId, linkedTo);
   }
 
   @TypedRoute.Post()
@@ -45,6 +50,7 @@ export class ConnectionController {
       refreshToken: body.refreshToken,
       expiresAt: body.expiresAt ? new Date(body.expiresAt) : undefined,
       connectionId: body.connectionId,
+      linkedTo: body.linkedTo,
     });
   }
 
