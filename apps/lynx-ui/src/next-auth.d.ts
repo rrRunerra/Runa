@@ -10,9 +10,10 @@ declare module "next-auth" {
       displayName: string | null;
       avatarUrl: string | null;
       role: string;
+      passwordChangedAt?: number | null;
     };
     accessToken?: string;
-    passwordChangedAt?: number | null;
+    iat?: number;
   }
 
   interface User {
@@ -37,5 +38,7 @@ declare module "next-auth/jwt" {
     role: string;
     accessToken?: string;
     passwordChangedAt?: number | null;
+    iat?: number;
+    exp?: number;
   }
 }

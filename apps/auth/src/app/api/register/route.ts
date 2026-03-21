@@ -30,10 +30,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, data: result }, { status: 201 });
   } catch (error: any) {
     if (error.status) {
-      return NextResponse.json(
-        { message: error.message || "An error occurred" },
-        { status: error.status },
-      );
+      return NextResponse.json(error.message, { status: error.status });
     }
     return NextResponse.json(
       { message: "Internal Server Error" },

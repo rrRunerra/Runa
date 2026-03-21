@@ -103,6 +103,7 @@ export const authOptions: NextAuthOptions = {
         token.avatarUrl = u.avatarUrl;
         token.role = u.role;
         token.accessToken = u.accessToken;
+        token.iat = u.iat;
 
         // Store passwordChangedAt timestamp
         token.passwordChangedAt = u.passwordChangedAt

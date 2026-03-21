@@ -13,6 +13,7 @@ declare module "next-auth" {
       passwordChangedAt?: number | null;
     };
     accessToken?: string;
+    iat?: number;
   }
 
   interface User {
@@ -37,5 +38,6 @@ declare module "next-auth/jwt" {
     role: string;
     accessToken?: string;
     passwordChangedAt?: number | null;
+    iat?: number;
   }
 }

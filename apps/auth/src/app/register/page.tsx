@@ -65,9 +65,15 @@ export default function Page() {
           password,
         }),
       });
-      const data = await res.json();
+      let data = await res.json();
 
-      if (!res.ok) {
+      if (!data?.success) {
+        data = JSON.parse(data);
+      }
+
+      console.log(res);
+
+      if (!res.ok || res.status !== 201) {
         data.message?.forEach((message: string) => {
           const lowerMsg = message.toLowerCase();
           if (lowerMsg.includes("email")) {
