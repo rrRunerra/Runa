@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { UnauthorizedException, Injectable } from '@nestjs/common';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { SignJWT } from 'jose';
 import { PrismaService } from '../../providers/database/prisma.service';
@@ -12,7 +12,7 @@ export class AuthService {
     process.env.NEXTAUTH_SECRET,
   );
 
-  async login(data: LoginAuthDto) {
+  public async login(data: LoginAuthDto) {
     const user = await this.prisma.client.user.findFirst({
       where: {
         OR: [{ email: data.identifier }, { username: data.identifier }],
@@ -20,13 +20,13 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new BadRequestException('User not found');
+      throw new UnauthorizedException('User not found');
     }
 
     const passHash = await bcrypt.compare(data.password, user.passwordHash);
 
     if (!passHash) {
-      throw new BadRequestException('Invalid password');
+      throw new UnauthorizedException('Invalid password');
     }
 
     const token = await this.signToken(user);
@@ -45,7 +45,7 @@ export class AuthService {
     };
   }
 
-  async signToken(user: any) {
+  private async signToken(user: any) {
     return await new SignJWT({
       sub: user.id,
       email: user.email,

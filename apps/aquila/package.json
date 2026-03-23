@@ -10,7 +10,6 @@
     "format": "biome format --write"
   },
   "dependencies": {
-    "@runa/api": "workspace:*",
     "@runa/auth": "workspace:*",
     "@runa/ui": "workspace:*",
     "class-variance-authority": "0.7.1",

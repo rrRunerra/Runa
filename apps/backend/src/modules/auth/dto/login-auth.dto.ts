@@ -9,7 +9,7 @@ import {
 export class LoginAuthDto {
   @IsString()
   @IsNotEmpty()
-  identifier!: string;
+  identifier: string;
 
   @IsString()
   @MinLength(16, { message: 'Password must be at least 16 characters long' })
@@ -18,5 +18,5 @@ export class LoginAuthDto {
     message:
       'Password must contain at least 2 numbers, 1 uppercase letter, and 1 special character',
   })
-  password!: string;
+  password: string;
 }

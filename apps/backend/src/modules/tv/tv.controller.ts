@@ -1,5 +1,4 @@
-import { Controller, Param, UseGuards } from '@nestjs/common';
-import { TypedRoute, TypedQuery } from '@nestia/core';
+import { Controller, Param, UseGuards, Get, Query } from '@nestjs/common';
 import { TvService } from './tv.service';
 import { DualAuthGuard } from '../../common/guards/auth.guard';
 import { Public } from 'src/common/decorators/public.decorator';
@@ -13,15 +12,15 @@ export class TvController {
   constructor(private readonly tvService: TvService) {}
 
   @Public()
-  @TypedRoute.Get('search')
+  @Get('search')
   public async search(
-    @TypedQuery() query: SearchTvDto,
+    @Query() query: SearchTvDto,
   ): Promise<TvSearchEntity> {
     return this.tvService.search(query.name);
   }
 
   @Public()
-  @TypedRoute.Get(':id')
+  @Get(':id')
   public async getTv(@Param('id') id: string): Promise<TvEntity> {
     return this.tvService.getTv(id);
   }

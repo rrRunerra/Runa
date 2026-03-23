@@ -1,5 +1,4 @@
-import { Controller, Param, UseGuards } from '@nestjs/common';
-import { TypedRoute, TypedQuery } from '@nestia/core';
+import { Controller, Param, UseGuards, Get, Query } from '@nestjs/common';
 import { MovieService } from './movie.service';
 import { DualAuthGuard } from '../../common/guards/auth.guard';
 import { Public } from 'src/common/decorators/public.decorator';
@@ -13,15 +12,15 @@ export class MovieController {
   constructor(private readonly movieService: MovieService) {}
 
   @Public()
-  @TypedRoute.Get('search')
+  @Get('search')
   public async search(
-    @TypedQuery() query: SearchMovieDto,
+    @Query() query: SearchMovieDto,
   ): Promise<MovieSearchEntity> {
     return this.movieService.search(query.name);
   }
 
   @Public()
-  @TypedRoute.Get(':id')
+  @Get(':id')
   public async getMovie(@Param('id') id: string): Promise<MovieEntity> {
     return this.movieService.getMovie(id);
   }

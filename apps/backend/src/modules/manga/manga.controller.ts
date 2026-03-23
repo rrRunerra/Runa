@@ -1,5 +1,4 @@
-import { Controller, Param, UseGuards } from '@nestjs/common';
-import { TypedRoute, TypedQuery } from '@nestia/core';
+import { Controller, Param, UseGuards, Get, Query } from '@nestjs/common';
 import { MangaService } from './manga.service';
 import { DualAuthGuard } from '../../common/guards/auth.guard';
 import { Public } from '../../common/decorators/public.decorator';
@@ -13,15 +12,15 @@ export class MangaController {
   constructor(private readonly mangaService: MangaService) {}
 
   @Public()
-  @TypedRoute.Get('search')
+  @Get('search')
   async search(
-    @TypedQuery() query: SearchMangaDto,
+    @Query() query: SearchMangaDto,
   ): Promise<MangaSearchEntity> {
     return this.mangaService.search(query.name);
   }
 
   @Public()
-  @TypedRoute.Get(':id')
+  @Get(':id')
   async getManga(@Param('id') id: string): Promise<MangaEntity> {
     return this.mangaService.getManga(parseInt(id));
   }

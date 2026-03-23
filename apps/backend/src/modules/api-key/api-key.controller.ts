@@ -11,7 +11,6 @@ import {
 } from '@nestjs/common';
 import { ApiKeyService } from './api-key.service';
 import { DualAuthGuard } from '../../common/guards/auth.guard';
-import { TypedRoute } from '@nestia/core';
 import { CreateApiKeyDto } from './dto/create-api-key.dto';
 import { RegenerateApiKeyDto } from './dto/regenerate-api-key.dto';
 import { ApiKeyCreatedEntity, ApiKeyEntity } from './entities/api-key.entity';
@@ -21,29 +20,32 @@ import { ApiKeyCreatedEntity, ApiKeyEntity } from './entities/api-key.entity';
 export class ApiKeyController {
   constructor(private readonly apiKeyService: ApiKeyService) {}
 
-  @TypedRoute.Get('')
+  @Get('')
   async findAll(@Req() req: any): Promise<ApiKeyEntity[]> {
-    return this.apiKeyService.findAll(req.user.id);
+    return this.apiKeyService.findAllKeysByUser(req.user.id);
   }
 
-  @TypedRoute.Post('')
+  @Post('')
   async create(
     @Req() req: any,
     @Body() body: CreateApiKeyDto,
   ): Promise<ApiKeyCreatedEntity> {
-    return this.apiKeyService.create(req.user.id, body.name);
+    return this.apiKeyService.createKey(req.user.id, body.name);
   }
 
-  @TypedRoute.Put('')
+  @Put('')
   async regenerate(
     @Req() req: any,
     @Body() body: RegenerateApiKeyDto,
   ): Promise<ApiKeyCreatedEntity> {
-    return this.apiKeyService.regenerate(body.id, req.user.id);
+    return this.apiKeyService.regenerateKey(body.id, req.user.id);
   }
 
-  @TypedRoute.Delete(':id')
-  async remove(@Req() req: any, @Param('id') id: string): Promise<any> {
-    return this.apiKeyService.remove(id, req.user.id);
+  @Delete(':id')
+  async remove(
+    @Req() req: any,
+    @Param('id') id: string,
+  ): Promise<{ message: string }> {
+    return this.apiKeyService.deleteKey(id, req.user.id);
   }
 }

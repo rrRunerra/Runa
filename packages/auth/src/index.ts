@@ -1,7 +1,10 @@
 /// <reference path="./next-auth.d.ts" />
 import { getServerSession, NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { functional, IConnection } from "../../api";
+
+const API_URL = process.env.NEST_API_URL
+  ? process.env.NEST_API_URL
+  : `http://localhost:${process.env.NEST_PORT}`;
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -16,24 +19,26 @@ export const authOptions: NextAuthOptions = {
           throw new Error("Missing credentials");
         }
 
-        const connection: IConnection = {
-          host:
-            process.env.NEST_API_URL ??
-            `http://localhost:${process.env.NEST_PORT}`,
-        };
-
-        const res = await functional.auth.login(connection, {
-          identifier: credentials.identifier,
-          password: credentials.password,
+        const res = await fetch(`${API_URL}/auth/login`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            identifier: credentials.identifier,
+            password: credentials.password,
+          }),
         });
 
-        if (!res.user) {
-          throw new Error("Login failed");
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.message);
         }
 
         return {
-          ...res.user,
-          accessToken: res.token,
+          ...data.user,
+          accessToken: data.token,
         };
       },
     }),

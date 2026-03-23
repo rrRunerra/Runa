@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { functional } from "@runa/api";
-import type { IConnection } from "@runa/api";
+
+const API_URL = process.env.NEST_API_URL
+  ? process.env.NEST_API_URL
+  : `http://localhost:${process.env.NEST_PORT}`;
 
 export async function POST(req: Request) {
   const { email, password, username } = (await req.json()) as {
@@ -16,25 +18,23 @@ export async function POST(req: Request) {
     );
   }
 
-  const connection: IConnection = {
-    host: `http://localhost:${process.env.NEST_PORT}`,
-  };
-
-  try {
-    const result = await functional.user.create(connection, {
+  const res = await fetch(`${API_URL}/user/create`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
       email: email.toLowerCase(),
       username: username.toLowerCase(),
-      password: password,
-    });
+      password,
+    }),
+  });
 
-    return NextResponse.json({ success: true, data: result }, { status: 201 });
-  } catch (error: any) {
-    if (error.status) {
-      return NextResponse.json(error.message, { status: error.status });
-    }
-    return NextResponse.json(
-      { message: "Internal Server Error" },
-      { status: 500 },
-    );
+  const data = await res.json();
+
+  if (!res.ok) {
+    return NextResponse.json(data, { status: res.status });
   }
+
+  return NextResponse.json({ success: true, data }, { status: 201 });
 }

@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { auth } from "@runa/auth";
-import api, { IConnection } from "@runa/api";
 
-const NEST_URL =
-  process.env.NEST_API_URL ||
-  `http://localhost:${process.env.NEST_PORT || 4000}`;
+const API_URL = process.env.NEST_API_URL
+  ? process.env.NEST_API_URL
+  : `http://localhost:${process.env.NEST_PORT}`;
 
 const PROVIDERS: Record<string, any> = {
   anilist: {
@@ -160,17 +159,14 @@ export async function GET(
     // 2. Fetch profile info
     const profile = await provider.getProfile(accessToken);
 
-    const getApiConfig = (userId?: string): IConnection => ({
-      host: NEST_URL,
-      headers: {
-        "x-api-key": process.env.INTERNAL_API_KEY!,
-        ...(userId ? { "x-user-id": userId } : {}),
-      },
-    });
-
     // 3. Upsert connection in NestJS
-    try {
-      await api.functional.connection.upsert(getApiConfig(), {
+    const res = await fetch(`${API_URL}/connections`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.accessToken}`,
+      },
+      body: JSON.stringify({
         userId: session.user.id,
         provider: providerId.toUpperCase() as any,
         connectionId: profile.id,
@@ -179,10 +175,13 @@ export async function GET(
         refreshToken,
         expiresAt: expiresAt?.toISOString(),
         linkedTo: "AQUILA" as any,
-      });
-    } catch (err: any) {
-      console.error(`Failed to store connection in NestJS:`, err);
-      throw new Error(`Failed to store connection: ${err.message}`);
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message);
     }
 
     // Success! Redirect back to settings

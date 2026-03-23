@@ -46,9 +46,6 @@ importers:
 
   apps/aquila:
     dependencies:
-      '@runa/api':
-        specifier: workspace:*
-        version: link:../../packages/api
       '@runa/auth':
         specifier: workspace:*
         version: link:../../packages/auth
@@ -159,12 +156,6 @@ importers:
 
   apps/backend:
     dependencies:
-      '@nestia/core':
-        specifier: ^10.0.2
-        version: 10.0.2(@nestia/fetcher@10.0.2)(@nestjs/common@11.1.17(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.17)(reflect-metadata@0.2.2)(rxjs@7.8.2)(typia@11.0.3(@types/node@22.19.15)(typescript@5.9.3))
-      '@nestia/sdk':
-        specifier: ^10.0.2
-        version: 10.0.2(@nestia/core@10.0.2(@nestia/fetcher@10.0.2)(@nestjs/common@11.1.17(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.17)(reflect-metadata@0.2.2)(rxjs@7.8.2)(typia@11.0.3(@types/node@22.19.15)(typescript@5.9.3)))(@types/node@22.19.15)(typescript@5.9.3)
       '@nestjs/common':
         specifier: ^11.1.17
         version: 11.1.17(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -195,9 +186,6 @@ importers:
       jose:
         specifier: ^6.2.2
         version: 6.2.2
-      nestia:
-        specifier: ^10.0.2
-        version: 10.0.2(@types/node@22.19.15)
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -268,9 +256,6 @@ importers:
       ts-node:
         specifier: ^10.9.2
         version: 10.9.2(@types/node@22.19.15)(typescript@5.9.3)
-      ts-patch:
-        specifier: ^3.3.0
-        version: 3.3.0
       tsconfig-paths:
         specifier: ^4.2.0
         version: 4.2.0
@@ -4655,10 +4640,6 @@ packages:
     resolution: {integrity: sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q==}
     deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
 
-  global-prefix@4.0.0:
-    resolution: {integrity: sha512-w0Uf9Y9/nyHinEk5vMJKRie+wa4kR5hmDbEhGGds/kG1PwGLLHKRoNMeJOyCQjjBkANlnScqgzcFwGHgmgLkVA==}
-    engines: {node: '>=16'}
-
   globals@14.0.0:
     resolution: {integrity: sha512-oahGvuMGQlPw/ivIYBjVSrWAfWLBeku5tpPE2fOPLi+WHffIWbuh2tCjhyQhTBPMf5E9jDEH4FOmTYgYwbKwtQ==}
     engines: {node: '>=18'}
@@ -4817,10 +4798,6 @@ packages:
 
   inherits@2.0.4:
     resolution: {integrity: sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==}
-
-  ini@4.1.3:
-    resolution: {integrity: sha512-X7rqawQBvfdjS10YU1y1YVreA3SsLrW9dX2CewP2EbBJM4ypVNLDkO5y04gejPwKIY9lR+7r9gn3rFPt/kmWFg==}
-    engines: {node: ^14.17.0 || ^16.13.0 || >=18.0.0}
 
   inline-style-parser@0.2.7:
     resolution: {integrity: sha512-Nb2ctOyNR8DqQoR0OwRG95uNWIC0C1lCgf5Naz5H6Ji72KZ8OcFZLz2P5sNgwlyoJ8Yif11oMuYs5pBQa86csA==}
@@ -5290,10 +5267,6 @@ packages:
 
   keyv@5.6.0:
     resolution: {integrity: sha512-CYDD3SOtsHtyXeEORYRx2qBtpDJFjRTGXUtmNEMGyzYOKj1TE3tycdlho7kA1Ufx9OYWZzg52QFBGALTirzDSw==}
-
-  kind-of@6.0.3:
-    resolution: {integrity: sha512-dcS1ul+9tmeD95T+x28/ehLgd9mENa3LsvDTtzm3vyBEO7RPptvAD+t44WVXaUjTBRcrpFeFlC8WCruUR456hw==}
-    engines: {node: '>=0.10.0'}
 
   kleur@3.0.3:
     resolution: {integrity: sha512-eTIzlVOSUR+JxdDFepEYcBMtZ9Qqdef+rnzWdRZuMbOywu5tO2w2N7rqjoANZ5k9vywhL6Br1VRjUIgTQx4E8w==}
@@ -6533,11 +6506,6 @@ packages:
   resolve-pkg-maps@1.0.0:
     resolution: {integrity: sha512-seS2Tj26TBVOC2NIc2rOe2y2ZO7efxITtLZcGSOnHHNOQ7CkiUBfw0Iw2ck6xkIhPwLhKNLS8BO+hEpngQlqzw==}
 
-  resolve@1.22.11:
-    resolution: {integrity: sha512-RfqAvLnMl313r7c9oclB1HhUEAezcpLjz95wFH4LVuhk9JF/r22qmVP9AMmOU4vMX7Q8pN8jwNg/CSpdFnMjTQ==}
-    engines: {node: '>= 0.4'}
-    hasBin: true
-
   resolve@2.0.0-next.6:
     resolution: {integrity: sha512-3JmVl5hMGtJ3kMmB3zi3DL25KfkCEyy3Tw7Gmw7z5w8M9WlwoPFnIvwChzu1+cF3iaK3sp18hhPz8ANeimdJfA==}
     engines: {node: '>= 0.4'}
@@ -7093,10 +7061,6 @@ packages:
         optional: true
       '@swc/wasm':
         optional: true
-
-  ts-patch@3.3.0:
-    resolution: {integrity: sha512-zAOzDnd5qsfEnjd9IGy1IRuvA7ygyyxxdxesbhMdutt8AHFjD8Vw8hU2rMF89HX1BKRWFYqKHrO8Q6lw0NeUZg==}
-    hasBin: true
 
   tsconfck@2.1.2:
     resolution: {integrity: sha512-ghqN1b0puy3MhhviwO2kGF8SeMDNhEbnKxjK7h6+fvY9JAxqvXi8y5NAHSQv687OVboS2uZIByzGd45/YxrRHg==}
@@ -8731,26 +8695,6 @@ snapshots:
       '@tybys/wasm-util': 0.10.1
     optional: true
 
-  '@nestia/core@10.0.2(@nestia/fetcher@10.0.2)(@nestjs/common@11.1.17(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.17)(reflect-metadata@0.2.2)(rxjs@7.8.2)(typia@11.0.3(@types/node@22.19.15)(typescript@5.9.3))':
-    dependencies:
-      '@nestia/fetcher': 10.0.2
-      '@nestjs/common': 11.1.17(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@nestjs/core': 11.1.17(@nestjs/common@11.1.17(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/platform-express@11.1.17)(reflect-metadata@0.2.2)(rxjs@7.8.2)
-      '@samchon/openapi': 6.0.1
-      detect-ts-node: 1.0.5
-      get-function-location: 2.0.0
-      glob: 11.1.0
-      path-parser: 6.1.0
-      raw-body: 2.5.3
-      reflect-metadata: 0.2.2
-      rxjs: 7.8.2
-      tgrid: 1.2.1
-      typia: 11.0.3(@types/node@22.19.15)(typescript@5.9.3)
-      ws: 7.5.10
-    transitivePeerDependencies:
-      - bufferutil
-      - utf-8-validate
-
   '@nestia/core@10.0.2(@nestia/fetcher@10.0.2)(@nestjs/common@11.1.17(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.17)(reflect-metadata@0.2.2)(rxjs@7.8.2)(typia@11.0.3(@types/node@25.5.0)(typescript@5.9.3))':
     dependencies:
       '@nestia/fetcher': 10.0.2
@@ -8774,27 +8718,6 @@ snapshots:
   '@nestia/fetcher@10.0.2':
     dependencies:
       '@samchon/openapi': 6.0.1
-
-  '@nestia/sdk@10.0.2(@nestia/core@10.0.2(@nestia/fetcher@10.0.2)(@nestjs/common@11.1.17(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.17)(reflect-metadata@0.2.2)(rxjs@7.8.2)(typia@11.0.3(@types/node@22.19.15)(typescript@5.9.3)))(@types/node@22.19.15)(typescript@5.9.3)':
-    dependencies:
-      '@nestia/core': 10.0.2(@nestia/fetcher@10.0.2)(@nestjs/common@11.1.17(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.17)(reflect-metadata@0.2.2)(rxjs@7.8.2)(typia@11.0.3(@types/node@22.19.15)(typescript@5.9.3))
-      '@nestia/fetcher': 10.0.2
-      '@samchon/openapi': 6.0.1
-      cli: 1.0.1
-      get-function-location: 2.0.0
-      glob: 11.1.0
-      path-to-regexp: 6.3.0
-      prettier: 3.8.1
-      ts-node: 10.9.2(@types/node@22.19.15)(typescript@5.9.3)
-      tsconfck: 2.1.2(typescript@5.9.3)
-      tsconfig-paths: 4.2.0
-      tstl: 3.0.0
-      typia: 11.0.3(@types/node@22.19.15)(typescript@5.9.3)
-    transitivePeerDependencies:
-      - '@swc/core'
-      - '@swc/wasm'
-      - '@types/node'
-      - typescript
 
   '@nestia/sdk@10.0.2(@nestia/core@10.0.2(@nestia/fetcher@10.0.2)(@nestjs/common@11.1.17(class-transformer@0.5.1)(class-validator@0.14.4)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@11.1.17)(reflect-metadata@0.2.2)(rxjs@7.8.2)(typia@11.0.3(@types/node@25.5.0)(typescript@5.9.3)))(@types/node@25.5.0)(typescript@5.9.3)':
     dependencies:
@@ -12781,12 +12704,6 @@ snapshots:
       once: 1.4.0
       path-is-absolute: 1.0.1
 
-  global-prefix@4.0.0:
-    dependencies:
-      ini: 4.1.3
-      kind-of: 6.0.3
-      which: 4.0.0
-
   globals@14.0.0: {}
 
   globals@16.5.0: {}
@@ -12962,29 +12879,7 @@ snapshots:
 
   inherits@2.0.4: {}
 
-  ini@4.1.3: {}
-
   inline-style-parser@0.2.7: {}
-
-  inquirer@8.2.7(@types/node@22.19.15):
-    dependencies:
-      '@inquirer/external-editor': 1.0.3(@types/node@22.19.15)
-      ansi-escapes: 4.3.2
-      chalk: 4.1.2
-      cli-cursor: 3.1.0
-      cli-width: 3.0.0
-      figures: 3.2.0
-      lodash: 4.17.23
-      mute-stream: 0.0.8
-      ora: 5.4.1
-      run-async: 2.4.1
-      rxjs: 7.8.2
-      string-width: 4.2.3
-      strip-ansi: 6.0.1
-      through: 2.3.8
-      wrap-ansi: 6.2.0
-    transitivePeerDependencies:
-      - '@types/node'
 
   inquirer@8.2.7(@types/node@25.5.0):
     dependencies:
@@ -13619,8 +13514,6 @@ snapshots:
   keyv@5.6.0:
     dependencies:
       '@keyv/serialize': 1.1.1
-
-  kind-of@6.0.3: {}
 
   kleur@3.0.3: {}
 
@@ -14257,15 +14150,6 @@ snapshots:
   negotiator@1.0.0: {}
 
   neo-async@2.6.2: {}
-
-  nestia@10.0.2(@types/node@22.19.15):
-    dependencies:
-      commander: 10.0.1
-      comment-json: 4.6.2
-      inquirer: 8.2.7(@types/node@22.19.15)
-      package-manager-detector: 0.2.11
-    transitivePeerDependencies:
-      - '@types/node'
 
   nestia@10.0.2(@types/node@25.5.0):
     dependencies:
@@ -15259,12 +15143,6 @@ snapshots:
 
   resolve-pkg-maps@1.0.0: {}
 
-  resolve@1.22.11:
-    dependencies:
-      is-core-module: 2.16.1
-      path-parse: 1.0.7
-      supports-preserve-symlinks-flag: 1.0.0
-
   resolve@2.0.0-next.6:
     dependencies:
       es-errors: 1.3.0
@@ -15966,15 +15844,6 @@ snapshots:
       v8-compile-cache-lib: 3.0.1
       yn: 3.1.1
 
-  ts-patch@3.3.0:
-    dependencies:
-      chalk: 4.1.2
-      global-prefix: 4.0.0
-      minimist: 1.2.8
-      resolve: 1.22.11
-      semver: 7.7.4
-      strip-ansi: 6.0.1
-
   tsconfck@2.1.2(typescript@5.9.3):
     optionalDependencies:
       typescript: 5.9.3
@@ -16088,19 +15957,6 @@ snapshots:
       - supports-color
 
   typescript@5.9.3: {}
-
-  typia@11.0.3(@types/node@22.19.15)(typescript@5.9.3):
-    dependencies:
-      '@samchon/openapi': 6.0.1
-      '@standard-schema/spec': 1.1.0
-      commander: 10.0.1
-      comment-json: 4.6.2
-      inquirer: 8.2.7(@types/node@22.19.15)
-      package-manager-detector: 0.2.11
-      randexp: 0.5.3
-      typescript: 5.9.3
-    transitivePeerDependencies:
-      - '@types/node'
 
   typia@11.0.3(@types/node@25.5.0)(typescript@5.9.3):
     dependencies:

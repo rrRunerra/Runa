@@ -12,17 +12,16 @@ import {
 import { ConnectionLinkedTo } from '@runa/database';
 import { ConnectionService } from './connection.service';
 import { DualAuthGuard } from '../../common/guards/auth.guard';
-import { TypedRoute } from '@nestia/core';
 import { UpsertConnectionDto } from './dto/upsert-connection.dto';
 import { RemoveConnectionDto } from './dto/remove-connection.dto';
 import { ConnectionEntity } from './entities/connection.entity';
 
-@Controller('connection')
+@Controller('connections')
 @UseGuards(DualAuthGuard)
 export class ConnectionController {
   constructor(private readonly connectionService: ConnectionService) {}
 
-  @TypedRoute.Get()
+  @Get()
   async findAll(
     @Req() req: any,
     @Query('linkedTo') linkedTo?: ConnectionLinkedTo,
@@ -34,7 +33,7 @@ export class ConnectionController {
     return this.connectionService.findAll(userId, linkedTo);
   }
 
-  @TypedRoute.Post()
+  @Post()
   async upsert(
     @Req() req: any,
     @Body() body: UpsertConnectionDto,
@@ -54,7 +53,7 @@ export class ConnectionController {
     });
   }
 
-  @TypedRoute.Delete(':provider')
+  @Delete(':provider')
   async remove(
     @Req() req: any,
     @Param('provider') provider: string,

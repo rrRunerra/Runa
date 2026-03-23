@@ -1,5 +1,4 @@
-import { Controller, Post } from '@nestjs/common';
-import { TypedBody, TypedRoute } from '@nestia/core';
+import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Public } from '../../common/decorators/public.decorator';
 import { LoginAuthDto } from './dto/login-auth.dto';
@@ -10,8 +9,9 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Public()
-  @TypedRoute.Post('login')
-  async login(@TypedBody() data: LoginAuthDto): Promise<AuthResponseEntity> {
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  async login(@Body() data: LoginAuthDto): Promise<AuthResponseEntity> {
     return this.authService.login(data);
   }
 }

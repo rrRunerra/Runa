@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../providers/database/prisma.service';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
@@ -11,7 +15,7 @@ export class ApiKeyService {
     return `${crypto.randomBytes(32).toString('hex')}`;
   }
 
-  async create(userId: string, name: string) {
+  public async createKey(userId: string, name: string) {
     const rawKey = this.generateKey();
     const keyPrefix = rawKey.slice(0, 16);
     const keyHash = await bcrypt.hash(rawKey, 10);
@@ -31,7 +35,7 @@ export class ApiKeyService {
     };
   }
 
-  async findAll(userId: string) {
+  public async findAllKeysByUser(userId: string) {
     const keys = await this.prisma.client.apiKey.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
@@ -46,7 +50,7 @@ export class ApiKeyService {
     }));
   }
 
-  async regenerate(id: string, userId: string) {
+  public async regenerateKey(id: string, userId: string) {
     const existing = await this.prisma.client.apiKey.findFirst({
       where: { id, userId },
     });
@@ -74,7 +78,7 @@ export class ApiKeyService {
     };
   }
 
-  async remove(id: string, userId: string) {
+  public async deleteKey(id: string, userId: string) {
     const existing = await this.prisma.client.apiKey.findFirst({
       where: { id, userId },
     });
@@ -83,8 +87,16 @@ export class ApiKeyService {
       throw new NotFoundException('API Key not found');
     }
 
-    return this.prisma.client.apiKey.delete({
-      where: { id },
-    });
+    try {
+      await this.prisma.client.apiKey.delete({
+        where: { id },
+      });
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to delete API Key');
+    }
+
+    return {
+      message: 'API Key deleted successfully',
+    };
   }
 }

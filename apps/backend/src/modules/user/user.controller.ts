@@ -1,5 +1,4 @@
-import { Controller, UseGuards, Post } from '@nestjs/common';
-import { TypedRoute, TypedBody } from '@nestia/core';
+import { Controller, UseGuards, Post, Body } from '@nestjs/common';
 import { UserService } from './user.service';
 import { DualAuthGuard } from '../../common/guards/auth.guard';
 import { User } from '@runa/database';
@@ -12,8 +11,8 @@ export class UserController {
   constructor(private readonly usersService: UserService) {}
 
   @Public()
-  @TypedRoute.Post('create')
-  create(@TypedBody() data: CreateUserDto): Promise<User> {
+  @Post('create')
+  create(@Body() data: CreateUserDto): Promise<User> {
     return this.usersService.create(data);
   }
 }

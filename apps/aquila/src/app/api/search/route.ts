@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { functional, IConnection } from "@runa/api";
+
+const API_URL = process.env.NEST_API_URL
+  ? process.env.NEST_API_URL
+  : `http://localhost:${process.env.NEST_PORT}`;
 
 const validTypes = [
   "anime",
@@ -26,11 +29,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Invalid type" }, { status: 400 });
   }
 
-  const connection: IConnection = {
-    host:
-      process.env.NEST_API_URL ?? `http://localhost:${process.env.NEST_PORT}`,
-  };
-
   const mapItem = (item: any) => ({
     id: item.id.toString(),
     title: {
@@ -45,45 +43,29 @@ export async function GET(req: NextRequest) {
     isAdult: !!item.isAdult,
   });
 
-  switch (type) {
-    case "anime":
-      const anime = await functional.anime.search(connection, { name: query });
-      return NextResponse.json(
-        Array.isArray(anime)
-          ? anime.map(mapItem)
-          : ((anime as any).data?.map(mapItem) ?? anime),
-      );
-    case "manga":
-      const manga = await functional.manga.search(connection, { name: query });
-      return NextResponse.json(
-        Array.isArray(manga)
-          ? manga.map(mapItem)
-          : ((manga as any).data?.map(mapItem) ?? manga),
-      );
-    case "movies":
-      const movie = await functional.movie.search(connection, { name: query });
-      return NextResponse.json(
-        Array.isArray(movie)
-          ? movie.map(mapItem)
-          : ((movie as any).data?.map(mapItem) ?? movie),
-      );
-    case "tv":
-      const tv = await functional.tv.search(connection, { name: query });
-      return NextResponse.json(
-        Array.isArray(tv)
-          ? tv.map(mapItem)
-          : ((tv as any).data?.map(mapItem) ?? tv),
-      );
-    case "game":
-    //   const game = await functional.game.search(connection, { name: query });
-    //   return NextResponse.json(game);
-    case "book":
-    //   const book = await functional.book.search(connection, { name: query });
-    //   return NextResponse.json(book);
-    case "music":
-    //   const music = await functional.music.search(connection, { name: query });
-    //   return NextResponse.json(music);
-    default:
-      return NextResponse.json({ error: "Invalid type" }, { status: 400 });
+  const endpointMap: Record<string, string> = {
+    anime: "anime",
+    manga: "manga",
+    movies: "movie",
+    tv: "tv",
+  };
+
+  const endpoint = endpointMap[type];
+  if (!endpoint) {
+    return NextResponse.json({ error: "Type not implemented" }, { status: 400 });
   }
+
+  const res = await fetch(`${API_URL}/${endpoint}/search?name=${encodeURIComponent(query)}`);
+
+  if (!res.ok) {
+    return NextResponse.json({ error: "Failed to fetch search results" }, { status: res.status });
+  }
+
+  const data = await res.json();
+  
+  return NextResponse.json(
+    Array.isArray(data)
+      ? data.map(mapItem)
+      : (data.data?.map(mapItem) ?? data),
+  );
 }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button, cn, Input, Label, PixelBlast, useAlert } from "@runa/ui";
 import { Loader2, User, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import Error from "next/error";
 
 export default function Page() {
   const [email, setEmail] = useState("");
@@ -60,21 +61,17 @@ export default function Page() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email,
-          username,
+          email: email.toLowerCase(),
+          username: username.toLowerCase(),
           password,
         }),
       });
-      let data = await res.json();
-
-      if (!data?.success) {
-        data = JSON.parse(data);
-      }
-
+      const data = await res.json();
+      console.log(data);
       console.log(res);
 
-      if (!res.ok || res.status !== 201) {
-        data.message?.forEach((message: string) => {
+      if (!res.ok) {
+        await data.message.forEach((message: string) => {
           const lowerMsg = message.toLowerCase();
           if (lowerMsg.includes("email")) {
             setFieldErrors((prev) => ({ ...prev, email: message }));
@@ -102,9 +99,14 @@ export default function Page() {
         number: false,
         special: false,
       });
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "An error occurred";
-      setMessage(message);
+    } catch (err: any) {
+      err.props.forEach((message: string) => {
+        showAlert({
+          title: "Error",
+          message,
+          type: "error",
+        });
+      });
     } finally {
       setLoading(false);
     }
