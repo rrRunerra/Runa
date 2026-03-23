@@ -217,16 +217,16 @@ export default function AnimeDetailsPage() {
               <div className="bg-card rounded-xl p-4 space-y-2 border border-border">
                 <h4 className="font-semibold text-sm mb-2">Links</h4>
                 <div className="flex flex-wrap gap-2">
-                  {anime.externalLinks.map((link) => (
-                    <a
-                      key={link.id}
+                  {anime.externalLinks.map((link, i) => (
+                    <Link
+                      key={i}
                       href={link.url}
                       target="_blank"
                       rel="noreferrer"
                       className="text-xs bg-muted hover:bg-muted/80 px-2 py-1 rounded transition-colors"
                     >
                       {link.site}
-                    </a>
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -267,17 +267,13 @@ export default function AnimeDetailsPage() {
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Genres & Tags</h3>
               <div className="flex flex-wrap gap-2">
-                {anime.genres?.map((genre) => (
-                  <Badge key={genre} variant="secondary">
+                {anime.genres?.map((genre, i) => (
+                  <Badge key={i} variant="secondary">
                     {genre}
                   </Badge>
                 ))}
-                {anime.tags?.slice(0, 10).map((tag) => (
-                  <Badge
-                    key={tag.id}
-                    variant="outline"
-                    className="border-dashed"
-                  >
+                {anime.tags?.slice(0, 10).map((tag, i) => (
+                  <Badge key={i} variant="outline" className="border-dashed">
                     {tag.name}
                     {tag.rank && (
                       <span className="ml-1 text-[10px] text-muted-foreground">
@@ -294,9 +290,9 @@ export default function AnimeDetailsPage() {
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Characters</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  {anime.characters.slice(0, 10).map((char) => (
+                  {anime.characters.slice(0, 10).map((char, i) => (
                     <div
-                      key={char.id}
+                      key={i}
                       className="flex items-center gap-3 bg-card p-2 rounded-lg border border-border"
                     >
                       <img
@@ -323,7 +319,7 @@ export default function AnimeDetailsPage() {
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Relations</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {anime.relations.map((relation) => {
+                  {anime.relations.map((relation, i) => {
                     let href = "#";
                     switch (relation.type) {
                       case "ANIME":
@@ -338,7 +334,7 @@ export default function AnimeDetailsPage() {
 
                     return (
                       <Link
-                        key={relation.id}
+                        key={i}
                         href={href}
                         className="flex items-center justify-between bg-card p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors"
                       >
