@@ -45,7 +45,7 @@ export const authOptions: NextAuthOptions = {
   ],
 
   pages: {
-    signIn: `${process.env.NEXT_PUBLIC_AUTH}/login`,
+    signIn: `${process.env.NEXTAUTH_URL}/polaris/login`,
   },
 
   session: {
@@ -56,34 +56,9 @@ export const authOptions: NextAuthOptions = {
     async redirect({ url, baseUrl }) {
       // Allows relative callback URLs
       if (url.startsWith("/")) return `${baseUrl}${url}`;
-      const allowedOrigins = [
-        process.env.NEXT_PUBLIC_AUTH,
-        process.env.NEXT_PUBLIC_LYNX,
-      ].filter(Boolean) as string[];
 
-      try {
-        const urlObj = new URL(url);
-        if (
-          allowedOrigins.some((origin) => {
-            try {
-              return urlObj.origin === new URL(origin).origin;
-            } catch {
-              return false;
-            }
-          })
-        ) {
-          return url;
-        }
-      } catch (e) {
-        // Fallback
-      }
+      if (new URL(url).origin === baseUrl) return url;
 
-      // Default NextAuth behavior
-      try {
-        if (new URL(url).origin === baseUrl) return url;
-      } catch {
-        // Fallback
-      }
       return baseUrl;
     },
     async jwt({ token, user, trigger, session }) {
@@ -153,21 +128,3 @@ export const authOptions: NextAuthOptions = {
 };
 
 export const auth = () => getServerSession(authOptions);
-
-interface AuthUser {
-  id: string;
-
-  email?: string | null;
-
-  username?: string | null;
-
-  displayName?: string | null;
-
-  avatarUrl?: string | null;
-
-  role?: string | null;
-
-  accessToken?: string | null;
-
-  passwordChangedAt?: string | Date | null;
-}
