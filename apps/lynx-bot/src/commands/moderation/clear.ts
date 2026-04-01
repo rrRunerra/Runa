@@ -2,12 +2,8 @@ import {
   ApplicationCommandOptionType,
   ChatInputCommandInteraction,
   EmbedBuilder,
-  Message,
-  PermissionFlagsBits,
   TextChannel,
-  User,
   Role,
-  Collection,
   MessageFlags,
 } from "discord.js";
 import { Command } from "../../structures/Command";

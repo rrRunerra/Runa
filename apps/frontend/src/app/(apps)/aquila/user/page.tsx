@@ -1,12 +1,17 @@
 "use client";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function UserPage() {
   const { data: session } = useSession();
   const router = useRouter();
 
-  if (!session) return;
+  useEffect(() => {
+    if (session?.user?.id) {
+      router.push(`/aquila/user/${session.user.id}`);
+    }
+  }, [router, session]);
 
-  router.push(`/aquila/user/${session.user.id}`);
+  return null;
 }

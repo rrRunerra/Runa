@@ -348,7 +348,7 @@ export default function MangaDetailsPage() {
                 <h3 className="text-lg font-semibold">Relations</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {manga.relations.map((relation) => {
-                    let href = "#";
+                    let href: string;
                     switch (relation.type) {
                       case "ANIME":
                         href = `/aquila/anime/${relation.id}`;

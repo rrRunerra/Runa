@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { LynxClient } from "../../client/client";
 import { API } from "../../structures/Api";
-import { ChannelType } from "discord.js";
 
 export default class StartDmApi extends API {
   public client: LynxClient;

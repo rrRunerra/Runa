@@ -3,7 +3,6 @@ import {
   ChannelType,
   ChatInputCommandInteraction,
   EmbedBuilder,
-  GuildChannel,
   TextChannel,
   PermissionFlagsBits,
   MessageFlags,

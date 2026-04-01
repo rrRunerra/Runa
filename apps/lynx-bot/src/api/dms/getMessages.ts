@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { LynxClient } from "../../client/client";
 import { API } from "../../structures/Api";
-import { DMChannel, TextChannel } from "discord.js";
+import { DMChannel } from "discord.js";
 
 export default class GetDmMessagesApi extends API {
   public client: LynxClient;

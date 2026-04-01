@@ -3,7 +3,6 @@ import { SubCommand } from "../../structures/SubCommand";
 import {
   ChatInputCommandInteraction,
   EmbedBuilder,
-  ForumChannel,
   MessageFlags,
 } from "discord.js";
 import { EdupageUtils } from "@runa/edupage";

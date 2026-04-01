@@ -5,7 +5,6 @@ import {
   EmbedBuilder,
   MessageFlags,
   TextChannel,
-  WebhookClient,
 } from "discord.js";
 import { Command } from "../../structures/Command";
 import { client } from "../../index";

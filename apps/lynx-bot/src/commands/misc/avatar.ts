@@ -2,7 +2,6 @@ import {
   ApplicationCommandOptionType,
   ChatInputCommandInteraction,
   EmbedBuilder,
-  GuildMember,
 } from "discord.js";
 import { Command } from "../../structures/Command";
 import { client } from "../../index";
