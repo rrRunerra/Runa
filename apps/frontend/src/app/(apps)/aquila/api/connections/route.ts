@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@runa/auth";
+import { ConnectionProvider } from "@runa/database";
 
 const API_URL = process.env.NEST_API_URL
   ? process.env.NEST_API_URL
@@ -65,7 +66,13 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ message: "Missing provider" }, { status: 400 });
   }
 
-  const res = await fetch(`${API_URL}/connections/${provider}`, {
+  // Validate provider to prevent SSRF
+  const upperProvider = provider.toUpperCase() as ConnectionProvider;
+  if (!Object.values(ConnectionProvider).includes(upperProvider)) {
+    return NextResponse.json({ message: "Invalid provider" }, { status: 400 });
+  }
+
+  const res = await fetch(`${API_URL}/connections/${upperProvider}`, {
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",

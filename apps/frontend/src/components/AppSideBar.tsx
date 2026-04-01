@@ -1,13 +1,24 @@
 "use client";
 
-import { ChevronRight, ChevronsUpDown, LinkIcon, LogIn, LogOut } from "lucide-react";
+import {
+  ChevronRight,
+  ChevronsUpDown,
+  LinkIcon,
+  LogIn,
+  LogOut,
+  Palette,
+} from "lucide-react";
 import Link from "next/link";
 import { signIn, signOut, useSession } from "next-auth/react";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { apps } from "../../config/apps";
 import { useNavigation } from "@/hooks/useNavigation";
-import type { NavbarConfig, NavSection, NavItem } from "@/components/Providers/NavigationProvider";
+import type {
+  NavbarConfig,
+  NavSection,
+  NavItem,
+} from "@/components/Providers/NavigationProvider";
 import {
   useSidebar,
   Sidebar,
@@ -39,6 +50,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { AppearanceDialog } from "@/components/AppearanceDialog";
 
 interface AppSideBarProps extends React.ComponentProps<typeof Sidebar> {
   /**
@@ -60,6 +72,11 @@ interface AppSideBarProps extends React.ComponentProps<typeof Sidebar> {
    * Defaults to `/polaris/connections`.
    */
   connectionsHref?: string;
+  /**
+   * Override the Appearance link in the footer dropdown.
+   * Defaults to `/polaris/appearance`.
+   */
+  appearanceHref?: string;
 }
 
 export default function AppSideBar({
@@ -67,6 +84,7 @@ export default function AppSideBar({
   extraFooterItems,
   profileHref,
   connectionsHref = "/polaris/connections",
+  appearanceHref = "/polaris/appearance",
   ...props
 }: AppSideBarProps) {
   const { data: session } = useSession();
@@ -74,6 +92,7 @@ export default function AppSideBar({
   const { isMobile } = useSidebar();
 
   const [activeApp, setActiveApp] = useState(apps[0]);
+  const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
 
   // Sync the passed-in navConfig into the navigation context
   useEffect(() => {
@@ -86,7 +105,8 @@ export default function AppSideBar({
     if (app) setActiveApp(app);
   }, []);
 
-  const resolvedProfileHref = profileHref ?? `/polaris/user/${session?.user?.id}`;
+  const resolvedProfileHref =
+    profileHref ?? `/polaris/user/${session?.user?.id}`;
 
   if (!activeApp) return null;
 
@@ -106,7 +126,9 @@ export default function AppSideBar({
                     {activeApp.logo}
                   </div>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-medium">{activeApp.name}</span>
+                    <span className="truncate font-medium">
+                      {activeApp.name}
+                    </span>
                     <span className="truncate text-xs text-muted-foreground">
                       {activeApp.description}
                     </span>
@@ -166,7 +188,8 @@ export default function AppSideBar({
                       : item.role === session?.user?.role,
                   )
                   .map((item: NavItem, itemIdx: number) => {
-                    const hasChildren = item.children && item.children.length > 0;
+                    const hasChildren =
+                      item.children && item.children.length > 0;
                     const hasHref = !!item.href;
 
                     const truncate = (s: string, n: number) =>
@@ -203,16 +226,18 @@ export default function AppSideBar({
                             )}
                             <CollapsibleContent>
                               <SidebarMenuSub>
-                                {item.children?.map((child: any, childIdx: number) => (
-                                  <SidebarMenuSubItem key={childIdx}>
-                                    <SidebarMenuSubButton asChild>
-                                      <Link href={child.href}>
-                                        {child.icon}
-                                        {truncate(child.label, 16)}
-                                      </Link>
-                                    </SidebarMenuSubButton>
-                                  </SidebarMenuSubItem>
-                                ))}
+                                {item.children?.map(
+                                  (child: any, childIdx: number) => (
+                                    <SidebarMenuSubItem key={childIdx}>
+                                      <SidebarMenuSubButton asChild>
+                                        <Link href={child.href}>
+                                          {child.icon}
+                                          {truncate(child.label, 16)}
+                                        </Link>
+                                      </SidebarMenuSubButton>
+                                    </SidebarMenuSubItem>
+                                  ),
+                                )}
                               </SidebarMenuSub>
                             </CollapsibleContent>
                           </>
@@ -302,6 +327,19 @@ export default function AppSideBar({
                   <DropdownMenuGroup>
                     <DropdownMenuItem
                       className="cursor-pointer gap-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200 p-2 rounded-md"
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        setIsAppearanceOpen(true);
+                      }}
+                    >
+                      <Palette className="size-4" />
+                      Appearance
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem
+                      className="cursor-pointer gap-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200 p-2 rounded-md"
                       asChild
                     >
                       <Link href={connectionsHref}>
@@ -341,6 +379,11 @@ export default function AppSideBar({
           )}
         </SidebarMenu>
       </SidebarFooter>
+
+      <AppearanceDialog
+        open={isAppearanceOpen}
+        onOpenChange={setIsAppearanceOpen}
+      />
     </Sidebar>
   );
 }

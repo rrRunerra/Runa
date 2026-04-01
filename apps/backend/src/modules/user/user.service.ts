@@ -57,4 +57,10 @@ export class UserService {
         throw new BadRequestException('Failed to create user');
       });
   }
+
+  async findById(id: string): Promise<User | null> {
+    return await this.prisma.client.user.findUnique({
+      where: { id },
+    });
+  }
 }
