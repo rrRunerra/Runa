@@ -65,7 +65,7 @@ const PROVIDERS = [
 ];
 
 export default function ConnectionsPage() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [connections, setConnections] = useState<Connection[]>([]);

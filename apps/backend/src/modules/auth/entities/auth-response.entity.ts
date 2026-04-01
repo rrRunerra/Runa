@@ -1,5 +1,3 @@
-import { User } from '@runa/database';
-
 export class AuthResponseEntity {
   user: {
     id: string;

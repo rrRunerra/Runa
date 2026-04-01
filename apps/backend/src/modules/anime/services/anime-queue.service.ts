@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import { Subject, EMPTY, Observable } from 'rxjs';
-import { mergeMap, catchError, tap, finalize } from 'rxjs/operators';
+import { Subject, EMPTY } from 'rxjs';
+import { mergeMap, catchError } from 'rxjs/operators';
 import { AnimeRepository } from '../repositories/anime.repository';
 
 @Injectable()

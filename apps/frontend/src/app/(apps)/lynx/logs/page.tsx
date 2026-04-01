@@ -11,7 +11,7 @@ export default function LogsPage() {
   const { getItem } = useNavigation();
   const logsItem = getItem("Administration", "Logs");
 
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   if (status === "unauthenticated") {
     return <AccessDenied />;
   }

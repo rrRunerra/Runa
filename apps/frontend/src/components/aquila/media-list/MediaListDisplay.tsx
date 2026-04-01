@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { MediaEntry, MediaFilters, MediaListDisplayProps } from "./types";
+import { MediaEntry, MediaListDisplayProps } from "./types";
 import { MediaListGroup } from "./MediaListGroup";
 
 export const MediaListDisplay: React.FC<MediaListDisplayProps> = ({
@@ -36,9 +36,14 @@ export const MediaListDisplay: React.FC<MediaListDisplayProps> = ({
         case "progress":
           return (b.progress || 0) - (a.progress || 0);
         case "last_updated":
-          return new Date(b.last_updated).getTime() - new Date(a.last_updated).getTime();
+          return (
+            new Date(b.last_updated).getTime() -
+            new Date(a.last_updated).getTime()
+          );
         case "last_added":
-          return new Date(b.last_added).getTime() - new Date(a.last_added).getTime();
+          return (
+            new Date(b.last_added).getTime() - new Date(a.last_added).getTime()
+          );
         default:
           return 0;
       }
@@ -49,7 +54,7 @@ export const MediaListDisplay: React.FC<MediaListDisplayProps> = ({
   // Derive grouped data for multiple lists efficiently
   const groupedData = useMemo(() => {
     const groups: Record<string, MediaEntry[]> = {};
-    
+
     // Initialize groups in the requested order
     lists.forEach((listName) => {
       groups[listName] = [];
@@ -57,7 +62,9 @@ export const MediaListDisplay: React.FC<MediaListDisplayProps> = ({
 
     sortedData.forEach((entry) => {
       // Find matching group or fallback to a general status matching
-      const targetList = lists.find(l => l.toLowerCase() === entry.status.toLowerCase()) || entry.status;
+      const targetList =
+        lists.find((l) => l.toLowerCase() === entry.status.toLowerCase()) ||
+        entry.status;
       if (!groups[targetList]) groups[targetList] = [];
       groups[targetList].push(entry);
     });
@@ -76,7 +83,7 @@ export const MediaListDisplay: React.FC<MediaListDisplayProps> = ({
           baseUrl={baseUrl}
         />
       ))}
-      
+
       {/* Dynamic groups that we didn't initially define, but still exist in data */}
       {Object.keys(groupedData)
         .filter((k) => !lists.includes(k))
