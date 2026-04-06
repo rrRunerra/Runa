@@ -1,0 +1,40 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+    restart: always
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: backend
+    ports:
+      - "3001:3000" # Mapping to 3001 on host, backend standard is 3000 in-container
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - START_COMMAND=pnpm --filter backend start:prod
+    restart: always
+
+  lynx-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: lynx-bot
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - START_COMMAND=pnpm --filter lynx-bot start
+    restart: always

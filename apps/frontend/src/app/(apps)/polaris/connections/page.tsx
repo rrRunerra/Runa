@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
@@ -64,7 +64,7 @@ const PROVIDERS = [
   },
 ];
 
-export default function ConnectionsPage() {
+function ConnectionsContent() {
   const { status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -363,5 +363,22 @@ export default function ConnectionsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ConnectionsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
+          <Spinner className="h-10 w-10 text-primary" />
+          <p className="text-muted-foreground animate-pulse">
+            Loading your connections...
+          </p>
+        </div>
+      }
+    >
+      <ConnectionsContent />
+    </Suspense>
   );
 }

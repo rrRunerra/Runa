@@ -6,7 +6,7 @@ const API_URL = process.env.NEST_API_URL
 
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
 
