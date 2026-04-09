@@ -7,6 +7,26 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 // Define the shape of the data based on the user provided JSON
 interface MediaTrailer {
@@ -87,6 +107,12 @@ export default function AnimeDetailsPage() {
   const [anime, setAnime] = useState<Media | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [listStatus, setListStatus] = useState<string>("PLANNING");
+  const [score, setScore] = useState<string>("");
+  const [progress, setProgress] = useState<string>("");
+  const [notes, setNotes] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const session = useSession();
 
@@ -161,9 +187,156 @@ export default function AnimeDetailsPage() {
 
             <div className="flex flex-col gap-2">
               {session.data?.user && (
-                <Button className="w-full" size="lg">
-                  Add to List
-                </Button>
+                <>
+                  <Button
+                    className="w-full"
+                    size="lg"
+                    onClick={async () => {
+                      try {
+                        const res = await fetch("/aquila/api/list/anime", {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${session.data?.accessToken}`,
+                          },
+                          body: JSON.stringify({
+                            userId: session.data?.user?.id,
+                            animeId: Number(id),
+                            status: "PLANNING",
+                          }),
+                        });
+                        if (res.ok) {
+                          toast.success("Added to list!");
+                        } else {
+                          toast.error("Failed to add to list");
+                        }
+                      } catch {
+                        toast.error("Failed to add to list");
+                      }
+                    }}
+                  >
+                    Quick Add
+                  </Button>
+                  <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" className="w-full" size="lg">
+                        Add to List
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[425px]">
+                      <DialogHeader>
+                        <DialogTitle>Add to List</DialogTitle>
+                        <DialogDescription>
+                          Add {anime.title.english || anime.title.romaji} to
+                          your list.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-1 gap-2">
+                          <Label htmlFor="status">Status</Label>
+                          <Select
+                            value={listStatus}
+                            onValueChange={setListStatus}
+                          >
+                            <SelectTrigger id="status">
+                              <SelectValue placeholder="Select status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="PLANNING">Planning</SelectItem>
+                              <SelectItem value="WATCHING">Watching</SelectItem>
+                              <SelectItem value="COMPLETED">
+                                Completed
+                              </SelectItem>
+                              <SelectItem value="ON_HOLD">On Hold</SelectItem>
+                              <SelectItem value="DROPPED">Dropped</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="grid items-1 gap-2">
+                            <Label htmlFor="score">Score (0-10)</Label>
+                            <Input
+                              id="score"
+                              type="number"
+                              min="0"
+                              max="10"
+                              placeholder="0-10"
+                              value={score}
+                              onChange={(e) => setScore(e.target.value)}
+                            />
+                          </div>
+                          <div className="grid items-1 gap-2">
+                            <Label htmlFor="progress">Progress</Label>
+                            <Input
+                              id="progress"
+                              type="number"
+                              min="0"
+                              placeholder="Episodes"
+                              value={progress}
+                              onChange={(e) => setProgress(e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        <div className="grid items-1 gap-2">
+                          <Label htmlFor="notes">Notes</Label>
+                          <Textarea
+                            id="notes"
+                            placeholder="Your notes..."
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button
+                          type="submit"
+                          disabled={isSubmitting}
+                          onClick={async () => {
+                            setIsSubmitting(true);
+                            try {
+                              const res = await fetch(
+                                "/aquila/api/list/anime",
+                                {
+                                  method: "POST",
+                                  headers: {
+                                    "Content-Type": "application/json",
+                                    Authorization: `Bearer ${session.data?.accessToken}`,
+                                  },
+                                  body: JSON.stringify({
+                                    userId: session.data?.user?.id,
+                                    animeId: Number(id),
+                                    status: listStatus,
+                                    score: score ? Number(score) : undefined,
+                                    progress: progress
+                                      ? Number(progress)
+                                      : undefined,
+                                    notes: notes || undefined,
+                                  }),
+                                },
+                              );
+                              if (res.ok) {
+                                toast.success("Added to list!");
+                                setIsDialogOpen(false);
+                                setListStatus("PLANNING");
+                                setScore("");
+                                setProgress("");
+                                setNotes("");
+                              } else {
+                                toast.error("Failed to add to list");
+                              }
+                            } catch {
+                              toast.error("Failed to add to list");
+                            } finally {
+                              setIsSubmitting(false);
+                            }
+                          }}
+                        >
+                          Save
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </>
               )}
               {anime.trailers && anime.trailers.length > 0 && (
                 <Button variant="outline" className="w-full" asChild>
@@ -218,9 +391,9 @@ export default function AnimeDetailsPage() {
               <div className="bg-card rounded-xl p-4 space-y-2 border border-border">
                 <h4 className="font-semibold text-sm mb-2">Links</h4>
                 <div className="flex flex-wrap gap-2">
-                  {anime.externalLinks.map((link, i) => (
+                  {anime.externalLinks.map((link, qid) => (
                     <Link
-                      key={i}
+                      key={qid}
                       href={link.url}
                       target="_blank"
                       rel="noreferrer"
@@ -268,13 +441,13 @@ export default function AnimeDetailsPage() {
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Genres & Tags</h3>
               <div className="flex flex-wrap gap-2">
-                {anime.genres?.map((genre, i) => (
-                  <Badge key={i} variant="secondary">
+                {anime.genres?.map((genre, qid) => (
+                  <Badge key={qid} variant="secondary">
                     {genre}
                   </Badge>
                 ))}
-                {anime.tags?.slice(0, 10).map((tag, i) => (
-                  <Badge key={i} variant="outline" className="border-dashed">
+                {anime.tags?.slice(0, 10).map((tag, qid) => (
+                  <Badge key={qid} variant="outline" className="border-dashed">
                     {tag.name}
                     {tag.rank && (
                       <span className="ml-1 text-[10px] text-muted-foreground">
@@ -291,9 +464,9 @@ export default function AnimeDetailsPage() {
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Characters</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  {anime.characters.slice(0, 10).map((char, i) => (
+                  {anime.characters.slice(0, 10).map((char, qid) => (
                     <div
-                      key={i}
+                      key={qid}
                       className="flex items-center gap-3 bg-card p-2 rounded-lg border border-border"
                     >
                       <img
@@ -320,7 +493,7 @@ export default function AnimeDetailsPage() {
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Relations</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {anime.relations.map((relation, i) => {
+                  {anime.relations.map((relation, qid) => {
                     let href: string;
                     switch (relation.type) {
                       case "ANIME":
@@ -335,7 +508,7 @@ export default function AnimeDetailsPage() {
 
                     return (
                       <Link
-                        key={i}
+                        key={qid}
                         href={href}
                         className="flex items-center justify-between bg-card p-3 rounded-lg border border-border hover:bg-accent/50 transition-colors"
                       >

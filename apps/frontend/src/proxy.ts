@@ -1,0 +1,43 @@
+import { getToken } from "next-auth/jwt";
+import { NextRequest, NextResponse } from "next/server";
+import "dotenv/config";
+
+const PUBLIC_ROUTES: string[] = [
+  "/polaris/login",
+  "/polaris/register",
+  "/polaris/api/register",
+  "/api/auth/session",
+  "/aquila/api/list/anime",
+  "/aquila/api/list/anime/upsert",
+];
+
+const ADMIN_ROUTES: string[] = [];
+
+export default async function proxy(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  const url = req.nextUrl.clone();
+  if (PUBLIC_ROUTES.some((route) => pathname.startsWith(route))) {
+    return NextResponse.next();
+  }
+  const token = await getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET,
+    secureCookie: process.env.NODE_ENV === "production",
+  });
+  if (!token) {
+    url.pathname = "/polaris/login";
+    return NextResponse.redirect(url);
+  }
+
+  if (Date.now() > (token.exp as number) * 1000) {
+    url.pathname = "/polaris/login";
+    return NextResponse.redirect(url);
+  }
+  if (ADMIN_ROUTES.includes(pathname) && token.role !== "ADMIN") {
+  }
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+};

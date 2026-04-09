@@ -19,45 +19,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import * as Lucide from "lucide-react";
 
-const MOCK_DATA: MediaEntry[] = [
-  {
-    id: "1",
-    title: "ONE PIECE",
-    score: 7,
-    progress: 816,
-    image:
-      "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/nx21-tXMN3Y20PIL9.jpg",
-    type: "TV",
-    status: "Watching",
-    last_updated: new Date().toISOString(),
-    last_added: new Date().toISOString(),
-  },
-  {
-    id: "2",
-    title: "To Your Eternity Season 3",
-    score: 8,
-    progress: 22,
-    image:
-      "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx153518-gQ72yGzUeG9B.png",
-    type: "TV",
-    status: "Completed TV",
-    last_updated: new Date().toISOString(),
-    last_added: new Date().toISOString(),
-  },
-  {
-    id: "3",
-    title: "The Darwin Incident",
-    score: 7,
-    progress: 13,
-    image:
-      "https://s4.anilist.co/file/anilistcdn/media/anime/cover/large/bx178345-hQ93yXzBfJ4E.png",
-    type: "TV",
-    status: "Completed TV",
-    last_updated: new Date().toISOString(),
-    last_added: new Date().toISOString(),
-  },
-];
-
 export default function UserAnimePage() {
   const params = useParams();
   const userId = params.id as string;
@@ -81,6 +42,8 @@ export default function UserAnimePage() {
     avatarUrl?: string;
   } | null>(null);
 
+  const [animeList, setAnimeList] = useState<MediaEntry[]>([]);
+
   useEffect(() => {
     if (userId) {
       fetch(`/aquila/api/users/${userId}`)
@@ -89,6 +52,15 @@ export default function UserAnimePage() {
         .catch((err) => console.error("Failed to fetch user data", err));
     }
   }, [userId]);
+
+  useEffect(() => {
+    if (userId) {
+      fetch(`/aquila/api/list/anime/${userId}`)
+        .then(async (res) => await res.json())
+        .then((data) => setAnimeList(data))
+        .catch((err) => console.error("Failed to fetch anime list", err));
+    }
+  }, []);
 
   const lists = ["All", "Watching", "Completed", "Dropped", "Planning"];
 
@@ -106,12 +78,10 @@ export default function UserAnimePage() {
 
   // Apply quick search and list filtering here for the Display component
   const filteredData = useMemo(() => {
-    return MOCK_DATA.filter((entry) => {
-      // Search Title
+    return animeList.filter((entry) => {
       if (search && !entry.title.toLowerCase().includes(search.toLowerCase()))
         return false;
 
-      // Filter by active list status (rough match for mock)
       if (activeList !== "All") {
         if (!entry.status.toLowerCase().includes(activeList.toLowerCase()))
           return false;
@@ -119,7 +89,7 @@ export default function UserAnimePage() {
 
       return true;
     });
-  }, [search, activeList]);
+  }, [search, activeList, animeList]);
 
   return (
     <div className="flex w-full min-h-screen gap-8 p-6 pl-2">
@@ -241,7 +211,7 @@ export default function UserAnimePage() {
                 {userData.displayName || userData.username}
               </h2>
               <p className="text-xs text-muted-foreground font-medium">
-                @{userData.username} • 3 Anime in list
+                @{userData.username}
               </p>
             </div>
           </div>

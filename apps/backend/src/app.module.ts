@@ -12,6 +12,7 @@ import { TvModule } from './modules/tv/tv.module';
 import { ApiKeyModule } from './modules/api-key/api-key.module';
 import { ConnectionModule } from './modules/connection/connection.module';
 import { TestModule } from './modules/test/test.module';
+import { ListModule } from './modules/list/list.module';
 
 @Module({
   providers: [
@@ -32,6 +33,7 @@ import { TestModule } from './modules/test/test.module';
     ApiKeyModule,
     ConnectionModule,
     TestModule,
+    ListModule,
   ],
 })
 export class AppModule {}
