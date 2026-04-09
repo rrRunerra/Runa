@@ -7,8 +7,16 @@ const PUBLIC_ROUTES: string[] = [
   "/polaris/register",
   "/polaris/api/register",
   "/api/auth/session",
-  "/aquila/api/list/anime",
-  "/aquila/api/list/anime/upsert",
+  "/aquila/api",
+  "/aquila/user",
+  "/aquila/anime",
+  "/aquila/movies",
+  "/aquila/manga",
+  "/aquila/books",
+  "/aquila/games",
+  "/aquila/tv",
+  "/aquila/music",
+  "/aquila/browse",
 ];
 
 const ADMIN_ROUTES: string[] = [];

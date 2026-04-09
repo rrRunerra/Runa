@@ -5,7 +5,22 @@ const API_URL = process.env.NEST_API_URL
   ? process.env.NEST_API_URL
   : `http://localhost:${process.env.NEST_PORT}`;
 
-export async function GET(req: NextRequest) {}
+export async function GET(req: NextRequest) {
+  const url = new URL(req.url);
+  const userId = url.searchParams.get("userId");
+  const animeId = url.searchParams.get("animeId");
+
+  if (!userId || !animeId) {
+    return NextResponse.json(
+      { success: false, message: "User ID and Anime ID are required" },
+      { status: 400 },
+    );
+  }
+
+  const res = await fetch(`${API_URL}/list/anime/${userId}/${animeId}`);
+  const data = await res.json();
+  return NextResponse.json(data, { status: res.status });
+}
 
 export async function POST(req: NextRequest) {
   const {
@@ -63,5 +78,36 @@ export async function POST(req: NextRequest) {
 
   console.log(data);
 
+  return NextResponse.json(data, { status: res.status });
+}
+
+export async function DELETE(req: NextRequest) {
+  const url = new URL(req.url);
+  const userId = url.searchParams.get("userId");
+  const animeId = url.searchParams.get("animeId");
+
+  if (!userId || !animeId) {
+    return NextResponse.json(
+      { success: false, message: "User ID and Anime ID are required" },
+      { status: 400 },
+    );
+  }
+
+  if (!req.headers.get("Authorization")) {
+    return NextResponse.json(
+      { success: false, message: "No authentication token found" },
+      { status: 401 },
+    );
+  }
+
+  const res = await fetch(`${API_URL}/list/anime/${userId}/${animeId}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: req.headers.get("Authorization")!,
+    },
+  });
+  
+  const data = await res.json();
   return NextResponse.json(data, { status: res.status });
 }

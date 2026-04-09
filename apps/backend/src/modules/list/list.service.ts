@@ -56,6 +56,17 @@ export class ListService {
     return mappedList;
   }
 
+  public async getAnimeListEntry(userId: string, animeId: number) {
+    return this.prisma.client.aquilaAnimeUserList.findUnique({
+      where: {
+        userId_animeId: {
+          userId,
+          animeId,
+        },
+      },
+    });
+  }
+
   public async upsertAnimeList(body: {
     userId: string;
     animeId: number;
@@ -109,5 +120,29 @@ export class ListService {
       success: true,
       message: 'Anime list updated successfully',
     };
+  }
+
+  public async deleteAnimeList(userId: string, animeId: number): Promise<{ success: boolean; message: string; error?: any }> {
+    try {
+      await this.prisma.client.aquilaAnimeUserList.delete({
+        where: {
+          userId_animeId: {
+            userId,
+            animeId,
+          },
+        },
+      });
+      return {
+        success: true,
+        message: 'Deleted from list',
+      };
+    } catch (error) {
+      this.logger.error(error);
+      return {
+        success: false,
+        message: 'Failed to delete anime from list',
+        error: error,
+      };
+    }
   }
 }
