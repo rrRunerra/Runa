@@ -150,7 +150,7 @@ export default function AnimeDetailsPage() {
           );
           if (res.ok) {
             const data = await res.json();
-            if (data && data !== null) {
+            if (data) {
               setListStatus(data.status || "PLANNING");
               setScore(data.score ? data.score.toString() : "");
               setProgress(data.progress ? data.progress.toString() : "");

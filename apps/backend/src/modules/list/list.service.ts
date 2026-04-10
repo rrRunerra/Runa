@@ -122,7 +122,10 @@ export class ListService {
     };
   }
 
-  public async deleteAnimeList(userId: string, animeId: number): Promise<{ success: boolean; message: string; error?: any }> {
+  public async deleteAnimeList(
+    userId: string,
+    animeId: number,
+  ): Promise<{ success: boolean; message: string; error?: any }> {
     try {
       await this.prisma.client.aquilaAnimeUserList.delete({
         where: {
