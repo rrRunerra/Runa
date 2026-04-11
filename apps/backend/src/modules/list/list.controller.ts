@@ -49,6 +49,11 @@ export class ListController {
       endDate?: number;
       notes?: string;
       rewatched?: number;
+      updateConnection?: boolean;
+      connections?: {
+        anilist?: number;
+        mal?: number;
+      };
     },
   ): Promise<{ success: boolean; message: string; error?: any }> {
     return this.listService.upsertAnimeList(body);

@@ -43,10 +43,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { Heart, CalendarIcon } from "lucide-react";
+import { Heart, CalendarIcon, X } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
 
 // Define the shape of the data based on the user provided JSON
 interface MediaTrailer {
@@ -141,6 +142,91 @@ export default function AnimeDetailsPage() {
   const [rewatches, setRewatches] = useState<string>("0");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Connection State
+  const [updateConnection, setUpdateConnection] = useState<boolean>(false);
+  const [connections, setConnections] = useState<Record<string, string>>({});
+  const [activeSearchProvider, setActiveSearchProvider] = useState<
+    "anilist" | "mal" | null
+  >(null);
+  const [isConnectionSearchOpen, setIsConnectionSearchOpen] =
+    useState<boolean>(false);
+  const [connectionSearchQuery, setConnectionSearchQuery] =
+    useState<string>("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState<boolean>(false);
+
+  // Search function for the connections modal
+  const performConnectionSearch = async (query: string) => {
+    if (!query) return;
+    setIsSearching(true);
+    setSearchResults([]);
+
+    try {
+      if (activeSearchProvider === "anilist") {
+        const graphqlQuery = `
+          query ($search: String) {
+            Page(page: 1, perPage: 10) {
+              media(search: $search, type: ANIME) {
+                id
+                title {
+                  romaji
+                  english
+                }
+                coverImage {
+                  medium
+                }
+                format
+                episodes
+              }
+            }
+          }
+        `;
+        const res = await fetch("https://graphql.anilist.co", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            query: graphqlQuery,
+            variables: { search: query },
+          }),
+        });
+        const data = await res.json();
+        const results = data.data?.Page?.media || [];
+        setSearchResults(
+          results.map((item: any) => ({
+            id: item.id.toString(),
+            title: item.title.english || item.title.romaji,
+            image: item.coverImage.medium,
+            format: item.format,
+            episodes: item.episodes,
+          })),
+        );
+      } else if (activeSearchProvider === "mal") {
+        // Use Jikan API for MyAnimeList searches
+        const res = await fetch(
+          `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(query)}&limit=10`,
+        );
+        const data = await res.json();
+        const results = data.data || [];
+        setSearchResults(
+          results.map((item: any) => ({
+            id: item.mal_id.toString(),
+            title: item.title_english || item.title,
+            image: item.images?.jpg?.image_url,
+            format: item.type,
+            episodes: item.episodes,
+          })),
+        );
+      }
+    } catch (err) {
+      console.error(`Failed to search ${activeSearchProvider}`, err);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   useEffect(() => {
     if (session.data?.user?.id && id) {
       const fetchEntry = async () => {
@@ -162,6 +248,8 @@ export default function AnimeDetailsPage() {
                 data.endDate ? new Date(data.endDate * 1000) : undefined,
               );
               setRewatches(data.rewatched ? data.rewatched.toString() : "0");
+              setConnections(data.connections || {});
+              setUpdateConnection(data.updateConnection || false);
               setHasListEntry(true);
             } else {
               setHasListEntry(false);
@@ -198,6 +286,8 @@ export default function AnimeDetailsPage() {
           progress: progress ? Number(progress) : undefined,
           notes: notes || undefined,
           rewatched: rewatches ? Number(rewatches) : undefined,
+          updateConnection,
+          connections,
         }),
       });
       const data = await res.json();
@@ -591,6 +681,95 @@ export default function AnimeDetailsPage() {
                               className="bg-background border-input text-foreground min-h-[80px] resize-y h-10"
                             />
                           </div>
+
+                          <div className="col-span-6 flex flex-col gap-2 mt-2">
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="update-connection-add"
+                                checked={updateConnection}
+                                onCheckedChange={(checked) =>
+                                  setUpdateConnection(checked as boolean)
+                                }
+                              />
+                              <Label
+                                htmlFor="update-connection-add"
+                                className="text-sm font-semibold text-muted-foreground cursor-pointer"
+                              >
+                                Update anime from connection
+                              </Label>
+                            </div>
+
+                            {updateConnection && (
+                              <div className="flex gap-4 items-center pl-6">
+                                <div className="flex items-center">
+                                  <Button
+                                    type="button"
+                                    variant={
+                                      connections["anilist"]
+                                        ? "default"
+                                        : "outline"
+                                    }
+                                    size="sm"
+                                    className={connections["anilist"] ? "rounded-r-none" : ""}
+                                    onClick={() => {
+                                      setActiveSearchProvider("anilist");
+                                      setIsConnectionSearchOpen(true);
+                                    }}
+                                  >
+                                    AniList{" "}
+                                    {connections["anilist"]
+                                      ? `(${connections["anilist"]})`
+                                      : ""}
+                                  </Button>
+                                  {connections["anilist"] && (
+                                    <Button
+                                      type="button"
+                                      variant="destructive"
+                                      size="sm"
+                                      className="rounded-l-none px-2 h-9"
+                                      onClick={() => {
+                                        setConnections(p => { const newP = {...p}; delete newP['anilist']; return newP; });
+                                      }}
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                                <div className="flex items-center">
+                                  <Button
+                                    type="button"
+                                    variant={
+                                      connections["mal"] ? "default" : "outline"
+                                    }
+                                    size="sm"
+                                    className={connections["mal"] ? "rounded-r-none" : ""}
+                                    onClick={() => {
+                                      setActiveSearchProvider("mal");
+                                      setIsConnectionSearchOpen(true);
+                                    }}
+                                  >
+                                    MyAnimeList{" "}
+                                    {connections["mal"]
+                                      ? `(${connections["mal"]})`
+                                      : ""}
+                                  </Button>
+                                  {connections["mal"] && (
+                                    <Button
+                                      type="button"
+                                      variant="destructive"
+                                      size="sm"
+                                      className="rounded-l-none px-2 h-9"
+                                      onClick={() => {
+                                        setConnections(p => { const newP = {...p}; delete newP['mal']; return newP; });
+                                      }}
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
 
                         <div className="mt-6 flex justify-end">
@@ -863,6 +1042,93 @@ export default function AnimeDetailsPage() {
                             className="bg-background border-input text-foreground min-h-[80px] resize-y h-10"
                           />
                         </div>
+
+                        <div className="col-span-6 flex flex-col gap-2 mt-2">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="update-connection-edit"
+                              checked={updateConnection}
+                              onCheckedChange={(checked) =>
+                                setUpdateConnection(checked as boolean)
+                              }
+                            />
+                            <Label
+                              htmlFor="update-connection-edit"
+                              className="text-sm font-semibold text-muted-foreground cursor-pointer"
+                            >
+                              Update anime from connection
+                            </Label>
+                          </div>
+
+                          {updateConnection && (
+                            <div className="flex gap-4 items-center pl-6">
+                              <div className="flex items-center">
+                                <Button
+                                  type="button"
+                                  variant={
+                                    connections["anilist"] ? "default" : "outline"
+                                  }
+                                  size="sm"
+                                  className={connections["anilist"] ? "rounded-r-none" : ""}
+                                  onClick={() => {
+                                    setActiveSearchProvider("anilist");
+                                    setIsConnectionSearchOpen(true);
+                                  }}
+                                >
+                                  AniList{" "}
+                                  {connections["anilist"]
+                                    ? `(${connections["anilist"]})`
+                                    : ""}
+                                </Button>
+                                {connections["anilist"] && (
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    className="rounded-l-none px-2 h-9"
+                                    onClick={() => {
+                                      setConnections(p => { const newP = {...p}; delete newP['anilist']; return newP; });
+                                    }}
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </Button>
+                                )}
+                              </div>
+                              <div className="flex items-center">
+                                <Button
+                                  type="button"
+                                  variant={
+                                    connections["mal"] ? "default" : "outline"
+                                  }
+                                  size="sm"
+                                  className={connections["mal"] ? "rounded-r-none" : ""}
+                                  onClick={() => {
+                                    setActiveSearchProvider("mal");
+                                    setIsConnectionSearchOpen(true);
+                                  }}
+                                >
+                                  MyAnimeList{" "}
+                                  {connections["mal"]
+                                    ? `(${connections["mal"]})`
+                                    : ""}
+                                </Button>
+                                {connections["mal"] && (
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    className="rounded-l-none px-2 h-9"
+                                    onClick={() => {
+                                      setConnections(p => { const newP = {...p}; delete newP['mal']; return newP; });
+                                    }}
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       <div className="mt-6 flex justify-end">
@@ -1096,6 +1362,99 @@ export default function AnimeDetailsPage() {
           </div>
         </div>
       </div>
+
+      {/* Connection Search Dialog */}
+      <Dialog
+        open={isConnectionSearchOpen}
+        onOpenChange={(open) => {
+          setIsConnectionSearchOpen(open);
+          if (!open) {
+            setConnectionSearchQuery("");
+            setSearchResults([]);
+            setIsSearching(false);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[425px] bg-popover border-border">
+          <DialogHeader>
+            <DialogTitle>
+              Search{" "}
+              {activeSearchProvider === "anilist" ? "AniList" : "MyAnimeList"}
+            </DialogTitle>
+            <DialogDescription>
+              Search for this anime to link it.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2">
+            <div className="flex bg-background border border-input rounded-md flex-1 overflow-hidden">
+              <Input
+                placeholder="Search anime..."
+                className="border-0 bg-transparent text-foreground focus-visible:ring-0"
+                value={connectionSearchQuery}
+                onChange={(e) => setConnectionSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    performConnectionSearch(connectionSearchQuery);
+                  }
+                }}
+              />
+            </div>
+            <Button
+              onClick={() => performConnectionSearch(connectionSearchQuery)}
+              disabled={isSearching || !connectionSearchQuery.trim()}
+            >
+              {isSearching ? "Searching..." : "Search"}
+            </Button>
+          </div>
+          <div className="max-h-[300px] overflow-y-auto space-y-2 mt-4">
+            {searchResults.length === 0 && !isSearching ? (
+              <div className="text-sm text-muted-foreground text-center py-4">
+                {connectionSearchQuery
+                  ? "No results found."
+                  : "Type and press enter to search..."}
+              </div>
+            ) : (
+              <>
+                {searchResults.map((result) => (
+                  <div
+                    key={result.id}
+                    className="flex gap-3 items-center p-2 border border-border rounded-md cursor-pointer hover:bg-accent"
+                    onClick={() => {
+                      if (activeSearchProvider) {
+                        setConnections((prev) => ({
+                          ...prev,
+                          [activeSearchProvider]: result.id,
+                        }));
+                      }
+                      setIsConnectionSearchOpen(false);
+                    }}
+                  >
+                    {result.image ? (
+                      <img
+                        src={result.image}
+                        alt={result.title}
+                        className="w-10 h-14 bg-muted rounded object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-14 bg-muted rounded"></div>
+                    )}
+                    <div className="flex-1">
+                      <p className="font-medium text-sm line-clamp-1">
+                        {result.title}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {result.format?.replace(/_/g, " ") || "Unknown"} •{" "}
+                        {result.episodes ? `${result.episodes} eps` : "? eps"}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

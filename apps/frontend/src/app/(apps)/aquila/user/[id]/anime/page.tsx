@@ -213,7 +213,7 @@ export default function UserAnimePage() {
             </Avatar>
             <div className="flex flex-col gap-0.5">
               <h2 className="text-xl font-bold tracking-tight text-foreground">
-                {userData.displayName || userData.username}
+                {`${userData.displayName || userData.username}'s Anime List`}
               </h2>
               <p className="text-xs text-muted-foreground font-medium">
                 @{userData.username}
@@ -223,11 +223,11 @@ export default function UserAnimePage() {
         )}
 
         <header className="flex items-center justify-between mt-2">
-          <h1 className="text-2xl font-bold text-foreground">
+          {/* <h1 className="text-2xl font-bold text-foreground">
             {activeList === "All" ? "Anime List" : activeList}
-          </h1>
+          </h1> */}
 
-          <div className="flex items-center gap-1.5 bg-muted/40 p-1 rounded-lg border border-border/40 shadow-sm">
+          <div className="flex items-center gap-1.5 bg-muted/40 p-1 rounded-lg border border-border/40 shadow-sm ml-auto">
             {[
               { type: "list", icon: <Lucide.List size={16} /> },
               { type: "compact", icon: <Lucide.LayoutList size={16} /> },

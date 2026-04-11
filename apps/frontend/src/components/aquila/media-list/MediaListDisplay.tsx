@@ -74,6 +74,7 @@ export const MediaListDisplay: React.FC<MediaListDisplayProps> = ({
 
   return (
     <div className="flex w-full flex-col gap-8">
+      {/* Planning doesnt work without this */}
       {lists.map((listName) => (
         <MediaListGroup
           key={listName}

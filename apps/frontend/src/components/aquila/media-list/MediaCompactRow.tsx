@@ -9,11 +9,17 @@ interface MediaCompactRowProps {
   baseUrl: string;
 }
 
-export const MediaCompactRow: React.FC<MediaCompactRowProps> = ({ entry, baseUrl }) => {
+export const MediaCompactRow: React.FC<MediaCompactRowProps> = ({
+  entry,
+  baseUrl,
+}) => {
   return (
-    <Link href={`${baseUrl}/${entry.id}`} prefetch={false} className="group flex cursor-pointer items-center justify-between gap-4 py-2 hover:bg-muted/50 rounded-md px-2 transition-colors block">
+    <Link
+      href={`${baseUrl}/${entry.id}`}
+      prefetch={false}
+      className="group flex cursor-pointer items-center justify-between gap-4 py-2 hover:bg-muted/50 rounded-md px-2 transition-colors block"
+    >
       <div className="flex items-center gap-3">
-        <div className="h-2 w-2 rounded-full bg-emerald-500" />
         <span className="font-medium text-sm text-foreground group-hover:text-primary transition-colors">
           {entry.title}
         </span>
@@ -26,4 +32,3 @@ export const MediaCompactRow: React.FC<MediaCompactRowProps> = ({ entry, baseUrl
     </Link>
   );
 };
-

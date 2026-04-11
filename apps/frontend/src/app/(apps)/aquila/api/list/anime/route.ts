@@ -45,6 +45,8 @@ export async function POST(req: NextRequest) {
     endDate,
     notes,
     rewatched,
+    updateConnection,
+    connections,
   } = await req.json();
 
   if (!userId) {
@@ -97,6 +99,8 @@ export async function POST(req: NextRequest) {
       endDate,
       notes,
       rewatched,
+      updateConnection,
+      connections,
     }),
   });
   const data = await res.json();
