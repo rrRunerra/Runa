@@ -1,13 +1,20 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../providers/database/prisma.service';
 import type { Media, SearchMedia } from '../../common/types/types';
-import { NotFoundError } from 'rxjs';
+import { MangaRepository } from './repositories/manga.repository';
+import { MangaQueueService } from './services/manga-queue.service';
+
+const CACHE_DURATION_MS = 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class MangaService {
-  constructor(private readonly prisma: PrismaService) {}
-
   private readonly logger = new Logger(MangaService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mangaRepository: MangaRepository,
+    private readonly mangaQueueService: MangaQueueService,
+  ) {}
 
   public async search(name: string): Promise<SearchMedia[]> {
     const aniListRes = await fetch('https://graphql.anilist.co', {
@@ -66,6 +73,37 @@ export class MangaService {
   }
 
   public async getManga(id: number): Promise<Media> {
+    if (isNaN(id)) {
+      throw new Error(`Invalid manga ID: ${id}`);
+    }
+
+    const dbManga = await this.mangaRepository.findByAnilistId(id);
+
+    if (dbManga) {
+      const now = new Date();
+      const updatedAt = new Date(dbManga.updatedAt);
+      const timeSinceUpdate = now.getTime() - updatedAt.getTime();
+
+      if (timeSinceUpdate < CACHE_DURATION_MS) {
+        return this.mangaRepository.toMedia(dbManga);
+      }
+    }
+
+    try {
+      const media = await this.fetchFromAniList(id);
+
+      this.mangaQueueService.addJob(id);
+
+      return media;
+    } catch (error) {
+      if (dbManga) {
+        return this.mangaRepository.toMedia(dbManga);
+      }
+      throw new NotFoundException('Manga not found');
+    }
+  }
+
+  private async fetchFromAniList(id: number): Promise<Media> {
     const aniListRes = await fetch('https://graphql.anilist.co', {
       method: 'POST',
       headers: {
@@ -160,10 +198,10 @@ export class MangaService {
     });
 
     const data: AniListGetResponse = await aniListRes.json();
-    const media = data.data.Media;
+    const media = data.data?.Media;
 
     if (!media) {
-      throw new NotFoundError('Manga not found');
+      throw new Error(`Manga with ID ${id} not found on AniList`);
     }
 
     return {
@@ -181,11 +219,10 @@ export class MangaService {
       genres: media.genres,
       source: media.source,
       tags: media.tags?.map((tag) => ({
-        id: tag.name.toString(), // Manga tags don't have IDs in the current query, using name
+        id: tag.name.toString(),
         name: tag.name,
         rank: tag.rank,
       })),
-
       averageScore: media.averageScore,
       popularity: media.popularity,
       favourites: media.favourites,
@@ -196,7 +233,7 @@ export class MangaService {
         format: edge.node.format,
         type: edge.node.type,
       })),
-      externalLinks: media.externalLinks.map((link) => ({
+      externalLinks: media.externalLinks?.map((link) => ({
         id: link.id.toString(),
         url: link.url,
         site: link.site,

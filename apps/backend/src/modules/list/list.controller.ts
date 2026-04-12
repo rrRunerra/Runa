@@ -19,6 +19,8 @@ import { $Enums } from '@runa/database';
 export class ListController {
   constructor(private readonly listService: ListService) {}
 
+  // ─────────────────────────── ANIME ───────────────────────────
+
   @Public()
   @Get('/anime/:userId')
   public async getAnimeList(
@@ -65,5 +67,56 @@ export class ListController {
     @Param('animeId') animeId: string,
   ): Promise<{ success: boolean; message: string; error?: any }> {
     return this.listService.deleteAnimeList(userId, Number(animeId));
+  }
+
+  // ─────────────────────────── MANGA ───────────────────────────
+
+  @Public()
+  @Get('/manga/:userId')
+  public async getMangaList(
+    @Param('userId') userId: string,
+  ): Promise<ListEntity[]> {
+    return this.listService.getMangaList(userId);
+  }
+
+  @Public()
+  @Get('/manga/:userId/:mangaId')
+  public async getMangaListEntry(
+    @Param('userId') userId: string,
+    @Param('mangaId') mangaId: string,
+  ) {
+    return this.listService.getMangaListEntry(userId, Number(mangaId));
+  }
+
+  @Post('/manga/upsert')
+  public async upsertMangaList(
+    @Body()
+    body: {
+      userId: string;
+      mangaId: number;
+      status?: $Enums.MangaListStatus;
+      chapters?: number;
+      volumes?: number;
+      score?: number;
+      startDate?: number;
+      endDate?: number;
+      notes?: string;
+      reread?: number;
+      updateConnection?: boolean;
+      connections?: {
+        anilist?: number;
+        mal?: number;
+      };
+    },
+  ): Promise<{ success: boolean; message: string; error?: any }> {
+    return this.listService.upsertMangaList(body);
+  }
+
+  @Delete('/manga/:userId/:mangaId')
+  public async deleteMangaList(
+    @Param('userId') userId: string,
+    @Param('mangaId') mangaId: string,
+  ): Promise<{ success: boolean; message: string; error?: any }> {
+    return this.listService.deleteMangaList(userId, Number(mangaId));
   }
 }

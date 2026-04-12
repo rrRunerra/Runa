@@ -236,6 +236,7 @@ export default function AnimeDetailsPage() {
           );
           if (res.ok) {
             const data = await res.json();
+
             if (data) {
               setListStatus(data.status || "PLANNING");
               setScore(data.score ? data.score.toString() : "");
@@ -249,7 +250,7 @@ export default function AnimeDetailsPage() {
               );
               setRewatches(data.rewatched ? data.rewatched.toString() : "0");
               setConnections(data.connections || {});
-              setUpdateConnection(data.connections ? true : false);
+              setUpdateConnection(Object.keys(data.connections).length > 0);
               setHasListEntry(true);
             } else {
               setHasListEntry(false);

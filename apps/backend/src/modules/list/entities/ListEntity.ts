@@ -1,13 +1,13 @@
-import { $Enums } from '@runa/database';
 
 export default class ListEntity {
   id: number;
   title: string;
   score?: number | null;
   progress?: number | null;
+  episodes?: number | null;
   image: string;
-  format: $Enums.AnimeFormat;
-  status: $Enums.AnimeListStatus;
+  format: string;
+  status: string;
   last_updated: Date;
   last_added: Date;
 }
