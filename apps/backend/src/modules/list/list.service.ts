@@ -311,21 +311,27 @@ export class ListService {
       }
 
       let accessToken = malConnection.accessToken;
-      
+
       // Refresh MAL token if expired
-      if (malConnection.expiresAt && Date.now() > malConnection.expiresAt.getTime()) {
-        const refreshRes = await fetch('https://myanimelist.net/v1/oauth2/token', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
+      if (
+        malConnection.expiresAt &&
+        Date.now() > malConnection.expiresAt.getTime()
+      ) {
+        const refreshRes = await fetch(
+          'https://myanimelist.net/v1/oauth2/token',
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+              client_id: process.env.MAL_CLIENT_ID || '',
+              client_secret: process.env.MAL_CLIENT_SECRET || '',
+              grant_type: 'refresh_token',
+              refresh_token: malConnection.refreshToken || '',
+            }),
           },
-          body: new URLSearchParams({
-            client_id: process.env.MAL_CLIENT_ID || '',
-            client_secret: process.env.MAL_CLIENT_SECRET || '',
-            grant_type: 'refresh_token',
-            refresh_token: malConnection.refreshToken || '',
-          }),
-        });
+        );
 
         if (refreshRes.ok) {
           const refreshData = await refreshRes.json();
@@ -346,28 +352,43 @@ export class ListService {
 
       let malStatus: string | undefined = undefined;
       switch (status) {
-        case 'WATCHING': malStatus = 'watching'; break;
-        case 'COMPLETED': malStatus = 'completed'; break;
-        case 'PAUSED': malStatus = 'on_hold'; break;
-        case 'DROPPED': malStatus = 'dropped'; break;
-        case 'PLANNING': malStatus = 'plan_to_watch'; break;
-        case 'REPEATING': malStatus = 'watching'; break;
+        case 'WATCHING':
+          malStatus = 'watching';
+          break;
+        case 'COMPLETED':
+          malStatus = 'completed';
+          break;
+        case 'PAUSED':
+          malStatus = 'on_hold';
+          break;
+        case 'DROPPED':
+          malStatus = 'dropped';
+          break;
+        case 'PLANNING':
+          malStatus = 'plan_to_watch';
+          break;
+        case 'REPEATING':
+          malStatus = 'watching';
+          break;
       }
-      
+
       const malData = new URLSearchParams();
       if (malStatus) malData.append('status', malStatus);
-      if (score !== undefined) malData.append('score', Math.round(score).toString());
-      if (progress !== undefined) malData.append('num_watched_episodes', progress.toString());
+      if (score !== undefined)
+        malData.append('score', Math.round(score).toString());
+      if (progress !== undefined)
+        malData.append('num_watched_episodes', progress.toString());
       if (status === 'REPEATING') malData.append('is_rewatching', 'true');
-      if (rewatched !== undefined) malData.append('num_times_rewatched', rewatched.toString());
+      if (rewatched !== undefined)
+        malData.append('num_times_rewatched', rewatched.toString());
       if (notes !== undefined) malData.append('comments', notes);
-      
+
       const parseDateStr = (ts?: number) => {
         if (!ts) return undefined;
         const d = new Date(ts * 1000);
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      }
-      
+      };
+
       if (startDate) {
         const startString = parseDateStr(startDate);
         if (startString) malData.append('start_date', startString);
@@ -377,14 +398,22 @@ export class ListService {
         if (endString) malData.append('finish_date', endString);
       }
 
-      const res = await fetch(`https://api.myanimelist.net/v2/anime/${connections.mal}/my_list_status`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
+      if (Number.isNaN(connections.mal)) {
+        this.logger.error(`MAL ID is not a number`);
+        return;
+      }
+
+      const res = await fetch(
+        `https://api.myanimelist.net/v2/anime/${connections.mal}/my_list_status`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: malData,
         },
-        body: malData,
-      });
+      );
 
       if (!res.ok) {
         this.logger.error(`Failed to update MAL connection for user ${userId}`);

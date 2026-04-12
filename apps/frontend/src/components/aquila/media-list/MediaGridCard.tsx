@@ -10,14 +10,23 @@ interface MediaGridCardProps {
   baseUrl: string;
 }
 
-export const MediaGridCard: React.FC<MediaGridCardProps> = ({ entry, baseUrl }) => {
+export const MediaGridCard: React.FC<MediaGridCardProps> = ({
+  entry,
+  baseUrl,
+}) => {
   return (
-    <Link href={`${baseUrl}/${entry.id}`} prefetch={false} className="group relative flex aspect-[2/3] w-full cursor-pointer flex-col overflow-hidden rounded-md bg-card transition-all hover:scale-[1.02] hover:shadow-lg block">
+    <Link
+      href={`${baseUrl}/${entry.id}`}
+      prefetch={false}
+      className="group relative flex aspect-[2/3] w-full cursor-pointer flex-col overflow-hidden rounded-md bg-card transition-all hover:scale-[1.02] hover:shadow-lg block"
+    >
       <div className="absolute inset-0">
         <Image
           src={entry.image}
           alt={entry.title}
           fill
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          loading="eager"
           className="object-cover transition-transform duration-300 group-hover:scale-105"
         />
       </div>
@@ -36,4 +45,3 @@ export const MediaGridCard: React.FC<MediaGridCardProps> = ({ entry, baseUrl }) 
     </Link>
   );
 };
-

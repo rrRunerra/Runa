@@ -249,7 +249,7 @@ export default function AnimeDetailsPage() {
               );
               setRewatches(data.rewatched ? data.rewatched.toString() : "0");
               setConnections(data.connections || {});
-              setUpdateConnection(data.updateConnection || false);
+              setUpdateConnection(data.connections ? true : false);
               setHasListEntry(true);
             } else {
               setHasListEntry(false);
@@ -710,7 +710,11 @@ export default function AnimeDetailsPage() {
                                         : "outline"
                                     }
                                     size="sm"
-                                    className={connections["anilist"] ? "rounded-r-none" : ""}
+                                    className={
+                                      connections["anilist"]
+                                        ? "rounded-r-none"
+                                        : ""
+                                    }
                                     onClick={() => {
                                       setActiveSearchProvider("anilist");
                                       setIsConnectionSearchOpen(true);
@@ -728,7 +732,11 @@ export default function AnimeDetailsPage() {
                                       size="sm"
                                       className="rounded-l-none px-2 h-9"
                                       onClick={() => {
-                                        setConnections(p => { const newP = {...p}; delete newP['anilist']; return newP; });
+                                        setConnections((p) => {
+                                          const newP = { ...p };
+                                          delete newP["anilist"];
+                                          return newP;
+                                        });
                                       }}
                                     >
                                       <X className="w-4 h-4" />
@@ -742,7 +750,9 @@ export default function AnimeDetailsPage() {
                                       connections["mal"] ? "default" : "outline"
                                     }
                                     size="sm"
-                                    className={connections["mal"] ? "rounded-r-none" : ""}
+                                    className={
+                                      connections["mal"] ? "rounded-r-none" : ""
+                                    }
                                     onClick={() => {
                                       setActiveSearchProvider("mal");
                                       setIsConnectionSearchOpen(true);
@@ -760,7 +770,11 @@ export default function AnimeDetailsPage() {
                                       size="sm"
                                       className="rounded-l-none px-2 h-9"
                                       onClick={() => {
-                                        setConnections(p => { const newP = {...p}; delete newP['mal']; return newP; });
+                                        setConnections((p) => {
+                                          const newP = { ...p };
+                                          delete newP["mal"];
+                                          return newP;
+                                        });
                                       }}
                                     >
                                       <X className="w-4 h-4" />
@@ -1066,10 +1080,16 @@ export default function AnimeDetailsPage() {
                                 <Button
                                   type="button"
                                   variant={
-                                    connections["anilist"] ? "default" : "outline"
+                                    connections["anilist"]
+                                      ? "default"
+                                      : "outline"
                                   }
                                   size="sm"
-                                  className={connections["anilist"] ? "rounded-r-none" : ""}
+                                  className={
+                                    connections["anilist"]
+                                      ? "rounded-r-none"
+                                      : ""
+                                  }
                                   onClick={() => {
                                     setActiveSearchProvider("anilist");
                                     setIsConnectionSearchOpen(true);
@@ -1087,7 +1107,11 @@ export default function AnimeDetailsPage() {
                                     size="sm"
                                     className="rounded-l-none px-2 h-9"
                                     onClick={() => {
-                                      setConnections(p => { const newP = {...p}; delete newP['anilist']; return newP; });
+                                      setConnections((p) => {
+                                        const newP = { ...p };
+                                        delete newP["anilist"];
+                                        return newP;
+                                      });
                                     }}
                                   >
                                     <X className="w-4 h-4" />
@@ -1101,7 +1125,9 @@ export default function AnimeDetailsPage() {
                                     connections["mal"] ? "default" : "outline"
                                   }
                                   size="sm"
-                                  className={connections["mal"] ? "rounded-r-none" : ""}
+                                  className={
+                                    connections["mal"] ? "rounded-r-none" : ""
+                                  }
                                   onClick={() => {
                                     setActiveSearchProvider("mal");
                                     setIsConnectionSearchOpen(true);
@@ -1119,7 +1145,11 @@ export default function AnimeDetailsPage() {
                                     size="sm"
                                     className="rounded-l-none px-2 h-9"
                                     onClick={() => {
-                                      setConnections(p => { const newP = {...p}; delete newP['mal']; return newP; });
+                                      setConnections((p) => {
+                                        const newP = { ...p };
+                                        delete newP["mal"];
+                                        return newP;
+                                      });
                                     }}
                                   >
                                     <X className="w-4 h-4" />

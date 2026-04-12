@@ -143,7 +143,7 @@ export default function BrowsePage() {
                 >
                   TV Show
                 </SelectItem>
-                <SelectItem
+                {/* <SelectItem
                   value="games"
                   className="rounded-lg cursor-pointer py-2.5 transition-colors focus:bg-primary/10"
                 >
@@ -160,7 +160,7 @@ export default function BrowsePage() {
                   className="rounded-lg cursor-pointer py-2.5 transition-colors focus:bg-primary/10"
                 >
                   Music
-                </SelectItem>
+                </SelectItem> */}
               </SelectContent>
             </Select>
           </div>

@@ -63,24 +63,24 @@ export const getAquilaSidebarConfig = (
         icon: <Tv className="h-4 w-4" />,
         subtitle: "TV Shows",
       },
-      {
-        label: "Games",
-        href: `/aquila/user/${session?.user?.id}/games`,
-        icon: <Gamepad className="h-4 w-4" />,
-        subtitle: "Games",
-      },
-      {
-        label: "Books",
-        href: `/aquila/user/${session?.user?.id}/books`,
-        icon: <BookA className="h-4 w-4" />,
-        subtitle: "Books",
-      },
-      {
-        label: "Music",
-        href: `/aquila/user/${session?.user?.id}/music`,
-        icon: <Music className="h-4 w-4" />,
-        subtitle: "Music",
-      },
+      // {
+      //   label: "Games",
+      //   href: `/aquila/user/${session?.user?.id}/games`,
+      //   icon: <Gamepad className="h-4 w-4" />,
+      //   subtitle: "Games",
+      // },
+      // {
+      //   label: "Books",
+      //   href: `/aquila/user/${session?.user?.id}/books`,
+      //   icon: <BookA className="h-4 w-4" />,
+      //   subtitle: "Books",
+      // },
+      // {
+      //   label: "Music",
+      //   href: `/aquila/user/${session?.user?.id}/music`,
+      //   icon: <Music className="h-4 w-4" />,
+      //   subtitle: "Music",
+      // },
     ],
   },
   {
