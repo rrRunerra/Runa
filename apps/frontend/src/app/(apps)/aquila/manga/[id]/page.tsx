@@ -235,7 +235,9 @@ export default function MangaDetailsPage() {
               );
               setRereads(data.reread ? data.reread.toString() : "0");
               setConnections(data.connections || {});
-              setUpdateConnection(Object.keys(data.connections).length > 0);
+              setUpdateConnection(
+                Object.keys(data?.connections || {}).length > 0,
+              );
               setHasListEntry(true);
             } else {
               setHasListEntry(false);

@@ -250,7 +250,9 @@ export default function AnimeDetailsPage() {
               );
               setRewatches(data.rewatched ? data.rewatched.toString() : "0");
               setConnections(data.connections || {});
-              setUpdateConnection(Object.keys(data.connections).length > 0);
+              setUpdateConnection(
+                Object.keys(data?.connections || {}).length > 0,
+              );
               setHasListEntry(true);
             } else {
               setHasListEntry(false);
