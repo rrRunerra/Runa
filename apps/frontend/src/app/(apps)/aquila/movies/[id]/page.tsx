@@ -90,7 +90,7 @@ export default function MovieDetailsPage() {
     async function fetchMovie() {
       if (!id) return;
       try {
-        const res = await fetch(`/aquila/api/movies/${id}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/movie/details/${id}`);
         if (!res.ok) {
           setError(true);
           setLoading(false);

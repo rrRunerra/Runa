@@ -20,7 +20,7 @@ export class TvController {
   }
 
   @Public()
-  @Get(':id')
+  @Get('details/:id')
   public async getTv(@Param('id') id: string): Promise<TvEntity> {
     return this.tvService.getTv(id);
   }

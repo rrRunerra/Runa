@@ -20,7 +20,7 @@ export class MovieController {
   }
 
   @Public()
-  @Get(':id')
+  @Get('details/:id')
   public async getMovie(@Param('id') id: string): Promise<MovieEntity> {
     return this.movieService.getMovie(id);
   }

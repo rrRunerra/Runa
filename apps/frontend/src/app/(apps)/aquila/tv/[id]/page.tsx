@@ -107,7 +107,7 @@ export default function TvDetailsPage() {
     async function fetchTv() {
       if (!id) return;
       try {
-        const res = await fetch(`/aquila/api/tv/${id}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tv/details/${id}`);
         if (!res.ok) {
           setError(true);
           setLoading(false);

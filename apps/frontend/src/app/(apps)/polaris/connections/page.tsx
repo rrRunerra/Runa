@@ -43,7 +43,7 @@ const PROVIDERS = [
     name: "AniList",
     description: "Connect to sync your anime and manga progress.",
     url: "https://anilist.co",
-    icon: "/anilist.svg",
+    icon: "/anilist.png",
     invert: true,
   },
   {
@@ -51,7 +51,7 @@ const PROVIDERS = [
     name: "MyAnimeList",
     description: "Connect to sync your anime and manga progress.",
     url: "https://myanimelist.net",
-    icon: "/mal.svg",
+    icon: "/mal.png",
     invert: false,
   },
   {
@@ -59,13 +59,13 @@ const PROVIDERS = [
     name: "Simkl",
     description: "Connect to sync your anime, movies, and TV shows.",
     url: "https://simkl.com",
-    icon: "/simkl.svg",
+    icon: "/simkl.png",
     invert: false,
   },
 ];
 
 function ConnectionsContent() {
-  const { status } = useSession();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [connections, setConnections] = useState<Connection[]>([]);
@@ -75,8 +75,17 @@ function ConnectionsContent() {
   const [success, setSuccess] = useState<boolean>(false);
 
   const fetchConnections = useCallback(async () => {
+    if (!session?.accessToken) return;
+
     try {
-      const res = await fetch("/polaris/api/connections");
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/connections`,
+        {
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+        },
+      );
       if (!res.ok) throw new Error("Failed to fetch connections");
       const data = await res.json();
       setConnections(Array.isArray(data) ? data : []);
@@ -86,7 +95,7 @@ function ConnectionsContent() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [session]);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -114,7 +123,7 @@ function ConnectionsContent() {
 
   const handleConnect = (providerId: string) => {
     setIsActionLoading(providerId);
-    window.location.href = `/polaris/api/connections/${providerId}/connect`;
+    window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/connections/${providerId.toLowerCase()}/connect?token=${session?.accessToken}`;
   };
 
   const handleDisconnect = async (providerId: string) => {
@@ -128,9 +137,12 @@ function ConnectionsContent() {
     setIsActionLoading(providerId);
     try {
       const res = await fetch(
-        `/polaris/api/connections?provider=${providerId.toUpperCase()}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/connections/remove/${providerId.toLowerCase()}`,
         {
           method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${session?.accessToken}`,
+          },
         },
       );
       if (!res.ok) throw new Error("Failed to disconnect");

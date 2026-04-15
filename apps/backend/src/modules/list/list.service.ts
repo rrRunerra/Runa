@@ -67,27 +67,29 @@ export class ListService {
     });
   }
 
-  public async upsertAnimeList(body: {
-    userId: string;
-    animeId: number;
-    status?: $Enums.AnimeListStatus;
-    progress?: number;
-    score?: number;
-    startDate?: number;
-    endDate?: number;
-    notes?: string;
-    rewatched?: number;
-    updateConnection?: boolean;
-    connections?: {
-      anilist?: number;
-      mal?: number;
-    };
-  }): Promise<{ success: boolean; message: string; error?: any }> {
+  public async upsertAnimeList(
+    userId: string,
+    body: {
+      animeId: number;
+      status?: $Enums.AnimeListStatus;
+      progress?: number;
+      score?: number;
+      startDate?: number;
+      endDate?: number;
+      notes?: string;
+      rewatched?: number;
+      updateConnection?: boolean;
+      connections?: {
+        anilist?: number;
+        mal?: number;
+      };
+    },
+  ): Promise<{ success: boolean; message: string; error?: any }> {
     try {
       await this.prisma.client.aquilaAnimeUserList.upsert({
         where: {
           userId_animeId: {
-            userId: body.userId,
+            userId: userId,
             animeId: body.animeId,
           },
         },
@@ -102,7 +104,7 @@ export class ListService {
           connections: body.connections,
         },
         create: {
-          userId: body.userId,
+          userId: userId,
           animeId: body.animeId,
           status: body.status,
           progress: body.progress,
@@ -117,7 +119,7 @@ export class ListService {
 
       if (body.updateConnection) {
         await this.updateConnections(
-          body.userId,
+          userId,
           body.animeId,
           body.connections || {},
           body.status,
@@ -478,28 +480,30 @@ export class ListService {
     });
   }
 
-  public async upsertMangaList(body: {
-    userId: string;
-    mangaId: number;
-    status?: $Enums.MangaListStatus;
-    chapters?: number;
-    volumes?: number;
-    score?: number;
-    startDate?: number;
-    endDate?: number;
-    notes?: string;
-    reread?: number;
-    updateConnection?: boolean;
-    connections?: {
-      anilist?: number;
-      mal?: number;
-    };
-  }): Promise<{ success: boolean; message: string; error?: any }> {
+  public async upsertMangaList(
+    userId: string,
+    body: {
+      mangaId: number;
+      status?: $Enums.MangaListStatus;
+      chapters?: number;
+      volumes?: number;
+      score?: number;
+      startDate?: number;
+      endDate?: number;
+      notes?: string;
+      reread?: number;
+      updateConnection?: boolean;
+      connections?: {
+        anilist?: number;
+        mal?: number;
+      };
+    },
+  ): Promise<{ success: boolean; message: string; error?: any }> {
     try {
       await this.prisma.client.aquilaMangaUserList.upsert({
         where: {
           userId_mangaId: {
-            userId: body.userId,
+            userId: userId,
             mangaId: body.mangaId,
           },
         },
@@ -515,7 +519,7 @@ export class ListService {
           connections: body.connections,
         },
         create: {
-          userId: body.userId,
+          userId: userId,
           mangaId: body.mangaId,
           status: body.status,
           chapters: body.chapters,
@@ -531,7 +535,7 @@ export class ListService {
 
       if (body.updateConnection) {
         await this.updateMangaConnections(
-          body.userId,
+          userId,
           body.mangaId,
           body.connections || {},
           body.status,
@@ -675,13 +679,19 @@ export class ListService {
         });
 
         if (!res.ok) {
-          this.logger.error(`Failed to update Anilist manga connection for user ${userId}`);
+          this.logger.error(
+            `Failed to update Anilist manga connection for user ${userId}`,
+          );
         } else {
           const data = await res.json();
           if (data.errors) {
-            this.logger.error(`Failed to update Anilist manga connection for user ${userId}`);
+            this.logger.error(
+              `Failed to update Anilist manga connection for user ${userId}`,
+            );
           } else {
-            this.logger.log(`Anilist manga connection updated for user ${userId}`);
+            this.logger.log(
+              `Anilist manga connection updated for user ${userId}`,
+            );
           }
         }
       }
@@ -690,7 +700,12 @@ export class ListService {
     if (connections.mal) {
       const malConnection = await this.prisma.client.connections.findFirst({
         where: { userId, provider: 'MAL' },
-        select: { id: true, accessToken: true, refreshToken: true, expiresAt: true },
+        select: {
+          id: true,
+          accessToken: true,
+          refreshToken: true,
+          expiresAt: true,
+        },
       });
 
       if (!malConnection) {
@@ -700,17 +715,23 @@ export class ListService {
 
       let accessToken = malConnection.accessToken;
 
-      if (malConnection.expiresAt && Date.now() > malConnection.expiresAt.getTime()) {
-        const refreshRes = await fetch('https://myanimelist.net/v1/oauth2/token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({
-            client_id: process.env.MAL_CLIENT_ID || '',
-            client_secret: process.env.MAL_CLIENT_SECRET || '',
-            grant_type: 'refresh_token',
-            refresh_token: malConnection.refreshToken || '',
-          }),
-        });
+      if (
+        malConnection.expiresAt &&
+        Date.now() > malConnection.expiresAt.getTime()
+      ) {
+        const refreshRes = await fetch(
+          'https://myanimelist.net/v1/oauth2/token',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              client_id: process.env.MAL_CLIENT_ID || '',
+              client_secret: process.env.MAL_CLIENT_SECRET || '',
+              grant_type: 'refresh_token',
+              refresh_token: malConnection.refreshToken || '',
+            }),
+          },
+        );
 
         if (refreshRes.ok) {
           const refreshData = await refreshRes.json();
@@ -731,19 +752,33 @@ export class ListService {
 
       let malStatus: string | undefined = undefined;
       switch (status) {
-        case 'READING': malStatus = 'reading'; break;
-        case 'COMPLETED': malStatus = 'completed'; break;
-        case 'ON_HOLD': malStatus = 'on_hold'; break;
-        case 'DROPPED': malStatus = 'dropped'; break;
-        case 'PLANNING': malStatus = 'plan_to_read'; break;
+        case 'READING':
+          malStatus = 'reading';
+          break;
+        case 'COMPLETED':
+          malStatus = 'completed';
+          break;
+        case 'ON_HOLD':
+          malStatus = 'on_hold';
+          break;
+        case 'DROPPED':
+          malStatus = 'dropped';
+          break;
+        case 'PLANNING':
+          malStatus = 'plan_to_read';
+          break;
       }
 
       const malData = new URLSearchParams();
       if (malStatus) malData.append('status', malStatus);
-      if (score !== undefined) malData.append('score', Math.round(score).toString());
-      if (chapters !== undefined) malData.append('num_chapters_read', chapters.toString());
-      if (volumes !== undefined) malData.append('num_volumes_read', volumes.toString());
-      if (reread !== undefined) malData.append('num_times_reread', reread.toString());
+      if (score !== undefined)
+        malData.append('score', Math.round(score).toString());
+      if (chapters !== undefined)
+        malData.append('num_chapters_read', chapters.toString());
+      if (volumes !== undefined)
+        malData.append('num_volumes_read', volumes.toString());
+      if (reread !== undefined)
+        malData.append('num_times_reread', reread.toString());
       if (notes !== undefined) malData.append('comments', notes);
 
       const parseDateStr = (ts?: number) => {
@@ -779,7 +814,9 @@ export class ListService {
       );
 
       if (!res.ok) {
-        this.logger.error(`Failed to update MAL manga connection for user ${userId}`);
+        this.logger.error(
+          `Failed to update MAL manga connection for user ${userId}`,
+        );
       } else {
         this.logger.log(`MAL manga connection updated for user ${userId}`);
       }

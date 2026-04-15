@@ -46,7 +46,7 @@ export default function UserMangaPage() {
 
   useEffect(() => {
     if (userId) {
-      fetch(`/aquila/api/users/${userId}`)
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/${userId}`)
         .then(async (res) => await res.json())
         .then((data) => setUserData(data))
         .catch((err) => console.error("Failed to fetch user data", err));
@@ -55,7 +55,7 @@ export default function UserMangaPage() {
 
   useEffect(() => {
     if (userId) {
-      fetch(`/aquila/api/list/manga/${userId}`)
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/manga/user/${userId}`)
         .then(async (res) => await res.json())
         .then((data) => setMangaList(data))
         .catch((err) => console.error("Failed to fetch manga list", err));

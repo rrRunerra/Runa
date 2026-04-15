@@ -9,6 +9,7 @@ config({ path: '../../.env' });
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.enableCors();
   app.useGlobalPipes(new ValidationPipe());
 
   const builder = new DocumentBuilder().setTitle('API').setVersion('1.0');

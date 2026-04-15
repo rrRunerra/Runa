@@ -19,7 +19,7 @@ export class AnimeController {
   }
 
   @Public()
-  @Get(':id')
+  @Get('details/:id')
   async getAnime(@Param('id') id: string): Promise<AnimeEntity> {
     return this.animeService.getAnime(parseInt(id));
   }

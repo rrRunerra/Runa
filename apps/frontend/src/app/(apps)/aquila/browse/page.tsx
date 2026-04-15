@@ -44,14 +44,18 @@ function useSearch() {
     setIsLoading(true);
     setError(null);
     try {
+      // Standardize type for URL and parameter
+      const mediaType = type === "movies" ? "movie" : type;
       const res = await fetch(
-        `/aquila/api/search?query=${encodeURIComponent(query)}&type=${type}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/${mediaType}/search?name=${encodeURIComponent(query)}`,
       );
       if (!res.ok) {
         throw new Error("Failed to fetch search results");
       }
       const json = await res.json();
-      setData(Array.isArray(json) ? json : (json.data ?? []));
+      // Handle different search result structures if any
+      const results = json.data ?? json;
+      setData(Array.isArray(results) ? results : []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
       setData([]);

@@ -217,7 +217,12 @@ export default function MangaDetailsPage() {
       const fetchEntry = async () => {
         try {
           const res = await fetch(
-            `/aquila/api/list/manga?userId=${session.data.user.id}&mangaId=${id}`,
+            `${process.env.NEXT_PUBLIC_API_URL}/list/manga/entry/${id}`,
+            {
+              headers: {
+                Authorization: `Bearer ${session.data.accessToken}`,
+              },
+            },
           );
           if (res.ok) {
             const data = await res.json();
@@ -254,14 +259,13 @@ export default function MangaDetailsPage() {
   const handleSave = async () => {
     setIsSubmitting(true);
     try {
-      const res = await fetch("/aquila/api/list/manga", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/manga/entry/save`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.data?.accessToken}`,
         },
         body: JSON.stringify({
-          userId: session.data?.user?.id,
           mangaId: Number(id),
           status: listStatus,
           startDate: startDate
@@ -300,7 +304,7 @@ export default function MangaDetailsPage() {
     setIsSubmitting(true);
     try {
       const res = await fetch(
-        `/aquila/api/list/manga?userId=${session.data?.user?.id}&mangaId=${id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/list/manga/entry/${id}`,
         {
           method: "DELETE",
           headers: {
@@ -337,7 +341,7 @@ export default function MangaDetailsPage() {
     async function fetchManga() {
       if (!id) return;
       try {
-        const res = await fetch(`/aquila/api/manga/${id}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/manga/details/${id}`);
         if (!res.ok) {
           setError(true);
           setLoading(false);
@@ -779,14 +783,13 @@ export default function MangaDetailsPage() {
                     size="lg"
                     onClick={async () => {
                       try {
-                        const res = await fetch("/aquila/api/list/manga", {
+                        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/manga/entry/save`, {
                           method: "POST",
                           headers: {
                             "Content-Type": "application/json",
                             Authorization: `Bearer ${session.data?.accessToken}`,
                           },
                           body: JSON.stringify({
-                            userId: session.data?.user?.id,
                             mangaId: Number(id),
                             status: "PLANNING",
                           }),

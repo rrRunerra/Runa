@@ -7,6 +7,7 @@ import {
   Post,
   Body,
   Delete,
+  Req,
 } from '@nestjs/common';
 import { DualAuthGuard } from '../../common/guards/auth.guard';
 import { Public } from 'src/common/decorators/public.decorator';
@@ -22,27 +23,26 @@ export class ListController {
   // ─────────────────────────── ANIME ───────────────────────────
 
   @Public()
-  @Get('/anime/:userId')
+  @Get('/anime/user/:userId')
   public async getAnimeList(
     @Param('userId') userId: string,
   ): Promise<ListEntity[]> {
     return this.listService.getAnimeList(userId);
   }
 
-  @Public()
-  @Get('/anime/:userId/:animeId')
+  @Get('/anime/entry/:animeId')
   public async getAnimeListEntry(
-    @Param('userId') userId: string,
     @Param('animeId') animeId: string,
+    @Req() req: any,
   ) {
-    return this.listService.getAnimeListEntry(userId, Number(animeId));
+    return this.listService.getAnimeListEntry(req.user.id, Number(animeId));
   }
 
-  @Post('/anime/upsert')
-  public async upsertAnimeList(
+  @Post('/anime/entry/save')
+  public async saveAnimeListEntry(
+    @Req() req: any,
     @Body()
     body: {
-      userId: string;
       animeId: number;
       status?: $Enums.AnimeListStatus;
       progress?: number;
@@ -58,41 +58,40 @@ export class ListController {
       };
     },
   ): Promise<{ success: boolean; message: string; error?: any }> {
-    return this.listService.upsertAnimeList(body);
+    return this.listService.upsertAnimeList(req.user.id, body);
   }
 
-  @Delete('/anime/:userId/:animeId')
-  public async deleteAnimeList(
-    @Param('userId') userId: string,
+  @Delete('/anime/entry/:animeId')
+  public async deleteAnimeListEntry(
     @Param('animeId') animeId: string,
+    @Req() req: any,
   ): Promise<{ success: boolean; message: string; error?: any }> {
-    return this.listService.deleteAnimeList(userId, Number(animeId));
+    return this.listService.deleteAnimeList(req.user.id, Number(animeId));
   }
 
   // ─────────────────────────── MANGA ───────────────────────────
 
   @Public()
-  @Get('/manga/:userId')
+  @Get('/manga/user/:userId')
   public async getMangaList(
     @Param('userId') userId: string,
   ): Promise<ListEntity[]> {
     return this.listService.getMangaList(userId);
   }
 
-  @Public()
-  @Get('/manga/:userId/:mangaId')
+  @Get('/manga/entry/:mangaId')
   public async getMangaListEntry(
-    @Param('userId') userId: string,
     @Param('mangaId') mangaId: string,
+    @Req() req: any,
   ) {
-    return this.listService.getMangaListEntry(userId, Number(mangaId));
+    return this.listService.getMangaListEntry(req.user.id, Number(mangaId));
   }
 
-  @Post('/manga/upsert')
-  public async upsertMangaList(
+  @Post('/manga/entry/save')
+  public async saveMangaListEntry(
+    @Req() req: any,
     @Body()
     body: {
-      userId: string;
       mangaId: number;
       status?: $Enums.MangaListStatus;
       chapters?: number;
@@ -109,14 +108,14 @@ export class ListController {
       };
     },
   ): Promise<{ success: boolean; message: string; error?: any }> {
-    return this.listService.upsertMangaList(body);
+    return this.listService.upsertMangaList(req.user.id, body);
   }
 
-  @Delete('/manga/:userId/:mangaId')
-  public async deleteMangaList(
-    @Param('userId') userId: string,
+  @Delete('/manga/entry/:mangaId')
+  public async deleteMangaListEntry(
     @Param('mangaId') mangaId: string,
+    @Req() req: any,
   ): Promise<{ success: boolean; message: string; error?: any }> {
-    return this.listService.deleteMangaList(userId, Number(mangaId));
+    return this.listService.deleteMangaList(req.user.id, Number(mangaId));
   }
 }

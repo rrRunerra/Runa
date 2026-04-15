@@ -20,7 +20,7 @@ export class MangaController {
   }
 
   @Public()
-  @Get(':id')
+  @Get('details/:id')
   async getManga(@Param('id') id: string): Promise<MangaEntity> {
     return this.mangaService.getManga(parseInt(id));
   }

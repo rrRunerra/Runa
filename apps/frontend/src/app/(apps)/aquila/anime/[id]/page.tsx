@@ -232,7 +232,13 @@ export default function AnimeDetailsPage() {
       const fetchEntry = async () => {
         try {
           const res = await fetch(
-            `/aquila/api/list/anime?userId=${session.data.user.id}&animeId=${id}`,
+            `${process.env.NEXT_PUBLIC_API_URL}/list/anime/entry/${id}`,
+            {
+              headers: {
+                Authorization: `Bearer ${session.data.accessToken}`,
+              },
+              method: "GET",
+            },
           );
           if (res.ok) {
             const data = await res.json();
@@ -269,14 +275,13 @@ export default function AnimeDetailsPage() {
   const handleSave = async () => {
     setIsSubmitting(true);
     try {
-      const res = await fetch("/aquila/api/list/anime", {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/anime/entry/save`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.data?.accessToken}`,
         },
         body: JSON.stringify({
-          userId: session.data?.user?.id,
           animeId: Number(id),
           status: listStatus,
           startDate: startDate
@@ -314,7 +319,7 @@ export default function AnimeDetailsPage() {
     setIsSubmitting(true);
     try {
       const res = await fetch(
-        `/aquila/api/list/anime?userId=${session.data?.user?.id}&animeId=${id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/list/anime/entry/${id}`,
         {
           method: "DELETE",
           headers: {
@@ -350,7 +355,7 @@ export default function AnimeDetailsPage() {
     async function fetchAnime() {
       if (!id) return;
       try {
-        const res = await fetch(`/aquila/api/anime/${id}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/anime/details/${id}`);
         if (!res.ok) {
           setError(true);
           setLoading(false);
@@ -428,14 +433,13 @@ export default function AnimeDetailsPage() {
                     size="lg"
                     onClick={async () => {
                       try {
-                        const res = await fetch("/aquila/api/list/anime", {
+                        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/anime/entry/save`, {
                           method: "POST",
                           headers: {
                             "Content-Type": "application/json",
                             Authorization: `Bearer ${session.data?.accessToken}`,
                           },
                           body: JSON.stringify({
-                            userId: session.data?.user?.id,
                             animeId: Number(id),
                             status: "PLANNING",
                           }),

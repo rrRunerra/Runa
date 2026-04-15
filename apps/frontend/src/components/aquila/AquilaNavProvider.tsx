@@ -19,11 +19,17 @@ export default function AquilaNavProvider({ children }: AquilaNavProviderProps) 
   const [connections, setConnections] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch("/aquila/api/connections")
-      .then((res) => res.json())
-      .then((data) => setConnections(Array.isArray(data) ? data : []))
-      .catch((err) => console.error("Failed to fetch connections", err));
-  }, []);
+    if (session?.accessToken) {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/connections`, {
+        headers: {
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+      })
+        .then((res) => res.json())
+        .then((data) => setConnections(Array.isArray(data) ? data : []))
+        .catch((err) => console.error("Failed to fetch connections", err));
+    }
+  }, [session?.accessToken]);
 
   const navConfig = useMemo(
     () => getAquilaSidebarConfig(session, connections),
