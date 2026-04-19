@@ -404,6 +404,10 @@ export class ListService {
         this.logger.error(`MAL ID is not a number`);
         return;
       }
+      if (Number(connections.mal) < 0) {
+        this.logger.error(`MAL ID cannot be negative`);
+        return;
+      }
 
       const res = await fetch(
         `https://api.myanimelist.net/v2/anime/${connections.mal}/my_list_status`,
@@ -798,6 +802,10 @@ export class ListService {
 
       if (Number.isNaN(connections.mal)) {
         this.logger.error(`MAL manga ID is not a number`);
+        return;
+      }
+      if (Number(connections.mal) < 0) {
+        this.logger.error(`MAL ID cannot be negative`);
         return;
       }
 

@@ -11,6 +11,6 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "next-auth": "^4.24.13"
+    "next-auth": "^4.24.14"
   }
 }

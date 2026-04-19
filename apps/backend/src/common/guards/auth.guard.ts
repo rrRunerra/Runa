@@ -68,7 +68,6 @@ export class DualAuthGuard implements CanActivate {
     if (!token) {
       throw new UnauthorizedException('No authentication token found');
     }
-
     try {
       const { payload } = await jwtVerify(token, this.secret, {
         algorithms: ['HS256'],
@@ -93,12 +92,12 @@ export class DualAuthGuard implements CanActivate {
       return authHeader.split(' ')[1];
     }
 
-    // Fallback to query parameter for redirect flows
-    const url = new URL(request.url, `http://${request.headers.host}`);
-    const queryToken = url.searchParams.get('token');
-    if (queryToken) {
-      return queryToken;
-    }
+    // // Fallback to query parameter for redirect flows
+    // const url = new URL(request.url, `http://${request.headers.host}`);
+    // const queryToken = url.searchParams.get('token');
+    // if (queryToken) {
+    //   return queryToken;
+    // }
 
     return null;
   }

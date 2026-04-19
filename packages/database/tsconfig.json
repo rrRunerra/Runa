@@ -9,7 +9,8 @@
     "module": "CommonJS",
     "target": "ES6",
     "moduleResolution": "node",
-    "noEmit": false
+    "noEmit": false,
+    "skipLibCheck": true
   },
   "include": ["index.ts"],
   "exclude": ["node_modules", "dist"]

@@ -17,6 +17,7 @@ const PUBLIC_ROUTES: string[] = [
   "/aquila/tv",
   "/aquila/music",
   "/aquila/browse",
+  "/api/auth"
 ];
 
 const ADMIN_ROUTES: string[] = [];

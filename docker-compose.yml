@@ -2,39 +2,36 @@ services:
   frontend:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: apps/frontend/Dockerfile
       args:
-        APP_NAME: frontend
+        - DATABASE_URL
+    container_name: runa-frontend
     ports:
       - "3000:3000"
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - NEXTAUTH_URL=${NEXTAUTH_URL}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+    env_file:
+      - .env
     restart: always
 
   backend:
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        APP_NAME: backend
+      dockerfile: apps/backend/Dockerfile
+    container_name: runa-backend
     ports:
-      - "3001:3000" # Mapping to 3001 on host, backend standard is 3000 in-container
+      - "${NEST_PORT}:${NEST_PORT}"
+    env_file:
+      - .env
     environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - JWT_SECRET=${JWT_SECRET}
-      - START_COMMAND=pnpm --filter backend start:prod
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-rrAkaryth}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-runerra}
     restart: always
 
   lynx-bot:
     build:
       context: .
-      dockerfile: Dockerfile
-      args:
-        APP_NAME: lynx-bot
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - DISCORD_TOKEN=${DISCORD_TOKEN}
-      - START_COMMAND=pnpm --filter lynx-bot start
+      dockerfile: apps/lynx-bot/Dockerfile
+    container_name: runa-lynx-bot
+    ports:
+      - "${LYNX_PORT}:${LYNX_PORT}"
+    env_file:
+      - .env
     restart: always

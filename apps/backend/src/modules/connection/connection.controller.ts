@@ -100,12 +100,10 @@ export class ConnectionController {
 
       await this.connectionService.handleCallback(provider, code, user.id);
 
-      const frontendUrl =
-        process.env.NEXT_PUBLIC_AQUILA || 'http://localhost:3000';
+      const frontendUrl = process.env.NEXT_PUBLIC_URL;
       return res.redirect(`${frontendUrl}/connections?success=true`);
     } catch (error) {
-      const frontendUrl =
-        process.env.NEXT_PUBLIC_AQUILA || 'http://localhost:3000';
+      const frontendUrl = process.env.NEXT_PUBLIC_URL;
       return res.redirect(
         `${frontendUrl}/connections?error=oauth_failed&message=${encodeURIComponent(error.message)}`,
       );
