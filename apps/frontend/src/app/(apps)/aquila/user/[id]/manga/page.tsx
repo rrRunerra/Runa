@@ -23,6 +23,10 @@ export default function UserMangaPage() {
   const params = useParams();
   const userId = params.id as string;
 
+  if (!userId) {
+    return <div>User not found</div>;
+  }
+
   const [displayType, setDisplayType] = useState<DisplayType>("grid");
   const [search, setSearch] = useState("");
   const [activeList, setActiveList] = useState("All");
@@ -67,7 +71,14 @@ export default function UserMangaPage() {
     document.title = `Aquila | ${userData?.displayName || userData?.username}'s Manga List`;
   }, [userData]);
 
-  const lists = ["All", "Reading", "Completed", "Dropped", "Planning", "On Hold"];
+  const lists = [
+    "All",
+    "Reading",
+    "Completed",
+    "Dropped",
+    "Planning",
+    "On Hold",
+  ];
 
   const resetFilters = () => {
     setSearch("");
@@ -162,7 +173,9 @@ export default function UserMangaPage() {
               <SelectContent>
                 <SelectItem value="Finished">Finished</SelectItem>
                 <SelectItem value="Releasing">Releasing</SelectItem>
-                <SelectItem value="Not Yet Released">Not Yet Released</SelectItem>
+                <SelectItem value="Not Yet Released">
+                  Not Yet Released
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -241,11 +254,7 @@ export default function UserMangaPage() {
         </header>
 
         <MediaListDisplay
-          lists={
-            activeList === "All"
-              ? ["Reading", "Completed"]
-              : [activeList]
-          }
+          lists={activeList === "All" ? ["Reading", "Completed"] : [activeList]}
           data={filteredData}
           displayType={displayType}
           filters={filters}

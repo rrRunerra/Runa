@@ -23,6 +23,10 @@ export default function UserAnimePage() {
   const params = useParams();
   const userId = params.id as string;
 
+  if (!userId) {
+    return <div>User not found</div>;
+  }
+
   const [displayType, setDisplayType] = useState<DisplayType>("grid");
   const [search, setSearch] = useState("");
   const [activeList, setActiveList] = useState("All");

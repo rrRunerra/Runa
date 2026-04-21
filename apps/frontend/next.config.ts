@@ -1,12 +1,11 @@
 import type { NextConfig } from "next";
-import dotenv from "dotenv";
 
-try {
-  dotenv.config({ path: "../../.env" });
-} catch (error) {
-  console.error("Error loading .env file:", error);
-} finally {
-  console.log("Loaded .env file");
+const REQUIRED_ENVS = ["DATABASE_URL", "NEXTAUTH_SECRET", "NEXTAUTH_URL"];
+
+for (const env of REQUIRED_ENVS) {
+  if (!process.env[env]) {
+    throw new Error(`Missing required environment variable: ${env}`);
+  }
 }
 
 const nextConfig: NextConfig = {

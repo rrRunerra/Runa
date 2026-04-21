@@ -2,16 +2,9 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-import { config } from 'dotenv';
-import fs from 'fs';
 import 'reflect-metadata';
 
-config({ path: '../../.env' });
 
-fs.watchFile('../../.env', () => {
-  console.log('Environment variables changed');
-  config({ path: '../../.env', override: true });
-});
 
 const REQUIRED_ENV_VARS = [
   'NEST_PORT',
@@ -31,12 +24,8 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, builder.build());
   SwaggerModule.setup('docs', app, document);
 
-  for (const envVar of REQUIRED_ENV_VARS) {
-    if (!process.env[envVar]) {
-      throw new Error(`${envVar} is not defined`);
-    }
-  }
-
-  await app.listen(Number(process.env.NEST_PORT));
+  const port = Number(process.env.NEST_PORT) || 3000;
+  await app.listen(port);
+  console.log(`Application is running on: ${await app.getUrl()}`);
 }
 bootstrap();

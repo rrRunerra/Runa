@@ -12,9 +12,9 @@
     }
   },
   "scripts": {
-    "build": "tsc",
-    "db:generate": "prisma generate",
-    "db:push": "prisma db push"
+    "build": "dotenvx run -f ../../.env -- tsc",
+    "db:generate": "dotenvx run -f ../../.env -- prisma generate",
+    "db:push": "dotenvx run -f ../../.env -- prisma db push"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.7.0",
