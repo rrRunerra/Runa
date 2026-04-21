@@ -31,7 +31,26 @@ RUN cd packages/database && pnpm db:generate
 # Next.js build requires env vars for build-time optimization, but we usually handle them via ENV in compose
 
 ARG DATABASE_URL
+ARG NEXT_PUBLIC_URL
+ARG NEXTAUTH_URL
+ARG NEXT_PUBLIC_API_URL
+ARG NEST_PORT
+
 ENV DATABASE_URL=${DATABASE_URL}
+ENV NEXT_PUBLIC_URL=${NEXT_PUBLIC_URL}
+ENV NEXTAUTH_URL=${NEXTAUTH_URL}
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEST_PORT=${NEST_PORT}
+
+# Verify that essential URL variables are not empty before building
+RUN if [ -z "$DATABASE_URL" ] || [ -z "$NEXTAUTH_URL" ] || [ -z "$NEXT_PUBLIC_API_URL" ] || [ -z "$NEXT_PUBLIC_URL" ]; then \
+    echo "ERROR: Essential build-time environment variables are missing!" && \
+    echo "DATABASE_URL: ${DATABASE_URL:-(empty)}" && \
+    echo "NEXT_PUBLIC_URL: ${NEXT_PUBLIC_URL:-(empty)}" && \
+    echo "NEXTAUTH_URL: ${NEXTAUTH_URL:-(empty)}" && \
+    echo "NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-(empty)}" && \
+    exit 1; \
+    fi
 
 RUN pnpm turbo run build --filter=frontend
 

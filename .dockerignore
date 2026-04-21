@@ -1,11 +1,28 @@
-node_modules
-.next
-dist
-.turbo
-*.log
-.env
-.env.*
-!.env.example
+# Dependency folders
+**/node_modules
+**/jspm_packages
+
+# Build artifacts
+**/.next
+**/dist
+**/build
+**/.turbo
+**/.cache
+
+# Logs and databases
+**/*.log
+**/*.sqlite
+**/db.sqlite
+
+# System/IDE files
 .git
 .gitignore
-README.md
+.vscode
+.idea
+.pnpm-store
+.vercel
+
+# Environment files
+.env*
+.env
+!.env.example

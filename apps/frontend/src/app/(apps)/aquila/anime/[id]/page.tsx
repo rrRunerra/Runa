@@ -22,7 +22,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -275,29 +274,32 @@ export default function AnimeDetailsPage() {
   const handleSave = async () => {
     setIsSubmitting(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/anime/entry/save`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.data?.accessToken}`,
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/list/anime/entry/save`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.data?.accessToken}`,
+          },
+          body: JSON.stringify({
+            animeId: Number(id),
+            status: listStatus,
+            startDate: startDate
+              ? Math.floor(startDate.getTime() / 1000)
+              : undefined,
+            endDate: finishDate
+              ? Math.floor(finishDate.getTime() / 1000)
+              : undefined,
+            score: score ? Number(score) : undefined,
+            progress: progress ? Number(progress) : undefined,
+            notes: notes || undefined,
+            rewatched: rewatches ? Number(rewatches) : undefined,
+            updateConnection,
+            connections,
+          }),
         },
-        body: JSON.stringify({
-          animeId: Number(id),
-          status: listStatus,
-          startDate: startDate
-            ? Math.floor(startDate.getTime() / 1000)
-            : undefined,
-          endDate: finishDate
-            ? Math.floor(finishDate.getTime() / 1000)
-            : undefined,
-          score: score ? Number(score) : undefined,
-          progress: progress ? Number(progress) : undefined,
-          notes: notes || undefined,
-          rewatched: rewatches ? Number(rewatches) : undefined,
-          updateConnection,
-          connections,
-        }),
-      });
+      );
       const data = await res.json();
       if (res.ok && data.success !== false) {
         toast.success("Added to list!");
@@ -355,7 +357,9 @@ export default function AnimeDetailsPage() {
     async function fetchAnime() {
       if (!id) return;
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/anime/details/${id}`);
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/anime/details/${id}`,
+        );
         if (!res.ok) {
           setError(true);
           setLoading(false);
@@ -433,17 +437,20 @@ export default function AnimeDetailsPage() {
                     size="lg"
                     onClick={async () => {
                       try {
-                        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/anime/entry/save`, {
-                          method: "POST",
-                          headers: {
-                            "Content-Type": "application/json",
-                            Authorization: `Bearer ${session.data?.accessToken}`,
+                        const res = await fetch(
+                          `${process.env.NEXT_PUBLIC_API_URL}/list/anime/entry/save`,
+                          {
+                            method: "POST",
+                            headers: {
+                              "Content-Type": "application/json",
+                              Authorization: `Bearer ${session.data?.accessToken}`,
+                            },
+                            body: JSON.stringify({
+                              animeId: Number(id),
+                              status: "PLANNING",
+                            }),
                           },
-                          body: JSON.stringify({
-                            animeId: Number(id),
-                            status: "PLANNING",
-                          }),
-                        });
+                        );
                         if (res.ok) {
                           toast.success("Added to list!");
                           setHasListEntry(true);
