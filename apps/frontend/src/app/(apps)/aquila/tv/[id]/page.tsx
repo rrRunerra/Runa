@@ -431,7 +431,7 @@ export default function TvDetailsPage() {
                                   <img
                                     src={
                                       episode.image.length > 0
-                                        ? episode.image
+                                        ? `https://thetvdb.com${episode.image}`
                                         : undefined
                                     }
                                     alt={episode.name}
