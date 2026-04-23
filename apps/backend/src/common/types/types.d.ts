@@ -87,6 +87,10 @@ export interface Media {
   chapters?: number | null;
   volumes?: number | null;
   runtime?: number | null;
+  averageRuntime?: number | null;
+  originalCountry?: string | null;
+  originalLanguage?: string | null;
+  tvType?: string | null;
   budget?: string | null;
   boxOffice?: string | null;
   genres: string[] | null;

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../providers/database/prisma.service';
 import type {
   Media,
@@ -6,10 +6,18 @@ import type {
   SearchApiResponse,
   SearchMediaItem,
 } from '../../common/types/types';
+import { MovieRepository } from './repositories/movie.repository';
+import { MovieQueueService } from './services/movie-queue.service';
+
+const CACHE_DURATION_MS = 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class MovieService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly movieRepository: MovieRepository,
+    private readonly movieQueueService: MovieQueueService,
+  ) {}
 
   private readonly logger = new Logger(MovieService.name);
   private token: string | null = null;
@@ -71,45 +79,74 @@ export class MovieService {
   }
 
   public async getMovie(id: string): Promise<Media> {
-    if (!/^\d+$/.test(id)) {
+    const tvdbId = parseInt(id);
+    if (isNaN(tvdbId)) {
       throw new Error('Invalid id format');
     }
+
+    const dbMovie = await this.movieRepository.findByTvdbId(tvdbId);
+
+    if (dbMovie) {
+      const now = new Date();
+      const updatedAt = new Date(dbMovie.updatedAt);
+      const timeSinceUpdate = now.getTime() - updatedAt.getTime();
+
+      if (timeSinceUpdate < CACHE_DURATION_MS) {
+        return this.movieRepository.toMedia(dbMovie);
+      }
+    }
+
+    try {
+      const media = await this.fetchFromTvdb(tvdbId);
+
+      this.movieQueueService.addJob(tvdbId);
+
+      return media;
+    } catch (error) {
+      if (dbMovie) {
+        return this.movieRepository.toMedia(dbMovie);
+      }
+      throw new NotFoundException('Movie not found');
+    }
+  }
+
+  private async fetchFromTvdb(tvdbId: number): Promise<Media> {
     if (!this.token) {
       await this.setTheTvDbToken();
     }
 
-    const res = await fetch(
-      `https://api4.thetvdb.com/v4/movies/${id}/extended`,
-      {
+    const [movieRes, transRes] = await Promise.all([
+      fetch(`https://api4.thetvdb.com/v4/movies/${tvdbId}/extended`, {
         method: 'GET',
         headers: {
           Accept: 'application/json',
           Authorization: `Bearer ${this.token}`,
         },
-      },
-    );
+      }),
+      fetch(`https://api4.thetvdb.com/v4/movies/${tvdbId}/translations/eng`, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${this.token}`,
+        },
+      }),
+    ]);
 
-    const data = await res.json();
+    const [movieData, transData] = await Promise.all([
+      movieRes.json(),
+      transRes.json(),
+    ]);
 
-    if (data.message == 'Unauthorized') {
+    if (movieData.message == 'Unauthorized') {
       await this.setTheTvDbToken();
-      return this.getMovie(id);
+      return this.fetchFromTvdb(tvdbId);
     }
 
-    const movie = data.data;
+    if (!movieData.data) {
+      throw new Error(`Movie with ID ${tvdbId} not found`);
+    }
 
-    // Explicitly fetch English translations for the movie
-    const transRes = await fetch(
-      `https://api4.thetvdb.com/v4/movies/${id}/translations/eng`,
-      {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-          Authorization: `Bearer ${this.token}`,
-        },
-      },
-    );
-    const transData = await transRes.json();
+    const movie = movieData.data;
     const translation = transData.data;
 
     const englishName = translation?.name || movie.name;
@@ -128,19 +165,9 @@ export class MovieService {
       status: movie.status?.name || 'FINISHED',
       description: englishOverview,
       runtime: movie.runtime,
-      budget: movie.budget,
-      boxOffice: movie.boxOffice,
       genres: movie.genres?.map((g: any) => g.name) || [],
-      trailers:
-        movie.trailers?.map((t: any) => ({
-          id: t.id.toString(),
-          name: t.name,
-          url: t.url,
-          language: t.language,
-        })) || [],
       characters:
         movie.characters?.map((c: any) => ({
-          id: c.id.toString(),
           name: c.name ?? '',
           personName: c.personName ?? '',
           image: c.image ?? '',

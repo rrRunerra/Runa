@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../providers/database/prisma.service';
 import type {
   Media,
@@ -6,10 +6,18 @@ import type {
   SearchApiResponse,
   SearchMediaItem,
 } from '../../common/types/types';
+import { TvRepository } from './repositories/tv.repository';
+import { TvQueueService } from './services/tv-queue.service';
+
+const CACHE_DURATION_MS = 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class TvService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tvRepository: TvRepository,
+    private readonly tvQueueService: TvQueueService,
+  ) {}
 
   private readonly logger = new Logger(TvService.name);
   private token: string | null = null;
@@ -74,6 +82,35 @@ export class TvService {
     if (!/^\d+$/.test(id)) {
       throw new Error('Invalid id format');
     }
+
+    const tvdbId = parseInt(id);
+    const dbTv = await this.tvRepository.findByTvdbId(tvdbId);
+
+    if (dbTv) {
+      const now = new Date();
+      const updatedAt = new Date(dbTv.updatedAt);
+      const timeSinceUpdate = now.getTime() - updatedAt.getTime();
+
+      if (timeSinceUpdate < CACHE_DURATION_MS) {
+        return this.tvRepository.toMedia(dbTv);
+      }
+    }
+
+    try {
+      const media = await this.fetchFromTvdb(id);
+
+      this.tvQueueService.addJob(tvdbId);
+
+      return media;
+    } catch (error) {
+      if (dbTv) {
+        return this.tvRepository.toMedia(dbTv);
+      }
+      throw new NotFoundException('TV show not found');
+    }
+  }
+
+  private async fetchFromTvdb(id: string): Promise<Media> {
     if (!this.token) {
       await this.setTheTvDbToken();
     }
@@ -94,7 +131,7 @@ export class TvService {
 
     if (seriesData.message == 'Unauthorized') {
       await this.setTheTvDbToken();
-      return this.getTv(id);
+      return this.fetchFromTvdb(id);
     }
 
     const series = seriesData.data;
@@ -172,6 +209,7 @@ export class TvService {
       seasons:
         series.seasons
           ?.filter((s: any) => s.type.id === 1)
+          .filter((s: any) => s.number !== 0)
           .sort((a: any, b: any) => a.number - b.number)
           .map((s: any) => {
             // Map episodes that belong to this season

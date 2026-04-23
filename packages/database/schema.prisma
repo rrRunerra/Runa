@@ -375,3 +375,57 @@ enum MangaListStatus {
     ON_HOLD
     DROPPED
 }
+
+model AquilaMovie {
+    id        Int  @id @default(autoincrement())
+    tvdbId    Int? @unique
+
+    titleEnglish String?
+    titleRomaji  String?
+
+    coverImage String?
+    bannerImage String?
+    description String?
+
+    status  String?
+    runtime Int?
+
+    genres   String[] @db.Text
+    studios String[] @db.Text
+
+    cast     Json? @db.Json
+
+    updatedAt DateTime @updatedAt
+
+    @@index([tvdbId])
+}
+
+model AquilaTv {
+    id        Int  @id @default(autoincrement())
+    tvdbId    Int? @unique
+
+    titleEnglish String?
+    titleRomaji  String?
+
+    coverImage String?
+    bannerImage String?
+    description String?
+
+    status  String?
+    originalCountry String?
+    originalLanguage String?
+    tvType  String?
+    subgenre String?
+    averageRuntime Int?
+
+    genres String[] @db.Text
+    studios String[] @db.Text
+
+    cast    Json? @db.Json
+    seasons Json? @db.Json
+    trailers Json? @db.Json
+
+    updatedAt DateTime @updatedAt
+
+    @@index([tvdbId])
+}

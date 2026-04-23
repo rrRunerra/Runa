@@ -13,9 +13,7 @@ export class TvController {
 
   @Public()
   @Get('search')
-  public async search(
-    @Query() query: SearchTvDto,
-  ): Promise<TvSearchEntity> {
+  public async search(@Query() query: SearchTvDto): Promise<TvSearchEntity> {
     return this.tvService.search(query.name);
   }
 

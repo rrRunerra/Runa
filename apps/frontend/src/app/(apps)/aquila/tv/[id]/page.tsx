@@ -90,6 +90,10 @@ interface Media {
   studios?: MediaStudio[];
   staff?: { id: string; name: string; role: string }[];
   seasons?: MediaSeason[];
+  originalCountry?: string;
+  originalLanguage?: string;
+  tvType?: string;
+  averageRuntime?: number;
 }
 
 export default function TvDetailsPage() {
@@ -107,7 +111,9 @@ export default function TvDetailsPage() {
     async function fetchTv() {
       if (!id) return;
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/tv/details/${id}`);
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/tv/details/${id}`,
+        );
         if (!res.ok) {
           setError(true);
           setLoading(false);
@@ -151,7 +157,7 @@ export default function TvDetailsPage() {
         <div className="absolute inset-0 bg-linear-to-t from-background via-background/20 to-transparent z-10" />
         {tv.bannerImage ? (
           <img
-            src={tv.bannerImage}
+            src={tv.bannerImage.length > 0 ? tv.bannerImage : undefined}
             alt={tv.title?.romaji}
             className="w-full h-full object-cover"
           />
@@ -210,12 +216,38 @@ export default function TvDetailsPage() {
                   <span className="font-medium">{tv.duration} mins</span>
                 </div>
               )}
+              {tv.averageRuntime && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Avg. Runtime</span>
+                  <span className="font-medium">{tv.averageRuntime} mins</span>
+                </div>
+              )}
               <div className="flex justify-between items-center text-sm">
                 <span className="text-muted-foreground">Status</span>
                 <span className="font-medium capitalize">
                   {tv.status?.replace(/_/g, " ").toLowerCase()}
                 </span>
               </div>
+              {tv.tvType && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">TV Type</span>
+                  <span className="font-medium">{tv.tvType}</span>
+                </div>
+              )}
+              {tv.originalCountry && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Country</span>
+                  <span className="font-medium">{tv.originalCountry}</span>
+                </div>
+              )}
+              {tv.originalLanguage && (
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Language</span>
+                  <span className="font-medium uppercase">
+                    {tv.originalLanguage}
+                  </span>
+                </div>
+              )}
               {tv.seasons && tv.seasons.length > 0 && (
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-muted-foreground">Seasons</span>
@@ -361,7 +393,11 @@ export default function TvDetailsPage() {
                         <div className="flex items-center gap-3">
                           {season.image && (
                             <img
-                              src={season.image}
+                              src={
+                                season.image.length > 0
+                                  ? season.image
+                                  : undefined
+                              }
                               alt={season.name || `Season ${season.number}`}
                               className="w-12 h-12 rounded-lg object-cover"
                             />
@@ -393,7 +429,11 @@ export default function TvDetailsPage() {
                               >
                                 {episode.image && (
                                   <img
-                                    src={episode.image}
+                                    src={
+                                      episode.image.length > 0
+                                        ? episode.image
+                                        : undefined
+                                    }
                                     alt={episode.name}
                                     className="w-28 h-16 rounded-lg object-cover shrink-0"
                                   />
@@ -437,7 +477,7 @@ export default function TvDetailsPage() {
                       className="flex items-center gap-3 bg-card p-2 rounded-lg border border-border"
                     >
                       <img
-                        src={char.image}
+                        src={char.image.length > 0 ? char.image : undefined}
                         alt={char.name}
                         className="w-10 h-10 rounded-full object-cover"
                       />
