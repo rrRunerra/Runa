@@ -51,6 +51,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { AppearanceDialog } from "@/components/AppearanceDialog";
+import { usePathname } from "next/navigation";
 
 interface AppSideBarProps extends React.ComponentProps<typeof Sidebar> {
   /**
@@ -90,6 +91,7 @@ export default function AppSideBar({
   const { data: session } = useSession();
   const { setNavbarConfig } = useNavigation();
   const { isMobile } = useSidebar();
+  const pathname = usePathname();
 
   const [activeApp, setActiveApp] = useState(apps[0]);
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
@@ -194,11 +196,18 @@ export default function AppSideBar({
 
                     const truncate = (s: string, n: number) =>
                       s.length > n ? `${s.slice(0, n)}...` : s;
-
+                    const isChildActive =
+                      item.children?.some(
+                        (child: any) => pathname === child.href,
+                      ) ?? false;
                     const MenuItem = (
                       <SidebarMenuItem key={itemIdx}>
                         {hasHref ? (
-                          <SidebarMenuButton asChild tooltip={item.label}>
+                          <SidebarMenuButton
+                            asChild
+                            tooltip={item.label}
+                            isActive={pathname === item.href || isChildActive}
+                          >
                             <Link href={item.href}>
                               {item.icon}
                               {truncate(item.label, 18)}
@@ -206,7 +215,10 @@ export default function AppSideBar({
                           </SidebarMenuButton>
                         ) : (
                           <CollapsibleTrigger asChild>
-                            <SidebarMenuButton tooltip={item.label}>
+                            <SidebarMenuButton
+                              tooltip={item.label}
+                              isActive={isChildActive}
+                            >
                               {item.icon}
                               {truncate(item.label, 18)}
                               <ChevronRight className="ml-auto size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
@@ -229,7 +241,10 @@ export default function AppSideBar({
                                 {item.children?.map(
                                   (child: any, childIdx: number) => (
                                     <SidebarMenuSubItem key={childIdx}>
-                                      <SidebarMenuSubButton asChild>
+                                      <SidebarMenuSubButton
+                                        asChild
+                                        isActive={pathname === child.href}
+                                      >
                                         <Link href={child.href}>
                                           {child.icon}
                                           {truncate(child.label, 16)}
@@ -250,7 +265,7 @@ export default function AppSideBar({
                         <Collapsible
                           key={itemIdx}
                           asChild
-                          defaultOpen={false}
+                          defaultOpen={isChildActive}
                           className="group/collapsible mt-1"
                         >
                           {MenuItem}

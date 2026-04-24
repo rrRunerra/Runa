@@ -7,21 +7,22 @@ datasource db {
 }
 
 model User {
-    id                String                @id @default(uuid())
-    createdAt         DateTime              @default(now())
-    updatedAt         DateTime              @updatedAt
-    email             String                @unique
-    username          String                @unique
-    passwordHash      String
-    passwordChangedAt DateTime?
-    private           Boolean               @default(false)
-    role              Role                  @default(USER)
-    displayName       String?
-    avatarUrl         String?
-    apiKeys           ApiKey[]
-    connections       Connections[]
-    animeList         AquilaAnimeUserList[]
-    mangaList         AquilaMangaUserList[]
+    id                   String                @id @default(uuid())
+    createdAt            DateTime              @default(now())
+    updatedAt            DateTime              @updatedAt
+    email                String                @unique
+    username             String                @unique
+    passwordHash         String
+    passwordChangedAt    DateTime?
+    private              Boolean               @default(false)
+    role                 Role                  @default(USER)
+    displayName          String?
+    avatarUrl            String?
+    apiKeys              ApiKey[]
+    connections          Connections[]
+    animeList            AquilaAnimeUserList[]
+    mangaList            AquilaMangaUserList[]
+    aquilaMovieUserLists AquilaMovieUserList[]
 
     @@index([id])
     @@index([username])
@@ -305,8 +306,8 @@ model AquilaManga {
     chapters Int?
     volumes  Int?
 
-    genres   String[] @db.Text
-    tags     Json?    @db.Json
+    genres String[] @db.Text
+    tags   Json?    @db.Json
 
     source  String?
     format  MangaFormat @default(UNKNOWN)
@@ -377,55 +378,87 @@ enum MangaListStatus {
 }
 
 model AquilaMovie {
-    id        Int  @id @default(autoincrement())
-    tvdbId    Int? @unique
+    id     Int @id @default(autoincrement())
+    tvdbId Int @unique
 
     titleEnglish String?
     titleRomaji  String?
 
-    coverImage String?
+    coverImage  String?
     bannerImage String?
     description String?
 
     status  String?
     runtime Int?
 
-    genres   String[] @db.Text
+    genres  String[] @db.Text
+    studios String[] @db.Text
+
+    cast Json? @db.Json
+
+    updatedAt            DateTime              @updatedAt
+    aquilaMovieUserLists AquilaMovieUserList[]
+
+    @@index([tvdbId])
+}
+
+model AquilaTv {
+    id     Int  @id @default(autoincrement())
+    tvdbId Int? @unique
+
+    titleEnglish String?
+    titleRomaji  String?
+
+    coverImage  String?
+    bannerImage String?
+    description String?
+
+    status           String?
+    originalCountry  String?
+    originalLanguage String?
+    tvType           String?
+    subgenre         String?
+    averageRuntime   Int?
+
+    genres  String[] @db.Text
     studios String[] @db.Text
 
     cast     Json? @db.Json
+    seasons  Json? @db.Json
+    trailers Json? @db.Json
 
     updatedAt DateTime @updatedAt
 
     @@index([tvdbId])
 }
 
-model AquilaTv {
-    id        Int  @id @default(autoincrement())
-    tvdbId    Int? @unique
+enum MovieListStatus {
+    COMPLETED
+    PLANNING
+    DROPPED
+}
 
-    titleEnglish String?
-    titleRomaji  String?
+model AquilaMovieUserList {
+    id        Int             @id @default(autoincrement())
+    userId    String
+    tvdbId    Int
+    status    MovieListStatus @default(PLANNING)
+    score     Int?
+    notes     String?         @db.Text
+    rewatched Int?
 
-    coverImage String?
-    bannerImage String?
-    description String?
+    startDate Int?
+    endDate   Int?
 
-    status  String?
-    originalCountry String?
-    originalLanguage String?
-    tvType  String?
-    subgenre String?
-    averageRuntime Int?
-
-    genres String[] @db.Text
-    studios String[] @db.Text
-
-    cast    Json? @db.Json
-    seasons Json? @db.Json
-    trailers Json? @db.Json
-
+    createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
+    connections Json? @db.Json
+
+    user  User        @relation(fields: [userId], references: [id])
+    movie AquilaMovie @relation(fields: [tvdbId], references: [tvdbId])
+
+    @@unique([userId, tvdbId])
+    @@index([userId])
     @@index([tvdbId])
 }

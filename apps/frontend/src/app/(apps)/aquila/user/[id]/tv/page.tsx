@@ -138,7 +138,7 @@ export default function UserTvShowsPage() {
             Filters
           </Label>
 
-          <div className="space-y-1.5 mt-2">
+          {/* <div className="space-y-1.5 mt-2">
             <Label className="text-xs font-semibold px-2">Status</Label>
             <Select
               value={filters.status}
@@ -153,7 +153,7 @@ export default function UserTvShowsPage() {
                 <SelectItem value="Not Yet Aired">Not Yet Aired</SelectItem>
               </SelectContent>
             </Select>
-          </div>
+          </div> */}
 
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold px-2">Sort</Label>

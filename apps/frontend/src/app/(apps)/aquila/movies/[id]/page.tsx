@@ -218,9 +218,9 @@ export default function MovieDetailsPage() {
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Cast</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                  {movie.characters.slice(0, 10).map((char) => (
+                  {movie.characters.slice(0, 10).map((char, idx) => (
                     <div
-                      key={char.personName || char.name}
+                      key={idx}
                       className="flex items-center gap-3 bg-card p-2 rounded-lg border border-border"
                     >
                       <img

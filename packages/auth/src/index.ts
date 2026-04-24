@@ -1,13 +1,14 @@
 /// <reference path="./next-auth.d.ts" />
 import { getServerSession, NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-const API_URL =
-  process.env.NEST_API_URL ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  `http://localhost:${process.env.NEST_PORT || 4000}`;
+const API_URL = process.env.NEST_API_URL || process.env.NEXT_PUBLIC_API_URL;
 
 if (!process.env.NEXTAUTH_URL) {
   throw new Error("[AUTH] NEXTAUTH_URL env variable is not defined");
+}
+
+if (!API_URL) {
+  throw new Error("[AUTH] API url is not defined");
 }
 
 export const authOptions: NextAuthOptions = {
