@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "dotenvx run -f ../../.env -- next dev -H 0.0.0.0",
-    "build": "next build",
-    "start": "next start",
+    "build": "dotenvx run -f ../../.env -- next build",
+    "start": "dotenvx run -f ../../.env -- next start",
     "lint": "eslint"
   },
   "dependencies": {

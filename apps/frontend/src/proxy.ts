@@ -32,7 +32,7 @@ export default async function proxy(req: NextRequest) {
   const token = await getToken({
     req,
     secret: process.env.NEXTAUTH_SECRET,
-    secureCookie: process.env.NODE_ENV === "production",
+    secureCookie: process.env.NEXTAUTH_URL?.startsWith("https://") ?? false,
   });
   if (!token) {
     url.pathname = "/polaris/login";

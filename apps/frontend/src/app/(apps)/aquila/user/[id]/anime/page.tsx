@@ -61,10 +61,14 @@ export default function UserAnimePage() {
     if (userId) {
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/anime/user/${userId}`)
         .then(async (res) => await res.json())
-        .then((data) => setAnimeList(data))
+        .then((data) => {
+          if (data.statusCode !== 404) {
+            setAnimeList(data);
+          }
+        })
         .catch((err) => console.error("Failed to fetch anime list", err));
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     if (!userData) return;

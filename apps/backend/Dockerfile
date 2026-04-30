@@ -37,7 +37,7 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nestjs
 USER nestjs
 
-COPY --from=builder /app .
+COPY --from=builder --chown=nestjs:nodejs /app .
 
 ENV NODE_ENV=production
 ENV PORT=4000

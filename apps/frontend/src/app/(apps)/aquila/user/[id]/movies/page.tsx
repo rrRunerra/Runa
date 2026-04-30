@@ -61,10 +61,14 @@ export default function UserMoviesPage() {
     if (userId) {
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/movies/user/${userId}`)
         .then(async (res) => await res.json())
-        .then((data) => setMoviesList(data))
+        .then((data) => {
+          if (data.statusCode !== 404) {
+            setMoviesList(data);
+          }
+        })
         .catch((err) => console.error("Failed to fetch movies list", err));
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     if (!userData) return;
@@ -87,7 +91,6 @@ export default function UserMoviesPage() {
 
   // Apply quick search and list filtering here for the Display component
   const filteredData = useMemo(() => {
-    if (moviesList?.statusCode === 404) return [];
     return moviesList.filter((entry) => {
       if (search && !entry.title.toLowerCase().includes(search.toLowerCase()))
         return false;

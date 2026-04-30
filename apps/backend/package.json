@@ -7,9 +7,9 @@
   "type": "commonjs",
   "license": "UNLICENSED",
   "scripts": {
-    "build": "nest build",
+    "build": "dotenvx run -f ../../.env -- nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "nest start",
+    "start": "dotenvx run -f ../../.env -- nest start",
     "dev": "dotenvx run -f ../../.env -- nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",

@@ -61,7 +61,11 @@ export default function UserTvShowsPage() {
     if (userId) {
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/tv/user/${userId}`)
         .then(async (res) => await res.json())
-        .then((data) => setTvList(data))
+        .then((data) => {
+          if (data.statusCode !== 404) {
+            setTvList(data);
+          }
+        })
         .catch((err) => console.error("Failed to fetch TV list", err));
     }
   }, [userId]);
@@ -87,7 +91,6 @@ export default function UserTvShowsPage() {
 
   // Apply quick search and list filtering here for the Display component
   const filteredData = useMemo(() => {
-    if (tvList?.statusCode === 404) return [];
     return tvList.filter((entry) => {
       if (search && !entry.title.toLowerCase().includes(search.toLowerCase()))
         return false;

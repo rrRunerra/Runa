@@ -10,6 +10,7 @@ export interface MediaEntry {
   status: string;
   last_updated: string;
   last_added: string;
+  statusCode?: number;
 }
 
 export interface MediaFilters {

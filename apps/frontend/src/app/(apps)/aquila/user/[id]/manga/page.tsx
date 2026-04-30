@@ -61,10 +61,14 @@ export default function UserMangaPage() {
     if (userId) {
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/manga/user/${userId}`)
         .then(async (res) => await res.json())
-        .then((data) => setMangaList(data))
+        .then((data) => {
+          if (data.statusCode !== 404) {
+            setMangaList(data);
+          }
+        })
         .catch((err) => console.error("Failed to fetch manga list", err));
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     if (!userData) return;

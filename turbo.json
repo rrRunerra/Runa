@@ -9,7 +9,7 @@
     },
     "build": {
       "dependsOn": ["^build", "db:generate"],
-      "env": ["DATABASE_URL", "NEXT_PUBLIC_URL", "NEXTAUTH_URL", "NEXT_PUBLIC_API_URL", "NEST_PORT"],
+      "env": ["DATABASE_URL", "NEXT_PUBLIC_URL", "NEXTAUTH_URL", "NEXT_PUBLIC_API_URL", "NEST_PORT", "NEXTAUTH_SECRET"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },
