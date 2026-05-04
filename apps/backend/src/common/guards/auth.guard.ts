@@ -29,7 +29,6 @@ export class DualAuthGuard implements CanActivate {
     if (isPublic) {
       return true;
     }
-
     const request = context.switchToHttp().getRequest();
 
     // API Key (Highest priority)
@@ -92,12 +91,14 @@ export class DualAuthGuard implements CanActivate {
       return authHeader.split(' ')[1];
     }
 
-    // // Fallback to query parameter for redirect flows
-    // const url = new URL(request.url, `http://${request.headers.host}`);
-    // const queryToken = url.searchParams.get('token');
-    // if (queryToken) {
-    //   return queryToken;
-    // }
+    // Fallback to query parameter for redirect
+    // USED BY CONNECTIONS
+    // YES I KNOW ITS AS SECURE AS PAPER DOORS IN A HURRICANE
+    const url = new URL(request.url, `http://${request.headers.host}`);
+    const queryToken = url.searchParams.get('token');
+    if (queryToken) {
+      return queryToken;
+    }
 
     return null;
   }

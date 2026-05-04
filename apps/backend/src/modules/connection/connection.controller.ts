@@ -101,11 +101,11 @@ export class ConnectionController {
       await this.connectionService.handleCallback(provider, code, user.id);
 
       const frontendUrl = process.env.NEXT_PUBLIC_URL;
-      return res.redirect(`${frontendUrl}/connections?success=true`);
+      return res.redirect(`${frontendUrl}/polaris/connections?success=true`);
     } catch (error) {
       const frontendUrl = process.env.NEXT_PUBLIC_URL;
       return res.redirect(
-        `${frontendUrl}/connections?error=oauth_failed&message=${encodeURIComponent(error.message)}`,
+        `${frontendUrl}/polaris/connections?error=oauth_failed&message=${encodeURIComponent(error.message)}`,
       );
     }
   }

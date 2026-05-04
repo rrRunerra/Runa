@@ -18,6 +18,7 @@ services:
     environment:
       - NEST_API_URL=http://backend:${NEST_PORT:-4000}
       - NEXTAUTH_URL_INTERNAL=http://localhost:3000
+      - LYNX_API_URL=http://lynx-bot:4444
     restart: always
 
   backend:

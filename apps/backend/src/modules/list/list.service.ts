@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../providers/database/prisma.service';
 import ListEntity from './entities/ListEntity';
 import { $Enums } from '@runa/database';
@@ -57,7 +57,7 @@ export class ListService {
   }
 
   public async getAnimeListEntry(userId: string, animeId: number) {
-    return this.prisma.client.aquilaAnimeUserList.findUnique({
+    const out = await this.prisma.client.aquilaAnimeUserList.findUnique({
       where: {
         userId_animeId: {
           userId,
@@ -65,6 +65,9 @@ export class ListService {
         },
       },
     });
+
+    if (!out) throw new NotFoundException('Anime not found in list');
+    return out;
   }
 
   public async upsertAnimeList(

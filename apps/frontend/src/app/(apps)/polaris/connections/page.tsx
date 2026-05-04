@@ -43,7 +43,7 @@ const PROVIDERS = [
     name: "AniList",
     description: "Connect to sync your anime and manga progress.",
     url: "https://anilist.co",
-    icon: "/anilist.png",
+    icon: `/anilist.png`,
     invert: true,
   },
   {
@@ -51,7 +51,7 @@ const PROVIDERS = [
     name: "MyAnimeList",
     description: "Connect to sync your anime and manga progress.",
     url: "https://myanimelist.net",
-    icon: "/mal.png",
+    icon: `/mal.png`,
     invert: false,
   },
   {
@@ -59,7 +59,7 @@ const PROVIDERS = [
     name: "Simkl",
     description: "Connect to sync your anime, movies, and TV shows.",
     url: "https://simkl.com",
-    icon: "/simkl.png",
+    icon: `/simkl.png`,
     invert: false,
   },
 ];
@@ -76,7 +76,6 @@ function ConnectionsContent() {
 
   const fetchConnections = useCallback(async () => {
     if (!session?.accessToken) return;
-
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/connections`,

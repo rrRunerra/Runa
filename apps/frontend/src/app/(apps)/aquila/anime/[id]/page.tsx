@@ -227,7 +227,7 @@ export default function AnimeDetailsPage() {
   };
 
   useEffect(() => {
-    if (session.data?.user?.id && id) {
+    if (session.status === "authenticated" && session.data?.user?.id && id) {
       const fetchEntry = async () => {
         try {
           const res = await fetch(
@@ -239,6 +239,7 @@ export default function AnimeDetailsPage() {
               method: "GET",
             },
           );
+
           if (res.ok) {
             const data = await res.json();
 
