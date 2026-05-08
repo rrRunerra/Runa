@@ -19,12 +19,12 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import * as Lucide from "lucide-react";
 
-export default function UserTvShowsPage() {
+export default function UserMoviesPage() {
   const params = useParams();
-  const userId = params.id as string;
+  const username = params.name as string;
 
-  if (!userId) {
-    return <div>User not found</div>;
+  if (!username) {
+    return <div>Username not found</div>;
   }
 
   const [displayType, setDisplayType] = useState<DisplayType>("grid");
@@ -46,36 +46,36 @@ export default function UserTvShowsPage() {
     avatarUrl?: string;
   } | null>(null);
 
-  const [tvList, setTvList] = useState<MediaEntry[]>([]);
+  const [moviesList, setMoviesList] = useState<MediaEntry[]>([]);
 
   useEffect(() => {
-    if (userId) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/${userId}`)
+    if (username) {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/${username}`)
         .then(async (res) => await res.json())
         .then((data) => setUserData(data))
         .catch((err) => console.error("Failed to fetch user data", err));
     }
-  }, [userId]);
+  }, [username]);
 
   useEffect(() => {
-    if (userId) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/tv/user/${userId}`)
+    if (username) {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/movies/user/${username}`)
         .then(async (res) => await res.json())
         .then((data) => {
           if (data.statusCode !== 404) {
-            setTvList(data);
+            setMoviesList(data);
           }
         })
-        .catch((err) => console.error("Failed to fetch TV list", err));
+        .catch((err) => console.error("Failed to fetch movies list", err));
     }
-  }, [userId]);
+  }, [username]);
 
   useEffect(() => {
     if (!userData) return;
-    document.title = `Aquila | ${userData?.displayName || userData?.username}'s TV List`;
+    document.title = `Aquila | ${userData?.displayName || userData?.username}'s Movies List`;
   }, [userData]);
 
-  const lists = ["All", "Watching", "Completed", "Dropped", "Planning"];
+  const lists = ["All", "Completed", "Dropped", "Planning"];
 
   const resetFilters = () => {
     setSearch("");
@@ -91,7 +91,7 @@ export default function UserTvShowsPage() {
 
   // Apply quick search and list filtering here for the Display component
   const filteredData = useMemo(() => {
-    return tvList.filter((entry) => {
+    return moviesList.filter((entry) => {
       if (search && !entry.title.toLowerCase().includes(search.toLowerCase()))
         return false;
 
@@ -102,7 +102,7 @@ export default function UserTvShowsPage() {
 
       return true;
     });
-  }, [search, activeList, tvList]);
+  }, [search, activeList, moviesList]);
 
   return (
     <div className="flex w-full min-h-screen gap-8 p-6 pl-2">
@@ -141,7 +141,7 @@ export default function UserTvShowsPage() {
             Filters
           </Label>
 
-          {/* <div className="space-y-1.5 mt-2">
+          <div className="space-y-1.5 mt-2">
             <Label className="text-xs font-semibold px-2">Status</Label>
             <Select
               value={filters.status}
@@ -151,12 +151,11 @@ export default function UserTvShowsPage() {
                 <SelectValue placeholder="All Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Finished">Finished</SelectItem>
-                <SelectItem value="Continuing">Continuing</SelectItem>
-                <SelectItem value="Not Yet Aired">Not Yet Aired</SelectItem>
+                <SelectItem value="Upcoming">Upcoming</SelectItem>
+                <SelectItem value="Released">Released</SelectItem>
               </SelectContent>
             </Select>
-          </div> */}
+          </div>
 
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold px-2">Sort</Label>
@@ -204,7 +203,7 @@ export default function UserTvShowsPage() {
             </Avatar>
             <div className="flex flex-col gap-0.5">
               <h2 className="text-xl font-bold tracking-tight text-foreground">
-                {`${userData.displayName || userData.username}'s TV Shows List`}
+                {`${userData.displayName || userData.username}'s Movies List`}
               </h2>
               <p className="text-xs text-muted-foreground font-medium">
                 @{userData.username}
@@ -234,14 +233,14 @@ export default function UserTvShowsPage() {
         <MediaListDisplay
           lists={
             activeList === "All"
-              ? ["Watching", "Completed TV"]
-              : [activeList === "Completed" ? "Completed TV" : activeList]
+              ? ["Completed", "Dropped", "Planning"]
+              : [activeList]
           }
           data={filteredData}
           displayType={displayType}
           filters={filters}
           sort={sort}
-          baseUrl="/aquila/tv"
+          baseUrl="/aquila/movies"
         />
       </main>
     </div>

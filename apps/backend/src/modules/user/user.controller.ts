@@ -1,4 +1,12 @@
-import { Controller, UseGuards, Post, Body, Get, Param, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  UseGuards,
+  Post,
+  Body,
+  Get,
+  Param,
+  NotFoundException,
+} from '@nestjs/common';
 import { UserService } from './user.service';
 import { DualAuthGuard } from '../../common/guards/auth.guard';
 import { User } from '@runa/database';
@@ -17,11 +25,11 @@ export class UserController {
   }
 
   @Public()
-  @Get(':id')
-  async findOne(@Param('id') id: string) {
-    const user = await this.usersService.findById(id);
+  @Get(':username')
+  async findOne(@Param('username') username: string) {
+    const user = await this.usersService.findByUsername(username);
     if (!user) {
-      throw new NotFoundException(`User with ID ${id} not found`);
+      throw new NotFoundException(`User with username ${username} not found`);
     }
     // Return only public fields
     return {

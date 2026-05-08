@@ -23,11 +23,11 @@ export class ListController {
   // ─────────────────────────── ANIME ───────────────────────────
 
   @Public()
-  @Get('/anime/user/:userId')
+  @Get('/anime/user/:username')
   public async getAnimeList(
-    @Param('userId') userId: string,
+    @Param('username') username: string,
   ): Promise<ListEntity[]> {
-    return this.listService.getAnimeList(userId);
+    return this.listService.getAnimeList(username);
   }
 
   @Get('/anime/entry/:animeId')
@@ -72,11 +72,11 @@ export class ListController {
   // ─────────────────────────── MANGA ───────────────────────────
 
   @Public()
-  @Get('/manga/user/:userId')
+  @Get('/manga/user/:username')
   public async getMangaList(
-    @Param('userId') userId: string,
+    @Param('username') username: string,
   ): Promise<ListEntity[]> {
-    return this.listService.getMangaList(userId);
+    return this.listService.getMangaList(username);
   }
 
   @Get('/manga/entry/:mangaId')

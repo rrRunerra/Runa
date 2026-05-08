@@ -8,8 +8,8 @@ export default function UserPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (session?.user?.id) {
-      router.push(`/aquila/user/${session.user.id}`);
+    if (session?.user?.username) {
+      router.push(`/aquila/user/${session.user.username}`);
     }
   }, [router, session]);
 

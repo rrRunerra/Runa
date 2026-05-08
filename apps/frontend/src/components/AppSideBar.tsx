@@ -108,7 +108,7 @@ export default function AppSideBar({
   }, []);
 
   const resolvedProfileHref =
-    profileHref ?? `/polaris/user/${session?.user?.id}`;
+    profileHref ?? `/polaris/user/${session?.user?.username}`;
 
   if (!activeApp) return null;
 

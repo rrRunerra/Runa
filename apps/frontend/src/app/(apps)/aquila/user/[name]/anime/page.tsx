@@ -21,10 +21,10 @@ import * as Lucide from "lucide-react";
 
 export default function UserAnimePage() {
   const params = useParams();
-  const userId = params.id as string;
+  const username = params.name as string;
 
-  if (!userId) {
-    return <div>User not found</div>;
+  if (!username) {
+    return <div>Username not found</div>;
   }
 
   const [displayType, setDisplayType] = useState<DisplayType>("grid");
@@ -49,17 +49,17 @@ export default function UserAnimePage() {
   const [animeList, setAnimeList] = useState<MediaEntry[]>([]);
 
   useEffect(() => {
-    if (userId) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/${userId}`)
+    if (username) {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/${username}`)
         .then(async (res) => await res.json())
         .then((data) => setUserData(data))
         .catch((err) => console.error("Failed to fetch user data", err));
     }
-  }, [userId]);
+  }, [username]);
 
   useEffect(() => {
-    if (userId) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/anime/user/${userId}`)
+    if (username) {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/anime/user/${username}`)
         .then(async (res) => await res.json())
         .then((data) => {
           if (data.statusCode !== 404) {
@@ -68,7 +68,7 @@ export default function UserAnimePage() {
         })
         .catch((err) => console.error("Failed to fetch anime list", err));
     }
-  }, [userId]);
+  }, [username]);
 
   useEffect(() => {
     if (!userData) return;

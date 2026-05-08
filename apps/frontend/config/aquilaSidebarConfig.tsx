@@ -41,43 +41,43 @@ export const getAquilaSidebarConfig = (
     items: [
       {
         label: "Anime",
-        href: `/aquila/user/${session?.user?.id}/anime`,
+        href: `/aquila/user/${session?.user?.username}/anime`,
         icon: <Film className="h-4 w-4" />,
         subtitle: "Anime",
       },
       {
         label: "Manga",
-        href: `/aquila/user/${session?.user?.id}/manga`,
+        href: `/aquila/user/${session?.user?.username}/manga`,
         icon: <Book className="h-4 w-4" />,
         subtitle: "Manga",
       },
       {
         label: "Movies",
-        href: `/aquila/user/${session?.user?.id}/movies`,
+        href: `/aquila/user/${session?.user?.username}/movies`,
         icon: <Tv2 className="h-4 w-4" />,
         subtitle: "Movies",
       },
       {
         label: "TV Shows",
-        href: `/aquila/user/${session?.user?.id}/tv`,
+        href: `/aquila/user/${session?.user?.username}/tv`,
         icon: <Tv className="h-4 w-4" />,
         subtitle: "TV Shows",
       },
       // {
       //   label: "Games",
-      //   href: `/aquila/user/${session?.user?.id}/games`,
+      //   href: `/aquila/user/${session?.user?.username}/games`,
       //   icon: <Gamepad className="h-4 w-4" />,
       //   subtitle: "Games",
       // },
       // {
       //   label: "Books",
-      //   href: `/aquila/user/${session?.user?.id}/books`,
+      //   href: `/aquila/user/${session?.user?.username}/books`,
       //   icon: <BookA className="h-4 w-4" />,
       //   subtitle: "Books",
       // },
       // {
       //   label: "Music",
-      //   href: `/aquila/user/${session?.user?.id}/music`,
+      //   href: `/aquila/user/${session?.user?.username}/music`,
       //   icon: <Music className="h-4 w-4" />,
       //   subtitle: "Music",
       // },
@@ -90,7 +90,7 @@ export const getAquilaSidebarConfig = (
       (connection: { provider: string; username: string }) => {
         return {
           label: `${connection.provider} / ${connection.username}`,
-          href: `/aquila/user/${session?.user?.id}/connections/${connection.provider.toLowerCase()}`,
+          href: `/aquila/user/${session?.user?.username}/connections/${connection.provider.toLowerCase()}`,
           icon: <List className="h-4 w-4" />,
           subtitle: connection.provider,
         };

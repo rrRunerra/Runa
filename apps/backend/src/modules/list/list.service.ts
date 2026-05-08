@@ -9,10 +9,19 @@ export class ListService {
 
   private readonly logger = new Logger(ListService.name);
 
-  public async getAnimeList(userId: string): Promise<ListEntity[]> {
+  public async getAnimeList(username: string): Promise<ListEntity[]> {
+    const user = await this.prisma.client.user.findUnique({
+      where: { username: username.toLowerCase() },
+      select: { id: true },
+    });
+
+    if (!user) {
+      return [];
+    }
+
     const list = await this.prisma.client.aquilaAnimeUserList.findMany({
       where: {
-        userId: userId,
+        userId: user.id,
       },
       select: {
         animeId: true,
@@ -434,9 +443,18 @@ export class ListService {
 
   // ───────────────────────────── MANGA ─────────────────────────────
 
-  public async getMangaList(userId: string): Promise<ListEntity[]> {
+  public async getMangaList(username: string): Promise<ListEntity[]> {
+    const user = await this.prisma.client.user.findUnique({
+      where: { username: username.toLowerCase() },
+      select: { id: true },
+    });
+
+    if (!user) {
+      return [];
+    }
+
     const list = await this.prisma.client.aquilaMangaUserList.findMany({
-      where: { userId },
+      where: { userId: user.id },
       select: {
         mangaId: true,
         status: true,

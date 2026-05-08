@@ -1,3 +1,4 @@
+import { StarIcon } from "@/components/icons/StarIcon";
 import { Bot, List } from "lucide-react";
 import React from "react";
 
@@ -15,6 +16,13 @@ export const apps: App[] = [
     description: "Media tracker",
     href: `/aquila`,
     color: "bg-blue-800",
+  },
+  {
+    name: "Polaris",
+    logo: <StarIcon className="size-4" />,
+    description: "Landing page",
+    href: `/polaris/dash`,
+    color: "bg-indigo-800",
   },
 ];
 

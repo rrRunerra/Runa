@@ -7,7 +7,7 @@ datasource db {
 }
 
 model User {
-    id                   String                @id @default(uuid())
+    id                   String                @id @default(nanoid())
     createdAt            DateTime              @default(now())
     updatedAt            DateTime              @updatedAt
     email                String                @unique
@@ -29,7 +29,7 @@ model User {
 }
 
 model ApiKey {
-    id         String    @id @default(uuid())
+    id         String    @id @default(nanoid())
     createdAt  DateTime  @default(now())
     updatedAt  DateTime  @updatedAt
     keyHash    String
@@ -50,7 +50,7 @@ enum ConnectionLinkedTo {
 }
 
 model Connections {
-    id           String              @id @default(uuid())
+    id           String              @id @default(nanoid())
     userId       String
     connectionId String?
     createdAt    DateTime            @default(now())
@@ -89,12 +89,12 @@ model LynxHomeWorkChannels {
 }
 
 model LynxRngRigConfig {
-    id             String @id @default(cuid())
+    id             String @id @default(nanoid())
     ignoredNumbers Json   @db.Json
 }
 
 model LynxKickHistory {
-    id        String   @id @default(cuid())
+    id        String   @id @default(nanoid())
     userId    String
     guildId   String
     moderator String
@@ -106,7 +106,7 @@ model LynxKickHistory {
 }
 
 model LynxBanHistory {
-    id        String    @id @default(cuid())
+    id        String    @id @default(nanoid())
     userId    String
     guildId   String
     moderator String
@@ -120,7 +120,7 @@ model LynxBanHistory {
 }
 
 model LynxClearBatch {
-    id          String               @id @default(cuid())
+    id          String               @id @default(nanoid())
     guildId     String
     channelId   String
     moderatorId String
@@ -132,7 +132,7 @@ model LynxClearBatch {
 }
 
 model LynxClearedMessage {
-    id          String         @id @default(cuid())
+    id          String         @id @default(nanoid())
     batchId     String
     authorId    String
     username    String

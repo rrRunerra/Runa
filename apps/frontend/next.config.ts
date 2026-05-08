@@ -24,6 +24,16 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+
+  async redirects() {
+    return [
+      {
+        source: "/",
+        destination: "/polaris/dash",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

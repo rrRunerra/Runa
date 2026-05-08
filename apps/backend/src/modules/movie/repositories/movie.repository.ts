@@ -19,7 +19,7 @@ export class MovieRepository {
   ) {
     return this.prisma.client.aquilaMovie.upsert({
       where: { tvdbId },
-      update: data as Prisma.AquilaMovieUpdateInput,
+      update: data,
       create: data as Prisma.AquilaMovieCreateInput,
     });
   }

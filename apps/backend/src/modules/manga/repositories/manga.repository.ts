@@ -19,7 +19,7 @@ export class MangaRepository {
   ) {
     return this.prisma.client.aquilaManga.upsert({
       where: { anilistId },
-      update: data as Prisma.AquilaMangaUpdateInput,
+      update: data,
       create: data as Prisma.AquilaMangaCreateInput,
     });
   }

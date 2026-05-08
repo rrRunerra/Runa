@@ -19,12 +19,12 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import * as Lucide from "lucide-react";
 
-export default function UserMangaPage() {
+export default function UserTvShowsPage() {
   const params = useParams();
-  const userId = params.id as string;
+  const username = params.name as string;
 
-  if (!userId) {
-    return <div>User not found</div>;
+  if (!username) {
+    return <div>Username not found</div>;
   }
 
   const [displayType, setDisplayType] = useState<DisplayType>("grid");
@@ -46,43 +46,36 @@ export default function UserMangaPage() {
     avatarUrl?: string;
   } | null>(null);
 
-  const [mangaList, setMangaList] = useState<MediaEntry[]>([]);
+  const [tvList, setTvList] = useState<MediaEntry[]>([]);
 
   useEffect(() => {
-    if (userId) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/${userId}`)
+    if (username) {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/${username}`)
         .then(async (res) => await res.json())
         .then((data) => setUserData(data))
         .catch((err) => console.error("Failed to fetch user data", err));
     }
-  }, [userId]);
+  }, [username]);
 
   useEffect(() => {
-    if (userId) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/manga/user/${userId}`)
+    if (username) {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/tv/user/${username}`)
         .then(async (res) => await res.json())
         .then((data) => {
           if (data.statusCode !== 404) {
-            setMangaList(data);
+            setTvList(data);
           }
         })
-        .catch((err) => console.error("Failed to fetch manga list", err));
+        .catch((err) => console.error("Failed to fetch TV list", err));
     }
-  }, [userId]);
+  }, [username]);
 
   useEffect(() => {
     if (!userData) return;
-    document.title = `Aquila | ${userData?.displayName || userData?.username}'s Manga List`;
+    document.title = `Aquila | ${userData?.displayName || userData?.username}'s TV List`;
   }, [userData]);
 
-  const lists = [
-    "All",
-    "Reading",
-    "Completed",
-    "Dropped",
-    "Planning",
-    "On Hold",
-  ];
+  const lists = ["All", "Watching", "Completed", "Dropped", "Planning"];
 
   const resetFilters = () => {
     setSearch("");
@@ -98,7 +91,7 @@ export default function UserMangaPage() {
 
   // Apply quick search and list filtering here for the Display component
   const filteredData = useMemo(() => {
-    return mangaList.filter((entry) => {
+    return tvList.filter((entry) => {
       if (search && !entry.title.toLowerCase().includes(search.toLowerCase()))
         return false;
 
@@ -109,7 +102,7 @@ export default function UserMangaPage() {
 
       return true;
     });
-  }, [search, activeList, mangaList]);
+  }, [search, activeList, tvList]);
 
   return (
     <div className="flex w-full min-h-screen gap-8 p-6 pl-2">
@@ -148,24 +141,7 @@ export default function UserMangaPage() {
             Filters
           </Label>
 
-          <div className="space-y-1.5 mt-2">
-            <Label className="text-xs font-semibold px-2">Format</Label>
-            <Select
-              value={filters.format}
-              onValueChange={(v) => setFilters((f) => ({ ...f, format: v }))}
-            >
-              <SelectTrigger className="h-9 bg-muted/20 border-none shadow-none text-xs">
-                <SelectValue placeholder="All Formats" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="MANGA">Manga</SelectItem>
-                <SelectItem value="NOVEL">Novel</SelectItem>
-                <SelectItem value="ONE_SHOT">One Shot</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
+          {/* <div className="space-y-1.5 mt-2">
             <Label className="text-xs font-semibold px-2">Status</Label>
             <Select
               value={filters.status}
@@ -176,13 +152,11 @@ export default function UserMangaPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Finished">Finished</SelectItem>
-                <SelectItem value="Releasing">Releasing</SelectItem>
-                <SelectItem value="Not Yet Released">
-                  Not Yet Released
-                </SelectItem>
+                <SelectItem value="Continuing">Continuing</SelectItem>
+                <SelectItem value="Not Yet Aired">Not Yet Aired</SelectItem>
               </SelectContent>
             </Select>
-          </div>
+          </div> */}
 
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold px-2">Sort</Label>
@@ -230,7 +204,7 @@ export default function UserMangaPage() {
             </Avatar>
             <div className="flex flex-col gap-0.5">
               <h2 className="text-xl font-bold tracking-tight text-foreground">
-                {`${userData.displayName || userData.username}'s Manga List`}
+                {`${userData.displayName || userData.username}'s TV Shows List`}
               </h2>
               <p className="text-xs text-muted-foreground font-medium">
                 @{userData.username}
@@ -258,12 +232,16 @@ export default function UserMangaPage() {
         </header>
 
         <MediaListDisplay
-          lists={activeList === "All" ? ["Reading", "Completed"] : [activeList]}
+          lists={
+            activeList === "All"
+              ? ["Watching", "Completed TV"]
+              : [activeList === "Completed" ? "Completed TV" : activeList]
+          }
           data={filteredData}
           displayType={displayType}
           filters={filters}
           sort={sort}
-          baseUrl="/aquila/manga"
+          baseUrl="/aquila/tv"
         />
       </main>
     </div>

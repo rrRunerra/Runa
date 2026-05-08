@@ -58,9 +58,9 @@ export class UserService {
       });
   }
 
-  async findById(id: string): Promise<User | null> {
+  async findByUsername(username: string): Promise<User | null> {
     return await this.prisma.client.user.findUnique({
-      where: { id },
+      where: { username: username.toLowerCase() },
     });
   }
 }

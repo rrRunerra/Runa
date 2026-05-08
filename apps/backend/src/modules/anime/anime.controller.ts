@@ -12,9 +12,7 @@ export class AnimeController {
 
   @Public()
   @Get('search')
-  async search(
-    @Query() query: { name: string },
-  ): Promise<AnimeSearchEntity> {
+  async search(@Query() query: { name: string }): Promise<AnimeSearchEntity> {
     return this.animeService.search(query.name);
   }
 

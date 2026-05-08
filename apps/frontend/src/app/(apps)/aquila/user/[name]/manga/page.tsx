@@ -19,11 +19,11 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import * as Lucide from "lucide-react";
 
-export default function UserMoviesPage() {
+export default function UserMangaPage() {
   const params = useParams();
-  const userId = params.id as string;
+  const username = params.name as string;
 
-  if (!userId) {
+  if (!username) {
     return <div>User not found</div>;
   }
 
@@ -46,36 +46,43 @@ export default function UserMoviesPage() {
     avatarUrl?: string;
   } | null>(null);
 
-  const [moviesList, setMoviesList] = useState<MediaEntry[]>([]);
+  const [mangaList, setMangaList] = useState<MediaEntry[]>([]);
 
   useEffect(() => {
-    if (userId) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/${userId}`)
+    if (username) {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/${username}`)
         .then(async (res) => await res.json())
         .then((data) => setUserData(data))
         .catch((err) => console.error("Failed to fetch user data", err));
     }
-  }, [userId]);
+  }, [username]);
 
   useEffect(() => {
-    if (userId) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/movies/user/${userId}`)
+    if (username) {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/manga/user/${username}`)
         .then(async (res) => await res.json())
         .then((data) => {
           if (data.statusCode !== 404) {
-            setMoviesList(data);
+            setMangaList(data);
           }
         })
-        .catch((err) => console.error("Failed to fetch movies list", err));
+        .catch((err) => console.error("Failed to fetch manga list", err));
     }
-  }, [userId]);
+  }, [username]);
 
   useEffect(() => {
     if (!userData) return;
-    document.title = `Aquila | ${userData?.displayName || userData?.username}'s Movies List`;
+    document.title = `Aquila | ${userData?.displayName || userData?.username}'s Manga List`;
   }, [userData]);
 
-  const lists = ["All", "Completed", "Dropped", "Planning"];
+  const lists = [
+    "All",
+    "Reading",
+    "Completed",
+    "Dropped",
+    "Planning",
+    "On Hold",
+  ];
 
   const resetFilters = () => {
     setSearch("");
@@ -91,7 +98,7 @@ export default function UserMoviesPage() {
 
   // Apply quick search and list filtering here for the Display component
   const filteredData = useMemo(() => {
-    return moviesList.filter((entry) => {
+    return mangaList.filter((entry) => {
       if (search && !entry.title.toLowerCase().includes(search.toLowerCase()))
         return false;
 
@@ -102,7 +109,7 @@ export default function UserMoviesPage() {
 
       return true;
     });
-  }, [search, activeList, moviesList]);
+  }, [search, activeList, mangaList]);
 
   return (
     <div className="flex w-full min-h-screen gap-8 p-6 pl-2">
@@ -142,6 +149,23 @@ export default function UserMoviesPage() {
           </Label>
 
           <div className="space-y-1.5 mt-2">
+            <Label className="text-xs font-semibold px-2">Format</Label>
+            <Select
+              value={filters.format}
+              onValueChange={(v) => setFilters((f) => ({ ...f, format: v }))}
+            >
+              <SelectTrigger className="h-9 bg-muted/20 border-none shadow-none text-xs">
+                <SelectValue placeholder="All Formats" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="MANGA">Manga</SelectItem>
+                <SelectItem value="NOVEL">Novel</SelectItem>
+                <SelectItem value="ONE_SHOT">One Shot</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
             <Label className="text-xs font-semibold px-2">Status</Label>
             <Select
               value={filters.status}
@@ -151,8 +175,11 @@ export default function UserMoviesPage() {
                 <SelectValue placeholder="All Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Upcoming">Upcoming</SelectItem>
-                <SelectItem value="Released">Released</SelectItem>
+                <SelectItem value="Finished">Finished</SelectItem>
+                <SelectItem value="Releasing">Releasing</SelectItem>
+                <SelectItem value="Not Yet Released">
+                  Not Yet Released
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -203,7 +230,7 @@ export default function UserMoviesPage() {
             </Avatar>
             <div className="flex flex-col gap-0.5">
               <h2 className="text-xl font-bold tracking-tight text-foreground">
-                {`${userData.displayName || userData.username}'s Movies List`}
+                {`${userData.displayName || userData.username}'s Manga List`}
               </h2>
               <p className="text-xs text-muted-foreground font-medium">
                 @{userData.username}
@@ -231,16 +258,12 @@ export default function UserMoviesPage() {
         </header>
 
         <MediaListDisplay
-          lists={
-            activeList === "All"
-              ? ["Completed", "Dropped", "Planning"]
-              : [activeList]
-          }
+          lists={activeList === "All" ? ["Reading", "Completed"] : [activeList]}
           data={filteredData}
           displayType={displayType}
           filters={filters}
           sort={sort}
-          baseUrl="/aquila/movies"
+          baseUrl="/aquila/manga"
         />
       </main>
     </div>

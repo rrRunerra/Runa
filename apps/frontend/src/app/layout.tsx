@@ -40,7 +40,7 @@ export default function RootLayout({
         notoSans.variable,
       )}
     >
-      <body className="min-h-full flex flex-col">
+      <body className="h-screen flex flex-col">
         <Providers>{children}</Providers>
         <Toaster />
       </body>

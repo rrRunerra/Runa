@@ -19,7 +19,7 @@ export class TvRepository {
   ) {
     return this.prisma.client.aquilaTv.upsert({
       where: { tvdbId },
-      update: data as Prisma.AquilaTvUpdateInput,
+      update: data,
       create: data as Prisma.AquilaTvCreateInput,
     });
   }
