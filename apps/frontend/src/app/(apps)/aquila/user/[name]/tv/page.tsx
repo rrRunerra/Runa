@@ -234,8 +234,8 @@ export default function UserTvShowsPage() {
         <MediaListDisplay
           lists={
             activeList === "All"
-              ? ["Watching", "Completed TV"]
-              : [activeList === "Completed" ? "Completed TV" : activeList]
+              ? ["Watching", "Completed", "Dropped", "Planning"]
+              : [activeList]
           }
           data={filteredData}
           displayType={displayType}

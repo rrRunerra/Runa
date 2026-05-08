@@ -9,4 +9,9 @@ export default class ListEntity {
   status: string;
   last_updated: Date;
   last_added: Date;
+  type: 'anime' | 'manga' | 'tv' | 'movie';
+  meta?: {
+    season: number;
+    episode: number;
+  };
 }

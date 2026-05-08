@@ -59,7 +59,7 @@ export default function UserMoviesPage() {
 
   useEffect(() => {
     if (username) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/movies/user/${username}`)
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/movie/user/${username}`)
         .then(async (res) => await res.json())
         .then((data) => {
           if (data.statusCode !== 404) {
@@ -88,6 +88,8 @@ export default function UserMoviesPage() {
     });
     setSort("last_updated");
   };
+
+  console.log(moviesList);
 
   // Apply quick search and list filtering here for the Display component
   const filteredData = useMemo(() => {

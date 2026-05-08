@@ -54,6 +54,7 @@ export class ListService {
         status: item.status,
         last_updated: item.updatedAt,
         last_added: item.createdAt,
+        type: 'anime',
       };
     });
 
@@ -480,6 +481,7 @@ export class ListService {
       status: item.status,
       last_updated: item.updatedAt,
       last_added: item.createdAt,
+      type: 'manga',
     }));
   }
 
@@ -839,5 +841,629 @@ export class ListService {
         this.logger.log(`MAL manga connection updated for user ${username}`);
       }
     }
+  }
+
+  // ─────────────────────────── MOVIE ───────────────────────────
+
+  public async getMovieList(username: string): Promise<ListEntity[]> {
+    const list = await this.prisma.client.aquilaMovieUserList.findMany({
+      where: {
+        username: username.toLowerCase(),
+      },
+      select: {
+        tvdbId: true,
+        status: true,
+        score: true,
+        updatedAt: true,
+        createdAt: true,
+        movie: {
+          select: {
+            titleEnglish: true,
+            titleRomaji: true,
+            coverImage: true,
+          },
+        },
+      },
+    });
+
+    if (!list.length) {
+      return [];
+    }
+
+    return list.map((item) => ({
+      id: item.tvdbId,
+      title: item.movie.titleEnglish ?? item.movie.titleRomaji ?? '',
+      score: item.score,
+      progress: item.status === 'COMPLETED' ? 1 : 0,
+      episodes: 1,
+      image: item.movie.coverImage ?? '',
+      status: item.status,
+      last_updated: item.updatedAt,
+      last_added: item.createdAt,
+      type: 'movie',
+      format: 'Movie',
+    }));
+  }
+
+  public async getMovieListEntry(username: string, tvdbId: number) {
+    const out = await this.prisma.client.aquilaMovieUserList.findUnique({
+      where: {
+        username_tvdbId: {
+          username: username.toLowerCase(),
+          tvdbId,
+        },
+      },
+    });
+
+    if (!out) throw new NotFoundException('Movie not found in list');
+    return out;
+  }
+
+  public async upsertMovieList(
+    username: string,
+    body: {
+      tvdbId: number;
+      status?: $Enums.MovieListStatus;
+      score?: number;
+      startDate?: number;
+      endDate?: number;
+      notes?: string;
+      rewatched?: number;
+      connections?: any;
+    },
+  ): Promise<{ success: boolean; message: string; error?: any }> {
+    try {
+      await this.prisma.client.aquilaMovieUserList.upsert({
+        where: {
+          username_tvdbId: {
+            username: username.toLowerCase(),
+            tvdbId: body.tvdbId,
+          },
+        },
+        update: {
+          status: body.status,
+          score: body.score,
+          startDate: body.startDate,
+          endDate: body.endDate,
+          notes: body.notes,
+          rewatched: body.rewatched,
+          connections: body.connections,
+        },
+        create: {
+          username: username.toLowerCase(),
+          tvdbId: body.tvdbId,
+          status: body.status,
+          score: body.score,
+          startDate: body.startDate,
+          endDate: body.endDate,
+          notes: body.notes,
+          rewatched: body.rewatched,
+          connections: body.connections,
+        },
+      });
+    } catch (error) {
+      this.logger.error(error);
+      return {
+        success: false,
+        message: 'Failed to update movie list',
+        error: error,
+      };
+    }
+
+    return {
+      success: true,
+      message: 'Movie list updated successfully',
+    };
+  }
+
+  public async deleteMovieList(
+    username: string,
+    tvdbId: number,
+  ): Promise<{ success: boolean; message: string; error?: any }> {
+    try {
+      await this.prisma.client.aquilaMovieUserList.delete({
+        where: {
+          username_tvdbId: {
+            username: username.toLowerCase(),
+            tvdbId,
+          },
+        },
+      });
+      return {
+        success: true,
+        message: 'Deleted from list',
+      };
+    } catch (error) {
+      this.logger.error(error);
+      return {
+        success: false,
+        message: 'Failed to delete movie from list',
+        error: error,
+      };
+    }
+  }
+
+  // ─────────────────────────── TV ───────────────────────────
+
+  public async getTvList(username: string): Promise<ListEntity[]> {
+    const list = await this.prisma.client.aquilaTvUserList.findMany({
+      where: {
+        username: username.toLowerCase(),
+      },
+      select: {
+        tvdbId: true,
+        status: true,
+        score: true,
+        updatedAt: true,
+        createdAt: true,
+        tv: {
+          select: {
+            titleEnglish: true,
+            titleRomaji: true,
+            coverImage: true,
+            seasons: true,
+          },
+        },
+        _count: {
+          select: {
+            watchedEpisodes: true,
+          },
+        },
+      },
+    });
+
+    if (!list.length) {
+      return [];
+    }
+
+    return list.map((item) => {
+      // Calculate total episodes from seasons JSON
+      let totalEpisodes = 0;
+      const seasons = item.tv.seasons as any[];
+      if (seasons) {
+        seasons.forEach((s) => {
+          totalEpisodes += s.episodeCount || 0;
+        });
+      }
+
+      return {
+        id: item.tvdbId,
+        title: item.tv.titleEnglish ?? item.tv.titleRomaji ?? '',
+        score: item.score,
+        progress: item._count.watchedEpisodes,
+        episodes: totalEpisodes,
+        image: item.tv.coverImage ?? '',
+        format: 'TV',
+        status: item.status,
+        last_updated: item.updatedAt,
+        last_added: item.createdAt,
+        type: 'tv',
+      };
+    });
+  }
+
+  public async getTvListEntry(username: string, tvdbId: number) {
+    const out = await this.prisma.client.aquilaTvUserList.findUnique({
+      where: {
+        username_tvdbId: {
+          username: username.toLowerCase(),
+          tvdbId,
+        },
+      },
+      include: {
+        watchedEpisodes: true,
+      },
+    });
+
+    if (!out) throw new NotFoundException('TV show not found in list');
+    return out;
+  }
+
+  public async upsertTvList(
+    username: string,
+    body: {
+      tvdbId: number;
+      status?: $Enums.TvListStatus;
+      score?: number;
+      startDate?: number;
+      endDate?: number;
+      notes?: string;
+      rewatched?: number;
+      connections?: any;
+    },
+  ): Promise<{ success: boolean; message: string; error?: any }> {
+    try {
+      await this.prisma.client.aquilaTvUserList.upsert({
+        where: {
+          username_tvdbId: {
+            username: username.toLowerCase(),
+            tvdbId: body.tvdbId,
+          },
+        },
+        update: {
+          status: body.status,
+          score: body.score,
+          startDate: body.startDate,
+          endDate: body.endDate,
+          notes: body.notes,
+          rewatched: body.rewatched,
+          connections: body.connections,
+        },
+        create: {
+          username: username.toLowerCase(),
+          tvdbId: body.tvdbId,
+          status: body.status,
+          score: body.score,
+          startDate: body.startDate,
+          endDate: body.endDate,
+          notes: body.notes,
+          rewatched: body.rewatched,
+          connections: body.connections,
+        },
+      });
+    } catch (error) {
+      this.logger.error(error);
+      return {
+        success: false,
+        message: 'Failed to update TV list',
+        error: error,
+      };
+    }
+
+    return {
+      success: true,
+      message: 'TV list updated successfully',
+    };
+  }
+
+  public async deleteTvList(
+    username: string,
+    tvdbId: number,
+  ): Promise<{ success: boolean; message: string; error?: any }> {
+    try {
+      await this.prisma.client.aquilaTvUserList.delete({
+        where: {
+          username_tvdbId: {
+            username: username.toLowerCase(),
+            tvdbId,
+          },
+        },
+      });
+      return {
+        success: true,
+        message: 'Deleted from list',
+      };
+    } catch (error) {
+      this.logger.error(error);
+      return {
+        success: false,
+        message: 'Failed to delete TV show from list',
+        error: error,
+      };
+    }
+  }
+
+  public async toggleEpisodeWatched(
+    username: string,
+    tvdbId: number,
+    seasonNum: number,
+    episodeNum: number,
+  ) {
+    const listEntry = await this.prisma.client.aquilaTvUserList.findUnique({
+      where: {
+        username_tvdbId: {
+          username: username.toLowerCase(),
+          tvdbId,
+        },
+      },
+    });
+
+    if (!listEntry) throw new NotFoundException('TV show not in list');
+
+    const existing = await this.prisma.client.aquilaTvWatchedEpisode.findUnique(
+      {
+        where: {
+          listId_seasonNum_episodeNum: {
+            listId: listEntry.id,
+            seasonNum,
+            episodeNum,
+          },
+        },
+      },
+    );
+
+    if (existing) {
+      await this.prisma.client.aquilaTvWatchedEpisode.delete({
+        where: { id: existing.id },
+      });
+      return { watched: false };
+    } else {
+      await this.prisma.client.aquilaTvWatchedEpisode.create({
+        data: {
+          listId: listEntry.id,
+          seasonNum,
+          episodeNum,
+        },
+      });
+      return { watched: true };
+    }
+  }
+
+  public async toggleSeasonWatched(
+    username: string,
+    tvdbId: number,
+    seasonNum: number,
+    episodes: { number: number }[],
+    watched: boolean,
+  ) {
+    const listEntry = await this.prisma.client.aquilaTvUserList.findUnique({
+      where: {
+        username_tvdbId: {
+          username: username.toLowerCase(),
+          tvdbId,
+        },
+      },
+    });
+
+    if (!listEntry) throw new NotFoundException('TV show not in list');
+
+    if (watched) {
+      // Mark all as watched
+      for (const ep of episodes) {
+        await this.prisma.client.aquilaTvWatchedEpisode.upsert({
+          where: {
+            listId_seasonNum_episodeNum: {
+              listId: listEntry.id,
+              seasonNum,
+              episodeNum: ep.number,
+            },
+          },
+          update: {},
+          create: {
+            listId: listEntry.id,
+            seasonNum,
+            episodeNum: ep.number,
+          },
+        });
+      }
+    } else {
+      // Mark all as unwatched
+      await this.prisma.client.aquilaTvWatchedEpisode.deleteMany({
+        where: {
+          listId: listEntry.id,
+          seasonNum,
+        },
+      });
+    }
+
+    return { success: true };
+  }
+
+  public async getWatchingList(username: string): Promise<ListEntity[]> {
+    const animeWatching = await this.prisma.client.aquilaAnimeUserList.findMany(
+      {
+        where: {
+          username: username.toLowerCase(),
+          status: $Enums.AnimeListStatus.WATCHING,
+        },
+        include: {
+          anime: true,
+        },
+      },
+    );
+
+    const mangaReading = await this.prisma.client.aquilaMangaUserList.findMany({
+      where: {
+        username: username.toLowerCase(),
+        status: $Enums.MangaListStatus.READING,
+      },
+      include: {
+        manga: true,
+      },
+    });
+
+    const tvWatching = await this.prisma.client.aquilaTvUserList.findMany({
+      where: {
+        username: username.toLowerCase(),
+        status: $Enums.TvListStatus.WATCHING,
+      },
+      include: {
+        tv: true,
+        watchedEpisodes: true,
+      },
+    });
+
+    const watchingList: ListEntity[] = [];
+
+    animeWatching.forEach((item) => {
+      watchingList.push({
+        id: item.animeId,
+        title:
+          item.anime.titleEnglish ??
+          item.anime.titleRomaji ??
+          item.anime.titleNative ??
+          '',
+        score: item.score,
+        progress: item.progress,
+        episodes: item.anime.episodes,
+        image: item.anime.coverImageLarge ?? '',
+        format: item.anime.format ?? 'ANIME',
+        status: item.status,
+        last_updated: item.updatedAt,
+        last_added: item.createdAt,
+        type: 'anime',
+      });
+    });
+
+    mangaReading.forEach((item) => {
+      watchingList.push({
+        id: item.mangaId,
+        title: item.manga.titleEnglish ?? item.manga.titleRomaji ?? '',
+        score: item.score,
+        progress: item.chapters ?? 0,
+        episodes: item.manga.chapters,
+        image: item.manga.coverImageLarge ?? '',
+        format: item.manga.format ?? 'MANGA',
+        status: item.status,
+        last_updated: item.updatedAt,
+        last_added: item.createdAt,
+        type: 'manga',
+      });
+    });
+
+    tvWatching.forEach((item) => {
+      const seasons = (item.tv.seasons as any[]) || [];
+      const totalEpisodes = seasons.reduce(
+        (acc, s) => acc + (s.episodeCount || 0),
+        0,
+      );
+
+      // Find the "current" season/episode display
+      // We look for the latest watched episode to show current progress
+      const latestWatched = [...item.watchedEpisodes].sort((a, b) => {
+        if (a.seasonNum !== b.seasonNum) return b.seasonNum - a.seasonNum;
+        return b.episodeNum - a.episodeNum;
+      })[0];
+
+      watchingList.push({
+        id: item.tvdbId,
+        title: item.tv.titleEnglish ?? item.tv.titleRomaji ?? '',
+        score: item.score,
+        progress: item.watchedEpisodes.length,
+        episodes: totalEpisodes,
+        image: item.tv.coverImage ?? '',
+        format: 'TV',
+        status: item.status,
+        last_updated: item.updatedAt,
+        last_added: item.createdAt,
+        type: 'tv',
+        meta: latestWatched
+          ? {
+              season: latestWatched.seasonNum,
+              episode: latestWatched.episodeNum,
+            }
+          : undefined,
+      });
+    });
+
+    return watchingList.sort(
+      (a, b) => b.last_updated.getTime() - a.last_updated.getTime(),
+    );
+  }
+
+  public async incrementProgress(
+    username: string,
+    mediaType: 'anime' | 'manga' | 'tv',
+    id: number,
+  ): Promise<{ success: boolean; message: string; data?: any }> {
+    const user = username.toLowerCase();
+
+    if (mediaType === 'anime') {
+      const entry = await this.prisma.client.aquilaAnimeUserList.findUnique({
+        where: { username_animeId: { username: user, animeId: id } },
+        include: { anime: true },
+      });
+      if (!entry) throw new NotFoundException('Anime not in list');
+
+      const nextProgress = (entry.progress || 0) + 1;
+      const isCompleted =
+        entry.anime.episodes && nextProgress >= entry.anime.episodes;
+
+      await this.prisma.client.aquilaAnimeUserList.update({
+        where: { id: entry.id },
+        data: {
+          progress: nextProgress,
+          status: isCompleted ? $Enums.AnimeListStatus.COMPLETED : entry.status,
+          endDate: isCompleted ? Math.floor(Date.now() / 1000) : entry.endDate,
+        },
+      });
+      return { success: true, message: 'Progress updated' };
+    }
+
+    if (mediaType === 'manga') {
+      const entry = await this.prisma.client.aquilaMangaUserList.findUnique({
+        where: { username_mangaId: { username: user, mangaId: id } },
+        include: { manga: true },
+      });
+      if (!entry) throw new NotFoundException('Manga not in list');
+
+      const nextProgress = (entry.chapters || 0) + 1;
+      const isCompleted =
+        entry.manga.chapters && nextProgress >= entry.manga.chapters;
+
+      await this.prisma.client.aquilaMangaUserList.update({
+        where: { id: entry.id },
+        data: {
+          chapters: nextProgress,
+          status: isCompleted ? $Enums.MangaListStatus.COMPLETED : entry.status,
+          endDate: isCompleted ? Math.floor(Date.now() / 1000) : entry.endDate,
+        },
+      });
+      return { success: true, message: 'Progress updated' };
+    }
+
+    if (mediaType === 'tv') {
+      const entry = await this.prisma.client.aquilaTvUserList.findUnique({
+        where: { username_tvdbId: { username: user, tvdbId: id } },
+        include: { tv: true, watchedEpisodes: true },
+      });
+      if (!entry) throw new NotFoundException('TV show not in list');
+
+      const seasons = (entry.tv.seasons as any[]) || [];
+      const totalEpisodes = seasons.reduce(
+        (acc, s) => acc + (s.episodeCount || 0),
+        0,
+      );
+
+      // Find the next episode to watch
+      let nextEp: { seasonNum: number; episodeNum: number } | null = null;
+
+      for (const season of seasons) {
+        for (const ep of season.episodes) {
+          const isWatched = entry.watchedEpisodes.some(
+            (we) =>
+              we.seasonNum === season.number && we.episodeNum === ep.number,
+          );
+          if (!isWatched) {
+            nextEp = { seasonNum: season.number, episodeNum: ep.number };
+            break;
+          }
+        }
+        if (nextEp) break;
+      }
+
+      if (!nextEp) {
+        return { success: false, message: 'All episodes already watched' };
+      }
+
+      await this.prisma.client.aquilaTvWatchedEpisode.create({
+        data: {
+          listId: entry.id,
+          seasonNum: nextEp.seasonNum,
+          episodeNum: nextEp.episodeNum,
+        },
+      });
+
+      const totalWatched = entry.watchedEpisodes.length + 1;
+      const isCompleted = totalWatched >= totalEpisodes;
+
+      if (isCompleted) {
+        await this.prisma.client.aquilaTvUserList.update({
+          where: { id: entry.id },
+          data: {
+            status: $Enums.TvListStatus.COMPLETED,
+            endDate: Math.floor(Date.now() / 1000),
+          },
+        });
+      }
+
+      return {
+        success: true,
+        message: 'Progress updated',
+        data: { nextEp, isCompleted },
+      };
+    }
+
+    return { success: false, message: 'Invalid media type' };
   }
 }

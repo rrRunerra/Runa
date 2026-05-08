@@ -124,4 +124,138 @@ export class ListController {
   ): Promise<{ success: boolean; message: string; error?: any }> {
     return this.listService.deleteMangaList(req.user.username, Number(mangaId));
   }
+
+  // ─────────────────────────── MOVIE ───────────────────────────
+
+  @Public()
+  @Get('/movie/user/:username')
+  public async getMovieList(
+    @Param('username') username: string,
+  ): Promise<ListEntity[]> {
+    return this.listService.getMovieList(username);
+  }
+
+  @Get('/movie/entry/:tvdbId')
+  public async getMovieListEntry(
+    @Param('tvdbId') tvdbId: string,
+    @Req() req: any,
+  ) {
+    return this.listService.getMovieListEntry(
+      req.user.username,
+      Number(tvdbId),
+    );
+  }
+
+  @Post('/movie/entry/save')
+  public async saveMovieListEntry(
+    @Req() req: any,
+    @Body()
+    body: {
+      tvdbId: number;
+      status?: $Enums.MovieListStatus;
+      score?: number;
+      startDate?: number;
+      endDate?: number;
+      notes?: string;
+      rewatched?: number;
+      connections?: any;
+    },
+  ): Promise<{ success: boolean; message: string; error?: any }> {
+    return this.listService.upsertMovieList(req.user.username, body);
+  }
+
+  @Delete('/movie/entry/:tvdbId')
+  public async deleteMovieListEntry(
+    @Param('tvdbId') tvdbId: string,
+    @Req() req: any,
+  ): Promise<{ success: boolean; message: string; error?: any }> {
+    return this.listService.deleteMovieList(req.user.username, Number(tvdbId));
+  }
+
+  // ─────────────────────────── TV ───────────────────────────
+
+  @Public()
+  @Get('/tv/user/:username')
+  public async getTvList(
+    @Param('username') username: string,
+  ): Promise<ListEntity[]> {
+    return this.listService.getTvList(username);
+  }
+
+  @Get('/tv/entry/:tvdbId')
+  public async getTvListEntry(@Param('tvdbId') tvdbId: string, @Req() req: any) {
+    return this.listService.getTvListEntry(req.user.username, Number(tvdbId));
+  }
+
+  @Post('/tv/entry/save')
+  public async saveTvListEntry(
+    @Req() req: any,
+    @Body()
+    body: {
+      tvdbId: number;
+      status?: $Enums.TvListStatus;
+      score?: number;
+      startDate?: number;
+      endDate?: number;
+      notes?: string;
+      rewatched?: number;
+      connections?: any;
+    },
+  ): Promise<{ success: boolean; message: string; error?: any }> {
+    return this.listService.upsertTvList(req.user.username, body);
+  }
+
+  @Delete('/tv/entry/:tvdbId')
+  public async deleteTvListEntry(
+    @Param('tvdbId') tvdbId: string,
+    @Req() req: any,
+  ): Promise<{ success: boolean; message: string; error?: any }> {
+    return this.listService.deleteTvList(req.user.username, Number(tvdbId));
+  }
+
+  @Get('/watching')
+  public async getWatchingList(@Req() req: any) {
+    return this.listService.getWatchingList(req.user.username);
+  }
+
+  @Post('/increment')
+  public async incrementProgress(
+    @Req() req: any,
+    @Body() body: { mediaType: 'anime' | 'manga' | 'tv'; id: number },
+  ) {
+    return this.listService.incrementProgress(
+      req.user.username,
+      body.mediaType,
+      body.id,
+    );
+  }
+
+  @Post('/tv/entry/:tvdbId/episode')
+  public async toggleEpisode(
+    @Param('tvdbId') tvdbId: string,
+    @Req() req: any,
+    @Body() body: { seasonNum: number; episodeNum: number },
+  ) {
+    return this.listService.toggleEpisodeWatched(
+      req.user.username,
+      Number(tvdbId),
+      body.seasonNum,
+      body.episodeNum,
+    );
+  }
+
+  @Post('/tv/entry/:tvdbId/season')
+  public async toggleSeason(
+    @Param('tvdbId') tvdbId: string,
+    @Req() req: any,
+    @Body() body: { seasonNum: number; episodes: any[]; watched: boolean },
+  ) {
+    return this.listService.toggleSeasonWatched(
+      req.user.username,
+      Number(tvdbId),
+      body.seasonNum,
+      body.episodes,
+      body.watched,
+    );
+  }
 }

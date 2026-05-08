@@ -23,6 +23,7 @@ model User {
     animeList            AquilaAnimeUserList[]
     mangaList            AquilaMangaUserList[]
     aquilaMovieUserLists AquilaMovieUserList[]
+    aquilaTvUserLists    AquilaTvUserList[]
 
     @@index([id])
     @@index([username])
@@ -50,18 +51,18 @@ enum ConnectionLinkedTo {
 }
 
 model Connections {
-    id           String              @id @default(nanoid())
-    username     String
-    connectionId String?
-    createdAt    DateTime            @default(now())
-    updatedAt    DateTime            @updatedAt
-    provider     ConnectionProvider
-    linkedTo     ConnectionLinkedTo?
+    id             String              @id @default(nanoid())
+    username       String
+    connectionId   String?
+    createdAt      DateTime            @default(now())
+    updatedAt      DateTime            @updatedAt
+    provider       ConnectionProvider
+    linkedTo       ConnectionLinkedTo?
     linkedUsername String?
-    accessToken  String?
-    expiresAt    DateTime?
-    refreshToken String?
-    user         User                @relation(fields: [username], references: [username])
+    accessToken    String?
+    expiresAt      DateTime?
+    refreshToken   String?
+    user           User                @relation(fields: [username], references: [username])
 
     @@unique([username, provider])
     @@index([username])
@@ -228,7 +229,7 @@ model AquilaAnime {
 
 model AquilaAnimeUserList {
     id        Int             @id @default(autoincrement())
-    username String
+    username  String
     animeId   Int
     malId     Int?
     anilistId Int?
@@ -328,7 +329,7 @@ model AquilaManga {
 
 model AquilaMangaUserList {
     id        Int             @id @default(autoincrement())
-    username String
+    username  String
     mangaId   Int
     malId     Int?
     anilistId Int?
@@ -403,8 +404,8 @@ model AquilaMovie {
 }
 
 model AquilaTv {
-    id     Int  @id @default(autoincrement())
-    tvdbId Int? @unique
+    id     Int @id @default(autoincrement())
+    tvdbId Int @unique
 
     titleEnglish String?
     titleRomaji  String?
@@ -427,9 +428,56 @@ model AquilaTv {
     seasons  Json? @db.Json
     trailers Json? @db.Json
 
-    updatedAt DateTime @updatedAt
+    updatedAt       DateTime           @updatedAt
+    aquilaUserLists AquilaTvUserList[]
 
     @@index([tvdbId])
+}
+
+enum TvListStatus {
+    WATCHING
+    PLANNING
+    COMPLETED
+    DROPPED
+}
+
+model AquilaTvUserList {
+    id        Int          @id @default(autoincrement())
+    username  String
+    tvdbId    Int
+    status    TvListStatus @default(PLANNING)
+    score     Int?
+    notes     String?      @db.Text
+    rewatched Int?
+
+    startDate Int?
+    endDate   Int?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    connections Json? @db.Json
+
+    user            User                     @relation(fields: [username], references: [username])
+    tv              AquilaTv                 @relation(fields: [tvdbId], references: [tvdbId])
+    watchedEpisodes AquilaTvWatchedEpisode[]
+
+    @@unique([username, tvdbId])
+    @@index([username])
+    @@index([tvdbId])
+}
+
+model AquilaTvWatchedEpisode {
+    id         Int      @id @default(autoincrement())
+    listId     Int
+    seasonNum  Int
+    episodeNum Int
+    watchedAt  DateTime @default(now())
+
+    list AquilaTvUserList @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+    @@unique([listId, seasonNum, episodeNum])
+    @@index([listId])
 }
 
 enum MovieListStatus {
@@ -440,7 +488,7 @@ enum MovieListStatus {
 
 model AquilaMovieUserList {
     id        Int             @id @default(autoincrement())
-    username String
+    username  String
     tvdbId    Int
     status    MovieListStatus @default(PLANNING)
     score     Int?
