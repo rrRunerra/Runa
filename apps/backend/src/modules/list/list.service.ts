@@ -10,18 +10,9 @@ export class ListService {
   private readonly logger = new Logger(ListService.name);
 
   public async getAnimeList(username: string): Promise<ListEntity[]> {
-    const user = await this.prisma.client.user.findUnique({
-      where: { username: username.toLowerCase() },
-      select: { id: true },
-    });
-
-    if (!user) {
-      return [];
-    }
-
     const list = await this.prisma.client.aquilaAnimeUserList.findMany({
       where: {
-        userId: user.id,
+        username: username.toLowerCase(),
       },
       select: {
         animeId: true,
@@ -42,6 +33,10 @@ export class ListService {
         },
       },
     });
+
+    if (!list.length) {
+      return [];
+    }
 
     const mappedList: ListEntity[] = list.map((item) => {
       return {
@@ -65,11 +60,11 @@ export class ListService {
     return mappedList;
   }
 
-  public async getAnimeListEntry(userId: string, animeId: number) {
+  public async getAnimeListEntry(username: string, animeId: number) {
     const out = await this.prisma.client.aquilaAnimeUserList.findUnique({
       where: {
-        userId_animeId: {
-          userId,
+        username_animeId: {
+          username: username.toLowerCase(),
           animeId,
         },
       },
@@ -80,7 +75,7 @@ export class ListService {
   }
 
   public async upsertAnimeList(
-    userId: string,
+    username: string,
     body: {
       animeId: number;
       status?: $Enums.AnimeListStatus;
@@ -100,8 +95,8 @@ export class ListService {
     try {
       await this.prisma.client.aquilaAnimeUserList.upsert({
         where: {
-          userId_animeId: {
-            userId: userId,
+          username_animeId: {
+            username: username.toLowerCase(),
             animeId: body.animeId,
           },
         },
@@ -116,7 +111,7 @@ export class ListService {
           connections: body.connections,
         },
         create: {
-          userId: userId,
+          username: username.toLowerCase(),
           animeId: body.animeId,
           status: body.status,
           progress: body.progress,
@@ -131,7 +126,7 @@ export class ListService {
 
       if (body.updateConnection) {
         await this.updateConnections(
-          userId,
+          username.toLowerCase(),
           body.animeId,
           body.connections || {},
           body.status,
@@ -159,14 +154,14 @@ export class ListService {
   }
 
   public async deleteAnimeList(
-    userId: string,
+    username: string,
     animeId: number,
   ): Promise<{ success: boolean; message: string; error?: any }> {
     try {
       await this.prisma.client.aquilaAnimeUserList.delete({
         where: {
-          userId_animeId: {
-            userId,
+          username_animeId: {
+            username: username.toLowerCase(),
             animeId,
           },
         },
@@ -186,7 +181,7 @@ export class ListService {
   }
 
   private async updateConnections(
-    userId: string,
+    username: string,
     animeId: number,
     connections: { anilist?: number; mal?: number },
     status?: string,
@@ -200,7 +195,7 @@ export class ListService {
     if (connections.anilist) {
       const anilistConnection = await this.prisma.client.connections.findFirst({
         where: {
-          userId: userId,
+          username: username,
           provider: 'ANILIST',
         },
         select: {
@@ -211,7 +206,7 @@ export class ListService {
       });
 
       if (!anilistConnection) {
-        this.logger.warn(`No Anilist connection found for user ${userId}`);
+        this.logger.warn(`No Anilist connection found for user ${username}`);
         return;
       }
 
@@ -289,7 +284,7 @@ export class ListService {
 
       if (!res.ok) {
         this.logger.error(
-          `Failed to update Anilist connection for user ${userId}`,
+          `Failed to update Anilist connection for user ${username}`,
         );
         return;
       }
@@ -297,18 +292,18 @@ export class ListService {
       const data = await res.json();
       if (data.errors) {
         this.logger.error(
-          `Failed to update Anilist connection for user ${userId}`,
+          `Failed to update Anilist connection for user ${username}`,
         );
         return;
       }
 
-      this.logger.log(`Anilist connection updated for user ${userId}`);
+      this.logger.log(`Anilist connection updated for user ${username}`);
     }
 
     if (connections.mal) {
       const malConnection = await this.prisma.client.connections.findFirst({
         where: {
-          userId: userId,
+          username: username,
           provider: 'MAL',
         },
         select: {
@@ -320,13 +315,12 @@ export class ListService {
       });
 
       if (!malConnection) {
-        this.logger.warn(`No MAL connection found for user ${userId}`);
+        this.logger.warn(`No MAL connection found for user ${username}`);
         return;
       }
 
       let accessToken = malConnection.accessToken;
 
-      // Refresh MAL token if expired
       if (
         malConnection.expiresAt &&
         Date.now() > malConnection.expiresAt.getTime()
@@ -358,9 +352,9 @@ export class ListService {
               expiresAt: new Date(Date.now() + refreshData.expires_in * 1000),
             },
           });
-          this.logger.log(`MAL token refreshed for user ${userId}`);
+          this.logger.log(`MAL token refreshed for user ${username}`);
         } else {
-          this.logger.error(`Failed to refresh MAL token for user ${userId}`);
+          this.logger.error(`Failed to refresh MAL token for user ${username}`);
         }
       }
 
@@ -434,27 +428,18 @@ export class ListService {
       );
 
       if (!res.ok) {
-        this.logger.error(`Failed to update MAL connection for user ${userId}`);
+        this.logger.error(
+          `Failed to update MAL connection for user ${username}`,
+        );
       } else {
-        this.logger.log(`MAL connection updated for user ${userId}`);
+        this.logger.log(`MAL connection updated for user ${username}`);
       }
     }
   }
 
-  // ───────────────────────────── MANGA ─────────────────────────────
-
   public async getMangaList(username: string): Promise<ListEntity[]> {
-    const user = await this.prisma.client.user.findUnique({
-      where: { username: username.toLowerCase() },
-      select: { id: true },
-    });
-
-    if (!user) {
-      return [];
-    }
-
     const list = await this.prisma.client.aquilaMangaUserList.findMany({
-      where: { userId: user.id },
+      where: { username: username.toLowerCase() },
       select: {
         mangaId: true,
         status: true,
@@ -476,6 +461,10 @@ export class ListService {
       },
     });
 
+    if (!list.length) {
+      return [];
+    }
+
     return list.map((item) => ({
       id: item.mangaId,
       title:
@@ -494,11 +483,11 @@ export class ListService {
     }));
   }
 
-  public async getMangaListEntry(userId: string, mangaId: number) {
+  public async getMangaListEntry(username: string, mangaId: number) {
     return this.prisma.client.aquilaMangaUserList.findUnique({
       where: {
-        userId_mangaId: {
-          userId,
+        username_mangaId: {
+          username: username.toLowerCase(),
           mangaId,
         },
       },
@@ -506,7 +495,7 @@ export class ListService {
   }
 
   public async upsertMangaList(
-    userId: string,
+    username: string,
     body: {
       mangaId: number;
       status?: $Enums.MangaListStatus;
@@ -527,8 +516,8 @@ export class ListService {
     try {
       await this.prisma.client.aquilaMangaUserList.upsert({
         where: {
-          userId_mangaId: {
-            userId: userId,
+          username_mangaId: {
+            username: username.toLowerCase(),
             mangaId: body.mangaId,
           },
         },
@@ -544,7 +533,7 @@ export class ListService {
           connections: body.connections,
         },
         create: {
-          userId: userId,
+          username: username.toLowerCase(),
           mangaId: body.mangaId,
           status: body.status,
           chapters: body.chapters,
@@ -560,7 +549,7 @@ export class ListService {
 
       if (body.updateConnection) {
         await this.updateMangaConnections(
-          userId,
+          username.toLowerCase(),
           body.mangaId,
           body.connections || {},
           body.status,
@@ -589,14 +578,14 @@ export class ListService {
   }
 
   public async deleteMangaList(
-    userId: string,
+    username: string,
     mangaId: number,
   ): Promise<{ success: boolean; message: string; error?: any }> {
     try {
       await this.prisma.client.aquilaMangaUserList.delete({
         where: {
-          userId_mangaId: {
-            userId,
+          username_mangaId: {
+            username: username.toLowerCase(),
             mangaId,
           },
         },
@@ -616,7 +605,7 @@ export class ListService {
   }
 
   private async updateMangaConnections(
-    userId: string,
+    username: string,
     mangaId: number,
     connections: { anilist?: number; mal?: number },
     status?: string,
@@ -630,12 +619,12 @@ export class ListService {
   ) {
     if (connections.anilist) {
       const anilistConnection = await this.prisma.client.connections.findFirst({
-        where: { userId, provider: 'ANILIST' },
+        where: { username, provider: 'ANILIST' },
         select: { accessToken: true, refreshToken: true, expiresAt: true },
       });
 
       if (!anilistConnection) {
-        this.logger.warn(`No Anilist connection found for user ${userId}`);
+        this.logger.warn(`No Anilist connection found for user ${username}`);
       } else {
         const res = await fetch('https://graphql.anilist.co', {
           method: 'POST',
@@ -705,17 +694,17 @@ export class ListService {
 
         if (!res.ok) {
           this.logger.error(
-            `Failed to update Anilist manga connection for user ${userId}`,
+            `Failed to update Anilist manga connection for user ${username}`,
           );
         } else {
           const data = await res.json();
           if (data.errors) {
             this.logger.error(
-              `Failed to update Anilist manga connection for user ${userId}`,
+              `Failed to update Anilist manga connection for user ${username}`,
             );
           } else {
             this.logger.log(
-              `Anilist manga connection updated for user ${userId}`,
+              `Anilist manga connection updated for user ${username}`,
             );
           }
         }
@@ -724,7 +713,7 @@ export class ListService {
 
     if (connections.mal) {
       const malConnection = await this.prisma.client.connections.findFirst({
-        where: { userId, provider: 'MAL' },
+        where: { username, provider: 'MAL' },
         select: {
           id: true,
           accessToken: true,
@@ -734,7 +723,7 @@ export class ListService {
       });
 
       if (!malConnection) {
-        this.logger.warn(`No MAL connection found for user ${userId}`);
+        this.logger.warn(`No MAL connection found for user ${username}`);
         return;
       }
 
@@ -769,9 +758,9 @@ export class ListService {
               expiresAt: new Date(Date.now() + refreshData.expires_in * 1000),
             },
           });
-          this.logger.log(`MAL token refreshed for user ${userId}`);
+          this.logger.log(`MAL token refreshed for user ${username}`);
         } else {
-          this.logger.error(`Failed to refresh MAL token for user ${userId}`);
+          this.logger.error(`Failed to refresh MAL token for user ${username}`);
         }
       }
 
@@ -844,10 +833,10 @@ export class ListService {
 
       if (!res.ok) {
         this.logger.error(
-          `Failed to update MAL manga connection for user ${userId}`,
+          `Failed to update MAL manga connection for user ${username}`,
         );
       } else {
-        this.logger.log(`MAL manga connection updated for user ${userId}`);
+        this.logger.log(`MAL manga connection updated for user ${username}`);
       }
     }
   }

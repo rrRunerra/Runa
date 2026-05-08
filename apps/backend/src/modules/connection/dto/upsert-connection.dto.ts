@@ -20,7 +20,7 @@ export class UpsertConnectionDto {
 
   @IsString()
   @IsOptional()
-  username?: string;
+  linkedUsername?: string;
 
   @IsString()
   @IsOptional()
@@ -40,7 +40,7 @@ export class UpsertConnectionDto {
 
   @IsString()
   @IsOptional()
-  userId?: string;
+  username?: string;
 
   @IsEnum(ConnectionLinkedTo)
   @IsOptional()

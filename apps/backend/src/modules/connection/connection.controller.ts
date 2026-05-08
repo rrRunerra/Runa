@@ -18,6 +18,7 @@ import { UpsertConnectionDto } from './dto/upsert-connection.dto';
 import { RemoveConnectionDto } from './dto/remove-connection.dto';
 import { ConnectionEntity } from './entities/connection.entity';
 import { Public } from 'src/common/decorators/public.decorator';
+import { jwtVerify } from 'jose';
 
 @Controller('connections')
 @UseGuards(DualAuthGuard)
@@ -29,11 +30,8 @@ export class ConnectionController {
     @Req() req: any,
     @Query('linkedTo') linkedTo?: ConnectionLinkedTo,
   ): Promise<ConnectionEntity[]> {
-    // Check if system override is provided in headers (safer for GET than Body)
-    const userIdOverride = req.headers['x-user-id'];
-    const userId =
-      req.user.id === 'system' && userIdOverride ? userIdOverride : req.user.id;
-    return this.connectionService.findAll(userId, linkedTo);
+    const username = req.user.username;
+    return this.connectionService.findAll(username, linkedTo);
   }
 
   @Post('save')
@@ -41,13 +39,11 @@ export class ConnectionController {
     @Req() req: any,
     @Body() body: UpsertConnectionDto,
   ): Promise<ConnectionEntity> {
-    // If authenticated via internal API key (system), allow overriding the user ID
-    const userId =
-      req.user.id === 'system' && body.userId ? body.userId : req.user.id;
+    const username = req.user.username;
 
-    return this.connectionService.upsert(userId, {
+    return this.connectionService.upsert(username, {
       provider: body.provider,
-      username: body.username,
+      linkedUsername: body.linkedUsername,
       accessToken: body.accessToken,
       refreshToken: body.refreshToken,
       expiresAt: body.expiresAt ? new Date(body.expiresAt) : undefined,
@@ -62,10 +58,8 @@ export class ConnectionController {
     @Param('provider') provider: string,
     @Body() body: RemoveConnectionDto,
   ): Promise<{ success: boolean }> {
-    const userId =
-      req.user.id === 'system' && body.userId ? body.userId : req.user.id;
-
-    return this.connectionService.remove(userId, provider);
+    const username = req.user.username;
+    return this.connectionService.remove(username, provider);
   }
 
   @Get(':provider/connect')
@@ -83,22 +77,17 @@ export class ConnectionController {
   async callback(
     @Param('provider') provider: string,
     @Query('code') code: string,
-    @Query('state') state: string, // state contains the token
+    @Query('state') state: string,
     @Res() res: Response,
   ) {
     try {
-      // Manual auth check using state token
-      const authHeader = `Bearer ${state}`;
-      // We call the service which will eventually call upsert.
-      // But we need the userId. We can either decode the token here or pass it to service.
-      // Better: we can actually use the Guard if we adjust it, but for now let's pass token to service.
-      // The service could decode it or we can decode it here.
-
-      // Actually, let's just use the handleCallback with the token as 'state'
-      // We need to decode the sub (userId) from the token.
       const user = await this.decodeToken(state);
 
-      await this.connectionService.handleCallback(provider, code, user.id);
+      await this.connectionService.handleCallback(
+        provider,
+        code,
+        user.username,
+      );
 
       const frontendUrl = process.env.NEXT_PUBLIC_URL;
       return res.redirect(`${frontendUrl}/polaris/connections?success=true`);
@@ -111,11 +100,10 @@ export class ConnectionController {
   }
 
   private async decodeToken(token: string) {
-    const { jwtVerify } = await import('jose');
     const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET);
     const { payload } = await jwtVerify(token, secret, {
       algorithms: ['HS256'],
     });
-    return { id: payload.sub as string };
+    return { username: payload.name as string };
   }
 }

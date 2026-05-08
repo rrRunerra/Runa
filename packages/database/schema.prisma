@@ -51,20 +51,20 @@ enum ConnectionLinkedTo {
 
 model Connections {
     id           String              @id @default(nanoid())
-    userId       String
+    username     String
     connectionId String?
     createdAt    DateTime            @default(now())
     updatedAt    DateTime            @updatedAt
     provider     ConnectionProvider
     linkedTo     ConnectionLinkedTo?
-    username     String?
+    linkedUsername String?
     accessToken  String?
     expiresAt    DateTime?
     refreshToken String?
-    user         User                @relation(fields: [userId], references: [id])
+    user         User                @relation(fields: [username], references: [username])
 
-    @@unique([userId, provider])
-    @@index([userId])
+    @@unique([username, provider])
+    @@index([username])
 }
 
 model LynxHomeworkExists {
@@ -228,7 +228,7 @@ model AquilaAnime {
 
 model AquilaAnimeUserList {
     id        Int             @id @default(autoincrement())
-    userId    String
+    username String
     animeId   Int
     malId     Int?
     anilistId Int?
@@ -246,11 +246,11 @@ model AquilaAnimeUserList {
 
     connections Json? @db.Json
 
-    user  User        @relation(fields: [userId], references: [id])
+    user  User        @relation(fields: [username], references: [username])
     anime AquilaAnime @relation(fields: [animeId], references: [anilistId])
 
-    @@unique([userId, animeId])
-    @@index([userId])
+    @@unique([username, animeId])
+    @@index([username])
     @@index([animeId])
 }
 
@@ -328,7 +328,7 @@ model AquilaManga {
 
 model AquilaMangaUserList {
     id        Int             @id @default(autoincrement())
-    userId    String
+    username String
     mangaId   Int
     malId     Int?
     anilistId Int?
@@ -347,11 +347,11 @@ model AquilaMangaUserList {
 
     connections Json? @db.Json
 
-    user  User        @relation(fields: [userId], references: [id])
+    user  User        @relation(fields: [username], references: [username])
     manga AquilaManga @relation(fields: [mangaId], references: [anilistId])
 
-    @@unique([userId, mangaId])
-    @@index([userId])
+    @@unique([username, mangaId])
+    @@index([username])
     @@index([mangaId])
 }
 
@@ -440,7 +440,7 @@ enum MovieListStatus {
 
 model AquilaMovieUserList {
     id        Int             @id @default(autoincrement())
-    userId    String
+    username String
     tvdbId    Int
     status    MovieListStatus @default(PLANNING)
     score     Int?
@@ -455,10 +455,10 @@ model AquilaMovieUserList {
 
     connections Json? @db.Json
 
-    user  User        @relation(fields: [userId], references: [id])
+    user  User        @relation(fields: [username], references: [username])
     movie AquilaMovie @relation(fields: [tvdbId], references: [tvdbId])
 
-    @@unique([userId, tvdbId])
-    @@index([userId])
+    @@unique([username, tvdbId])
+    @@index([username])
     @@index([tvdbId])
 }

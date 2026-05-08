@@ -1,9 +1,10 @@
 export class ConnectionEntity {
   id!: string;
   provider!: string;
-  username!: string | null;
+  linkedUsername!: string | null;
   connectionId!: string | null;
   createdAt!: Date;
   updatedAt!: Date;
   expiresAt!: Date | null;
+  linkedTo!: string | null;
 }

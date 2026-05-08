@@ -33,11 +33,6 @@ export class DualAuthGuard implements CanActivate {
 
     // API Key (Highest priority)
     const apiKey = request.headers['x-api-key'];
-    if (apiKey && apiKey === this.internalApiKey) {
-      request.user = { id: 'system', role: 'admin' };
-      return true;
-    }
-
     if (apiKey) {
       const keyPrefix = apiKey.slice(0, 16);
       const record = await prisma.apiKey.findFirst({
@@ -58,7 +53,11 @@ export class DualAuthGuard implements CanActivate {
         data: { lastUsedAt: new Date() },
       });
 
-      request.user = { id: record.user?.id, role: record.user?.role };
+      request.user = {
+        id: record.user?.id,
+        username: record.user?.username,
+        role: record.user?.role,
+      };
       return true;
     }
 
@@ -74,8 +73,8 @@ export class DualAuthGuard implements CanActivate {
 
       request.user = {
         id: payload.sub,
+        username: payload.name,
         email: payload.email,
-        name: payload.name,
         role: payload.role,
       };
 
@@ -91,9 +90,6 @@ export class DualAuthGuard implements CanActivate {
       return authHeader.split(' ')[1];
     }
 
-    // Fallback to query parameter for redirect
-    // USED BY CONNECTIONS
-    // YES I KNOW ITS AS SECURE AS PAPER DOORS IN A HURRICANE
     const url = new URL(request.url, `http://${request.headers.host}`);
     const queryToken = url.searchParams.get('token');
     if (queryToken) {

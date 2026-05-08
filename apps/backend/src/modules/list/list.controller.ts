@@ -35,7 +35,10 @@ export class ListController {
     @Param('animeId') animeId: string,
     @Req() req: any,
   ) {
-    return this.listService.getAnimeListEntry(req.user.id, Number(animeId));
+    return this.listService.getAnimeListEntry(
+      req.user.username,
+      Number(animeId),
+    );
   }
 
   @Post('/anime/entry/save')
@@ -58,7 +61,7 @@ export class ListController {
       };
     },
   ): Promise<{ success: boolean; message: string; error?: any }> {
-    return this.listService.upsertAnimeList(req.user.id, body);
+    return this.listService.upsertAnimeList(req.user.username, body);
   }
 
   @Delete('/anime/entry/:animeId')
@@ -66,7 +69,7 @@ export class ListController {
     @Param('animeId') animeId: string,
     @Req() req: any,
   ): Promise<{ success: boolean; message: string; error?: any }> {
-    return this.listService.deleteAnimeList(req.user.id, Number(animeId));
+    return this.listService.deleteAnimeList(req.user.username, Number(animeId));
   }
 
   // ─────────────────────────── MANGA ───────────────────────────
@@ -84,7 +87,10 @@ export class ListController {
     @Param('mangaId') mangaId: string,
     @Req() req: any,
   ) {
-    return this.listService.getMangaListEntry(req.user.id, Number(mangaId));
+    return this.listService.getMangaListEntry(
+      req.user.username,
+      Number(mangaId),
+    );
   }
 
   @Post('/manga/entry/save')
@@ -108,7 +114,7 @@ export class ListController {
       };
     },
   ): Promise<{ success: boolean; message: string; error?: any }> {
-    return this.listService.upsertMangaList(req.user.id, body);
+    return this.listService.upsertMangaList(req.user.username, body);
   }
 
   @Delete('/manga/entry/:mangaId')
@@ -116,6 +122,6 @@ export class ListController {
     @Param('mangaId') mangaId: string,
     @Req() req: any,
   ): Promise<{ success: boolean; message: string; error?: any }> {
-    return this.listService.deleteMangaList(req.user.id, Number(mangaId));
+    return this.listService.deleteMangaList(req.user.username, Number(mangaId));
   }
 }

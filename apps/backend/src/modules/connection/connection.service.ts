@@ -107,7 +107,7 @@ export class ConnectionService {
     return url.toString();
   }
 
-  async handleCallback(providerId: string, code: string, userId: string) {
+  async handleCallback(providerId: string, code: string, username: string) {
     const provider = this.PROVIDERS[providerId.toLowerCase()];
     if (!provider) {
       throw new BadRequestException(`Invalid provider: ${providerId}`);
@@ -180,10 +180,10 @@ export class ConnectionService {
     const profile = await provider.getProfile(accessToken);
 
     // 3. Save connection
-    await this.upsert(userId, {
+    await this.upsert(username, {
       provider: providerId.toUpperCase(),
       connectionId: profile.id,
-      username: profile.username,
+      linkedUsername: profile.username,
       accessToken,
       refreshToken,
       expiresAt,
@@ -193,30 +193,31 @@ export class ConnectionService {
     return { success: true };
   }
 
-  async findAll(userId: string, linkedTo?: ConnectionLinkedTo) {
+  async findAll(username: string, linkedTo?: ConnectionLinkedTo) {
     return this.prisma.client.connections.findMany({
       where: {
-        userId,
+        username,
         linkedTo: linkedTo ?? undefined,
       },
       orderBy: { createdAt: 'desc' },
       select: {
         id: true,
         provider: true,
-        username: true,
+        linkedUsername: true,
         connectionId: true,
         createdAt: true,
         updatedAt: true,
         expiresAt: true,
+        linkedTo: true,
       },
     });
   }
 
   async upsert(
-    userId: string,
+    username: string,
     data: {
       provider: string;
-      username?: string;
+      linkedUsername?: string;
       accessToken?: string;
       refreshToken?: string;
       expiresAt?: Date;
@@ -228,10 +229,10 @@ export class ConnectionService {
 
     const connection = await this.prisma.client.connections.upsert({
       where: {
-        userId_provider: { userId, provider },
+        username_provider: { username, provider },
       },
       update: {
-        username: data.username,
+        linkedUsername: data.linkedUsername,
         accessToken: data.accessToken,
         refreshToken: data.refreshToken,
         expiresAt: data.expiresAt,
@@ -239,9 +240,9 @@ export class ConnectionService {
         linkedTo: data.linkedTo,
       },
       create: {
-        userId,
+        username,
         provider,
-        username: data.username,
+        linkedUsername: data.linkedUsername,
         accessToken: data.accessToken,
         refreshToken: data.refreshToken,
         expiresAt: data.expiresAt,
@@ -253,7 +254,7 @@ export class ConnectionService {
     return {
       id: connection.id,
       provider: connection.provider,
-      username: connection.username,
+      linkedUsername: connection.linkedUsername,
       connectionId: connection.connectionId,
       createdAt: connection.createdAt,
       updatedAt: connection.updatedAt,
@@ -262,12 +263,12 @@ export class ConnectionService {
     };
   }
 
-  async remove(userId: string, providerRaw: string) {
+  async remove(username: string, providerRaw: string) {
     const provider = this.toProvider(providerRaw);
 
     const existing = await this.prisma.client.connections.findUnique({
       where: {
-        userId_provider: { userId, provider },
+        username_provider: { username, provider },
       },
     });
 
