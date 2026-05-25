@@ -11,12 +11,12 @@
     "start": "tsx src/index.ts"
   },
   "dependencies": {
-    "@nestjs/common": "^11.1.19",
-    "@nestjs/core": "^11.1.19",
+    "@nestjs/common": "^11.1.23",
+    "@nestjs/core": "^11.1.23",
     "@runa/database": "workspace:*",
     "@runa/edupage": "workspace:*",
     "cors": "^2.8.6",
-    "discord.js": "^14.26.3",
+    "discord.js": "^14.26.4",
     "dotenv": "^17.4.2",
     "download": "^8.0.0",
     "express": "^5.2.1",
@@ -29,6 +29,6 @@
     "@types/download": "^8.0.5",
     "@types/express": "^5.0.6",
     "@types/html-to-text": "^9.0.4",
-    "tsx": "^4.21.0"
+    "tsx": "^4.22.3"
   }
 }
