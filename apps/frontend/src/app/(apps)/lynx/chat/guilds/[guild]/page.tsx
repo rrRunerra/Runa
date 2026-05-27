@@ -45,7 +45,11 @@ async function getChannels(guild: string): Promise<Channel[]> {
         Authorization: `Bot ${token}`,
         "Content-Type": "application/json",
       },
-      next: { revalidate: 0 }, // Ensure fresh data on every load
+      cache: "force-cache",
+        next: {
+          revalidate: 60, // revalidate every 60 seconds
+          tags: ["guilds"]
+        }
     },
   );
   if (!res.ok) return [];

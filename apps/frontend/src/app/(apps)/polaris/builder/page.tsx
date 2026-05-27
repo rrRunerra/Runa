@@ -21,6 +21,10 @@ export default function ConstellationBuilder() {
   const [bgX, setBgX] = useState(0);
   const [bgY, setBgY] = useState(0);
 
+  useEffect(() => {
+    document.title = "Polaris > Builder";
+  }, [])
+
   // Viewport Settings
   const width = 800;
   const height = 600;

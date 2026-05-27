@@ -72,7 +72,7 @@ export default function UserAnimePage() {
 
   useEffect(() => {
     if (!userData) return;
-    document.title = `Aquila | ${userData?.displayName || userData?.username}'s Anime List`;
+    document.title = `Aquila > User > ${userData?.displayName || userData?.username} > Anime List`;
   }, [userData]);
 
   const lists = ["All", "Watching", "Completed", "Dropped", "Planning"];

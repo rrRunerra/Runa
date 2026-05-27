@@ -72,7 +72,7 @@ export default function UserTvShowsPage() {
 
   useEffect(() => {
     if (!userData) return;
-    document.title = `Aquila | ${userData?.displayName || userData?.username}'s TV List`;
+    document.title = `Aquila > User > ${userData?.displayName || userData?.username} > TV List`;
   }, [userData]);
 
   const lists = ["All", "Watching", "Completed", "Dropped", "Planning"];

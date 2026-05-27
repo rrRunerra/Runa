@@ -23,7 +23,14 @@ function GuildsContent() {
 
   useEffect(() => {
     async function getGuilds() {
-      const res = await fetch("/lynx/api/chat/getGuilds");
+      const res = await fetch("/lynx/api/chat/getGuilds", {
+        cache: "force-cache",
+        next: {
+          revalidate: 60, // revalidate every 60 seconds
+          tags: ["guilds"]
+        }
+        
+      });
       const data = await res.json();
       setGuilds(data.guilds);
     }

@@ -131,7 +131,7 @@ export default function MangaDetailsPage() {
 
   useEffect(() => {
     if (!manga) return;
-    document.title = `Aquila | ${manga?.title.english ?? manga?.title.romaji ?? ""}`;
+    document.title = `Aquila > Manga > ${manga?.title.english ?? manga?.title.romaji ?? ""}`;
   }, [manga?.title.romaji]);
 
   if (loading) {

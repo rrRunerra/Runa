@@ -144,6 +144,10 @@ export default function MovieDetailsPage() {
     fetchEntry();
   }, [session.status, movie?.id]);
 
+  useEffect(() => {
+    document.title = `Aquila > Movie > ${movie?.title.english ?? movie?.title.romaji}`
+  }, [movie?.title])
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">

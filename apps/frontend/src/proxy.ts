@@ -22,7 +22,12 @@ const PUBLIC_ROUTES: string[] = [
   "/aquila"
 ];
 
-const ADMIN_ROUTES: string[] = [];
+const ADMIN_ROUTES: string[] = [
+  "/lynx/databases",
+  "/lynx/logs",
+  "/lynx/config",
+  "/lynx/chat"
+];
 
 export default async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -45,6 +50,18 @@ export default async function proxy(req: NextRequest) {
     return NextResponse.redirect(url);
   }
   if (ADMIN_ROUTES.includes(pathname) && token.role !== "ADMIN") {
+    if (pathname.startsWith("/lynx")) {
+      url.pathname = "/lynx/unauthorized";
+      return NextResponse.redirect(url);
+    }
+    if (pathname.startsWith("/aquila")) {
+      url.pathname = "/aquila/unauthorized";
+      return NextResponse.redirect(url);
+    }
+    if (pathname.startsWith("/polaris")) {
+      url.pathname = "/polaris/unauthorized";
+      return NextResponse.redirect(url);
+    }
   }
   return NextResponse.next();
 }

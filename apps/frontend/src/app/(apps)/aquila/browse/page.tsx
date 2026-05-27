@@ -83,7 +83,7 @@ export default function BrowsePage() {
   }, [query, type, performSearch]);
 
   useEffect(() => {
-    document.title = "Aquila | Browse";
+    document.title = "Aquila > Browse";
   }, []);
 
   const handleSearchSubmit = (e: React.FormEvent) => {

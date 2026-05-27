@@ -72,7 +72,7 @@ export default function UserMangaPage() {
 
   useEffect(() => {
     if (!userData) return;
-    document.title = `Aquila | ${userData?.displayName || userData?.username}'s Manga List`;
+    document.title = `Aquila > User > ${userData?.displayName || userData?.username} > Manga List`;
   }, [userData]);
 
   const lists = [

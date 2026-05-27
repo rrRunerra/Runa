@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Loader2, User, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import Error from "next/error";
@@ -53,6 +53,10 @@ export default function Page() {
     number: false,
     special: false,
   });
+
+  useEffect(() => {
+    document.title = "Polaris > Register";
+  }, [])
 
   const validatePassword = (value: string) => {
     const criteria = {

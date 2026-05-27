@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react";
@@ -38,6 +38,10 @@ export default function Page() {
     identifier?: string;
   } | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    document.title = "Polaris > Login";
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

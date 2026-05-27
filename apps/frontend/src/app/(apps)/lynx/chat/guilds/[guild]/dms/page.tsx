@@ -19,7 +19,11 @@ async function getGuildUsers(guildId: string): Promise<GuildMember[]> {
   const res = await fetch(
     `${process.env.LYNX_API_URL}/guilds/${guildId}/getUsers`,
     {
-      next: { revalidate: 0 },
+      cache: "force-cache",
+        next: {
+          revalidate: 30, // revalidate every 30 seconds
+          tags: ["guilds"]
+        }
     },
   );
   if (!res.ok) return [];

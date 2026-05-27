@@ -171,10 +171,11 @@ export default function Dash() {
   const starMapRef = useRef<StarMapHandle>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const { data: session, status } = useSession();
+  const [greeting, setGreeting] = useState(GREETINGS[Math.floor(Math.random() * GREETINGS.length)]);
 
   useEffect(() => {
     document.title = "Polaris > Dashboard";
-  });
+  }, []);
 
   useEffect(() => {
     let resizeObserver: ResizeObserver | null = null;
@@ -224,7 +225,7 @@ export default function Dash() {
             {/* Hero Section - Centered */}
             <section className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center text-center w-[900px] z-10">
               <h1 className="text-5xl md:text-7xl font-bold text-white tracking-widest opacity-90 mb-2 drop-shadow-lg select-none">
-                {GREETINGS[Math.floor(Math.random() * GREETINGS.length)]}
+                {greeting}
                 {", "}
                 {name}
               </h1>

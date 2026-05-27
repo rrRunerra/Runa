@@ -143,7 +143,7 @@ export default function AnimeDetailsPage() {
 
   useEffect(() => {
     if (!anime) return;
-    document.title = `Aquila | ${anime?.title.english ?? anime?.title.romaji ?? ""}`;
+    document.title = `Aquila > Anime > ${anime?.title.english ?? anime?.title.romaji ?? ""}`;
   }, [anime?.title.romaji]);
 
   if (loading) {

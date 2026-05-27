@@ -146,6 +146,10 @@ export default function TvDetailsPage() {
     fetchListEntry();
   }, [session.status, tv?.id]);
 
+  useEffect(() => {
+    document.title = `Aquila > TV > ${tv?.title.english ?? tv?.title.romaji}`
+  }, [tv?.title])
+
   const toggleEpisode = async (seasonNum: number, episodeNum: number) => {
     if (!tv) return;
     try {

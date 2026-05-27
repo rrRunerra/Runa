@@ -72,7 +72,7 @@ export default function UserMoviesPage() {
 
   useEffect(() => {
     if (!userData) return;
-    document.title = `Aquila | ${userData?.displayName || userData?.username}'s Movies List`;
+    document.title = `Aquila > User > ${userData?.displayName || userData?.username} > Movies List`;
   }, [userData]);
 
   const lists = ["All", "Completed", "Dropped", "Planning"];

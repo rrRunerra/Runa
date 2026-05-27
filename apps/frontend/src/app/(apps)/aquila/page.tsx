@@ -61,6 +61,10 @@ export default function AquilaHome() {
     fetchWatching();
   }, [status]);
 
+  useEffect(() => {
+    document.title = "Aquila > Home";
+  }, [])
+
   const handleIncrement = async (item: MediaItem) => {
     if (status !== "authenticated" || updatingId) return;
 
@@ -145,13 +149,7 @@ export default function AquilaHome() {
   }
 
   return (
-    <div className="space-y-12 pb-20 px-4 md:px-8">
-      <header className="flex flex-col gap-2 pt-8">
-        <h1 className="text-3xl font-bold tracking-tight">Continuing</h1>
-        <p className="text-muted-foreground">
-          Pick up right where you left off.
-        </p>
-      </header>
+    <div className="space-y-12 pb-20 px-4 md:px-8 mt-4">
 
       {watching.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 bg-muted/20 rounded-3xl border border-dashed border-border">

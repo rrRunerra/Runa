@@ -120,6 +120,10 @@ function ConnectionsContent() {
     }
   }, [searchParams, router]);
 
+  useEffect(() => {
+    document.title = "Polaris > Connections";
+  }, [])
+
   const handleConnect = (providerId: string) => {
     setIsActionLoading(providerId);
     window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/connections/${providerId.toLowerCase()}/connect?token=${session?.accessToken}`;

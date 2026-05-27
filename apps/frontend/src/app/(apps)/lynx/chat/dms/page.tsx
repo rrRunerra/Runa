@@ -20,7 +20,11 @@ interface DMChannel {
 
 async function getActiveDms(): Promise<DMChannel[]> {
   const res = await fetch(`${process.env.LYNX_API_URL}/dms/getDms`, {
-    next: { revalidate: 0 },
+    cache: "force-cache",
+        next: {
+          revalidate: 10, // revalidate every 10 seconds
+          tags: ["dms"]
+        }
   });
   if (!res.ok) return [];
   return res.json();

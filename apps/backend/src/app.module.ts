@@ -13,6 +13,7 @@ import { ApiKeyModule } from './modules/api-key/api-key.module';
 import { ConnectionModule } from './modules/connection/connection.module';
 import { TestModule } from './modules/test/test.module';
 import { ListModule } from './modules/list/list.module';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
   providers: [
@@ -20,6 +21,10 @@ import { ListModule } from './modules/list/list.module';
       provide: APP_GUARD,
       useClass: DualAuthGuard,
     },
+    {
+       provide: APP_GUARD,
+  useClass: ThrottlerGuard
+    }
   ],
   imports: [
     UserModule,
@@ -34,6 +39,14 @@ import { ListModule } from './modules/list/list.module';
     ConnectionModule,
     TestModule,
     ListModule,
+    ThrottlerModule.forRoot({
+      throttlers: [
+        {
+          ttl: 60000,  // 1 min
+          limit: 100, 
+        },
+      ],
+    }),
   ],
 })
 export class AppModule {}
