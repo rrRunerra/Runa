@@ -10,12 +10,33 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+const RESERVED_KEYWORDS = new Set([
+  "break", "case", "catch", "class", "const", "continue", "debugger",
+  "default", "delete", "do", "else", "export", "extends", "false",
+  "finally", "for", "function", "if", "import", "in", "instanceof",
+  "new", "null", "return", "super", "switch", "this", "throw",
+  "true", "try", "typeof", "var", "void", "while", "with", "yield",
+  "let", "package", "private", "protected", "public", "static",
+  "any", "boolean", "constructor", "declare", "get", "module",
+  "require", "number", "set", "string", "symbol", "type", "undefined",
+  "unknown", "never", "readonly", "keyof", "infer", "as", "from",
+  "of", "namespace", "interface", "implements", "enum", "await",
+  "select", "insert", "update", "drop", "truncate", "alter",
+  "create", "table", "database", "index", "use", "where", "join",
+  "left", "right", "inner", "outer", "on", "and", "or", "not",
+  "union", "values", "into", "order", "by", "group", "having",
+  "limit", "offset", "distinct", "all", "exists", "like", "between", "is"
+]);
+
 export default function Page() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{
+    identifier?: string;
+  } | null>(null);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -23,9 +44,25 @@ export default function Page() {
     setLoading(true);
     setMessage("");
 
+    const val = identifier.trim();
+    let sanitized = val;
+    if (!val.includes("@")) {
+      sanitized = val.replace(/[^a-zA-Z0-9_]/g, "");
+    }
+    const lower = sanitized.toLowerCase();
+
+    if (!sanitized.includes("@") && RESERVED_KEYWORDS.has(lower)) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        identifier: `Username cannot be a reserved keyword ("${lower}")`,
+      }));
+      setLoading(false);
+      return;
+    }
+
     const res = await signIn("credentials", {
       redirect: false,
-      identifier: identifier.toLowerCase(),
+      identifier: lower,
       password,
     });
 
@@ -113,7 +150,11 @@ export default function Page() {
                   htmlFor="identifier"
                   className="text-sm font-medium ml-1"
                 >
-                  Email or Username
+                  {fieldErrors?.identifier ? (
+                    <span className="text-red-400">{fieldErrors.identifier}</span>
+                  ) : (
+                    "Email or Username"
+                  )}
                 </Label>
                 <div className="relative">
                   <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground mr-2" />
@@ -123,9 +164,32 @@ export default function Page() {
                     placeholder="example@runerra.org"
                     required
                     value={identifier}
-                    onChange={(e) => setIdentifier(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      let sanitized = val;
+                      if (!val.includes("@")) {
+                        sanitized = val.replace(/[^a-zA-Z0-9_]/g, "");
+                      }
+                      setIdentifier(sanitized);
+
+                      const lower = sanitized.toLowerCase();
+                      if (!sanitized.includes("@") && RESERVED_KEYWORDS.has(lower)) {
+                        setFieldErrors((prev) => ({
+                          ...prev,
+                          identifier: `Username cannot be a reserved keyword ("${lower}")`,
+                        }));
+                      } else {
+                        setFieldErrors((prev) => ({
+                          ...prev,
+                          identifier: "",
+                        }));
+                      }
+                    }}
                     disabled={loading}
-                    className="pl-11 h-12 bg-white/5 border-white/10 rounded-xl focus:ring-2 focus:ring-primary/40 focus:border-primary/40 transition-all text-foreground placeholder:text-muted-foreground/50"
+                    className={cn(
+                      "pl-11 h-12 bg-white/5 border-white/10 rounded-xl focus:ring-2 focus:ring-primary/40 focus:border-primary/40 transition-all text-foreground placeholder:text-muted-foreground/50",
+                      fieldErrors?.identifier && "border-red-500/50 bg-red-500/5"
+                    )}
                   />
                 </div>
               </div>
@@ -169,7 +233,7 @@ export default function Page() {
               <Button
                 type="submit"
                 className="w-full h-12 mt-2 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg shadow-primary/20 transition-all active:scale-[0.98]"
-                disabled={loading}
+                disabled={loading || !!fieldErrors?.identifier}
               >
                 {loading ? "Signing in..." : "Sign In"}
               </Button>

@@ -42,7 +42,7 @@ export default function RootLayout({
     >
       <body className="h-screen flex flex-col">
         <Providers>{children}</Providers>
-        <Toaster />
+        <Toaster position="top-center" />
       </body>
     </html>
   );

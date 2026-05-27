@@ -9,6 +9,24 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 
+const RESERVED_KEYWORDS = new Set([
+  "break", "case", "catch", "class", "const", "continue", "debugger",
+  "default", "delete", "do", "else", "export", "extends", "false",
+  "finally", "for", "function", "if", "import", "in", "instanceof",
+  "new", "null", "return", "super", "switch", "this", "throw",
+  "true", "try", "typeof", "var", "void", "while", "with", "yield",
+  "let", "package", "private", "protected", "public", "static",
+  "any", "boolean", "constructor", "declare", "get", "module",
+  "require", "number", "set", "string", "symbol", "type", "undefined",
+  "unknown", "never", "readonly", "keyof", "infer", "as", "from",
+  "of", "namespace", "interface", "implements", "enum", "await",
+  "select", "insert", "update", "drop", "truncate", "alter",
+  "create", "table", "database", "index", "use", "where", "join",
+  "left", "right", "inner", "outer", "on", "and", "or", "not",
+  "union", "values", "into", "order", "by", "group", "having",
+  "limit", "offset", "distinct", "all", "exists", "like", "between", "is"
+]);
+
 export default function Page() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -42,7 +60,7 @@ export default function Page() {
       maxLength: value.length <= 64,
       uppercase: /[A-Z]/.test(value),
       number: /[0-9]{2,}/.test(value),
-      special: /[!@#$%^&*]/.test(value),
+      special: /[!@#$%^&*(),.?":{}|<>~'_\-+=/\\\[\]\x60]/.test(value),
     };
 
     setErrors(criteria);
@@ -57,19 +75,38 @@ export default function Page() {
     setMessage("");
     setFieldErrors(null);
 
+    const sanitizedUsername = username.replace(/[^a-zA-Z0-9_]/g, "");
+    const lowerUsername = sanitizedUsername.toLowerCase();
+
+    if (RESERVED_KEYWORDS.has(lowerUsername)) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        username: `Username cannot be a reserved keyword ("${lowerUsername}")`,
+      }));
+      setLoading(false);
+      return;
+    }
+
+    if (sanitizedUsername.length < 3) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        username: "Username must be at least 3 characters long",
+      }));
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch("/polaris/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: email.toLowerCase(),
-          username: username.toLowerCase(),
+          username: lowerUsername,
           password,
         }),
       });
       const data = await res.json();
-      console.log(data);
-      console.log(res);
 
       if (!res.ok) {
         await data.message.forEach((message: string) => {
@@ -96,7 +133,7 @@ export default function Page() {
         special: false,
       });
     } catch (err: any) {
-      err.props.forEach((message: string) => {});
+      err.props.forEach((message: string) => { });
     } finally {
       setLoading(false);
     }
@@ -169,9 +206,25 @@ export default function Page() {
                     type="text"
                     value={username}
                     onChange={(e) => {
-                      setUsername(e.target.value);
-                      if (fieldErrors?.username) {
-                        setFieldErrors((prev) => ({ ...prev, username: "" }));
+                      const sanitized = e.target.value.replace(/[^a-zA-Z0-9_]/g, "");
+                      setUsername(sanitized);
+                      
+                      const lower = sanitized.toLowerCase();
+                      if (RESERVED_KEYWORDS.has(lower)) {
+                        setFieldErrors((prev) => ({
+                          ...prev,
+                          username: `Username cannot be a reserved keyword ("${lower}")`,
+                        }));
+                      } else if (sanitized.length > 0 && sanitized.length < 3) {
+                        setFieldErrors((prev) => ({
+                          ...prev,
+                          username: "Username must be at least 3 characters long",
+                        }));
+                      } else {
+                        setFieldErrors((prev) => ({
+                          ...prev,
+                          username: "",
+                        }));
                       }
                     }}
                     placeholder="CosmicExplorer"

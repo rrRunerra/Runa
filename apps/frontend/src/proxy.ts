@@ -19,6 +19,7 @@ const PUBLIC_ROUTES: string[] = [
   "/aquila/browse",
   "/api/auth",
   "/api/auth/callback/credentials",
+  "/aquila"
 ];
 
 const ADMIN_ROUTES: string[] = [];
