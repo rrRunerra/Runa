@@ -9,6 +9,7 @@ import { PrismaService } from '../../providers/database/prisma.service';
 import type { User } from '@runa/database';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { PrivacySettingsDto } from './dto/privacy-settings.dto';
 import bcrypt from 'bcrypt';
 
 const RESERVED_KEYWORDS = new Set([
@@ -159,5 +160,88 @@ export class UserService {
       where: { id: userId },
       data: updateData,
     });
+  }
+
+  async getPrivacySettings(username: string) {
+    const user = await this.prisma.client.user.findUnique({
+      where: { username: username.toLowerCase() },
+      select: {
+        private: true,
+        privateAnime: true,
+        privateManga: true,
+        privateTv: true,
+        privateMovie: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User ${username} not found`);
+    }
+
+    return {
+      profile: user.private,
+      animeList: user.privateAnime,
+      mangaList: user.privateManga,
+      tvList: user.privateTv,
+      movieList: user.privateMovie,
+    };
+  }
+
+  async updatePrivacySettings(userId: string, dto: PrivacySettingsDto) {
+    const user = await this.prisma.client.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    const updateData: any = {};
+    if (dto.profile !== undefined) updateData.private = dto.profile;
+    if (dto.animeList !== undefined) updateData.privateAnime = dto.animeList;
+    if (dto.mangaList !== undefined) updateData.privateManga = dto.mangaList;
+    if (dto.tvList !== undefined) updateData.privateTv = dto.tvList;
+    if (dto.movieList !== undefined) updateData.privateMovie = dto.movieList;
+
+    await this.prisma.client.$transaction([
+      this.prisma.client.user.update({
+        where: { id: userId },
+        data: updateData,
+      }),
+      ...(dto.animeList !== undefined
+        ? [
+            this.prisma.client.aquilaAnimeUserList.updateMany({
+              where: { username: user.username },
+              data: { private: dto.animeList },
+            }),
+          ]
+        : []),
+      ...(dto.mangaList !== undefined
+        ? [
+            this.prisma.client.aquilaMangaUserList.updateMany({
+              where: { username: user.username },
+              data: { private: dto.mangaList },
+            }),
+          ]
+        : []),
+      ...(dto.tvList !== undefined
+        ? [
+            this.prisma.client.aquilaTvUserList.updateMany({
+              where: { username: user.username },
+              data: { private: dto.tvList },
+            }),
+          ]
+        : []),
+      ...(dto.movieList !== undefined
+        ? [
+            this.prisma.client.aquilaMovieUserList.updateMany({
+              where: { username: user.username },
+              data: { private: dto.movieList },
+            }),
+          ]
+        : []),
+    ]);
+
+    return { success: true };
   }
 }

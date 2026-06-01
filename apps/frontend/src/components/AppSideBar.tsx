@@ -1,4 +1,5 @@
 "use client";
+"use no memo";
 
 import {
   ChevronRight,
@@ -8,11 +9,13 @@ import {
   LogOut,
   Palette,
   Settings,
+  LayoutGrid,
 } from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import { signIn, signOut, useSession } from "next-auth/react";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { apps } from "../../config/apps";
 import { useNavigation } from "@/hooks/useNavigation";
 import type {
@@ -55,6 +58,7 @@ import { AppearanceDialog } from "@/components/AppearanceDialog";
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { usePathname } from "next/navigation";
 
+
 interface AppSideBarProps extends React.ComponentProps<typeof Sidebar> {
   /**
    * The nav sections to render in the sidebar body.
@@ -92,17 +96,102 @@ export default function AppSideBar({
 }: AppSideBarProps) {
   const { data: session } = useSession();
   const { setNavbarConfig } = useNavigation();
-  const { isMobile } = useSidebar();
+  const { isMobile, setOpenMobile } = useSidebar();
   const pathname = usePathname();
 
   const [activeApp, setActiveApp] = useState(apps[0]);
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  // Sync the passed-in navConfig into the navigation context
+  const [resolvedNavConfig, setResolvedNavConfig] = useState<NavbarConfig>(navConfig);
+
   useEffect(() => {
-    setNavbarConfig(() => navConfig);
-  }, [navConfig, setNavbarConfig]);
+    const getActiveAppHref = () => {
+      if (typeof window === "undefined") return "/aquila";
+      const pathname = window.location.pathname;
+      const app = apps.find((a) => pathname.startsWith(a.href));
+      return app ? app.href : "/aquila";
+    };
+
+    const loadAndInjectCustomDock = () => {
+      const storageKey = `runa-phone-dock-items-${getActiveAppHref()}`;
+      const stored = localStorage.getItem(storageKey);
+      
+      let customDockMap: Record<string, string | null> | null = null;
+      if (stored) {
+        try {
+          customDockMap = JSON.parse(stored);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      if (customDockMap) {
+        const phoneSectionIdx = navConfig.findIndex(
+          (s) => s.section?.toLowerCase() === "phone"
+        );
+
+        if (phoneSectionIdx !== -1) {
+          const findItemByHref = (href: string | null | undefined): NavItem | undefined => {
+            if (!href) return undefined;
+            for (const section of navConfig) {
+              for (const item of section.items) {
+                if (item.href === href) return item;
+                if (item.children) {
+                  for (const child of item.children) {
+                    if (child.href === href) return child;
+                  }
+                }
+              }
+            }
+            return undefined;
+          };
+
+          const newItems: NavItem[] = [];
+          for (const pos of ["1", "2", "3", "4"]) {
+            const href = customDockMap[pos];
+            if (href) {
+              const matchedItem = findItemByHref(href);
+              if (matchedItem) {
+                newItems.push({
+                  ...matchedItem,
+                  position: parseInt(pos, 10),
+                });
+              }
+            }
+          }
+
+          const updatedNavConfig = navConfig.map((section, idx) => {
+            if (idx === phoneSectionIdx) {
+              return {
+                ...section,
+                items: newItems,
+              };
+            }
+            return section;
+          });
+
+          setResolvedNavConfig(updatedNavConfig);
+        } else {
+          setResolvedNavConfig(navConfig);
+        }
+      } else {
+        setResolvedNavConfig(navConfig);
+      }
+    };
+
+    loadAndInjectCustomDock();
+
+    window.addEventListener("runa-sidebar-changed", loadAndInjectCustomDock);
+    return () => {
+      window.removeEventListener("runa-sidebar-changed", loadAndInjectCustomDock);
+    };
+  }, [navConfig]);
+
+  // Sync the resolvedNavConfig into the navigation context
+  useEffect(() => {
+    setNavbarConfig(() => resolvedNavConfig);
+  }, [resolvedNavConfig, setNavbarConfig]);
 
   useEffect(() => {
     const pathname = window.location.pathname;
@@ -117,7 +206,8 @@ export default function AppSideBar({
 
 
   return (
-    <Sidebar variant="floating" {...props}>
+    <>
+      <Sidebar variant="floating" {...props}>
       {/* ── App switcher header ─────────────────────────── */}
       <SidebarHeader>
         <SidebarMenu>
@@ -172,12 +262,14 @@ export default function AppSideBar({
 
       {/* ── Nav sections ────────────────────────────────── */}
       <SidebarContent className="no-scrollbar px-2">
-        {navConfig
+        {resolvedNavConfig
           .filter(
             (c: NavSection) =>
               (!c.role || session?.user?.role === "ADMIN"
                 ? true
-                : c.role === session?.user?.role) && c.items.length > 0,
+                : c.role === session?.user?.role) &&
+              c.items.length > 0 &&
+              c.section?.toLowerCase() !== "phone",
           )
           .map((section: NavSection, sectionIdx: number) => (
             <SidebarGroup key={sectionIdx} className="mb-1">
@@ -416,7 +508,111 @@ export default function AppSideBar({
       <SettingsDialog
         open={isSettingsOpen}
         onOpenChange={setIsSettingsOpen}
+        navConfig={navConfig}
       />
     </Sidebar>
+    {isMobile && (
+      <BottomDock
+        navConfig={resolvedNavConfig}
+        pathname={pathname}
+        setOpenMobile={setOpenMobile}
+      />
+    )}
+    </>
+  );
+}
+
+function BottomDock({
+  navConfig,
+  pathname,
+  setOpenMobile,
+}: {
+  navConfig: NavbarConfig;
+  pathname: string;
+  setOpenMobile: (open: boolean) => void;
+}): React.JSX.Element | null {
+  const phoneSection = navConfig.find(
+    (s) => s.section?.toLowerCase() === "phone",
+  );
+  if (!phoneSection || phoneSection.items.length === 0) return null;
+
+  const items = phoneSection.items;
+
+  // Find items for each position (1 to 4)
+  const item1 = items.find((i) => i.position === 1);
+  const item2 = items.find((i) => i.position === 2);
+  const item3 = items.find((i) => i.position === 3);
+  const item4 = items.find((i) => i.position === 4);
+
+  // Group items into left and right buckets dynamically
+  const leftItems: NavItem[] = [];
+  const rightItems: NavItem[] = [];
+
+  if (item1) leftItems.push(item1);
+
+  if (!item3 && !item4) {
+    // 2 position should be on the left if 3 and 4 are empty
+    if (item2) leftItems.push(item2);
+  } else if (!item3 && item4) {
+    // same for 4 if 3 is empty (position 4 goes on the left side)
+    if (item2) leftItems.push(item2);
+    leftItems.push(item4);
+  } else {
+    // default distribution
+    if (item2) leftItems.push(item2);
+    if (item3) rightItems.push(item3);
+    if (item4) rightItems.push(item4);
+  }
+
+  return (
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between gap-1 px-3 py-2 bg-sidebar/95 backdrop-blur-md border border-sidebar-border rounded-full shadow-2xl w-[calc(100%-2rem)] max-w-sm md:hidden select-none">
+      {/* Left items */}
+      <div className="flex items-center gap-0.5 flex-1 justify-around">
+        {leftItems.map((item) => (
+          <DockItem key={item.label} item={item} isActive={pathname === item.href} />
+        ))}
+      </div>
+
+      {/* Middle Switcher Button */}
+      <button
+        onClick={() => setOpenMobile(true)}
+        className="flex items-center justify-center size-10.5 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-transform duration-200 cursor-pointer shrink-0 mx-1.5"
+        aria-label="Toggle Navigation Drawer"
+      >
+        <LayoutGrid className="size-4" />
+      </button>
+
+      {/* Right items */}
+      <div className="flex items-center gap-0.5 flex-1 justify-around">
+        {rightItems.map((item) => (
+          <DockItem key={item.label} item={item} isActive={pathname === item.href} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DockItem({
+  item,
+  isActive,
+}: {
+  item: NavItem;
+  isActive: boolean;
+}): React.JSX.Element {
+  return (
+    <Link
+      href={item.href || "#"}
+      className={cn(
+        "flex flex-col items-center justify-center gap-0.5 px-2.5 py-1 rounded-xl transition-all duration-200 min-w-[54px]",
+        isActive 
+          ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold" 
+          : "text-sidebar-foreground/60 hover:text-sidebar-foreground"
+      )}
+    >
+      <span className="scale-90">{item.icon}</span>
+      <span className="text-[9px] tracking-tight font-medium">
+        {item.label}
+      </span>
+    </Link>
   );
 }

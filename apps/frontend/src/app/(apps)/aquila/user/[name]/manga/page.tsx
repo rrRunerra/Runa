@@ -51,6 +51,7 @@ export default function UserMangaPage() {
   } | null>(null);
 
   const [mangaList, setMangaList] = useState<MediaEntry[]>([]);
+  const [isPrivate, setIsPrivate] = useState(false);
 
   useEffect(() => {
     if (username) {
@@ -63,11 +64,28 @@ export default function UserMangaPage() {
 
   const fetchMangaList = () => {
     if (username) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/manga/user/${username}`)
-        .then(async (res) => await res.json())
+      const headers: HeadersInit = {};
+      if (session?.accessToken) {
+        headers["Authorization"] = `Bearer ${session.accessToken}`;
+      }
+
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/manga/user/${username}`, {
+        headers,
+      })
+        .then(async (res) => {
+          if (res.status === 403) {
+            setIsPrivate(true);
+            return null;
+          }
+          if (res.ok) {
+            return res.json();
+          }
+          throw new Error("Failed to fetch list");
+        })
         .then((data) => {
-          if (data.statusCode !== 404) {
+          if (data && data.statusCode !== 404) {
             setMangaList(data);
+            setIsPrivate(false);
           }
         })
         .catch((err) => console.error("Failed to fetch manga list", err));
@@ -76,7 +94,7 @@ export default function UserMangaPage() {
 
   useEffect(() => {
     fetchMangaList();
-  }, [username]);
+  }, [username, session]);
 
   useEffect(() => {
     if (!userData) return;
@@ -247,34 +265,48 @@ export default function UserMangaPage() {
           </div>
         )}
 
-        <header className="flex items-center justify-between mt-2">
-          <div className="flex items-center gap-1.5 bg-muted/40 p-1 rounded-lg border border-border/40 shadow-sm ml-auto">
-            {[
-              { type: "list", icon: <Lucide.List size={16} /> },
-              { type: "compact", icon: <Lucide.LayoutList size={16} /> },
-              { type: "grid", icon: <Lucide.LayoutGrid size={16} /> },
-            ].map((view) => (
-              <button
-                key={view.type}
-                onClick={() => setDisplayType(view.type as DisplayType)}
-                className={`flex items-center justify-center size-8 rounded-md transition-all ${displayType === view.type ? "bg-background text-foreground shadow-md ring-1 ring-border/50" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"}`}
-              >
-                {view.icon}
-              </button>
-            ))}
+        {isPrivate ? (
+          <div className="flex flex-col items-center justify-center py-20 bg-muted/10 border border-border/40 rounded-2xl shadow-sm text-center p-6 mt-4">
+            <div className="size-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 text-primary">
+              <Lucide.Lock className="size-8" />
+            </div>
+            <h3 className="text-lg font-bold text-foreground">This list is private</h3>
+            <p className="text-sm text-muted-foreground max-w-sm mt-1">
+              The owner of this list has set their privacy preferences to private.
+            </p>
           </div>
-        </header>
+        ) : (
+          <>
+            <header className="flex items-center justify-between mt-2">
+              <div className="flex items-center gap-1.5 bg-muted/40 p-1 rounded-lg border border-border/40 shadow-sm ml-auto">
+                {[
+                  { type: "list", icon: <Lucide.List size={16} /> },
+                  { type: "compact", icon: <Lucide.LayoutList size={16} /> },
+                  { type: "grid", icon: <Lucide.LayoutGrid size={16} /> },
+                ].map((view) => (
+                  <button
+                    key={view.type}
+                    onClick={() => setDisplayType(view.type as DisplayType)}
+                    className={`flex items-center justify-center size-8 rounded-md transition-all ${displayType === view.type ? "bg-background text-foreground shadow-md ring-1 ring-border/50" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"}`}
+                  >
+                    {view.icon}
+                  </button>
+                ))}
+              </div>
+            </header>
 
-        <MediaListDisplay
-          lists={activeList === "All" ? ["Reading", "Completed"] : [activeList]}
-          data={filteredData}
-          displayType={displayType}
-          filters={filters}
-          sort={sort}
-          baseUrl="/aquila/manga"
-          isOwner={isOwner}
-          onRefresh={fetchMangaList}
-        />
+            <MediaListDisplay
+              lists={activeList === "All" ? ["Reading", "Completed"] : [activeList]}
+              data={filteredData}
+              displayType={displayType}
+              filters={filters}
+              sort={sort}
+              baseUrl="/aquila/manga"
+              isOwner={isOwner}
+              onRefresh={fetchMangaList}
+            />
+          </>
+        )}
       </main>
     </div>
   );

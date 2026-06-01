@@ -21,6 +21,7 @@ export interface NavItem {
   children?: NavChildItem[];
   role?: UserRole;
   preventRedirect?: boolean;
+  position?: number;
 }
 
 export interface NavSection {

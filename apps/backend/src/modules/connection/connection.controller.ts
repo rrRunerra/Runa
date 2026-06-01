@@ -66,9 +66,10 @@ export class ConnectionController {
   async connect(
     @Param('provider') provider: string,
     @Query('token') token: string,
+    @Query('redirectUrl') redirectUrl: string,
     @Res() res: Response,
   ) {
-    const authUrl = await this.connectionService.getAuthUrl(provider, token);
+    const authUrl = await this.connectionService.getAuthUrl(provider, token, redirectUrl);
     return res.redirect(authUrl);
   }
 
@@ -80,8 +81,13 @@ export class ConnectionController {
     @Query('state') state: string,
     @Res() res: Response,
   ) {
+    const [token, redirectUrl] = (state || '').split(':::');
+    const defaultUrl = `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/polaris/connections`;
+    const targetUrl = redirectUrl || defaultUrl;
+    const separator = targetUrl.includes('?') ? '&' : '?';
+
     try {
-      const user = await this.decodeToken(state);
+      const user = await this.decodeToken(token);
 
       await this.connectionService.handleCallback(
         provider,
@@ -89,12 +95,10 @@ export class ConnectionController {
         user.username,
       );
 
-      const frontendUrl = process.env.NEXT_PUBLIC_URL;
-      return res.redirect(`${frontendUrl}/polaris/connections?success=true`);
+      return res.redirect(`${targetUrl}${separator}success=true`);
     } catch (error) {
-      const frontendUrl = process.env.NEXT_PUBLIC_URL;
       return res.redirect(
-        `${frontendUrl}/polaris/connections?error=oauth_failed&message=${encodeURIComponent(error.message)}`,
+        `${targetUrl}${separator}error=oauth_failed&message=${encodeURIComponent(error.message)}`,
       );
     }
   }

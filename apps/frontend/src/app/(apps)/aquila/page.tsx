@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useEffect, useState, useMemo } from "react";
-import { Plus, Play, BookOpen, Tv, Film, Loader2, CheckCircle2, Menu } from "lucide-react";
+import { Plus, Play, BookOpen, Tv, Film, Loader2, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
@@ -29,7 +29,7 @@ interface MediaItem {
   };
 }
 
-export default function AquilaHome() {
+export default function AquilaHome(): React.JSX.Element {
   const { data: session, status } = useSession();
   const [watching, setWatching] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -149,68 +149,114 @@ export default function AquilaHome() {
   }
 
   return (
-    <div className="space-y-12 pb-20 px-4 md:px-8 mt-4">
+    <div className="relative flex-1 w-full min-h-[calc(100vh-4rem)] flex flex-col overflow-x-hidden">
+      {/* Background Image Wallpaper */}
+      <img
+        src="/lappland3.png"
+        alt="Lappland Background Wallpaper"
+        className="fixed inset-0 w-full h-full object-cover object-right grayscale contrast-115 brightness-75 pointer-events-none z-0"
+      />
 
-      {watching.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 bg-muted/20 rounded-3xl border border-dashed border-border">
-          <CheckCircle2 className="w-12 h-12 text-muted-foreground mb-4" />
-          <h2 className="text-xl font-semibold">Nothing currently watching</h2>
-          <p className="text-muted-foreground mt-2">
-            Start browsing to add items to your list.
-          </p>
-          <Button variant="outline" className="mt-6" asChild>
-            <Link href="/browse">Browse Media</Link>
-          </Button>
-        </div>
-      ) : (
-        <>
-          {sections.anime.length > 0 && (
-            <MediaSection
-              title="Anime"
-              icon={<Play className="w-5 h-5" />}
-              items={sections.anime}
-              onIncrement={handleIncrement}
-              updatingId={updatingId}
-              onRefresh={fetchWatching}
-            />
-          )}
-          {sections.manga.length > 0 && (
-            <MediaSection
-              title="Manga"
-              icon={<BookOpen className="w-5 h-5" />}
-              items={sections.manga}
-              onIncrement={handleIncrement}
-              updatingId={updatingId}
-              onRefresh={fetchWatching}
-            />
-          )}
-          {sections.tv.length > 0 && (
-            <MediaSection
-              title="TV Shows"
-              icon={<Tv className="w-5 h-5" />}
-              items={sections.tv}
-              onIncrement={handleIncrement}
-              updatingId={updatingId}
-              onRefresh={fetchWatching}
-            />
-          )}
-          {sections.movie.length > 0 && (
-            <MediaSection
-              title="Movies"
-              icon={<Film className="w-5 h-5" />}
-              items={sections.movie}
-              onIncrement={handleIncrement}
-              updatingId={updatingId}
-              onRefresh={fetchWatching}
-            />
-          )}
-        </>
-      )}
+      {/* Main Content Pane */}
+      <div className="relative z-10 flex-1 flex flex-col">
+        {watching.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-center px-6 py-12">
+            {/* Content on top - Glassmorphic Card */}
+            <div className="flex flex-col items-center max-w-sm mx-4 p-8 rounded-3xl bg-black/65 backdrop-blur-md border border-white/10 shadow-2xl">
+              <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white mb-3 drop-shadow-md">
+                Nothing here
+              </h2>
+              <p className="text-neutral-200 text-xs md:text-sm mb-6 leading-relaxed">
+                It looks like your watch list is empty. Start browsing to find and track your favorite media.
+              </p>
+
+              <Button 
+                variant="default" 
+                className="w-full px-6 py-4 text-xs md:text-sm rounded-xl bg-linear-to-r from-primary to-violet-600 hover:from-primary/95 hover:to-violet-600/95 shadow-xl shadow-primary/20 hover:shadow-primary/35 transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0" 
+                asChild
+              >
+                <Link href="/aquila/browse">Browse Media</Link>
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-12 pb-20 px-4 md:px-8 mt-4">
+            {sections.anime.length > 0 && (
+              <MediaSection
+                title="Anime"
+                icon={<Play className="w-5 h-5" />}
+                items={sections.anime}
+                onIncrement={handleIncrement}
+                updatingId={updatingId}
+                onRefresh={fetchWatching}
+              />
+            )}
+            {sections.manga.length > 0 && (
+              <MediaSection
+                title="Manga"
+                icon={<BookOpen className="w-5 h-5" />}
+                items={sections.manga}
+                onIncrement={handleIncrement}
+                updatingId={updatingId}
+                onRefresh={fetchWatching}
+              />
+            )}
+            {sections.tv.length > 0 && (
+              <MediaSection
+                title="TV Shows"
+                icon={<Tv className="w-5 h-5" />}
+                items={sections.tv}
+                onIncrement={handleIncrement}
+                updatingId={updatingId}
+                onRefresh={fetchWatching}
+              />
+            )}
+            {sections.movie.length > 0 && (
+              <MediaSection
+                title="Movies"
+                icon={<Film className="w-5 h-5" />}
+                items={sections.movie}
+                onIncrement={handleIncrement}
+                updatingId={updatingId}
+                onRefresh={fetchWatching}
+              />
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Image source credit */}
+      <div className="absolute bottom-4 right-6 z-20">
+        <a
+          href="https://www.wallpaperflare.com/arknights-lappland-arknights-meng-ziya-wallpaper-yttpm"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[10px] text-neutral-400/60 hover:text-neutral-200 transition-colors duration-200 underline underline-offset-2"
+        >
+          Artwork by Meng Ziya (Modified)
+        </a>
+      </div>
     </div>
   );
 }
 
-function MediaSection({ title, icon, items, onIncrement, updatingId, onRefresh }: any) {
+interface MediaSectionProps {
+  title: string;
+  icon: React.ReactNode;
+  items: MediaItem[];
+  onIncrement: (item: MediaItem) => void;
+  updatingId: string | null;
+  onRefresh: () => void;
+}
+
+function MediaSection({
+  title,
+  icon,
+  items,
+  onIncrement,
+  updatingId,
+  onRefresh,
+}: MediaSectionProps): React.JSX.Element {
   return (
     <section className="space-y-6">
       <div className="flex items-center gap-3 border-b border-border pb-4">
@@ -228,10 +274,10 @@ function MediaSection({ title, icon, items, onIncrement, updatingId, onRefresh }
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-[repeat(auto-fill,minmax(160px,1fr))]">
         {items.map((item: MediaItem) => (
           <MediaCard
-            key={`${(item as any).type}-${item.id}`}
+            key={`${item.type}-${item.id}`}
             item={item}
             onIncrement={() => onIncrement(item)}
-            isUpdating={updatingId === `${(item as any).type}-${item.id}`}
+            isUpdating={updatingId === `${item.type}-${item.id}`}
             onRefresh={onRefresh}
           />
         ))}
@@ -250,7 +296,7 @@ function MediaCard({
   onIncrement: () => void;
   isUpdating: boolean;
   onRefresh: () => void;
-}) {
+}): React.JSX.Element {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const mediaType = item.type;
   const href = `/aquila/${mediaType === "manga"

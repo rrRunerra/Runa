@@ -36,6 +36,39 @@ export function getLynxSidebarConfig(data: Partial<LynxData>): NavbarConfig {
 
   return [
     {
+      section: "Phone",
+      items: [
+        {
+          label: "Commands",
+          href: "/lynx/commands",
+          icon: <Command className="h-4 w-4" />,
+          subtitle: "Commands list",
+          position: 1,
+        },
+        {
+          label: "Events",
+          href: "/lynx/events",
+          icon: <Logs className="h-4 w-4" />,
+          subtitle: "Events list",
+          position: 2,
+        },
+        {
+          label: "Logs",
+          href: "/lynx/logs",
+          icon: <ScrollText className="h-4 w-4" />,
+          subtitle: "Logs list",
+          position: 3,
+        },
+        {
+          label: "Config",
+          href: "/lynx/config",
+          icon: <Settings className="h-4 w-4" />,
+          subtitle: "Config list",
+          position: 4,
+        },
+      ],
+    },
+    {
       section: "Structures",
       items: [
         {

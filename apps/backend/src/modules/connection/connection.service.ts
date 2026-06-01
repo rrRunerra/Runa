@@ -73,7 +73,7 @@ export class ConnectionService {
     },
   };
 
-  async getAuthUrl(providerId: string, token: string) {
+  async getAuthUrl(providerId: string, token: string, redirectUrl?: string) {
     const provider = this.PROVIDERS[providerId.toLowerCase()];
     if (!provider) {
       throw new BadRequestException(`Invalid provider: ${providerId}`);
@@ -93,7 +93,10 @@ export class ConnectionService {
     url.searchParams.append('client_id', clientId);
     url.searchParams.append('redirect_uri', redirectUri);
     url.searchParams.append('response_type', 'code');
-    url.searchParams.append('state', token); // Use token as state to maintain auth on callback
+    
+    // Encode token and redirectUrl together in the state string
+    const state = redirectUrl ? `${token}:::${redirectUrl}` : token;
+    url.searchParams.append('state', state);
 
     if (providerId.toLowerCase() === 'mal') {
       const codeChallenge = (

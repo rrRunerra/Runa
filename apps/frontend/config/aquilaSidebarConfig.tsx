@@ -20,6 +20,25 @@ export const getAquilaSidebarConfig = (
   userConnections: any[] = [],
 ): NavbarConfig => [
     {
+      section: "Phone",
+      items: [
+        {
+          label: "Home",
+          href: "/aquila",
+          icon: <Home className="h-4 w-4" />,
+          subtitle: "Home",
+          position: 1,
+        },
+        {
+          label: "Browse",
+          href: "/aquila/browse",
+          icon: <Search className="h-4 w-4" />,
+          subtitle: "Browse",
+          position: 2,
+        }
+      ],
+    },
+    {
       section: "",
       items: [
         {

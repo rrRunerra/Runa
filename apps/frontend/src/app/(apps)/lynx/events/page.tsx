@@ -22,8 +22,8 @@ export default function EventsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {eventsItem?.children && eventsItem.children.length > 0 ? (
-          eventsItem.children.map((category) => (
-            <Link key={category.href} href={category.href}>
+          eventsItem.children.map((category, idx) => (
+            <Link key={idx} href={category.href}>
               <Card className="h-full hover:scale-[1.02] transition-transform duration-300 cursor-pointer group bg-card border-border shadow-sm">
                 <CardHeader className="p-6">
                   <div className="flex items-center justify-between">

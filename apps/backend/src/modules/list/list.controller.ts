@@ -26,8 +26,9 @@ export class ListController {
   @Get('/anime/user/:username')
   public async getAnimeList(
     @Param('username') username: string,
+    @Req() req: any,
   ): Promise<ListEntity[]> {
-    return this.listService.getAnimeList(username);
+    return this.listService.getAnimeList(username, req.user?.username);
   }
 
   @Get('/anime/entry/:animeId')
@@ -78,8 +79,9 @@ export class ListController {
   @Get('/manga/user/:username')
   public async getMangaList(
     @Param('username') username: string,
+    @Req() req: any,
   ): Promise<ListEntity[]> {
-    return this.listService.getMangaList(username);
+    return this.listService.getMangaList(username, req.user?.username);
   }
 
   @Get('/manga/entry/:mangaId')
@@ -131,8 +133,9 @@ export class ListController {
   @Get('/movie/user/:username')
   public async getMovieList(
     @Param('username') username: string,
+    @Req() req: any,
   ): Promise<ListEntity[]> {
-    return this.listService.getMovieList(username);
+    return this.listService.getMovieList(username, req.user?.username);
   }
 
   @Get('/movie/entry/:tvdbId')
@@ -178,8 +181,9 @@ export class ListController {
   @Get('/tv/user/:username')
   public async getTvList(
     @Param('username') username: string,
+    @Req() req: any,
   ): Promise<ListEntity[]> {
-    return this.listService.getTvList(username);
+    return this.listService.getTvList(username, req.user?.username);
   }
 
   @Get('/tv/entry/:tvdbId')

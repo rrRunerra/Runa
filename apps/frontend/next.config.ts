@@ -9,7 +9,7 @@ for (const env of REQUIRED_ENVS) {
 }
 
 const nextConfig: NextConfig = {
-  reactCompiler: true,
+  reactCompiler: false,
   transpilePackages: ["@runa/auth"],
   allowedDevOrigins: ["192.168.0.56"],
   images: {

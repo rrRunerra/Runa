@@ -1,11 +1,8 @@
 "use client";
 
 import type React from "react";
-import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
-import { User, LinkIcon, Camera, Eye, EyeOff } from "lucide-react";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { useState, useRef, useEffect } from "react";
+import { User, LinkIcon, Lock, Smartphone } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,606 +11,191 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
+import { AccountSettingsTab } from "./AccountSettingsTab";
+import { ConnectionsTab } from "./ConnectionsTab";
+import { PrivacySettingsTab } from "./PrivacySettingsTab";
+import { SidebarSettingsTab } from "./SidebarSettingsTab";
+import type { AccountSettingsTabRef } from "./AccountSettingsTab";
+import type { PrivacySettingsTabRef } from "./PrivacySettingsTab";
+import type { SidebarSettingsTabRef } from "./SidebarSettingsTab";
+import type { NavbarConfig } from "@/components/Providers/NavigationProvider";
 
 interface SettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  navConfig?: NavbarConfig;
 }
 
-type Category = "account" | "connections";
+type Category = "account" | "connections" | "privacy" | "sidebar";
 
 export function SettingsDialog({
   open,
   onOpenChange,
+  navConfig,
 }: SettingsDialogProps): React.JSX.Element {
-  const { data: session, update } = useSession();
   const [activeCategory, setActiveCategory] = useState<Category>("account");
-
-  // Form states
-  const [displayName, setDisplayName] = useState("");
-  const [email, setEmail] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
-  const [bannerUrl, setBannerUrl] = useState("");
-
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [bannerFile, setBannerFile] = useState<File | null>(null);
-
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [passwordTouched, setPasswordTouched] = useState(false);
-  const [passwordCriteria, setPasswordCriteria] = useState({
-    length: false,
-    maxLength: false,
-    uppercase: false,
-    number: false,
-    special: false,
-  });
-  const [emailError, setEmailError] = useState("");
-
-  const [confirmPasswordInput, setConfirmPasswordInput] = useState("");
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const accountTabRef = useRef<AccountSettingsTabRef>(null);
+  const privacyTabRef = useRef<PrivacySettingsTabRef>(null);
+  const sidebarTabRef = useRef<SidebarSettingsTabRef>(null);
 
-  // Sync with backend user profile when the dialog opens or session changes
   useEffect(() => {
-    if (open && session?.user?.username) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/${session.user.username}`)
-        .then((res) => {
-          if (res.ok) return res.json();
-          throw new Error("Failed to fetch user profile");
-        })
-        .then((data) => {
-          setDisplayName(data.displayName || "");
-          setEmail(session.user.email || "");
-          setAvatarUrl(data.avatarUrl || "");
-          setBannerUrl(data.bannerUrl || "");
-        })
-        .catch((err) => {
-          console.error("Error fetching user profile:", err);
-        });
-
-      // Reset file, password, and modal confirmation states
-      setAvatarFile(null);
-      setBannerFile(null);
-      setNewPassword("");
-      setConfirmPassword("");
-      setConfirmPasswordInput("");
-      setIsConfirmOpen(false);
-      setPasswordTouched(false);
-      setPasswordCriteria({ length: false, maxLength: false, uppercase: false, number: false, special: false });
-      setEmailError("");
-    }
-  }, [open, session]);
-
-  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-  const validatePassword = (value: string) => {
-    setPasswordCriteria({
-      length: value.length >= 16,
-      maxLength: value.length <= 64,
-      uppercase: /[A-Z]/.test(value),
-      number: /[0-9]{2,}/.test(value),
-      special: /[!@#$%^&*(),.?":{}|<>~'_\-+=/\\[\]`]/.test(value),
-    });
-  };
-
-  const isPasswordValid =
-    !newPassword ||
-    (passwordCriteria.length &&
-      passwordCriteria.maxLength &&
-      passwordCriteria.uppercase &&
-      passwordCriteria.number &&
-      passwordCriteria.special);
-
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setAvatarFile(file);
-      const url = URL.createObjectURL(file);
-      setAvatarUrl(url);
-    }
-  };
-
-  const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setBannerFile(file);
-      const url = URL.createObjectURL(file);
-      setBannerUrl(url);
-    }
-  };
-
-  const handlePreSave = () => {
-    if (!session?.accessToken) {
-      toast.error("You must be logged in to update your profile.");
-      return;
-    }
-
-    // Validate email format
-    if (email && !EMAIL_REGEX.test(email)) {
-      setEmailError("Please enter a valid email address.");
-      return;
-    }
-
-    // Validate password criteria if a new password is provided
-    if (newPassword && !isPasswordValid) {
-      toast.error("Password does not meet the required criteria.");
-      return;
-    }
-
-    if (newPassword && newPassword !== confirmPassword) {
-      toast.error("New passwords do not match.");
-      return;
-    }
-
-    const emailChanged = email.toLowerCase() !== session.user.email.toLowerCase();
-
-    // Require password confirmation only if email or password is being changed
-    if (emailChanged || newPassword) {
-      setConfirmPasswordInput("");
-      setIsConfirmOpen(true);
-    } else {
-      executeSave("");
-    }
-  };
-
-  const executeSave = async (passwordToVerify: string) => {
-    setIsSubmitting(true);
-
-    try {
-      let finalAvatarUrl = avatarUrl;
-      let finalBannerUrl = bannerUrl;
-
-      // 1. Upload Avatar if updated
-      if (avatarFile) {
-        const formData = new FormData();
-        formData.append("file", avatarFile);
-
-        const uploadRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/media/upload`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${session!.accessToken}`,
-          },
-          body: formData,
-        });
-
-        if (!uploadRes.ok) {
-          const errData = await uploadRes.json();
-          throw new Error(errData.message || "Failed to upload avatar image.");
-        }
-
-        const uploadData = await uploadRes.json();
-        finalAvatarUrl = uploadData.url;
+    if (open) {
+      const params = new URLSearchParams(window.location.search);
+      const cat = params.get("category") || params.get("settings");
+      if (cat === "connections") {
+        setActiveCategory("connections");
+      } else if (cat === "privacy") {
+        setActiveCategory("privacy");
+      } else if (cat === "sidebar") {
+        setActiveCategory("sidebar");
+      } else {
+        setActiveCategory("account");
       }
-
-      // 2. Upload Banner if updated
-      if (bannerFile) {
-        const formData = new FormData();
-        formData.append("file", bannerFile);
-
-        const uploadRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/media/upload`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${session!.accessToken}`,
-          },
-          body: formData,
-        });
-
-        if (!uploadRes.ok) {
-          const errData = await uploadRes.json();
-          throw new Error(errData.message || "Failed to upload banner image.");
-        }
-
-        const uploadData = await uploadRes.json();
-        finalBannerUrl = uploadData.url;
-      }
-
-      // 3. Update profile details on NestJS backend
-      const updatePayload: any = {
-        displayName: displayName || null,
-        avatarUrl: finalAvatarUrl || null,
-        bannerUrl: finalBannerUrl || null,
-      };
-
-      const emailChanged = email.toLowerCase() !== session!.user.email.toLowerCase();
-      if (emailChanged) {
-        updatePayload.email = email.toLowerCase();
-      }
-
-      if (newPassword) {
-        updatePayload.newPassword = newPassword;
-      }
-
-      if (passwordToVerify) {
-        updatePayload.currentPassword = passwordToVerify;
-      }
-
-      const updateRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/update`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session!.accessToken}`,
-        },
-        body: JSON.stringify(updatePayload),
-      });
-
-      const updateData = await updateRes.json();
-
-      if (!updateRes.ok) {
-        throw new Error(
-          Array.isArray(updateData.message)
-            ? updateData.message[0]
-            : updateData.message || "Failed to update profile."
-        );
-      }
-
-      // 4. Update the NextAuth session on successful backend response
-      await update({
-        displayName: updateData.displayName,
-        email: updateData.email,
-        avatarUrl: updateData.avatarUrl,
-      });
-
-      toast.success("Profile updated successfully!");
-      setIsConfirmOpen(false);
-      onOpenChange(false);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to update profile.");
-    } finally {
-      setIsSubmitting(false);
     }
-  };
+  }, [open]);
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[95vw] md:max-w-4xl lg:max-w-5xl bg-card border border-border shadow-2xl p-0 gap-0 overflow-hidden rounded-2xl flex flex-col md:flex-row h-[90vh] md:h-[600px]">
-          {/* Left Sidebar */}
-          <div className="w-full md:w-64 border-b md:border-b-0 md:border-r border-border/50 bg-muted/20 p-4 flex flex-row md:flex-col gap-1.5 shrink-0 overflow-x-auto md:overflow-x-visible no-scrollbar">
-            <div className="hidden md:block px-2 py-1.5 mb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Settings
-            </div>
-            <button
-              type="button"
-              onClick={() => setActiveCategory("account")}
-              className={`flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap ${
-                activeCategory === "account"
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              }`}
-            >
-              <User className="size-4" />
-              Account
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveCategory("connections")}
-              className={`flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap ${
-                activeCategory === "connections"
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              }`}
-            >
-              <LinkIcon className="size-4" />
-              Connections
-            </button>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-[95vw] md:max-w-5xl lg:max-w-6xl bg-card border border-border shadow-2xl p-0 gap-0 overflow-hidden rounded-2xl flex flex-col md:flex-row h-[92vh] md:h-[720px]">
+        {/* Left Sidebar */}
+        <div className="w-full md:w-64 border-b md:border-b-0 md:border-r border-border/50 bg-muted/20 p-4 flex flex-row md:flex-col gap-1.5 shrink-0 overflow-x-auto md:overflow-x-visible no-scrollbar">
+          <div className="hidden md:block px-2 py-1.5 mb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            Settings
           </div>
+          <button
+            type="button"
+            onClick={() => setActiveCategory("account")}
+            className={`flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap ${
+              activeCategory === "account"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            <User className="size-4" />
+            Account
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveCategory("connections")}
+            className={`flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap ${
+              activeCategory === "connections"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            <LinkIcon className="size-4" />
+            Connections
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveCategory("privacy")}
+            className={`flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap ${
+              activeCategory === "privacy"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            <Lock className="size-4" />
+            Privacy
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveCategory("sidebar")}
+            className={`flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap ${
+              activeCategory === "sidebar"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            <Smartphone className="size-4" />
+            Sidebar
+          </button>
+        </div>
 
-          {/* Right Content Area */}
-          <div className="flex-1 flex flex-col h-full overflow-hidden">
-            <DialogHeader className="p-6 pb-4 border-b border-border/50">
-              <DialogTitle className="text-lg font-bold">
-                {activeCategory === "account" ? "Account Settings" : "Connections"}
-              </DialogTitle>
-              <DialogDescription className="sr-only">
-                Customize your Settings
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="flex-1 overflow-y-auto p-6">
-              {activeCategory === "account" && (
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-sm font-semibold text-foreground">
-                      Profile Banner & Avatar
-                    </h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Customize your profile banner and avatar image.
-                    </p>
-                  </div>
-
-                  {/* Banner & Avatar section */}
-                  <div className="relative mb-8">
-                    {/* Banner */}
-                    <div className="h-32 w-full bg-linear-to-r from-indigo-500/20 to-purple-500/20 rounded-xl relative overflow-hidden group/banner border border-border/50">
-                      {bannerUrl ? (
-                        <img src={process.env.NEXT_PUBLIC_API_URL + bannerUrl} alt="Banner" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-                          No banner uploaded
-                        </div>
-                      )}
-                      <label className="absolute inset-0 bg-black/40 opacity-0 group-hover/banner:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-2 cursor-pointer text-white text-xs font-semibold">
-                        <Camera className="size-4" />
-                        Change Banner
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleBannerChange}
-                        />
-                      </label>
-                    </div>
-
-                    {/* Avatar */}
-                    <div className="absolute -bottom-6 left-6 size-20 rounded-full border-4 border-card overflow-hidden group/avatar bg-muted shadow-md">
-                      {avatarUrl ? (
-                        <img src={process.env.NEXT_PUBLIC_API_URL + avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xl uppercase">
-                          {displayName ? displayName.charAt(0) : session?.user?.username?.charAt(0) || "U"}
-                        </div>
-                      )}
-                      <label className="absolute inset-0 bg-black/50 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center cursor-pointer text-white text-[10px] font-semibold">
-                        <Camera className="size-3.5 mb-0.5" />
-                        Edit
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleAvatarChange}
-                        />
-                      </label>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 pt-2">
-                    {/* Left Column - Details */}
-                    <div className="space-y-4">
-                      <div>
-                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                          Profile Information
-                        </h4>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">
-                          Your public-facing details.
-                        </p>
-                      </div>
-                      
-                      <div className="space-y-1.5">
-                        <Label htmlFor="display-name">Display Name</Label>
-                        <Input
-                          id="display-name"
-                          value={displayName}
-                          onChange={(e) => setDisplayName(e.target.value)}
-                          placeholder="Enter display name"
-                          className="h-9 px-3"
-                        />
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <Label htmlFor="email">
-                          {emailError ? (
-                            <span className="text-red-500">{emailError}</span>
-                          ) : (
-                            "Email Address"
-                          )}
-                        </Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={email}
-                          onChange={(e) => {
-                            setEmail(e.target.value);
-                            if (emailError) setEmailError("");
-                          }}
-                          placeholder="Enter email address"
-                          className={cn(
-                            "h-9 px-3",
-                            emailError && "border-red-500/50 bg-red-500/5 focus-visible:ring-red-500/30"
-                          )}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Right Column - Password */}
-                    <div className="space-y-4">
-                      <div>
-                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                          Security & Password
-                        </h4>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">
-                          Update your password credentials.
-                        </p>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <Label htmlFor="new-password">New Password</Label>
-                        <div className="relative">
-                          <Input
-                            id="new-password"
-                            type={showNewPassword ? "text" : "password"}
-                            value={newPassword}
-                            maxLength={64}
-                            onChange={(e) => {
-                              setNewPassword(e.target.value);
-                              validatePassword(e.target.value);
-                              if (!passwordTouched) setPasswordTouched(true);
-                            }}
-                            onFocus={() => { if (!passwordTouched && newPassword.length > 0) setPasswordTouched(true); }}
-                            onBlur={() => setPasswordTouched(false)}
-                            placeholder="••••••••"
-                            className={cn(
-                              "h-9 px-3 pr-9",
-                              newPassword && !isPasswordValid && "border-red-500/50 bg-red-500/5 focus-visible:ring-red-500/30"
-                            )}
-                          />
-                          <button
-                            type="button"
-                            tabIndex={-1}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                            onClick={() => setShowNewPassword((v) => !v)}
-                          >
-                            {showNewPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-                          </button>
-                        </div>
-
-                        {(passwordTouched || (newPassword.length > 0 && !isPasswordValid)) && (
-                          <div className="mt-1.5 p-3 rounded-xl bg-muted/30 border border-border/50 animate-in fade-in slide-in-from-top-1 duration-150">
-                            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                              Password Criteria
-                            </p>
-                            <ul className="grid grid-cols-1 gap-1.5">
-                              {[
-                                { key: "length", label: "Min 16 characters" },
-                                { key: "maxLength", label: "Max 64 characters" },
-                                { key: "uppercase", label: "One uppercase letter" },
-                                { key: "number", label: "Two numbers" },
-                                { key: "special", label: "One special character" },
-                              ].map((item) => (
-                                <li
-                                  key={item.key}
-                                  className={cn(
-                                    "flex items-center gap-2 text-[11px] transition-all duration-200",
-                                    passwordCriteria[item.key as keyof typeof passwordCriteria]
-                                      ? "text-emerald-500 font-medium"
-                                      : "text-muted-foreground/60",
-                                  )}
-                                >
-                                  <div
-                                    className={cn(
-                                      "size-1.5 rounded-full transition-all",
-                                      passwordCriteria[item.key as keyof typeof passwordCriteria]
-                                        ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]"
-                                        : "bg-muted-foreground/30",
-                                    )}
-                                  />
-                                  {item.label}
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <Label htmlFor="confirm-password">Confirm Password</Label>
-                        <div className="relative">
-                          <Input
-                            id="confirm-password"
-                            type={showConfirmPassword ? "text" : "password"}
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            placeholder="••••••••"
-                            className={cn(
-                              "h-9 px-3 pr-9",
-                              confirmPassword && newPassword !== confirmPassword && "border-red-500/50 bg-red-500/5 focus-visible:ring-red-500/30"
-                            )}
-                          />
-                          <button
-                            type="button"
-                            tabIndex={-1}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                            onClick={() => setShowConfirmPassword((v) => !v)}
-                          >
-                            {showConfirmPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-                          </button>
-                        </div>
-                        {confirmPassword && newPassword !== confirmPassword && (
-                          <p className="text-[11px] text-red-500 mt-1">Passwords do not match.</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              {activeCategory === "connections" && (
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Manage your connected integrations and third-party services.
-                  </p>
-                  {/* Connections placeholders */}
-                </div>
-              )}
-            </div>
-
-            {/* Footer actions */}
-            <div className="px-6 py-4 border-t border-border/50 flex justify-end gap-3 bg-muted/10">
-              <Button
-                variant="ghost"
-                onClick={() => onOpenChange(false)}
-                className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg text-sm"
-                disabled={isSubmitting}
-              >
-                Cancel
-              </Button>
-              {activeCategory === "account" && (
-                <Button
-                  onClick={handlePreSave}
-                  disabled={isSubmitting}
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg px-5 shadow-sm text-sm"
-                >
-                  {isSubmitting ? "Saving..." : "Save Changes"}
-                </Button>
-              )}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Password Confirmation Dialog */}
-      <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
-        <DialogContent className="max-w-md bg-card border border-border shadow-2xl p-6 rounded-2xl">
-          <DialogHeader className="pb-2">
-            <DialogTitle className="text-md font-bold">Confirm Account Changes</DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground mt-1">
-              Please enter your current password to authorize changes to your email or password.
+        {/* Right Content Area */}
+        <div className="flex-1 flex flex-col h-full overflow-hidden">
+          <DialogHeader className="p-6 pb-4 border-b border-border/50">
+            <DialogTitle className="text-lg font-bold">
+              {activeCategory === "account"
+                ? "Account Settings"
+                : activeCategory === "connections"
+                  ? "Connections"
+                  : activeCategory === "privacy"
+                    ? "Privacy Settings"
+                    : "Sidebar Settings"}
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              Customize your Settings
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="confirm-current-password">Current Password</Label>
-              <Input
-                id="confirm-current-password"
-                type="password"
-                value={confirmPasswordInput}
-                onChange={(e) => setConfirmPasswordInput(e.target.value)}
-                placeholder="••••••••"
-                className="h-9 px-3"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && confirmPasswordInput && !isSubmitting) {
-                    e.preventDefault();
-                    executeSave(confirmPasswordInput);
-                  }
-                }}
+          <div className="flex-1 overflow-y-auto p-6">
+            {activeCategory === "account" && (
+              <AccountSettingsTab
+                ref={accountTabRef}
+                onOpenChange={onOpenChange}
+                isSubmitting={isSubmitting}
+                setIsSubmitting={setIsSubmitting}
               />
-            </div>
+            )}
+            {activeCategory === "connections" && <ConnectionsTab />}
+            {activeCategory === "privacy" && (
+              <PrivacySettingsTab
+                ref={privacyTabRef}
+                onOpenChange={onOpenChange}
+                isSubmitting={isSubmitting}
+                setIsSubmitting={setIsSubmitting}
+              />
+            )}
+            {activeCategory === "sidebar" && (
+              <SidebarSettingsTab
+                ref={sidebarTabRef}
+                onOpenChange={onOpenChange}
+                navConfig={navConfig}
+              />
+            )}
           </div>
 
-          <div className="flex justify-end gap-3 pt-2">
+          {/* Footer actions */}
+          <div className="px-6 py-4 border-t border-border/50 flex justify-end gap-3 bg-muted/10">
             <Button
               variant="ghost"
-              onClick={() => setIsConfirmOpen(false)}
+              onClick={() => onOpenChange(false)}
               className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg text-sm"
               disabled={isSubmitting}
             >
               Cancel
             </Button>
-            <Button
-              onClick={() => executeSave(confirmPasswordInput)}
-              disabled={!confirmPasswordInput || isSubmitting}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg px-5 shadow-sm text-sm"
-            >
-              {isSubmitting ? "Verifying..." : "Confirm"}
-            </Button>
+            {activeCategory === "account" && (
+              <Button
+                onClick={() => accountTabRef.current?.handleSave()}
+                disabled={isSubmitting}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg px-5 shadow-sm text-sm"
+              >
+                {isSubmitting ? "Saving..." : "Save Changes"}
+              </Button>
+            )}
+            {activeCategory === "privacy" && (
+              <Button
+                onClick={() => privacyTabRef.current?.handleSave()}
+                disabled={isSubmitting}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg px-5 shadow-sm text-sm"
+              >
+                {isSubmitting ? "Saving..." : "Save Changes"}
+              </Button>
+            )}
+            {activeCategory === "sidebar" && (
+              <Button
+                onClick={() => sidebarTabRef.current?.handleSave()}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg px-5 shadow-sm text-sm"
+              >
+                Save Changes
+              </Button>
+            )}
           </div>
-        </DialogContent>
-      </Dialog>
-    </>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

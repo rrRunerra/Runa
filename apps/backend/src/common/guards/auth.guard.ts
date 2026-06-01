@@ -26,62 +26,71 @@ export class DualAuthGuard implements CanActivate {
       context.getClass(),
     ]);
 
+    const request = context.switchToHttp().getRequest();
+
+    try {
+      // API Key (Highest priority)
+      const apiKey = request.headers['x-api-key'];
+      if (apiKey) {
+        const keyPrefix = apiKey.slice(0, 16);
+        const record = await prisma.apiKey.findFirst({
+          where: {
+            keyPrefix,
+          },
+          include: {
+            user: true,
+          },
+        });
+        if (!record) {
+          throw new UnauthorizedException('API Key not found');
+        }
+
+        const valid = await bcrypt.compare(apiKey, record.keyHash);
+        if (!valid) {
+          throw new UnauthorizedException('Invalid API Key');
+        }
+
+        void prisma.apiKey.update({
+          where: { id: record.id },
+          data: { lastUsedAt: new Date() },
+        });
+
+        request.user = {
+          id: record.user?.id,
+          username: record.user?.username,
+          role: record.user?.role,
+        };
+        return true;
+      }
+
+      const token = this.extractToken(request);
+
+      if (token) {
+        const { payload } = await jwtVerify(token, this.secret, {
+          algorithms: ['HS256'],
+        });
+
+        request.user = {
+          id: payload.sub,
+          username: payload.name,
+          email: payload.email,
+          role: payload.role,
+        };
+        return true;
+      } else if (!isPublic) {
+        throw new UnauthorizedException('No authentication token found');
+      }
+    } catch (error) {
+      if (!isPublic) {
+        throw error;
+      }
+    }
+
     if (isPublic) {
       return true;
     }
-    const request = context.switchToHttp().getRequest();
 
-    // API Key (Highest priority)
-    const apiKey = request.headers['x-api-key'];
-    if (apiKey) {
-      const keyPrefix = apiKey.slice(0, 16);
-      const record = await prisma.apiKey.findFirst({
-        where: {
-          keyPrefix,
-        },
-        include: {
-          user: true,
-        },
-      });
-      if (!record) throw new UnauthorizedException('API Key not found');
-
-      const valid = await bcrypt.compare(apiKey, record.keyHash);
-      if (!valid) throw new UnauthorizedException('Invalid API Key');
-
-      void prisma.apiKey.update({
-        where: { id: record.id },
-        data: { lastUsedAt: new Date() },
-      });
-
-      request.user = {
-        id: record.user?.id,
-        username: record.user?.username,
-        role: record.user?.role,
-      };
-      return true;
-    }
-
-    const token = this.extractToken(request);
-
-    if (!token) {
-      throw new UnauthorizedException('No authentication token found');
-    }
-    try {
-      const { payload } = await jwtVerify(token, this.secret, {
-        algorithms: ['HS256'],
-      });
-
-      request.user = {
-        id: payload.sub,
-        username: payload.name,
-        email: payload.email,
-        role: payload.role,
-      };
-
-      return true;
-    } catch (error) {
-      throw new UnauthorizedException('Invalid or expired token');
-    }
+    return false;
   }
 
   private extractToken(request: any): string | null {

@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
 
 import { $Enums } from '@runa/database';
 
@@ -15,7 +15,21 @@ export class ListService {
 
   private readonly logger = new Logger(ListService.name);
 
-  public async getAnimeList(username: string): Promise<ListEntity[]> {
+  public async getAnimeList(username: string, requester?: string): Promise<ListEntity[]> {
+    const owner = await this.prisma.client.user.findUnique({
+      where: { username: username.toLowerCase() },
+      select: { private: true, privateAnime: true },
+    });
+
+    if (!owner) {
+      throw new NotFoundException(`User ${username} not found`);
+    }
+
+    const isOwner = requester?.toLowerCase() === username.toLowerCase();
+    if ((owner.private || owner.privateAnime) && !isOwner) {
+      throw new ForbiddenException('This list is private');
+    }
+
     const list = await this.prisma.client.aquilaAnimeUserList.findMany({
       where: {
         username: username.toLowerCase(),
@@ -100,6 +114,12 @@ export class ListService {
     },
   ): Promise<{ success: boolean; message: string; error?: any }> {
     try {
+      const user = await this.prisma.client.user.findUnique({
+        where: { username: username.toLowerCase() },
+        select: { private: true, privateAnime: true },
+      });
+      const isPrivate = !!(user?.private || user?.privateAnime);
+
       await this.prisma.client.aquilaAnimeUserList.upsert({
         where: {
           username_animeId: {
@@ -128,6 +148,7 @@ export class ListService {
           notes: body.notes,
           rewatched: body.rewatched,
           connections: body.connections,
+          private: isPrivate,
         },
       });
 
@@ -245,7 +266,21 @@ export class ListService {
     }
   }
 
-  public async getMangaList(username: string): Promise<ListEntity[]> {
+  public async getMangaList(username: string, requester?: string): Promise<ListEntity[]> {
+    const owner = await this.prisma.client.user.findUnique({
+      where: { username: username.toLowerCase() },
+      select: { private: true, privateManga: true },
+    });
+
+    if (!owner) {
+      throw new NotFoundException(`User ${username} not found`);
+    }
+
+    const isOwner = requester?.toLowerCase() === username.toLowerCase();
+    if ((owner.private || owner.privateManga) && !isOwner) {
+      throw new ForbiddenException('This list is private');
+    }
+
     const list = await this.prisma.client.aquilaMangaUserList.findMany({
       where: { username: username.toLowerCase() },
       select: {
@@ -323,6 +358,12 @@ export class ListService {
     },
   ): Promise<{ success: boolean; message: string; error?: any }> {
     try {
+      const user = await this.prisma.client.user.findUnique({
+        where: { username: username.toLowerCase() },
+        select: { private: true, privateManga: true },
+      });
+      const isPrivate = !!(user?.private || user?.privateManga);
+
       await this.prisma.client.aquilaMangaUserList.upsert({
         where: {
           username_mangaId: {
@@ -353,6 +394,7 @@ export class ListService {
           notes: body.notes,
           reread: body.reread,
           connections: body.connections,
+          private: isPrivate,
         },
       });
 
@@ -480,7 +522,21 @@ export class ListService {
 
   // ─────────────────────────── MOVIE ───────────────────────────
 
-  public async getMovieList(username: string): Promise<ListEntity[]> {
+  public async getMovieList(username: string, requester?: string): Promise<ListEntity[]> {
+    const owner = await this.prisma.client.user.findUnique({
+      where: { username: username.toLowerCase() },
+      select: { private: true, privateMovie: true },
+    });
+
+    if (!owner) {
+      throw new NotFoundException(`User ${username} not found`);
+    }
+
+    const isOwner = requester?.toLowerCase() === username.toLowerCase();
+    if ((owner.private || owner.privateMovie) && !isOwner) {
+      throw new ForbiddenException('This list is private');
+    }
+
     const list = await this.prisma.client.aquilaMovieUserList.findMany({
       where: {
         username: username.toLowerCase(),
@@ -548,6 +604,12 @@ export class ListService {
     },
   ): Promise<{ success: boolean; message: string; error?: any }> {
     try {
+      const user = await this.prisma.client.user.findUnique({
+        where: { username: username.toLowerCase() },
+        select: { private: true, privateMovie: true },
+      });
+      const isPrivate = !!(user?.private || user?.privateMovie);
+
       await this.prisma.client.aquilaMovieUserList.upsert({
         where: {
           username_tvdbId: {
@@ -574,6 +636,7 @@ export class ListService {
           notes: body.notes,
           rewatched: body.rewatched,
           connections: body.connections,
+          private: isPrivate,
         },
       });
     } catch (error) {
@@ -620,7 +683,21 @@ export class ListService {
 
   // ─────────────────────────── TV ───────────────────────────
 
-  public async getTvList(username: string): Promise<ListEntity[]> {
+  public async getTvList(username: string, requester?: string): Promise<ListEntity[]> {
+    const owner = await this.prisma.client.user.findUnique({
+      where: { username: username.toLowerCase() },
+      select: { private: true, privateTv: true },
+    });
+
+    if (!owner) {
+      throw new NotFoundException(`User ${username} not found`);
+    }
+
+    const isOwner = requester?.toLowerCase() === username.toLowerCase();
+    if ((owner.private || owner.privateTv) && !isOwner) {
+      throw new ForbiddenException('This list is private');
+    }
+
     const list = await this.prisma.client.aquilaTvUserList.findMany({
       where: {
         username: username.toLowerCase(),
@@ -708,6 +785,12 @@ export class ListService {
     },
   ): Promise<{ success: boolean; message: string; error?: any }> {
     try {
+      const user = await this.prisma.client.user.findUnique({
+        where: { username: username.toLowerCase() },
+        select: { private: true, privateTv: true },
+      });
+      const isPrivate = !!(user?.private || user?.privateTv);
+
       await this.prisma.client.aquilaTvUserList.upsert({
         where: {
           username_tvdbId: {
@@ -734,6 +817,7 @@ export class ListService {
           notes: body.notes,
           rewatched: body.rewatched,
           connections: body.connections,
+          private: isPrivate,
         },
       });
     } catch (error) {
