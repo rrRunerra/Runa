@@ -49,7 +49,7 @@ export default async function proxy(req: NextRequest) {
     url.pathname = "/polaris/login";
     return NextResponse.redirect(url);
   }
-  if (ADMIN_ROUTES.includes(pathname) && token.role !== "ADMIN") {
+  if (ADMIN_ROUTES.some((route) => pathname.startsWith(route)) && token.role !== "ADMIN") {
     if (pathname.startsWith("/lynx")) {
       url.pathname = "/lynx/unauthorized";
       return NextResponse.redirect(url);

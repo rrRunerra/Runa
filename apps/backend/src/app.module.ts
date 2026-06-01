@@ -3,7 +3,6 @@ import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { PrismaModule } from './providers/database/prisma.module';
 import { APP_GUARD } from '@nestjs/core';
-import { DualAuthGuard } from './common/guards/auth.guard';
 import { AnimeModule } from './modules/anime/anime.module';
 import { GameModule } from './modules/game/game.module';
 import { MangaModule } from './modules/manga/manga.module';
@@ -13,17 +12,14 @@ import { ApiKeyModule } from './modules/api-key/api-key.module';
 import { ConnectionModule } from './modules/connection/connection.module';
 import { TestModule } from './modules/test/test.module';
 import { ListModule } from './modules/list/list.module';
+import { FavoriteModule } from './modules/favorite/favorite.module';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
   providers: [
     {
-      provide: APP_GUARD,
-      useClass: DualAuthGuard,
-    },
-    {
        provide: APP_GUARD,
-  useClass: ThrottlerGuard
+       useClass: ThrottlerGuard
     }
   ],
   imports: [
@@ -39,6 +35,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
     ConnectionModule,
     TestModule,
     ListModule,
+    FavoriteModule,
     ThrottlerModule.forRoot({
       throttlers: [
         {

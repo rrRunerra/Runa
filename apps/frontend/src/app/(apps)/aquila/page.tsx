@@ -304,7 +304,7 @@ function MediaCard({
             <Button
               size="icon"
               variant="ghost"
-              className="h-8 w-8 rounded-lg bg-black/40 hover:bg-black/60 border border-white/10 hover:border-white/20 text-white/80 hover:text-white transition-all cursor-pointer pointer-events-auto"
+              className="h-8 w-8 rounded-lg bg-black/40 hover:bg-black/60 border border-white/10 hover:border-primary/30 text-white/80 hover:text-primary transition-all cursor-pointer pointer-events-auto flex items-center justify-center p-0"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();

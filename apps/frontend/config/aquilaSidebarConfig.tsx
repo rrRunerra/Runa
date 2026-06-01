@@ -89,9 +89,9 @@ export const getAquilaSidebarConfig = (
       // idk if it will stay like this or not |  either this or aniyomi style or even both idk
       section: "Connections",
       items: (userConnections || []).map(
-        (connection: { provider: string; username: string }) => {
+        (connection: { provider: string; linkedUsername: string }) => {
           return {
-            label: `${connection.provider} / ${connection.username}`,
+            label: `${connection.provider} / ${connection.linkedUsername}`,
             href: `/aquila/user/${session?.user?.username}/connections/${connection.provider.toLowerCase()}`,
             icon: <List className="h-4 w-4" />,
             subtitle: connection.provider,

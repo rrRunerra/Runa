@@ -17,15 +17,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useSession } from "next-auth/react";
 import * as Lucide from "lucide-react";
 
 export default function UserMoviesPage() {
   const params = useParams();
   const username = params.name as string;
+  const { data: session } = useSession();
 
   if (!username) {
     return <div>Username not found</div>;
   }
+
+  const isOwner = session?.user?.username === username;
 
   const [displayType, setDisplayType] = useState<DisplayType>("grid");
   const [search, setSearch] = useState("");
@@ -57,7 +61,7 @@ export default function UserMoviesPage() {
     }
   }, [username]);
 
-  useEffect(() => {
+  const fetchMoviesList = () => {
     if (username) {
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/movie/user/${username}`)
         .then(async (res) => await res.json())
@@ -68,6 +72,10 @@ export default function UserMoviesPage() {
         })
         .catch((err) => console.error("Failed to fetch movies list", err));
     }
+  };
+
+  useEffect(() => {
+    fetchMoviesList();
   }, [username]);
 
   useEffect(() => {
@@ -88,8 +96,6 @@ export default function UserMoviesPage() {
     });
     setSort("last_updated");
   };
-
-  console.log(moviesList);
 
   // Apply quick search and list filtering here for the Display component
   const filteredData = useMemo(() => {
@@ -243,6 +249,8 @@ export default function UserMoviesPage() {
           filters={filters}
           sort={sort}
           baseUrl="/aquila/movies"
+          isOwner={isOwner}
+          onRefresh={fetchMoviesList}
         />
       </main>
     </div>

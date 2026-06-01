@@ -43,7 +43,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon, Check } from "lucide-react";
+import { CalendarIcon, Check, Heart } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -121,6 +121,8 @@ export function TvEditDialog({
     { seasonNum: number; episodeNum: number }[]
   >([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [isSubmittingFavorite, setIsSubmittingFavorite] = useState(false);
   const [activeTab, setActiveTab] = useState<"general" | "episodes">("general");
   const [seasons, setSeasons] = useState<Season[]>(media.seasons || []);
 
@@ -167,6 +169,23 @@ export function TvEditDialog({
       }
 
       if (session.status === "authenticated") {
+        try {
+          const favRes = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/favorites/status/tv/${initialMedia.id}`,
+            {
+              headers: {
+                Authorization: `Bearer ${session.data.accessToken}`,
+              },
+            }
+          );
+          if (favRes.ok) {
+            const favData = await favRes.json();
+            setIsFavorited(favData.favorited);
+          }
+        } catch (e) {
+          console.error("Failed to fetch favorite status", e);
+        }
+
         try {
           const res = await fetch(
             `${process.env.NEXT_PUBLIC_API_URL}/list/tv/entry/${initialMedia.id}`,
@@ -337,6 +356,61 @@ export function TvEditDialog({
     }
   };
 
+  const handleToggleFavorite = async () => {
+    if (session.status !== "authenticated" || !session.data) {
+      toast.error("You must be logged in to favorite items");
+      return;
+    }
+
+    setIsSubmittingFavorite(true);
+    try {
+      if (isFavorited) {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/favorites/tv/${media.id}`,
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${session.data.accessToken}`,
+            },
+          }
+        );
+        if (res.ok) {
+          setIsFavorited(false);
+          toast.success("Removed from favorites!");
+        } else {
+          toast.error("Failed to remove from favorites");
+        }
+      } else {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/favorites`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.data.accessToken}`,
+            },
+            body: JSON.stringify({
+              type: "TV",
+              mediaId: media.id.toString(),
+            }),
+          }
+        );
+        if (res.ok) {
+          setIsFavorited(true);
+          toast.success("Added to favorites!");
+        } else {
+          toast.error("Failed to add to favorites");
+        }
+      }
+    } catch {
+      toast.error("Failed to toggle favorite");
+    } finally {
+      setTimeout(() => {
+        setIsSubmittingFavorite(false);
+      }, 1000);
+    }
+  };
+
   const dialogContent = (
     <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden bg-popover border-border text-popover-foreground [&>button]:text-foreground [&>button]:z-60 [&>button]:hover:text-muted-foreground">
       <DialogTitle className="sr-only">
@@ -379,6 +453,18 @@ export function TvEditDialog({
             </div>
           </div>
           <div className="pb-1 flex gap-4 items-center">
+            <button
+              onClick={handleToggleFavorite}
+              disabled={isSubmittingFavorite}
+              className={cn(
+                "transition-colors",
+                isFavorited
+                  ? "text-red-500 hover:text-red-600"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Heart className={cn("w-6 h-6", isFavorited && "fill-current")} />
+            </button>
             <Button
               className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md font-medium px-6"
               onClick={handleSave}
@@ -423,17 +509,17 @@ export function TvEditDialog({
             <div className="col-span-3 flex flex-col gap-2">
               <Label className="text-sm font-semibold text-muted-foreground">Status</Label>
               <Select
-                value={listStatus}
-                onValueChange={(val) => {
-                  setListStatus(val);
-                  if (val === "COMPLETED" && !finishDate) setFinishDate(new Date());
-                  if (val === "WATCHING" && !startDate) setStartDate(new Date());
-                }}
-              >
-                <SelectTrigger className="bg-background border-input text-foreground h-10">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent className="bg-popover border-border text-popover-foreground">
+              value={listStatus}
+              onValueChange={(val) => {
+                setListStatus(val);
+                if (val === "COMPLETED" && !finishDate) setFinishDate(new Date());
+                if (val === "WATCHING" && !startDate) setStartDate(new Date());
+              }}
+            >
+              <SelectTrigger className="w-full bg-background border-input text-foreground h-10 px-3 text-sm font-normal hover:bg-accent hover:text-accent-foreground transition-colors">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+                <SelectContent position="popper" className="bg-popover border-border text-popover-foreground">
                   <SelectItem value="WATCHING">Watching</SelectItem>
                   <SelectItem value="PLANNING">Plan to watch</SelectItem>
                   <SelectItem value="COMPLETED">Completed</SelectItem>
@@ -570,10 +656,11 @@ export function TvEditDialog({
                             </span>
                           </div>
                           <Button
+                            asChild
                             variant="ghost"
                             size="sm"
                             className={cn(
-                              "h-7 px-2 text-[10px] uppercase font-bold tracking-wider",
+                              "h-7 px-2 text-[10px] uppercase font-bold tracking-wider cursor-pointer",
                               isAllWatched
                                 ? "text-primary hover:text-primary/80"
                                 : "text-muted-foreground hover:text-foreground",
@@ -583,7 +670,19 @@ export function TvEditDialog({
                               toggleSeason(season.number, !isAllWatched);
                             }}
                           >
-                            {isAllWatched ? "Unmark All" : "Mark All"}
+                            <span
+                              role="button"
+                              tabIndex={0}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  toggleSeason(season.number, !isAllWatched);
+                                }
+                              }}
+                            >
+                              {isAllWatched ? "Unmark All" : "Mark All"}
+                            </span>
                           </Button>
                         </div>
                       </AccordionTrigger>

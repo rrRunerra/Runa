@@ -17,15 +17,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useSession } from "next-auth/react";
 import * as Lucide from "lucide-react";
 
 export default function UserTvShowsPage() {
   const params = useParams();
   const username = params.name as string;
+  const { data: session } = useSession();
 
   if (!username) {
     return <div>Username not found</div>;
   }
+
+  const isOwner = session?.user?.username === username;
 
   const [displayType, setDisplayType] = useState<DisplayType>("grid");
   const [search, setSearch] = useState("");
@@ -57,7 +61,7 @@ export default function UserTvShowsPage() {
     }
   }, [username]);
 
-  useEffect(() => {
+  const fetchTvList = () => {
     if (username) {
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/tv/user/${username}`)
         .then(async (res) => await res.json())
@@ -68,6 +72,10 @@ export default function UserTvShowsPage() {
         })
         .catch((err) => console.error("Failed to fetch TV list", err));
     }
+  };
+
+  useEffect(() => {
+    fetchTvList();
   }, [username]);
 
   useEffect(() => {
@@ -242,6 +250,8 @@ export default function UserTvShowsPage() {
           filters={filters}
           sort={sort}
           baseUrl="/aquila/tv"
+          isOwner={isOwner}
+          onRefresh={fetchTvList}
         />
       </main>
     </div>

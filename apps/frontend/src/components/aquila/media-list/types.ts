@@ -28,4 +28,7 @@ export interface MediaListDisplayProps {
   filters: MediaFilters;
   sort: "title" | "score" | "progress" | "last_updated" | "last_added";
   baseUrl: string;
+  isOwner?: boolean;
+  onRefresh?: () => void;
 }
+

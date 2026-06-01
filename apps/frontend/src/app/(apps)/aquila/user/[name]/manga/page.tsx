@@ -17,15 +17,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useSession } from "next-auth/react";
 import * as Lucide from "lucide-react";
 
 export default function UserMangaPage() {
   const params = useParams();
   const username = params.name as string;
+  const { data: session } = useSession();
 
   if (!username) {
     return <div>User not found</div>;
   }
+
+  const isOwner = session?.user?.username === username;
 
   const [displayType, setDisplayType] = useState<DisplayType>("grid");
   const [search, setSearch] = useState("");
@@ -57,7 +61,7 @@ export default function UserMangaPage() {
     }
   }, [username]);
 
-  useEffect(() => {
+  const fetchMangaList = () => {
     if (username) {
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/manga/user/${username}`)
         .then(async (res) => await res.json())
@@ -68,6 +72,10 @@ export default function UserMangaPage() {
         })
         .catch((err) => console.error("Failed to fetch manga list", err));
     }
+  };
+
+  useEffect(() => {
+    fetchMangaList();
   }, [username]);
 
   useEffect(() => {
@@ -264,6 +272,8 @@ export default function UserMangaPage() {
           filters={filters}
           sort={sort}
           baseUrl="/aquila/manga"
+          isOwner={isOwner}
+          onRefresh={fetchMangaList}
         />
       </main>
     </div>

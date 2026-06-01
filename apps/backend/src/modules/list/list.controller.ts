@@ -56,8 +56,8 @@ export class ListController {
       rewatched?: number;
       updateConnection?: boolean;
       connections?: {
-        anilist?: number;
-        mal?: number;
+        anilist?: any;
+        mal?: any;
       };
     },
   ): Promise<{ success: boolean; message: string; error?: any }> {
@@ -109,8 +109,8 @@ export class ListController {
       reread?: number;
       updateConnection?: boolean;
       connections?: {
-        anilist?: number;
-        mal?: number;
+        anilist?: any;
+        mal?: any;
       };
     },
   ): Promise<{ success: boolean; message: string; error?: any }> {

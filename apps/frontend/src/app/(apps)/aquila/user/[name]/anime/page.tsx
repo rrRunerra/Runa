@@ -17,15 +17,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useSession } from "next-auth/react";
 import * as Lucide from "lucide-react";
 
 export default function UserAnimePage() {
   const params = useParams();
   const username = params.name as string;
+  const { data: session } = useSession();
 
   if (!username) {
     return <div>Username not found</div>;
   }
+
+  const isOwner = session?.user?.username === username;
 
   const [displayType, setDisplayType] = useState<DisplayType>("grid");
   const [search, setSearch] = useState("");
@@ -57,7 +61,7 @@ export default function UserAnimePage() {
     }
   }, [username]);
 
-  useEffect(() => {
+  const fetchAnimeList = () => {
     if (username) {
       fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/anime/user/${username}`)
         .then(async (res) => await res.json())
@@ -68,6 +72,10 @@ export default function UserAnimePage() {
         })
         .catch((err) => console.error("Failed to fetch anime list", err));
     }
+  };
+
+  useEffect(() => {
+    fetchAnimeList();
   }, [username]);
 
   useEffect(() => {
@@ -263,6 +271,8 @@ export default function UserAnimePage() {
           filters={filters}
           sort={sort}
           baseUrl="/aquila/anime"
+          isOwner={isOwner}
+          onRefresh={fetchAnimeList}
         />
       </main>
     </div>

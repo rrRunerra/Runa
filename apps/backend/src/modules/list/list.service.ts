@@ -1,11 +1,17 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../providers/database/prisma.service';
-import ListEntity from './entities/ListEntity';
+
 import { $Enums } from '@runa/database';
+
+import { PrismaService } from '../../providers/database/prisma.service';
+import { ConnectionsManager } from './connections/connections.manager';
+import ListEntity from './entities/ListEntity';
 
 @Injectable()
 export class ListService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly connectionsManager: ConnectionsManager,
+  ) {}
 
   private readonly logger = new Logger(ListService.name);
 
@@ -184,7 +190,7 @@ export class ListService {
   private async updateConnections(
     username: string,
     animeId: number,
-    connections: { anilist?: number; mal?: number },
+    connections: any,
     status?: string,
     progress?: number,
     score?: number,
@@ -193,248 +199,49 @@ export class ListService {
     notes?: string,
     rewatched?: number,
   ) {
-    if (connections.anilist) {
-      const anilistConnection = await this.prisma.client.connections.findFirst({
-        where: {
-          username: username,
-          provider: 'ANILIST',
-        },
-        select: {
-          accessToken: true,
-          refreshToken: true,
-          expiresAt: true,
-        },
-      });
+    if (!connections || typeof connections !== 'object') return;
 
-      if (!anilistConnection) {
-        this.logger.warn(`No Anilist connection found for user ${username}`);
-        return;
-      }
+    for (const providerKey of Object.keys(connections)) {
+      const conn = connections[providerKey];
+      if (!conn) continue;
 
-      const res = await fetch('https://graphql.anilist.co', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${anilistConnection.accessToken}`,
-        },
-        body: JSON.stringify({
-          query: `
-            mutation (
-              $mediaId: Int!
-              $status: MediaListStatus
-              $progress: Int
-              $score: Float
-              $startedAt: FuzzyDateInput
-              $completedAt: FuzzyDateInput
-              $notes: String
-              $repeat: Int
-            ) {
-              SaveMediaListEntry(
-                mediaId: $mediaId
-                status: $status
-                progress: $progress
-                score: $score
-                startedAt: $startedAt
-                completedAt: $completedAt
-                notes: $notes
-                repeat: $repeat
-              ) {
-                id
-                status
-                progress
-                score
-                startedAt {
-                  year
-                  month
-                  day
-                }
-                completedAt {
-                  year
-                  month
-                  day
-                }
-                notes
-                repeat
-              }
-            }
-          `,
-          variables: {
-            mediaId: Number(connections.anilist),
-            status: status === 'WATCHING' ? 'CURRENT' : status,
-            progress: progress,
-            score: score,
-            startedAt: startDate
-              ? {
-                  year: new Date(startDate * 1000).getFullYear(),
-                  month: new Date(startDate * 1000).getMonth() + 1,
-                  day: new Date(startDate * 1000).getDate(),
-                }
-              : undefined,
-            completedAt: endDate
-              ? {
-                  year: new Date(endDate * 1000).getFullYear(),
-                  month: new Date(endDate * 1000).getMonth() + 1,
-                  day: new Date(endDate * 1000).getDate(),
-                }
-              : undefined,
-            notes: notes,
-            repeat: rewatched,
-          },
-        }),
-      });
+      let providerId: number;
+      let connStatus = status;
+      let connProgress = progress;
+      let connScore = score;
+      let connStartDate = startDate;
+      let connEndDate = endDate;
+      let connNotes = notes;
+      let connRewatched = rewatched;
 
-      if (!res.ok) {
-        this.logger.error(
-          `Failed to update Anilist connection for user ${username}`,
-        );
-        return;
-      }
-
-      const data = await res.json();
-      if (data.errors) {
-        this.logger.error(
-          `Failed to update Anilist connection for user ${username}`,
-        );
-        return;
-      }
-
-      this.logger.log(`Anilist connection updated for user ${username}`);
-    }
-
-    if (connections.mal) {
-      const malConnection = await this.prisma.client.connections.findFirst({
-        where: {
-          username: username,
-          provider: 'MAL',
-        },
-        select: {
-          id: true,
-          accessToken: true,
-          refreshToken: true,
-          expiresAt: true,
-        },
-      });
-
-      if (!malConnection) {
-        this.logger.warn(`No MAL connection found for user ${username}`);
-        return;
-      }
-
-      let accessToken = malConnection.accessToken;
-
-      if (
-        malConnection.expiresAt &&
-        Date.now() > malConnection.expiresAt.getTime()
-      ) {
-        const refreshRes = await fetch(
-          'https://myanimelist.net/v1/oauth2/token',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-              client_id: process.env.MAL_CLIENT_ID || '',
-              client_secret: process.env.MAL_CLIENT_SECRET || '',
-              grant_type: 'refresh_token',
-              refresh_token: malConnection.refreshToken || '',
-            }),
-          },
-        );
-
-        if (refreshRes.ok) {
-          const refreshData = await refreshRes.json();
-          accessToken = refreshData.access_token;
-          await this.prisma.client.connections.update({
-            where: { id: malConnection.id },
-            data: {
-              accessToken: refreshData.access_token,
-              refreshToken: refreshData.refresh_token,
-              expiresAt: new Date(Date.now() + refreshData.expires_in * 1000),
-            },
-          });
-          this.logger.log(`MAL token refreshed for user ${username}`);
-        } else {
-          this.logger.error(`Failed to refresh MAL token for user ${username}`);
+      if (typeof conn === 'object' && conn !== null) {
+        providerId = Number(conn.id);
+        if (conn.status !== undefined) connStatus = conn.status;
+        if (conn.progressOffset !== undefined) {
+          connProgress = (progress || 0) + Number(conn.progressOffset);
+        } else if (conn.progress !== undefined) {
+          connProgress = Number(conn.progress);
         }
-      }
-
-      let malStatus: string | undefined = undefined;
-      switch (status) {
-        case 'WATCHING':
-          malStatus = 'watching';
-          break;
-        case 'COMPLETED':
-          malStatus = 'completed';
-          break;
-        case 'PAUSED':
-          malStatus = 'on_hold';
-          break;
-        case 'DROPPED':
-          malStatus = 'dropped';
-          break;
-        case 'PLANNING':
-          malStatus = 'plan_to_watch';
-          break;
-        case 'REPEATING':
-          malStatus = 'watching';
-          break;
-      }
-
-      const malData = new URLSearchParams();
-      if (malStatus) malData.append('status', malStatus);
-      if (score !== undefined)
-        malData.append('score', Math.round(score).toString());
-      if (progress !== undefined)
-        malData.append('num_watched_episodes', progress.toString());
-      if (status === 'REPEATING') malData.append('is_rewatching', 'true');
-      if (rewatched !== undefined)
-        malData.append('num_times_rewatched', rewatched.toString());
-      if (notes !== undefined) malData.append('comments', notes);
-
-      const parseDateStr = (ts?: number) => {
-        if (!ts) return undefined;
-        const d = new Date(ts * 1000);
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      };
-
-      if (startDate) {
-        const startString = parseDateStr(startDate);
-        if (startString) malData.append('start_date', startString);
-      }
-      if (endDate) {
-        const endString = parseDateStr(endDate);
-        if (endString) malData.append('finish_date', endString);
-      }
-
-      if (Number.isNaN(connections.mal)) {
-        this.logger.error(`MAL ID is not a number`);
-        return;
-      }
-      if (Number(connections.mal) < 0) {
-        this.logger.error(`MAL ID cannot be negative`);
-        return;
-      }
-
-      const res = await fetch(
-        `https://api.myanimelist.net/v2/anime/${connections.mal}/my_list_status`,
-        {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: malData,
-        },
-      );
-
-      if (!res.ok) {
-        this.logger.error(
-          `Failed to update MAL connection for user ${username}`,
-        );
+        if (conn.score !== undefined) connScore = Number(conn.score);
+        if (conn.startDate !== undefined) connStartDate = conn.startDate;
+        if (conn.endDate !== undefined) connEndDate = conn.endDate;
+        if (conn.notes !== undefined) connNotes = conn.notes;
+        if (conn.rewatched !== undefined) connRewatched = Number(conn.rewatched);
       } else {
-        this.logger.log(`MAL connection updated for user ${username}`);
+        providerId = Number(conn);
       }
+
+      if (Number.isNaN(providerId) || providerId <= 0) continue;
+
+      await this.connectionsManager.syncAnime(providerKey, username, providerId, {
+        status: connStatus,
+        progress: connProgress,
+        score: connScore,
+        startDate: connStartDate,
+        endDate: connEndDate,
+        notes: connNotes,
+        rewatched: connRewatched,
+      }).catch((err) => this.logger.error(`Failed to sync anime with ${providerKey}`, err));
     }
   }
 
@@ -604,12 +411,11 @@ export class ListService {
         error: error,
       };
     }
-  }
-
+    }
   private async updateMangaConnections(
     username: string,
     mangaId: number,
-    connections: { anilist?: number; mal?: number },
+    connections: any,
     status?: string,
     chapters?: number,
     volumes?: number,
@@ -619,227 +425,56 @@ export class ListService {
     notes?: string,
     reread?: number,
   ) {
-    if (connections.anilist) {
-      const anilistConnection = await this.prisma.client.connections.findFirst({
-        where: { username, provider: 'ANILIST' },
-        select: { accessToken: true, refreshToken: true, expiresAt: true },
-      });
+    if (!connections || typeof connections !== 'object') return;
 
-      if (!anilistConnection) {
-        this.logger.warn(`No Anilist connection found for user ${username}`);
-      } else {
-        const res = await fetch('https://graphql.anilist.co', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${anilistConnection.accessToken}`,
-          },
-          body: JSON.stringify({
-            query: `
-              mutation (
-                $mediaId: Int!
-                $status: MediaListStatus
-                $progress: Int
-                $progressVolumes: Int
-                $score: Float
-                $startedAt: FuzzyDateInput
-                $completedAt: FuzzyDateInput
-                $notes: String
-                $repeat: Int
-              ) {
-                SaveMediaListEntry(
-                  mediaId: $mediaId
-                  status: $status
-                  progress: $progress
-                  progressVolumes: $progressVolumes
-                  score: $score
-                  startedAt: $startedAt
-                  completedAt: $completedAt
-                  notes: $notes
-                  repeat: $repeat
-                ) {
-                  id
-                  status
-                  progress
-                  progressVolumes
-                  score
-                  notes
-                  repeat
-                }
-              }
-            `,
-            variables: {
-              mediaId: Number(connections.anilist),
-              status: status === 'READING' ? 'CURRENT' : status,
-              progress: chapters,
-              progressVolumes: volumes,
-              score: score,
-              startedAt: startDate
-                ? {
-                    year: new Date(startDate * 1000).getFullYear(),
-                    month: new Date(startDate * 1000).getMonth() + 1,
-                    day: new Date(startDate * 1000).getDate(),
-                  }
-                : undefined,
-              completedAt: endDate
-                ? {
-                    year: new Date(endDate * 1000).getFullYear(),
-                    month: new Date(endDate * 1000).getMonth() + 1,
-                    day: new Date(endDate * 1000).getDate(),
-                  }
-                : undefined,
-              notes: notes,
-              repeat: reread,
-            },
-          }),
-        });
+    for (const providerKey of Object.keys(connections)) {
+      const conn = connections[providerKey];
+      if (!conn) continue;
 
-        if (!res.ok) {
-          this.logger.error(
-            `Failed to update Anilist manga connection for user ${username}`,
-          );
-        } else {
-          const data = await res.json();
-          if (data.errors) {
-            this.logger.error(
-              `Failed to update Anilist manga connection for user ${username}`,
-            );
-          } else {
-            this.logger.log(
-              `Anilist manga connection updated for user ${username}`,
-            );
-          }
+      let providerId: number;
+      let connStatus = status;
+      let connChapters = chapters;
+      let connVolumes = volumes;
+      let connScore = score;
+      let connStartDate = startDate;
+      let connEndDate = endDate;
+      let connNotes = notes;
+      let connReread = reread;
+
+      if (typeof conn === 'object' && conn !== null) {
+        providerId = Number(conn.id);
+        if (conn.status !== undefined) connStatus = conn.status;
+        if (conn.chaptersOffset !== undefined) {
+          connChapters = (chapters || 0) + Number(conn.chaptersOffset);
+        } else if (conn.chapters !== undefined) {
+          connChapters = Number(conn.chapters);
         }
-      }
-    }
-
-    if (connections.mal) {
-      const malConnection = await this.prisma.client.connections.findFirst({
-        where: { username, provider: 'MAL' },
-        select: {
-          id: true,
-          accessToken: true,
-          refreshToken: true,
-          expiresAt: true,
-        },
-      });
-
-      if (!malConnection) {
-        this.logger.warn(`No MAL connection found for user ${username}`);
-        return;
-      }
-
-      let accessToken = malConnection.accessToken;
-
-      if (
-        malConnection.expiresAt &&
-        Date.now() > malConnection.expiresAt.getTime()
-      ) {
-        const refreshRes = await fetch(
-          'https://myanimelist.net/v1/oauth2/token',
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-              client_id: process.env.MAL_CLIENT_ID || '',
-              client_secret: process.env.MAL_CLIENT_SECRET || '',
-              grant_type: 'refresh_token',
-              refresh_token: malConnection.refreshToken || '',
-            }),
-          },
-        );
-
-        if (refreshRes.ok) {
-          const refreshData = await refreshRes.json();
-          accessToken = refreshData.access_token;
-          await this.prisma.client.connections.update({
-            where: { id: malConnection.id },
-            data: {
-              accessToken: refreshData.access_token,
-              refreshToken: refreshData.refresh_token,
-              expiresAt: new Date(Date.now() + refreshData.expires_in * 1000),
-            },
-          });
-          this.logger.log(`MAL token refreshed for user ${username}`);
-        } else {
-          this.logger.error(`Failed to refresh MAL token for user ${username}`);
+        if (conn.volumesOffset !== undefined) {
+          connVolumes = (volumes || 0) + Number(conn.volumesOffset);
+        } else if (conn.volumes !== undefined) {
+          connVolumes = Number(conn.volumes);
         }
-      }
-
-      let malStatus: string | undefined = undefined;
-      switch (status) {
-        case 'READING':
-          malStatus = 'reading';
-          break;
-        case 'COMPLETED':
-          malStatus = 'completed';
-          break;
-        case 'ON_HOLD':
-          malStatus = 'on_hold';
-          break;
-        case 'DROPPED':
-          malStatus = 'dropped';
-          break;
-        case 'PLANNING':
-          malStatus = 'plan_to_read';
-          break;
-      }
-
-      const malData = new URLSearchParams();
-      if (malStatus) malData.append('status', malStatus);
-      if (score !== undefined)
-        malData.append('score', Math.round(score).toString());
-      if (chapters !== undefined)
-        malData.append('num_chapters_read', chapters.toString());
-      if (volumes !== undefined)
-        malData.append('num_volumes_read', volumes.toString());
-      if (reread !== undefined)
-        malData.append('num_times_reread', reread.toString());
-      if (notes !== undefined) malData.append('comments', notes);
-
-      const parseDateStr = (ts?: number) => {
-        if (!ts) return undefined;
-        const d = new Date(ts * 1000);
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      };
-
-      if (startDate) {
-        const s = parseDateStr(startDate);
-        if (s) malData.append('start_date', s);
-      }
-      if (endDate) {
-        const e = parseDateStr(endDate);
-        if (e) malData.append('finish_date', e);
-      }
-
-      if (Number.isNaN(connections.mal)) {
-        this.logger.error(`MAL manga ID is not a number`);
-        return;
-      }
-      if (Number(connections.mal) < 0) {
-        this.logger.error(`MAL ID cannot be negative`);
-        return;
-      }
-
-      const res = await fetch(
-        `https://api.myanimelist.net/v2/manga/${connections.mal}/my_list_status`,
-        {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: malData,
-        },
-      );
-
-      if (!res.ok) {
-        this.logger.error(
-          `Failed to update MAL manga connection for user ${username}`,
-        );
+        if (conn.score !== undefined) connScore = Number(conn.score);
+        if (conn.startDate !== undefined) connStartDate = conn.startDate;
+        if (conn.endDate !== undefined) connEndDate = conn.endDate;
+        if (conn.notes !== undefined) connNotes = conn.notes;
+        if (conn.reread !== undefined) connReread = Number(conn.reread);
       } else {
-        this.logger.log(`MAL manga connection updated for user ${username}`);
+        providerId = Number(conn);
       }
+
+      if (Number.isNaN(providerId) || providerId <= 0) continue;
+
+      await this.connectionsManager.syncManga(providerKey, username, providerId, {
+        status: connStatus,
+        chapters: connChapters,
+        volumes: connVolumes,
+        score: connScore,
+        startDate: connStartDate,
+        endDate: connEndDate,
+        notes: connNotes,
+        reread: connReread,
+      }).catch((err) => this.logger.error(`Failed to sync manga with ${providerKey}`, err));
     }
   }
 
@@ -1369,14 +1004,48 @@ export class ListService {
       const isCompleted =
         entry.anime.episodes && nextProgress >= entry.anime.episodes;
 
+      let connectionsData = entry.connections as any;
+      let nextConnections = connectionsData;
+      if (connectionsData && typeof connectionsData === 'object' && !Array.isArray(connectionsData)) {
+        nextConnections = { ...connectionsData };
+        for (const key of Object.keys(nextConnections)) {
+          const conn = nextConnections[key];
+          if (conn && typeof conn === 'object' && !Array.isArray(conn)) {
+            if (conn.progress !== undefined) {
+              nextConnections[key] = {
+                ...conn,
+                progress: (Number(conn.progress) || 0) + 1,
+              };
+            }
+          }
+        }
+      }
+
       await this.prisma.client.aquilaAnimeUserList.update({
         where: { id: entry.id },
         data: {
           progress: nextProgress,
           status: isCompleted ? $Enums.AnimeListStatus.COMPLETED : entry.status,
           endDate: isCompleted ? Math.floor(Date.now() / 1000) : entry.endDate,
+          connections: nextConnections || undefined,
         },
       });
+
+      if (nextConnections && typeof nextConnections === 'object') {
+        await this.updateConnections(
+          user,
+          id,
+          nextConnections,
+          isCompleted ? 'COMPLETED' : entry.status,
+          nextProgress,
+          entry.score || undefined,
+          entry.startDate || undefined,
+          isCompleted ? Math.floor(Date.now() / 1000) : (entry.endDate || undefined),
+          entry.notes || undefined,
+          entry.rewatched || undefined,
+        ).catch((err) => this.logger.error('Failed to sync incremented anime connection', err));
+      }
+
       return { success: true, message: 'Progress updated' };
     }
 
@@ -1391,14 +1060,49 @@ export class ListService {
       const isCompleted =
         entry.manga.chapters && nextProgress >= entry.manga.chapters;
 
+      let connectionsData = entry.connections as any;
+      let nextConnections = connectionsData;
+      if (connectionsData && typeof connectionsData === 'object' && !Array.isArray(connectionsData)) {
+        nextConnections = { ...connectionsData };
+        for (const key of Object.keys(nextConnections)) {
+          const conn = nextConnections[key];
+          if (conn && typeof conn === 'object' && !Array.isArray(conn)) {
+            if (conn.chapters !== undefined) {
+              nextConnections[key] = {
+                ...conn,
+                chapters: (Number(conn.chapters) || 0) + 1,
+              };
+            }
+          }
+        }
+      }
+
       await this.prisma.client.aquilaMangaUserList.update({
         where: { id: entry.id },
         data: {
           chapters: nextProgress,
           status: isCompleted ? $Enums.MangaListStatus.COMPLETED : entry.status,
           endDate: isCompleted ? Math.floor(Date.now() / 1000) : entry.endDate,
+          connections: nextConnections || undefined,
         },
       });
+
+      if (nextConnections && typeof nextConnections === 'object') {
+        await this.updateMangaConnections(
+          user,
+          id,
+          nextConnections,
+          isCompleted ? 'COMPLETED' : entry.status,
+          nextProgress,
+          entry.volumes || undefined,
+          entry.score || undefined,
+          entry.startDate || undefined,
+          isCompleted ? Math.floor(Date.now() / 1000) : (entry.endDate || undefined),
+          entry.notes || undefined,
+          entry.reread || undefined,
+        ).catch((err) => this.logger.error('Failed to sync incremented manga connection', err));
+      }
+
       return { success: true, message: 'Progress updated' };
     }
 

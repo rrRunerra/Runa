@@ -31,7 +31,7 @@ import { cn } from "@/lib/utils";
 type Connection = {
   id: string;
   provider: string;
-  username: string;
+  linkedUsername: string;
   connectionId: string | null;
   createdAt: string;
   expiresAt: string | null;
@@ -286,7 +286,7 @@ function ConnectionsContent() {
                         Account
                       </span>
                       <span className="text-sm font-semibold truncate ml-2">
-                        {conn.username}
+                        {conn.linkedUsername}
                       </span>
                     </div>
                     {conn.createdAt && (

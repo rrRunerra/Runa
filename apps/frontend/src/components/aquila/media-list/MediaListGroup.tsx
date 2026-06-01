@@ -11,6 +11,8 @@ interface MediaListGroupProps {
   entries: MediaEntry[];
   displayType: DisplayType;
   baseUrl: string;
+  isOwner?: boolean;
+  onRefresh?: () => void;
 }
 
 export const MediaListGroup: React.FC<MediaListGroupProps> = ({
@@ -18,6 +20,8 @@ export const MediaListGroup: React.FC<MediaListGroupProps> = ({
   entries,
   displayType,
   baseUrl,
+  isOwner,
+  onRefresh,
 }) => {
   if (entries.length === 0) return null;
 
@@ -28,7 +32,13 @@ export const MediaListGroup: React.FC<MediaListGroupProps> = ({
       {displayType === "grid" && (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-[repeat(auto-fill,minmax(160px,1fr))]">
           {entries.map((entry) => (
-            <MediaGridCard key={entry.id} entry={entry} baseUrl={baseUrl} />
+            <MediaGridCard
+              key={entry.id}
+              entry={entry}
+              baseUrl={baseUrl}
+              isOwner={isOwner}
+              onRefresh={onRefresh}
+            />
           ))}
         </div>
       )}
@@ -43,7 +53,13 @@ export const MediaListGroup: React.FC<MediaListGroupProps> = ({
             </div>
           </div>
           {entries.map((entry) => (
-            <MediaListRow key={entry.id} entry={entry} baseUrl={baseUrl} />
+            <MediaListRow
+              key={entry.id}
+              entry={entry}
+              baseUrl={baseUrl}
+              isOwner={isOwner}
+              onRefresh={onRefresh}
+            />
           ))}
         </div>
       )}
@@ -55,11 +71,17 @@ export const MediaListGroup: React.FC<MediaListGroupProps> = ({
             <div className="flex w-1/4 justify-end gap-6 pr-2">
               <span className="w-8 text-right">Score</span>
               <span className="w-12 text-right">Progress</span>
-              <span className="w-16 text-right">Type</span>
+              <span className="w-16 text-right hidden sm:block">Type</span>
             </div>
           </div>
           {entries.map((entry) => (
-            <MediaCompactRow key={entry.id} entry={entry} baseUrl={baseUrl} />
+            <MediaCompactRow
+              key={entry.id}
+              entry={entry}
+              baseUrl={baseUrl}
+              isOwner={isOwner}
+              onRefresh={onRefresh}
+            />
           ))}
         </div>
       )}

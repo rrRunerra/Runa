@@ -37,7 +37,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Heart } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -93,6 +93,8 @@ export function MovieEditDialog({
   const [finishDate, setFinishDate] = useState<Date | undefined>();
   const [rewatches, setRewatches] = useState<string>("0");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [isSubmittingFavorite, setIsSubmittingFavorite] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -116,6 +118,23 @@ export function MovieEditDialog({
       }
 
       if (session.status === "authenticated") {
+        try {
+          const favRes = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/favorites/status/movie/${initialMedia.id}`,
+            {
+              headers: {
+                Authorization: `Bearer ${session.data.accessToken}`,
+              },
+            }
+          );
+          if (favRes.ok) {
+            const favData = await favRes.json();
+            setIsFavorited(favData.favorited);
+          }
+        } catch (e) {
+          console.error("Failed to fetch favorite status", e);
+        }
+
         try {
           const res = await fetch(
             `${process.env.NEXT_PUBLIC_API_URL}/list/movie/entry/${initialMedia.id}`,
@@ -215,6 +234,61 @@ export function MovieEditDialog({
     }
   };
 
+  const handleToggleFavorite = async () => {
+    if (session.status !== "authenticated" || !session.data) {
+      toast.error("You must be logged in to favorite items");
+      return;
+    }
+
+    setIsSubmittingFavorite(true);
+    try {
+      if (isFavorited) {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/favorites/movie/${media.id}`,
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${session.data.accessToken}`,
+            },
+          }
+        );
+        if (res.ok) {
+          setIsFavorited(false);
+          toast.success("Removed from favorites!");
+        } else {
+          toast.error("Failed to remove from favorites");
+        }
+      } else {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/favorites`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.data.accessToken}`,
+            },
+            body: JSON.stringify({
+              type: "MOVIE",
+              mediaId: media.id.toString(),
+            }),
+          }
+        );
+        if (res.ok) {
+          setIsFavorited(true);
+          toast.success("Added to favorites!");
+        } else {
+          toast.error("Failed to add to favorites");
+        }
+      }
+    } catch {
+      toast.error("Failed to toggle favorite");
+    } finally {
+      setTimeout(() => {
+        setIsSubmittingFavorite(false);
+      }, 1000);
+    }
+  };
+
   const dialogContent = (
     <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden bg-popover border-border text-popover-foreground [&>button]:text-foreground [&>button]:z-60 [&>button]:hover:text-muted-foreground">
       <DialogTitle className="sr-only">
@@ -246,6 +320,18 @@ export function MovieEditDialog({
             </h2>
           </div>
           <div className="pb-1 flex gap-4 items-center">
+            <button
+              onClick={handleToggleFavorite}
+              disabled={isSubmittingFavorite}
+              className={cn(
+                "transition-colors",
+                isFavorited
+                  ? "text-red-500 hover:text-red-600"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Heart className={cn("w-6 h-6", isFavorited && "fill-current")} />
+            </button>
             <Button
               className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md font-medium px-6"
               onClick={handleSave}
@@ -270,10 +356,10 @@ export function MovieEditDialog({
                 if (val === "COMPLETED" && !startDate) setStartDate(new Date());
               }}
             >
-              <SelectTrigger className="bg-background border-input text-foreground h-10">
+              <SelectTrigger className="w-full bg-background border-input text-foreground h-10 px-3 text-sm font-normal hover:bg-accent hover:text-accent-foreground transition-colors">
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
-              <SelectContent className="bg-popover border-border text-popover-foreground">
+              <SelectContent position="popper" className="bg-popover border-border text-popover-foreground">
                 <SelectItem value="PLANNING">Planning</SelectItem>
                 <SelectItem value="COMPLETED">Completed</SelectItem>
                 <SelectItem value="DROPPED">Dropped</SelectItem>

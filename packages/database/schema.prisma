@@ -24,6 +24,7 @@ model User {
     mangaList            AquilaMangaUserList[]
     aquilaMovieUserLists AquilaMovieUserList[]
     aquilaTvUserLists    AquilaTvUserList[]
+    favorites            Favorite[]
 
     @@index([id])
     @@index([username])
@@ -510,3 +511,26 @@ model AquilaMovieUserList {
     @@index([username])
     @@index([tvdbId])
 }
+
+enum FavoriteType {
+    ANIME
+    MANGA
+    MOVIE
+    TV
+    BOOK
+    USER
+}
+
+model Favorite {
+    id        String       @id @default(nanoid())
+    userId    String
+    type      FavoriteType
+    mediaId   String
+    createdAt DateTime     @default(now())
+
+    user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, type, mediaId])
+    @@index([userId])
+}
+

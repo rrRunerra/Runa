@@ -11,6 +11,8 @@ export const MediaListDisplay: React.FC<MediaListDisplayProps> = ({
   filters,
   sort,
   baseUrl,
+  isOwner,
+  onRefresh,
 }) => {
   // Memoize filtering to prevent expensive recalculations
   const filteredData = useMemo(() => {
@@ -82,6 +84,8 @@ export const MediaListDisplay: React.FC<MediaListDisplayProps> = ({
           entries={groupedData[listName] || []}
           displayType={displayType}
           baseUrl={baseUrl}
+          isOwner={isOwner}
+          onRefresh={onRefresh}
         />
       ))}
 
@@ -95,6 +99,8 @@ export const MediaListDisplay: React.FC<MediaListDisplayProps> = ({
             entries={groupedData[listName]}
             displayType={displayType}
             baseUrl={baseUrl}
+            isOwner={isOwner}
+            onRefresh={onRefresh}
           />
         ))}
     </div>

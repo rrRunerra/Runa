@@ -38,10 +38,11 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Heart, CalendarIcon, X } from "lucide-react";
+import { Heart, CalendarIcon, X, ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { BASE_CONNECTION_PROVIDERS } from "@/lib/providers";
 
 interface AnimeEditDialogMedia {
   id: string;
@@ -100,13 +101,19 @@ export function AnimeEditDialog({
   const [finishDate, setFinishDate] = useState<Date | undefined>();
   const [rewatches, setRewatches] = useState<string>("0");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [isSubmittingFavorite, setIsSubmittingFavorite] = useState(false);
 
   // Connection State
   const [updateConnection, setUpdateConnection] = useState<boolean>(false);
-  const [connections, setConnections] = useState<Record<string, string>>({});
-  const [activeSearchProvider, setActiveSearchProvider] = useState<
-    "anilist" | "mal" | null
-  >(null);
+  const [connections, setConnections] = useState<Record<string, any>>({});
+  const [activeSearchProvider, setActiveSearchProvider] = useState<string | null>(null);
+  const [expandedConnections, setExpandedConnections] = useState<Record<string, boolean>>({});
+  const [userConnections, setUserConnections] = useState<string[]>([]);
+
+  const CONNECTION_PROVIDERS = BASE_CONNECTION_PROVIDERS.filter(
+    (prov) => userConnections.includes(prov.key) || !!connections[prov.key]
+  );
   const [isConnectionSearchOpen, setIsConnectionSearchOpen] =
     useState<boolean>(false);
   const [connectionSearchQuery, setConnectionSearchQuery] =
@@ -139,6 +146,43 @@ export function AnimeEditDialog({
 
       if (session.status === "authenticated" && session.data) {
         try {
+          const favRes = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/favorites/status/anime/${initialMedia.id}`,
+            {
+              headers: {
+                Authorization: `Bearer ${session.data?.accessToken}`,
+              },
+            }
+          );
+          if (favRes.ok) {
+            const favData = await favRes.json();
+            setIsFavorited(favData.favorited);
+          }
+        } catch (e) {
+          console.error("Failed to fetch favorite status", e);
+        }
+
+        try {
+          const connRes = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/connections`,
+            {
+              headers: {
+                Authorization: `Bearer ${session.data?.accessToken}`,
+              },
+            }
+          );
+          if (connRes.ok) {
+            const connData = await connRes.json();
+            const activeProviders = Array.isArray(connData)
+              ? connData.map((c: any) => c.provider.toLowerCase())
+              : [];
+            setUserConnections(activeProviders);
+          }
+        } catch (e) {
+          console.error("Failed to fetch user connections", e);
+        }
+
+        try {
           const res = await fetch(
             `${process.env.NEXT_PUBLIC_API_URL}/list/anime/entry/${initialMedia.id}`,
             {
@@ -161,9 +205,31 @@ export function AnimeEditDialog({
                 data.endDate ? new Date(data.endDate * 1000) : undefined
               );
               setRewatches(data.rewatched ? data.rewatched.toString() : "0");
-              setConnections(data.connections || {});
+              const rawConnections = data.connections || {};
+              const loadedConnections: Record<string, any> = {};
+              for (const key of Object.keys(rawConnections)) {
+                const conn = rawConnections[key];
+                if (conn && typeof conn === 'object') {
+                  let connProgress: string | undefined = undefined;
+                  if (conn.progressOffset !== undefined) {
+                    connProgress = (Number(data.progress || 0) + Number(conn.progressOffset)).toString();
+                  } else if (conn.progress !== undefined) {
+                    connProgress = conn.progress.toString();
+                  }
+                  loadedConnections[key] = {
+                    id: conn.id,
+                    status: conn.status,
+                    progress: connProgress,
+                    startDate: conn.startDate ? new Date(conn.startDate * 1000) : undefined,
+                    endDate: conn.endDate ? new Date(conn.endDate * 1000) : undefined,
+                  };
+                } else {
+                  loadedConnections[key] = conn;
+                }
+              }
+              setConnections(loadedConnections);
               setUpdateConnection(
-                Object.keys(data?.connections || {}).length > 0
+                Object.keys(loadedConnections).length > 0
               );
               setHasListEntry(true);
             }
@@ -172,6 +238,61 @@ export function AnimeEditDialog({
           console.error("Failed to fetch anime entry", e);
         }
       }
+    }
+  };
+
+  const handleToggleFavorite = async () => {
+    if (session.status !== "authenticated" || !session.data) {
+      toast.error("You must be logged in to favorite items");
+      return;
+    }
+
+    setIsSubmittingFavorite(true);
+    try {
+      if (isFavorited) {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/favorites/anime/${media.id}`,
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${session.data.accessToken}`,
+            },
+          }
+        );
+        if (res.ok) {
+          setIsFavorited(false);
+          toast.success("Removed from favorites!");
+        } else {
+          toast.error("Failed to remove from favorites");
+        }
+      } else {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/favorites`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.data.accessToken}`,
+            },
+            body: JSON.stringify({
+              type: "ANIME",
+              mediaId: media.id.toString(),
+            }),
+          }
+        );
+        if (res.ok) {
+          setIsFavorited(true);
+          toast.success("Added to favorites!");
+        } else {
+          toast.error("Failed to add to favorites");
+        }
+      }
+    } catch {
+      toast.error("Failed to toggle favorite");
+    } finally {
+      setTimeout(() => {
+        setIsSubmittingFavorite(false);
+      }, 1000);
     }
   };
 
@@ -258,7 +379,22 @@ export function AnimeEditDialog({
             notes: notes || undefined,
             rewatched: rewatches ? Number(rewatches) : undefined,
             updateConnection,
-            connections,
+            connections: Object.entries(connections).reduce((acc, [key, val]) => {
+              if (val && typeof val === 'object') {
+                acc[key] = {
+                  id: val.id,
+                  status: val.status,
+                  progressOffset: val.progress !== undefined && val.progress !== "" 
+                    ? Number(val.progress) - (progress ? Number(progress) : 0) 
+                    : undefined,
+                  startDate: val.startDate ? Math.floor(val.startDate.getTime() / 1000) : undefined,
+                  endDate: val.endDate ? Math.floor(val.endDate.getTime() / 1000) : undefined,
+                };
+              } else {
+                acc[key] = val;
+              }
+              return acc;
+            }, {} as Record<string, any>),
           }),
         }
       );
@@ -313,6 +449,333 @@ export function AnimeEditDialog({
     }
   };
 
+  const toggleConnectionExpand = (provider: string) => {
+    setExpandedConnections((p) => ({
+      ...p,
+      [provider]: !p[provider],
+    }));
+  };
+
+  const toggleStatusOverride = (provider: string) => {
+    setConnections((prev) => {
+      const current = prev[provider];
+      const id = typeof current === 'object' ? current.id : current;
+      const currentDetails = typeof current === 'object' ? current : {};
+      const nextDetails = { ...currentDetails, id };
+      if (typeof current === 'object' && current.status !== undefined) {
+        delete nextDetails.status;
+      } else {
+        nextDetails.status = listStatus;
+      }
+      return { ...prev, [provider]: nextDetails };
+    });
+  };
+
+  const toggleProgressOverride = (provider: string) => {
+    setConnections((prev) => {
+      const current = prev[provider];
+      const id = typeof current === 'object' ? current.id : current;
+      const currentDetails = typeof current === 'object' ? current : {};
+      const nextDetails = { ...currentDetails, id };
+      if (typeof current === 'object' && current.progress !== undefined) {
+        delete nextDetails.progress;
+      } else {
+        nextDetails.progress = progress || "0";
+      }
+      return { ...prev, [provider]: nextDetails };
+    });
+  };
+
+  const toggleDatesOverride = (provider: string) => {
+    setConnections((prev) => {
+      const current = prev[provider];
+      const id = typeof current === 'object' ? current.id : current;
+      const currentDetails = typeof current === 'object' ? current : {};
+      const nextDetails = { ...currentDetails, id };
+      if (typeof current === 'object' && (current.startDate !== undefined || current.endDate !== undefined)) {
+        delete nextDetails.startDate;
+        delete nextDetails.endDate;
+      } else {
+        nextDetails.startDate = startDate;
+        nextDetails.endDate = finishDate;
+      }
+      return { ...prev, [provider]: nextDetails };
+    });
+  };
+
+  const handleStatusOverrideChange = (provider: string, val: string) => {
+    setConnections((prev) => {
+      const current = prev[provider];
+      const id = typeof current === 'object' ? current.id : current;
+      const currentDetails = typeof current === 'object' ? current : {};
+      return {
+        ...prev,
+        [provider]: { ...currentDetails, id, status: val },
+      };
+    });
+  };
+
+  const handleProgressOverrideChange = (provider: string, val: string) => {
+    setConnections((prev) => {
+      const current = prev[provider];
+      const id = typeof current === 'object' ? current.id : current;
+      const currentDetails = typeof current === 'object' ? current : {};
+      return {
+        ...prev,
+        [provider]: { ...currentDetails, id, progress: val },
+      };
+    });
+  };
+
+  const handleDateOverrideChange = (provider: string, field: 'startDate' | 'endDate', val: Date | undefined) => {
+    setConnections((prev) => {
+      const current = prev[provider];
+      const id = typeof current === 'object' ? current.id : current;
+      const currentDetails = typeof current === 'object' ? current : {};
+      return {
+        ...prev,
+        [provider]: { ...currentDetails, id, [field]: val },
+      };
+    });
+  };
+
+  const renderConnectionCard = (provider: string, label: string) => {
+    const conn = connections[provider];
+    const isLinked = !!conn;
+    const linkedId = conn ? (typeof conn === 'object' ? conn.id : conn) : '';
+    const isExpanded = !!expandedConnections[provider];
+
+    if (!isLinked) {
+      return (
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full h-12 border-dashed border-input hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-2 rounded-lg bg-background/50 text-foreground"
+          onClick={() => {
+            setActiveSearchProvider(provider);
+            setIsConnectionSearchOpen(true);
+          }}
+        >
+          <Plus className="w-4 h-4" />
+          Link {label}
+        </Button>
+      );
+    }
+
+    const connStatus = typeof conn === 'object' ? conn.status : undefined;
+    const connProgress = typeof conn === 'object' ? conn.progress : undefined;
+    const connStartDate = typeof conn === 'object' ? conn.startDate : undefined;
+    const connEndDate = typeof conn === 'object' ? conn.endDate : undefined;
+
+    const hasStatusOverride = typeof conn === 'object' && conn.status !== undefined;
+    const hasProgressOverride = typeof conn === 'object' && conn.progress !== undefined;
+    const hasDatesOverride = typeof conn === 'object' && (conn.startDate !== undefined || conn.endDate !== undefined);
+
+    return (
+      <div className="flex flex-col border border-border rounded-lg overflow-hidden bg-background/50 w-full transition-all duration-200 text-foreground">
+        <div 
+          className="flex items-center justify-between p-3 hover:bg-accent/40 cursor-pointer select-none transition-colors"
+          onClick={() => toggleConnectionExpand(provider)}
+        >
+          <div className="flex items-center gap-3">
+            <span className="font-semibold text-sm">{label}</span>
+            <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded-md border border-border">
+              {linkedId}
+            </span>
+            {isExpanded ? (
+              <ChevronUp className="w-4 h-4 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            )}
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full"
+            onClick={(e) => {
+              e.stopPropagation();
+              setConnections((p) => {
+                const newP = { ...p };
+                delete newP[provider];
+                return newP;
+              });
+            }}
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+
+        {isExpanded && (
+          <div className="border-t border-border p-4 bg-muted/20 flex flex-col gap-4 animate-in slide-in-from-top-2 duration-200">
+            {/* Status Override */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id={`${provider}-override-status`}
+                  checked={hasStatusOverride}
+                  onCheckedChange={() => toggleStatusOverride(provider)}
+                />
+                <Label
+                  htmlFor={`${provider}-override-status`}
+                  className="text-xs font-medium text-muted-foreground cursor-pointer"
+                >
+                  Override status
+                </Label>
+              </div>
+              {hasStatusOverride ? (
+                <Select
+                  value={connStatus || listStatus}
+                  onValueChange={(val) => handleStatusOverrideChange(provider, val)}
+                >
+                  <SelectTrigger className="w-full bg-background border-input text-foreground h-9 mt-1 px-3 text-xs font-normal hover:bg-accent hover:text-accent-foreground transition-colors">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent position="popper" className="bg-popover border-border text-popover-foreground">
+                    <SelectItem value="WATCHING">Watching</SelectItem>
+                    <SelectItem value="PLANNING">Plan to watch</SelectItem>
+                    <SelectItem value="COMPLETED">Completed</SelectItem>
+                    <SelectItem value="REPEATING">Rewatching</SelectItem>
+                    <SelectItem value="PAUSED">Paused</SelectItem>
+                    <SelectItem value="DROPPED">Dropped</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <span className="text-xs text-muted-foreground/80 pl-6 italic">
+                  Inherited: {listStatus}
+                </span>
+              )}
+            </div>
+
+            {/* Progress Override */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id={`${provider}-override-progress`}
+                  checked={hasProgressOverride}
+                  onCheckedChange={() => toggleProgressOverride(provider)}
+                />
+                <Label
+                  htmlFor={`${provider}-override-progress`}
+                  className="text-xs font-medium text-muted-foreground cursor-pointer"
+                >
+                  Override episode progress
+                </Label>
+              </div>
+              {hasProgressOverride ? (
+                <div className="flex bg-background border border-input rounded-md overflow-hidden h-9 mt-1">
+                  <Input
+                    type="number"
+                    min="0"
+                    max={media.episodes || undefined}
+                    value={connProgress !== undefined ? connProgress : ""}
+                    onChange={(e) => handleProgressOverrideChange(provider, e.target.value)}
+                    className="border-0 bg-transparent text-foreground focus-visible:ring-0 h-full w-full px-3 text-sm"
+                  />
+                </div>
+              ) : (
+                <span className="text-xs text-muted-foreground/80 pl-6 italic">
+                  Inherited: {progress || "0"}
+                </span>
+              )}
+            </div>
+
+            {/* Dates Override */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id={`${provider}-override-dates`}
+                  checked={hasDatesOverride}
+                  onCheckedChange={() => toggleDatesOverride(provider)}
+                />
+                <Label
+                  htmlFor={`${provider}-override-dates`}
+                  className="text-xs font-medium text-muted-foreground cursor-pointer"
+                >
+                  Override dates
+                </Label>
+              </div>
+              {hasDatesOverride ? (
+                <div className="grid grid-cols-2 gap-3 mt-1">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Start Date</span>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal bg-background border-input text-foreground h-9 hover:bg-accent hover:text-accent-foreground text-xs",
+                            !connStartDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-1 h-3.5 w-3.5" />
+                          {connStartDate ? (
+                            format(connStartDate, "yyyy-MM-dd")
+                          ) : (
+                            <span>Pick date</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        align="start"
+                        className="w-auto p-0 bg-popover border-border z-60"
+                      >
+                        <Calendar
+                          mode="single"
+                          selected={connStartDate}
+                          onSelect={(date) => handleDateOverrideChange(provider, 'startDate', date)}
+                          initialFocus
+                          className="bg-popover text-popover-foreground"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Finish Date</span>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal bg-background border-input text-foreground h-9 hover:bg-accent hover:text-accent-foreground text-xs",
+                            !connEndDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-1 h-3.5 w-3.5" />
+                          {connEndDate ? (
+                            format(connEndDate, "yyyy-MM-dd")
+                          ) : (
+                            <span>Pick date</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        align="start"
+                        className="w-auto p-0 bg-popover border-border z-60"
+                      >
+                        <Calendar
+                          mode="single"
+                          selected={connEndDate}
+                          onSelect={(date) => handleDateOverrideChange(provider, 'endDate', date)}
+                          initialFocus
+                          className="bg-popover text-popover-foreground"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </div>
+              ) : (
+                <span className="text-xs text-muted-foreground/80 pl-6 italic">
+                  Inherited: {startDate ? format(startDate, "yyyy-MM-dd") : "No Start Date"} - {finishDate ? format(finishDate, "yyyy-MM-dd") : "No Finish Date"}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const dialogContent = (
     <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden bg-popover border-border text-popover-foreground [&>button]:text-foreground [&>button]:z-60 [&>button]:hover:text-muted-foreground">
       <DialogTitle className="sr-only">
@@ -345,11 +808,18 @@ export function AnimeEditDialog({
             </h2>
           </div>
           <div className="pb-1 flex gap-4 items-center">
-            {hasListEntry && (
-              <button className="text-muted-foreground hover:text-foreground transition-colors">
-                <Heart className="w-6 h-6 fill-current" />
-              </button>
-            )}
+            <button
+              onClick={handleToggleFavorite}
+              disabled={isSubmittingFavorite}
+              className={cn(
+                "transition-colors",
+                isFavorited
+                  ? "text-red-500 hover:text-red-600"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Heart className={cn("w-6 h-6", isFavorited && "fill-current")} />
+            </button>
             <Button
               className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md font-medium px-6"
               onClick={handleSave}
@@ -381,10 +851,10 @@ export function AnimeEditDialog({
                   setStartDate(new Date());
               }}
             >
-              <SelectTrigger className="bg-background border-input text-foreground h-10">
+              <SelectTrigger className="w-full bg-background border-input text-foreground h-10 px-3 text-sm font-normal hover:bg-accent hover:text-accent-foreground transition-colors">
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
-              <SelectContent className="bg-popover border-border text-popover-foreground">
+              <SelectContent position="popper" className="bg-popover border-border text-popover-foreground">
                 <SelectItem value="WATCHING">Watching</SelectItem>
                 <SelectItem value="PLANNING">Plan to watch</SelectItem>
                 <SelectItem value="COMPLETED">Completed</SelectItem>
@@ -563,73 +1033,18 @@ export function AnimeEditDialog({
             </div>
 
             {updateConnection && (
-              <div className="flex gap-4 items-center pl-6">
-                <div className="flex items-center">
-                  <Button
-                    type="button"
-                    variant={connections["anilist"] ? "default" : "outline"}
-                    size="sm"
-                    className={connections["anilist"] ? "rounded-r-none" : ""}
-                    onClick={() => {
-                      setActiveSearchProvider("anilist");
-                      setIsConnectionSearchOpen(true);
-                    }}
-                  >
-                    AniList{" "}
-                    {connections["anilist"]
-                      ? `(${connections["anilist"]})`
-                      : ""}
-                  </Button>
-                  {connections["anilist"] && (
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      className="rounded-l-none px-2 h-9"
-                      onClick={() => {
-                        setConnections((p) => {
-                          const newP = { ...p };
-                          delete newP["anilist"];
-                          return newP;
-                        });
-                      }}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-                <div className="flex items-center">
-                  <Button
-                    type="button"
-                    variant={connections["mal"] ? "default" : "outline"}
-                    size="sm"
-                    className={connections["mal"] ? "rounded-r-none" : ""}
-                    onClick={() => {
-                      setActiveSearchProvider("mal");
-                      setIsConnectionSearchOpen(true);
-                    }}
-                  >
-                    MyAnimeList{" "}
-                    {connections["mal"] ? `(${connections["mal"]})` : ""}
-                  </Button>
-                  {connections["mal"] && (
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      className="rounded-l-none px-2 h-9"
-                      onClick={() => {
-                        setConnections((p) => {
-                          const newP = { ...p };
-                          delete newP["mal"];
-                          return newP;
-                        });
-                      }}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-1 w-full">
+                {CONNECTION_PROVIDERS.length > 0 ? (
+                  CONNECTION_PROVIDERS.map((prov) => (
+                    <div key={prov.key} className="w-full">
+                      {renderConnectionCard(prov.key, prov.name)}
+                    </div>
+                  ))
+                ) : (
+                  <div className="col-span-2 text-center py-4 text-xs text-muted-foreground bg-muted/20 border border-dashed border-border rounded-lg">
+                    No active connections found. Please connect your accounts in settings.
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -644,16 +1059,14 @@ export function AnimeEditDialog({
             <DialogContent className="sm:max-w-[500px]">
               <DialogTitle>
                 Search on{" "}
-                {activeSearchProvider === "anilist"
-                  ? "AniList"
-                  : "MyAnimeList"}
+                {CONNECTION_PROVIDERS.find((p) => p.key === activeSearchProvider)?.name || activeSearchProvider}
               </DialogTitle>
               <DialogDescription className="sr-only">
                 Search and select a media item to link connection IDs.
               </DialogDescription>
               <div className="flex gap-2">
                 <Input
-                  placeholder="Search anime..."
+                  placeholder={`Search ${CONNECTION_PROVIDERS.find((p) => p.key === activeSearchProvider)?.name || "anime"}...`}
                   value={connectionSearchQuery}
                   onChange={(e) => setConnectionSearchQuery(e.target.value)}
                   onKeyDown={(e) => {
