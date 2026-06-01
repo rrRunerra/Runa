@@ -26,6 +26,7 @@ services:
       context: .
       dockerfile: apps/backend/Dockerfile
     container_name: runa-backend
+    user: "0:0"
     ports:
       - "${NEST_PORT}:${NEST_PORT}"
     env_file:
