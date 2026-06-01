@@ -11,7 +11,7 @@ allowBuilds:
   prisma: true
   sharp: true
   unrs-resolver: true
-  yt-dlp-exec: true
+  yt-dlp-exec: false
 
 overrides:
   "got@<11.8.5": ">=11.8.5"

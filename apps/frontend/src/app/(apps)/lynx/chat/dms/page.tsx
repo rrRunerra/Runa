@@ -7,6 +7,8 @@ import { PageHeader } from "@/components/lynx/LynxPageHeader";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 
+export const dynamic = "force-dynamic";
+
 interface DMChannel {
   id: string;
   recipient: {

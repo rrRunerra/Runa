@@ -1,8 +1,8 @@
 # Stage 1: Base
 FROM node:22-alpine AS base
 ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
+ENV PATH="$PNPM_HOME:$PNPM_HOME/bin:$PATH"
+RUN corepack enable && pnpm --version
 RUN apk add --no-cache libc6-compat
 RUN apk update
 
@@ -27,7 +27,7 @@ COPY --from=installer /app .
 COPY --from=pruner /app/out/full/ .
 COPY turbo.json turbo.json
 COPY tsconfig.json tsconfig.json
-RUN cd packages/database && pnpm db:generate
+RUN cd packages/database && pnpm exec prisma generate
 RUN pnpm turbo run build --filter=backend
 
 # Stage 5: Runner

@@ -18,67 +18,12 @@ Runa/
 └── turbo.json          # Turborepo configuration
 ```
 
-## Build/Lint/Test Commands
-
-### Root Commands
-
-```bash
-pnpm install            # Install all dependencies
-pnpm build             # Build all apps/packages
-pnpm dev               # Run all apps in development
-pnpm lint              # Lint all apps
-pnpm format            # Format all code with Prettier
-pnpm check-types       # Type-check all projects
-```
-
-### Backend (NestJS)
-
-```bash
-cd apps/backend
-pnpm dev               # Start with hot reload
-pnpm build             # Production build
-pnpm start             # Start production server
-pnpm lint              # ESLint with auto-fix
-pnpm format            # Prettier format
-```
-
-### Testing Backend
-
-```bash
-cd apps/backend
-
-pnpm test              # Run all unit tests
-pnpm test -- <name>   # Run single test file (e.g., pnpm test -- users.service)
-pnpm test:watch       # Watch mode
-pnpm test:cov         # Coverage report
-pnpm test:e2e         # End-to-end tests
-```
-
-### Frontend (Next.js)
-
-```bash
-cd apps/frontend
-pnpm dev               # Start dev server (port 3000)
-pnpm build             # Production build
-pnpm lint              # ESLint check
-```
-
-### Database
-
-```bash
-cd packages/database
-pnpm build             # Compile TypeScript
-pnpm db:generate       # Generate Prisma client
-pnpm db:push           # Push schema to database
-```
-
 ## Code Style Guidelines
 
 ### Formatting
 
 - **Indent**: 2 spaces
 - **Line length**: Let formatters handle it
-- **Run `pnpm format`** before committing
 
 ### TypeScript Conventions
 
