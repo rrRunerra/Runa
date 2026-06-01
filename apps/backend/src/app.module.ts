@@ -13,6 +13,7 @@ import { ConnectionModule } from './modules/connection/connection.module';
 import { TestModule } from './modules/test/test.module';
 import { ListModule } from './modules/list/list.module';
 import { FavoriteModule } from './modules/favorite/favorite.module';
+import { MediaModule } from './modules/media/media.module';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 @Module({
@@ -36,6 +37,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
     TestModule,
     ListModule,
     FavoriteModule,
+    MediaModule,
     ThrottlerModule.forRoot({
       throttlers: [
         {

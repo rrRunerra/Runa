@@ -55,7 +55,7 @@ export const MediaListRow: React.FC<MediaListRowProps> = ({
         <Link
           href={`${baseUrl}/${entry.id}`}
           prefetch={false}
-          className="flex-1 flex cursor-pointer items-center justify-between gap-4 py-1.5 px-2 transition-colors block"
+          className="flex-1 cursor-pointer items-center justify-between gap-4 py-1.5 px-2 transition-colors block"
         >
           <div className="flex items-center gap-3">
             <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-muted">

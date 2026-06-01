@@ -7,6 +7,7 @@ import {
   LogIn,
   LogOut,
   Palette,
+  Settings,
 } from "lucide-react";
 import Link from "next/link";
 import { signIn, signOut, useSession } from "next-auth/react";
@@ -51,6 +52,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { AppearanceDialog } from "@/components/AppearanceDialog";
+import { SettingsDialog } from "@/components/SettingsDialog";
 import { usePathname } from "next/navigation";
 
 interface AppSideBarProps extends React.ComponentProps<typeof Sidebar> {
@@ -95,6 +97,7 @@ export default function AppSideBar({
 
   const [activeApp, setActiveApp] = useState(apps[0]);
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Sync the passed-in navConfig into the navigation context
   useEffect(() => {
@@ -111,6 +114,7 @@ export default function AppSideBar({
     profileHref ?? `/polaris/user/${session?.user?.username}`;
 
   if (!activeApp) return null;
+
 
   return (
     <Sidebar variant="floating" {...props}>
@@ -291,8 +295,8 @@ export default function AppSideBar({
                     size="lg"
                     className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                   >
-                    <Avatar className="h-9 w-9 rounded-md border border-border/50 shadow-sm">
-                      <AvatarImage src={session.user?.avatarUrl ?? ""} />
+                    <Avatar className="h-9 w-9  border border-border/50 shadow-sm">
+                      <AvatarImage src={session.user?.avatarUrl ? process.env.NEXT_PUBLIC_API_URL + session.user?.avatarUrl : ""} />
                       <AvatarFallback className="rounded-md bg-primary/10 text-primary">
                         {session.user?.username?.charAt(0).toUpperCase()}
                       </AvatarFallback>
@@ -317,9 +321,9 @@ export default function AppSideBar({
                   <DropdownMenuLabel className="p-0 font-normal">
                     <Link href={resolvedProfileHref}>
                       <div className="flex items-center gap-3 px-2 py-2 text-left text-sm bg-sidebar-accent/50 rounded-md mb-2">
-                        <Avatar className="h-9 w-9 rounded-md border border-border/50">
+                        <Avatar className="h-9 w-9 border border-border/50">
                           <AvatarImage
-                            src={session.user?.avatarUrl ?? ""}
+                            src={session.user?.avatarUrl ? process.env.NEXT_PUBLIC_API_URL + session.user?.avatarUrl : ""}
                             alt={session.user?.username}
                           />
                           <AvatarFallback className="rounded-md bg-primary/10 text-primary">
@@ -350,9 +354,19 @@ export default function AppSideBar({
                       <Palette className="size-4" />
                       Appearance
                     </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="cursor-pointer gap-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200 p-2 rounded-md"
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        setIsSettingsOpen(true);
+                      }}
+                    >
+                      <Settings className="size-4" />
+                      Settings
+                    </DropdownMenuItem>
                   </DropdownMenuGroup>
 
-                  <DropdownMenuGroup>
+                  {/* <DropdownMenuGroup>
                     <DropdownMenuItem
                       className="cursor-pointer gap-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200 p-2 rounded-md"
                       asChild
@@ -363,7 +377,7 @@ export default function AppSideBar({
                       </Link>
                     </DropdownMenuItem>
                     {extraFooterItems}
-                  </DropdownMenuGroup>
+                  </DropdownMenuGroup> */}
 
                   <DropdownMenuSeparator className="bg-border/50" />
                   <DropdownMenuItem
@@ -398,6 +412,10 @@ export default function AppSideBar({
       <AppearanceDialog
         open={isAppearanceOpen}
         onOpenChange={setIsAppearanceOpen}
+      />
+      <SettingsDialog
+        open={isSettingsOpen}
+        onOpenChange={setIsSettingsOpen}
       />
     </Sidebar>
   );

@@ -3,10 +3,12 @@ import {
   ConflictException,
   Injectable,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../providers/database/prisma.service';
 import type { User } from '@runa/database';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 import bcrypt from 'bcrypt';
 
 const RESERVED_KEYWORDS = new Set([
@@ -86,6 +88,76 @@ export class UserService {
   async findByUsername(username: string): Promise<User | null> {
     return await this.prisma.client.user.findUnique({
       where: { username: username.toLowerCase() },
+    });
+  }
+
+  async update(userId: string, data: UpdateUserDto): Promise<User> {
+    const user = await this.prisma.client.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    const updateData: any = {};
+    let passwordOrEmailChanged = false;
+
+    // Email change check
+    if (data.email !== undefined && data.email.toLowerCase() !== user.email) {
+      passwordOrEmailChanged = true;
+
+      // Ensure the email is not already taken
+      const existingEmail = await this.prisma.client.user.findFirst({
+        where: { email: data.email.toLowerCase() },
+      });
+      if (existingEmail && existingEmail.id !== userId) {
+        throw new ConflictException('Email is already taken.');
+      }
+      updateData.email = data.email.toLowerCase();
+    }
+
+    // Password change check
+    if (data.newPassword !== undefined) {
+      passwordOrEmailChanged = true;
+    }
+
+    // Enforce password confirmation for password or email changes
+    if (passwordOrEmailChanged) {
+      if (!data.currentPassword) {
+        throw new BadRequestException(
+          'Current password is required to change email or password.',
+        );
+      }
+      const isCurrentPasswordValid = await bcrypt.compare(
+        data.currentPassword,
+        user.passwordHash,
+      );
+      if (!isCurrentPasswordValid) {
+        throw new BadRequestException('Invalid current password.');
+      }
+
+      if (data.newPassword !== undefined) {
+        updateData.passwordHash = await bcrypt.hash(data.newPassword, 10);
+        updateData.passwordChangedAt = new Date();
+      }
+    }
+
+    if (data.displayName !== undefined) {
+      updateData.displayName = data.displayName;
+    }
+
+    if (data.avatarUrl !== undefined) {
+      updateData.avatarUrl = data.avatarUrl;
+    }
+
+    if (data.bannerUrl !== undefined) {
+      updateData.bannerUrl = data.bannerUrl;
+    }
+
+    return await this.prisma.client.user.update({
+      where: { id: userId },
+      data: updateData,
     });
   }
 }

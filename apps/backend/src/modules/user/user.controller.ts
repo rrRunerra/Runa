@@ -6,12 +6,15 @@ import {
   Get,
   Param,
   NotFoundException,
+  Put,
+  Req,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { DualAuthGuard } from '../../common/guards/auth.guard';
 import { User } from '@runa/database';
 import { Public } from '../../common/decorators/public.decorator';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { Throttle } from '@nestjs/throttler';
 
 @Controller('user')
@@ -39,6 +42,13 @@ export class UserController {
       username: user.username,
       displayName: user.displayName,
       avatarUrl: user.avatarUrl,
+      bannerUrl: user.bannerUrl,
     };
+  }
+
+  @Put('update')
+  async update(@Req() req: any, @Body() data: UpdateUserDto) {
+    const userId = req.user.id;
+    return this.usersService.update(userId, data);
   }
 }

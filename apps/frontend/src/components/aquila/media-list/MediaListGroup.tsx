@@ -45,7 +45,7 @@ export const MediaListGroup: React.FC<MediaListGroupProps> = ({
 
       {displayType === "list" && (
         <div className="flex flex-col gap-1 rounded-lg bg-card/50 p-2 border border-border">
-          <div className="flex px-4 py-2 text-xs font-semibold text-muted-foreground hidden sm:flex">
+          <div className="px-4 py-2 text-xs font-semibold text-muted-foreground hidden sm:flex">
             <span className="flex-1">Title</span>
             <div className="flex w-1/4 justify-end gap-6 pr-2">
               <span className="w-8 text-right">Score</span>
@@ -66,7 +66,7 @@ export const MediaListGroup: React.FC<MediaListGroupProps> = ({
 
       {displayType === "compact" && (
         <div className="flex flex-col gap-1 rounded-lg bg-card/50 p-2 border border-border">
-          <div className="flex px-4 py-2 text-xs font-semibold text-muted-foreground hidden sm:flex">
+          <div className="px-4 py-2 text-xs font-semibold text-muted-foreground hidden sm:flex">
             <span className="flex-1">Title</span>
             <div className="flex w-1/4 justify-end gap-6 pr-2">
               <span className="w-8 text-right">Score</span>

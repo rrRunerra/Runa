@@ -184,7 +184,7 @@ export default function Page() {
         <div className="flex flex-col gap-8">
           <div className="glass-card relative overflow-hidden rounded-3xl border border-white/10 bg-white/5 backdrop-blur-2xl p-8 shadow-2xl transition-all duration-300 hover:shadow-primary/5">
             {/* Subtle inner glow */}
-            <div className="absolute -top-[50%] -left-[50%] w-full h-full bg-primary/5 blur-[100px] pointer-events-none" />
+            <div className="absolute top-[-50%] left-[-50%] w-full h-full bg-primary/5 blur-[100px] pointer-events-none" />
 
             <div className="relative flex flex-col gap-1 mb-8">
               <h2 className="text-xl font-semibold text-foreground">

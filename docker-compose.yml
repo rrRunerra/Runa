@@ -30,7 +30,14 @@ services:
       - "${NEST_PORT}:${NEST_PORT}"
     env_file:
       - .env
+    environment:
+      - UPLOAD_DIR=/app/uploads
+    volumes:
+      - runa-backend-uploads:/app/uploads
     restart: always
+
+volumes:
+  runa-backend-uploads:
 
   lynx-bot:
     build:

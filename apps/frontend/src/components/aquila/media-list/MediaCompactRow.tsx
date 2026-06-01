@@ -54,7 +54,7 @@ export const MediaCompactRow: React.FC<MediaCompactRowProps> = ({
         <Link
           href={`${baseUrl}/${entry.id}`}
           prefetch={false}
-          className="flex-1 flex cursor-pointer items-center justify-between gap-4 py-2 px-2 transition-colors block"
+          className="flex-1 flex cursor-pointer items-center justify-between gap-4 py-2 px-2 transition-colors"
         >
           <div className="flex items-center gap-3">
             <span className="font-medium text-sm text-foreground group-hover:text-primary transition-colors">
