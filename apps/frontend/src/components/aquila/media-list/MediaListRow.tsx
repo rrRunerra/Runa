@@ -55,7 +55,7 @@ export const MediaListRow: React.FC<MediaListRowProps> = ({
         <Link
           href={`${baseUrl}/${entry.id}`}
           prefetch={false}
-          className="flex-1 cursor-pointer items-center justify-between gap-4 py-1.5 px-2 transition-colors block"
+          className="flex-1 flex cursor-pointer items-center justify-between gap-4 py-1.5 px-2 transition-colors"
         >
           <div className="flex items-center gap-3">
             <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-muted">
@@ -70,7 +70,7 @@ export const MediaListRow: React.FC<MediaListRowProps> = ({
               {entry.title}
             </span>
           </div>
-          <div className="flex items-center gap-6 text-sm text-muted-foreground w-1/4 justify-end">
+          <div className="flex items-center gap-4 md:gap-6 text-sm text-muted-foreground w-[100px] md:w-[120px] justify-end shrink-0">
             <span className="w-8 text-right font-medium">{entry.score}</span>
             <span className="w-12 text-right">{entry.progress}</span>
           </div>
@@ -81,7 +81,7 @@ export const MediaListRow: React.FC<MediaListRowProps> = ({
             <Button
               size="icon"
               variant="ghost"
-              className="h-8 w-8 rounded-lg text-muted-foreground hover:text-primary opacity-0 group-hover/row:opacity-100 transition-all cursor-pointer flex items-center justify-center p-0"
+              className="h-8 w-8 rounded-lg text-muted-foreground hover:text-primary opacity-100 lg:opacity-0 lg:group-hover/row:opacity-100 transition-all cursor-pointer flex items-center justify-center p-0"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();

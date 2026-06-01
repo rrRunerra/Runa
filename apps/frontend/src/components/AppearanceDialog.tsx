@@ -65,25 +65,25 @@ export function AppearanceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[90vw] md:max-w-xl lg:max-w-2xl bg-card border border-border shadow-2xl p-0 gap-0 overflow-hidden rounded-2xl">
-        <DialogHeader className="p-6 pb-4 border-b border-border/50">
-          <DialogTitle className="text-lg font-bold">Appearance</DialogTitle>
+      <DialogContent className="max-w-[90vw] sm:max-w-md md:max-w-xl lg:max-w-2xl bg-card border border-border shadow-2xl p-0 gap-0 overflow-hidden rounded-2xl">
+        <DialogHeader className="p-4 sm:p-6 pb-3 sm:pb-4 border-b border-border/50">
+          <DialogTitle className="text-base sm:text-lg font-bold">Appearance</DialogTitle>
           <DialogDescription className="sr-only">
             Customize the interface theme
           </DialogDescription>
         </DialogHeader>
 
-        <div className="p-6">
-          <div className="space-y-6">
+        <div className="p-4 sm:p-6">
+          <div className="space-y-4 sm:space-y-6">
             <div>
-              <h3 className="text-sm font-semibold text-foreground">
+              <h3 className="text-xs sm:text-sm font-semibold text-foreground">
                 Interface theme
               </h3>
-              <p className="text-sm text-muted-foreground mt-0.5">
+              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
                 Customize your workspace theme
               </p>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 mt-3 sm:mt-4">
                 {THEMES.map((t) => {
                   const currentColors = isDark ? t.colors.dark : t.colors.light;
                   return (
@@ -103,11 +103,11 @@ export function AppearanceDialog({
 
             {/* Dark Mode Toggle */}
             <div className="flex items-center justify-between">
-              <div className="space-y-1 pr-4">
-                <h3 className="text-sm font-semibold text-foreground">
+              <div className="space-y-0.5 sm:space-y-1 pr-4">
+                <h3 className="text-xs sm:text-sm font-semibold text-foreground">
                   Dark Mode
                 </h3>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-xs sm:text-sm text-muted-foreground">
                   Toggle between light and dark variants of your selected theme
                 </p>
               </div>
@@ -121,17 +121,17 @@ export function AppearanceDialog({
         </div>
 
         {/* Footer actions */}
-        <div className="px-6 py-5 border-t border-border/50 flex justify-end gap-3 bg-muted/30 rounded-bl-2xl rounded-br-2xl overflow-hidden">
+        <div className="px-4 sm:px-6 py-4 sm:py-5 border-t border-border/50 flex justify-end gap-3 bg-muted/30 rounded-bl-2xl rounded-br-2xl overflow-hidden">
           <Button
             variant="ghost"
             onClick={() => onOpenChange(false)}
-            className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg"
+            className="text-xs sm:text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg h-9"
           >
             Cancel
           </Button>
           <Button
             onClick={handleSave}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg px-5 shadow-md"
+            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg px-4 sm:px-5 shadow-md text-xs sm:text-sm h-9"
           >
             Save preferences
           </Button>
@@ -156,42 +156,42 @@ function ThemeButton({
     <button
       type="button"
       onClick={onClick}
-      className={`group relative rounded-xl border-2 p-3 text-left transition-all hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 active:scale-[0.98] flex flex-col items-center ${
+      className={`group relative rounded-xl border-2 p-2 sm:p-3 text-left transition-all hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 active:scale-[0.98] flex flex-col items-center ${
         isSelected ? "border-primary bg-primary/5" : "border-border/50"
       }`}
     >
       <div
-        className="w-full aspect-4/5 sm:aspect-4/3 rounded-lg border border-border/20 shadow-sm mb-3 overflow-hidden flex flex-col transition-all duration-300 group-hover:shadow-md"
+        className="w-full aspect-4/3 rounded-lg border border-border/20 shadow-sm mb-2 sm:mb-3 overflow-hidden flex flex-col transition-all duration-300 group-hover:shadow-md"
         style={{ backgroundColor: colors.background }}
       >
         {/* Mockup header */}
         <div
-          className="h-5 sm:h-6 border-b border-white/5 flex items-center px-2.5 gap-1.5"
+          className="h-4 sm:h-5 border-b border-white/5 flex items-center px-2 gap-1"
           style={{ backgroundColor: colors.sidebar }}
         >
-          <div className="size-1.5 rounded-full bg-red-400" />
-          <div className="size-1.5 rounded-full bg-yellow-400" />
-          <div className="size-1.5 rounded-full bg-green-400" />
+          <div className="size-1 sm:size-1.5 rounded-full bg-red-400" />
+          <div className="size-1 sm:size-1.5 rounded-full bg-yellow-400" />
+          <div className="size-1 sm:size-1.5 rounded-full bg-green-400" />
         </div>
         {/* Mockup body */}
-        <div className="flex-1 flex flex-col justify-center items-center gap-2 sm:gap-3 p-2">
-          <div className="flex items-center gap-2 w-full max-w-[85%]">
+        <div className="flex-1 flex flex-col justify-center items-center gap-1 sm:gap-2 p-1.5 sm:p-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 w-full max-w-[85%]">
             <div
-              className="size-3 sm:size-4 rounded-full shrink-0"
+              className="size-2 sm:size-3 rounded-full shrink-0"
               style={{ backgroundColor: colors.primary }}
             />
             <div
-              className="h-2.5 sm:h-3.5 flex-1 rounded-sm"
+              className="h-1.5 sm:h-2 flex-1 rounded-sm"
               style={{ backgroundColor: colors.primary }}
             />
           </div>
-          <div className="flex items-center gap-2 w-full max-w-[85%]">
+          <div className="flex items-center gap-1.5 sm:gap-2 w-full max-w-[85%]">
             <div
-              className="size-3 sm:size-4 rounded-full shrink-0"
+              className="size-2 sm:size-3 rounded-full shrink-0"
               style={{ backgroundColor: colors.primary }}
             />
             <div
-              className="h-2.5 sm:h-3.5 flex-1 rounded-sm"
+              className="h-1.5 sm:h-2 flex-1 rounded-sm"
               style={{ backgroundColor: colors.accent }}
             />
           </div>
@@ -199,19 +199,15 @@ function ThemeButton({
       </div>
 
       <div className="w-full flex items-center justify-between px-0.5">
-        <span className="text-xs sm:text-sm font-medium leading-tight">
-          {themeConfig.name.split(" ").map((word, i) => (
-            <span key={i} className="block">
-              {word}
-            </span>
-          ))}
+        <span className="text-[10px] sm:text-xs font-semibold leading-tight truncate mr-2">
+          {themeConfig.name}
         </span>
         {isSelected ? (
-          <div className="flex size-4 sm:size-5 items-center justify-center rounded-full bg-transparent border-2 border-primary">
-            <div className="size-2 sm:size-2.5 rounded-full bg-primary" />
+          <div className="flex size-3.5 sm:size-4 items-center justify-center rounded-full bg-transparent border-2 border-primary shrink-0">
+            <div className="size-1.5 sm:size-2 rounded-full bg-primary" />
           </div>
         ) : (
-          <div className="size-4 sm:size-5 rounded-full border-2 border-muted-foreground/30" />
+          <div className="size-3.5 sm:size-4 rounded-full border-2 border-muted-foreground/30 shrink-0" />
         )}
       </div>
     </button>

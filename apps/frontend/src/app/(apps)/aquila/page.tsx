@@ -271,7 +271,7 @@ function MediaSection({
       </div>
 
       {/* Grid with responsive columns matching MediaListGroup */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-[repeat(auto-fill,minmax(160px,1fr))]">
+      <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-[repeat(auto-fill,minmax(140px,1fr))]">
         {items.map((item: MediaItem) => (
           <MediaCard
             key={`${item.type}-${item.id}`}
@@ -319,16 +319,16 @@ function MediaCard({
     <>
       <Link
         href={href}
-        className="group relative aspect-2/3 rounded-2xl overflow-hidden border border-border bg-card shadow-sm hover:shadow-2xl hover:border-primary/50 transition-all duration-500 cursor-pointer block"
+        className="group relative aspect-2/3 rounded-2xl overflow-hidden border border-border bg-card shadow-sm lg:hover:shadow-2xl lg:hover:border-primary/50 transition-all duration-500 cursor-pointer block"
       >
         <div className="absolute inset-0 z-0">
           <img
             src={item.image}
             alt={item.title}
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+            className="w-full h-full object-cover transition-transform duration-700 lg:group-hover:scale-110"
           />
           {/* Subtle Bottom Fade for Progress Bar visibility */}
-          <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent opacity-40 group-hover:opacity-80 transition-opacity duration-500" />
+          <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent opacity-40 lg:group-hover:opacity-80 transition-opacity duration-500" />
         </div>
 
         {/* Progress Bar (Always visible but subtle) */}
@@ -342,7 +342,7 @@ function MediaCard({
         </div>
 
         {/* Hover Content */}
-        <div className="absolute inset-0 z-20 flex flex-col justify-between p-4 opacity-0 group-hover:opacity-100 transition-all duration-500 bg-black/40 backdrop-blur-[2px]">
+        <div className="absolute inset-0 z-20 flex flex-col justify-between p-2.5 sm:p-4 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-500 bg-black/50 backdrop-blur-none lg:bg-black/40 lg:backdrop-blur-[2px]">
           <div className="flex justify-between items-start w-full">
             <Badge className="bg-primary/20 backdrop-blur-md border-primary/20 text-primary-foreground text-[10px] font-bold">
               {item.format}
@@ -350,7 +350,7 @@ function MediaCard({
             <Button
               size="icon"
               variant="ghost"
-              className="h-8 w-8 rounded-lg bg-black/40 hover:bg-black/60 border border-white/10 hover:border-primary/30 text-white/80 hover:text-primary transition-all cursor-pointer pointer-events-auto flex items-center justify-center p-0"
+              className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-black/40 hover:bg-black/60 border border-white/10 hover:border-primary/30 text-white/80 hover:text-primary transition-all cursor-pointer pointer-events-auto flex items-center justify-center p-0"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -361,13 +361,27 @@ function MediaCard({
             </Button>
           </div>
 
-          {/* Center Increment Button */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          {/* Bottom Info & Increment Button */}
+          <div className="flex items-end justify-between gap-1.5 w-full transform translate-y-0 lg:translate-y-4 lg:group-hover:translate-y-0 transition-transform duration-500">
+            <div className="flex-1 min-w-0 space-y-0.5 sm:space-y-1">
+              <h3 className="font-bold text-xs sm:text-sm text-white leading-tight line-clamp-1">
+                {item.title}
+              </h3>
+              <p className="text-[9px] sm:text-[10px] font-bold text-white/70 uppercase tracking-widest">
+                {item.type === "tv"
+                  ? item.meta?.season
+                    ? `S${item.meta.season} E${item.meta.episode}`
+                    : "In Progress"
+                  : `${item.type === "manga" ? "Ch" : "Ep"} ${item.progress}`}
+                {item.episodes ? ` / ${item.episodes}` : ""}
+              </p>
+            </div>
+            
             <Button
-              size="lg"
+              size="icon"
               className={cn(
-                "h-14 w-14 rounded-full p-0 shadow-2xl scale-50 group-hover:scale-100 transition-all duration-500 pointer-events-auto cursor-pointer",
-                isUpdating ? "bg-primary/50 cursor-not-allowed" : "bg-primary hover:scale-110",
+                "h-7 w-7 sm:h-8 sm:w-8 rounded-full p-0 shadow-lg shrink-0 pointer-events-auto cursor-pointer hover:scale-105 transition-all duration-300",
+                isUpdating ? "bg-primary/50 cursor-not-allowed" : "bg-primary, hover:scale-110",
               )}
               onClick={(e) => {
                 e.preventDefault();
@@ -377,26 +391,11 @@ function MediaCard({
               disabled={isUpdating}
             >
               {isUpdating ? (
-                <Loader2 className="w-6 h-6 animate-spin" />
+                <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
               ) : (
-                <Plus className="w-8 h-8" />
+                <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
               )}
             </Button>
-          </div>
-
-          {/* Bottom Info */}
-          <div className="space-y-1 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
-            <h3 className="font-bold text-sm text-white leading-tight line-clamp-1">
-              {item.title}
-            </h3>
-            <p className="text-[10px] font-bold text-white/70 uppercase tracking-widest">
-              {item.type === "tv"
-                ? item.meta?.season
-                  ? `S${item.meta.season} E${item.meta.episode}`
-                  : "In Progress"
-                : `${item.type === "manga" ? "Ch" : "Ep"} ${item.progress}`}
-              {item.episodes ? ` / ${item.episodes}` : ""}
-            </p>
           </div>
         </div>
       </Link>

@@ -181,102 +181,128 @@ export default function MovieDetailsPage() {
         ) : (
           <div className="w-full h-full bg-muted" />
         )}
+
+        {/* TheTVDB Attribution Watermark */}
+        <div className="absolute inset-x-0 top-0 z-20 pointer-events-none">
+          <div className="container mx-auto px-4 pt-4 flex justify-end items-start pointer-events-auto">
+            <div className="flex flex-col gap-1 bg-black/40 backdrop-blur-xs p-2 rounded-lg border border-white/10 shadow-md">
+              <span className="text-[8px] text-white/60 uppercase font-bold tracking-widest leading-none">
+                Data Provided By
+              </span>
+              <Link
+                href="https://thetvdb.com"
+                target="_blank"
+                className="opacity-80 hover:opacity-100 transition-opacity"
+              >
+                <Image
+                  src="https://thetvdb.com/images/logo.png"
+                  alt="TheTVDB Logo"
+                  width={80}
+                  height={20}
+                  style={{ width: "80px", height: "auto" }}
+                />
+              </Link>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="container mx-auto px-4 -mt-32 relative z-20">
         <div className="flex flex-col md:flex-row gap-8">
           {/* Left Column - Poster & Actions */}
           <div className="shrink-0 w-full md:w-[280px] flex flex-col gap-4">
-            <div className="aspect-2/3 w-full rounded-xl overflow-hidden shadow-2xl border-4 border-background">
-              <img
-                src={movie.coverImage.large}
-                alt={movie.title?.romaji}
-                className="w-full h-full object-cover"
-              />
-            </div>
+            <div className="flex flex-row md:flex-col gap-4 items-end md:items-stretch">
+              <div className="aspect-2/3 w-32 sm:w-40 md:w-full rounded-xl overflow-hidden shadow-2xl border-4 border-background shrink-0">
+                <img
+                  src={movie.coverImage.large}
+                  alt={movie.title?.romaji}
+                  className="w-full h-full object-cover"
+                />
+              </div>
 
-            <div className="flex flex-col gap-2">
-              {session.data?.user && (
-                <>
-                  {!hasListEntry ? (
-                    <>
-                      <Button
-                        className="w-full cursor-pointer hover:bg-primary hover:border-primary"
-                        size="lg"
-                        onClick={async () => {
-                          try {
-                            const res = await fetch(
-                              `${process.env.NEXT_PUBLIC_API_URL}/list/movie/entry/save`,
-                              {
-                                method: "POST",
-                                headers: {
-                                  "Content-Type": "application/json",
-                                  Authorization: `Bearer ${session.data?.accessToken}`,
+              <div className="flex-1 flex flex-col gap-2 w-full">
+                {session.data?.user && (
+                  <>
+                    {!hasListEntry ? (
+                      <>
+                        <Button
+                          className="w-full cursor-pointer hover:bg-primary hover:border-primary"
+                          size="lg"
+                          onClick={async () => {
+                            try {
+                              const res = await fetch(
+                                `${process.env.NEXT_PUBLIC_API_URL}/list/movie/entry/save`,
+                                {
+                                  method: "POST",
+                                  headers: {
+                                    "Content-Type": "application/json",
+                                    Authorization: `Bearer ${session.data?.accessToken}`,
+                                  },
+                                  body: JSON.stringify({
+                                    tvdbId: parseInt(movie.id),
+                                    status: "PLANNING",
+                                  }),
                                 },
-                                body: JSON.stringify({
-                                  tvdbId: parseInt(movie.id),
-                                  status: "PLANNING",
-                                }),
-                              },
-                            );
-                            if (res.ok) {
-                              toast.success("Added to list!");
-                              setHasListEntry(true);
-                            } else {
+                              );
+                              if (res.ok) {
+                                toast.success("Added to list!");
+                                setHasListEntry(true);
+                              } else {
+                                toast.error("Failed to add to list");
+                              }
+                            } catch {
                               toast.error("Failed to add to list");
                             }
-                          } catch {
-                            toast.error("Failed to add to list");
-                          }
-                        }}
-                      >
-                        Quick Add
-                      </Button>
+                          }}
+                        >
+                          Quick Add
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full cursor-pointer hover:bg-primary hover:text-primary hover:border-primary"
+                          size="lg"
+                          onClick={() => setIsDialogOpen(true)}
+                        >
+                          Add to List
+                        </Button>
+                      </>
+                    ) : (
                       <Button
-                        variant="outline"
-                        className="w-full cursor-pointer hover:bg-primary hover:text-primary hover:border-primary"
+                        className="w-full cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90"
                         size="lg"
                         onClick={() => setIsDialogOpen(true)}
                       >
-                        Add to List
+                        Edit Entry
                       </Button>
-                    </>
-                  ) : (
-                    <Button
-                      className="w-full cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90"
-                      size="lg"
-                      onClick={() => setIsDialogOpen(true)}
+                    )}
+                    <MovieEditDialog
+                      media={movie}
+                      hasListEntry={hasListEntry}
+                      open={isDialogOpen}
+                      onOpenChange={setIsDialogOpen}
+                      onSaved={() => {
+                        fetchEntry();
+                      }}
+                      onDeleted={() => {
+                        setHasListEntry(false);
+                      }}
+                    />
+                  </>
+                )}
+                {movie.trailers && movie.trailers.length > 0 && (
+                  <Button variant="outline" className="w-full" asChild>
+                    <a
+                      href={movie.trailers?.[0]?.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-center"
                     >
-                      Edit Entry
-                    </Button>
-                  )}
-                  <MovieEditDialog
-                    media={movie}
-                    hasListEntry={hasListEntry}
-                    open={isDialogOpen}
-                    onOpenChange={setIsDialogOpen}
-                    onSaved={() => {
-                      fetchEntry();
-                    }}
-                    onDeleted={() => {
-                      setHasListEntry(false);
-                    }}
-                  />
-                </>
-              )}
-              {movie.trailers && movie.trailers.length > 0 && (
-                <Button variant="outline" className="w-full" asChild>
-                  <a
-                    href={movie.trailers?.[0]?.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center justify-center"
-                  >
-                    <Play className="mr-2 h-4 w-4" />
-                    Watch Trailer
-                  </a>
-                </Button>
-              )}
+                      <Play className="mr-2 h-4 w-4" />
+                      Watch Trailer
+                    </a>
+                  </Button>
+                )}
+              </div>
             </div>
 
             {/* Info Cards */}
@@ -327,24 +353,7 @@ export default function MovieDetailsPage() {
               </div>
             )}
 
-            {/* TheTVDB Attribution */}
-            <div className="bg-card rounded-xl p-4 border border-border flex flex-col items-center gap-2">
-              <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">
-                Data Provided By
-              </span>
-              <Link
-                href="https://thetvdb.com"
-                target="_blank"
-                className="opacity-70 hover:opacity-100 transition-opacity"
-              >
-                <Image
-                  src="https://thetvdb.com/images/logo.png"
-                  alt="TheTVDB Logo"
-                  width={100}
-                  height={100}
-                />
-              </Link>
-            </div>
+
           </div>
 
           {/* Right Column - Info */}

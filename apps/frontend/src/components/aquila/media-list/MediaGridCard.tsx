@@ -51,7 +51,7 @@ export const MediaGridCard: React.FC<MediaGridCardProps> = ({
 
   return (
     <>
-      <div className="relative group w-full aspect-2/3 overflow-hidden rounded-md bg-card transition-all hover:scale-[1.02] hover:shadow-lg">
+      <div className="relative group w-full aspect-2/3 overflow-hidden rounded-md bg-card transition-all lg:hover:scale-[1.02] lg:hover:shadow-lg">
         <Link
           href={`${baseUrl}/${entry.id}`}
           prefetch={false}
@@ -64,17 +64,17 @@ export const MediaGridCard: React.FC<MediaGridCardProps> = ({
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               loading="eager"
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
+              className="object-cover transition-transform duration-300 lg:group-hover:scale-105"
             />
           </div>
 
           <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/30 to-transparent z-15" />
 
-          <div className="absolute bottom-0 left-0 right-0 p-3 pt-6 flex flex-col gap-1.5 z-20">
-            <h4 className="font-medium text-sm text-foreground line-clamp-2 leading-tight">
+          <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-3 pt-4 sm:pt-6 flex flex-col gap-1 sm:gap-1.5 z-20">
+            <h4 className="font-medium text-xs sm:text-sm text-foreground line-clamp-2 leading-tight">
               {entry.title}
             </h4>
-            <div className="flex items-center justify-between text-xs font-semibold">
+            <div className="flex items-center justify-between text-[10px] sm:text-xs font-semibold">
               <span className="text-purple-400">{entry.progress}</span>
               <span className="text-pink-400">{entry.score}</span>
             </div>
@@ -82,11 +82,11 @@ export const MediaGridCard: React.FC<MediaGridCardProps> = ({
         </Link>
 
         {isOwner && (
-          <div className="absolute top-2 right-2 z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <div className="absolute top-2 right-2 z-30 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-300">
             <Button
               size="icon"
               variant="ghost"
-              className="h-8 w-8 rounded-lg bg-black/40 hover:bg-black/60 border border-white/10 hover:border-primary/30 text-white hover:text-primary transition-all cursor-pointer pointer-events-auto flex items-center justify-center p-0"
+              className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-black/40 hover:bg-black/60 border border-white/10 hover:border-primary/30 text-white hover:text-primary transition-all cursor-pointer pointer-events-auto flex items-center justify-center p-0"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();

@@ -889,75 +889,78 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
 
         {/* Project Popup */}
         {selectedConstellation && (
-          <div
-            className="absolute z-50 w-md"
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              left: width / 2,
-              top: height / 2,
-              transform: "translate(-50%, -50%)",
-            }}
-          >
-            <StarCard className="w-full">
-              <CardHeader className="flex flex-row justify-between items-start pb-2">
-                <div className="flex items-center gap-3">
-                  {selectedConstellation.icon && (
-                    <div className="w-10 h-10 relative rounded-full overflow-hidden border border-white/10 bg-black/50">
-                      <Image
-                        src={selectedConstellation.icon}
-                        alt={`${selectedConstellation.name} icon`}
-                        width={40}
-                        height={40}
-                        className="w-full h-full object-cover"
-                      />
+          <>
+            {/* Backdrop overlay */}
+            <div
+              className="absolute inset-0 z-40 bg-black/40 backdrop-blur-[2px] cursor-default transition-all duration-300 animate-in fade-in"
+              onClick={() => setSelectedConstellation(null)}
+            />
+            {/* Popup Card */}
+            <div
+              className="absolute z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2.5rem)] max-w-sm sm:max-w-md cursor-default transition-all duration-300 animate-in fade-in zoom-in-95"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <StarCard className="w-full border-zinc-800 bg-black/60 shadow-[0_0_50px_rgba(0,0,0,0.8),0_0_30px_rgba(139,92,246,0.15)] hover:border-zinc-700 transition-all duration-500">
+                <CardHeader className="flex flex-row justify-between items-center pb-2">
+                  <div className="flex items-center gap-3">
+                    {selectedConstellation.icon && (
+                      <div className="w-10 h-10 relative rounded-full overflow-hidden border border-white/10 bg-black/50">
+                        <Image
+                          src={selectedConstellation.icon}
+                          alt={`${selectedConstellation.name} icon`}
+                          width={40}
+                          height={40}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                    <div>
+                      <CardTitle className="text-xl font-bold text-white tracking-wide flex items-center gap-2">
+                        {selectedConstellation.name}
+                        <StarIcon
+                          size={16}
+                          className="text-blue-400"
+                          showFlare={false}
+                        />
+                      </CardTitle>
                     </div>
-                  )}
-                  <div>
-                    <CardTitle className="text-2xl font-bold text-white tracking-wide flex items-center gap-2">
-                      {selectedConstellation.name}
-                      <StarIcon
-                        size={16}
-                        className="text-white/50"
-                        showFlare={false}
-                      />
-                    </CardTitle>
                   </div>
-                </div>
-                <button
-                  onClick={() => setSelectedConstellation(null)}
-                  className="text-white/40 hover:text-white transition-colors"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
+                  <button
+                    onClick={() => setSelectedConstellation(null)}
+                    className="text-white/40 hover:text-white hover:bg-white/10 p-1.5 rounded-lg transition-colors cursor-pointer animate-none"
                   >
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
-                </button>
-              </CardHeader>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
+                </CardHeader>
 
-              <CardContent>
-                <CardDescription className="text-white/70 mb-6 text-sm leading-relaxed">
-                  {selectedConstellation.description}
-                </CardDescription>
-              </CardContent>
-              <CardFooter>
-                <Link href={selectedConstellation.redirect} className="w-full">
-                  <Button className="w-full bg-primary hover:bg-primary/50 text-black font-bold transition-all">
-                    Visit
-                  </Button>
-                </Link>
-              </CardFooter>
-            </StarCard>
-          </div>
+                <CardContent>
+                  <CardDescription className="text-zinc-300 mb-4 text-sm leading-relaxed">
+                    {selectedConstellation.description}
+                  </CardDescription>
+                </CardContent>
+                <CardFooter>
+                  <Link href={selectedConstellation.redirect} className="w-full">
+                    <Button className="w-full h-auto py-2.5 bg-primary hover:bg-primary/80 text-primary-foreground font-semibold rounded-lg shadow-[0_4px_12px_rgba(139,92,246,0.3)] transition-all duration-300">
+                      Visit
+                    </Button>
+                  </Link>
+                </CardFooter>
+              </StarCard>
+            </div>
+          </>
         )}
       </div>
     );

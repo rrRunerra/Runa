@@ -185,96 +185,98 @@ export default function AnimeDetailsPage() {
         <div className="flex flex-col md:flex-row gap-8">
           {/* Left Column - Cover & Main Actions */}
           <div className="shrink-0 w-full md:w-[280px] flex flex-col gap-4">
-            <div className="aspect-2/3 w-full rounded-xl overflow-hidden shadow-2xl border-4 border-background">
-              <img
-                src={anime.coverImage.extraLarge || anime.coverImage.large}
-                alt={anime.title?.romaji}
-                className="w-full h-full object-cover"
-              />
-            </div>
+            <div className="flex flex-row md:flex-col gap-4 items-end md:items-stretch">
+              <div className="aspect-2/3 w-32 sm:w-40 md:w-full rounded-xl overflow-hidden shadow-2xl border-4 border-background shrink-0">
+                <img
+                  src={anime.coverImage.extraLarge || anime.coverImage.large}
+                  alt={anime.title?.romaji}
+                  className="w-full h-full object-cover"
+                />
+              </div>
 
-            <div className="flex flex-col gap-2">
-              {session.data?.user && (
-                <>
-                  {!hasListEntry ? (
-                    <>
-                      <Button
-                        className="w-full cursor-pointer hover:bg-primary hover:border-primary"
-                        size="lg"
-                        onClick={async () => {
-                          try {
-                            const res = await fetch(
-                              `${process.env.NEXT_PUBLIC_API_URL}/list/anime/entry/save`,
-                              {
-                                method: "POST",
-                                headers: {
-                                  "Content-Type": "application/json",
-                                  Authorization: `Bearer ${session.data?.accessToken}`,
+              <div className="flex-1 flex flex-col gap-2 w-full">
+                {session.data?.user && (
+                  <>
+                    {!hasListEntry ? (
+                      <>
+                        <Button
+                          className="w-full cursor-pointer hover:bg-primary hover:border-primary"
+                          size="lg"
+                          onClick={async () => {
+                            try {
+                              const res = await fetch(
+                                `${process.env.NEXT_PUBLIC_API_URL}/list/anime/entry/save`,
+                                {
+                                  method: "POST",
+                                  headers: {
+                                    "Content-Type": "application/json",
+                                    Authorization: `Bearer ${session.data?.accessToken}`,
+                                  },
+                                  body: JSON.stringify({
+                                    animeId: Number(id),
+                                    status: "PLANNING",
+                                  }),
                                 },
-                                body: JSON.stringify({
-                                  animeId: Number(id),
-                                  status: "PLANNING",
-                                }),
-                              },
-                            );
-                            if (res.ok) {
-                              toast.success("Added to list!");
-                              setHasListEntry(true);
-                            } else {
+                              );
+                              if (res.ok) {
+                                toast.success("Added to list!");
+                                setHasListEntry(true);
+                              } else {
+                                toast.error("Failed to add to list");
+                              }
+                            } catch {
                               toast.error("Failed to add to list");
                             }
-                          } catch {
-                            toast.error("Failed to add to list");
-                          }
-                        }}
-                      >
-                        Quick Add
-                      </Button>
+                          }}
+                        >
+                          Quick Add
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full cursor-pointer hover:bg-primary hover:text-primary hover:border-primary"
+                          size="lg"
+                          onClick={() => setIsDialogOpen(true)}
+                        >
+                          Add to List
+                        </Button>
+                      </>
+                    ) : (
                       <Button
-                        variant="outline"
-                        className="w-full cursor-pointer hover:bg-primary hover:text-primary hover:border-primary"
+                        className="w-full cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90"
                         size="lg"
                         onClick={() => setIsDialogOpen(true)}
                       >
-                        Add to List
+                        Edit Entry
                       </Button>
-                    </>
-                  ) : (
-                    <Button
-                      className="w-full cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90"
-                      size="lg"
-                      onClick={() => setIsDialogOpen(true)}
+                    )}
+                    <AnimeEditDialog
+                      media={anime}
+                      hasListEntry={hasListEntry}
+                      open={isDialogOpen}
+                      onOpenChange={setIsDialogOpen}
+                      onSaved={() => {
+                        setHasListEntry(true);
+                      }}
+                      onDeleted={() => {
+                        setHasListEntry(false);
+                      }}
+                    />
+                  </>
+                )}
+                {anime.trailers && anime.trailers.length > 0 && (
+                  <Button variant="outline" className="w-full" asChild>
+                    <a
+                      href={anime.trailers[0].url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-center"
                     >
-                      Edit Entry
-                    </Button>
-                  )}
-                  <AnimeEditDialog
-                    media={anime}
-                    hasListEntry={hasListEntry}
-                    open={isDialogOpen}
-                    onOpenChange={setIsDialogOpen}
-                    onSaved={() => {
-                      setHasListEntry(true);
-                    }}
-                    onDeleted={() => {
-                      setHasListEntry(false);
-                    }}
-                  />
-                </>
-              )}
-              {anime.trailers && anime.trailers.length > 0 && (
-                <Button variant="outline" className="w-full" asChild>
-                  <a
-                    href={anime.trailers[0].url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center justify-center"
-                  >
-                    <Play className="mr-2 h-4 w-4" />
-                    Watch Trailer
-                  </a>
-                </Button>
-              )}
+                      <Play className="mr-2 h-4 w-4" />
+                      Watch Trailer
+                    </a>
+                  </Button>
+                )}
+              </div>
             </div>
 
             <div className="bg-card rounded-xl p-4 space-y-3 border border-border">

@@ -1,6 +1,7 @@
+import React from "react";
 
-export default function Page() {
-    return (
-        <h1>Unauthorized</h1>
-    )
+import LynxUnauthorized from "@/components/unauthorized/LynxUnauthorized";
+
+export default function Page(): React.JSX.Element {
+  return <LynxUnauthorized />;
 }

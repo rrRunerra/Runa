@@ -327,8 +327,9 @@ export class ListService {
     }));
   }
 
+
   public async getMangaListEntry(username: string, mangaId: number) {
-    return this.prisma.client.aquilaMangaUserList.findUnique({
+    const out = await this.prisma.client.aquilaMangaUserList.findUnique({
       where: {
         username_mangaId: {
           username: username.toLowerCase(),
@@ -336,6 +337,9 @@ export class ListService {
         },
       },
     });
+
+    if (!out) throw new NotFoundException('Manga not found in list');
+    return out;
   }
 
   public async upsertMangaList(

@@ -61,7 +61,7 @@ export const MediaCompactRow: React.FC<MediaCompactRowProps> = ({
               {entry.title}
             </span>
           </div>
-          <div className="flex items-center gap-6 text-sm text-muted-foreground w-1/4 justify-end">
+          <div className="flex items-center gap-4 md:gap-6 text-sm text-muted-foreground w-[100px] sm:w-[180px] justify-end shrink-0">
             <span className="w-8 text-right font-medium">{entry.score}</span>
             <span className="w-12 text-right">{entry.progress}</span>
             <span className="w-16 text-right hidden sm:block">{entry.type}</span>
@@ -73,7 +73,7 @@ export const MediaCompactRow: React.FC<MediaCompactRowProps> = ({
             <Button
               size="icon"
               variant="ghost"
-              className="h-8 w-8 rounded-lg text-muted-foreground hover:text-primary opacity-0 group-hover/row:opacity-100 transition-all cursor-pointer flex items-center justify-center p-0"
+              className="h-8 w-8 rounded-lg text-muted-foreground hover:text-primary opacity-100 lg:opacity-0 lg:group-hover/row:opacity-100 transition-all cursor-pointer flex items-center justify-center p-0"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
