@@ -2,7 +2,9 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@runa/ui": ["packages/ui/src/index.ts"]
+      "@runa/ui": ["packages/ui/src/index.ts"],
+      "@runa/connections": ["packages/connections/src/index.ts"],
+      "@runa/connections/metadata": ["packages/connections/src/metadata.ts"]
     },
     "target": "ESNext",
     "lib": ["DOM", "DOM.Iterable", "ESNext"],

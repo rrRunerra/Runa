@@ -161,11 +161,13 @@ export class ListController {
       endDate?: number;
       notes?: string;
       rewatched?: number;
+      updateConnection?: boolean;
       connections?: any;
     },
   ): Promise<{ success: boolean; message: string; error?: any }> {
     return this.listService.upsertMovieList(req.user.username, body);
   }
+  
 
   @Delete('/movie/entry/:tvdbId')
   public async deleteMovieListEntry(
@@ -203,6 +205,7 @@ export class ListController {
       endDate?: number;
       notes?: string;
       rewatched?: number;
+      updateConnection?: boolean;
       connections?: any;
     },
   ): Promise<{ success: boolean; message: string; error?: any }> {

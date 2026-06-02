@@ -1,6 +1,7 @@
 import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
 
 import { $Enums } from '@runa/database';
+import { MovieUpdateData, TvUpdateData } from '@runa/connections';
 
 import { PrismaService } from '../../providers/database/prisma.service';
 import { ConnectionsManager } from './connections/connections.manager';
@@ -186,6 +187,15 @@ export class ListService {
     animeId: number,
   ): Promise<{ success: boolean; message: string; error?: any }> {
     try {
+      const entry = await this.prisma.client.aquilaAnimeUserList.findUnique({
+        where: {
+          username_animeId: {
+            username: username.toLowerCase(),
+            animeId,
+          },
+        },
+      });
+
       await this.prisma.client.aquilaAnimeUserList.delete({
         where: {
           username_animeId: {
@@ -194,6 +204,19 @@ export class ListService {
           },
         },
       });
+
+      if (entry && entry.connections && typeof entry.connections === 'object') {
+        for (const providerKey of Object.keys(entry.connections)) {
+          const conn = entry.connections[providerKey];
+          if (!conn) continue;
+          const providerId = typeof conn === 'object' ? Number(conn.id) : Number(conn);
+          if (!Number.isNaN(providerId) && providerId > 0) {
+            await this.connectionsManager.deleteAnime(providerKey, username.toLowerCase(), providerId)
+              .catch((err) => this.logger.error(`Failed to delete anime connection for provider ${providerKey}`, err));
+          }
+        }
+      }
+
       return {
         success: true,
         message: 'Deleted from list',
@@ -437,6 +460,15 @@ export class ListService {
     mangaId: number,
   ): Promise<{ success: boolean; message: string; error?: any }> {
     try {
+      const entry = await this.prisma.client.aquilaMangaUserList.findUnique({
+        where: {
+          username_mangaId: {
+            username: username.toLowerCase(),
+            mangaId,
+          },
+        },
+      });
+
       await this.prisma.client.aquilaMangaUserList.delete({
         where: {
           username_mangaId: {
@@ -445,6 +477,19 @@ export class ListService {
           },
         },
       });
+
+      if (entry && entry.connections && typeof entry.connections === 'object') {
+        for (const providerKey of Object.keys(entry.connections)) {
+          const conn = entry.connections[providerKey];
+          if (!conn) continue;
+          const providerId = typeof conn === 'object' ? Number(conn.id) : Number(conn);
+          if (!Number.isNaN(providerId) && providerId > 0) {
+            await this.connectionsManager.deleteManga(providerKey, username.toLowerCase(), providerId)
+              .catch((err) => this.logger.error(`Failed to delete manga connection for provider ${providerKey}`, err));
+          }
+        }
+      }
+
       return {
         success: true,
         message: 'Deleted from list',
@@ -457,7 +502,7 @@ export class ListService {
         error: error,
       };
     }
-    }
+  }
   private async updateMangaConnections(
     username: string,
     mangaId: number,
@@ -521,6 +566,125 @@ export class ListService {
         notes: connNotes,
         reread: connReread,
       }).catch((err) => this.logger.error(`Failed to sync manga with ${providerKey}`, err));
+    }
+  }
+
+  private async updateMovieConnections(
+    username: string,
+    tvdbId: number,
+    connections: any,
+    status?: string,
+    score?: number,
+    startDate?: number,
+    endDate?: number,
+    notes?: string,
+    rewatched?: number,
+  ) {
+    if (!connections || typeof connections !== 'object') return;
+
+    for (const providerKey of Object.keys(connections)) {
+      const conn = connections[providerKey];
+      if (!conn) continue;
+
+      let providerId: number;
+      let connStatus = status;
+      let connScore = score;
+      let connStartDate = startDate;
+      let connEndDate = endDate;
+      let connNotes = notes;
+      let connRewatched = rewatched;
+
+      if (typeof conn === 'object' && conn !== null) {
+        providerId = Number(conn.id);
+        if (conn.status !== undefined) connStatus = conn.status;
+        if (conn.score !== undefined) connScore = Number(conn.score);
+        if (conn.startDate !== undefined) connStartDate = conn.startDate;
+        if (conn.endDate !== undefined) connEndDate = conn.endDate;
+        if (conn.notes !== undefined) connNotes = conn.notes;
+        if (conn.rewatched !== undefined) connRewatched = Number(conn.rewatched);
+      } else {
+        providerId = Number(conn);
+      }
+
+      if (Number.isNaN(providerId) || providerId <= 0) continue;
+
+      await this.connectionsManager.syncMovie(providerKey, username, providerId, {
+        status: connStatus,
+        score: connScore,
+        startDate: connStartDate,
+        endDate: connEndDate,
+        notes: connNotes,
+        rewatched: connRewatched,
+      }).catch((err) => this.logger.error(`Failed to sync movie with ${providerKey}`, err));
+    }
+  }
+
+  private async updateTvConnections(
+    username: string,
+    tvdbId: number,
+    connections: any,
+    status?: string,
+    score?: number,
+    startDate?: number,
+    endDate?: number,
+    notes?: string,
+    rewatched?: number,
+  ) {
+    if (!connections || typeof connections !== 'object') return;
+
+    // Fetch watched episodes to sync progress
+    const listEntry = await this.prisma.client.aquilaTvUserList.findUnique({
+      where: {
+        username_tvdbId: {
+          username: username.toLowerCase(),
+          tvdbId,
+        },
+      },
+      include: {
+        watchedEpisodes: true,
+      },
+    });
+
+    const watchedEpisodes = listEntry?.watchedEpisodes || [];
+
+    for (const providerKey of Object.keys(connections)) {
+      const conn = connections[providerKey];
+      if (!conn) continue;
+
+      let providerId: number;
+      let connStatus = status;
+      let connScore = score;
+      let connStartDate = startDate;
+      let connEndDate = endDate;
+      let connNotes = notes;
+      let connRewatched = rewatched;
+
+      if (typeof conn === 'object' && conn !== null) {
+        providerId = Number(conn.id);
+        if (conn.status !== undefined) connStatus = conn.status;
+        if (conn.score !== undefined) connScore = Number(conn.score);
+        if (conn.startDate !== undefined) connStartDate = conn.startDate;
+        if (conn.endDate !== undefined) connEndDate = conn.endDate;
+        if (conn.notes !== undefined) connNotes = conn.notes;
+        if (conn.rewatched !== undefined) connRewatched = Number(conn.rewatched);
+      } else {
+        providerId = Number(conn);
+      }
+
+      if (Number.isNaN(providerId) || providerId <= 0) continue;
+
+      await this.connectionsManager.syncTv(providerKey, username, providerId, {
+        status: connStatus,
+        score: connScore,
+        startDate: connStartDate,
+        endDate: connEndDate,
+        notes: connNotes,
+        rewatched: connRewatched,
+        watchedEpisodes: watchedEpisodes.map((ep) => ({
+          seasonNum: ep.seasonNum,
+          episodeNum: ep.episodeNum,
+        })),
+      }).catch((err) => this.logger.error(`Failed to sync TV show with ${providerKey}`, err));
     }
   }
 
@@ -604,6 +768,7 @@ export class ListService {
       endDate?: number;
       notes?: string;
       rewatched?: number;
+      updateConnection?: boolean;
       connections?: any;
     },
   ): Promise<{ success: boolean; message: string; error?: any }> {
@@ -643,6 +808,20 @@ export class ListService {
           private: isPrivate,
         },
       });
+
+      if (body.updateConnection) {
+        await this.updateMovieConnections(
+          username.toLowerCase(),
+          body.tvdbId,
+          body.connections || {},
+          body.status,
+          body.score,
+          body.startDate,
+          body.endDate,
+          body.notes,
+          body.rewatched,
+        );
+      }
     } catch (error) {
       this.logger.error(error);
       return {
@@ -663,6 +842,15 @@ export class ListService {
     tvdbId: number,
   ): Promise<{ success: boolean; message: string; error?: any }> {
     try {
+      const entry = await this.prisma.client.aquilaMovieUserList.findUnique({
+        where: {
+          username_tvdbId: {
+            username: username.toLowerCase(),
+            tvdbId,
+          },
+        },
+      });
+
       await this.prisma.client.aquilaMovieUserList.delete({
         where: {
           username_tvdbId: {
@@ -671,6 +859,19 @@ export class ListService {
           },
         },
       });
+
+      if (entry && entry.connections && typeof entry.connections === 'object') {
+        for (const providerKey of Object.keys(entry.connections)) {
+          const conn = entry.connections[providerKey];
+          if (!conn) continue;
+          const providerId = typeof conn === 'object' ? Number(conn.id) : Number(conn);
+          if (!Number.isNaN(providerId) && providerId > 0) {
+            await this.connectionsManager.deleteMovie(providerKey, username.toLowerCase(), providerId)
+              .catch((err) => this.logger.error(`Failed to delete movie connection for provider ${providerKey}`, err));
+          }
+        }
+      }
+
       return {
         success: true,
         message: 'Deleted from list',
@@ -785,6 +986,7 @@ export class ListService {
       endDate?: number;
       notes?: string;
       rewatched?: number;
+      updateConnection?: boolean;
       connections?: any;
     },
   ): Promise<{ success: boolean; message: string; error?: any }> {
@@ -824,6 +1026,20 @@ export class ListService {
           private: isPrivate,
         },
       });
+
+      if (body.updateConnection) {
+        await this.updateTvConnections(
+          username.toLowerCase(),
+          body.tvdbId,
+          body.connections || {},
+          body.status,
+          body.score,
+          body.startDate,
+          body.endDate,
+          body.notes,
+          body.rewatched,
+        );
+      }
     } catch (error) {
       this.logger.error(error);
       return {
@@ -844,6 +1060,15 @@ export class ListService {
     tvdbId: number,
   ): Promise<{ success: boolean; message: string; error?: any }> {
     try {
+      const entry = await this.prisma.client.aquilaTvUserList.findUnique({
+        where: {
+          username_tvdbId: {
+            username: username.toLowerCase(),
+            tvdbId,
+          },
+        },
+      });
+
       await this.prisma.client.aquilaTvUserList.delete({
         where: {
           username_tvdbId: {
@@ -852,6 +1077,19 @@ export class ListService {
           },
         },
       });
+
+      if (entry && entry.connections && typeof entry.connections === 'object') {
+        for (const providerKey of Object.keys(entry.connections)) {
+          const conn = entry.connections[providerKey];
+          if (!conn) continue;
+          const providerId = typeof conn === 'object' ? Number(conn.id) : Number(conn);
+          if (!Number.isNaN(providerId) && providerId > 0) {
+            await this.connectionsManager.deleteTv(providerKey, username.toLowerCase(), providerId)
+              .catch((err) => this.logger.error(`Failed to delete TV connection for provider ${providerKey}`, err));
+          }
+        }
+      }
+
       return {
         success: true,
         message: 'Deleted from list',
@@ -895,11 +1133,12 @@ export class ListService {
       },
     );
 
+    let watched: boolean;
     if (existing) {
       await this.prisma.client.aquilaTvWatchedEpisode.delete({
         where: { id: existing.id },
       });
-      return { watched: false };
+      watched = false;
     } else {
       await this.prisma.client.aquilaTvWatchedEpisode.create({
         data: {
@@ -908,8 +1147,24 @@ export class ListService {
           episodeNum,
         },
       });
-      return { watched: true };
+      watched = true;
     }
+
+    if (listEntry.connections && typeof listEntry.connections === 'object') {
+      await this.updateTvConnections(
+        username.toLowerCase(),
+        tvdbId,
+        listEntry.connections,
+        listEntry.status,
+        listEntry.score || undefined,
+        listEntry.startDate || undefined,
+        listEntry.endDate || undefined,
+        listEntry.notes || undefined,
+        listEntry.rewatched || undefined,
+      ).catch((err) => this.logger.error('Failed to sync toggled episode tv connection', err));
+    }
+
+    return { watched };
   }
 
   public async toggleSeasonWatched(
@@ -957,6 +1212,20 @@ export class ListService {
           seasonNum,
         },
       });
+    }
+
+    if (listEntry.connections && typeof listEntry.connections === 'object') {
+      await this.updateTvConnections(
+        username.toLowerCase(),
+        tvdbId,
+        listEntry.connections,
+        listEntry.status,
+        listEntry.score || undefined,
+        listEntry.startDate || undefined,
+        listEntry.endDate || undefined,
+        listEntry.notes || undefined,
+        listEntry.rewatched || undefined,
+      ).catch((err) => this.logger.error('Failed to sync toggled season tv connection', err));
     }
 
     return { success: true };
@@ -1247,6 +1516,20 @@ export class ListService {
             endDate: Math.floor(Date.now() / 1000),
           },
         });
+      }
+
+      if (entry.connections && typeof entry.connections === 'object') {
+        await this.updateTvConnections(
+          user,
+          id,
+          entry.connections,
+          isCompleted ? 'COMPLETED' : entry.status,
+          entry.score || undefined,
+          entry.startDate || undefined,
+          isCompleted ? Math.floor(Date.now() / 1000) : (entry.endDate || undefined),
+          entry.notes || undefined,
+          entry.rewatched || undefined,
+        ).catch((err) => this.logger.error('Failed to sync incremented tv connection', err));
       }
 
       return {

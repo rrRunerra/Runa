@@ -28,35 +28,9 @@ type Connection = {
   expiresAt: string | null;
 };
 
-const PROVIDERS = [
-  {
-    id: "anilist",
-    name: "AniList",
-    description: "Sync your watch list progress automatically.",
-    url: "https://anilist.co",
-    icon: `https://upload.wikimedia.org/wikipedia/commons/thumb/6/61/AniList_logo.svg/960px-AniList_logo.svg.png`,
-    accentColor: "bg-[#3db4f2]/10 border-[#3db4f2]/20 text-[#3db4f2] hover:bg-[#3db4f2]/20",
-    glowColor: "shadow-[#3db4f2]/10",
-  },
-  {
-    id: "mal",
-    name: "MyAnimeList",
-    description: "Keep your traditional anime lists synchronized.",
-    url: "https://myanimelist.net",
-    icon: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/MyAnimeList_favicon.svg/3840px-MyAnimeList_favicon.svg.png?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail",
-    accentColor: "bg-[#2e51a2]/10 border-[#2e51a2]/20 text-[#2e51a2] hover:bg-[#2e51a2]/20",
-    glowColor: "shadow-[#2e51a2]/10",
-  },
-  {
-    id: "simkl",
-    name: "Simkl",
-    description: "Sync your anime, movies, and TV shows in one place.",
-    url: "https://simkl.com",
-    icon: "https://play-lh.googleusercontent.com/DliaDatmrt_M8drBtsafddTyhcxN5W3UAcpQRjoq7MViP3iwHBMegVmKIxDAjHrFACQ",
-    accentColor: "bg-[#e50914]/10 border-[#e50914]/20 text-[#e50914] hover:bg-[#e50914]/20",
-    glowColor: "shadow-[#e50914]/10",
-  },
-];
+import { PROVIDERS_METADATA } from "@runa/connections/metadata";
+
+const PROVIDERS = PROVIDERS_METADATA;
 
 export function ConnectionsTab(): React.JSX.Element {
   const { data: session } = useSession();

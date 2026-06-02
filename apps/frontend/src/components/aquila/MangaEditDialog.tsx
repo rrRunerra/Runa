@@ -42,7 +42,7 @@ import { Heart, CalendarIcon, X, ChevronDown, ChevronUp, Plus } from "lucide-rea
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { BASE_CONNECTION_PROVIDERS } from "@/lib/providers";
+import { BASE_CONNECTION_PROVIDERS, ConnectionCapability } from "@/lib/providers";
 
 interface MangaEditDialogMedia {
   id: string;
@@ -110,7 +110,9 @@ export function MangaEditDialog({
   const [userConnections, setUserConnections] = useState<string[]>([]);
 
   const CONNECTION_PROVIDERS = BASE_CONNECTION_PROVIDERS.filter(
-    (prov) => userConnections.includes(prov.key) || !!connections[prov.key]
+    (prov) =>
+      prov.capabilities.includes(ConnectionCapability.MANGA) &&
+      (userConnections.includes(prov.key) || !!connections[prov.key])
   );
   const [isConnectionSearchOpen, setIsConnectionSearchOpen] =
     useState<boolean>(false);
@@ -219,7 +221,7 @@ export function MangaEditDialog({
                     connVolumes = conn.volumes.toString();
                   }
 
-                  loadedConnections[key] = {
+                  loadedConnections[key.toLowerCase()] = {
                     id: conn.id,
                     status: conn.status,
                     chapters: connChapters,
@@ -228,7 +230,7 @@ export function MangaEditDialog({
                     endDate: conn.endDate ? new Date(conn.endDate * 1000) : undefined,
                   };
                 } else {
-                  loadedConnections[key] = conn;
+                  loadedConnections[key.toLowerCase()] = conn;
                 }
               }
               setConnections(loadedConnections);
@@ -301,57 +303,14 @@ export function MangaEditDialog({
   };
 
   const performConnectionSearch = async (query: string) => {
-    if (!query) return;
+    if (!query || !activeSearchProvider) return;
     setIsSearching(true);
     setSearchResults([]);
     try {
-      if (activeSearchProvider === "anilist") {
-        const graphqlQuery = `
-          query ($search: String) {
-            Page(page: 1, perPage: 10) {
-              media(search: $search, type: MANGA) {
-                id title { romaji english } coverImage { medium } format chapters
-              }
-            }
-          }
-        `;
-        const res = await fetch("https://graphql.anilist.co", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify({
-            query: graphqlQuery,
-            variables: { search: query },
-          }),
-        });
-        const data = await res.json();
-        setSearchResults(
-          (data.data?.Page?.media || []).map((item: any) => ({
-            id: item.id.toString(),
-            title: item.title.english || item.title.romaji,
-            image: item.coverImage.medium,
-            format: item.format,
-            chapters: item.chapters,
-          }))
-        );
-      } else if (activeSearchProvider === "mal") {
-        const res = await fetch(
-          `https://api.jikan.moe/v4/manga?q=${encodeURIComponent(
-            query
-          )}&limit=10`
-        );
-        const data = await res.json();
-        setSearchResults(
-          (data.data || []).map((item: any) => ({
-            id: item.mal_id.toString(),
-            title: item.title_english || item.title,
-            image: item.images?.jpg?.image_url,
-            format: item.type,
-            chapters: item.chapters,
-          }))
-        );
+      const provider = BASE_CONNECTION_PROVIDERS.find((p) => p.key === activeSearchProvider);
+      if (provider && provider.search) {
+        const results = await provider.search(query, "MANGA");
+        setSearchResults(results);
       }
     } catch (err) {
       console.error(`Failed to search ${activeSearchProvider}`, err);
@@ -387,8 +346,9 @@ export function MangaEditDialog({
             reread: rereads ? Number(rereads) : undefined,
             updateConnection,
             connections: Object.entries(connections).reduce((acc, [key, val]) => {
+              const uppercaseKey = key.toUpperCase();
               if (val && typeof val === 'object') {
-                acc[key] = {
+                acc[uppercaseKey] = {
                   id: val.id,
                   status: val.status,
                   chaptersOffset: val.chapters !== undefined && val.chapters !== "" 
@@ -401,7 +361,7 @@ export function MangaEditDialog({
                   endDate: val.endDate ? Math.floor(val.endDate.getTime() / 1000) : undefined,
                 };
               } else {
-                acc[key] = val;
+                acc[uppercaseKey] = val;
               }
               return acc;
             }, {} as Record<string, any>),
@@ -975,22 +935,39 @@ export function MangaEditDialog({
               Start Date
             </Label>
             <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal bg-background border-input text-foreground h-10 hover:bg-accent hover:text-accent-foreground",
-                    !startDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {startDate ? (
-                    format(startDate, "yyyy-MM-dd")
-                  ) : (
-                    <span>Pick a date</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
+              <div className="relative w-full">
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal bg-background border-input text-foreground h-10 hover:bg-accent hover:text-accent-foreground pr-8",
+                      !startDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? (
+                      format(startDate, "yyyy-MM-dd")
+                    ) : (
+                      <span>Pick a date</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                {startDate && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 hover:bg-muted text-muted-foreground hover:text-foreground rounded-full"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setStartDate(undefined);
+                    }}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+              </div>
               <PopoverContent
                 align="start"
                 className="w-auto p-0 bg-popover border-border"
@@ -1012,22 +989,39 @@ export function MangaEditDialog({
               Finish Date
             </Label>
             <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal bg-background border-input text-foreground h-10 hover:bg-accent hover:text-accent-foreground",
-                    !finishDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {finishDate ? (
-                    format(finishDate, "yyyy-MM-dd")
-                  ) : (
-                    <span>Pick a date</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
+              <div className="relative w-full">
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal bg-background border-input text-foreground h-10 hover:bg-accent hover:text-accent-foreground pr-8",
+                      !finishDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {finishDate ? (
+                      format(finishDate, "yyyy-MM-dd")
+                    ) : (
+                      <span>Pick a date</span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                {finishDate && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 hover:bg-muted text-muted-foreground hover:text-foreground rounded-full"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setFinishDate(undefined);
+                    }}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+              </div>
               <PopoverContent
                 align="start"
                 className="w-auto p-0 bg-popover border-border"

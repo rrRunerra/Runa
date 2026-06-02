@@ -19,7 +19,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@runa/connections": ["../../packages/connections/src/index.ts"],
+      "@runa/connections/metadata": ["../../packages/connections/src/metadata.ts"]
     }
   },
   "include": [
