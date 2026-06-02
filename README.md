@@ -1,135 +1,256 @@
-# Turborepo starter
+# Runa
 
-This Turborepo starter is maintained by the Turborepo core team.
+A modern, full-stack monorepo built with **Turborepo**, featuring a NestJS backend, Next.js frontend, and Discord bot integration.
 
-## Using this example
+## 🚀 Quick Start
 
-Run the following command:
+### Prerequisites
 
-```sh
-npx create-turbo@latest
+- **Node.js** 18+
+- **pnpm** (recommended) or npm/yarn
+- **Git**
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/rrRunerra/Runa.git
+cd Runa
+
+# Install dependencies
+pnpm install
 ```
 
-## What's inside?
+### Development
 
-This Turborepo includes the following packages/apps:
+```bash
+# Start all apps in development mode
+pnpm dev
 
-### Apps and Packages
-
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+# Start a specific app
+pnpm dev --filter=frontend
+pnpm dev --filter=backend
+```
 
 ### Build
 
-To build all apps and packages, run the following command:
+```bash
+# Build all apps and packages
+pnpm build
 
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+# Build a specific app
+pnpm build --filter=backend
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+### Testing
 
-```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo build --filter=docs
+```bash
+# Run all tests
+pnpm test
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
+# Run tests for a specific app
+pnpm test --filter=backend
 ```
 
-### Develop
-
-To develop all apps and packages, run the following command:
+## 📁 Project Structure
 
 ```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
+Runa/
+├── apps/
+│   ├── backend/        # NestJS API server
+│   ├── frontend/       # Next.js web application
+│   └── lynx-bot/       # Discord bot
+├── packages/
+│   ├── api/            # Auto-generated SDK
+│   ├── auth/           # Shared authentication utilities
+│   ├── database/       # Prisma database client
+│   └── ui/             # Shared UI component library
+└── turbo.json          # Turborepo configuration
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+## 🏗️ Tech Stack
 
+| Layer | Technologies |
+|-------|--------------|
+| **Frontend** | Next.js, React, Tailwind CSS, TypeScript |
+| **Backend** | NestJS, Prisma, TypeScript |
+| **Database** | Prisma ORM |
+| **Bot** | Discord.js, TypeScript |
+| **Build System** | Turborepo, pnpm |
+| **Code Quality** | ESLint, Prettier, TypeScript |
+
+### Language Composition
+- **TypeScript**: 97.5%
+- **CSS**: 1.6%
+- **Other**: 0.9%
+
+## 📚 Key Features
+
+### Backend (NestJS)
+- RESTful API with TypeScript
+- Database ORM with Prisma
+- Authentication and authorization
+- Dependency injection architecture
+- Comprehensive error handling
+
+### Frontend (Next.js)
+- Server Components by default
+- Responsive UI with Tailwind CSS
+- Type-safe with TypeScript
+- Optimized performance and SEO
+
+### Shared Packages
+- **@runa/database**: Prisma client and migrations
+- **@runa/auth**: Authentication utilities
+- **@runa/ui**: Reusable React components
+- **@runa/api**: Auto-generated SDK
+
+## 📖 Coding Standards
+
+See [AGENTS.md](./AGENTS.md) for comprehensive development guidelines:
+
+### TypeScript Conventions
+- Explicit types for all function parameters and returns
+- Use `unknown` instead of `any`
+- Interfaces for object shapes, types for unions
+- No `as` casts—use proper typing
+
+### Naming Conventions
+- **Files**: kebab-case (`user-service.ts`)
+- **Components/Classes**: PascalCase (`UserService`)
+- **Functions/Variables**: camelCase (`getUserById`)
+- **Constants**: SCREAMING_SNAKE_CASE (`MAX_RETRY_COUNT`)
+
+### Code Organization
+```typescript
+// Import order:
+import { external } from "external-lib";      // External libraries
+import { Utility } from "@runa/database";     // Workspace packages
+import { helper } from "../helpers";          // Relative imports
 ```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo dev --filter=web
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
+## 🧪 Testing
+
+### Backend Tests
+```bash
+# Run all tests
+pnpm test --filter=backend
+
+# Watch mode
+pnpm test --filter=backend -- --watch
+
+# Coverage
+pnpm test:cov --filter=backend
 ```
 
-### Remote Caching
+Tests use **Jest** with **ts-jest** and follow the **AAA pattern** (Arrange, Act, Assert).
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+## 🗄️ Database
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+### Prisma Setup
+```bash
+# Generate Prisma client
+pnpm db:generate --filter=database
 
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
+# Run migrations
+pnpm db:migrate --filter=database
 
-```
-cd my-turborepo
-
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo login
-
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
+# Open Prisma Studio
+cd packages/database
+npx prisma studio
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+## 🔧 Common Commands
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+| Command | Description |
+|---------|-------------|
+| `pnpm dev` | Start all apps in development |
+| `pnpm build` | Build all apps and packages |
+| `pnpm test` | Run all tests |
+| `pnpm lint` | Lint all code |
+| `pnpm format` | Format code with Prettier |
+| `pnpm check-types` | Type check all TypeScript |
 
+## 🚀 Deployment
+
+### Frontend (Vercel Recommended)
+```bash
+# Deploy Next.js frontend to Vercel
+# Connected via GitHub for automatic deployments
 ```
-# With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended)
-turbo link
 
-# Without [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation), use your package manager
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
+### Backend (Docker/Cloud)
+```bash
+# Build production image
+docker build -t runa-backend apps/backend
 ```
 
-## Useful Links
+## 📖 Documentation
 
-Learn more about the power of Turborepo:
+- [AGENTS.md](./AGENTS.md) - Development guide for coding agents
+- [NestJS Documentation](https://docs.nestjs.com)
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Prisma Documentation](https://www.prisma.io/docs)
+- [Turborepo Documentation](https://turborepo.dev)
 
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+## 🐛 Troubleshooting
+
+### Type Errors
+```bash
+# Check all type errors
+pnpm check-types
+
+# Type check specific app
+pnpm build --filter=backend
+```
+
+### Database Issues
+```bash
+# After schema changes
+pnpm db:generate --filter=database
+
+# Reset database
+cd packages/database
+npx prisma migrate reset
+```
+
+### Dependency Issues
+```bash
+# Clean install
+rm -rf node_modules pnpm-lock.yaml
+pnpm install
+```
+
+## 📝 Git Conventions
+
+Follow conventional commits:
+- `feat:` - New features
+- `fix:` - Bug fixes
+- `chore:` - Build, dependencies, configuration
+- `docs:` - Documentation
+- `refactor:` - Code improvements
+- `test:` - Tests
+
+Example:
+```bash
+git commit -m "feat: add user authentication"
+```
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🤝 Contributing
+
+1. Follow the guidelines in [AGENTS.md](./AGENTS.md)
+2. Ensure code passes linting and type checking
+3. Write tests for new features
+4. Use conventional commits
+5. Create a pull request with a clear description
+
+## 🔗 Related Resources
+
+- [Turborepo Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
+- [NestJS Best Practices](https://docs.nestjs.com/first-steps)
+- [Next.js Best Practices](https://nextjs.org/docs/app/building-your-application)
+- [Prisma Best Practices](https://www.prisma.io/docs/guides/performance-and-optimization/query-optimization-performance)
