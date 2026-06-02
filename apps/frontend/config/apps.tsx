@@ -1,5 +1,5 @@
 import { StarIcon } from "@/components/icons/StarIcon";
-import { Bot, List } from "lucide-react";
+import { Bot, List, Mail } from "lucide-react";
 import React from "react";
 
 export const apps: App[] = [
@@ -18,12 +18,20 @@ export const apps: App[] = [
     color: "bg-blue-800",
   },
   {
+    name: "Pegasus",
+    logo: <Mail className="size-4" />,
+    href: "/pegasus",
+    color: "bg-green-800",
+    description: "Mail client.",
+  },
+  {
     name: "Polaris",
     logo: <StarIcon className="size-4" />,
     description: "Landing page",
     href: `/polaris/dash`,
     color: "bg-indigo-800",
   },
+
 ];
 
 interface App {
