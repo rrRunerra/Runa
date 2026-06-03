@@ -11,6 +11,17 @@ if (!API_URL) {
   throw new Error("[AUTH] API url is not defined");
 }
 
+function getJwtExpiry(tokenString: string): number | null {
+  try {
+    const parts = tokenString.split(".");
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(atob(parts[1]));
+    return payload.exp ? payload.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
@@ -107,6 +118,14 @@ export const authOptions: NextAuthOptions = {
           return Promise.reject(
             new Error("Token expired due to password change"),
           );
+        }
+      }
+
+      // Check if NestJS access token has expired
+      if (token.accessToken) {
+        const expiry = getJwtExpiry(token.accessToken);
+        if (expiry && Date.now() >= expiry) {
+          return Promise.reject(new Error("Access token expired"));
         }
       }
 

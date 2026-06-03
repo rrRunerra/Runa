@@ -23,6 +23,23 @@ interface AccountSettingsTabProps {
   setIsSubmitting: (submitting: boolean) => void;
 }
 
+const getSafeImageUrl = (url: string): string => {
+  if (!url) return "";
+  if (
+    url.startsWith("http://") ||
+    url.startsWith("https://") ||
+    url.startsWith("blob:") ||
+    url.startsWith("data:")
+  ) {
+    if (url.toLowerCase().includes("javascript:")) {
+      return "";
+    }
+    return url;
+  }
+  const path = url.startsWith("/") ? url : `/${url}`;
+  return `${process.env.NEXT_PUBLIC_API_URL || ""}${path}`;
+};
+
 export interface AccountSettingsTabRef {
   handleSave: () => void;
 }
@@ -284,7 +301,7 @@ export const AccountSettingsTab = forwardRef<AccountSettingsTabRef, AccountSetti
           {/* Banner */}
           <div className="h-32 w-full bg-linear-to-r from-indigo-500/20 to-purple-500/20 rounded-xl relative overflow-hidden group/banner border border-border/50">
             {bannerUrl ? (
-              <img src={process.env.NEXT_PUBLIC_API_URL + bannerUrl} alt="Banner" className="w-full h-full object-cover" />
+              <img src={getSafeImageUrl(bannerUrl)} alt="Banner" className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
                 No banner uploaded
@@ -305,7 +322,7 @@ export const AccountSettingsTab = forwardRef<AccountSettingsTabRef, AccountSetti
           {/* Avatar */}
           <div className="absolute -bottom-6 left-6 size-20 rounded-full border-4 border-card overflow-hidden group/avatar bg-muted shadow-md">
             {avatarUrl ? (
-              <img src={process.env.NEXT_PUBLIC_API_URL + avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+              <img src={getSafeImageUrl(avatarUrl)} alt="Avatar" className="w-full h-full object-cover" />
             ) : (
               <div className="w-full h-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xl uppercase">
                 {displayName ? displayName.charAt(0) : session?.user?.username?.charAt(0) || "U"}

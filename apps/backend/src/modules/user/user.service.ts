@@ -89,6 +89,9 @@ export class UserService {
   async findByUsername(username: string): Promise<User | null> {
     return await this.prisma.client.user.findUnique({
       where: { username: username.toLowerCase() },
+      include: {
+        connections: true,
+      },
     });
   }
 
@@ -243,5 +246,12 @@ export class UserService {
     ]);
 
     return { success: true };
+  }
+
+  async updateSettings(userId: string, settings: any) {
+    return await this.prisma.client.user.update({
+      where: { id: userId },
+      data: { profileSettings: settings },
+    });
   }
 }

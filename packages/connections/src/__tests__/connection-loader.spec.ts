@@ -11,7 +11,7 @@ describe("ConnectionLoader", () => {
     
     const mockDeps = {
       prisma: mockPrisma,
-      apiUrl: "http://localhost:3000/api",
+      apiUrl: "http://localhost:3000/api", // DevSkim: ignore DS137138, DS162092
       env: {
         ANILIST_CLIENT_ID: "anilist-id",
         ANILIST_CLIENT_SECRET: "anilist-secret",

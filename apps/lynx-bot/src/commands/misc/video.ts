@@ -97,23 +97,57 @@ function formatNumber(num: number | undefined | null): string {
   return num.toString();
 }
 
+function isTikTokUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    return host === "tiktok.com" || host.endsWith(".tiktok.com");
+  } catch {
+    return false;
+  }
+}
+
+function isInstagramUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    return host === "instagram.com" || host.endsWith(".instagram.com");
+  } catch {
+    return false;
+  }
+}
+
+function isYouTubeUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    return (
+      host === "youtube.com" ||
+      host.endsWith(".youtube.com") ||
+      host === "youtu.be" ||
+      host.endsWith(".youtu.be")
+    );
+  } catch {
+    return false;
+  }
+}
+
 function getPlatformInfo(url: string): PlatformInfo {
-  const lowerUrl = url.toLowerCase();
-  if (lowerUrl.includes("tiktok.com")) {
+  if (isTikTokUrl(url)) {
     return {
       name: "TikTok",
       color: 0xEE1D52,
       icon: "🎵",
     };
   }
-  if (lowerUrl.includes("instagram.com")) {
+  if (isInstagramUrl(url)) {
     return {
       name: "Instagram",
       color: 0xC13584,
       icon: "📸",
     };
   }
-  if (lowerUrl.includes("youtube.com") || lowerUrl.includes("youtu.be")) {
+  if (isYouTubeUrl(url)) {
     return {
       name: "YouTube",
       color: 0xFF0000,
@@ -143,7 +177,7 @@ function getGuildUploadLimit(guild: Guild | null): number {
 async function normalizeUrl(url: string): Promise<string> {
   let targetUrl = url;
   
-  if (url.includes("tiktok.com")) {
+  if (isTikTokUrl(url)) {
     try {
       let res = await globalThis.fetch(url, {
         method: "HEAD",
@@ -169,7 +203,7 @@ async function normalizeUrl(url: string): Promise<string> {
     }
   }
 
-  if (targetUrl.includes("tiktok.com") && targetUrl.includes("/photo/")) {
+  if (isTikTokUrl(targetUrl) && targetUrl.includes("/photo/")) {
     targetUrl = targetUrl.replace("/photo/", "/video/");
   }
 
@@ -626,7 +660,7 @@ Download and send videos from TikTok, Instagram, and YouTube Shorts.
     const platform = getPlatformInfo(url);
     const limit = getGuildUploadLimit(interaction.guild);
 
-    if (url.includes("tiktok.com")) {
+    if (isTikTokUrl(url)) {
       const tikwmResult = await tryTikwm(url, limit, folder, interaction.id);
       if (tikwmResult) {
         const { info: tikwmInfo, files: tikwmFiles } = tikwmResult;
@@ -709,7 +743,7 @@ Download and send videos from TikTok, Instagram, and YouTube Shorts.
       const errStr = String(err);
       this.logger.error(`Failed to fetch video info: ${err}`);
 
-      if (url.includes("instagram.com")) {
+      if (isInstagramUrl(url)) {
         this.logger.log("yt-dlp failed for Instagram, trying Cobalt API fallback...");
         const cobaltResult = await tryCobalt(url, limit, folder, interaction.id);
         if (cobaltResult && cobaltResult.files.length > 0) {
@@ -966,7 +1000,7 @@ Download and send videos from TikTok, Instagram, and YouTube Shorts.
     }
 
     if (downloadedFiles.length === 0) {
-      if (url.includes("instagram.com")) {
+      if (isInstagramUrl(url)) {
         this.logger.log("yt-dlp failed to download Instagram video. Trying Cobalt API as fallback...");
         const cobaltResult = await tryCobalt(url, limit, folder, interaction.id);
         if (cobaltResult && cobaltResult.files.length > 0) {

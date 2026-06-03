@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import "dotenv/config";
 
 const PUBLIC_ROUTES: string[] = [
+  "/polaris/user",
   "/polaris/login",
   "/polaris/register",
   "/polaris/api/register",
@@ -29,6 +30,17 @@ const ADMIN_ROUTES: string[] = [
   "/lynx/chat"
 ];
 
+function getJwtExpiry(tokenString: string): number | null {
+  try {
+    const parts = tokenString.split(".");
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(atob(parts[1]));
+    return payload.exp ? payload.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
 export default async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const url = req.nextUrl.clone();
@@ -40,14 +52,22 @@ export default async function proxy(req: NextRequest) {
     secret: process.env.NEXTAUTH_SECRET,
     secureCookie: process.env.NEXTAUTH_URL?.startsWith("https://") ?? false,
   });
+
   if (!token) {
     url.pathname = "/polaris/login";
     return NextResponse.redirect(url);
   }
-
+  
   if (Date.now() > (token.exp as number) * 1000) {
     url.pathname = "/polaris/login";
     return NextResponse.redirect(url);
+  }
+  if (token.accessToken) {
+    const expiry = getJwtExpiry(token.accessToken as string);
+    if (expiry && Date.now() >= expiry) {
+      url.pathname = "/polaris/login";
+      return NextResponse.redirect(url);
+    }
   }
   if (ADMIN_ROUTES.some((route) => pathname.startsWith(route)) && token.role !== "ADMIN") {
     if (pathname.startsWith("/lynx")) {

@@ -17,7 +17,7 @@ export class ConnectionService implements OnModuleInit {
   async onModuleInit() {
     this.loader = new ConnectionLoader({
       prisma: this.prisma,
-      apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000',
+      apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000', // DevSkim: ignore DS137138, DS162092
       env: process.env,
     });
 

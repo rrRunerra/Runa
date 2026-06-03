@@ -6,7 +6,9 @@ import { getLynxSidebarConfig } from "../../../config/lynxSidebarConfig";
 
 async function safeFetch<T>(url: string, fallback: T): Promise<T> {
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, {
+      cache: "force-cache"
+    });
     if (!res.ok) return fallback;
     return await res.json();
   } catch {

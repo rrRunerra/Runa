@@ -49,6 +49,14 @@ export class UserController {
     if (!user) {
       throw new NotFoundException(`User with username ${username} not found`);
     }
+    // Map connections to hide tokens
+    const safeConnections = (user as any).connections?.map((conn: any) => ({
+      id: conn.id,
+      provider: conn.provider,
+      linkedUsername: conn.linkedUsername,
+      linkedTo: conn.linkedTo,
+    })) || [];
+
     // Return only public fields
     return {
       id: user.id,
@@ -56,7 +64,16 @@ export class UserController {
       displayName: user.displayName,
       avatarUrl: user.avatarUrl,
       bannerUrl: user.bannerUrl,
+      profileSettings: user.profileSettings,
+      private: user.private,
+      connections: safeConnections,
     };
+  }
+
+  @Put('settings')
+  async updateSettings(@Req() req: any, @Body() data: { profileSettings: any }) {
+    const userId = req.user.id;
+    return this.usersService.updateSettings(userId, data.profileSettings);
   }
 
   @Put('update')

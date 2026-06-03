@@ -15,9 +15,9 @@
               "state": {
                 "file": "api-routes.canvas",
                 "viewState": {
-                  "x": 26.96536949292249,
-                  "y": 416.9826011758902,
-                  "zoom": -0.9999999999999998
+                  "x": -154.49900921562914,
+                  "y": 251.57436017283675,
+                  "zoom": -0.6666666666666665
                 }
               },
               "icon": "lucide-layout-dashboard",
@@ -81,7 +81,8 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 300,
+    "collapsed": true
   },
   "right": {
     "id": "2b1d9ebf8bccf6bb",

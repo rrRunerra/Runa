@@ -14,6 +14,7 @@ import { FavoriteService } from './favorite.service';
 import { DualAuthGuard } from '../../common/guards/auth.guard';
 import { CreateFavoriteDto } from './dto/create-favorite.dto';
 import { FavoriteType } from '@runa/database';
+import { Public } from '../../common/decorators/public.decorator';
 
 @Controller('favorites')
 @UseGuards(DualAuthGuard)
@@ -49,6 +50,16 @@ export class FavoriteController {
   async getFavorites(@Req() req: any, @Query('type') type?: string) {
     const favoriteType = type ? this.parseType(type) : undefined;
     return this.favoriteService.getFavorites(req.user.id, favoriteType);
+  }
+
+  @Public()
+  @Get('user/:username')
+  async getUserFavorites(
+    @Param('username') username: string,
+    @Query('type') type?: string,
+  ) {
+    const favoriteType = type ? this.parseType(type) : undefined;
+    return this.favoriteService.getFavoritesByUsername(username, favoriteType);
   }
 
   @Get('status/:type/:mediaId')

@@ -82,8 +82,8 @@ export class ConnectionController {
     @Res() res: Response,
   ) {
     const [token, redirectUrl] = (state || '').split(':::');
-    const defaultUrl = `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/polaris/connections`;
-    const targetUrl = redirectUrl || defaultUrl;
+    const defaultUrl = `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/polaris/connections`; // DevSkim: ignore DS137138, DS162092
+    const targetUrl = this.isSafeRedirectUrl(redirectUrl) ? redirectUrl : defaultUrl;
     const separator = targetUrl.includes('?') ? '&' : '?';
 
     try {
@@ -100,6 +100,20 @@ export class ConnectionController {
       return res.redirect(
         `${targetUrl}${separator}error=oauth_failed&message=${encodeURIComponent(error.message)}`,
       );
+    }
+  }
+
+  private isSafeRedirectUrl(url: string): boolean {
+    if (!url) return false;
+    if (url.startsWith('/') && !url.startsWith('//')) {
+      return true;
+    }
+    try {
+      const parsedUrl = new URL(url);
+      const allowedUrl = new URL(process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'); // DevSkim: ignore DS137138, DS162092
+      return parsedUrl.hostname === allowedUrl.hostname;
+    } catch {
+      return false;
     }
   }
 

@@ -23,6 +23,7 @@ model User {
     displayName          String?
     avatarUrl            String?
     bannerUrl            String?
+    profileSettings      Json?                 @db.Json
     apiKeys              ApiKey[]
     connections          Connections[]
     animeList            AquilaAnimeUserList[]

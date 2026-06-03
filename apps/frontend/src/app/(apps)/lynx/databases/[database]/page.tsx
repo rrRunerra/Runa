@@ -1,6 +1,7 @@
 import { auth } from "@runa/auth";
 import AccessDenied from "@/components/lynx/AccessDenied";
 import { PageHeader } from "@/components/lynx/LynxPageHeader";
+import DatabaseTable from "@/components/lynx/DatabaseTable";
 
 export default async function DatabasePage({
   params,
@@ -18,12 +19,12 @@ export default async function DatabasePage({
     <div className="container mx-auto p-8 space-y-8">
       <PageHeader
         title={database}
-        description={`Viewing data for model: ${database}`}
+        description={`Manage records, fields, and indexes for: ${database}`}
         backHref="/lynx/databases"
         backLabel="Back to Databases"
       />
 
-      <div className="relative z-10">TODO</div>
+      <DatabaseTable database={database} />
     </div>
   );
 }

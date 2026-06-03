@@ -19,6 +19,7 @@ export class DualAuthGuard implements CanActivate {
   );
 
   private readonly internalApiKey = process.env.INTERNAL_API_KEY;
+  private readonly pwdChangeCache = new Map<string, { timestamp: number; lastChecked: number }>();
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
@@ -70,6 +71,35 @@ export class DualAuthGuard implements CanActivate {
           algorithms: ['HS256'],
         });
 
+        // Verify if password has changed since token issuance (throttled to 5 minutes)
+        const userId = payload.sub as string;
+        const now = Date.now();
+        const cached = this.pwdChangeCache.get(userId);
+
+        let changedAt: number | null = null;
+
+        if (cached && now - cached.lastChecked < 300000) {
+          changedAt = cached.timestamp;
+        } else {
+          const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { passwordChangedAt: true },
+          });
+          const timestamp = user?.passwordChangedAt
+            ? Math.floor(user.passwordChangedAt.getTime() / 1000)
+            : null;
+
+          this.pwdChangeCache.set(userId, {
+            timestamp: timestamp || 0,
+            lastChecked: now,
+          });
+          changedAt = timestamp;
+        }
+
+        if (changedAt && payload.iat && payload.iat < changedAt) {
+          throw new UnauthorizedException('Token expired due to password change');
+        }
+
         request.user = {
           id: payload.sub,
           username: payload.name,
@@ -99,7 +129,7 @@ export class DualAuthGuard implements CanActivate {
       return authHeader.split(' ')[1];
     }
 
-    const url = new URL(request.url, `http://${request.headers.host}`);
+    const url = new URL(request.url, `https://${request.headers.host}`);
     const queryToken = url.searchParams.get('token');
     if (queryToken) {
       return queryToken;
