@@ -7,7 +7,7 @@ export default class MalConnection extends BaseConnection {
   public readonly providerKey = ConnectionProvider.MAL;
 
   public readonly requiredEnvKeys = ["MAL_CLIENT_ID", "MAL_CLIENT_SECRET"];
-  public readonly capabilities = [ConnectionCapability.ANIME, ConnectionCapability.MANGA];
+  public readonly capabilities = [ConnectionCapability.ANIME, ConnectionCapability.MANGA, ConnectionCapability.SHOWCASE];
 
   private getCodeVerifier(): string {
     return (

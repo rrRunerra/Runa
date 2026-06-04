@@ -7,7 +7,7 @@ export default class AnilistConnection extends BaseConnection {
   public readonly providerKey = ConnectionProvider.ANILIST;
   
   public readonly requiredEnvKeys = ["ANILIST_CLIENT_ID", "ANILIST_CLIENT_SECRET"];
-  public readonly capabilities = [ConnectionCapability.ANIME, ConnectionCapability.MANGA];
+  public readonly capabilities = [ConnectionCapability.ANIME, ConnectionCapability.MANGA, ConnectionCapability.SHOWCASE];
 
   public getAuthUrl(token: string, redirectUrl?: string): string {
     const clientId = this.deps.env.ANILIST_CLIENT_ID;

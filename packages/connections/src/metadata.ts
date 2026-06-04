@@ -4,6 +4,7 @@ export enum ConnectionCapability {
   MOVIES = "MOVIES",
   TV_SHOWS = "TV_SHOWS",
   AUTH = "AUTH",
+  SHOWCASE = "SHOWCASE",
 }
 
 export interface ConnectionSearchResult {
@@ -24,6 +25,7 @@ export interface ConnectionMetadata {
   accentColor: string;
   glowColor: string;
   capabilities: ConnectionCapability[];
+  primaryApp: "aquila" | "lynx";
   search?(query: string, type: "ANIME" | "MANGA" | "MOVIES" | "TV_SHOWS"): Promise<ConnectionSearchResult[]>;
 }
 
@@ -36,7 +38,8 @@ export const PROVIDERS_METADATA: ConnectionMetadata[] = [
     icon: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/61/AniList_logo.svg/960px-AniList_logo.svg.png",
     accentColor: "bg-[#3db4f2]/10 border-[#3db4f2]/20 text-[#3db4f2] hover:bg-[#3db4f2]/20",
     glowColor: "shadow-[#3db4f2]/10",
-    capabilities: [ConnectionCapability.ANIME, ConnectionCapability.MANGA],
+    capabilities: [ConnectionCapability.ANIME, ConnectionCapability.MANGA, ConnectionCapability.SHOWCASE],
+    primaryApp: "aquila",
     async search(query: string, type: "ANIME" | "MANGA"): Promise<ConnectionSearchResult[]> {
       const graphqlQuery = `
         query ($search: String, $type: MediaType) {
@@ -77,7 +80,8 @@ export const PROVIDERS_METADATA: ConnectionMetadata[] = [
     icon: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/MyAnimeList_favicon.svg/3840px-MyAnimeList_favicon.svg.png?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail",
     accentColor: "bg-[#2e51a2]/10 border-[#2e51a2]/20 text-[#2e51a2] hover:bg-[#2e51a2]/20",
     glowColor: "shadow-[#2e51a2]/10",
-    capabilities: [ConnectionCapability.ANIME, ConnectionCapability.MANGA],
+    capabilities: [ConnectionCapability.ANIME, ConnectionCapability.MANGA, ConnectionCapability.SHOWCASE],
+    primaryApp: "aquila",
     async search(query: string, type: "ANIME" | "MANGA"): Promise<ConnectionSearchResult[]> {
       const path = type.toLowerCase(); // 'anime' or 'manga'
       const res = await fetch(
@@ -102,7 +106,8 @@ export const PROVIDERS_METADATA: ConnectionMetadata[] = [
     icon: "https://play-lh.googleusercontent.com/DliaDatmrt_M8drBtsafddTyhcxN5W3UAcpQRjoq7MViP3iwHBMegVmKIxDAjHrFACQ",
     accentColor: "bg-[#e50914]/10 border-[#e50914]/20 text-[#e50914] hover:bg-[#e50914]/20",
     glowColor: "shadow-[#e50914]/10",
-    capabilities: [ConnectionCapability.ANIME, ConnectionCapability.MOVIES, ConnectionCapability.TV_SHOWS],
+    capabilities: [ConnectionCapability.ANIME, ConnectionCapability.MOVIES, ConnectionCapability.TV_SHOWS, ConnectionCapability.SHOWCASE],
+    primaryApp: "aquila",
     async search(query: string, type: "ANIME" | "MANGA" | "MOVIES" | "TV_SHOWS"): Promise<ConnectionSearchResult[]> {
       const clientId = typeof process !== "undefined" ? process.env.NEXT_PUBLIC_SIMKL_CLIENT_ID || "" : "";
       let path = "anime";
@@ -134,5 +139,16 @@ export const PROVIDERS_METADATA: ConnectionMetadata[] = [
         episodes: item.episodes ? (Array.isArray(item.episodes) ? item.episodes.length : undefined) : undefined,
       }));
     },
+  },
+  {
+    id: "discord",
+    name: "Discord",
+    description: "Connect with your Discord account.",
+    url: "https://discord.com",
+    icon: "https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6a49cf127bf92de1e2_icon_clyde_blurple_RGB.png",
+    accentColor: "bg-[#5865f2]/10 border-[#5865f2]/20 text-[#5865f2] hover:bg-[#5865f2]/20",
+    glowColor: "shadow-[#5865f2]/10",
+    capabilities: [ConnectionCapability.AUTH, ConnectionCapability.SHOWCASE],
+    primaryApp: "lynx",
   },
 ];

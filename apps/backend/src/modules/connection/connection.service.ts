@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { ConnectionLinkedTo, ConnectionProvider } from '@runa/database';
-import { ConnectionLoader } from '@runa/connections';
+import { ConnectionLoader, ConnectionCapability } from '@runa/connections';
 
 @Injectable()
 export class ConnectionService implements OnModuleInit {
@@ -53,8 +53,8 @@ export class ConnectionService implements OnModuleInit {
     return provider.handleCallback(code, username);
   }
 
-  async findAll(username: string, linkedTo?: ConnectionLinkedTo) {
-    return this.prisma.client.connections.findMany({
+  async findAll(username: string, linkedTo?: ConnectionLinkedTo, capabilities?: string | string[]) {
+    const connections = await this.prisma.client.connections.findMany({
       where: {
         username,
         linkedTo: linkedTo ?? undefined,
@@ -69,8 +69,38 @@ export class ConnectionService implements OnModuleInit {
         updatedAt: true,
         expiresAt: true,
         linkedTo: true,
+        private: true,
+        metadata: true,
       },
     });
+
+    let capabilitiesFilter: ConnectionCapability[] | undefined;
+    if (capabilities) {
+      const rawCaps = Array.isArray(capabilities)
+        ? capabilities
+        : typeof capabilities === 'string'
+        ? capabilities.split(',')
+        : [];
+      capabilitiesFilter = rawCaps
+        .map((cap) => cap.trim().toUpperCase() as ConnectionCapability)
+        .filter((cap) => Object.values(ConnectionCapability).includes(cap as ConnectionCapability));
+    }
+
+    if (capabilitiesFilter && capabilitiesFilter.length > 0) {
+      return connections.filter((conn) => {
+        try {
+          const providerInstance = this.loader.getConnection(conn.provider);
+          if (!providerInstance) return false;
+          return providerInstance.capabilities.some((cap) =>
+            capabilitiesFilter!.includes(cap)
+          );
+        } catch {
+          return false;
+        }
+      });
+    }
+
+    return connections;
   }
 
   async upsert(
@@ -83,6 +113,8 @@ export class ConnectionService implements OnModuleInit {
       expiresAt?: Date;
       connectionId?: string;
       linkedTo?: ConnectionLinkedTo;
+      private?: boolean;
+      metadata?: any;
     },
   ) {
     const provider = this.toProvider(data.provider);
@@ -98,6 +130,8 @@ export class ConnectionService implements OnModuleInit {
         expiresAt: data.expiresAt,
         connectionId: data.connectionId,
         linkedTo: data.linkedTo,
+        private: data.private,
+        metadata: data.metadata,
       },
       create: {
         username,
@@ -108,6 +142,8 @@ export class ConnectionService implements OnModuleInit {
         expiresAt: data.expiresAt,
         connectionId: data.connectionId,
         linkedTo: data.linkedTo,
+        private: data.private,
+        metadata: data.metadata,
       },
     });
 
@@ -120,6 +156,8 @@ export class ConnectionService implements OnModuleInit {
       updatedAt: connection.updatedAt,
       expiresAt: connection.expiresAt,
       linkedTo: connection.linkedTo,
+      private: connection.private,
+      metadata: connection.metadata,
     };
   }
 

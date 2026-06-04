@@ -9,7 +9,7 @@ import {
   Put,
   Req,
 } from '@nestjs/common';
-import { UserService } from './user.service';
+import { parsePrivacy, UserService } from './user.service';
 import { DualAuthGuard } from '../../common/guards/auth.guard';
 import { User } from '@runa/database';
 import { Public } from '../../common/decorators/public.decorator';
@@ -49,13 +49,19 @@ export class UserController {
     if (!user) {
       throw new NotFoundException(`User with username ${username} not found`);
     }
-    // Map connections to hide tokens
-    const safeConnections = (user as any).connections?.map((conn: any) => ({
-      id: conn.id,
-      provider: conn.provider,
-      linkedUsername: conn.linkedUsername,
-      linkedTo: conn.linkedTo,
-    })) || [];
+    // Map connections to hide tokens, filtering out private ones
+    const safeConnections = (user as any).connections
+      ?.filter((conn: any) => !conn.private)
+      ?.map((conn: any) => ({
+        id: conn.id,
+        provider: conn.provider,
+        linkedUsername: conn.linkedUsername,
+        linkedTo: conn.linkedTo,
+        private: conn.private,
+        metadata: conn.metadata,
+      })) || [];
+
+    const privacy = parsePrivacy(user.privacy);
 
     // Return only public fields
     return {
@@ -65,7 +71,7 @@ export class UserController {
       avatarUrl: user.avatarUrl,
       bannerUrl: user.bannerUrl,
       profileSettings: user.profileSettings,
-      private: user.private,
+      private: privacy.profile,
       connections: safeConnections,
     };
   }

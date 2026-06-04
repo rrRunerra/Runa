@@ -29,9 +29,10 @@ export class ConnectionController {
   async findAll(
     @Req() req: any,
     @Query('linkedTo') linkedTo?: ConnectionLinkedTo,
+    @Query('capabilities') capabilities?: string | string[],
   ): Promise<ConnectionEntity[]> {
     const username = req.user.username;
-    return this.connectionService.findAll(username, linkedTo);
+    return this.connectionService.findAll(username, linkedTo, capabilities);
   }
 
   @Post('save')
@@ -49,6 +50,8 @@ export class ConnectionController {
       expiresAt: body.expiresAt ? new Date(body.expiresAt) : undefined,
       connectionId: body.connectionId,
       linkedTo: body.linkedTo,
+      private: body.private,
+      metadata: body.metadata,
     });
   }
 

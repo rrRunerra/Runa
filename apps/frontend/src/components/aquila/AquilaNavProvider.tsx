@@ -20,7 +20,7 @@ export default function AquilaNavProvider({ children }: AquilaNavProviderProps) 
 
   useEffect(() => {
     if (session?.accessToken) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/connections`, {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/connections?capabilities=ANIME,MANGA,MOVIES,TV_SHOWS`, {
         headers: {
           Authorization: `Bearer ${session.accessToken}`,
         },

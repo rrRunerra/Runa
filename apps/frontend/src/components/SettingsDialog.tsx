@@ -3,6 +3,7 @@
 import type React from "react";
 import { useState, useRef, useEffect } from "react";
 import { User, LinkIcon, Lock, Smartphone } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Dialog,
   DialogContent,
@@ -66,50 +67,86 @@ export function SettingsDialog({
           <button
             type="button"
             onClick={() => setActiveCategory("account")}
-            className={`flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap ${
+            className={`relative flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap outline-hidden cursor-pointer ${
               activeCategory === "account"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                ? "text-primary-foreground font-semibold"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <User className="size-4" />
-            Account
+            {activeCategory === "account" && (
+              <motion.div
+                layoutId="activeSettingsHighlight"
+                className="absolute inset-0 bg-primary rounded-lg shadow-sm"
+                transition={{ type: "spring", stiffness: 350, damping: 26 }}
+              />
+            )}
+            <span className="relative z-10 flex items-center gap-2.5">
+              <User className="size-4" />
+              Account
+            </span>
           </button>
           <button
             type="button"
             onClick={() => setActiveCategory("connections")}
-            className={`flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap ${
+            className={`relative flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap outline-hidden cursor-pointer ${
               activeCategory === "connections"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                ? "text-primary-foreground font-semibold"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <LinkIcon className="size-4" />
-            Connections
+            {activeCategory === "connections" && (
+              <motion.div
+                layoutId="activeSettingsHighlight"
+                className="absolute inset-0 bg-primary rounded-lg shadow-sm"
+                transition={{ type: "spring", stiffness: 350, damping: 26 }}
+              />
+            )}
+            <span className="relative z-10 flex items-center gap-2.5">
+              <LinkIcon className="size-4" />
+              Connections
+            </span>
           </button>
           <button
             type="button"
             onClick={() => setActiveCategory("privacy")}
-            className={`flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap ${
+            className={`relative flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap outline-hidden cursor-pointer ${
               activeCategory === "privacy"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                ? "text-primary-foreground font-semibold"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <Lock className="size-4" />
-            Privacy
+            {activeCategory === "privacy" && (
+              <motion.div
+                layoutId="activeSettingsHighlight"
+                className="absolute inset-0 bg-primary rounded-lg shadow-sm"
+                transition={{ type: "spring", stiffness: 350, damping: 26 }}
+              />
+            )}
+            <span className="relative z-10 flex items-center gap-2.5">
+              <Lock className="size-4" />
+              Privacy
+            </span>
           </button>
           <button
             type="button"
             onClick={() => setActiveCategory("sidebar")}
-            className={`flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap ${
+            className={`relative flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 whitespace-nowrap outline-hidden cursor-pointer ${
               activeCategory === "sidebar"
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                ? "text-primary-foreground font-semibold"
+                : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <Smartphone className="size-4" />
-            Sidebar
+            {activeCategory === "sidebar" && (
+              <motion.div
+                layoutId="activeSettingsHighlight"
+                className="absolute inset-0 bg-primary rounded-lg shadow-sm"
+                transition={{ type: "spring", stiffness: 350, damping: 26 }}
+              />
+            )}
+            <span className="relative z-10 flex items-center gap-2.5">
+              <Smartphone className="size-4" />
+              Sidebar
+            </span>
           </button>
         </div>
 
@@ -131,67 +168,84 @@ export function SettingsDialog({
           </DialogHeader>
 
           <div className="flex-1 overflow-y-auto p-6">
-            {activeCategory === "account" && (
-              <AccountSettingsTab
-                ref={accountTabRef}
-                onOpenChange={onOpenChange}
-                isSubmitting={isSubmitting}
-                setIsSubmitting={setIsSubmitting}
-              />
-            )}
-            {activeCategory === "connections" && <ConnectionsTab />}
-            {activeCategory === "privacy" && (
-              <PrivacySettingsTab
-                ref={privacyTabRef}
-                onOpenChange={onOpenChange}
-                isSubmitting={isSubmitting}
-                setIsSubmitting={setIsSubmitting}
-              />
-            )}
-            {activeCategory === "sidebar" && (
-              <SidebarSettingsTab
-                ref={sidebarTabRef}
-                onOpenChange={onOpenChange}
-                navConfig={navConfig}
-              />
-            )}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeCategory}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="h-full"
+              >
+                {activeCategory === "account" && (
+                  <AccountSettingsTab
+                    ref={accountTabRef}
+                    onOpenChange={onOpenChange}
+                    isSubmitting={isSubmitting}
+                    setIsSubmitting={setIsSubmitting}
+                  />
+                )}
+                {activeCategory === "connections" && <ConnectionsTab />}
+                {activeCategory === "privacy" && (
+                  <PrivacySettingsTab
+                    ref={privacyTabRef}
+                    onOpenChange={onOpenChange}
+                    isSubmitting={isSubmitting}
+                    setIsSubmitting={setIsSubmitting}
+                  />
+                )}
+                {activeCategory === "sidebar" && (
+                  <SidebarSettingsTab
+                    ref={sidebarTabRef}
+                    onOpenChange={onOpenChange}
+                    navConfig={navConfig}
+                  />
+                )}
+              </motion.div>
+            </AnimatePresence>
           </div>
 
           {/* Footer actions */}
-          <div className="px-6 py-4 border-t border-border/50 flex justify-end gap-3 bg-muted/10">
+          <div className="px-6 py-4 border-t border-border/50 flex justify-end gap-3 bg-muted/10 items-center">
             <Button
               variant="ghost"
               onClick={() => onOpenChange(false)}
-              className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg text-sm"
+              className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg text-sm cursor-pointer"
               disabled={isSubmitting}
             >
               Cancel
             </Button>
             {activeCategory === "account" && (
-              <Button
-                onClick={() => accountTabRef.current?.handleSave()}
-                disabled={isSubmitting}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg px-5 shadow-sm text-sm"
-              >
-                {isSubmitting ? "Saving..." : "Save Changes"}
-              </Button>
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Button
+                  onClick={() => accountTabRef.current?.handleSave()}
+                  disabled={isSubmitting}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg px-5 shadow-sm text-sm cursor-pointer"
+                >
+                  {isSubmitting ? "Saving..." : "Save Changes"}
+                </Button>
+              </motion.div>
             )}
             {activeCategory === "privacy" && (
-              <Button
-                onClick={() => privacyTabRef.current?.handleSave()}
-                disabled={isSubmitting}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg px-5 shadow-sm text-sm"
-              >
-                {isSubmitting ? "Saving..." : "Save Changes"}
-              </Button>
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Button
+                  onClick={() => privacyTabRef.current?.handleSave()}
+                  disabled={isSubmitting}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg px-5 shadow-sm text-sm cursor-pointer"
+                >
+                  {isSubmitting ? "Saving..." : "Save Changes"}
+                </Button>
+              </motion.div>
             )}
             {activeCategory === "sidebar" && (
-              <Button
-                onClick={() => sidebarTabRef.current?.handleSave()}
-                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg px-5 shadow-sm text-sm"
-              >
-                Save Changes
-              </Button>
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Button
+                  onClick={() => sidebarTabRef.current?.handleSave()}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg px-5 shadow-sm text-sm cursor-pointer"
+                >
+                  Save Changes
+                </Button>
+              </motion.div>
             )}
           </div>
         </div>

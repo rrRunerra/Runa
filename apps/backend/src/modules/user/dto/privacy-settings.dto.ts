@@ -20,4 +20,8 @@ export class PrivacySettingsDto {
   @IsBoolean()
   @IsOptional()
   movieList?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  connections?: boolean;
 }

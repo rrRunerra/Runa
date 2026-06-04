@@ -6,6 +6,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { NavigationProvider } from "@/components/Providers/NavigationProvider";
 import { ThemeProvider } from "next-themes";
 import { THEMES } from "@/config/themes";
+import SpotlightSearch from "@/components/SpotlightSearch";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const allThemes = [
@@ -20,10 +21,14 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       <ThemeProvider attribute="class" defaultTheme="dark" themes={allThemes}>
         <SidebarProvider>
           <TooltipProvider>
-            <NavigationProvider>{children}</NavigationProvider>
+            <NavigationProvider>
+              {children}
+              <SpotlightSearch />
+            </NavigationProvider>
           </TooltipProvider>
         </SidebarProvider>
       </ThemeProvider>
     </SessionProvider>
   );
 }
+

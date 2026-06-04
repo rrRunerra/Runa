@@ -27,6 +27,7 @@ export const PrivacySettingsTab = forwardRef<PrivacySettingsTabRef, PrivacySetti
     const [mangaListPrivate, setMangaListPrivate] = useState(false);
     const [tvListPrivate, setTvListPrivate] = useState(false);
     const [movieListPrivate, setMovieListPrivate] = useState(false);
+    const [connectionsPrivate, setConnectionsPrivate] = useState(false);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -47,6 +48,7 @@ export const PrivacySettingsTab = forwardRef<PrivacySettingsTabRef, PrivacySetti
             setMangaListPrivate(data.mangaList || false);
             setTvListPrivate(data.tvList || false);
             setMovieListPrivate(data.movieList || false);
+            setConnectionsPrivate(data.connections || false);
           })
           .catch((err) => {
             console.error("Error fetching privacy settings:", err);
@@ -78,6 +80,7 @@ export const PrivacySettingsTab = forwardRef<PrivacySettingsTabRef, PrivacySetti
             mangaList: mangaListPrivate,
             tvList: tvListPrivate,
             movieList: movieListPrivate,
+            connections: connectionsPrivate,
           }),
         });
 
@@ -206,6 +209,24 @@ export const PrivacySettingsTab = forwardRef<PrivacySettingsTabRef, PrivacySetti
               id="movie-private"
               checked={movieListPrivate}
               onCheckedChange={setMovieListPrivate}
+              disabled={isSubmitting || profilePrivate}
+            />
+          </div>
+
+          {/* Connections Privacy Toggle */}
+          <div className="flex items-center justify-between py-4">
+            <div className="space-y-0.5 pr-8">
+              <Label className="text-sm font-medium text-foreground cursor-pointer" htmlFor="connections-private">
+                Private Connections
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Hides all of your linked third-party integrations/connections from your public profile page.
+              </p>
+            </div>
+            <Switch
+              id="connections-private"
+              checked={connectionsPrivate}
+              onCheckedChange={setConnectionsPrivate}
               disabled={isSubmitting || profilePrivate}
             />
           </div>

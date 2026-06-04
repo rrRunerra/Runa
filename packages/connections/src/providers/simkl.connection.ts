@@ -7,7 +7,7 @@ export default class SimklConnection extends BaseConnection {
   public readonly providerKey = ConnectionProvider.SIMKL;
 
   public readonly requiredEnvKeys = ["SIMKL_CLIENT_ID", "SIMKL_CLIENT_SECRET"];
-  public readonly capabilities = [ConnectionCapability.ANIME, ConnectionCapability.MOVIES, ConnectionCapability.TV_SHOWS];
+  public readonly capabilities = [ConnectionCapability.ANIME, ConnectionCapability.MOVIES, ConnectionCapability.TV_SHOWS, ConnectionCapability.SHOWCASE];
 
   public getAuthUrl(token: string, redirectUrl?: string): string {
     const clientId = this.deps.env.SIMKL_CLIENT_ID;
@@ -76,7 +76,8 @@ export default class SimklConnection extends BaseConnection {
     }
 
     const profileData = await profileRes.json();
-    const profile = { id: String(profileData.user.id), username: profileData.user.name };
+    const connectionId = profileData.account.id.toString();
+    const profile = { id: connectionId, username: profileData.user.name };
 
     await this.deps.prisma.client.connections.upsert({
       where: {

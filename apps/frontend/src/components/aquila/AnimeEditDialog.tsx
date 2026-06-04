@@ -166,7 +166,7 @@ export function AnimeEditDialog({
 
         try {
           const connRes = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/connections`,
+            `${process.env.NEXT_PUBLIC_API_URL}/connections?capabilities=ANIME`,
             {
               headers: {
                 Authorization: `Bearer ${session.data?.accessToken}`,

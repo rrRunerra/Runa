@@ -103,6 +103,19 @@ export default function AppSideBar({
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
+  useEffect(() => {
+    const handleOpenAppearance = () => setIsAppearanceOpen(true);
+    const handleOpenSettings = () => setIsSettingsOpen(true);
+
+    window.addEventListener("runa-open-appearance", handleOpenAppearance);
+    window.addEventListener("runa-open-settings", handleOpenSettings);
+
+    return () => {
+      window.removeEventListener("runa-open-appearance", handleOpenAppearance);
+      window.removeEventListener("runa-open-settings", handleOpenSettings);
+    };
+  }, []);
+
   const [resolvedNavConfig, setResolvedNavConfig] = useState<NavbarConfig>(navConfig);
 
   useEffect(() => {
@@ -233,27 +246,68 @@ export default function AppSideBar({
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent
-                className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-xl bg-popover text-popover-foreground shadow-md p-2"
+                className="w-80 rounded-2xl bg-popover/90 backdrop-blur-md border border-border/40 text-popover-foreground shadow-2xl p-3"
                 align="start"
                 side={isMobile ? "bottom" : "right"}
                 sideOffset={12}
               >
-                <DropdownMenuLabel className="text-muted-foreground text-xs uppercase tracking-wider font-semibold mb-2 px-2">
-                  Applications
-                </DropdownMenuLabel>
-                {apps.map((app, idx) => (
-                  <Link href={app.href} key={idx}>
-                    <DropdownMenuItem
-                      onClick={() => setActiveApp(app)}
-                      className="gap-3 p-2 rounded-md hover:bg-sidebar-accent hover:text-sidebar-accent-foreground cursor-pointer transition-colors duration-200"
-                    >
-                      <div className="flex size-7 items-center justify-center rounded-md border border-border/50 bg-background text-foreground shadow-sm">
-                        {app.logo}
-                      </div>
-                      <span className="font-medium">{app.name}</span>
-                    </DropdownMenuItem>
-                  </Link>
-                ))}
+                <div className="flex flex-col gap-2.5">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-muted-foreground text-[10px] uppercase tracking-widest font-bold">
+                      Applications
+                    </span>
+                    <span className="text-muted-foreground/60 text-[9px] font-medium flex items-center gap-1">
+                      Press <kbd className="px-1 py-0.5 rounded-sm bg-muted border border-border/50 text-[8px] font-sans font-semibold">Shift</kbd> twice to search
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {apps.map((app, idx) => {
+                      const isActive = activeApp.name === app.name;
+                      
+                      const hoverBorderClass = app.hoverBorderClass || "hover:border-indigo-500/40 hover:bg-indigo-950/10 hover:shadow-indigo-500/5";
+                      const logoWrapperClass = app.logoWrapperClass || "bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 group-hover:bg-indigo-500 group-hover:text-white";
+                      const badgeText = app.badgeText || "";
+                      const badgeColor = app.badgeColor || "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20";
+
+                      return (
+                        <Link href={app.href} key={idx} className="block">
+                          <DropdownMenuItem
+                            onClick={() => setActiveApp(app)}
+                            className={cn(
+                              "group relative flex flex-col items-start gap-2 p-3 rounded-xl border border-border/30 bg-background/40 cursor-pointer text-left transition-all duration-300 hover:scale-105 active:scale-95 hover:shadow-md outline-hidden select-none",
+                              hoverBorderClass,
+                              isActive && "border-primary/50 bg-primary/5 shadow-xs"
+                            )}
+                          >
+                            <div className="flex w-full items-center justify-between">
+                              <div className={cn(
+                                "flex size-7 items-center justify-center rounded-lg shadow-sm transition-all duration-300",
+                                logoWrapperClass,
+                                isActive && "scale-105 shadow-md"
+                              )}>
+                                {app.logo}
+                              </div>
+                              {badgeText && (
+                                <span className={cn("text-[9px] px-1.5 py-0.5 rounded-full font-semibold border tracking-wide", badgeColor)}>
+                                  {badgeText}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex flex-col gap-0.5 mt-0.5">
+                              <span className="font-bold text-xs text-foreground group-hover:text-foreground">
+                                {app.name}
+                              </span>
+                              <span className="text-[10px] leading-tight text-muted-foreground line-clamp-1 group-hover:text-muted-foreground/80">
+                                {app.description}
+                              </span>
+                            </div>
+                          </DropdownMenuItem>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
               </DropdownMenuContent>
             </DropdownMenu>
           </SidebarMenuItem>

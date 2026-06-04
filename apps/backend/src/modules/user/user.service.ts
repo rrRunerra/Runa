@@ -30,6 +30,38 @@ const RESERVED_KEYWORDS = new Set([
   "limit", "offset", "distinct", "all", "exists", "like", "between", "is"
 ]);
 
+export interface PrivacySettings {
+  [key: string]: boolean;
+  profile: boolean;
+  animeList: boolean;
+  mangaList: boolean;
+  tvList: boolean;
+  movieList: boolean;
+  connections: boolean;
+}
+
+export function parsePrivacy(privacy: unknown): PrivacySettings {
+  if (privacy && typeof privacy === 'object') {
+    const p = privacy as Record<string, unknown>;
+    return {
+      profile: p.profile === true,
+      animeList: p.animeList === true,
+      mangaList: p.mangaList === true,
+      tvList: p.tvList === true,
+      movieList: p.movieList === true,
+      connections: p.connections === true,
+    };
+  }
+  return {
+    profile: false,
+    animeList: false,
+    mangaList: false,
+    tvList: false,
+    movieList: false,
+    connections: false,
+  };
+}
+
 @Injectable()
 export class UserService {
   constructor(private readonly prisma: PrismaService) {}
@@ -165,15 +197,11 @@ export class UserService {
     });
   }
 
-  async getPrivacySettings(username: string) {
+  async getPrivacySettings(username: string): Promise<PrivacySettings> {
     const user = await this.prisma.client.user.findUnique({
       where: { username: username.toLowerCase() },
       select: {
-        private: true,
-        privateAnime: true,
-        privateManga: true,
-        privateTv: true,
-        privateMovie: true,
+        privacy: true,
       },
     });
 
@@ -181,35 +209,36 @@ export class UserService {
       throw new NotFoundException(`User ${username} not found`);
     }
 
-    return {
-      profile: user.private,
-      animeList: user.privateAnime,
-      mangaList: user.privateManga,
-      tvList: user.privateTv,
-      movieList: user.privateMovie,
-    };
+    return parsePrivacy(user.privacy);
   }
 
-  async updatePrivacySettings(userId: string, dto: PrivacySettingsDto) {
+  async updatePrivacySettings(userId: string, dto: PrivacySettingsDto): Promise<{ success: boolean }> {
     const user = await this.prisma.client.user.findUnique({
       where: { id: userId },
+      select: {
+        username: true,
+        privacy: true,
+      },
     });
 
     if (!user) {
       throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
-    const updateData: any = {};
-    if (dto.profile !== undefined) updateData.private = dto.profile;
-    if (dto.animeList !== undefined) updateData.privateAnime = dto.animeList;
-    if (dto.mangaList !== undefined) updateData.privateManga = dto.mangaList;
-    if (dto.tvList !== undefined) updateData.privateTv = dto.tvList;
-    if (dto.movieList !== undefined) updateData.privateMovie = dto.movieList;
+    const currentPrivacy = parsePrivacy(user.privacy);
+    const updatedPrivacy: PrivacySettings = {
+      profile: dto.profile !== undefined ? dto.profile : currentPrivacy.profile,
+      animeList: dto.animeList !== undefined ? dto.animeList : currentPrivacy.animeList,
+      mangaList: dto.mangaList !== undefined ? dto.mangaList : currentPrivacy.mangaList,
+      tvList: dto.tvList !== undefined ? dto.tvList : currentPrivacy.tvList,
+      movieList: dto.movieList !== undefined ? dto.movieList : currentPrivacy.movieList,
+      connections: dto.connections !== undefined ? dto.connections : currentPrivacy.connections,
+    };
 
     await this.prisma.client.$transaction([
       this.prisma.client.user.update({
         where: { id: userId },
-        data: updateData,
+        data: { privacy: updatedPrivacy },
       }),
       ...(dto.animeList !== undefined
         ? [
@@ -243,10 +272,19 @@ export class UserService {
             }),
           ]
         : []),
+      ...(dto.connections !== undefined
+        ? [
+            this.prisma.client.connections.updateMany({
+              where: { username: user.username },
+              data: { private: dto.connections },
+            }),
+          ]
+        : []),
     ]);
 
     return { success: true };
   }
+
 
   async updateSettings(userId: string, settings: any) {
     return await this.prisma.client.user.update({

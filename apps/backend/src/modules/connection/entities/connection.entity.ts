@@ -7,4 +7,6 @@ export class ConnectionEntity {
   updatedAt!: Date;
   expiresAt!: Date | null;
   linkedTo!: string | null;
+  private!: boolean;
+  metadata!: any;
 }

@@ -5,6 +5,8 @@ import {
   IsOptional,
   IsString,
   IsDateString,
+  IsBoolean,
+  IsObject,
 } from 'class-validator';
 
 export enum ConnectionProvider {
@@ -45,4 +47,12 @@ export class UpsertConnectionDto {
   @IsEnum(ConnectionLinkedTo)
   @IsOptional()
   linkedTo?: ConnectionLinkedTo;
+
+  @IsBoolean()
+  @IsOptional()
+  private?: boolean;
+
+  @IsObject()
+  @IsOptional()
+  metadata?: any;
 }

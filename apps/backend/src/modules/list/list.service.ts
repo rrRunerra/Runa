@@ -1,5 +1,7 @@
 import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
 
+import { parsePrivacy } from '../user/user.service';
+
 import { $Enums } from '@runa/database';
 import { MovieUpdateData, TvUpdateData } from '@runa/connections';
 
@@ -19,7 +21,7 @@ export class ListService {
   public async getAnimeList(username: string, requester?: string): Promise<ListEntity[]> {
     const owner = await this.prisma.client.user.findUnique({
       where: { username: username.toLowerCase() },
-      select: { private: true, privateAnime: true },
+      select: { privacy: true },
     });
 
     if (!owner) {
@@ -27,7 +29,8 @@ export class ListService {
     }
 
     const isOwner = requester?.toLowerCase() === username.toLowerCase();
-    if ((owner.private || owner.privateAnime) && !isOwner) {
+    const privacy = parsePrivacy(owner.privacy);
+    if ((privacy.profile || privacy.animeList) && !isOwner) {
       throw new ForbiddenException('This list is private');
     }
 
@@ -117,9 +120,10 @@ export class ListService {
     try {
       const user = await this.prisma.client.user.findUnique({
         where: { username: username.toLowerCase() },
-        select: { private: true, privateAnime: true },
+        select: { privacy: true },
       });
-      const isPrivate = !!(user?.private || user?.privateAnime);
+      const privacy = parsePrivacy(user?.privacy);
+      const isPrivate = !!(privacy.profile || privacy.animeList);
 
       await this.prisma.client.aquilaAnimeUserList.upsert({
         where: {
@@ -292,7 +296,7 @@ export class ListService {
   public async getMangaList(username: string, requester?: string): Promise<ListEntity[]> {
     const owner = await this.prisma.client.user.findUnique({
       where: { username: username.toLowerCase() },
-      select: { private: true, privateManga: true },
+      select: { privacy: true },
     });
 
     if (!owner) {
@@ -300,7 +304,8 @@ export class ListService {
     }
 
     const isOwner = requester?.toLowerCase() === username.toLowerCase();
-    if ((owner.private || owner.privateManga) && !isOwner) {
+    const privacy = parsePrivacy(owner.privacy);
+    if ((privacy.profile || privacy.mangaList) && !isOwner) {
       throw new ForbiddenException('This list is private');
     }
 
@@ -387,9 +392,10 @@ export class ListService {
     try {
       const user = await this.prisma.client.user.findUnique({
         where: { username: username.toLowerCase() },
-        select: { private: true, privateManga: true },
+        select: { privacy: true },
       });
-      const isPrivate = !!(user?.private || user?.privateManga);
+      const privacy = parsePrivacy(user?.privacy);
+      const isPrivate = !!(privacy.profile || privacy.mangaList);
 
       await this.prisma.client.aquilaMangaUserList.upsert({
         where: {
@@ -693,7 +699,7 @@ export class ListService {
   public async getMovieList(username: string, requester?: string): Promise<ListEntity[]> {
     const owner = await this.prisma.client.user.findUnique({
       where: { username: username.toLowerCase() },
-      select: { private: true, privateMovie: true },
+      select: { privacy: true },
     });
 
     if (!owner) {
@@ -701,7 +707,8 @@ export class ListService {
     }
 
     const isOwner = requester?.toLowerCase() === username.toLowerCase();
-    if ((owner.private || owner.privateMovie) && !isOwner) {
+    const privacy = parsePrivacy(owner.privacy);
+    if ((privacy.profile || privacy.movieList) && !isOwner) {
       throw new ForbiddenException('This list is private');
     }
 
@@ -775,9 +782,10 @@ export class ListService {
     try {
       const user = await this.prisma.client.user.findUnique({
         where: { username: username.toLowerCase() },
-        select: { private: true, privateMovie: true },
+        select: { privacy: true },
       });
-      const isPrivate = !!(user?.private || user?.privateMovie);
+      const privacy = parsePrivacy(user?.privacy);
+      const isPrivate = !!(privacy.profile || privacy.movieList);
 
       await this.prisma.client.aquilaMovieUserList.upsert({
         where: {
@@ -891,7 +899,7 @@ export class ListService {
   public async getTvList(username: string, requester?: string): Promise<ListEntity[]> {
     const owner = await this.prisma.client.user.findUnique({
       where: { username: username.toLowerCase() },
-      select: { private: true, privateTv: true },
+      select: { privacy: true },
     });
 
     if (!owner) {
@@ -899,7 +907,8 @@ export class ListService {
     }
 
     const isOwner = requester?.toLowerCase() === username.toLowerCase();
-    if ((owner.private || owner.privateTv) && !isOwner) {
+    const privacy = parsePrivacy(owner.privacy);
+    if ((privacy.profile || privacy.tvList) && !isOwner) {
       throw new ForbiddenException('This list is private');
     }
 
@@ -993,9 +1002,10 @@ export class ListService {
     try {
       const user = await this.prisma.client.user.findUnique({
         where: { username: username.toLowerCase() },
-        select: { private: true, privateTv: true },
+        select: { privacy: true },
       });
-      const isPrivate = !!(user?.private || user?.privateTv);
+      const privacy = parsePrivacy(user?.privacy);
+      const isPrivate = !!(privacy.profile || privacy.tvList);
 
       await this.prisma.client.aquilaTvUserList.upsert({
         where: {

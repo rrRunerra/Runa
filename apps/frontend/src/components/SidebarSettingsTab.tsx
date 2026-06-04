@@ -18,6 +18,8 @@ interface Connection {
   connectionId: string | null;
   createdAt: string;
   expiresAt: string | null;
+  private: boolean;
+  metadata?: any;
 }
 
 interface SidebarSettingsTabProps {
