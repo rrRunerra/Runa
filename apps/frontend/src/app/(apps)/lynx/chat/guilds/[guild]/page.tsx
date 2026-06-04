@@ -4,7 +4,6 @@ import Link from "next/link";
 import AccessDenied from "@/components/lynx/AccessDenied";
 import { PageHeader } from "@/components/lynx/LynxPageHeader";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 // TYPE 2 = VOICE
@@ -92,46 +91,45 @@ export default async function ChannelsPage({
                   href={`/lynx/chat/guilds/${guild}/${channel.id}`}
                   className="block h-full"
                 >
-                  <Card className="h-full hover:scale-[1.02] transform-gpu backface-visibility-hidden transition-all duration-300 cursor-pointer group shadow-sm overflow-hidden bg-card border-border">
-                    <CardHeader className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={cn(
-                              "p-2.5 rounded-lg border flex items-center justify-center transition-colors",
-                              isVoice
-                                ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500"
-                                : "bg-primary/10 border-primary/20 text-primary",
-                              channel.nsfw &&
-                                "bg-destructive/10 border-destructive/20 text-destructive",
-                            )}
-                          >
-                            <div className="relative z-10">
-                              {isVoice ? (
-                                <Volume2 className="w-5 h-5" />
-                              ) : (
-                                <Hash className="w-5 h-5" />
-                              )}
-                            </div>
-                          </div>
-                          <CardTitle className="text-xl text-foreground flex items-center gap-2 truncate">
-                            {channel.name}
-                          </CardTitle>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {channel.nsfw && (
-                            <Badge
-                              variant="destructive"
-                              className="bg-destructive/20 text-destructive border-destructive/30 text-[10px] uppercase px-1.5 h-5"
-                            >
-                              NSFW
-                            </Badge>
+                  <div className="h-full relative overflow-hidden rounded-2xl border border-zinc-800/40 bg-zinc-950/20 backdrop-blur-xl p-6 shadow-xl hover:shadow-2xl hover:border-zinc-700/50 hover:bg-zinc-800/10 cursor-pointer group flex flex-col justify-between transition-all duration-300 isolate [transform:translate3d(0,0,0)]">
+                    {/* Accent glow on hover */}
+                    <div className="absolute top-0 right-0 size-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors pointer-events-none" />
+
+                    <div className="flex items-center justify-between relative z-10 w-full">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div
+                          className={cn(
+                            "size-10 rounded-xl border flex items-center justify-center transition-all duration-300 group-hover:scale-105 shadow-inner shrink-0",
+                            isVoice
+                              ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                              : "bg-primary/10 border-primary/20 text-primary",
+                            channel.nsfw &&
+                              "bg-destructive/10 border-destructive/20 text-destructive",
                           )}
-                          <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                        >
+                          {isVoice ? (
+                            <Volume2 className="size-5" />
+                          ) : (
+                            <Hash className="size-5" />
+                          )}
                         </div>
+                        <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors truncate max-w-[170px]" title={channel.name}>
+                          {channel.name}
+                        </h3>
                       </div>
-                    </CardHeader>
-                  </Card>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {channel.nsfw && (
+                          <Badge
+                            variant="destructive"
+                            className="bg-red-500/10 text-red-400 border border-red-500/20 text-[9px] font-bold uppercase px-1.5 h-5 shadow-[0_0_8px_rgba(239,68,68,0.08)]"
+                          >
+                            NSFW
+                          </Badge>
+                        )}
+                        <ChevronRight className="size-4 text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition-all" />
+                      </div>
+                    </div>
+                  </div>
                 </Link>
               );
             })

@@ -98,7 +98,20 @@ export class AnimeQueueService implements OnModuleInit {
             episodes
             duration
             source
+            averageScore
+            meanScore
+            popularity
+            trending
+            favourites
             genres
+            synonyms
+            hashtag
+            countryOfOrigin
+            nextAiringEpisode {
+              airingAt
+              timeUntilAiring
+              episode
+            }
             tags {
               name
               rank
@@ -128,12 +141,25 @@ export class AnimeQueueService implements OnModuleInit {
                     medium
                   }
                 }
+                voiceActors (language: JAPANESE) {
+                  name {
+                    full
+                  }
+                  image {
+                    medium
+                  }
+                }
               }
             }
             studios (isMain: true) {
               nodes {
                 name
               }
+            }
+            trailer {
+              id
+              site
+              thumbnail
             }
           }
         }`,
@@ -151,6 +177,20 @@ export class AnimeQueueService implements OnModuleInit {
     if (!media) {
       return null;
     }
+
+    const trailers = media.trailer
+      ? [
+          {
+            id: media.trailer.id,
+            name: 'Official Trailer',
+            site: media.trailer.site,
+            url:
+              media.trailer.site === 'youtube'
+                ? `https://www.youtube.com/watch?v=${media.trailer.id}`
+                : media.trailer.id,
+          },
+        ]
+      : [];
 
     return {
       anilistId: media.id,
@@ -189,8 +229,25 @@ export class AnimeQueueService implements OnModuleInit {
         name: edge.node.name.full,
         image: edge.node.image.medium,
         role: edge.role,
+        voiceActor:
+          edge.voiceActors && edge.voiceActors[0]
+            ? {
+                name: edge.voiceActors[0].name.full,
+                image: edge.voiceActors[0].image.medium,
+              }
+            : null,
       })),
       studios: media.studios?.nodes.map((node) => node.name),
+      averageScore: media.averageScore,
+      popularity: media.popularity,
+      favourites: media.favourites,
+      trending: media.trending,
+      meanScore: media.meanScore,
+      synonyms: media.synonyms || [],
+      hashtag: media.hashtag,
+      countryOfOrigin: media.countryOfOrigin,
+      nextAiringEpisode: media.nextAiringEpisode || undefined,
+      trailers: trailers,
     };
   }
 }
@@ -214,6 +271,14 @@ interface AniListGetResponse {
       duration: number;
       source: string;
       genres: string[];
+      synonyms: string[];
+      hashtag: string;
+      countryOfOrigin: string;
+      averageScore: number;
+      meanScore: number;
+      popularity: number;
+      trending: number;
+      favourites: number;
       tags: { name: string; rank: number }[];
       isAdult: boolean;
       relations: {
@@ -237,9 +302,27 @@ interface AniListGetResponse {
             name: { full: string };
             image: { medium: string };
           };
+          voiceActors: {
+            name: {
+              full: string;
+            };
+            image: {
+              medium: string;
+            };
+          }[];
         }[];
       };
       studios: { nodes: { name: string }[] };
+      trailer: {
+        id: string;
+        site: string;
+        thumbnail: string;
+      };
+      nextAiringEpisode: {
+        airingAt: number;
+        timeUntilAiring: number;
+        episode: number;
+      };
     };
   };
 }

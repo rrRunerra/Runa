@@ -206,6 +206,14 @@ export class TvService {
             id: s.id.toString(),
             name: s.name,
           })) || [],
+      originalCountry: series.originalCountry || null,
+      originalLanguage: series.originalLanguage || null,
+      tvType: series.type || null,
+      averageRuntime: series.averageRuntime || null,
+      contentRating:
+        series.contentRatings?.find((r: any) => r.country === 'usa')?.name ||
+        series.contentRatings?.[0]?.name ||
+        null,
       seasons:
         series.seasons
           ?.filter((s: any) => s.type.id === 1)

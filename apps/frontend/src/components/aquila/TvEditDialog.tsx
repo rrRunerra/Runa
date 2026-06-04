@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import {
@@ -45,6 +45,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, Check, Heart, X, ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { format } from "date-fns";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -165,18 +166,19 @@ export function TvEditDialog({
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState<boolean>(false);
 
-  const performConnectionSearch = async (query: string) => {
-    if (!query || !activeSearchProvider) return;
+  const performConnectionSearch = async (query: string, providerKey?: string): Promise<void> => {
+    const activeProv = providerKey || activeSearchProvider;
+    if (!query || !activeProv) return;
     setIsSearching(true);
     setSearchResults([]);
     try {
-      const provider = BASE_CONNECTION_PROVIDERS.find((p) => p.key === activeSearchProvider);
+      const provider = BASE_CONNECTION_PROVIDERS.find((p) => p.key === activeProv);
       if (provider && provider.search) {
         const results = await provider.search(query, "TV_SHOWS");
         setSearchResults(results);
       }
     } catch (err) {
-      console.error(`Failed to search ${activeSearchProvider}`, err);
+      console.error(`Failed to search ${activeProv}`, err);
     } finally {
       setIsSearching(false);
     }
@@ -245,7 +247,7 @@ export function TvEditDialog({
     });
   };
 
-  const renderConnectionCard = (provider: string, label: string) => {
+  const renderConnectionCard = (provider: string, label: string): React.JSX.Element => {
     const conn = connections[provider];
     const isLinked = !!conn;
     const linkedId = conn ? (typeof conn === 'object' ? conn.id : conn) : '';
@@ -256,10 +258,13 @@ export function TvEditDialog({
         <Button
           type="button"
           variant="outline"
-          className="w-full h-12 border-dashed border-input hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-2 rounded-lg bg-background/50 text-foreground"
+          className="w-full h-12 border-dashed border-zinc-800/80 hover:border-primary/50 hover:bg-primary/5 hover:text-primary transition-all duration-300 flex items-center justify-center gap-2 rounded-xl bg-zinc-950/20 text-muted-foreground text-xs font-semibold cursor-pointer"
           onClick={() => {
             setActiveSearchProvider(provider);
+            const title = media.title.english || media.title.romaji;
+            setConnectionSearchQuery(title);
             setIsConnectionSearchOpen(true);
+            performConnectionSearch(title, provider);
           }}
         >
           <Plus className="w-4 h-4" />
@@ -276,27 +281,27 @@ export function TvEditDialog({
     const hasDatesOverride = typeof conn === 'object' && (conn.startDate !== undefined || conn.endDate !== undefined);
 
     return (
-      <div className="flex flex-col border border-border rounded-lg overflow-hidden bg-background/50 w-full transition-all duration-200 text-foreground">
+      <div className="flex flex-col border border-zinc-800/50 rounded-xl overflow-hidden bg-zinc-950/40 w-full transition-all duration-200 text-foreground">
         <div 
-          className="flex items-center justify-between p-3 hover:bg-accent/40 cursor-pointer select-none transition-colors"
+          className="flex items-center justify-between p-3 hover:bg-zinc-900/30 cursor-pointer select-none transition-colors"
           onClick={() => toggleConnectionExpand(provider)}
         >
           <div className="flex items-center gap-3">
-            <span className="font-semibold text-sm">{label}</span>
-            <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded-md border border-border">
+            <span className="font-semibold text-xs tracking-wide uppercase text-muted-foreground">{label}</span>
+            <span className="text-[10px] font-mono text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-lg">
               {linkedId}
             </span>
             {isExpanded ? (
-              <ChevronUp className="w-4 h-4 text-muted-foreground" />
+              <ChevronUp className="w-3.5 h-3.5 text-muted-foreground/60" />
             ) : (
-              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground/60" />
             )}
           </div>
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full"
+            className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full cursor-pointer transition-colors"
             onClick={(e) => {
               e.stopPropagation();
               setConnections((p) => {
@@ -310,137 +315,149 @@ export function TvEditDialog({
           </Button>
         </div>
 
-        {isExpanded && (
-          <div className="border-t border-border p-4 bg-muted/20 flex flex-col gap-4 animate-in slide-in-from-top-2 duration-200">
-            {/* Status Override */}
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id={`${provider}-override-status`}
-                  checked={hasStatusOverride}
-                  onCheckedChange={() => toggleStatusOverride(provider)}
-                />
-                <Label
-                  htmlFor={`${provider}-override-status`}
-                  className="text-xs font-medium text-muted-foreground cursor-pointer"
-                >
-                  Override status
-                </Label>
-              </div>
-              {hasStatusOverride ? (
-                <Select
-                  value={connStatus || listStatus}
-                  onValueChange={(val) => handleStatusOverrideChange(provider, val)}
-                >
-                  <SelectTrigger className="w-full bg-background border-input text-foreground h-9 mt-1 px-3 text-xs font-normal hover:bg-accent hover:text-accent-foreground transition-colors">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent position="popper" className="bg-popover border-border text-popover-foreground">
-                    <SelectItem value="WATCHING">Watching</SelectItem>
-                    <SelectItem value="PLANNING">Plan to watch</SelectItem>
-                    <SelectItem value="COMPLETED">Completed</SelectItem>
-                    <SelectItem value="DROPPED">Dropped</SelectItem>
-                  </SelectContent>
-                </Select>
-              ) : (
-                <span className="text-xs text-muted-foreground/80 pl-6 italic">
-                  Inherited: {listStatus}
-                </span>
-              )}
-            </div>
-
-            {/* Dates Override */}
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id={`${provider}-override-dates`}
-                  checked={hasDatesOverride}
-                  onCheckedChange={() => toggleDatesOverride(provider)}
-                />
-                <Label
-                  htmlFor={`${provider}-override-dates`}
-                  className="text-xs font-medium text-muted-foreground cursor-pointer"
-                >
-                  Override dates
-                </Label>
-              </div>
-              {hasDatesOverride ? (
-                <div className="grid grid-cols-2 gap-3 mt-1">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Start Date</span>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal bg-background border-input text-foreground h-9 hover:bg-accent hover:text-accent-foreground text-xs",
-                            !connStartDate && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-1 h-3.5 w-3.5" />
-                          {connStartDate ? (
-                            format(connStartDate, "yyyy-MM-dd")
-                          ) : (
-                            <span>Pick date</span>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        align="start"
-                        className="w-auto p-0 bg-popover border-border z-60"
-                      >
-                        <Calendar
-                          mode="single"
-                          selected={connStartDate}
-                          onSelect={(date) => handleDateOverrideChange(provider, 'startDate', date)}
-                          initialFocus
-                          className="bg-popover text-popover-foreground"
-                        />
-                      </PopoverContent>
-                    </Popover>
+        <AnimatePresence initial={false}>
+          {isExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="border-t border-zinc-800/40 bg-zinc-950/60 overflow-hidden"
+            >
+              <div className="p-4 flex flex-col gap-4">
+                {/* Status Override */}
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`${provider}-override-status`}
+                      checked={hasStatusOverride}
+                      onCheckedChange={() => toggleStatusOverride(provider)}
+                      className="border-zinc-700/80 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                    />
+                    <Label
+                      htmlFor={`${provider}-override-status`}
+                      className="text-xs font-semibold text-muted-foreground cursor-pointer select-none"
+                    >
+                      Override status
+                    </Label>
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Finish Date</span>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal bg-background border-input text-foreground h-9 hover:bg-accent hover:text-accent-foreground text-xs",
-                            !connEndDate && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-1 h-3.5 w-3.5" />
-                          {connEndDate ? (
-                            format(connEndDate, "yyyy-MM-dd")
-                          ) : (
-                            <span>Pick date</span>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        align="start"
-                        className="w-auto p-0 bg-popover border-border z-60"
-                      >
-                        <Calendar
-                          mode="single"
-                          selected={connEndDate}
-                          onSelect={(date) => handleDateOverrideChange(provider, 'endDate', date)}
-                          initialFocus
-                          className="bg-popover text-popover-foreground"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
+                  {hasStatusOverride ? (
+                    <Select
+                      value={connStatus || listStatus}
+                      onValueChange={(val) => handleStatusOverrideChange(provider, val)}
+                    >
+                      <SelectTrigger className="w-full bg-zinc-950/40 border border-zinc-800/50 text-foreground h-9 mt-1 px-3 text-xs font-normal hover:bg-zinc-900/60 hover:text-foreground focus:ring-1 focus:ring-primary/30 rounded-xl transition-all duration-300">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent position="popper" className="bg-zinc-950/95 backdrop-blur-md border border-zinc-800/80 rounded-xl text-foreground">
+                        <SelectItem value="WATCHING">Watching</SelectItem>
+                        <SelectItem value="PLANNING">Planning</SelectItem>
+                        <SelectItem value="COMPLETED">Completed</SelectItem>
+                        <SelectItem value="DROPPED">Dropped</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground/60 pl-6 italic">
+                      Inherited: {listStatus}
+                    </span>
+                  )}
                 </div>
-              ) : (
-                <span className="text-xs text-muted-foreground/80 pl-6 italic">
-                  Inherited: {startDate ? format(startDate, "yyyy-MM-dd") : "No Start Date"} - {finishDate ? format(finishDate, "yyyy-MM-dd") : "No Finish Date"}
-                </span>
-              )}
-            </div>
-          </div>
-        )}
+
+                {/* Dates Override */}
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`${provider}-override-dates`}
+                      checked={hasDatesOverride}
+                      onCheckedChange={() => toggleDatesOverride(provider)}
+                      className="border-zinc-700/80 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                    />
+                    <Label
+                      htmlFor={`${provider}-override-dates`}
+                      className="text-xs font-semibold text-muted-foreground cursor-pointer select-none"
+                    >
+                      Override dates
+                    </Label>
+                  </div>
+                  {hasDatesOverride ? (
+                    <div className="grid grid-cols-2 gap-3 mt-1">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Start Date</span>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal bg-zinc-950/40 border border-zinc-800/50 text-foreground h-9 hover:bg-zinc-900/60 hover:text-foreground text-xs rounded-xl transition-all duration-300",
+                                !connStartDate && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-1 h-3.5 w-3.5" />
+                              {connStartDate ? (
+                                format(connStartDate, "yyyy-MM-dd")
+                              ) : (
+                                <span>Pick date</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            align="start"
+                            className="w-auto p-0 bg-zinc-950/95 backdrop-blur-md border border-zinc-800/80 rounded-xl z-60"
+                          >
+                            <Calendar
+                              mode="single"
+                              selected={connStartDate}
+                              onSelect={(date) => handleDateOverrideChange(provider, 'startDate', date)}
+                              initialFocus
+                              className="bg-transparent text-foreground"
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Finish Date</span>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal bg-zinc-950/40 border border-zinc-800/50 text-foreground h-9 hover:bg-zinc-900/60 hover:text-foreground text-xs rounded-xl transition-all duration-300",
+                                !connEndDate && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-1 h-3.5 w-3.5" />
+                              {connEndDate ? (
+                                format(connEndDate, "yyyy-MM-dd")
+                              ) : (
+                                <span>Pick date</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            align="start"
+                            className="w-auto p-0 bg-zinc-950/95 backdrop-blur-md border border-zinc-800/80 rounded-xl z-60"
+                          >
+                            <Calendar
+                              mode="single"
+                              selected={connEndDate}
+                              onSelect={(date) => handleDateOverrideChange(provider, 'endDate', date)}
+                              initialFocus
+                              className="bg-transparent text-foreground"
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground/60 pl-6 italic">
+                      Inherited: {startDate ? format(startDate, "yyyy-MM-dd") : "No Start Date"} - {finishDate ? format(finishDate, "yyyy-MM-dd") : "No Finish Date"}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   };
@@ -766,7 +783,7 @@ export function TvEditDialog({
   };
 
   const dialogContent = (
-    <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden bg-popover border-border text-popover-foreground [&>button]:text-foreground [&>button]:z-60 [&>button]:hover:text-muted-foreground">
+    <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden bg-zinc-950/90 backdrop-blur-xl border border-zinc-800/60 text-foreground [&>button]:text-foreground [&>button]:z-60 [&>button]:hover:text-muted-foreground shadow-2xl rounded-2xl">
       <DialogTitle className="sr-only">
         {hasListEntry ? "Edit TV Show Entry" : "Add TV Show to List"}
       </DialogTitle>
@@ -775,27 +792,27 @@ export function TvEditDialog({
       </DialogDescription>
 
       {/* Banner header */}
-      <div className="relative h-48 w-full bg-muted">
+      <div className="relative h-48 w-full bg-zinc-900/40">
         {media.bannerImage && (
           <img
             src={media.bannerImage}
             alt="banner"
-            className="w-full h-full object-cover opacity-60"
+            className="w-full h-full object-cover opacity-50"
           />
         )}
-        <div className="absolute inset-0 bg-linear-to-t from-popover to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/50 to-transparent" />
         <div className="absolute bottom-4 left-6 right-6 flex items-end gap-6 z-10">
           <img
             src={media.coverImage.large}
             alt="cover"
-            className="w-24 rounded shadow-lg object-cover bg-muted"
+            className="w-24 rounded-xl shadow-2xl object-cover bg-zinc-950/40 border border-zinc-800/40"
           />
           <div className="flex-1 pb-1">
-            <h2 className="text-xl font-bold line-clamp-2 text-foreground">
+            <h2 className="text-xl font-bold line-clamp-2 text-foreground drop-shadow-md">
               {media.title.english || media.title.romaji}
             </h2>
             <div className="mt-2 flex items-center gap-3">
-              <div className="flex-1 bg-muted/50 h-2 rounded-full overflow-hidden max-w-[200px]">
+              <div className="flex-1 bg-zinc-900/80 border border-zinc-800/40 h-2 rounded-full overflow-hidden max-w-[200px]">
                 <div
                   className="bg-primary h-full transition-all duration-500"
                   style={{ width: `${progressPercent}%` }}
@@ -807,75 +824,97 @@ export function TvEditDialog({
             </div>
           </div>
           <div className="pb-1 flex gap-4 items-center">
-            <button
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
               onClick={handleToggleFavorite}
               disabled={isSubmittingFavorite}
               className={cn(
-                "transition-colors",
+                "transition-colors cursor-pointer",
                 isFavorited
-                  ? "text-red-500 hover:text-red-600"
+                  ? "text-red-500 hover:text-red-600 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
               <Heart className={cn("w-6 h-6", isFavorited && "fill-current")} />
-            </button>
-            <Button
-              className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md font-medium px-6"
-              onClick={handleSave}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Saving..." : "Save"}
-            </Button>
+            </motion.button>
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button
+                className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/10 font-bold px-6 rounded-xl cursor-pointer"
+                onClick={handleSave}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Saving..." : "Save"}
+              </Button>
+            </motion.div>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="bg-popover border-b border-border flex px-6">
+      <div className="flex bg-zinc-950/60 border border-zinc-800/50 p-1 rounded-xl w-fit mx-6 my-4">
         <button
           onClick={() => setActiveTab("general")}
           className={cn(
-            "px-4 py-3 text-sm font-semibold transition-colors border-b-2 relative",
+            "relative z-10 px-4 py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer",
             activeTab === "general"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground",
+              ? "text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground",
           )}
         >
+          {activeTab === "general" && (
+            <motion.div
+              layoutId="tvEditActiveTabHighlight"
+              className="absolute inset-0 bg-primary rounded-lg -z-10 shadow-md"
+              transition={{ type: "spring", stiffness: 380, damping: 30 }}
+            />
+          )}
           General Info
         </button>
         <button
           onClick={() => setActiveTab("episodes")}
           className={cn(
-            "px-4 py-3 text-sm font-semibold transition-colors border-b-2 relative",
+            "relative z-10 px-4 py-2 text-xs font-semibold rounded-lg transition-colors cursor-pointer",
             activeTab === "episodes"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground",
+              ? "text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground",
           )}
         >
+          {activeTab === "episodes" && (
+            <motion.div
+              layoutId="tvEditActiveTabHighlight"
+              className="absolute inset-0 bg-primary rounded-lg -z-10 shadow-md"
+              transition={{ type: "spring", stiffness: 380, damping: 30 }}
+            />
+          )}
           Episode Progress
         </button>
       </div>
 
-      <div className="p-6 pt-4 bg-popover max-h-[60vh] overflow-y-auto">
+      <div className="p-6 pt-0 bg-transparent max-h-[60vh] overflow-y-auto">
         {activeTab === "general" ? (
           <div className="grid grid-cols-6 gap-x-6 gap-y-4">
             {/* Status */}
             <div className="col-span-3 flex flex-col gap-2">
-              <Label className="text-sm font-semibold text-muted-foreground">Status</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60 px-1">Status</Label>
               <Select
-              value={listStatus}
-              onValueChange={(val) => {
-                setListStatus(val);
-                if (val === "COMPLETED" && !finishDate) setFinishDate(new Date());
-                if (val === "WATCHING" && !startDate) setStartDate(new Date());
-              }}
-            >
-              <SelectTrigger className="w-full bg-background border-input text-foreground h-10 px-3 text-sm font-normal hover:bg-accent hover:text-accent-foreground transition-colors">
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-                <SelectContent position="popper" className="bg-popover border-border text-popover-foreground">
+                value={listStatus}
+                onValueChange={(val) => {
+                  setListStatus(val);
+                  if (val === "COMPLETED") {
+                    const targetEndDate = finishDate || new Date();
+                    if (!finishDate) setFinishDate(targetEndDate);
+                    if (!startDate) setStartDate(targetEndDate);
+                  }
+                  if (val === "WATCHING" && !startDate) setStartDate(new Date());
+                }}
+              >
+                <SelectTrigger className="w-full bg-zinc-950/40 border border-zinc-800/50 text-foreground h-10 px-3 text-xs font-medium hover:bg-zinc-900/60 hover:text-foreground focus:ring-1 focus:ring-primary/30 rounded-xl transition-all duration-300 cursor-pointer">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent position="popper" className="bg-zinc-950/95 backdrop-blur-md border border-zinc-800/80 rounded-xl text-foreground">
                   <SelectItem value="WATCHING">Watching</SelectItem>
-                  <SelectItem value="PLANNING">Plan to watch</SelectItem>
+                  <SelectItem value="PLANNING">Planning</SelectItem>
                   <SelectItem value="COMPLETED">Completed</SelectItem>
                   <SelectItem value="DROPPED">Dropped</SelectItem>
                 </SelectContent>
@@ -884,8 +923,8 @@ export function TvEditDialog({
 
             {/* Score */}
             <div className="col-span-3 flex flex-col gap-2">
-              <Label className="text-sm font-semibold text-muted-foreground">Score</Label>
-              <div className="flex bg-background border border-input rounded-md overflow-hidden">
+              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60 px-1">Score</Label>
+              <div className="flex bg-zinc-950/40 border border-zinc-800/50 rounded-xl overflow-hidden focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all duration-300">
                 <Input
                   type="number"
                   min="0"
@@ -897,25 +936,25 @@ export function TvEditDialog({
                     setScore(val);
                   }}
                   placeholder="0-10"
-                  className="border-0 bg-transparent text-foreground focus-visible:ring-0 h-10 w-full"
+                  className="border-0 bg-transparent text-foreground focus-visible:ring-0 h-10 w-full px-3 text-xs font-medium"
                 />
               </div>
             </div>
 
             {/* Start Date */}
             <div className="col-span-2 flex flex-col gap-2">
-              <Label className="text-sm font-semibold text-muted-foreground">Start Date</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60 px-1">Start Date</Label>
               <Popover>
                 <div className="relative w-full">
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       className={cn(
-                        "w-full justify-start text-left font-normal bg-background border-input text-foreground h-10 hover:bg-accent hover:text-accent-foreground pr-8",
-                        !startDate && "text-muted-foreground",
+                        "w-full justify-start text-left font-medium bg-zinc-950/40 border border-zinc-800/50 text-foreground h-10 hover:bg-zinc-900/60 hover:text-foreground pr-8 rounded-xl transition-all duration-300 text-xs cursor-pointer",
+                        !startDate && "text-muted-foreground/40",
                       )}
                     >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground/60" />
                       {startDate ? format(startDate, "yyyy-MM-dd") : <span>Pick a date</span>}
                     </Button>
                   </PopoverTrigger>
@@ -924,7 +963,7 @@ export function TvEditDialog({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 hover:bg-muted text-muted-foreground hover:text-foreground rounded-full"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 hover:bg-zinc-800/40 text-muted-foreground hover:text-foreground rounded-full cursor-pointer"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -935,13 +974,13 @@ export function TvEditDialog({
                     </Button>
                   )}
                 </div>
-                <PopoverContent align="start" className="w-auto p-0 bg-popover border-border">
+                <PopoverContent align="start" className="w-auto p-0 bg-zinc-950/95 backdrop-blur-md border border-zinc-800/80 rounded-xl z-60">
                   <Calendar
                     mode="single"
                     selected={startDate}
                     onSelect={setStartDate}
                     initialFocus
-                    className="bg-popover text-popover-foreground"
+                    className="bg-transparent text-foreground"
                   />
                 </PopoverContent>
               </Popover>
@@ -949,18 +988,18 @@ export function TvEditDialog({
 
             {/* Finish Date */}
             <div className="col-span-2 flex flex-col gap-2">
-              <Label className="text-sm font-semibold text-muted-foreground">Finish Date</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60 px-1">Finish Date</Label>
               <Popover>
                 <div className="relative w-full">
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       className={cn(
-                        "w-full justify-start text-left font-normal bg-background border-input text-foreground h-10 hover:bg-accent hover:text-accent-foreground pr-8",
-                        !finishDate && "text-muted-foreground",
+                        "w-full justify-start text-left font-medium bg-zinc-950/40 border border-zinc-800/50 text-foreground h-10 hover:bg-zinc-900/60 hover:text-foreground pr-8 rounded-xl transition-all duration-300 text-xs cursor-pointer",
+                        !finishDate && "text-muted-foreground/40",
                       )}
                     >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground/60" />
                       {finishDate ? format(finishDate, "yyyy-MM-dd") : <span>Pick a date</span>}
                     </Button>
                   </PopoverTrigger>
@@ -969,7 +1008,7 @@ export function TvEditDialog({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 hover:bg-muted text-muted-foreground hover:text-foreground rounded-full"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 hover:bg-zinc-800/40 text-muted-foreground hover:text-foreground rounded-full cursor-pointer"
                       onClick={(e) => {
                         e.preventDefault();
                         e.stopPropagation();
@@ -980,13 +1019,13 @@ export function TvEditDialog({
                     </Button>
                   )}
                 </div>
-                <PopoverContent align="start" className="w-auto p-0 bg-popover border-border">
+                <PopoverContent align="start" className="w-auto p-0 bg-zinc-950/95 backdrop-blur-md border border-zinc-800/80 rounded-xl z-60">
                   <Calendar
                     mode="single"
                     selected={finishDate}
                     onSelect={setFinishDate}
                     initialFocus
-                    className="bg-popover text-popover-foreground"
+                    className="bg-transparent text-foreground"
                   />
                 </PopoverContent>
               </Popover>
@@ -994,26 +1033,26 @@ export function TvEditDialog({
 
             {/* Rewatches */}
             <div className="col-span-2 flex flex-col gap-2">
-              <Label className="text-sm font-semibold text-muted-foreground">Total Rewatches</Label>
-              <div className="flex bg-background border border-input rounded-md overflow-hidden">
+              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60 px-1">Total Rewatches</Label>
+              <div className="flex bg-zinc-950/40 border border-zinc-800/50 rounded-xl overflow-hidden focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all duration-300">
                 <Input
                   type="number"
                   min="0"
                   value={rewatches}
                   onChange={(e) => setRewatches(e.target.value)}
-                  className="border-0 bg-transparent text-foreground focus-visible:ring-0 h-10 w-full"
+                  className="border-0 bg-transparent text-foreground focus-visible:ring-0 h-10 w-full px-3 text-xs font-medium"
                 />
               </div>
             </div>
 
             {/* Notes */}
             <div className="col-span-6 flex flex-col gap-2">
-              <Label className="text-sm font-semibold text-muted-foreground">Notes</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60 px-1">Notes</Label>
               <Textarea
                 placeholder="Your notes..."
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="bg-background border-input text-foreground min-h-[80px] resize-y"
+                className="bg-zinc-950/40 border border-zinc-800/50 text-foreground px-3 py-2 text-xs font-medium hover:bg-zinc-900/60 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 rounded-xl transition-all duration-300 min-h-[80px] resize-y"
               />
             </div>
 
@@ -1026,10 +1065,11 @@ export function TvEditDialog({
                   onCheckedChange={(checked) =>
                     setUpdateConnection(checked as boolean)
                   }
+                  className="border-zinc-700/80 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                 />
                 <Label
                   htmlFor="tv-update-connection"
-                  className="text-sm font-semibold text-muted-foreground cursor-pointer"
+                  className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60 cursor-pointer select-none"
                 >
                   Update TV show from connection
                 </Label>
@@ -1044,7 +1084,7 @@ export function TvEditDialog({
                       </div>
                     ))
                   ) : (
-                    <div className="col-span-2 text-center py-4 text-xs text-muted-foreground bg-muted/20 border border-dashed border-border rounded-lg">
+                    <div className="col-span-2 text-center py-4 text-xs text-muted-foreground bg-zinc-950/20 border border-dashed border-zinc-800/60 rounded-xl">
                       No active connections found. Please connect your accounts in settings.
                     </div>
                   )}
@@ -1055,12 +1095,12 @@ export function TvEditDialog({
         ) : (
           <div className="space-y-4">
             {!hasListEntry && (
-              <div className="p-4 bg-muted/50 rounded-lg text-sm text-muted-foreground text-center">
+              <div className="p-6 bg-zinc-950/20 border border-dashed border-zinc-800/60 rounded-xl text-center text-xs font-medium text-muted-foreground">
                 Add the show to your list first to track episodes.
               </div>
             )}
             {hasListEntry && (
-              <Accordion type="multiple" className="w-full space-y-2">
+              <Accordion type="multiple" className="w-full space-y-3">
                 {seasons.map((season) => {
                   const watchedInSeason = getSeasonWatchedCount(season);
                   const isAllWatched = watchedInSeason === season.episodeCount;
@@ -1068,13 +1108,13 @@ export function TvEditDialog({
                     <AccordionItem
                       key={season.id}
                       value={season.id}
-                      className="border border-border rounded-lg overflow-hidden px-0"
+                      className="border border-zinc-800/50 rounded-xl overflow-hidden px-0 bg-zinc-950/20"
                     >
-                      <AccordionTrigger className="hover:no-underline px-4 py-3 bg-muted/20">
+                      <AccordionTrigger className="hover:no-underline px-4 py-3 bg-zinc-900/30 hover:bg-zinc-900/50 transition-colors [&[data-state=open]]:border-b [&[data-state=open]]:border-zinc-800/50">
                         <div className="flex items-center justify-between w-full pr-4">
                           <div className="flex items-center gap-3">
-                            <span className="font-bold">Season {season.number}</span>
-                            <span className="text-xs text-muted-foreground">
+                            <span className="font-bold text-sm text-foreground">Season {season.number}</span>
+                            <span className="text-xs text-muted-foreground font-medium bg-zinc-950/40 border border-zinc-800/60 px-2 py-0.5 rounded-lg">
                               {watchedInSeason} / {season.episodeCount} episodes
                             </span>
                           </div>
@@ -1083,7 +1123,7 @@ export function TvEditDialog({
                             variant="ghost"
                             size="sm"
                             className={cn(
-                              "h-7 px-2 text-[10px] uppercase font-bold tracking-wider cursor-pointer",
+                              "h-7 px-2.5 text-[10px] uppercase font-bold tracking-wider cursor-pointer hover:bg-zinc-800/60 rounded-lg",
                               isAllWatched
                                 ? "text-primary hover:text-primary/80"
                                 : "text-muted-foreground hover:text-foreground",
@@ -1097,20 +1137,20 @@ export function TvEditDialog({
                               role="button"
                               tabIndex={0}
                               onKeyDown={(e) => {
-                                if (e.key === "Enter" || e.key === " ") {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  toggleSeason(season.number, !isAllWatched);
-                                }
-                              }}
+                               if (e.key === "Enter" || e.key === " ") {
+                                 e.preventDefault();
+                                 e.stopPropagation();
+                                 toggleSeason(season.number, !isAllWatched);
+                               }
+                             }}
                             >
                               {isAllWatched ? "Unmark All" : "Mark All"}
                             </span>
                           </Button>
                         </div>
                       </AccordionTrigger>
-                      <AccordionContent className="p-0">
-                        <div className="divide-y divide-border">
+                      <AccordionContent className="p-0 bg-zinc-950/40 divide-y divide-zinc-800/40">
+                        <div className="divide-y divide-zinc-800/40">
                           {season.episodes.map((episode) => {
                             const watched = isEpisodeWatched(
                               season.number,
@@ -1120,7 +1160,7 @@ export function TvEditDialog({
                               <div
                                 key={episode.id}
                                 className={cn(
-                                  "flex items-center gap-4 px-4 py-2 hover:bg-muted/30 transition-colors cursor-pointer",
+                                  "flex items-center gap-4 px-4 py-3 hover:bg-zinc-900/20 transition-colors cursor-pointer select-none",
                                   watched && "bg-primary/5",
                                 )}
                                 onClick={() =>
@@ -1129,24 +1169,24 @@ export function TvEditDialog({
                               >
                                 <div
                                   className={cn(
-                                    "shrink-0 w-6 h-6 rounded border-2 flex items-center justify-center transition-colors",
+                                    "shrink-0 w-5 h-5 rounded-md border flex items-center justify-center transition-all duration-200",
                                     watched
-                                      ? "bg-primary border-primary text-primary-foreground"
-                                      : "border-muted-foreground/30",
+                                      ? "bg-primary border-primary text-primary-foreground shadow-sm shadow-primary/20 scale-105"
+                                      : "border-zinc-700 hover:border-zinc-500 bg-zinc-950/50",
                                   )}
                                 >
-                                  {watched && <Check className="w-4 h-4" />}
+                                  {watched && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center justify-between">
-                                    <p className="text-sm font-medium truncate">
-                                      <span className="text-muted-foreground mr-2">
+                                    <p className="text-sm font-semibold text-foreground truncate">
+                                      <span className="text-muted-foreground mr-2 font-normal">
                                         {episode.number}.
                                       </span>
                                       {episode.name}
                                     </p>
                                     {episode.airDate && (
-                                      <span className="text-[10px] text-muted-foreground">
+                                      <span className="text-[10px] text-muted-foreground font-mono">
                                         {episode.airDate}
                                       </span>
                                     )}
@@ -1169,29 +1209,31 @@ export function TvEditDialog({
           {hasListEntry && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  disabled={isSubmitting}
-                  className="bg-background hover:bg-destructive hover:text-destructive-foreground border-input font-medium"
-                >
-                  Delete
-                </Button>
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Button
+                    variant="outline"
+                    disabled={isSubmitting}
+                    className="bg-zinc-950/20 border border-zinc-800 hover:bg-destructive/10 hover:border-destructive/50 hover:text-destructive font-bold text-xs px-5 h-9 rounded-xl transition-all duration-300 cursor-pointer"
+                  >
+                    Delete
+                  </Button>
+                </motion.div>
               </AlertDialogTrigger>
-              <AlertDialogContent className="bg-popover border-border text-popover-foreground [&>button]:text-foreground">
+              <AlertDialogContent className="bg-zinc-950/95 backdrop-blur-xl border border-zinc-800/80 text-foreground [&>button]:text-foreground shadow-2xl rounded-2xl">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Are you sure you want to delete this?</AlertDialogTitle>
-                  <AlertDialogDescription className="text-muted-foreground">
+                  <AlertDialogTitle className="text-base font-bold">Are you sure you want to delete this?</AlertDialogTitle>
+                  <AlertDialogDescription className="text-xs text-muted-foreground">
                     This action cannot be undone. This will permanently remove this TV show
                     from your list and all episode progress.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel className="bg-muted text-foreground border-border hover:bg-muted/80">
+                <AlertDialogFooter className="mt-4 gap-2">
+                  <AlertDialogCancel className="bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-foreground text-xs font-semibold px-4 h-9 rounded-xl cursor-pointer transition-colors">
                     Cancel
                   </AlertDialogCancel>
                   <AlertDialogAction
                     onClick={handleDelete}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    className="bg-destructive hover:bg-destructive/90 text-destructive-foreground text-xs font-semibold px-4 h-9 rounded-xl cursor-pointer transition-colors"
                   >
                     Delete
                   </AlertDialogAction>
@@ -1202,73 +1244,82 @@ export function TvEditDialog({
         </div>
 
         {/* Connection search dialog */}
-        {isConnectionSearchOpen && (
-          <Dialog
-            open={isConnectionSearchOpen}
-            onOpenChange={setIsConnectionSearchOpen}
-          >
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogTitle>
-                Search on{" "}
-                {CONNECTION_PROVIDERS.find((p) => p.key === activeSearchProvider)?.name || activeSearchProvider}
-              </DialogTitle>
-              <DialogDescription className="sr-only">
-                Search and select a media item to link connection IDs.
-              </DialogDescription>
-              <div className="flex gap-2">
-                <Input
-                  placeholder={`Search ${CONNECTION_PROVIDERS.find((p) => p.key === activeSearchProvider)?.name || "TV show"}...`}
-                  value={connectionSearchQuery}
-                  onChange={(e) => setConnectionSearchQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter")
-                      performConnectionSearch(connectionSearchQuery);
-                  }}
-                />
-                <Button
-                  onClick={() =>
-                    performConnectionSearch(connectionSearchQuery)
-                  }
-                  disabled={isSearching}
-                >
-                  {isSearching ? "Searching..." : "Search"}
-                </Button>
-              </div>
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {searchResults.map((result, idx) => (
-                  <button
-                    key={`${activeSearchProvider}-${result.id}-${idx}`}
-                    className="flex items-center gap-3 w-full p-2 rounded hover:bg-muted text-left"
-                    onClick={() => {
-                      setConnections((p) => ({
-                        ...p,
-                        [activeSearchProvider!]: result.id,
-                      }));
-                      setIsConnectionSearchOpen(false);
-                      setConnectionSearchQuery("");
-                      setSearchResults([]);
+        <AnimatePresence>
+          {isConnectionSearchOpen && (
+            <Dialog
+              open={isConnectionSearchOpen}
+              onOpenChange={setIsConnectionSearchOpen}
+            >
+              <DialogContent className="sm:max-w-[500px] p-6 bg-zinc-950/95 backdrop-blur-xl border border-zinc-800/80 text-foreground [&>button]:text-foreground shadow-2xl rounded-2xl">
+                <DialogTitle className="text-lg font-bold">
+                  Search on{" "}
+                  {CONNECTION_PROVIDERS.find((p) => p.key === activeSearchProvider)?.name || activeSearchProvider}
+                </DialogTitle>
+                <DialogDescription className="sr-only">
+                  Search and select a media item to link connection IDs.
+                </DialogDescription>
+                <div className="flex gap-2 mt-4">
+                  <Input
+                    placeholder={`Search ${CONNECTION_PROVIDERS.find((p) => p.key === activeSearchProvider)?.name || "TV show"}...`}
+                    value={connectionSearchQuery}
+                    onChange={(e) => setConnectionSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter")
+                        performConnectionSearch(connectionSearchQuery);
                     }}
-                  >
-                    {result.image && (
-                      <img
-                        src={result.image}
-                        alt={result.title}
-                        className="w-10 h-14 object-cover rounded"
-                      />
-                    )}
-                    <div>
-                      <p className="font-medium text-sm">{result.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {result.format}
-                        {result.episodes ? ` · ${result.episodes} eps` : ""}
-                      </p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </DialogContent>
-          </Dialog>
-        )}
+                    className="bg-zinc-950/40 border border-zinc-800/50 text-foreground h-10 px-3 text-xs font-medium hover:bg-zinc-900/60 focus:border-primary/50 focus:ring-1 focus:ring-primary/20 rounded-xl transition-all duration-300"
+                  />
+                  <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                    <Button
+                      onClick={() =>
+                        performConnectionSearch(connectionSearchQuery)
+                      }
+                      disabled={isSearching}
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold h-10 px-5 rounded-xl cursor-pointer"
+                    >
+                      {isSearching ? "Searching..." : "Search"}
+                    </Button>
+                  </motion.div>
+                </div>
+                <div className="space-y-2 mt-4 max-h-64 overflow-y-auto pr-1">
+                  {searchResults.map((result, idx) => (
+                    <button
+                      key={`${activeSearchProvider}-${result.id}-${idx}`}
+                      className="flex items-center gap-3 w-full p-2.5 rounded-xl border border-transparent hover:border-zinc-800/50 hover:bg-zinc-900/20 text-left transition-all duration-200 cursor-pointer"
+                      onClick={() => {
+                        setConnections((p) => ({
+                          ...p,
+                          [activeSearchProvider!]: result.id,
+                        }));
+                        setIsConnectionSearchOpen(false);
+                        setConnectionSearchQuery("");
+                        setSearchResults([]);
+                      }}
+                    >
+                      {result.image && (
+                        <img
+                          src={result.image}
+                          alt={result.title}
+                          className="w-10 h-14 object-cover rounded-lg border border-zinc-800/30"
+                        />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm text-foreground truncate">{result.title}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {result.format}
+                          {result.episodes ? ` · ${result.episodes} eps` : ""}
+                        </p>
+                      </div>
+                    </button>
+                  ))}
+                  {!isSearching && searchResults.length === 0 && connectionSearchQuery && (
+                    <p className="text-center py-6 text-xs text-muted-foreground">No results found.</p>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
+        </AnimatePresence>
       </div>
     </DialogContent>
   );

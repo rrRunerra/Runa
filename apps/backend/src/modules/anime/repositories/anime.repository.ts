@@ -64,6 +64,16 @@ export class AnimeRepository {
       relations: dbAnime.relations,
       characters: dbAnime.characters,
       studios: dbAnime.studios?.map((name: string) => ({ name })),
+      averageScore: dbAnime.averageScore,
+      popularity: dbAnime.popularity,
+      favourites: dbAnime.favourites,
+      trending: dbAnime.trending,
+      meanScore: dbAnime.meanScore,
+      synonyms: dbAnime.synonyms || [],
+      hashtag: dbAnime.hashtag,
+      countryOfOrigin: dbAnime.countryOfOrigin,
+      nextAiringEpisode: dbAnime.nextAiringEpisode,
+      trailers: dbAnime.trailers,
     };
   }
 }

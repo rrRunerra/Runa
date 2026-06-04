@@ -7,6 +7,7 @@ export interface MediaEntry {
   progress?: number;
   image: string;
   type: string;
+  format?: string;
   status: string;
   last_updated: string;
   last_added: string;

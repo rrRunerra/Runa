@@ -114,7 +114,7 @@ export class AnimeService {
         query: `query ($id: Int) {
   Media (id: $id, type: ANIME) {
     id
-		idMal
+    idMal
     title {
       romaji
       english
@@ -153,6 +153,14 @@ export class AnimeService {
     favourites
     # Categories
     genres
+    synonyms
+    hashtag
+    countryOfOrigin
+    nextAiringEpisode {
+      airingAt
+      timeUntilAiring
+      episode
+    }
     tags {
       name
       rank
@@ -184,6 +192,14 @@ export class AnimeService {
             medium
           }
         }
+        voiceActors (language: JAPANESE) {
+          name {
+            full
+          }
+          image {
+            medium
+          }
+        }
       }
     }
     # Studio Information
@@ -191,6 +207,11 @@ export class AnimeService {
       nodes {
         name
       }
+    }
+    trailer {
+      id
+      site
+      thumbnail
     }
   }
 }`,
@@ -206,6 +227,20 @@ export class AnimeService {
     if (!media) {
       throw new Error(`Anime with ID ${id} not found on AniList`);
     }
+
+    const trailers = media.trailer
+      ? [
+          {
+            id: media.trailer.id,
+            name: 'Official Trailer',
+            site: media.trailer.site,
+            url:
+              media.trailer.site === 'youtube'
+                ? `https://www.youtube.com/watch?v=${media.trailer.id}`
+                : media.trailer.id,
+          },
+        ]
+      : [];
 
     return {
       id: media.id.toString(),
@@ -238,10 +273,27 @@ export class AnimeService {
         name: edge.node.name.full,
         image: edge.node.image.medium,
         role: edge.role,
+        voiceActor:
+          edge.voiceActors && edge.voiceActors[0]
+            ? {
+                name: edge.voiceActors[0].name.full,
+                image: edge.voiceActors[0].image.medium,
+              }
+            : null,
       })),
       studios: media.studios?.nodes.map((node) => ({
         name: node.name,
       })),
+      averageScore: media.averageScore,
+      popularity: media.popularity,
+      favourites: media.favourites,
+      trending: media.trending,
+      meanScore: media.meanScore,
+      synonyms: media.synonyms,
+      hashtag: media.hashtag,
+      countryOfOrigin: media.countryOfOrigin,
+      nextAiringEpisode: media.nextAiringEpisode,
+      trailers,
     };
   }
 }
@@ -278,6 +330,7 @@ interface AniListGetResponse {
   data: {
     Media: {
       id: number;
+      idMal: number;
       title: {
         romaji: string;
         english: string;
@@ -352,6 +405,14 @@ interface AniListGetResponse {
               medium: string;
             };
           };
+          voiceActors: {
+            name: {
+              full: string;
+            };
+            image: {
+              medium: string;
+            };
+          }[];
         }[];
       };
       externalLinks: {
@@ -363,6 +424,11 @@ interface AniListGetResponse {
         id: string;
         site: string;
         thumbnail: string;
+      };
+      nextAiringEpisode: {
+        airingAt: number;
+        timeUntilAiring: number;
+        episode: number;
       };
       studios: {
         nodes: {

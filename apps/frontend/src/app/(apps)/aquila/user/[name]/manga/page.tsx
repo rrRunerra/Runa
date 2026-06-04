@@ -27,6 +27,28 @@ import {
 } from "@/components/ui/sheet";
 import { useSession } from "next-auth/react";
 import * as Lucide from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 15 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { type: "spring", stiffness: 350, damping: 25 },
+  },
+} as const;
+
 
 export default function UserMangaPage() {
   const params = useParams();
@@ -145,54 +167,67 @@ export default function UserMangaPage() {
     });
   }, [search, activeList, mangaList]);  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
-  const SidebarContents = ({ onItemClick }: { onItemClick?: () => void }) => (
+  const SidebarContents = ({ idPrefix, onItemClick }: { idPrefix: string; onItemClick?: () => void }) => (
     <>
       {/* Search */}
       <div className="relative">
-        <Lucide.Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+        <Lucide.Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60" />
         <Input
-          placeholder="Filter"
-          className="pl-9 h-9 bg-muted/30 border-none focus-visible:ring-1"
+          placeholder="Filter..."
+          className="pl-9 h-9 bg-zinc-950/40 border border-zinc-800/50 focus-visible:ring-1 focus-visible:ring-primary/30 rounded-xl placeholder:text-muted-foreground/30 text-xs"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
 
       {/* Lists navigation */}
-      <div className="flex flex-col gap-1">
-        <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 px-3">
+      <div className="flex flex-col gap-1 relative">
+        <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 mb-1.5 px-3">
           Lists
         </Label>
-        {lists.map((list) => (
-          <button
-            key={list}
-            onClick={() => {
-              setActiveList(list);
-              onItemClick?.();
-            }}
-            className={`flex items-center gap-3 px-3 py-1.5 rounded-md text-sm transition-colors text-left ${activeList === list ? "bg-primary/20 text-primary font-medium" : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"}`}
-          >
-            {list}
-          </button>
-        ))}
+        {lists.map((list) => {
+          const isActive = activeList === list;
+          return (
+            <button
+              key={list}
+              onClick={() => {
+                setActiveList(list);
+                onItemClick?.();
+              }}
+              className={cn(
+                "relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold uppercase tracking-wider transition-colors text-left cursor-pointer select-none",
+                isActive ? "text-primary-foreground font-bold" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {isActive && (
+                <motion.div
+                  layoutId={`${idPrefix}-activeListHighlight`}
+                  className="absolute inset-0 bg-primary rounded-xl -z-10 shadow-md shadow-primary/10"
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                />
+              )}
+              <span className="relative z-10">{list}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Dynamic Filters */}
       <div className="flex flex-col gap-5 px-1">
-        <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground -mb-3 px-2">
+        <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50 -mb-3 px-2">
           Filters
         </Label>
 
         <div className="space-y-1.5 mt-2">
-          <Label className="text-xs font-semibold px-2">Format</Label>
+          <Label className="text-xs font-semibold text-muted-foreground px-2">Format</Label>
           <Select
             value={filters.format}
             onValueChange={(v) => setFilters((f) => ({ ...f, format: v }))}
           >
-            <SelectTrigger className="h-9 bg-muted/20 border-none shadow-none text-xs">
+            <SelectTrigger className="h-9 bg-zinc-950/40 border border-zinc-800/50 shadow-inner text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
               <SelectValue placeholder="All Formats" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-zinc-950/95 backdrop-blur-md border border-zinc-800/80 rounded-xl">
               <SelectItem value="MANGA">Manga</SelectItem>
               <SelectItem value="NOVEL">Novel</SelectItem>
               <SelectItem value="ONE_SHOT">One Shot</SelectItem>
@@ -201,15 +236,15 @@ export default function UserMangaPage() {
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-xs font-semibold px-2">Status</Label>
+          <Label className="text-xs font-semibold text-muted-foreground px-2">Status</Label>
           <Select
             value={filters.status}
             onValueChange={(v) => setFilters((f) => ({ ...f, status: v }))}
           >
-            <SelectTrigger className="h-9 bg-muted/20 border-none shadow-none text-xs">
+            <SelectTrigger className="h-9 bg-zinc-950/40 border border-zinc-800/50 shadow-inner text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
               <SelectValue placeholder="All Status" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-zinc-950/95 backdrop-blur-md border border-zinc-800/80 rounded-xl">
               <SelectItem value="Finished">Finished</SelectItem>
               <SelectItem value="Releasing">Releasing</SelectItem>
               <SelectItem value="Not Yet Released">
@@ -220,12 +255,12 @@ export default function UserMangaPage() {
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-xs font-semibold px-2">Sort</Label>
+          <Label className="text-xs font-semibold text-muted-foreground px-2">Sort</Label>
           <Select value={sort} onValueChange={(v: any) => setSort(v)}>
-            <SelectTrigger className="h-9 bg-muted/20 border-none shadow-none text-xs">
+            <SelectTrigger className="h-9 bg-zinc-950/40 border border-zinc-800/50 shadow-inner text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
               <SelectValue placeholder="Title" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-zinc-950/95 backdrop-blur-md border border-zinc-800/80 rounded-xl">
               <SelectItem value="title">Title</SelectItem>
               <SelectItem value="score">Score</SelectItem>
               <SelectItem value="progress">Progress</SelectItem>
@@ -239,27 +274,42 @@ export default function UserMangaPage() {
       <div className="px-1 mt-2">
         <button
           onClick={resetFilters}
-          className="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-md text-xs font-medium text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors border border-border/40"
+          className="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-xl text-xs font-semibold text-muted-foreground hover:bg-zinc-850/50 hover:text-foreground transition-all duration-300 border border-zinc-800/60 cursor-pointer"
         >
           <Lucide.RotateCcw size={14} />
           Reset
         </button>
       </div>
+
     </>
   );
 
   return (
-    <div className="flex flex-col lg:flex-row w-full min-h-screen gap-6 lg:gap-8 p-4 lg:p-6 lg:pl-2">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className="relative flex flex-col lg:flex-row w-full min-h-screen gap-6 lg:gap-8 p-4 lg:p-6 lg:pl-2 select-none"
+    >
+      {/* Ambient background glow */}
+      <div className="absolute top-0 right-0 h-[500px] w-[500px] bg-primary/5 rounded-full blur-3xl pointer-events-none z-0" />
+
       {/* ── Page Sidebar (Left) ────────────────────────── */}
-      <aside className="hidden lg:flex w-56 flex-col gap-6 shrink-0 sticky top-6 h-fit">
-        <SidebarContents />
-      </aside>
+      <motion.aside
+        variants={itemVariants}
+        className="hidden lg:flex w-56 flex-col gap-6 shrink-0 sticky top-6 h-fit bg-zinc-950/20 backdrop-blur-xl border border-zinc-800/40 p-5 rounded-2xl shadow-xl z-10"
+      >
+        <SidebarContents idPrefix="desktop" />
+      </motion.aside>
 
       {/* ── Main Content (Right) ────────────────────────── */}
-      <main className="flex-1 flex flex-col gap-8 max-w-[1200px]">
+      <motion.main
+        variants={itemVariants}
+        className="flex-1 flex flex-col gap-6 w-full z-10"
+      >
         {/* User Profile Header */}
         {userData && (
-          <div className="flex items-center gap-4 p-3 sm:p-4 rounded-xl bg-muted/20 border border-border/40 mb-2 shadow-sm">
+          <div className="flex items-center gap-4 p-4 rounded-2xl bg-zinc-950/20 backdrop-blur-xl border border-zinc-800/40 mb-2 shadow-xl">
             <Avatar
               size="lg"
               className="border-2 border-background ring-2 ring-primary/20"
@@ -283,7 +333,7 @@ export default function UserMangaPage() {
         )}
 
         {isPrivate ? (
-          <div className="flex flex-col items-center justify-center py-20 bg-muted/10 border border-border/40 rounded-2xl shadow-sm text-center p-6 mt-4">
+          <div className="flex flex-col items-center justify-center py-20 bg-zinc-950/20 backdrop-blur-xl border border-zinc-800/40 rounded-2xl shadow-xl text-center p-6 mt-4">
             <div className="size-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 text-primary">
               <Lucide.Lock className="size-8" />
             </div>
@@ -301,38 +351,40 @@ export default function UserMangaPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex items-center gap-2 h-9 bg-muted/20 border-border/40"
+                      className="flex items-center gap-2 h-9 bg-zinc-950/40 border border-zinc-850 rounded-xl"
                     >
                       <Lucide.SlidersHorizontal size={14} />
                       Filters & Lists
                     </Button>
                   </SheetTrigger>
-                  <SheetContent side="left" className="w-[280px] p-6 bg-background border-r border-border/40">
+                  <SheetContent side="left" className="w-[280px] p-6 bg-zinc-950/95 backdrop-blur-md border-r border-zinc-800/40">
                     <SheetHeader className="p-0 mb-4">
                       <SheetTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground text-left">
                         Filters & Lists
                       </SheetTitle>
                     </SheetHeader>
-                    <div className="flex flex-col gap-6 overflow-y-auto pr-1">
-                      <SidebarContents onItemClick={() => setIsSheetOpen(false)} />
+                    <div className="flex flex-col gap-6 overflow-y-auto pr-1 no-scrollbar">
+                      <SidebarContents idPrefix="mobile" onItemClick={() => setIsSheetOpen(false)} />
                     </div>
                   </SheetContent>
                 </Sheet>
               </div>
 
-              <div className="flex items-center gap-1.5 bg-muted/40 p-1 rounded-lg border border-border/40 shadow-sm ml-auto">
+              <div className="flex items-center gap-1.5 bg-zinc-950/40 p-1 rounded-xl border border-zinc-850 shadow-inner ml-auto">
                 {[
                   { type: "list", icon: <Lucide.List size={16} /> },
                   { type: "compact", icon: <Lucide.LayoutList size={16} /> },
                   { type: "grid", icon: <Lucide.LayoutGrid size={16} /> },
                 ].map((view) => (
-                  <button
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     key={view.type}
                     onClick={() => setDisplayType(view.type as DisplayType)}
-                    className={`flex items-center justify-center size-8 rounded-md transition-all ${displayType === view.type ? "bg-background text-foreground shadow-md ring-1 ring-border/50" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"}`}
+                    className={`flex items-center justify-center size-8 rounded-lg transition-all cursor-pointer ${displayType === view.type ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:bg-zinc-800/30 hover:text-foreground"}`}
                   >
                     {view.icon}
-                  </button>
+                  </motion.button>
                 ))}
               </div>
             </header>
@@ -349,7 +401,7 @@ export default function UserMangaPage() {
             />
           </>
         )}
-      </main>
-    </div>
+      </motion.main>
+    </motion.div>
   );
 }

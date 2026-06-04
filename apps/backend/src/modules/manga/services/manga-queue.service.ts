@@ -96,7 +96,15 @@ export class MangaQueueService implements OnModuleInit {
             chapters
             volumes
             source
+            averageScore
+            meanScore
+            popularity
+            trending
+            favourites
             genres
+            synonyms
+            hashtag
+            countryOfOrigin
             tags {
               name
               rank
@@ -186,6 +194,14 @@ export class MangaQueueService implements OnModuleInit {
         role: edge.role,
       })),
       studios: media.studios?.nodes.map((node) => node.name),
+      averageScore: media.averageScore,
+      popularity: media.popularity,
+      favourites: media.favourites,
+      trending: media.trending,
+      meanScore: media.meanScore,
+      synonyms: media.synonyms || [],
+      hashtag: media.hashtag,
+      countryOfOrigin: media.countryOfOrigin,
     };
   }
 }
@@ -206,7 +222,15 @@ interface AniListGetResponse {
       chapters: number;
       volumes: number;
       source: string;
+      averageScore: number;
+      meanScore: number;
+      popularity: number;
+      trending: number;
+      favourites: number;
       genres: string[];
+      synonyms: string[];
+      hashtag: string;
+      countryOfOrigin: string;
       tags: { name: string; rank: number }[];
       relations: {
         edges: {

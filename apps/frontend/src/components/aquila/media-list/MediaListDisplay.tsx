@@ -17,7 +17,7 @@ export const MediaListDisplay: React.FC<MediaListDisplayProps> = ({
   // Memoize filtering to prevent expensive recalculations
   const filteredData = useMemo(() => {
     return data.filter((entry) => {
-      if (filters.format && entry.type !== filters.format) return false;
+      if (filters.format && entry.format !== filters.format) return false;
       if (filters.status && entry.status !== filters.status) return false;
       // Add other filters as needed...
       return true;

@@ -1,19 +1,13 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { Loader2, Save } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
 import AccessDenied from "@/components/lynx/AccessDenied";
 import { PageHeader } from "@/components/lynx/LynxPageHeader";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
+import { toast } from "sonner";
 
 export default function HomeworkConfigPage() {
   const [guildId, setGuildId] = useState("");
@@ -36,6 +30,7 @@ export default function HomeworkConfigPage() {
         parsedChannels = JSON.parse(jsonInput);
       } catch (_err) {
         setIsLoading(false);
+        toast.error("Invalid JSON format in channel configuration");
         return;
       }
 
@@ -55,85 +50,93 @@ export default function HomeworkConfigPage() {
       if (!response.ok) {
         throw new Error(data.error || "Failed to save configuration");
       }
+      toast.success("Homework configuration saved successfully");
     } catch (error: any) {
       console.error(error);
+      toast.error(error.message || "Failed to save configuration");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="container mx-auto p-8 space-y-8">
+    <div className="container mx-auto p-6 md:p-8 space-y-6 md:space-y-8 select-none">
       <PageHeader
         title="Homework Configuration"
-        description="Configure the channels for homework assignments."
+        description="Configure the channel mapping targets for automatic homework assignments."
         backHref="/lynx/config"
         backLabel="Back to Configuration"
       />
 
-      <Card>
-        <CardHeader className="p-6">
-          <CardTitle>HomeWork Channels</CardTitle>
-          <CardDescription>
-            Enter the Guild ID and the JSON configuration for subjects and
-            channels.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="guildId" className="text-sm font-medium">
-                Guild ID
-              </label>
-              <Input
-                id="guildId"
-                placeholder="Enter Guild ID"
-                value={guildId}
-                onChange={(e) => setGuildId(e.target.value)}
-                autoComplete="off"
-                required
-              />
-            </div>
+      <div className="rounded-2xl border border-zinc-800/40 bg-zinc-950/20 backdrop-blur-xl p-6 shadow-xl space-y-5">
+        <div>
+          <h3 className="text-lg font-bold text-foreground">Homework Channels</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Enter the target Discord Guild ID and map subjects to their respective channel IDs.
+          </p>
+        </div>
 
-            <div className="space-y-2">
-              <label htmlFor="channels" className="text-sm font-medium">
-                Channels JSON
-              </label>
-              <textarea
-                id="channels"
-                className="flex min-h-[300px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 font-mono"
-                placeholder={`Use subject shortName as key
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-1.5 pl-0.5">
+            <label htmlFor="guildId" className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/60">
+              Guild ID
+            </label>
+            <Input
+              id="guildId"
+              placeholder="e.g. 1425890971203145840"
+              value={guildId}
+              onChange={(e) => setGuildId(e.target.value)}
+              autoComplete="off"
+              required
+              className="bg-zinc-900/30 border-zinc-800/60 rounded-xl px-4 py-2.5 text-xs text-foreground focus:border-primary/50 focus:ring-1 focus:ring-primary/25 transition-all shadow-inner placeholder:text-muted-foreground/35"
+            />
+          </div>
+
+          <div className="space-y-1.5 pl-0.5">
+            <label htmlFor="channels" className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/60">
+              Channels JSON Configuration
+            </label>
+            <textarea
+              id="channels"
+              className="flex min-h-[250px] w-full rounded-xl border border-zinc-800/60 bg-zinc-950/80 px-4 py-3 text-xs font-mono text-zinc-300 placeholder:text-muted-foreground/35 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/25 shadow-inner no-scrollbar"
+              placeholder={`Use subject shorthand as keys:
 {
-    "apm": "1425890971203145840",
-    "slj": "1425890971203145840",
-    "pci": "1425890971203145840"
+  "apm": "1425890971203145840",
+  "slj": "1425890971203145840",
+  "pci": "1425890971203145840"
 }`}
-                value={jsonInput}
-                onChange={(e) => setJsonInput(e.target.value)}
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                Enter a valid JSON object defining the channel configuration.
-              </p>
-            </div>
+              value={jsonInput}
+              onChange={(e) => setJsonInput(e.target.value)}
+              required
+            />
+            <p className="text-[10px] text-muted-foreground/50 italic pl-1">
+              Ensure you provide valid JSON brackets and double quotes around all keys and values.
+            </p>
+          </div>
 
-            <Button
+          <div className="pt-2">
+            <motion.button
+              whileHover={{ scale: 1.015 }}
+              whileTap={{ scale: 0.985 }}
               type="submit"
               disabled={isLoading}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto px-5 py-2.5 text-xs font-semibold rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground shadow-lg shadow-primary/15 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving…
+                  <Loader2 className="size-4 animate-spin" />
+                  Saving Configuration…
                 </>
               ) : (
-                "Save Configuration"
+                <>
+                  <Save className="size-4" />
+                  Save Configuration
+                </>
               )}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+            </motion.button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

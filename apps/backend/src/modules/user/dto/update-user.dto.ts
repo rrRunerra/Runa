@@ -42,4 +42,8 @@ export class UpdateUserDto {
   @IsString()
   @IsOptional()
   bannerUrl?: string;
+
+  @IsString()
+  @IsOptional()
+  sidebarCardBackgroundUrl?: string;
 }

@@ -25,6 +25,10 @@ export interface MediaCharacter {
   personName?: string;
   image: string;
   role?: string;
+  voiceActor?: {
+    name: string;
+    image: string;
+  } | null;
 }
 
 export interface MediaTrailer {
@@ -99,6 +103,13 @@ export interface Media {
   averageScore?: number | null;
   popularity?: number | null;
   favourites?: number | null;
+  trending?: number | null;
+  meanScore?: number | null;
+  synonyms?: string[] | null;
+  hashtag?: string | null;
+  nextAiringEpisode?: any | null;
+  contentRating?: string | null;
+  countryOfOrigin?: string | null;
   relations?: MediaRelation[];
   characters?: MediaCharacter[];
   trailers?: MediaTrailer[];

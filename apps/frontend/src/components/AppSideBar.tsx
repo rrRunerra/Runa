@@ -15,7 +15,8 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { signIn, signOut, useSession } from "next-auth/react";
 import type React from "react";
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { apps } from "../../config/apps";
 import { useNavigation } from "@/hooks/useNavigation";
 import type {
@@ -85,6 +86,23 @@ interface AppSideBarProps extends React.ComponentProps<typeof Sidebar> {
    */
   appearanceHref?: string;
 }
+
+const getSafeImageUrl = (url: string | null | undefined): string => {
+  if (!url) return "";
+  if (
+    url.startsWith("http://") ||
+    url.startsWith("https://") ||
+    url.startsWith("blob:") ||
+    url.startsWith("data:")
+  ) {
+    if (url.toLowerCase().includes("javascript:")) {
+      return "";
+    }
+    return url;
+  }
+  const path = url.startsWith("/") ? url : `/${url}`;
+  return `${process.env.NEXT_PUBLIC_API_URL || ""}${path}`;
+};
 
 export default function AppSideBar({
   navConfig,
@@ -220,7 +238,11 @@ export default function AppSideBar({
 
   return (
     <>
-      <Sidebar variant="floating" {...props}>
+      <Sidebar
+        variant="floating"
+        className="**:data-[sidebar=sidebar-inner]:bg-zinc-950/40 **:data-[sidebar=sidebar-inner]:backdrop-blur-xl **:data-[sidebar=sidebar-inner]:border **:data-[sidebar=sidebar-inner]:border-zinc-800/40 **:data-[sidebar=sidebar-inner]:shadow-2xl **:data-[sidebar=sidebar-inner]:rounded-2xl"
+        {...props}
+      >
       {/* ── App switcher header ─────────────────────────── */}
       <SidebarHeader>
         <SidebarMenu>
@@ -229,24 +251,31 @@ export default function AppSideBar({
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
                   size="lg"
-                  className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground hover:bg-sidebar-accent transition-colors duration-200"
+                  className="relative h-12 w-full flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-300 border border-transparent hover:border-zinc-800/40 hover:bg-white/5 data-[state=open]:bg-white/5 data-[state=open]:border-zinc-800/40"
+                  asChild
                 >
-                  <div className="bg-primary text-primary-foreground flex aspect-square size-8 items-center justify-center rounded-md shadow-sm">
-                    {activeApp.logo}
-                  </div>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-medium">
-                      {activeApp.name}
-                    </span>
-                    <span className="truncate text-xs text-muted-foreground">
-                      {activeApp.description}
-                    </span>
-                  </div>
-                  <ChevronsUpDown className="ml-auto" />
+                  <motion.button
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                  >
+                    <div className="bg-primary text-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg shadow-md shrink-0">
+                      {activeApp.logo}
+                    </div>
+                    <div className="grid flex-1 text-left text-sm leading-tight ml-1.5">
+                      <span className="truncate font-semibold text-foreground">
+                        {activeApp.name}
+                      </span>
+                      <span className="truncate text-xs text-muted-foreground/80">
+                        {activeApp.description}
+                      </span>
+                    </div>
+                    <ChevronsUpDown className="ml-auto size-4 text-muted-foreground/60 group-hover:text-foreground transition-colors" />
+                  </motion.button>
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent
-                className="w-80 rounded-2xl bg-popover/90 backdrop-blur-md border border-border/40 text-popover-foreground shadow-2xl p-3"
+                className="w-80 rounded-2xl bg-zinc-950/90 backdrop-blur-xl border border-zinc-800/80 shadow-2xl p-3"
                 align="start"
                 side={isMobile ? "bottom" : "right"}
                 sideOffset={12}
@@ -274,34 +303,41 @@ export default function AppSideBar({
                         <Link href={app.href} key={idx} className="block">
                           <DropdownMenuItem
                             onClick={() => setActiveApp(app)}
-                            className={cn(
-                              "group relative flex flex-col items-start gap-2 p-3 rounded-xl border border-border/30 bg-background/40 cursor-pointer text-left transition-all duration-300 hover:scale-105 active:scale-95 hover:shadow-md outline-hidden select-none",
-                              hoverBorderClass,
-                              isActive && "border-primary/50 bg-primary/5 shadow-xs"
-                            )}
+                            asChild
                           >
-                            <div className="flex w-full items-center justify-between">
-                              <div className={cn(
-                                "flex size-7 items-center justify-center rounded-lg shadow-sm transition-all duration-300",
-                                logoWrapperClass,
-                                isActive && "scale-105 shadow-md"
-                              )}>
-                                {app.logo}
-                              </div>
-                              {badgeText && (
-                                <span className={cn("text-[9px] px-1.5 py-0.5 rounded-full font-semibold border tracking-wide", badgeColor)}>
-                                  {badgeText}
-                                </span>
+                            <motion.div
+                              whileHover={{ scale: 1.02, y: -2 }}
+                              whileTap={{ scale: 0.98 }}
+                              transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                              className={cn(
+                                "group relative flex flex-col items-start gap-2.5 p-3 rounded-xl border border-zinc-800/40 bg-zinc-900/10 cursor-pointer text-left transition-all duration-300 hover:shadow-md outline-hidden select-none",
+                                hoverBorderClass,
+                                isActive && "border-primary/40 bg-primary/5 shadow-md shadow-primary/5"
                               )}
-                            </div>
-                            <div className="flex flex-col gap-0.5 mt-0.5">
-                              <span className="font-bold text-xs text-foreground group-hover:text-foreground">
-                                {app.name}
-                              </span>
-                              <span className="text-[10px] leading-tight text-muted-foreground line-clamp-1 group-hover:text-muted-foreground/80">
-                                {app.description}
-                              </span>
-                            </div>
+                            >
+                              <div className="flex w-full items-center justify-between">
+                                <div className={cn(
+                                  "flex size-7 items-center justify-center rounded-lg shadow-sm transition-all duration-300",
+                                  logoWrapperClass,
+                                  isActive && "scale-105 shadow-md"
+                                )}>
+                                  {app.logo}
+                                </div>
+                                {badgeText && (
+                                  <span className={cn("text-[9px] px-1.5 py-0.5 rounded-full font-semibold border tracking-wide", badgeColor)}>
+                                    {badgeText}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex flex-col gap-0.5 mt-0.5">
+                                <span className="font-bold text-xs text-foreground group-hover:text-foreground">
+                                  {app.name}
+                                </span>
+                                <span className="text-[10px] leading-tight text-muted-foreground line-clamp-1 group-hover:text-muted-foreground/80">
+                                  {app.description}
+                                </span>
+                              </div>
+                            </motion.div>
                           </DropdownMenuItem>
                         </Link>
                       );
@@ -328,7 +364,7 @@ export default function AppSideBar({
           .map((section: NavSection, sectionIdx: number) => (
             <SidebarGroup key={sectionIdx} className="mb-1">
               {section.section && (
-                <SidebarGroupLabel className="text-muted-foreground text-xs font-semibold uppercase tracking-wider mb-1">
+                <SidebarGroupLabel className="text-muted-foreground/60 text-[10px] font-bold uppercase tracking-widest mb-1.5">
                   {section.section}
                 </SidebarGroupLabel>
               )}
@@ -350,28 +386,64 @@ export default function AppSideBar({
                       item.children?.some(
                         (child: any) => pathname === child.href,
                       ) ?? false;
+                    
+                    const isActive = hasHref && (pathname === item.href || isChildActive);
+
                     const MenuItem = (
                       <SidebarMenuItem key={itemIdx}>
                         {hasHref ? (
                           <SidebarMenuButton
                             asChild
                             tooltip={item.label}
-                            isActive={pathname === item.href || isChildActive}
+                            className={cn(
+                              "relative transition-colors duration-200 rounded-xl h-9.5 px-3",
+                              isActive ? "text-primary font-bold" : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                            )}
                           >
-                            <Link href={item.href}>
-                              {item.icon}
-                              {truncate(item.label, 18)}
+                            <Link href={item.href} className="relative z-10 w-full flex items-center">
+                              {isActive && (
+                                <>
+                                  <motion.div
+                                    layoutId="activeSidebarNavIndicator"
+                                    className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-primary rounded-r-md"
+                                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                                  />
+                                  <motion.div
+                                    layoutId="activeSidebarNavHighlight"
+                                    className="absolute inset-0 bg-primary/5 rounded-xl border border-primary/10"
+                                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                                    style={{ pointerEvents: "none" }}
+                                  />
+                                </>
+                              )}
+                              <span className="flex items-center gap-2.5 w-full relative z-20">
+                                {item.icon}
+                                <span className="truncate">{truncate(item.label, 18)}</span>
+                              </span>
                             </Link>
                           </SidebarMenuButton>
                         ) : (
                           <CollapsibleTrigger asChild>
                             <SidebarMenuButton
                               tooltip={item.label}
-                              isActive={isChildActive}
+                              className={cn(
+                                "relative transition-colors duration-200 rounded-xl h-9.5 px-3",
+                                isChildActive ? "text-primary font-bold" : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                              )}
                             >
-                              {item.icon}
-                              {truncate(item.label, 18)}
-                              <ChevronRight className="ml-auto size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                              <span className="flex items-center gap-2.5 w-full relative z-20">
+                                {isChildActive && (
+                                  <motion.div
+                                    layoutId="activeSidebarNavHighlight"
+                                    className="absolute inset-0 bg-primary/5 rounded-xl border border-primary/10"
+                                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                                    style={{ pointerEvents: "none" }}
+                                  />
+                                )}
+                                {item.icon}
+                                <span className="truncate">{truncate(item.label, 18)}</span>
+                                <ChevronRight className="ml-auto size-4 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90 text-muted-foreground/60 group-hover:text-foreground" />
+                              </span>
                             </SidebarMenuButton>
                           </CollapsibleTrigger>
                         )}
@@ -381,27 +453,43 @@ export default function AppSideBar({
                             {hasHref && (
                               <CollapsibleTrigger asChild>
                                 <SidebarMenuAction className="data-[state=open]:rotate-90">
-                                  <ChevronRight />
+                                  <ChevronRight className="size-4 text-muted-foreground/60 hover:text-foreground" />
                                   <span className="sr-only">Toggle</span>
                                 </SidebarMenuAction>
                               </CollapsibleTrigger>
                             )}
                             <CollapsibleContent>
-                              <SidebarMenuSub>
+                              <SidebarMenuSub className="border-l border-zinc-800/40 ml-4.5 pl-3 py-1 gap-1">
                                 {item.children?.map(
-                                  (child: any, childIdx: number) => (
-                                    <SidebarMenuSubItem key={childIdx}>
-                                      <SidebarMenuSubButton
-                                        asChild
-                                        isActive={pathname === child.href}
-                                      >
-                                        <Link href={child.href}>
-                                          {child.icon}
-                                          {truncate(child.label, 16)}
-                                        </Link>
-                                      </SidebarMenuSubButton>
-                                    </SidebarMenuSubItem>
-                                  ),
+                                  (child: any, childIdx: number) => {
+                                    const isSubActive = pathname === child.href;
+                                    return (
+                                      <SidebarMenuSubItem key={childIdx}>
+                                        <SidebarMenuSubButton
+                                          asChild
+                                          className={cn(
+                                            "relative transition-colors duration-200 rounded-lg px-2.5 py-1.5 h-8",
+                                            isSubActive ? "text-primary font-semibold" : "text-muted-foreground/80 hover:text-foreground hover:bg-white/5"
+                                          )}
+                                        >
+                                          <Link href={child.href} className="relative z-10 w-full flex items-center">
+                                            {isSubActive && (
+                                              <motion.div
+                                                layoutId="activeSubmenuHighlight"
+                                                className="absolute inset-0 bg-primary/5 rounded-lg border border-primary/5"
+                                                transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                                                style={{ pointerEvents: "none" }}
+                                              />
+                                            )}
+                                            <span className="flex items-center gap-2 relative z-20">
+                                              {child.icon}
+                                              <span className="truncate">{truncate(child.label, 16)}</span>
+                                            </span>
+                                          </Link>
+                                        </SidebarMenuSubButton>
+                                      </SidebarMenuSubItem>
+                                    );
+                                  }
                                 )}
                               </SidebarMenuSub>
                             </CollapsibleContent>
@@ -439,99 +527,131 @@ export default function AppSideBar({
                 <DropdownMenuTrigger asChild>
                   <SidebarMenuButton
                     size="lg"
-                    className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+                    className="relative h-12 w-full flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-300 border border-transparent hover:border-zinc-800/40 hover:bg-white/5 data-[state=open]:bg-white/5 data-[state=open]:border-zinc-800/40 overflow-hidden isolate transform-[translate3d(0,0,0)]"
                   >
-                    <Avatar className="h-9 w-9  border border-border/50 shadow-sm">
-                      <AvatarImage src={session.user?.avatarUrl ? process.env.NEXT_PUBLIC_API_URL + session.user?.avatarUrl : ""} />
-                      <AvatarFallback className="rounded-md bg-primary/10 text-primary">
+                    {/* Custom Card Background Image */}
+                    {session.user?.sidebarCardBackgroundUrl && (
+                      <>
+                        <div
+                          className="absolute inset-0 bg-cover bg-center z-0"
+                          style={{
+                            backgroundImage: `url(${getSafeImageUrl(session.user.sidebarCardBackgroundUrl)})`,
+                          }}
+                        />
+                        <div className="absolute inset-0 bg-linear-to-r from-black/85 via-black/40 to-transparent z-0" />
+                      </>
+                    )}
+                    
+                    <Avatar className="h-9 w-9 border border-zinc-800/60 shadow-sm shrink-0 z-10">
+                      <AvatarImage src={session.user?.avatarUrl ? getSafeImageUrl(session.user.avatarUrl) : ""} />
+                      <AvatarFallback className="rounded-md bg-primary/10 text-primary z-10">
                         {session.user?.username?.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="grid flex-1 text-left text-sm leading-tight ml-1">
-                      <span className="truncate font-semibold text-sidebar-foreground">
+                    <div className="grid flex-1 text-left text-sm leading-tight ml-1.5 z-10">
+                      <span className={cn(
+                        "truncate font-semibold",
+                        session.user?.sidebarCardBackgroundUrl ? "text-white" : "text-foreground"
+                      )}>
                         {session.user?.username}
                       </span>
-                      <span className="truncate text-xs text-muted-foreground">
+                      <span className={cn(
+                        "truncate text-xs",
+                        session.user?.sidebarCardBackgroundUrl ? "text-zinc-300" : "text-muted-foreground/75"
+                      )}>
                         {session.user?.email}
                       </span>
                     </div>
-                    <ChevronsUpDown className="ml-auto size-4 text-muted-foreground" />
+                    <ChevronsUpDown className={cn(
+                      "ml-auto size-4 transition-colors z-10",
+                      session.user?.sidebarCardBackgroundUrl
+                        ? "text-zinc-400 group-hover:text-white"
+                        : "text-muted-foreground/60 group-hover:text-foreground"
+                    )} />
                   </SidebarMenuButton>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
-                  className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg bg-popover text-popover-foreground shadow-md p-2"
+                  className="w-60 rounded-2xl bg-zinc-950/90 backdrop-blur-xl border border-zinc-800/80 shadow-2xl p-2.5"
                   side={isMobile ? "bottom" : "right"}
                   align="end"
                   sideOffset={12}
                 >
                   <DropdownMenuLabel className="p-0 font-normal">
                     <Link href={resolvedProfileHref}>
-                      <div className="flex items-center gap-3 px-2 py-2 text-left text-sm bg-sidebar-accent/50 rounded-md mb-2">
-                        <Avatar className="h-9 w-9 border border-border/50">
+                      <div
+                        className="relative overflow-hidden flex items-center gap-3.5 px-3 py-2.5 text-left text-sm bg-zinc-900/40 border border-zinc-800/30 hover:border-zinc-700/45 hover:bg-zinc-800/30 rounded-xl mb-2 transition-all duration-200 isolate transform-[translate3d(0,0,0)]"
+                      >
+                        {/* Custom Card Background Image */}
+                        {session.user?.sidebarCardBackgroundUrl && (
+                          <>
+                            <div
+                              className="absolute inset-0 bg-cover bg-center z-0"
+                              style={{
+                                backgroundImage: `url(${getSafeImageUrl(session.user.sidebarCardBackgroundUrl)})`,
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-linear-to-r from-black/85 via-black/40 to-transparent z-0" />
+                          </>
+                        )}
+                        
+                        <Avatar className="h-9 w-9 border border-zinc-800/60 z-10 shrink-0">
                           <AvatarImage
-                            src={session.user?.avatarUrl ? process.env.NEXT_PUBLIC_API_URL + session.user?.avatarUrl : ""}
+                            src={session.user?.avatarUrl ? getSafeImageUrl(session.user.avatarUrl) : ""}
                             alt={session.user?.username}
                           />
-                          <AvatarFallback className="rounded-md bg-primary/10 text-primary">
+                          <AvatarFallback className="rounded-md bg-primary/10 text-primary font-bold z-10">
                             {session.user?.username?.charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
-                        <div className="grid flex-1 text-left text-sm leading-tight">
-                          <span className="truncate font-semibold text-foreground">
+                        <div className="grid flex-1 text-left text-sm leading-tight z-10">
+                          <span className={cn(
+                            "truncate font-bold",
+                            session.user?.sidebarCardBackgroundUrl ? "text-white" : "text-foreground"
+                          )}>
                             {session.user?.username}
                           </span>
-                          <span className="truncate text-xs text-muted-foreground">
+                          <span className={cn(
+                            "truncate text-xs",
+                            session.user?.sidebarCardBackgroundUrl ? "text-zinc-300" : "text-muted-foreground/80"
+                          )}>
                             {session.user?.email}
                           </span>
                         </div>
                       </div>
                     </Link>
                   </DropdownMenuLabel>
-                  <DropdownMenuSeparator className="bg-border/50" />
+                  <DropdownMenuSeparator className="bg-zinc-800/40 my-1.5" />
 
-                  <DropdownMenuGroup>
+                  <DropdownMenuGroup className="space-y-0.5">
                     <DropdownMenuItem
-                      className="cursor-pointer gap-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200 p-2 rounded-md"
+                      className="cursor-pointer gap-2.5 px-3 py-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-zinc-800/50 rounded-xl transition-all duration-200"
                       onSelect={(e) => {
                         e.preventDefault();
                         setIsAppearanceOpen(true);
                       }}
                     >
-                      <Palette className="size-4" />
+                      <Palette className="size-4 text-primary/80" />
                       Appearance
                     </DropdownMenuItem>
                     <DropdownMenuItem
-                      className="cursor-pointer gap-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200 p-2 rounded-md"
+                      className="cursor-pointer gap-2.5 px-3 py-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-zinc-800/50 rounded-xl transition-all duration-200"
                       onSelect={(e) => {
                         e.preventDefault();
                         setIsSettingsOpen(true);
                       }}
                     >
-                      <Settings className="size-4" />
+                      <Settings className="size-4 text-primary/80" />
                       Settings
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
 
-                  {/* <DropdownMenuGroup>
-                    <DropdownMenuItem
-                      className="cursor-pointer gap-2 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors duration-200 p-2 rounded-md"
-                      asChild
-                    >
-                      <Link href={connectionsHref}>
-                        <LinkIcon className="size-4" />
-                        Connections
-                      </Link>
-                    </DropdownMenuItem>
-                    {extraFooterItems}
-                  </DropdownMenuGroup> */}
-
-                  <DropdownMenuSeparator className="bg-border/50" />
+                  <DropdownMenuSeparator className="bg-zinc-800/40 my-1.5" />
                   <DropdownMenuItem
-                    className="cursor-pointer gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive focus:bg-destructive/10 focus:text-destructive transition-colors duration-200 p-2 rounded-md"
+                    className="cursor-pointer gap-2.5 px-3 py-2.5 text-xs font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 focus:bg-red-500/10 rounded-xl transition-all duration-200"
                     onClick={() => signOut({ redirect: false })}
                   >
-                    <LogOut className="size-4" />
-                    <span className="font-medium">Log out</span>
+                    <LogOut className="size-4 text-red-400/80" />
+                    <span className="font-bold">Log out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -545,10 +665,10 @@ export default function AppSideBar({
                     callbackUrl: window.location.pathname,
                   })
                 }
-                className="border border-border shadow-sm hover:bg-sidebar-accent transition-colors"
+                className="border border-zinc-800/50 shadow-sm hover:bg-white/5 rounded-xl transition-colors h-11"
               >
-                <LogIn className="size-4" />
-                <span className="font-medium">Log in</span>
+                <LogIn className="size-4 text-primary" />
+                <span className="font-semibold text-foreground">Log in</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           )}
@@ -619,7 +739,7 @@ function BottomDock({
   }
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between gap-1 px-3 py-2 bg-sidebar/95 backdrop-blur-md border border-sidebar-border rounded-full shadow-2xl w-[calc(100%-2rem)] max-w-sm md:hidden select-none">
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between gap-1 px-3 py-2 bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/80 shadow-2xl w-[calc(100%-2rem)] max-w-sm md:hidden select-none rounded-full">
       {/* Left items */}
       <div className="flex items-center gap-0.5 flex-1 justify-around">
         {leftItems.map((item) => (
@@ -628,13 +748,15 @@ function BottomDock({
       </div>
 
       {/* Middle Switcher Button */}
-      <button
+      <motion.button
         onClick={() => setOpenMobile(true)}
-        className="flex items-center justify-center size-10.5 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 hover:scale-105 active:scale-95 transition-transform duration-200 cursor-pointer shrink-0 mx-1.5"
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.95 }}
+        className="flex items-center justify-center size-10.5 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 cursor-pointer shrink-0 mx-1.5"
         aria-label="Toggle Navigation Drawer"
       >
         <LayoutGrid className="size-4" />
-      </button>
+      </motion.button>
 
       {/* Right items */}
       <div className="flex items-center gap-0.5 flex-1 justify-around">
@@ -657,14 +779,24 @@ function DockItem({
     <Link
       href={item.href || "#"}
       className={cn(
-        "flex flex-col items-center justify-center gap-0.5 px-2.5 py-1 rounded-xl transition-all duration-200 min-w-[54px]",
+        "relative flex flex-col items-center justify-center gap-0.5 px-2.5 py-1.5 rounded-full transition-colors duration-200 min-w-[58px]",
         isActive 
-          ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold" 
-          : "text-sidebar-foreground/60 hover:text-sidebar-foreground"
+          ? "text-primary font-bold" 
+          : "text-muted-foreground/70 hover:text-foreground"
       )}
     >
-      <span className="scale-90">{item.icon}</span>
-      <span className="text-[9px] tracking-tight font-medium">
+      {isActive && (
+        <motion.div
+          layoutId="activeDockBubble"
+          className="absolute inset-0 bg-primary/10 rounded-full border border-primary/20"
+          transition={{ type: "spring", stiffness: 380, damping: 30 }}
+          style={{ pointerEvents: "none" }}
+        />
+      )}
+      <span className={cn("relative z-10 transition-transform duration-200", isActive && "scale-105")}>
+        {item.icon}
+      </span>
+      <span className="text-[9px] tracking-tight font-medium relative z-10">
         {item.label}
       </span>
     </Link>

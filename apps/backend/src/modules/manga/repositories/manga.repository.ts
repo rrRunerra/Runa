@@ -62,6 +62,14 @@ export class MangaRepository {
       relations: dbManga.relations,
       characters: dbManga.characters,
       studios: dbManga.studios?.map((name: string) => ({ name })),
+      averageScore: dbManga.averageScore,
+      popularity: dbManga.popularity,
+      favourites: dbManga.favourites,
+      trending: dbManga.trending,
+      meanScore: dbManga.meanScore,
+      synonyms: dbManga.synonyms || [],
+      hashtag: dbManga.hashtag,
+      countryOfOrigin: dbManga.countryOfOrigin,
     };
   }
 }

@@ -4,7 +4,6 @@ import Image from "next/image";
 import Link from "next/link";
 import AccessDenied from "@/components/lynx/AccessDenied";
 import { PageHeader } from "@/components/lynx/LynxPageHeader";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 interface GuildMember {
@@ -44,7 +43,7 @@ export default async function MemberGridPage({
   }
 
   return (
-    <div className="container mx-auto p-8 space-y-8">
+    <div className="container mx-auto p-6 md:p-8 space-y-6 md:space-y-8 select-none">
       <PageHeader
         title="Choose a Member"
         description="Select a member from this guild to start a Direct Message conversation."
@@ -52,7 +51,7 @@ export default async function MemberGridPage({
         backLabel="Back to Channels"
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
         {members && members.length > 0 ? (
           members.map((member) => (
             <Link
@@ -60,48 +59,52 @@ export default async function MemberGridPage({
               href={`/lynx/chat/dms/start?userId=${member.id}`}
               className="block h-full"
             >
-              <Card className="h-full hover:scale-[1.02] transform-gpu backface-visibility-hidden transition-all duration-300 cursor-pointer group shadow-sm overflow-hidden bg-card border-border">
-                <CardHeader className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="relative">
-                        <div className="w-12 h-12 rounded-full border border-border overflow-hidden flex items-center justify-center bg-accent/10">
-                          <Image
-                            src={member.avatarURL}
-                            alt=""
-                            width={48}
-                            height={48}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <div
-                          className={cn(
-                            "absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-card",
-                            member.status === "online"
-                              ? "bg-emerald-500"
-                              : member.status === "idle"
-                                ? "bg-yellow-500"
-                                : member.status === "dnd"
-                                  ? "bg-rose-500"
-                                  : "bg-zinc-500",
-                          )}
+              <div className="h-full relative overflow-hidden rounded-2xl border border-zinc-800/40 bg-zinc-950/20 backdrop-blur-xl p-6 shadow-xl hover:shadow-2xl hover:border-zinc-700/50 hover:bg-zinc-800/10 cursor-pointer group flex flex-col justify-between transition-all duration-300 isolate [transform:translate3d(0,0,0)]">
+                {/* Accent glow on hover */}
+                <div className="absolute top-0 right-0 size-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors pointer-events-none" />
+
+                <div className="flex items-center justify-between relative z-10 w-full">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="relative shrink-0">
+                      <div className="size-12 rounded-full overflow-hidden border border-zinc-800/80 bg-zinc-900/50 shadow-inner group-hover:scale-105 transition-transform duration-300 flex items-center justify-center">
+                        <Image
+                          src={member.avatarURL}
+                          alt=""
+                          width={48}
+                          height={48}
+                          className="w-full h-full object-cover"
                         />
                       </div>
-                      <CardTitle className="text-xl text-foreground truncate">
-                        {member.globalName || member.username}
-                      </CardTitle>
+                      <div
+                        className={cn(
+                          "absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-zinc-950",
+                          member.status === "online"
+                            ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse"
+                            : member.status === "idle"
+                              ? "bg-yellow-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]"
+                              : member.status === "dnd"
+                                ? "bg-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"
+                                : "bg-zinc-500",
+                        )}
+                      />
                     </div>
-                    <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                    <div className="min-w-0">
+                      <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors truncate">
+                        {member.globalName || member.username}
+                      </h3>
+                      <p className="text-xs text-muted-foreground truncate">
+                        @{member.username}
+                      </p>
+                    </div>
                   </div>
-                </CardHeader>
-              </Card>
+                  <ChevronRight className="size-4 text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
+                </div>
+              </div>
             </Link>
           ))
         ) : (
-          <div className="col-span-full py-20 text-center opacity-70">
-            <p className="text-muted-foreground italic">
-              No members found in this guild
-            </p>
+          <div className="col-span-full py-16 text-center rounded-2xl border-2 border-dashed border-zinc-800/40 bg-zinc-900/10 italic text-muted-foreground text-sm">
+            No members found in this guild
           </div>
         )}
       </div>

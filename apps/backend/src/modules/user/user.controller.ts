@@ -70,6 +70,7 @@ export class UserController {
       displayName: user.displayName,
       avatarUrl: user.avatarUrl,
       bannerUrl: user.bannerUrl,
+      sidebarCardBackgroundUrl: (user as any).sidebarCardBackgroundUrl,
       profileSettings: user.profileSettings,
       private: privacy.profile,
       connections: safeConnections,

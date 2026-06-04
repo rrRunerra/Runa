@@ -15,7 +15,7 @@ export default function AquilaLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <div className="flex h-screen w-full">
+    <div className="flex h-screen w-full overflow-hidden">
       <AquilaNavProvider>
         <SidebarInset className="bg-background pt-2 overflow-y-auto no-scrollbar flex flex-col h-full">
           {children}

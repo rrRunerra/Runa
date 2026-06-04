@@ -1,19 +1,18 @@
 "use client";
 
-import { FileText } from "lucide-react";
+import { Badge, FileText, Link2 } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 const MarkdownComponents: Record<string, React.FC<any>> = {
-  // eslint-disable-line @typescript-eslint/no-explicit-any
-  a: (
-    { ...props }: any, // eslint-disable-line @typescript-eslint/no-explicit-any
-  ) => (
+  a: ({ ...props }: any) => (
     <a
       {...props}
-      className="text-primary hover:underline transition-colors"
+      className="text-primary hover:underline transition-colors font-semibold"
       target="_blank"
       rel="noopener noreferrer"
     />
@@ -52,12 +51,12 @@ function MessageMedia({ attachment }: { attachment: Attachment }) {
 
   if (isImage) {
     return (
-      <div className="mt-1 rounded-md overflow-hidden border border-border max-w-[280px]">
+      <div className="mt-2 rounded-xl overflow-hidden border border-zinc-800/60 max-w-[340px] shadow-md hover:scale-[1.01] transition-transform duration-300">
         <Image
           src={attachment.url}
           alt={attachment.name}
-          width={280}
-          height={200}
+          width={340}
+          height={240}
           className="w-full h-auto object-contain"
         />
       </div>
@@ -66,11 +65,11 @@ function MessageMedia({ attachment }: { attachment: Attachment }) {
 
   if (isVideo) {
     return (
-      <div className="mt-1 rounded-md overflow-hidden border border-border max-w-[320px]">
+      <div className="mt-2 rounded-xl overflow-hidden border border-zinc-800/60 max-w-[360px] shadow-md">
         <video
           src={attachment.url}
           controls
-          autoPlay
+          autoPlay={false}
           muted
           loop
           playsInline
@@ -82,12 +81,12 @@ function MessageMedia({ attachment }: { attachment: Attachment }) {
 
   if (isTextFile && textPreview) {
     return (
-      <div className="mt-1.5 rounded-md border border-border bg-card overflow-hidden max-w-2xl">
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 border-b border-border text-[10px] text-muted-foreground font-medium font-mono">
-          <FileText className="w-3 h-3 text-muted-foreground/60" />
+      <div className="mt-2 rounded-xl border border-zinc-800 bg-zinc-950/60 overflow-hidden max-w-2xl shadow-inner font-mono">
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900/50 border-b border-zinc-800 text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
+          <FileText className="size-3.5 text-primary" />
           {attachment.name}
         </div>
-        <pre className="p-3 text-[11px] text-foreground font-mono leading-relaxed whitespace-pre-wrap overflow-x-auto">
+        <pre className="p-4 text-[11px] text-zinc-300 leading-relaxed whitespace-pre-wrap overflow-x-auto no-scrollbar">
           {textPreview}
         </pre>
       </div>
@@ -99,9 +98,10 @@ function MessageMedia({ attachment }: { attachment: Attachment }) {
       href={attachment.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="mt-1 flex items-center gap-1.5 p-1.5 rounded bg-accent/50 hover:bg-accent transition-colors w-fit text-[11px] text-primary"
+      className="mt-2 flex items-center gap-2 px-3.5 py-2 rounded-xl border border-zinc-800/80 bg-zinc-900/30 hover:bg-zinc-800/20 text-xs font-semibold text-primary transition-all w-fit shadow-xs"
     >
-      <span className="opacity-70">📎</span> {attachment.name}
+      <Link2 className="size-3.5" />
+      {attachment.name}
     </a>
   );
 }
@@ -119,20 +119,21 @@ interface Embed {
 }
 
 function MessageEmbed({ embed }: { embed: Embed }) {
+  const embedColor = embed.color
+    ? `#${embed.color.toString(16).padStart(6, "0")}`
+    : "#6366f1"; // default primary indigo
+
   return (
     <div
-      className="mt-1.5 p-3 rounded border-l-2 bg-card/60 max-w-xl space-y-1.5 border-border"
-      style={{
-        borderLeftColor: embed.color
-          ? `#${embed.color.toString(16).padStart(6, "0")}`
-          : undefined,
-      }}
+      className="mt-2.5 p-4 rounded-xl border-l-[3px] bg-zinc-950/40 border border-zinc-900/50 max-w-xl space-y-2 shadow-sm font-sans"
+      style={{ borderLeftColor: embedColor }}
     >
       {embed.title && (
-        <h4 className="font-bold text-foreground text-[13px] hover:underline cursor-pointer">
+        <h4 className="font-bold text-foreground text-sm hover:text-primary transition-colors cursor-pointer leading-tight">
           {embed.url ? (
-            <a href={embed.url} target="_blank" rel="noopener noreferrer">
+            <a href={embed.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
               {embed.title}
+              <Link2 className="size-3" />
             </a>
           ) : (
             embed.title
@@ -140,7 +141,7 @@ function MessageEmbed({ embed }: { embed: Embed }) {
         </h4>
       )}
       {embed.description && (
-        <div className="text-muted-foreground text-[12px] leading-snug prose prose-sm max-w-none dark:prose-invert">
+        <div className="text-muted-foreground text-xs leading-relaxed prose prose-sm max-w-none dark:prose-invert">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={MarkdownComponents}
@@ -151,70 +152,67 @@ function MessageEmbed({ embed }: { embed: Embed }) {
       )}
 
       {embed.fields && embed.fields.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-zinc-900/40">
           {embed.fields.map((field, i: number) => (
             <div key={i} className={field.inline ? "" : "col-span-full"}>
-              <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+              <div className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest">
                 {field.name}
               </div>
-              <div className="text-[12px] text-foreground">{field.value}</div>
+              <div className="text-xs text-foreground mt-0.5 font-medium">{field.value}</div>
             </div>
           ))}
         </div>
       )}
 
       {embed.video && (
-        <div className="mt-1.5 rounded overflow-hidden border border-border max-w-[400px]">
+        <div className="mt-2 rounded-xl overflow-hidden border border-zinc-800/60 max-w-[420px]">
           <video
             src={embed.video.url}
             controls
-            autoPlay
+            autoPlay={false}
             muted
             loop
-            playsInline
             className="w-full h-auto"
           />
         </div>
       )}
 
       {embed.image && !embed.video && (
-        <div className="mt-1.5 rounded overflow-hidden border border-border max-w-[300px]">
+        <div className="mt-2 rounded-xl overflow-hidden border border-zinc-800/60 max-w-[340px]">
           <Image
             src={embed.image.url}
-            alt="Embed"
-            width={300}
-            height={200}
-            className="w-full h-auto"
+            alt="Embed Image"
+            width={340}
+            height={240}
+            className="w-full h-auto object-cover"
           />
         </div>
       )}
 
       {embed.thumbnail && !embed.image && !embed.video && (
-        <div className="mt-1.5 rounded overflow-hidden border border-border max-w-[150px]">
+        <div className="mt-2 rounded-xl overflow-hidden border border-zinc-800/60 max-w-[120px] shadow-sm">
           <Image
             src={embed.thumbnail.url}
             alt="Thumbnail"
-            width={150}
-            height={150}
-            className="w-full h-auto"
+            width={120}
+            height={120}
+            className="w-full h-auto object-cover"
           />
         </div>
       )}
 
       {embed.footer && (
-        <div className="flex items-center gap-1.5 mt-1.5 pt-1.5 border-t border-border">
+        <div className="flex items-center gap-2 mt-2 pt-2 border-t border-zinc-900/40 text-[10px] text-muted-foreground/60 select-none">
           {embed.footer.icon_url && (
             <Image
               src={embed.footer.icon_url}
               alt=""
               width={14}
               height={14}
-              className="w-3.5 h-3.5 rounded-full"
+              className="size-3.5 rounded-full"
             />
           )}
-          <span className="text-[9px] text-muted-foreground">
-            {embed.footer.text}
-          </span>
+          <span className="font-medium">{embed.footer.text}</span>
         </div>
       )}
     </div>
@@ -282,77 +280,89 @@ export default function LiveMessageList({
   }, [guildId, channelId]);
 
   return (
-    <div className="space-y-4 pt-2">
+    <div className="space-y-4 pt-2 select-none">
       {messages && messages.length > 0 ? (
-        messages.map((message: Message) => (
-          <div
-            key={message.id}
-            className="group flex gap-3 hover:bg-muted/30 p-1.5 -mx-1.5 rounded transition-colors"
-          >
-            <div className="shrink-0 pt-0.5">
-              <div className="w-8 h-8 rounded-full bg-accent/20 overflow-hidden border border-border shadow-sm">
-                {message.author.avatarURL ? (
-                  <Image
-                    src={message.author.avatarURL}
-                    alt=""
-                    width={32}
-                    height={32}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-[10px] text-muted-foreground">
-                    ?
+        <AnimatePresence initial={false}>
+          {messages.map((message: Message) => {
+            const isBot = message.author.username?.toLowerCase().includes("lynx");
+            return (
+              <motion.div
+                key={message.id}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ type: "spring", stiffness: 400, damping: 28 }}
+                className="group flex gap-4 bg-zinc-950/20 backdrop-blur-xl p-4.5 rounded-2xl border border-zinc-900/50 hover:border-zinc-800/60 hover:bg-zinc-900/10 transition-all duration-300 shadow-md relative overflow-hidden"
+              >
+                {/* Subtle hover background glow */}
+                <div className="absolute top-0 left-0 size-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/8 transition-all duration-500 pointer-events-none" />
+
+                <div className="shrink-0 pt-0.5 relative z-10">
+                  <div className="size-9 rounded-full overflow-hidden border border-zinc-800/80 bg-zinc-900/50 shadow-inner group-hover:scale-105 transition-transform duration-300">
+                    {message.author.avatarURL ? (
+                      <Image
+                        src={message.author.avatarURL}
+                        alt="User Avatar"
+                        width={36}
+                        height={36}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-[11px] text-muted-foreground font-bold bg-zinc-900">
+                        {message.author.username?.charAt(0).toUpperCase() || "?"}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </div>
-            <div className="flex-1 space-y-0.5 min-w-0">
-              <div className="flex items-baseline gap-2">
-                <span className="font-bold text-[13px] text-foreground hover:underline cursor-pointer">
-                  {message.author.globalName || message.author.username}
-                </span>
-                <span className="text-[9px] text-muted-foreground font-normal opacity-80">
-                  {new Date(message.createdTimestamp).toLocaleString()}
-                </span>
-              </div>
-
-              {message.cleanContent && (
-                <div className="text-foreground text-[13px] leading-relaxed prose prose-sm max-w-none dark:prose-invert prose-p:my-0 prose-pre:my-1 prose-pre:bg-muted prose-pre:border prose-pre:border-border">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={MarkdownComponents}
-                  >
-                    {message.cleanContent}
-                  </ReactMarkdown>
                 </div>
-              )}
+                <div className="flex-1 space-y-1.5 min-w-0 relative z-10">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={cn(
+                      "font-bold text-[13px] transition-colors cursor-pointer",
+                      isBot
+                        ? "text-primary hover:text-primary/80"
+                        : "text-foreground hover:text-primary"
+                    )}>
+                      {message.author.globalName || message.author.username}
+                    </span>
+                    {isBot && (
+                      <Badge className="bg-primary/20 hover:bg-primary/20 text-primary border border-primary/30 text-[9px] uppercase px-1.5 py-0.5 h-4.5 font-bold tracking-wider select-none shrink-0 font-sans">
+                        Bot
+                      </Badge>
+                    )}
+                    <span className="text-[10px] text-muted-foreground/50 font-semibold font-mono">
+                      {new Date(message.createdTimestamp).toLocaleString()}
+                    </span>
+                  </div>
 
-              {message.attachments?.map(
-                (
-                  attachment: any, // eslint-disable-line @typescript-eslint/no-explicit-any
-                  _i: number,
-                ) => (
-                  <MessageMedia key={_i} attachment={attachment} />
-                ),
-              )}
+                  {message.cleanContent && (
+                    <div className="text-zinc-300 text-xs md:text-sm leading-relaxed prose prose-stone dark:prose-invert max-w-none prose-p:my-0 prose-pre:my-2 prose-pre:bg-zinc-950/60 prose-pre:border prose-pre:border-zinc-800/50 prose-pre:p-4 prose-pre:rounded-xl prose-pre:font-mono prose-code:text-[11px] select-text">
+                      <ReactMarkdown
+                        remarkPlugins={[remarkGfm]}
+                        components={MarkdownComponents}
+                      >
+                        {message.cleanContent}
+                      </ReactMarkdown>
+                    </div>
+                  )}
 
-              {message.embeds?.map(
-                (
-                  embed: any, // eslint-disable-line @typescript-eslint/no-explicit-any
-                  _i: number,
-                ) => (
-                  <MessageEmbed key={_i} embed={embed} />
-                ),
-              )}
-            </div>
-          </div>
-        ))
+                  {message.attachments?.map((attachment, _i) => (
+                    <MessageMedia key={_i} attachment={attachment} />
+                  ))}
+
+                  {message.embeds?.map((embed, _i) => (
+                    <MessageEmbed key={_i} embed={embed} />
+                  ))}
+                </div>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
       ) : (
-        <div className="flex flex-col items-center justify-center py-16 text-center space-y-3 opacity-40">
-          <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center text-muted-foreground border border-border">
+        <div className="flex flex-col items-center justify-center py-20 text-center space-y-3 opacity-40">
+          <div className="size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-muted-foreground font-semibold">
             #
           </div>
-          <p className="text-muted-foreground text-sm italic">
+          <p className="text-muted-foreground text-sm italic font-medium">
             No history found here
           </p>
         </div>

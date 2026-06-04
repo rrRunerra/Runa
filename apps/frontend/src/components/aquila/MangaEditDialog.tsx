@@ -40,6 +40,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Heart, CalendarIcon, X, ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { format } from "date-fns";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { BASE_CONNECTION_PROVIDERS, ConnectionCapability } from "@/lib/providers";
@@ -302,18 +303,19 @@ export function MangaEditDialog({
     }
   };
 
-  const performConnectionSearch = async (query: string) => {
-    if (!query || !activeSearchProvider) return;
+  const performConnectionSearch = async (query: string, providerKey?: string) => {
+    const activeProv = providerKey || activeSearchProvider;
+    if (!query || !activeProv) return;
     setIsSearching(true);
     setSearchResults([]);
     try {
-      const provider = BASE_CONNECTION_PROVIDERS.find((p) => p.key === activeSearchProvider);
+      const provider = BASE_CONNECTION_PROVIDERS.find((p) => p.key === activeProv);
       if (provider && provider.search) {
         const results = await provider.search(query, "MANGA");
         setSearchResults(results);
       }
     } catch (err) {
-      console.error(`Failed to search ${activeSearchProvider}`, err);
+      console.error(`Failed to search ${activeProv}`, err);
     } finally {
       setIsSearching(false);
     }
@@ -780,7 +782,7 @@ export function MangaEditDialog({
   };
 
   const dialogContent = (
-    <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden bg-popover border-border text-popover-foreground [&>button]:text-foreground [&>button]:z-60 [&>button]:hover:text-muted-foreground">
+    <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden bg-zinc-950/90 backdrop-blur-xl border border-zinc-800/60 text-foreground [&>button]:text-foreground [&>button]:z-60 [&>button]:hover:text-muted-foreground shadow-2xl rounded-2xl">
       <DialogTitle className="sr-only">
         {hasListEntry ? "Edit Manga Entry" : "Add Manga to List"}
       </DialogTitle>
@@ -790,73 +792,79 @@ export function MangaEditDialog({
       </DialogDescription>
 
       {/* Banner header */}
-      <div className="relative h-48 w-full bg-muted">
+      <div className="relative h-48 w-full bg-zinc-900/40">
         {media.bannerImage && (
           <img
             src={media.bannerImage}
             alt="banner"
-            className="w-full h-full object-cover opacity-60"
+            className="w-full h-full object-cover opacity-50"
           />
         )}
-        <div className="absolute inset-0 bg-linear-to-t from-popover to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/50 to-transparent" />
         <div className="absolute bottom-4 left-6 right-6 flex items-end gap-6 z-10">
           <img
             src={media.coverImage.large}
             alt="cover"
-            className="w-24 rounded shadow-lg object-cover bg-muted"
+            className="w-24 rounded-xl shadow-2xl object-cover bg-zinc-950/40 border border-zinc-800/40"
           />
           <div className="flex-1 pb-1">
-            <h2 className="text-xl font-bold line-clamp-2 text-foreground">
+            <h2 className="text-xl font-bold line-clamp-2 text-foreground drop-shadow-md">
               {media.title.english || media.title.romaji}
             </h2>
           </div>
           <div className="pb-1 flex gap-4 items-center">
-            <button
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
               onClick={handleToggleFavorite}
               disabled={isSubmittingFavorite}
               className={cn(
-                "transition-colors",
+                "transition-colors cursor-pointer",
                 isFavorited
-                  ? "text-red-500 hover:text-red-600"
+                  ? "text-red-500 hover:text-red-600 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
               <Heart className={cn("w-6 h-6", isFavorited && "fill-current")} />
-            </button>
-            <Button
-              className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md font-medium px-6"
-              onClick={handleSave}
-              disabled={isSubmitting}
-            >
-              Save
-            </Button>
+            </motion.button>
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button
+                className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/10 font-bold px-6 rounded-xl cursor-pointer"
+                onClick={handleSave}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Saving..." : "Save"}
+              </Button>
+            </motion.div>
           </div>
         </div>
       </div>
 
-      <div className="p-6 pt-4 bg-popover">
+      <div className="p-6 pt-4 bg-transparent">
         <div className="grid grid-cols-6 gap-x-6 gap-y-4">
           {/* Status */}
           <div className="col-span-2 flex flex-col gap-2">
-            <Label className="text-sm font-semibold text-muted-foreground">
+            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60 px-1">
               Status
             </Label>
             <Select
               value={listStatus}
               onValueChange={(val) => {
                 setListStatus(val);
-                if (val === "COMPLETED" && !finishDate) {
-                  setFinishDate(new Date());
+                if (val === "COMPLETED") {
+                  const targetEndDate = finishDate || new Date();
+                  if (!finishDate) setFinishDate(targetEndDate);
+                  if (!startDate) setStartDate(targetEndDate);
                   if (media.chapters && !chapters)
                     setChapters(media.chapters.toString());
                 }
                 if (val === "READING" && !startDate) setStartDate(new Date());
               }}
             >
-              <SelectTrigger className="w-full bg-background border-input text-foreground h-10 px-3 text-sm font-normal hover:bg-accent hover:text-accent-foreground transition-colors">
+              <SelectTrigger className="w-full bg-zinc-950/40 border border-zinc-800/50 text-foreground h-10 px-3 text-xs font-medium hover:bg-zinc-900/60 hover:text-foreground focus:ring-1 focus:ring-primary/30 rounded-xl transition-all duration-300 cursor-pointer">
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
-              <SelectContent position="popper" className="bg-popover border-border text-popover-foreground">
+              <SelectContent position="popper" className="bg-zinc-950/95 backdrop-blur-md border border-zinc-800/80 rounded-xl text-foreground">
                 <SelectItem value="READING">Reading</SelectItem>
                 <SelectItem value="PLANNING">Plan to read</SelectItem>
                 <SelectItem value="COMPLETED">Completed</SelectItem>
@@ -868,10 +876,10 @@ export function MangaEditDialog({
 
           {/* Score */}
           <div className="col-span-2 flex flex-col gap-2">
-            <Label className="text-sm font-semibold text-muted-foreground">
+            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60 px-1">
               Score
             </Label>
-            <div className="flex bg-background border border-input rounded-md overflow-hidden">
+            <div className="flex bg-zinc-950/40 border border-zinc-800/50 rounded-xl overflow-hidden focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all duration-300">
               <Input
                 type="number"
                 min="1"
@@ -882,17 +890,18 @@ export function MangaEditDialog({
                   if (Number(val) > 10) val = "10";
                   setScore(val);
                 }}
-                className="border-0 bg-transparent text-foreground focus-visible:ring-0 h-10 w-full"
+                placeholder="0-10"
+                className="border-0 bg-transparent text-foreground focus-visible:ring-0 h-10 w-full px-3 text-xs font-medium"
               />
             </div>
           </div>
 
           {/* Chapter Progress */}
           <div className="col-span-2 flex flex-col gap-2">
-            <Label className="text-sm font-semibold text-muted-foreground">
+            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60 px-1">
               Chapter Progress
             </Label>
-            <div className="flex bg-background border border-input rounded-md overflow-hidden">
+            <div className="flex bg-zinc-950/40 border border-zinc-800/50 rounded-xl overflow-hidden focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all duration-300">
               <Input
                 type="number"
                 min="0"
@@ -903,35 +912,39 @@ export function MangaEditDialog({
                   if (media.chapters && Number(val) >= media.chapters) {
                     val = media.chapters.toString();
                     setListStatus("COMPLETED");
-                    if (!finishDate) setFinishDate(new Date());
+                    const targetEndDate = finishDate || new Date();
+                    if (!finishDate) setFinishDate(targetEndDate);
+                    if (!startDate) setStartDate(targetEndDate);
                   }
                   setChapters(val);
                 }}
-                className="border-0 bg-transparent text-foreground focus-visible:ring-0 h-10 w-full"
+                placeholder={`0 / ${media.chapters || "?"}`}
+                className="border-0 bg-transparent text-foreground focus-visible:ring-0 h-10 w-full px-3 text-xs font-medium"
               />
             </div>
           </div>
 
           {/* Volume Progress */}
           <div className="col-span-2 flex flex-col gap-2">
-            <Label className="text-sm font-semibold text-muted-foreground">
+            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60 px-1">
               Volume Progress
             </Label>
-            <div className="flex bg-background border border-input rounded-md overflow-hidden">
+            <div className="flex bg-zinc-950/40 border border-zinc-800/50 rounded-xl overflow-hidden focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all duration-300">
               <Input
                 type="number"
                 min="0"
                 max={media.volumes || undefined}
                 value={volumes}
                 onChange={(e) => setVolumes(e.target.value)}
-                className="border-0 bg-transparent text-foreground focus-visible:ring-0 h-10 w-full"
+                placeholder={`0 / ${media.volumes || "?"}`}
+                className="border-0 bg-transparent text-foreground focus-visible:ring-0 h-10 w-full px-3 text-xs font-medium"
               />
             </div>
           </div>
 
           {/* Start Date */}
           <div className="col-span-2 flex flex-col gap-2">
-            <Label className="text-sm font-semibold text-muted-foreground">
+            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60 px-1">
               Start Date
             </Label>
             <Popover>
@@ -940,11 +953,11 @@ export function MangaEditDialog({
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full justify-start text-left font-normal bg-background border-input text-foreground h-10 hover:bg-accent hover:text-accent-foreground pr-8",
-                      !startDate && "text-muted-foreground"
+                      "w-full justify-start text-left font-medium bg-zinc-950/40 border border-zinc-800/50 text-foreground h-10 hover:bg-zinc-900/60 hover:text-foreground pr-8 rounded-xl transition-all duration-300 text-xs cursor-pointer",
+                      !startDate && "text-muted-foreground/40"
                     )}
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground/60" />
                     {startDate ? (
                       format(startDate, "yyyy-MM-dd")
                     ) : (
@@ -957,7 +970,7 @@ export function MangaEditDialog({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 hover:bg-muted text-muted-foreground hover:text-foreground rounded-full"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 hover:bg-zinc-800/40 text-muted-foreground hover:text-foreground rounded-full cursor-pointer"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -970,14 +983,14 @@ export function MangaEditDialog({
               </div>
               <PopoverContent
                 align="start"
-                className="w-auto p-0 bg-popover border-border"
+                className="w-auto p-0 bg-zinc-950/95 backdrop-blur-md border border-zinc-800/80 rounded-xl z-60"
               >
                 <Calendar
                   mode="single"
                   selected={startDate}
                   onSelect={setStartDate}
                   initialFocus
-                  className="bg-popover text-popover-foreground"
+                  className="bg-transparent text-foreground"
                 />
               </PopoverContent>
             </Popover>
@@ -985,7 +998,7 @@ export function MangaEditDialog({
 
           {/* Finish Date */}
           <div className="col-span-2 flex flex-col gap-2">
-            <Label className="text-sm font-semibold text-muted-foreground">
+            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60 px-1">
               Finish Date
             </Label>
             <Popover>
@@ -994,11 +1007,11 @@ export function MangaEditDialog({
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full justify-start text-left font-normal bg-background border-input text-foreground h-10 hover:bg-accent hover:text-accent-foreground pr-8",
-                      !finishDate && "text-muted-foreground"
+                      "w-full justify-start text-left font-medium bg-zinc-950/40 border border-zinc-800/50 text-foreground h-10 hover:bg-zinc-900/60 hover:text-foreground pr-8 rounded-xl transition-all duration-300 text-xs cursor-pointer",
+                      !finishDate && "text-muted-foreground/40"
                     )}
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground/60" />
                     {finishDate ? (
                       format(finishDate, "yyyy-MM-dd")
                     ) : (
@@ -1011,7 +1024,7 @@ export function MangaEditDialog({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 hover:bg-muted text-muted-foreground hover:text-foreground rounded-full"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 hover:bg-zinc-800/40 text-muted-foreground hover:text-foreground rounded-full cursor-pointer"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -1024,14 +1037,14 @@ export function MangaEditDialog({
               </div>
               <PopoverContent
                 align="start"
-                className="w-auto p-0 bg-popover border-border"
+                className="w-auto p-0 bg-zinc-950/95 backdrop-blur-md border border-zinc-800/80 rounded-xl z-60"
               >
                 <Calendar
                   mode="single"
                   selected={finishDate}
                   onSelect={setFinishDate}
                   initialFocus
-                  className="bg-popover text-popover-foreground"
+                  className="bg-transparent text-foreground"
                 />
               </PopoverContent>
             </Popover>
@@ -1039,30 +1052,30 @@ export function MangaEditDialog({
 
           {/* Re-reads */}
           <div className="col-span-2 flex flex-col gap-2">
-            <Label className="text-sm font-semibold text-muted-foreground">
+            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60 px-1">
               Total Re-reads
             </Label>
-            <div className="flex bg-background border border-input rounded-md overflow-hidden">
+            <div className="flex bg-zinc-950/40 border border-zinc-800/50 rounded-xl overflow-hidden focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all duration-300">
               <Input
                 type="number"
                 min="0"
                 value={rereads}
                 onChange={(e) => setRereads(e.target.value)}
-                className="border-0 bg-transparent text-foreground focus-visible:ring-0 h-10 w-full"
+                className="border-0 bg-transparent text-foreground focus-visible:ring-0 h-10 w-full px-3 text-xs font-medium"
               />
             </div>
           </div>
 
           {/* Notes */}
           <div className="col-span-6 flex flex-col gap-2">
-            <Label className="text-sm font-semibold text-muted-foreground">
+            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60 px-1">
               Notes
             </Label>
             <Textarea
               placeholder="Your notes..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="bg-background border-input text-foreground min-h-[80px] resize-y h-10"
+              className="bg-zinc-950/40 border border-zinc-800/50 text-foreground min-h-[80px] resize-y h-10 rounded-xl focus-visible:ring-1 focus-visible:ring-primary/30 focus-visible:border-primary/50 transition-all duration-300 placeholder:text-muted-foreground/30 text-xs font-medium"
             />
           </div>
 
@@ -1075,10 +1088,11 @@ export function MangaEditDialog({
                 onCheckedChange={(checked) =>
                   setUpdateConnection(checked as boolean)
                 }
+                className="border-zinc-700/80 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
               />
               <Label
                 htmlFor="manga-update-connection"
-                className="text-sm font-semibold text-muted-foreground cursor-pointer"
+                className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60 cursor-pointer select-none"
               >
                 Update manga from connection
               </Label>
@@ -1092,7 +1106,7 @@ export function MangaEditDialog({
                     </div>
                   ))
                 ) : (
-                  <div className="col-span-2 text-center py-4 text-xs text-muted-foreground bg-muted/20 border border-dashed border-border rounded-lg">
+                  <div className="col-span-2 text-center py-4 text-xs text-muted-foreground bg-zinc-950/20 border border-dashed border-zinc-800/50 rounded-xl">
                     No active connections found. Please connect your accounts in settings.
                   </div>
                 )}
@@ -1107,15 +1121,15 @@ export function MangaEditDialog({
             open={isConnectionSearchOpen}
             onOpenChange={setIsConnectionSearchOpen}
           >
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogTitle>
+            <DialogContent className="sm:max-w-[500px] bg-zinc-950/95 backdrop-blur-xl border border-zinc-800/60 rounded-2xl shadow-2xl text-foreground [&>button]:text-foreground [&>button]:z-60">
+              <DialogTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground/80">
                 Search on{" "}
                 {CONNECTION_PROVIDERS.find((p) => p.key === activeSearchProvider)?.name || activeSearchProvider}
               </DialogTitle>
               <DialogDescription className="sr-only">
                 Search and select a media item to link connection IDs.
               </DialogDescription>
-              <div className="flex gap-2">
+              <div className="flex gap-2 mt-1">
                 <Input
                   placeholder={`Search ${CONNECTION_PROVIDERS.find((p) => p.key === activeSearchProvider)?.name || "manga"}...`}
                   value={connectionSearchQuery}
@@ -1126,21 +1140,23 @@ export function MangaEditDialog({
                     if (e.key === "Enter")
                       performConnectionSearch(connectionSearchQuery);
                   }}
+                  className="bg-zinc-950/40 border border-zinc-800/50 rounded-xl text-xs placeholder:text-muted-foreground/30 h-10"
                 />
                 <Button
                   onClick={() =>
                     performConnectionSearch(connectionSearchQuery)
                   }
                   disabled={isSearching}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl h-10 font-bold px-4 cursor-pointer text-xs transition-colors shrink-0"
                 >
                   {isSearching ? "Searching..." : "Search"}
                 </Button>
               </div>
-              <div className="space-y-2 max-h-64 overflow-y-auto">
+              <div className="space-y-2 max-h-64 overflow-y-auto mt-2 pr-1 no-scrollbar">
                 {searchResults.map((result) => (
                   <button
                     key={result.id}
-                    className="flex items-center gap-3 w-full p-2 rounded hover:bg-muted text-left"
+                    className="flex items-center gap-3 w-full p-2.5 rounded-xl hover:bg-zinc-800/30 text-left cursor-pointer transition-all border border-transparent hover:border-zinc-800/40"
                     onClick={() => {
                       setConnections((p) => ({
                         ...p,
@@ -1155,12 +1171,12 @@ export function MangaEditDialog({
                       <img
                         src={result.image}
                         alt={result.title}
-                        className="w-10 h-14 object-cover rounded"
+                        className="w-10 h-14 object-cover rounded-lg bg-zinc-950/40"
                       />
                     )}
                     <div>
-                      <p className="font-medium text-sm">{result.title}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="font-semibold text-xs text-foreground">{result.title}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
                         {result.format}
                         {result.chapters ? ` · ${result.chapters} ch` : ""}
                       </p>
@@ -1176,29 +1192,33 @@ export function MangaEditDialog({
           <div className="mt-6 flex justify-end">
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  disabled={isSubmitting}
-                  className="bg-background hover:bg-destructive hover:text-destructive-foreground border-input font-medium"
-                >
-                  Delete
-                </Button>
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Button
+                    variant="outline"
+                    disabled={isSubmitting}
+                    className="bg-zinc-950/40 hover:bg-destructive hover:text-destructive-foreground border-zinc-850 hover:border-destructive/50 text-muted-foreground text-xs font-semibold rounded-xl cursor-pointer px-4 h-9 transition-colors"
+                  >
+                    Delete
+                  </Button>
+                </motion.div>
               </AlertDialogTrigger>
-              <AlertDialogContent>
+              <AlertDialogContent className="bg-zinc-950/95 backdrop-blur-xl border border-zinc-800/60 rounded-2xl shadow-2xl text-foreground">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>
+                  <AlertDialogTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
                     Are you sure you want to delete this?
                   </AlertDialogTitle>
-                  <AlertDialogDescription>
+                  <AlertDialogDescription className="text-xs text-muted-foreground/80">
                     This action cannot be undone. This will permanently remove
                     this manga from your list.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogFooter className="mt-4 gap-2">
+                  <AlertDialogCancel className="bg-zinc-950/40 hover:bg-zinc-900 border-zinc-850 text-foreground text-xs font-bold rounded-xl cursor-pointer h-9 px-4">
+                    Cancel
+                  </AlertDialogCancel>
                   <AlertDialogAction
                     onClick={handleDelete}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90 text-xs font-bold rounded-xl cursor-pointer h-9 px-4"
                   >
                     Delete
                   </AlertDialogAction>

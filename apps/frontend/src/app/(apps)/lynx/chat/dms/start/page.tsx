@@ -34,10 +34,10 @@ function StartDmContent() {
   }, [userId, router]);
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-zinc-950 text-zinc-400">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-8 h-8 border-2 border-zinc-700 border-t-blue-500 rounded-full animate-spin" />
-        <p className="text-sm font-medium animate-pulse">
+    <div className="flex items-center justify-center min-h-screen text-zinc-400 bg-background relative z-10">
+      <div className="flex flex-col items-center gap-4 bg-zinc-950/20 backdrop-blur-xl p-8 border border-zinc-900/50 rounded-2xl shadow-xl">
+        <div className="w-8 h-8 border-2 border-zinc-800 border-t-primary rounded-full animate-spin" />
+        <p className="text-xs font-semibold animate-pulse text-muted-foreground">
           Initializing Direct Message…
         </p>
       </div>

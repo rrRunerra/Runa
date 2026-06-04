@@ -122,6 +122,19 @@ export class MovieQueueService implements OnModuleInit {
           image: c.image || '',
           role: c.peopleType || '',
         })) || [],
+      originalCountry: movie.originalCountry || null,
+      originalLanguage: movie.originalLanguage || null,
+      contentRating:
+        movie.contentRatings?.find((r: any) => r.country === 'usa')?.name ||
+        movie.contentRatings?.[0]?.name ||
+        null,
+      trailers:
+        movie.trailers?.map((t: any) => ({
+          id: t.id?.toString() || '',
+          name: t.name || 'Trailer',
+          url: t.url || '',
+          language: t.language || 'eng',
+        })) || [],
     };
   }
 }

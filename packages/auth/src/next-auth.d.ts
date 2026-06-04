@@ -9,6 +9,7 @@ declare module "next-auth" {
       username: string;
       displayName: string | null;
       avatarUrl: string | null;
+      sidebarCardBackgroundUrl?: string | null;
       role: string;
       passwordChangedAt?: number | null;
     };
@@ -22,6 +23,7 @@ declare module "next-auth" {
     username: string;
     displayName: string | null;
     avatarUrl: string | null;
+    sidebarCardBackgroundUrl?: string | null;
     role: string;
     accessToken?: string;
     passwordChangedAt?: string | null;
@@ -35,6 +37,7 @@ declare module "next-auth/jwt" {
     username: string;
     displayName: string | null;
     avatarUrl: string | null;
+    sidebarCardBackgroundUrl?: string | null;
     role: string;
     accessToken?: string;
     passwordChangedAt?: number | null;

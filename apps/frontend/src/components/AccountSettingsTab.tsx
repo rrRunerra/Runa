@@ -3,7 +3,7 @@
 import type React from "react";
 import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
 import { useSession } from "next-auth/react";
-import { Camera, Eye, EyeOff } from "lucide-react";
+import { Camera, Eye, EyeOff, Trash, ChevronsUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
@@ -53,9 +53,11 @@ export const AccountSettingsTab = forwardRef<AccountSettingsTabRef, AccountSetti
     const [email, setEmail] = useState("");
     const [avatarUrl, setAvatarUrl] = useState("");
     const [bannerUrl, setBannerUrl] = useState("");
+    const [sidebarCardBackgroundUrl, setSidebarCardBackgroundUrl] = useState("");
 
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [bannerFile, setBannerFile] = useState<File | null>(null);
+    const [sidebarCardBackgroundFile, setSidebarCardBackgroundFile] = useState<File | null>(null);
 
     const [newPassword, setNewPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
@@ -86,6 +88,7 @@ export const AccountSettingsTab = forwardRef<AccountSettingsTabRef, AccountSetti
             setEmail(session.user.email || "");
             setAvatarUrl(data.avatarUrl || "");
             setBannerUrl(data.bannerUrl || "");
+            setSidebarCardBackgroundUrl(data.sidebarCardBackgroundUrl || "");
           })
           .catch((err) => {
             console.error("Error fetching user profile:", err);
@@ -93,6 +96,7 @@ export const AccountSettingsTab = forwardRef<AccountSettingsTabRef, AccountSetti
 
         setAvatarFile(null);
         setBannerFile(null);
+        setSidebarCardBackgroundFile(null);
         setNewPassword("");
         setConfirmPassword("");
         setConfirmPasswordInput("");
@@ -188,6 +192,7 @@ export const AccountSettingsTab = forwardRef<AccountSettingsTabRef, AccountSetti
       try {
         let finalAvatarUrl = avatarUrl;
         let finalBannerUrl = bannerUrl;
+        let finalBackgroundUrl = sidebarCardBackgroundUrl;
 
         if (avatarFile) {
           const formData = new FormData();
@@ -231,10 +236,32 @@ export const AccountSettingsTab = forwardRef<AccountSettingsTabRef, AccountSetti
           finalBannerUrl = uploadData.url;
         }
 
+        if (sidebarCardBackgroundFile) {
+          const formData = new FormData();
+          formData.append("file", sidebarCardBackgroundFile);
+
+          const uploadRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/media/upload`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${session!.accessToken}`,
+            },
+            body: formData,
+          });
+
+          if (!uploadRes.ok) {
+            const errData = await uploadRes.json();
+            throw new Error(errData.message || "Failed to upload background image.");
+          }
+
+          const uploadData = await uploadRes.json();
+          finalBackgroundUrl = uploadData.url;
+        }
+
         const updatePayload: any = {
           displayName: displayName || null,
           avatarUrl: finalAvatarUrl || null,
           bannerUrl: finalBannerUrl || null,
+          sidebarCardBackgroundUrl: finalBackgroundUrl || null,
         };
 
         const emailChanged = email.toLowerCase() !== session!.user.email.toLowerCase();
@@ -273,6 +300,7 @@ export const AccountSettingsTab = forwardRef<AccountSettingsTabRef, AccountSetti
           displayName: updateData.displayName,
           email: updateData.email,
           avatarUrl: updateData.avatarUrl,
+          sidebarCardBackgroundUrl: updateData.sidebarCardBackgroundUrl,
         });
 
         toast.success("Profile updated successfully!");
@@ -292,7 +320,7 @@ export const AccountSettingsTab = forwardRef<AccountSettingsTabRef, AccountSetti
             Profile Banner & Avatar
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Customize your profile banner and avatar image.
+            Customize your profile banner (recommended: 1200x400px) and avatar image (recommended: 512x512px).
           </p>
         </div>
 
@@ -307,16 +335,31 @@ export const AccountSettingsTab = forwardRef<AccountSettingsTabRef, AccountSetti
                 No banner uploaded
               </div>
             )}
-            <label className="absolute inset-0 bg-black/40 opacity-0 group-hover/banner:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-2 cursor-pointer text-white text-xs font-semibold">
-              <Camera className="size-4" />
-              Change Banner
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleBannerChange}
-              />
-            </label>
+            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/banner:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-3">
+              <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/20 hover:bg-white/35 text-white text-xs font-semibold cursor-pointer transition-colors">
+                <Camera className="size-3.5" />
+                Change
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleBannerChange}
+                />
+              </label>
+              {bannerUrl && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBannerUrl("");
+                    setBannerFile(null);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/35 text-red-200 text-xs font-semibold cursor-pointer transition-colors"
+                >
+                  <Trash className="size-3.5" />
+                  Remove
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Avatar */}
@@ -328,16 +371,131 @@ export const AccountSettingsTab = forwardRef<AccountSettingsTabRef, AccountSetti
                 {displayName ? displayName.charAt(0) : session?.user?.username?.charAt(0) || "U"}
               </div>
             )}
-            <label className="absolute inset-0 bg-black/50 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center cursor-pointer text-white text-[10px] font-semibold">
-              <Camera className="size-3.5 mb-0.5" />
-              Edit
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleAvatarChange}
-              />
-            </label>
+            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center gap-1.5">
+              <label className="flex items-center justify-center p-1.5 rounded-full bg-white/20 hover:bg-white/35 text-white cursor-pointer transition-colors" title="Change Avatar">
+                <Camera className="size-3.5" />
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                />
+              </label>
+              {avatarUrl && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAvatarUrl("");
+                    setAvatarFile(null);
+                  }}
+                  className="flex items-center justify-center p-1.5 rounded-full bg-red-500/20 hover:bg-red-500/35 text-red-200 cursor-pointer transition-colors"
+                  title="Remove Avatar"
+                >
+                  <Trash className="size-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Custom Sidebar Card Background Section */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-2xl border border-zinc-800/50 bg-card/20 backdrop-blur-xs mt-2">
+          {/* Uploader Controls */}
+          <div className="flex flex-col justify-center space-y-3">
+            <div>
+              <span className="text-xs font-semibold text-foreground">Sidebar User Card Background</span>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Upload a custom image to style the bottom user card in your sidebar (recommended: 480x96px).
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold cursor-pointer transition-colors shadow-sm">
+                <Camera className="size-3.5" />
+                Choose Background
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setSidebarCardBackgroundFile(file);
+                      setSidebarCardBackgroundUrl(URL.createObjectURL(file));
+                    }
+                  }}
+                />
+              </label>
+              {sidebarCardBackgroundUrl && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSidebarCardBackgroundUrl("");
+                    setSidebarCardBackgroundFile(null);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs font-semibold cursor-pointer transition-colors"
+                >
+                  <Trash className="size-3.5" />
+                  Remove
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Live Showcase Preview */}
+          <div className="flex flex-col justify-center items-center p-4 rounded-xl border border-dashed border-zinc-800 bg-zinc-900/10 relative overflow-hidden min-h-[90px]">
+            <div className="text-[9px] uppercase tracking-wider text-muted-foreground/60 mb-2 font-bold select-none">
+              Sidebar Card Showcase
+            </div>
+            {/* Preview Card */}
+            <div
+              className="h-12 w-full max-w-[240px] flex items-center gap-2 px-3 py-2 rounded-xl border border-zinc-800/40 bg-zinc-950/40 backdrop-blur-xl relative overflow-hidden transition-all duration-300 isolate transform-[translate3d(0,0,0)]"
+            >
+              {/* Custom Card Background Image */}
+              {sidebarCardBackgroundUrl && (
+                <>
+                  <div
+                    className="absolute inset-0 bg-cover bg-center z-0"
+                    style={{
+                      backgroundImage: `url(${sidebarCardBackgroundUrl.startsWith("blob:") ? sidebarCardBackgroundUrl : getSafeImageUrl(sidebarCardBackgroundUrl)})`,
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-linear-to-r from-black/85 via-black/40 to-transparent z-0" />
+                </>
+              )}
+              
+              <div className="relative size-8 rounded-full border border-zinc-800/60 shadow-sm shrink-0 overflow-hidden z-10 bg-muted">
+                {avatarUrl ? (
+                  <img
+                    src={avatarUrl.startsWith("blob:") ? avatarUrl : getSafeImageUrl(avatarUrl)}
+                    alt="Avatar"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs uppercase">
+                    {displayName ? displayName.charAt(0).toUpperCase() : session?.user?.username?.charAt(0).toUpperCase() || "U"}
+                  </div>
+                )}
+              </div>
+              
+              <div className="grid flex-1 text-left text-xs leading-tight ml-1.5 z-10">
+                <span className={cn(
+                  "truncate font-bold",
+                  sidebarCardBackgroundUrl ? "text-white" : "text-foreground"
+                )}>
+                  {displayName || session?.user?.username || "Username"}
+                </span>
+                <span className={cn(
+                  "truncate text-[10px]",
+                  sidebarCardBackgroundUrl ? "text-zinc-300" : "text-muted-foreground/80"
+                )}>
+                  {email || session?.user?.email || "email@example.com"}
+                </span>
+              </div>
+              <ChevronsUpDown className={cn(
+                "ml-auto size-3.5 z-10",
+                sidebarCardBackgroundUrl ? "text-zinc-400" : "text-muted-foreground/60"
+              )} />
+            </div>
           </div>
         </div>
 

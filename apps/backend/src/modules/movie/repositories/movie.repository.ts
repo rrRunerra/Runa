@@ -42,6 +42,10 @@ export class MovieRepository {
       genres: dbMovie.genres || [],
       studios: dbMovie.studios?.map((name: string) => ({ name })) || [],
       characters: dbMovie.cast || [],
+      originalCountry: dbMovie.originalCountry,
+      originalLanguage: dbMovie.originalLanguage,
+      contentRating: dbMovie.contentRating,
+      trailers: dbMovie.trailers || [],
     };
   }
 }

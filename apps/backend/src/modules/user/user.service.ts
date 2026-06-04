@@ -191,6 +191,10 @@ export class UserService {
       updateData.bannerUrl = data.bannerUrl;
     }
 
+    if (data.sidebarCardBackgroundUrl !== undefined) {
+      updateData.sidebarCardBackgroundUrl = data.sidebarCardBackgroundUrl;
+    }
+
     return await this.prisma.client.user.update({
       where: { id: userId },
       data: updateData,

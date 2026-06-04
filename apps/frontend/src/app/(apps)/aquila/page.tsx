@@ -157,26 +157,30 @@ export default function AquilaHome(): React.JSX.Element {
         className="fixed inset-0 w-full h-full object-cover object-right grayscale contrast-115 brightness-75 pointer-events-none z-0"
       />
 
+      {/* Readability Overlay Gradient */}
+      <div className="fixed inset-0 bg-linear-to-r from-black/85 via-black/50 to-transparent sm:from-black/55 sm:via-transparent pointer-events-none z-0" />
+
       {/* Main Content Pane */}
       <div className="relative z-10 flex-1 flex flex-col">
         {watching.length === 0 ? (
-          <div className="flex-1 flex flex-col items-center justify-center text-center px-6 py-12">
-            {/* Content on top - Glassmorphic Card */}
-            <div className="flex flex-col items-center max-w-sm mx-4 p-8 rounded-3xl bg-black/65 backdrop-blur-md border border-white/10 shadow-2xl">
-              <h2 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white mb-3 drop-shadow-md">
-                Nothing here
+          <div className="flex-1 flex flex-col justify-center items-center sm:items-start text-center sm:text-left px-8 sm:px-16 md:px-24 lg:px-32 xl:px-40 py-12 select-none relative z-10">
+            <div className="space-y-1 drop-shadow-[0_4px_12px_rgba(0,0,0,0.85)]">
+              <h2 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-widest text-zinc-400/40 sm:text-zinc-500/20 mix-blend-overlay uppercase select-none font-sans leading-none">
+                Nothing<br />Here
               </h2>
-              <p className="text-neutral-200 text-xs md:text-sm mb-6 leading-relaxed">
+              <p className="text-zinc-300/60 sm:text-zinc-500/40 text-xs uppercase tracking-widest leading-relaxed max-w-xs select-none pt-4 sm:pt-6">
                 It looks like your watch list is empty. Start browsing to find and track your favorite media.
               </p>
-
-              <Button 
-                variant="default" 
-                className="w-full px-6 py-4 text-xs md:text-sm rounded-xl bg-linear-to-r from-primary to-violet-600 hover:from-primary/95 hover:to-violet-600/95 shadow-xl shadow-primary/20 hover:shadow-primary/35 transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0" 
-                asChild
-              >
-                <Link href="/aquila/browse">Browse Media</Link>
-              </Button>
+              
+              <div className="pt-6 sm:pt-8">
+                <Button 
+                  variant="outline" 
+                  className="px-6 py-5 text-[10px] tracking-widest uppercase font-bold rounded-xl border border-zinc-700/60 sm:border-zinc-800/40 bg-zinc-950/40 sm:bg-zinc-950/10 hover:bg-zinc-900/30 hover:border-zinc-700/50 hover:text-neutral-200 transition-all duration-300 w-fit shrink-0 cursor-pointer shadow-sm text-zinc-300 sm:text-zinc-500" 
+                  asChild
+                >
+                  <Link href="/aquila/browse">Browse Media</Link>
+                </Button>
+              </div>
             </div>
           </div>
         ) : (

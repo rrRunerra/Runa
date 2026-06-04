@@ -82,6 +82,8 @@ export const authOptions: NextAuthOptions = {
         if (session.displayName) token.displayName = session.displayName;
         if (session.avatarUrl || session.avatarUrl === null)
           token.avatarUrl = session.avatarUrl;
+        if (session.sidebarCardBackgroundUrl || session.sidebarCardBackgroundUrl === null)
+          token.sidebarCardBackgroundUrl = session.sidebarCardBackgroundUrl;
         if (session.username) token.username = session.username;
         if (session.email) token.email = session.email;
         if (session.role) token.role = session.role;
@@ -97,6 +99,7 @@ export const authOptions: NextAuthOptions = {
         token.username = u.username;
         token.displayName = u.displayName;
         token.avatarUrl = u.avatarUrl;
+        token.sidebarCardBackgroundUrl = u.sidebarCardBackgroundUrl;
         token.role = u.role;
         token.accessToken = u.accessToken;
         token.iat = u.iat;
@@ -139,6 +142,7 @@ export const authOptions: NextAuthOptions = {
           username: token.username,
           displayName: token.displayName,
           avatarUrl: token.avatarUrl,
+          sidebarCardBackgroundUrl: token.sidebarCardBackgroundUrl,
           role: token.role,
         };
         session.accessToken = token.accessToken;

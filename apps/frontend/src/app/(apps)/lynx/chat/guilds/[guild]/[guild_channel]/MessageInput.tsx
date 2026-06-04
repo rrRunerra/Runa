@@ -1,9 +1,9 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { Loader2, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { motion } from "framer-motion";
 
 export default function MessageInput({
   guildId,
@@ -27,7 +27,7 @@ export default function MessageInput({
         ? "/lynx/api/chat/dms/sendMessage"
         : "/lynx/api/chat/sendMessage";
       const body = isDm
-        ? { channelId, content: content.trim() } // Adapt Lynx API to handle channelId
+        ? { channelId, content: content.trim() }
         : { guild: guildId, channel: channelId, content: content.trim() };
 
       const res = await fetch(url, {
@@ -48,31 +48,33 @@ export default function MessageInput({
   };
 
   return (
-    <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-md border-b border-border -mx-6 px-6 py-4 mb-4 transition-opacity group-scrolled:opacity-100">
+    <div className="sticky top-0 z-20 bg-zinc-950/20 backdrop-blur-xl border-b border-zinc-800/40 -mx-6 px-6 py-4 mb-4 select-none">
       <form
         onSubmit={handleSend}
-        className="relative flex items-center gap-2 max-w-4xl mx-auto"
+        className="relative flex items-center gap-3.5 max-w-4xl mx-auto"
       >
         <input
           type="text"
           value={content}
           onChange={(e) => setContent(e.target.value)}
           placeholder="Message this channel…"
-          className="flex-1 bg-muted border border-border rounded-lg px-4 py-2.5 text-[13px] text-foreground placeholder-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/50 transition-colors"
+          className="flex-1 bg-zinc-900/30 border border-zinc-800/50 rounded-xl px-4 py-2.5 text-xs text-foreground placeholder:text-muted-foreground/45 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/25 transition-all shadow-inner"
           disabled={isSending}
+          autoComplete="off"
         />
-        <Button
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           type="submit"
           disabled={!content.trim() || isSending}
-          size="icon"
-          className="p-2.5 rounded-lg bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:hover:bg-primary/90 text-primary-foreground shadow-sm"
+          className="size-9 rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground shadow-lg shadow-primary/15 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shrink-0 flex items-center justify-center transition-colors"
         >
           {isSending ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <Loader2 className="size-4 animate-spin" />
           ) : (
-            <Send className="w-4 h-4" />
+            <Send className="size-4" />
           )}
-        </Button>
+        </motion.button>
       </form>
     </div>
   );

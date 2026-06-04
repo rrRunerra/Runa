@@ -173,6 +173,10 @@ export class TvQueueService implements OnModuleInit {
       originalLanguage: series.originalLanguage || null,
       tvType: series.type || null,
       averageRuntime: series.averageRuntime || null,
+      contentRating:
+        series.contentRatings?.find((r: any) => r.country === 'usa')?.name ||
+        series.contentRatings?.[0]?.name ||
+        null,
       genres: series.genres?.map((g: any) => g.name) || [],
       studios:
         series.companies

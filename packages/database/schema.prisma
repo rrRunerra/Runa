@@ -19,6 +19,7 @@ model User {
     displayName          String?
     avatarUrl            String?
     bannerUrl            String?
+    sidebarCardBackgroundUrl String?
     profileSettings      Json?                 @db.Json
     apiKeys              ApiKey[]
     connections          Connections[]
@@ -225,6 +226,17 @@ model AquilaAnime {
     characters Json?    @db.Json
     studios    String[] @db.Text
 
+    averageScore      Int?
+    popularity        Int?
+    favourites        Int?
+    trending          Int?
+    meanScore         Int?
+    synonyms          String[]    @db.Text
+    hashtag           String?
+    countryOfOrigin   String?
+    nextAiringEpisode Json?       @db.Json
+    trailers          Json?       @db.Json
+
     updatedAt       DateTime              @updatedAt
     aquilaUserLists AquilaAnimeUserList[]
 
@@ -326,6 +338,15 @@ model AquilaManga {
     characters Json?    @db.Json
     studios    String[] @db.Text
 
+    averageScore      Int?
+    popularity        Int?
+    favourites        Int?
+    trending          Int?
+    meanScore         Int?
+    synonyms          String[]    @db.Text
+    hashtag           String?
+    countryOfOrigin   String?
+
     updatedAt       DateTime              @updatedAt
     aquilaUserLists AquilaMangaUserList[]
 
@@ -405,6 +426,11 @@ model AquilaMovie {
 
     cast Json? @db.Json
 
+    originalCountry  String?
+    originalLanguage String?
+    contentRating    String?
+    trailers         Json?    @db.Json
+
     updatedAt            DateTime              @updatedAt
     aquilaMovieUserLists AquilaMovieUserList[]
 
@@ -435,6 +461,8 @@ model AquilaTv {
     cast     Json? @db.Json
     seasons  Json? @db.Json
     trailers Json? @db.Json
+
+    contentRating    String?
 
     updatedAt       DateTime           @updatedAt
     aquilaUserLists AquilaTvUserList[]

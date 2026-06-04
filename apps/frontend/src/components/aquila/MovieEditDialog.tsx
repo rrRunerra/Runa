@@ -39,6 +39,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, Heart, X, ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { format } from "date-fns";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -117,18 +118,19 @@ export function MovieEditDialog({
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState<boolean>(false);
 
-  const performConnectionSearch = async (query: string) => {
-    if (!query || !activeSearchProvider) return;
+  const performConnectionSearch = async (query: string, providerKey?: string) => {
+    const activeProv = providerKey || activeSearchProvider;
+    if (!query || !activeProv) return;
     setIsSearching(true);
     setSearchResults([]);
     try {
-      const provider = BASE_CONNECTION_PROVIDERS.find((p) => p.key === activeSearchProvider);
+      const provider = BASE_CONNECTION_PROVIDERS.find((p) => p.key === activeProv);
       if (provider && provider.search) {
         const results = await provider.search(query, "MOVIES");
         setSearchResults(results);
       }
     } catch (err) {
-      console.error(`Failed to search ${activeSearchProvider}`, err);
+      console.error(`Failed to search ${activeProv}`, err);
     } finally {
       setIsSearching(false);
     }
@@ -208,10 +210,13 @@ export function MovieEditDialog({
         <Button
           type="button"
           variant="outline"
-          className="w-full h-12 border-dashed border-input hover:border-primary hover:text-primary transition-colors flex items-center justify-center gap-2 rounded-lg bg-background/50 text-foreground"
+          className="w-full h-12 border-dashed border-zinc-800/80 hover:border-primary/50 hover:bg-primary/5 hover:text-primary transition-all duration-300 flex items-center justify-center gap-2 rounded-xl bg-zinc-950/20 text-muted-foreground text-xs font-semibold cursor-pointer"
           onClick={() => {
             setActiveSearchProvider(provider);
+            const title = media.title.english || media.title.romaji;
+            setConnectionSearchQuery(title);
             setIsConnectionSearchOpen(true);
+            performConnectionSearch(title, provider);
           }}
         >
           <Plus className="w-4 h-4" />
@@ -228,27 +233,27 @@ export function MovieEditDialog({
     const hasDatesOverride = typeof conn === 'object' && (conn.startDate !== undefined || conn.endDate !== undefined);
 
     return (
-      <div className="flex flex-col border border-border rounded-lg overflow-hidden bg-background/50 w-full transition-all duration-200 text-foreground">
+      <div className="flex flex-col border border-zinc-800/50 rounded-xl overflow-hidden bg-zinc-950/40 w-full transition-all duration-200 text-foreground">
         <div 
-          className="flex items-center justify-between p-3 hover:bg-accent/40 cursor-pointer select-none transition-colors"
+          className="flex items-center justify-between p-3 hover:bg-zinc-900/30 cursor-pointer select-none transition-colors"
           onClick={() => toggleConnectionExpand(provider)}
         >
           <div className="flex items-center gap-3">
-            <span className="font-semibold text-sm">{label}</span>
-            <span className="text-xs font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded-md border border-border">
+            <span className="font-semibold text-xs tracking-wide uppercase text-muted-foreground">{label}</span>
+            <span className="text-[10px] font-mono text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-lg">
               {linkedId}
             </span>
             {isExpanded ? (
-              <ChevronUp className="w-4 h-4 text-muted-foreground" />
+              <ChevronUp className="w-3.5 h-3.5 text-muted-foreground/60" />
             ) : (
-              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              <ChevronDown className="w-3.5 h-3.5 text-muted-foreground/60" />
             )}
           </div>
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full"
+            className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full cursor-pointer transition-colors"
             onClick={(e) => {
               e.stopPropagation();
               setConnections((p) => {
@@ -262,136 +267,148 @@ export function MovieEditDialog({
           </Button>
         </div>
 
-        {isExpanded && (
-          <div className="border-t border-border p-4 bg-muted/20 flex flex-col gap-4 animate-in slide-in-from-top-2 duration-200">
-            {/* Status Override */}
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id={`${provider}-override-status`}
-                  checked={hasStatusOverride}
-                  onCheckedChange={() => toggleStatusOverride(provider)}
-                />
-                <Label
-                  htmlFor={`${provider}-override-status`}
-                  className="text-xs font-medium text-muted-foreground cursor-pointer"
-                >
-                  Override status
-                </Label>
-              </div>
-              {hasStatusOverride ? (
-                <Select
-                  value={connStatus || listStatus}
-                  onValueChange={(val) => handleStatusOverrideChange(provider, val)}
-                >
-                  <SelectTrigger className="w-full bg-background border-input text-foreground h-9 mt-1 px-3 text-xs font-normal hover:bg-accent hover:text-accent-foreground transition-colors">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent position="popper" className="bg-popover border-border text-popover-foreground">
-                    <SelectItem value="PLANNING">Planning</SelectItem>
-                    <SelectItem value="COMPLETED">Completed</SelectItem>
-                    <SelectItem value="DROPPED">Dropped</SelectItem>
-                  </SelectContent>
-                </Select>
-              ) : (
-                <span className="text-xs text-muted-foreground/80 pl-6 italic">
-                  Inherited: {listStatus}
-                </span>
-              )}
-            </div>
-
-            {/* Dates Override */}
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id={`${provider}-override-dates`}
-                  checked={hasDatesOverride}
-                  onCheckedChange={() => toggleDatesOverride(provider)}
-                />
-                <Label
-                  htmlFor={`${provider}-override-dates`}
-                  className="text-xs font-medium text-muted-foreground cursor-pointer"
-                >
-                  Override dates
-                </Label>
-              </div>
-              {hasDatesOverride ? (
-                <div className="grid grid-cols-2 gap-3 mt-1">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Start Date</span>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal bg-background border-input text-foreground h-9 hover:bg-accent hover:text-accent-foreground text-xs",
-                            !connStartDate && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-1 h-3.5 w-3.5" />
-                          {connStartDate ? (
-                            format(connStartDate, "yyyy-MM-dd")
-                          ) : (
-                            <span>Pick date</span>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        align="start"
-                        className="w-auto p-0 bg-popover border-border z-60"
-                      >
-                        <Calendar
-                          mode="single"
-                          selected={connStartDate}
-                          onSelect={(date) => handleDateOverrideChange(provider, 'startDate', date)}
-                          initialFocus
-                          className="bg-popover text-popover-foreground"
-                        />
-                      </PopoverContent>
-                    </Popover>
+        <AnimatePresence initial={false}>
+          {isExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="border-t border-zinc-800/40 bg-zinc-950/60 overflow-hidden"
+            >
+              <div className="p-4 flex flex-col gap-4">
+                {/* Status Override */}
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`${provider}-override-status`}
+                      checked={hasStatusOverride}
+                      onCheckedChange={() => toggleStatusOverride(provider)}
+                      className="border-zinc-700/80 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                    />
+                    <Label
+                      htmlFor={`${provider}-override-status`}
+                      className="text-xs font-semibold text-muted-foreground cursor-pointer select-none"
+                    >
+                      Override status
+                    </Label>
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Finish Date</span>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal bg-background border-input text-foreground h-9 hover:bg-accent hover:text-accent-foreground text-xs",
-                            !connEndDate && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-1 h-3.5 w-3.5" />
-                          {connEndDate ? (
-                            format(connEndDate, "yyyy-MM-dd")
-                          ) : (
-                            <span>Pick date</span>
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent
-                        align="start"
-                        className="w-auto p-0 bg-popover border-border z-60"
-                      >
-                        <Calendar
-                          mode="single"
-                          selected={connEndDate}
-                          onSelect={(date) => handleDateOverrideChange(provider, 'endDate', date)}
-                          initialFocus
-                          className="bg-popover text-popover-foreground"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
+                  {hasStatusOverride ? (
+                    <Select
+                      value={connStatus || listStatus}
+                      onValueChange={(val) => handleStatusOverrideChange(provider, val)}
+                    >
+                      <SelectTrigger className="w-full bg-zinc-950/40 border border-zinc-800/50 text-foreground h-9 mt-1 px-3 text-xs font-normal hover:bg-zinc-900/60 hover:text-foreground focus:ring-1 focus:ring-primary/30 rounded-xl transition-all duration-300">
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent position="popper" className="bg-zinc-950/95 backdrop-blur-md border border-zinc-800/80 rounded-xl text-foreground">
+                        <SelectItem value="PLANNING">Planning</SelectItem>
+                        <SelectItem value="COMPLETED">Completed</SelectItem>
+                        <SelectItem value="DROPPED">Dropped</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground/60 pl-6 italic">
+                      Inherited: {listStatus}
+                    </span>
+                  )}
                 </div>
-              ) : (
-                <span className="text-xs text-muted-foreground/80 pl-6 italic">
-                  Inherited: {startDate ? format(startDate, "yyyy-MM-dd") : "No Start Date"} - {finishDate ? format(finishDate, "yyyy-MM-dd") : "No Finish Date"}
-                </span>
-              )}
-            </div>
-          </div>
-        )}
+
+                {/* Dates Override */}
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`${provider}-override-dates`}
+                      checked={hasDatesOverride}
+                      onCheckedChange={() => toggleDatesOverride(provider)}
+                      className="border-zinc-700/80 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                    />
+                    <Label
+                      htmlFor={`${provider}-override-dates`}
+                      className="text-xs font-semibold text-muted-foreground cursor-pointer select-none"
+                    >
+                      Override dates
+                    </Label>
+                  </div>
+                  {hasDatesOverride ? (
+                    <div className="grid grid-cols-2 gap-3 mt-1">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Start Date</span>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal bg-zinc-950/40 border border-zinc-800/50 text-foreground h-9 hover:bg-zinc-900/60 hover:text-foreground text-xs rounded-xl transition-all duration-300",
+                                !connStartDate && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-1 h-3.5 w-3.5" />
+                              {connStartDate ? (
+                                format(connStartDate, "yyyy-MM-dd")
+                              ) : (
+                                <span>Pick date</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            align="start"
+                            className="w-auto p-0 bg-zinc-950/95 backdrop-blur-md border border-zinc-800/80 rounded-xl z-60"
+                          >
+                            <Calendar
+                              mode="single"
+                              selected={connStartDate}
+                              onSelect={(date) => handleDateOverrideChange(provider, 'startDate', date)}
+                              initialFocus
+                              className="bg-transparent text-foreground"
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Finish Date</span>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "w-full justify-start text-left font-normal bg-zinc-950/40 border border-zinc-800/50 text-foreground h-9 hover:bg-zinc-900/60 hover:text-foreground text-xs rounded-xl transition-all duration-300",
+                                !connEndDate && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-1 h-3.5 w-3.5" />
+                              {connEndDate ? (
+                                format(connEndDate, "yyyy-MM-dd")
+                              ) : (
+                                <span>Pick date</span>
+                              )}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            align="start"
+                            className="w-auto p-0 bg-zinc-950/95 backdrop-blur-md border border-zinc-800/80 rounded-xl z-60"
+                          >
+                            <Calendar
+                              mode="single"
+                              selected={connEndDate}
+                              onSelect={(date) => handleDateOverrideChange(provider, 'endDate', date)}
+                              initialFocus
+                              className="bg-transparent text-foreground"
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground/60 pl-6 italic">
+                      Inherited: {startDate ? format(startDate, "yyyy-MM-dd") : "No Start Date"} - {finishDate ? format(finishDate, "yyyy-MM-dd") : "No Finish Date"}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     );
   };
@@ -644,7 +661,7 @@ export function MovieEditDialog({
   };
 
   const dialogContent = (
-    <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden bg-popover border-border text-popover-foreground [&>button]:text-foreground [&>button]:z-60 [&>button]:hover:text-muted-foreground">
+    <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden bg-zinc-950/90 backdrop-blur-xl border border-zinc-800/60 text-foreground [&>button]:text-foreground [&>button]:z-60 [&>button]:hover:text-muted-foreground shadow-2xl rounded-2xl">
       <DialogTitle className="sr-only">
         {hasListEntry ? "Edit Movie Entry" : "Add Movie to List"}
       </DialogTitle>
@@ -653,67 +670,74 @@ export function MovieEditDialog({
       </DialogDescription>
 
       {/* Banner header */}
-      <div className="relative h-48 w-full bg-muted">
+      <div className="relative h-48 w-full bg-zinc-900/40">
         {media.bannerImage && (
           <img
             src={media.bannerImage}
             alt="banner"
-            className="w-full h-full object-cover opacity-60"
+            className="w-full h-full object-cover opacity-50"
           />
         )}
-        <div className="absolute inset-0 bg-linear-to-t from-popover to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/50 to-transparent" />
         <div className="absolute bottom-4 left-6 right-6 flex items-end gap-6 z-10">
           <img
             src={media.coverImage.large}
             alt="cover"
-            className="w-24 rounded shadow-lg object-cover bg-muted"
+            className="w-24 rounded-xl shadow-2xl object-cover bg-zinc-950/40 border border-zinc-800/40"
           />
           <div className="flex-1 pb-1">
-            <h2 className="text-xl font-bold line-clamp-2 text-foreground">
+            <h2 className="text-xl font-bold line-clamp-2 text-foreground drop-shadow-md">
               {media.title.english || media.title.romaji}
             </h2>
           </div>
           <div className="pb-1 flex gap-4 items-center">
-            <button
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
               onClick={handleToggleFavorite}
               disabled={isSubmittingFavorite}
               className={cn(
-                "transition-colors",
+                "transition-colors cursor-pointer",
                 isFavorited
-                  ? "text-red-500 hover:text-red-600"
+                  ? "text-red-500 hover:text-red-600 drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
               <Heart className={cn("w-6 h-6", isFavorited && "fill-current")} />
-            </button>
-            <Button
-              className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md font-medium px-6"
-              onClick={handleSave}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? "Saving..." : "Save"}
-            </Button>
+            </motion.button>
+            <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Button
+                className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/10 font-bold px-6 rounded-xl cursor-pointer"
+                onClick={handleSave}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Saving..." : "Save"}
+              </Button>
+            </motion.div>
           </div>
         </div>
       </div>
 
-      <div className="p-6 pt-4 bg-popover">
+      <div className="p-6 pt-4 bg-transparent">
         <div className="grid grid-cols-6 gap-x-6 gap-y-4">
           {/* Status */}
           <div className="col-span-3 flex flex-col gap-2">
-            <Label className="text-sm font-semibold text-muted-foreground">Status</Label>
+            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60 px-1">Status</Label>
             <Select
               value={listStatus}
               onValueChange={(val) => {
                 setListStatus(val);
-                if (val === "COMPLETED" && !finishDate) setFinishDate(new Date());
-                if (val === "COMPLETED" && !startDate) setStartDate(new Date());
+                if (val === "COMPLETED") {
+                  const targetEndDate = finishDate || new Date();
+                  if (!finishDate) setFinishDate(targetEndDate);
+                  if (!startDate) setStartDate(targetEndDate);
+                }
               }}
             >
-              <SelectTrigger className="w-full bg-background border-input text-foreground h-10 px-3 text-sm font-normal hover:bg-accent hover:text-accent-foreground transition-colors">
+              <SelectTrigger className="w-full bg-zinc-950/40 border border-zinc-800/50 text-foreground h-10 px-3 text-xs font-medium hover:bg-zinc-900/60 hover:text-foreground focus:ring-1 focus:ring-primary/30 rounded-xl transition-all duration-300 cursor-pointer">
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
-              <SelectContent position="popper" className="bg-popover border-border text-popover-foreground">
+              <SelectContent position="popper" className="bg-zinc-950/95 backdrop-blur-md border border-zinc-800/80 rounded-xl text-foreground">
                 <SelectItem value="PLANNING">Planning</SelectItem>
                 <SelectItem value="COMPLETED">Completed</SelectItem>
                 <SelectItem value="DROPPED">Dropped</SelectItem>
@@ -723,8 +747,8 @@ export function MovieEditDialog({
 
           {/* Score */}
           <div className="col-span-3 flex flex-col gap-2">
-            <Label className="text-sm font-semibold text-muted-foreground">Score</Label>
-            <div className="flex bg-background border border-input rounded-md overflow-hidden">
+            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60 px-1">Score</Label>
+            <div className="flex bg-zinc-950/40 border border-zinc-800/50 rounded-xl overflow-hidden focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all duration-300">
               <Input
                 type="number"
                 min="0"
@@ -736,25 +760,25 @@ export function MovieEditDialog({
                   setScore(val);
                 }}
                 placeholder="0-10"
-                className="border-0 bg-transparent text-foreground focus-visible:ring-0 h-10 w-full"
+                className="border-0 bg-transparent text-foreground focus-visible:ring-0 h-10 w-full px-3 text-xs font-medium"
               />
             </div>
           </div>
 
           {/* Start Date */}
           <div className="col-span-2 flex flex-col gap-2">
-            <Label className="text-sm font-semibold text-muted-foreground">Start Date</Label>
+            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60 px-1">Start Date</Label>
             <Popover>
               <div className="relative w-full">
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full justify-start text-left font-normal bg-background border-input text-foreground h-10 hover:bg-accent hover:text-accent-foreground pr-8",
-                      !startDate && "text-muted-foreground",
+                      "w-full justify-start text-left font-medium bg-zinc-950/40 border border-zinc-800/50 text-foreground h-10 hover:bg-zinc-900/60 hover:text-foreground pr-8 rounded-xl transition-all duration-300 text-xs cursor-pointer",
+                      !startDate && "text-muted-foreground/40",
                     )}
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground/60" />
                     {startDate ? format(startDate, "yyyy-MM-dd") : <span>Pick a date</span>}
                   </Button>
                 </PopoverTrigger>
@@ -763,7 +787,7 @@ export function MovieEditDialog({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 hover:bg-muted text-muted-foreground hover:text-foreground rounded-full"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 hover:bg-zinc-800/40 text-muted-foreground hover:text-foreground rounded-full cursor-pointer"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -774,13 +798,13 @@ export function MovieEditDialog({
                   </Button>
                 )}
               </div>
-              <PopoverContent align="start" className="w-auto p-0 bg-popover border-border">
+              <PopoverContent align="start" className="w-auto p-0 bg-zinc-950/95 backdrop-blur-md border border-zinc-800/80 rounded-xl z-60">
                 <Calendar
                   mode="single"
                   selected={startDate}
                   onSelect={setStartDate}
                   initialFocus
-                  className="bg-popover text-popover-foreground"
+                  className="bg-transparent text-foreground"
                 />
               </PopoverContent>
             </Popover>
@@ -788,18 +812,18 @@ export function MovieEditDialog({
 
           {/* Finish Date */}
           <div className="col-span-2 flex flex-col gap-2">
-            <Label className="text-sm font-semibold text-muted-foreground">Finish Date</Label>
+            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60 px-1">Finish Date</Label>
             <Popover>
               <div className="relative w-full">
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full justify-start text-left font-normal bg-background border-input text-foreground h-10 hover:bg-accent hover:text-accent-foreground pr-8",
-                      !finishDate && "text-muted-foreground",
+                      "w-full justify-start text-left font-medium bg-zinc-950/40 border border-zinc-800/50 text-foreground h-10 hover:bg-zinc-900/60 hover:text-foreground pr-8 rounded-xl transition-all duration-300 text-xs cursor-pointer",
+                      !finishDate && "text-muted-foreground/40",
                     )}
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground/60" />
                     {finishDate ? format(finishDate, "yyyy-MM-dd") : <span>Pick a date</span>}
                   </Button>
                 </PopoverTrigger>
@@ -808,7 +832,7 @@ export function MovieEditDialog({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 hover:bg-muted text-muted-foreground hover:text-foreground rounded-full"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 hover:bg-zinc-800/40 text-muted-foreground hover:text-foreground rounded-full cursor-pointer"
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -819,13 +843,13 @@ export function MovieEditDialog({
                   </Button>
                 )}
               </div>
-              <PopoverContent align="start" className="w-auto p-0 bg-popover border-border">
+              <PopoverContent align="start" className="w-auto p-0 bg-zinc-950/95 backdrop-blur-md border border-zinc-800/80 rounded-xl z-60">
                 <Calendar
                   mode="single"
                   selected={finishDate}
                   onSelect={setFinishDate}
                   initialFocus
-                  className="bg-popover text-popover-foreground"
+                  className="bg-transparent text-foreground"
                 />
               </PopoverContent>
             </Popover>
@@ -833,26 +857,26 @@ export function MovieEditDialog({
 
           {/* Rewatches */}
           <div className="col-span-2 flex flex-col gap-2">
-            <Label className="text-sm font-semibold text-muted-foreground">Total Rewatches</Label>
-            <div className="flex bg-background border border-input rounded-md overflow-hidden">
+            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60 px-1">Total Rewatches</Label>
+            <div className="flex bg-zinc-950/40 border border-zinc-800/50 rounded-xl overflow-hidden focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all duration-300">
               <Input
                 type="number"
                 min="0"
                 value={rewatches}
                 onChange={(e) => setRewatches(e.target.value)}
-                className="border-0 bg-transparent text-foreground focus-visible:ring-0 h-10 w-full"
+                className="border-0 bg-transparent text-foreground focus-visible:ring-0 h-10 w-full px-3 text-xs font-medium"
               />
             </div>
           </div>
 
           {/* Notes */}
           <div className="col-span-6 flex flex-col gap-2">
-            <Label className="text-sm font-semibold text-muted-foreground">Notes</Label>
+            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60 px-1">Notes</Label>
             <Textarea
               placeholder="Your notes..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="bg-background border-input text-foreground min-h-[80px] resize-y"
+              className="bg-zinc-950/40 border border-zinc-800/50 text-foreground min-h-[80px] resize-y rounded-xl focus-visible:ring-1 focus-visible:ring-primary/30 focus-visible:border-primary/50 transition-all duration-300 placeholder:text-muted-foreground/30 text-xs font-medium"
             />
           </div>
 
@@ -865,10 +889,11 @@ export function MovieEditDialog({
                 onCheckedChange={(checked) =>
                   setUpdateConnection(checked as boolean)
                 }
+                className="border-zinc-700/80 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
               />
               <Label
                 htmlFor="movie-update-connection"
-                className="text-sm font-semibold text-muted-foreground cursor-pointer"
+                className="text-xs font-bold uppercase tracking-wider text-muted-foreground/60 cursor-pointer select-none"
               >
                 Update movie from connection
               </Label>
@@ -883,7 +908,7 @@ export function MovieEditDialog({
                     </div>
                   ))
                 ) : (
-                  <div className="col-span-2 text-center py-4 text-xs text-muted-foreground bg-muted/20 border border-dashed border-border rounded-lg">
+                  <div className="col-span-2 text-center py-4 text-xs text-muted-foreground bg-zinc-950/20 border border-dashed border-zinc-800/50 rounded-xl">
                     No active connections found. Please connect your accounts in settings.
                   </div>
                 )}
@@ -898,15 +923,15 @@ export function MovieEditDialog({
             open={isConnectionSearchOpen}
             onOpenChange={setIsConnectionSearchOpen}
           >
-            <DialogContent className="sm:max-w-[500px]">
-              <DialogTitle>
+            <DialogContent className="sm:max-w-[500px] bg-zinc-950/95 backdrop-blur-xl border border-zinc-800/60 rounded-2xl shadow-2xl text-foreground [&>button]:text-foreground [&>button]:z-60">
+              <DialogTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground/80">
                 Search on{" "}
                 {CONNECTION_PROVIDERS.find((p) => p.key === activeSearchProvider)?.name || activeSearchProvider}
               </DialogTitle>
               <DialogDescription className="sr-only">
                 Search and select a media item to link connection IDs.
               </DialogDescription>
-              <div className="flex gap-2">
+              <div className="flex gap-2 mt-1">
                 <Input
                   placeholder={`Search ${CONNECTION_PROVIDERS.find((p) => p.key === activeSearchProvider)?.name || "movie"}...`}
                   value={connectionSearchQuery}
@@ -915,21 +940,23 @@ export function MovieEditDialog({
                     if (e.key === "Enter")
                       performConnectionSearch(connectionSearchQuery);
                   }}
+                  className="bg-zinc-950/40 border border-zinc-800/50 rounded-xl text-xs placeholder:text-muted-foreground/30 h-10"
                 />
                 <Button
                   onClick={() =>
                     performConnectionSearch(connectionSearchQuery)
                   }
                   disabled={isSearching}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl h-10 font-bold px-4 cursor-pointer text-xs transition-colors shrink-0"
                 >
                   {isSearching ? "Searching..." : "Search"}
                 </Button>
               </div>
-              <div className="space-y-2 max-h-64 overflow-y-auto">
+              <div className="space-y-2 max-h-64 overflow-y-auto mt-2 pr-1 no-scrollbar">
                 {searchResults.map((result, idx) => (
                   <button
                     key={`${activeSearchProvider}-${result.id}-${idx}`}
-                    className="flex items-center gap-3 w-full p-2 rounded hover:bg-muted text-left"
+                    className="flex items-center gap-3 w-full p-2.5 rounded-xl hover:bg-zinc-800/30 text-left cursor-pointer transition-all border border-transparent hover:border-zinc-800/40"
                     onClick={() => {
                       setConnections((p) => ({
                         ...p,
@@ -944,12 +971,12 @@ export function MovieEditDialog({
                       <img
                         src={result.image}
                         alt={result.title}
-                        className="w-10 h-14 object-cover rounded"
+                        className="w-10 h-14 object-cover rounded-lg bg-zinc-950/40"
                       />
                     )}
                     <div>
-                      <p className="font-medium text-sm">{result.title}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="font-semibold text-xs text-foreground">{result.title}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
                         {result.format}
                         {result.episodes ? ` · ${result.episodes} eps` : ""}
                       </p>
@@ -965,29 +992,31 @@ export function MovieEditDialog({
           {hasListEntry && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  disabled={isSubmitting}
-                  className="bg-background hover:bg-destructive hover:text-destructive-foreground border-input font-medium"
-                >
-                  Delete
-                </Button>
+                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                  <Button
+                    variant="outline"
+                    disabled={isSubmitting}
+                    className="bg-zinc-950/40 hover:bg-destructive hover:text-destructive-foreground border-zinc-850 hover:border-destructive/50 text-muted-foreground text-xs font-semibold rounded-xl cursor-pointer px-4 h-9 transition-colors"
+                  >
+                    Delete
+                  </Button>
+                </motion.div>
               </AlertDialogTrigger>
-              <AlertDialogContent className="bg-popover border-border text-popover-foreground [&>button]:text-foreground">
+              <AlertDialogContent className="bg-zinc-950/95 backdrop-blur-xl border border-zinc-800/60 rounded-2xl shadow-2xl text-foreground">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Are you sure you want to delete this?</AlertDialogTitle>
-                  <AlertDialogDescription className="text-muted-foreground">
+                  <AlertDialogTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Are you sure you want to delete this?</AlertDialogTitle>
+                  <AlertDialogDescription className="text-xs text-muted-foreground/80">
                     This action cannot be undone. This will permanently remove this movie
                     from your list.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel className="bg-muted text-foreground border-border hover:bg-muted/80">
+                <AlertDialogFooter className="mt-4 gap-2">
+                  <AlertDialogCancel className="bg-zinc-950/40 hover:bg-zinc-900 border-zinc-850 text-foreground text-xs font-bold rounded-xl cursor-pointer h-9 px-4">
                     Cancel
                   </AlertDialogCancel>
                   <AlertDialogAction
                     onClick={handleDelete}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90 text-xs font-bold rounded-xl cursor-pointer h-9 px-4"
                   >
                     Delete
                   </AlertDialogAction>

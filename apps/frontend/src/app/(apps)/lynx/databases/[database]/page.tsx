@@ -16,7 +16,7 @@ export default async function DatabasePage({
   }
 
   return (
-    <div className="container mx-auto p-8 space-y-8">
+    <div className="container mx-auto p-6 md:p-8 space-y-6 md:space-y-8 select-none">
       <PageHeader
         title={database}
         description={`Manage records, fields, and indexes for: ${database}`}

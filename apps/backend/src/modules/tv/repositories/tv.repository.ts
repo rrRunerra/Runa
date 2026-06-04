@@ -47,6 +47,7 @@ export class TvRepository {
       originalLanguage: dbTv.originalLanguage,
       tvType: dbTv.tvType,
       averageRuntime: dbTv.averageRuntime,
+      contentRating: dbTv.contentRating,
     };
   }
 }

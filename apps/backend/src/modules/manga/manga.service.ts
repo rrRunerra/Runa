@@ -150,6 +150,9 @@ export class MangaService {
     meanScore
     popularity
     favourites
+    trending
+    synonyms
+    hashtag
     # Categories
     genres
     tags {
@@ -226,6 +229,11 @@ export class MangaService {
       averageScore: media.averageScore,
       popularity: media.popularity,
       favourites: media.favourites,
+      trending: media.trending,
+      meanScore: media.meanScore,
+      synonyms: media.synonyms || [],
+      hashtag: media.hashtag,
+      countryOfOrigin: media.countryOfOrigin,
       relations: media.relations?.edges.map((edge) => ({
         id: edge.node.id.toString(),
         relationType: edge.relationType,
@@ -311,8 +319,11 @@ interface AniListGetResponse {
       averageScore: number;
       meanScore: number;
       popularity: number;
+      trending: number;
       favourites: number;
       genres: string[];
+      synonyms: string[];
+      hashtag: string;
       tags: {
         name: string;
         rank: number;
