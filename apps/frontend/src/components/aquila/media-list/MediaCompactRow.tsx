@@ -9,6 +9,8 @@ import { AnimeEditDialog } from "@/components/aquila/AnimeEditDialog";
 import { MangaEditDialog } from "@/components/aquila/MangaEditDialog";
 import { TvEditDialog } from "@/components/aquila/TvEditDialog";
 import { MovieEditDialog } from "@/components/aquila/MovieEditDialog";
+import { GameEditDialog } from "@/components/aquila/GameEditDialog";
+import { BookEditDialog } from "@/components/aquila/BookEditDialog";
 
 interface MediaCompactRowProps {
   entry: MediaEntry;
@@ -40,6 +42,10 @@ export const MediaCompactRow: React.FC<MediaCompactRowProps> = ({
     ? "tv"
     : baseUrl.endsWith("/movies")
     ? "movie"
+    : baseUrl.endsWith("/games")
+    ? "game"
+    : baseUrl.endsWith("/books")
+    ? "book"
     : (entry.type?.toLowerCase() || "anime");
 
   const handleRefresh = () => {
@@ -120,6 +126,26 @@ export const MediaCompactRow: React.FC<MediaCompactRowProps> = ({
           )}
           {inferredType === "movie" && (
             <MovieEditDialog
+              media={dialogMedia}
+              hasListEntry={true}
+              open={isEditDialogOpen}
+              onOpenChange={setIsEditDialogOpen}
+              onSaved={handleRefresh}
+              onDeleted={handleRefresh}
+            />
+          )}
+          {inferredType === "game" && (
+            <GameEditDialog
+              media={dialogMedia}
+              hasListEntry={true}
+              open={isEditDialogOpen}
+              onOpenChange={setIsEditDialogOpen}
+              onSaved={handleRefresh}
+              onDeleted={handleRefresh}
+            />
+          )}
+          {inferredType === "book" && (
+            <BookEditDialog
               media={dialogMedia}
               hasListEntry={true}
               open={isEditDialogOpen}

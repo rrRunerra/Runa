@@ -1,22 +1,22 @@
 import { Controller, Param, UseGuards, Get, Query } from '@nestjs/common';
-import { GameService } from './game.service';
+import { BookService } from './book.service';
 import { DualAuthGuard } from '../../common/guards/auth.guard';
 import { Public } from '../../common/decorators/public.decorator';
 
-@Controller('game')
+@Controller('book')
 @UseGuards(DualAuthGuard)
-export class GameController {
-  constructor(private readonly gameService: GameService) {}
+export class BookController {
+  constructor(private readonly bookService: BookService) {}
 
   @Public()
   @Get('search')
   async search(@Query() query: { name: string }) {
-    return this.gameService.search(query.name);
+    return this.bookService.search(query.name);
   }
 
   @Public()
   @Get('details/:id')
-  async getGame(@Param('id') id: string) {
-    return this.gameService.getGame(parseInt(id));
+  async getBook(@Param('id') id: string) {
+    return this.bookService.getBook(id);
   }
 }

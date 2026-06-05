@@ -167,6 +167,12 @@ export class TvService {
     const episodesData = await episodesRes.json();
     const allEpisodes = episodesData.data?.episodes || [];
 
+    const artworks = series.artworks || [];
+    const seriesBanners = artworks.filter((a: any) => a.type === 1 || a.type === 3);
+    const randomBanner = seriesBanners.length > 0
+      ? seriesBanners[Math.floor(Math.random() * seriesBanners.length)].image
+      : series.bannerImage || null;
+
     return {
       id: series.id.toString(),
       title: {
@@ -176,6 +182,7 @@ export class TvService {
       coverImage: {
         large: series.image,
       },
+      bannerImage: randomBanner,
       format: 'TV',
       status: series.status?.name || 'FINISHED',
       description: englishOverview,

@@ -1,5 +1,5 @@
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 
 export default function GamesPage() {
-  return notFound();
+  redirect("/aquila/browse?type=games");
 }

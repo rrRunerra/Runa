@@ -220,6 +220,101 @@ export class ListController {
     return this.listService.deleteTvList(req.user.username, Number(tvdbId));
   }
 
+  // ─────────────────────────── GAME ───────────────────────────
+
+  @Public()
+  @Get('/game/user/:username')
+  public async getGameList(
+    @Param('username') username: string,
+    @Req() req: any,
+  ): Promise<ListEntity[]> {
+    return this.listService.getGameList(username, req.user?.username);
+  }
+
+  @Get('/game/entry/:gameId')
+  public async getGameListEntry(
+    @Param('gameId') gameId: string,
+    @Req() req: any,
+  ) {
+    return this.listService.getGameListEntry(
+      req.user.username,
+      Number(gameId),
+    );
+  }
+
+  @Post('/game/entry/save')
+  public async saveGameListEntry(
+    @Req() req: any,
+    @Body()
+    body: {
+      gameId: number;
+      status?: $Enums.GameListStatus;
+      progress?: number;
+      score?: number;
+      startDate?: number;
+      endDate?: number;
+      notes?: string;
+    },
+  ): Promise<{ success: boolean; message: string; error?: any }> {
+    return this.listService.upsertGameList(req.user.username, body);
+  }
+
+  @Delete('/game/entry/:gameId')
+  public async deleteGameListEntry(
+    @Param('gameId') gameId: string,
+    @Req() req: any,
+  ): Promise<{ success: boolean; message: string; error?: any }> {
+    return this.listService.deleteGameList(req.user.username, Number(gameId));
+  }
+
+  // ─────────────────────────── BOOK ───────────────────────────
+
+  @Public()
+  @Get('/book/user/:username')
+  public async getBookList(
+    @Param('username') username: string,
+    @Req() req: any,
+  ): Promise<ListEntity[]> {
+    return this.listService.getBookList(username, req.user?.username);
+  }
+
+  @Get('/book/entry/:bookId')
+  public async getBookListEntry(
+    @Param('bookId') bookId: string,
+    @Req() req: any,
+  ) {
+    return this.listService.getBookListEntry(
+      req.user.username,
+      bookId,
+    );
+  }
+
+  @Post('/book/entry/save')
+  public async saveBookListEntry(
+    @Req() req: any,
+    @Body()
+    body: {
+      bookId: string;
+      status?: $Enums.BookListStatus;
+      chapters?: number;
+      volumes?: number;
+      score?: number;
+      startDate?: number;
+      endDate?: number;
+      notes?: string;
+    },
+  ): Promise<{ success: boolean; message: string; error?: any }> {
+    return this.listService.upsertBookList(req.user.username, body);
+  }
+
+  @Delete('/book/entry/:bookId')
+  public async deleteBookListEntry(
+    @Param('bookId') bookId: string,
+    @Req() req: any,
+  ): Promise<{ success: boolean; message: string; error?: any }> {
+    return this.listService.deleteBookList(req.user.username, bookId);
+  }
+
   @Get('/watching')
   public async getWatchingList(@Req() req: any) {
     return this.listService.getWatchingList(req.user.username);
@@ -228,7 +323,7 @@ export class ListController {
   @Post('/increment')
   public async incrementProgress(
     @Req() req: any,
-    @Body() body: { mediaType: 'anime' | 'manga' | 'tv'; id: number },
+    @Body() body: { mediaType: 'anime' | 'manga' | 'tv' | 'game' | 'book'; id: number | string },
   ) {
     return this.listService.incrementProgress(
       req.user.username,

@@ -5,6 +5,7 @@ import { PrismaModule } from './providers/database/prisma.module';
 import { APP_GUARD } from '@nestjs/core';
 import { AnimeModule } from './modules/anime/anime.module';
 import { GameModule } from './modules/game/game.module';
+import { BookModule } from './modules/book/book.module';
 import { MangaModule } from './modules/manga/manga.module';
 import { MovieModule } from './modules/movie/movie.module';
 import { TvModule } from './modules/tv/tv.module';
@@ -29,6 +30,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
     PrismaModule,
     AnimeModule,
     GameModule,
+    BookModule,
     MangaModule,
     MovieModule,
     TvModule,

@@ -104,12 +104,18 @@ export class MovieQueueService implements OnModuleInit {
 
     const englishName = translation?.name || movie.name;
 
+    const artworks = movie.artworks || [];
+    const movieBanners = artworks.filter((a: any) => a.type === 16 || a.type === 15);
+    const randomBanner = movieBanners.length > 0
+      ? movieBanners[Math.floor(Math.random() * movieBanners.length)].image
+      : movie.bannerImage || null;
+
     return {
       tvdbId: movie.id,
       titleEnglish: englishName,
       titleRomaji: movie.name,
       coverImage: movie.image,
-      bannerImage: movie.bannerImage,
+      bannerImage: randomBanner,
       description: movie.overview || '',
       status: movie.status?.name || 'FINISHED',
       runtime: movie.runtime,

@@ -75,7 +75,10 @@ function useSearch() {
       setError(null);
       try {
         // Standardize type for URL and parameter
-        const mediaType = type === "movies" ? "movie" : type;
+        const mediaType =
+          type === "movies" ? "movie" :
+          type === "games" ? "game" :
+          type === "books" ? "book" : type;
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/${mediaType}/search?name=${encodeURIComponent(query)}`,
         );
@@ -258,7 +261,7 @@ export default function BrowsePage() {
 
   const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const val = e.target.value;
-    const match = val.match(/^@(anime|manga|movies|movie|tv show|tv)\s+(.*)$/i);
+    const match = val.match(/^@(anime|manga|movies|movie|tv show|tv|games|game|books|book)\s+(.*)$/i);
     
     if (match) {
       const rawType = match[1].toLowerCase();
@@ -267,6 +270,8 @@ export default function BrowsePage() {
       let targetType = rawType;
       if (rawType === "movie") targetType = "movies";
       if (rawType === "tv show") targetType = "tv";
+      if (rawType === "game") targetType = "games";
+      if (rawType === "book") targetType = "books";
       
       setType(targetType);
       setQuery(remaining);
@@ -310,6 +315,8 @@ export default function BrowsePage() {
     { id: "manga", label: "Manga" },
     { id: "movies", label: "Movie" },
     { id: "tv", label: "TV Show" },
+    { id: "games", label: "Games" },
+    { id: "books", label: "Books" },
   ];
 
   return (

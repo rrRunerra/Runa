@@ -28,6 +28,8 @@ model User {
     aquilaMovieUserLists AquilaMovieUserList[]
     aquilaTvUserLists    AquilaTvUserList[]
     favorites            Favorite[]
+    gameList             AquilaGameUserList[]
+    bookList             AquilaBookUserList[]
 
     @@index([id])
     @@index([username])
@@ -555,6 +557,7 @@ enum FavoriteType {
     MOVIE
     TV
     BOOK
+    GAME
     USER
 }
 
@@ -569,5 +572,122 @@ model Favorite {
 
     @@unique([userId, type, mediaId])
     @@index([userId])
+}
+
+enum GameListStatus {
+    PLANNING
+    PLAYING
+    COMPLETED
+    ON_HOLD
+    DROPPED
+}
+
+enum BookListStatus {
+    PLANNING
+    READING
+    COMPLETED
+    ON_HOLD
+    DROPPED
+}
+
+model AquilaGame {
+    id        Int  @id @default(autoincrement())
+    rawgId    Int  @unique
+
+    titleString String? @db.Text
+
+    coverImage      String? @db.Text
+    description     String? @db.Text
+
+    releasedYear  Int?
+    releasedMonth Int?
+    releasedDay   Int?
+
+    genres  String[] @db.Text
+    platforms String[] @db.Text
+    developers String[] @db.Text
+    publishers String[] @db.Text
+
+    averageScore Float?
+    popularity   Int?
+
+    updatedAt       DateTime              @updatedAt
+    aquilaUserLists AquilaGameUserList[]
+
+    @@index([rawgId])
+    @@index([titleString])
+}
+
+model AquilaGameUserList {
+    id        Int             @id @default(autoincrement())
+    username  String
+    gameId    Int
+    status    GameListStatus @default(PLANNING)
+    progress  Int?            // Hours played
+    score     Int?
+    notes     String?         @db.Text
+    private   Boolean         @default(false)
+
+    startDate Int?
+    endDate   Int?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    user  User        @relation(fields: [username], references: [username])
+    game  AquilaGame  @relation(fields: [gameId], references: [rawgId])
+
+    @@unique([username, gameId])
+    @@index([username])
+    @@index([gameId])
+}
+
+model AquilaBook {
+    id            Int      @id @default(autoincrement())
+    openLibraryId String   @unique
+
+    titleString   String?  @db.Text
+    coverImage    String?  @db.Text
+    description   String?  @db.Text
+
+    publishYear   Int?
+
+    subjects      String[] @db.Text
+    authors       String[] @db.Text
+    publishers    String[] @db.Text
+
+    pages         Int?
+    chapters      Int?
+
+    updatedAt       DateTime              @updatedAt
+    aquilaUserLists AquilaBookUserList[]
+
+    @@index([openLibraryId])
+    @@index([titleString])
+}
+
+model AquilaBookUserList {
+    id        Int             @id @default(autoincrement())
+    username  String
+    bookId    String
+    status    BookListStatus  @default(PLANNING)
+    chapters  Int?
+    volumes   Int?
+    score     Int?
+    notes     String?         @db.Text
+    private   Boolean         @default(false)
+
+    startDate Int?
+    endDate   Int?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    user  User        @relation(fields: [username], references: [username])
+    book  AquilaBook  @relation(fields: [bookId], references: [openLibraryId])
+
+    @@unique([username, bookId])
+    @@index([username])
+    @@index([bookId])
 }
 

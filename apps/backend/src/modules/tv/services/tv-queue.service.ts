@@ -161,12 +161,18 @@ export class TvQueueService implements OnModuleInit {
         })
         .filter((s: any) => s.episodes.length > 0) || [];
 
+    const artworks = series.artworks || [];
+    const seriesBanners = artworks.filter((a: any) => a.type === 1 || a.type === 3);
+    const randomBanner = seriesBanners.length > 0
+      ? seriesBanners[Math.floor(Math.random() * seriesBanners.length)].image
+      : series.bannerImage || null;
+
     return {
       tvdbId: series.id,
       titleEnglish: englishName,
       titleRomaji: series.name,
       coverImage: series.image,
-      bannerImage: series.bannerImage,
+      bannerImage: randomBanner,
       description: englishOverview,
       status: series.status?.name || 'FINISHED',
       originalCountry: series.originalCountry || null,

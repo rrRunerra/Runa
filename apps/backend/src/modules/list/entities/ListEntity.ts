@@ -1,5 +1,5 @@
 export default class ListEntity {
-  id: number;
+  id: number | string;
   title: string;
   score?: number | null;
   progress?: number | null;
@@ -9,7 +9,7 @@ export default class ListEntity {
   status: string;
   last_updated: Date;
   last_added: Date;
-  type: 'anime' | 'manga' | 'tv' | 'movie';
+  type: 'anime' | 'manga' | 'tv' | 'movie' | 'game' | 'book';
   meta?: {
     season: number;
     episode: number;

@@ -94,7 +94,7 @@ const itemVariants = {
   show: {
     opacity: 1,
     y: 0,
-    transition: { type: "spring", stiffness: 100, damping: 15 },
+    transition: { type: ("spring" as any), stiffness: 100, damping: 15 },
   },
 };
 
@@ -260,20 +260,20 @@ export default function TvDetailsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center relative overflow-x-hidden">
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="min-h-screen bg-background flex items-center justify-center relative overflow-x-hidden">
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-sky-900/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="w-12 h-12 rounded-full border-2 border-dashed border-blue-500 animate-spin" />
+        <div className="w-12 h-12 rounded-full border-2 border-dashed border-primary animate-spin" />
       </div>
     );
   }
 
   if (error || !tv) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center gap-4 relative overflow-x-hidden">
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-        <h2 className="text-2xl font-bold text-zinc-100">TV show not found</h2>
-        <Button asChild className="bg-blue-600 hover:bg-blue-700">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 relative overflow-x-hidden">
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+        <h2 className="text-2xl font-bold text-foreground">TV show not found</h2>
+        <Button asChild className="bg-primary hover:bg-primary/90">
           <Link href="/aquila/browse">Back to Browse</Link>
         </Button>
       </div>
@@ -281,14 +281,14 @@ export default function TvDetailsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 pb-32 relative overflow-x-hidden">
+    <div className="min-h-screen bg-background text-foreground pb-32 relative overflow-x-hidden">
       {/* Background Radial Glowing Auras */}
-      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-[20%] left-[-100px] w-[600px] h-[600px] bg-sky-600/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-[20%] left-[-100px] w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl pointer-events-none" />
 
       {/* Banner Section */}
       <div className="relative h-[250px] md:h-[380px] w-full overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent z-10" />
+        <div className="absolute inset-0 bg-linear-to-t from-zinc-950 via-zinc-950/40 to-transparent z-10" />
         {tv.bannerImage ? (
           <img
             src={tv.bannerImage}
@@ -296,14 +296,14 @@ export default function TvDetailsPage() {
             className="w-full h-full object-cover scale-105 filter blur-[1px] brightness-75"
           />
         ) : (
-          <div className="w-full h-full bg-zinc-900" />
+          <div className="w-full h-full bg-card" />
         )}
 
         {/* TheTVDB Attribution */}
         <div className="absolute inset-x-0 top-0 z-20 pointer-events-none">
           <div className="container mx-auto px-4 pt-4 flex justify-end items-start pointer-events-auto">
             <div className="flex flex-col gap-1 bg-black/50 backdrop-blur-sm p-2 rounded-xl border border-white/10 shadow-md">
-              <span className="text-[8px] text-white/60 uppercase font-bold tracking-widest leading-none">
+              <span className="text-[8px] text-foreground/60 uppercase font-bold tracking-widest leading-none">
                 Data Provided By
               </span>
               <Link
@@ -336,8 +336,8 @@ export default function TvDetailsPage() {
             variants={itemVariants}
             className="shrink-0 w-full lg:w-[280px] flex flex-col gap-4"
           >
-            <div className="bg-zinc-900/70 border border-zinc-800/60 backdrop-blur-xl shadow-2xl rounded-2xl p-4 flex flex-col sm:flex-row lg:flex-col gap-4 items-center sm:items-start lg:items-stretch">
-              <div className="aspect-2/3 w-40 sm:w-44 lg:w-full rounded-xl overflow-hidden shadow-lg border border-zinc-700/30 shrink-0">
+            <div className="bg-card/70 border border-border/60 backdrop-blur-xl shadow-2xl rounded-2xl p-4 flex flex-col sm:flex-row lg:flex-col gap-4 items-center sm:items-start lg:items-stretch">
+              <div className="aspect-2/3 w-40 sm:w-44 lg:w-full rounded-xl overflow-hidden shadow-lg border border-border/30 shrink-0">
                 <img
                   src={tv.coverImage.large}
                   alt={tv.title?.romaji}
@@ -351,7 +351,7 @@ export default function TvDetailsPage() {
                     {!hasListEntry ? (
                       <>
                         <Button
-                          className="w-full cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-xl transition-all shadow-lg shadow-blue-600/20"
+                          className="w-full cursor-pointer bg-primary hover:bg-primary/90 text-foreground font-medium rounded-xl transition-all shadow-lg shadow-primary/20"
                           size="lg"
                           onClick={async () => {
                             try {
@@ -385,7 +385,7 @@ export default function TvDetailsPage() {
                         </Button>
                         <Button
                           variant="outline"
-                          className="w-full cursor-pointer border-zinc-700/60 hover:bg-zinc-800 text-zinc-200 hover:text-white rounded-xl"
+                          className="w-full cursor-pointer border-border/60 hover:bg-muted text-foreground hover:text-foreground rounded-xl"
                           size="lg"
                           onClick={() => setIsDialogOpen(true)}
                         >
@@ -394,7 +394,7 @@ export default function TvDetailsPage() {
                       </>
                     ) : (
                       <Button
-                        className="w-full cursor-pointer bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/60 text-zinc-100 rounded-xl"
+                        className="w-full cursor-pointer bg-muted hover:bg-zinc-700 border border-border/60 text-foreground rounded-xl"
                         size="lg"
                         onClick={() => setIsDialogOpen(true)}
                       >
@@ -417,7 +417,7 @@ export default function TvDetailsPage() {
                 {tv.trailers && tv.trailers.length > 0 && (
                   <Button
                     variant="outline"
-                    className="w-full border-zinc-700/60 hover:bg-zinc-800 text-zinc-200 hover:text-white rounded-xl"
+                    className="w-full border-border/60 hover:bg-muted text-foreground hover:text-foreground rounded-xl"
                     asChild
                   >
                     <a
@@ -435,51 +435,51 @@ export default function TvDetailsPage() {
             </div>
 
             {/* Info Sidebar */}
-            <div className="bg-zinc-900/60 border border-zinc-800/40 backdrop-blur-xl rounded-2xl p-5 space-y-4">
-              <h3 className="text-sm font-semibold tracking-wide text-zinc-400 uppercase">
+            <div className="bg-card/60 border border-border/40 backdrop-blur-xl rounded-2xl p-5 space-y-4">
+              <h3 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
                 Information
               </h3>
               <div className="space-y-3">
-                <div className="flex justify-between items-center text-sm border-b border-zinc-800/50 pb-2">
-                  <span className="text-zinc-400">Format</span>
-                  <span className="font-medium text-zinc-100">{tv.format}</span>
+                <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
+                  <span className="text-muted-foreground">Format</span>
+                  <span className="font-medium text-foreground">{tv.format}</span>
                 </div>
-                <div className="flex justify-between items-center text-sm border-b border-zinc-800/50 pb-2">
-                  <span className="text-zinc-400">Episodes</span>
-                  <span className="font-medium text-zinc-100">{totalEpisodes}</span>
+                <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
+                  <span className="text-muted-foreground">Episodes</span>
+                  <span className="font-medium text-foreground">{totalEpisodes}</span>
                 </div>
-                <div className="flex justify-between items-center text-sm border-b border-zinc-800/50 pb-2">
-                  <span className="text-zinc-400">Seasons</span>
-                  <span className="font-medium text-zinc-100">{tv.seasons.length}</span>
+                <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
+                  <span className="text-muted-foreground">Seasons</span>
+                  <span className="font-medium text-foreground">{tv.seasons.length}</span>
                 </div>
-                <div className="flex justify-between items-center text-sm border-b border-zinc-800/50 pb-2">
-                  <span className="text-zinc-400">Status</span>
-                  <span className="font-medium text-zinc-100 capitalize">
+                <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
+                  <span className="text-muted-foreground">Status</span>
+                  <span className="font-medium text-foreground capitalize">
                     {tv.status?.replace(/_/g, " ").toLowerCase()}
                   </span>
                 </div>
                 {tv.originalCountry && (
-                  <div className="flex justify-between items-center text-sm border-b border-zinc-800/50 pb-2">
-                    <span className="text-zinc-400">Country</span>
-                    <span className="font-medium text-zinc-100">{tv.originalCountry}</span>
+                  <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
+                    <span className="text-muted-foreground">Country</span>
+                    <span className="font-medium text-foreground">{tv.originalCountry}</span>
                   </div>
                 )}
                 {tv.originalLanguage && (
-                  <div className="flex justify-between items-center text-sm border-b border-zinc-800/50 pb-2">
-                    <span className="text-zinc-400">Language</span>
-                    <span className="font-medium text-zinc-100 uppercase">{tv.originalLanguage}</span>
+                  <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
+                    <span className="text-muted-foreground">Language</span>
+                    <span className="font-medium text-foreground uppercase">{tv.originalLanguage}</span>
                   </div>
                 )}
                 {tv.averageRuntime && (
-                  <div className="flex justify-between items-center text-sm border-b border-zinc-800/50 pb-2">
-                    <span className="text-zinc-400">Avg Runtime</span>
-                    <span className="font-medium text-zinc-100">{tv.averageRuntime} min</span>
+                  <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
+                    <span className="text-muted-foreground">Avg Runtime</span>
+                    <span className="font-medium text-foreground">{tv.averageRuntime} min</span>
                   </div>
                 )}
                 {tv.contentRating && (
-                  <div className="flex justify-between items-center text-sm border-b border-zinc-800/50 pb-2">
-                    <span className="text-zinc-400">Rating</span>
-                    <Badge className="bg-blue-500/15 border border-blue-500/30 text-blue-300 text-xs px-2 py-0.5">
+                  <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
+                    <span className="text-muted-foreground">Rating</span>
+                    <Badge className="bg-blue-500/15 border border-primary/30 text-primary text-xs px-2 py-0.5">
                       {tv.contentRating}
                     </Badge>
                   </div>
@@ -489,15 +489,15 @@ export default function TvDetailsPage() {
 
             {/* Networks */}
             {tv.studios && tv.studios.length > 0 && (
-              <div className="bg-zinc-900/60 border border-zinc-800/40 backdrop-blur-xl rounded-2xl p-5">
-                <h4 className="font-semibold text-sm tracking-wide text-zinc-400 uppercase mb-3">
+              <div className="bg-card/60 border border-border/40 backdrop-blur-xl rounded-2xl p-5">
+                <h4 className="font-semibold text-sm tracking-wide text-muted-foreground uppercase mb-3">
                   Networks
                 </h4>
                 <div className="flex flex-wrap gap-2">
                   {tv.studios.map((studio) => (
                     <span
                       key={studio.name}
-                      className="text-xs bg-zinc-800 text-zinc-300 border border-zinc-700/40 px-3 py-1.5 rounded-xl"
+                      className="text-xs bg-muted text-foreground/90 border border-border/40 px-3 py-1.5 rounded-xl"
                     >
                       {studio.name}
                     </span>
@@ -508,8 +508,8 @@ export default function TvDetailsPage() {
 
             {/* Additional Trailers */}
             {tv.trailers && tv.trailers.length > 1 && (
-              <div className="bg-zinc-900/60 border border-zinc-800/40 backdrop-blur-xl rounded-2xl p-5">
-                <h4 className="font-semibold text-sm tracking-wide text-zinc-400 uppercase mb-3">
+              <div className="bg-card/60 border border-border/40 backdrop-blur-xl rounded-2xl p-5">
+                <h4 className="font-semibold text-sm tracking-wide text-muted-foreground uppercase mb-3">
                   Trailers
                 </h4>
                 <div className="flex flex-col gap-2">
@@ -519,7 +519,7 @@ export default function TvDetailsPage() {
                       href={trailer.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex items-center gap-2 text-xs bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700/40 px-3 py-2 rounded-xl transition-all"
+                      className="flex items-center gap-2 text-xs bg-muted hover:bg-zinc-700 text-foreground/90 border border-border/40 px-3 py-2 rounded-xl transition-all"
                     >
                       <Play className="w-3 h-3 fill-current" />
                       {trailer.name || `Trailer ${idx + 2}`}
@@ -534,11 +534,11 @@ export default function TvDetailsPage() {
           <div className="flex-1 space-y-8 lg:pt-8 mb-32">
             {/* Header */}
             <motion.div variants={itemVariants} className="space-y-2">
-              <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white">
+              <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">
                 {tv.title.english || tv.title.romaji}
               </h1>
               {tv.title.romaji && tv.title.romaji !== tv.title.english && (
-                <p className="text-sm text-zinc-400 italic">
+                <p className="text-sm text-muted-foreground italic">
                   Also known as: {tv.title.romaji}
                 </p>
               )}
@@ -546,26 +546,26 @@ export default function TvDetailsPage() {
 
             {/* Quick Info Badges */}
             <motion.div variants={itemVariants} className="flex flex-wrap gap-3">
-              <div className="bg-zinc-900/55 border border-zinc-800/40 backdrop-blur-md px-4 py-2.5 rounded-xl flex items-center gap-2">
-                <Tv2 className="w-4 h-4 text-blue-400" />
-                <span className="text-sm font-semibold text-zinc-200 capitalize">
+              <div className="bg-card/55 border border-border/40 backdrop-blur-md px-4 py-2.5 rounded-xl flex items-center gap-2">
+                <Tv2 className="w-4 h-4 text-primary" />
+                <span className="text-sm font-semibold text-foreground capitalize">
                   {tv.status?.replace(/_/g, " ").toLowerCase()}
                 </span>
               </div>
               {tv.averageRuntime && (
-                <div className="bg-zinc-900/55 border border-zinc-800/40 backdrop-blur-md px-4 py-2.5 rounded-xl flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-blue-400" />
-                  <span className="text-sm font-semibold text-zinc-200">{tv.averageRuntime} min/ep</span>
+                <div className="bg-card/55 border border-border/40 backdrop-blur-md px-4 py-2.5 rounded-xl flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-semibold text-foreground">{tv.averageRuntime} min/ep</span>
                 </div>
               )}
               {tv.originalCountry && (
-                <div className="bg-zinc-900/55 border border-zinc-800/40 backdrop-blur-md px-4 py-2.5 rounded-xl flex items-center gap-2">
-                  <Globe className="w-4 h-4 text-blue-400" />
-                  <span className="text-sm font-semibold text-zinc-200">{tv.originalCountry}</span>
+                <div className="bg-card/55 border border-border/40 backdrop-blur-md px-4 py-2.5 rounded-xl flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-semibold text-foreground">{tv.originalCountry}</span>
                 </div>
               )}
               {tv.contentRating && (
-                <Badge className="bg-blue-500/10 border border-blue-500/30 text-blue-300 px-4 py-2.5 rounded-xl text-sm font-bold">
+                <Badge className="bg-primary/10 border border-primary/30 text-primary px-4 py-2.5 rounded-xl text-sm font-bold">
                   {tv.contentRating}
                 </Badge>
               )}
@@ -575,15 +575,15 @@ export default function TvDetailsPage() {
             {hasListEntry && totalEpisodes > 0 && (
               <motion.div
                 variants={itemVariants}
-                className="bg-zinc-900/40 border border-zinc-800/30 backdrop-blur-sm p-5 rounded-2xl"
+                className="bg-card/40 border border-border/30 backdrop-blur-sm p-5 rounded-2xl"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-semibold text-zinc-300">Watch Progress</span>
-                  <span className="text-xs font-bold text-blue-400 tabular-nums">
+                  <span className="text-sm font-semibold text-foreground/90">Watch Progress</span>
+                  <span className="text-xs font-bold text-primary tabular-nums">
                     {watchedCount} / {totalEpisodes} ({progressPercent}%)
                   </span>
                 </div>
-                <div className="w-full bg-zinc-800/60 h-2 rounded-full overflow-hidden">
+                <div className="w-full bg-muted/60 h-2 rounded-full overflow-hidden">
                   <div
                     className="bg-blue-500 h-full rounded-full transition-all duration-700"
                     style={{ width: `${progressPercent}%` }}
@@ -595,11 +595,11 @@ export default function TvDetailsPage() {
             {/* Description */}
             <motion.div
               variants={itemVariants}
-              className="bg-zinc-900/40 border border-zinc-800/30 backdrop-blur-sm p-6 rounded-2xl"
+              className="bg-card/40 border border-border/30 backdrop-blur-sm p-6 rounded-2xl"
             >
-              <h3 className="text-lg font-bold text-zinc-100 mb-3">Synopsis</h3>
+              <h3 className="text-lg font-bold text-foreground mb-3">Synopsis</h3>
               <div
-                className="prose prose-zinc dark:prose-invert max-w-none text-zinc-300 leading-relaxed text-sm md:text-base prose-p:my-2 prose-a:text-blue-400 hover:prose-a:text-blue-300 transition-colors"
+                className="prose prose-neutral dark:prose-invert dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-sm md:text-base prose-p:my-2 prose-a:text-primary hover:prose-a:text-primary transition-colors"
                 dangerouslySetInnerHTML={{ __html: tv.description }}
               />
             </motion.div>
@@ -607,12 +607,12 @@ export default function TvDetailsPage() {
             {/* Genres */}
             {tv.genres && tv.genres.length > 0 && (
               <motion.div variants={itemVariants} className="space-y-4">
-                <h3 className="text-lg font-bold text-zinc-100">Genres</h3>
+                <h3 className="text-lg font-bold text-foreground">Genres</h3>
                 <div className="flex flex-wrap gap-2">
                   {tv.genres.map((genre) => (
                     <Badge
                       key={genre}
-                      className="bg-blue-500/10 border border-blue-500/35 hover:bg-blue-500/15 text-blue-300 px-3 py-1 rounded-xl text-xs font-medium"
+                      className="bg-primary/10 border border-primary/30 hover:bg-primary/15 text-primary px-3 py-1 rounded-xl text-xs font-medium"
                     >
                       {genre}
                     </Badge>
@@ -624,12 +624,12 @@ export default function TvDetailsPage() {
             {/* Cast */}
             {tv.characters && tv.characters.length > 0 && (
               <motion.div variants={itemVariants} className="space-y-4">
-                <h3 className="text-lg font-bold text-zinc-100">Cast</h3>
+                <h3 className="text-lg font-bold text-foreground">Cast</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {tv.characters.slice(0, 12).map((char, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center justify-between bg-zinc-900/50 border border-zinc-800/40 backdrop-blur-md p-3 rounded-xl overflow-hidden hover:border-zinc-700/60 transition-all group"
+                      className="flex items-center justify-between bg-card/50 border border-border/40 backdrop-blur-md p-3 rounded-xl overflow-hidden hover:border-border/60 transition-all group"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         {char.image && char.image.length > 0 ? (
@@ -641,21 +641,21 @@ export default function TvDetailsPage() {
                             />
                           </div>
                         ) : (
-                          <div className="w-12 h-12 rounded-lg bg-zinc-800 shrink-0 flex items-center justify-center text-zinc-500 text-xs">
+                          <div className="w-12 h-12 rounded-lg bg-muted shrink-0 flex items-center justify-center text-muted-foreground text-xs">
                             ?
                           </div>
                         )}
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold truncate text-zinc-100">
+                          <p className="text-sm font-semibold truncate text-foreground">
                             {char.name}
                           </p>
-                          <p className="text-xs text-zinc-400 capitalize truncate">
+                          <p className="text-xs text-muted-foreground capitalize truncate">
                             {char.role?.toLowerCase()}
                           </p>
                         </div>
                       </div>
                       {char.personName && (
-                        <span className="text-xs text-zinc-400 truncate ml-3 shrink-0">
+                        <span className="text-xs text-muted-foreground truncate ml-3 shrink-0">
                           {char.personName}
                         </span>
                       )}
@@ -668,7 +668,7 @@ export default function TvDetailsPage() {
             {/* Seasons Accordion */}
             {tv.seasons && tv.seasons.length > 0 && (
               <motion.div variants={itemVariants} className="space-y-4">
-                <h3 className="text-xl font-bold text-zinc-100">Seasons</h3>
+                <h3 className="text-xl font-bold text-foreground">Seasons</h3>
                 <Accordion type="multiple" className="w-full space-y-3">
                   {tv.seasons.map((season) => {
                     const watchedInSeason = watchedEpisodes.filter(
@@ -685,11 +685,11 @@ export default function TvDetailsPage() {
                       <AccordionItem
                         key={season.id}
                         value={season.id}
-                        className="border border-zinc-800/40 rounded-2xl overflow-hidden bg-zinc-900/40 backdrop-blur-md shadow-none"
+                        className="border border-border/40 rounded-2xl overflow-hidden bg-card/40 backdrop-blur-md shadow-none"
                       >
-                        <AccordionTrigger className="hover:no-underline px-4 py-3 transition-colors hover:bg-zinc-800/30">
+                        <AccordionTrigger className="hover:no-underline px-4 py-3 transition-colors hover:bg-muted/30">
                           <div className="flex items-center gap-6 w-full pr-8">
-                            <div className="shrink-0 w-12 aspect-2/3 rounded-lg overflow-hidden border border-zinc-800/50 bg-zinc-800">
+                            <div className="shrink-0 w-12 aspect-2/3 rounded-lg overflow-hidden border border-border/50 bg-muted">
                               <img
                                 src={season.image || tv.coverImage.large}
                                 alt={season.name}
@@ -698,17 +698,17 @@ export default function TvDetailsPage() {
                             </div>
                             <div className="flex-1 flex items-center gap-8 text-left min-w-0">
                               <div className="flex flex-col">
-                                <h4 className="text-sm font-bold text-zinc-100 truncate">
+                                <h4 className="text-sm font-bold text-foreground truncate">
                                   Season {season.number}
                                 </h4>
-                                <span className="text-[11px] text-zinc-400 font-medium uppercase tracking-tight">
+                                <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-tight">
                                   {season.episodeCount} Episodes
                                 </span>
                               </div>
 
                               {hasListEntry && (
                                 <div className="flex-1 flex items-center gap-4 max-w-[300px]">
-                                  <div className="flex-1 bg-zinc-800/60 h-1 rounded-full overflow-hidden">
+                                  <div className="flex-1 bg-muted/60 h-1 rounded-full overflow-hidden">
                                     <div
                                       className="bg-blue-500 h-full transition-all duration-700 rounded-full"
                                       style={{
@@ -716,7 +716,7 @@ export default function TvDetailsPage() {
                                       }}
                                     />
                                   </div>
-                                  <span className="text-[11px] font-bold text-blue-400/80 tabular-nums">
+                                  <span className="text-[11px] font-bold text-primary/80 tabular-nums">
                                     {watchedInSeason} / {season.episodeCount}
                                   </span>
                                 </div>
@@ -724,7 +724,7 @@ export default function TvDetailsPage() {
                             </div>
                           </div>
                         </AccordionTrigger>
-                        <AccordionContent className="p-0 border-t border-zinc-800/30">
+                        <AccordionContent className="p-0 border-t border-border/30">
                           <div className="divide-y divide-zinc-800/20">
                             {season.episodes.map((episode) => {
                               const watched = watchedEpisodes.some(
@@ -736,7 +736,7 @@ export default function TvDetailsPage() {
                                 <div
                                   key={episode.id}
                                   className={cn(
-                                    "flex items-center gap-4 p-3 hover:bg-zinc-800/20 transition-colors group cursor-pointer",
+                                    "flex items-center gap-4 p-3 hover:bg-muted/20 transition-colors group cursor-pointer",
                                     watched && "bg-blue-500/5",
                                   )}
                                   onClick={() =>
@@ -747,7 +747,7 @@ export default function TvDetailsPage() {
                                     className={cn(
                                       "shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
                                       watched
-                                        ? "bg-blue-500 border-blue-500 text-white"
+                                        ? "bg-blue-500 border-primary text-foreground"
                                         : "border-zinc-600",
                                     )}
                                   >
@@ -757,17 +757,17 @@ export default function TvDetailsPage() {
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-3">
-                                      <span className="text-xs font-bold text-zinc-200">
+                                      <span className="text-xs font-bold text-foreground">
                                         {episode.number}. {episode.name}
                                       </span>
                                       {episode.airDate && (
-                                        <span className="text-[10px] text-zinc-500 font-medium">
+                                        <span className="text-[10px] text-muted-foreground font-medium">
                                           {episode.airDate}
                                         </span>
                                       )}
                                     </div>
                                     {episode.overview && (
-                                      <p className="text-[11px] text-zinc-400 line-clamp-1 mt-0.5">
+                                      <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">
                                         {episode.overview}
                                       </p>
                                     )}

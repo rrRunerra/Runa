@@ -152,6 +152,12 @@ export class MovieService {
     const englishName = translation?.name || movie.name;
     const englishOverview = translation?.overview || movie.overview || '';
 
+    const artworks = movie.artworks || [];
+    const movieBanners = artworks.filter((a: any) => a.type === 16 || a.type === 15);
+    const randomBanner = movieBanners.length > 0
+      ? movieBanners[Math.floor(Math.random() * movieBanners.length)].image
+      : movie.bannerImage || null;
+
     return {
       id: movie.id.toString(),
       title: {
@@ -161,6 +167,7 @@ export class MovieService {
       coverImage: {
         large: movie.image,
       },
+      bannerImage: randomBanner,
       format: 'MOVIE',
       status: movie.status?.name || 'FINISHED',
       description: englishOverview,

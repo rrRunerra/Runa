@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { useNavigation } from "@/hooks/useNavigation";
@@ -44,6 +44,7 @@ interface SpotlightSearchItem {
 
 export default function SpotlightSearch(): React.JSX.Element {
   const router = useRouter();
+  const pathname = usePathname();
   const { data: session } = useSession();
   const { theme, setTheme } = useTheme();
   const { navbarConfig } = useNavigation();
@@ -113,8 +114,11 @@ export default function SpotlightSearch(): React.JSX.Element {
     });
   });
 
+  // Find active application based on current pathname
+  const activeApp = apps.find((app) => pathname?.startsWith(app.href));
+
   // 2. Navigation Category (dynamically extracted from active Navigation Context)
-  if (navbarConfig && navbarConfig.length > 0) {
+  if (activeApp && navbarConfig && navbarConfig.length > 0) {
     navbarConfig.forEach((section) => {
       // Skip phone section if present
       if (section.section?.toLowerCase() === "phone") return;
@@ -129,8 +133,11 @@ export default function SpotlightSearch(): React.JSX.Element {
           return;
         }
 
+        // Only include if it belongs to the active app
+        const isFromActiveApp = navItem.href && navItem.href.startsWith(activeApp.href);
+
         // Add main navigation item
-        if (navItem.href) {
+        if (navItem.href && isFromActiveApp) {
           items.push({
             id: `nav-${navItem.label.toLowerCase()}`,
             label: navItem.label,
@@ -158,6 +165,9 @@ export default function SpotlightSearch(): React.JSX.Element {
             ) {
               return;
             }
+
+            const isChildFromActiveApp = childItem.href && childItem.href.startsWith(activeApp.href);
+            if (!isChildFromActiveApp) return;
 
             items.push({
               id: `nav-${navItem.label.toLowerCase()}-${childItem.label.toLowerCase()}`,

@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useEffect, useState, useMemo } from "react";
-import { Plus, Play, BookOpen, Tv, Film, Loader2, Menu } from "lucide-react";
+import { Plus, Play, BookOpen, Tv, Film, Loader2, Menu, Gamepad2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
@@ -12,9 +12,11 @@ import { AnimeEditDialog } from "@/components/aquila/AnimeEditDialog";
 import { MangaEditDialog } from "@/components/aquila/MangaEditDialog";
 import { TvEditDialog } from "@/components/aquila/TvEditDialog";
 import { MovieEditDialog } from "@/components/aquila/MovieEditDialog";
+import { GameEditDialog } from "@/components/aquila/GameEditDialog";
+import { BookEditDialog } from "@/components/aquila/BookEditDialog";
 
 interface MediaItem {
-  id: number;
+  id: number | string;
   title: string;
   image: string;
   progress: number;
@@ -22,7 +24,7 @@ interface MediaItem {
   format: string;
   status: string;
   last_updated: string;
-  type: "anime" | "manga" | "tv" | "movie";
+  type: "anime" | "manga" | "tv" | "movie" | "game" | "book";
   meta?: {
     season?: number;
     episode?: number;
@@ -100,7 +102,6 @@ export default function AquilaHome(): React.JSX.Element {
         const result = await res.json();
         if (result.success) {
           toast.success(`Progress updated for ${item.title}`);
-          // Refresh to get potential status changes (COMPLETED) or next episode metadata
           fetchWatching();
         } else {
           toast.error(result.message);
@@ -123,7 +124,9 @@ export default function AquilaHome(): React.JSX.Element {
     const manga = watching.filter((i) => i.type === "manga");
     const tv = watching.filter((i) => i.type === "tv");
     const movie = watching.filter((i) => i.type === "movie");
-    return { anime, manga, tv, movie };
+    const game = watching.filter((i) => i.type === "game");
+    const book = watching.filter((i) => i.type === "book");
+    return { anime, manga, tv, movie, game, book };
   }, [watching]);
 
   if (status === "unauthenticated") {
@@ -225,6 +228,26 @@ export default function AquilaHome(): React.JSX.Element {
                 onRefresh={fetchWatching}
               />
             )}
+            {sections.game.length > 0 && (
+              <MediaSection
+                title="Games"
+                icon={<Gamepad2 className="w-5 h-5" />}
+                items={sections.game}
+                onIncrement={handleIncrement}
+                updatingId={updatingId}
+                onRefresh={fetchWatching}
+              />
+            )}
+            {sections.book.length > 0 && (
+              <MediaSection
+                title="Books"
+                icon={<BookOpen className="w-5 h-5" />}
+                items={sections.book}
+                onIncrement={handleIncrement}
+                updatingId={updatingId}
+                onRefresh={fetchWatching}
+              />
+            )}
           </div>
         )}
       </div>
@@ -274,7 +297,6 @@ function MediaSection({
         </Badge>
       </div>
 
-      {/* Grid with responsive columns matching MediaListGroup */}
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-[repeat(auto-fill,minmax(140px,1fr))]">
         {items.map((item: MediaItem) => (
           <MediaCard
@@ -309,7 +331,11 @@ function MediaCard({
         ? "tv"
         : mediaType === "movie"
           ? "movies"
-          : "anime"
+          : mediaType === "game"
+            ? "games"
+            : mediaType === "book"
+              ? "books"
+              : "anime"
     }/${item.id}`;
 
   // Shared media shape for all dialogs
@@ -331,11 +357,10 @@ function MediaCard({
             alt={item.title}
             className="w-full h-full object-cover transition-transform duration-700 lg:group-hover:scale-110"
           />
-          {/* Subtle Bottom Fade for Progress Bar visibility */}
           <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent opacity-40 lg:group-hover:opacity-80 transition-opacity duration-500" />
         </div>
 
-        {/* Progress Bar (Always visible but subtle) */}
+        {/* Progress Bar */}
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted/20 z-10 overflow-hidden">
           <div
             className="bg-primary h-full transition-all duration-700 shadow-[0_0_8px_rgba(var(--primary),0.5)]"
@@ -376,7 +401,11 @@ function MediaCard({
                   ? item.meta?.season
                     ? `S${item.meta.season} E${item.meta.episode}`
                     : "In Progress"
-                  : `${item.type === "manga" ? "Ch" : "Ep"} ${item.progress}`}
+                  : item.type === "game"
+                    ? `Played ${item.progress} hr`
+                    : item.type === "book"
+                      ? `Ch ${item.progress}`
+                      : `${item.type === "manga" ? "Ch" : "Ep"} ${item.progress}`}
                 {item.episodes ? ` / ${item.episodes}` : ""}
               </p>
             </div>
@@ -385,7 +414,7 @@ function MediaCard({
               size="icon"
               className={cn(
                 "h-7 w-7 sm:h-8 sm:w-8 rounded-full p-0 shadow-lg shrink-0 pointer-events-auto cursor-pointer hover:scale-105 transition-all duration-300",
-                isUpdating ? "bg-primary/50 cursor-not-allowed" : "bg-primary, hover:scale-110",
+                isUpdating ? "bg-primary/50 cursor-not-allowed" : "bg-primary hover:scale-110",
               )}
               onClick={(e) => {
                 e.preventDefault();
@@ -437,6 +466,26 @@ function MediaCard({
       )}
       {item.type === "movie" && (
         <MovieEditDialog
+          media={dialogMedia}
+          hasListEntry={true}
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          onSaved={onRefresh}
+          onDeleted={onRefresh}
+        />
+      )}
+      {item.type === "game" && (
+        <GameEditDialog
+          media={dialogMedia}
+          hasListEntry={true}
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          onSaved={onRefresh}
+          onDeleted={onRefresh}
+        />
+      )}
+      {item.type === "book" && (
+        <BookEditDialog
           media={dialogMedia}
           hasListEntry={true}
           open={isEditDialogOpen}

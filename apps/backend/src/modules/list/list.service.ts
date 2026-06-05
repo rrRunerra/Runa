@@ -1241,6 +1241,332 @@ export class ListService {
     return { success: true };
   }
 
+  // ─────────────────────────── GAME ───────────────────────────
+
+  public async getGameList(username: string, requester?: string): Promise<ListEntity[]> {
+    const owner = await this.prisma.client.user.findUnique({
+      where: { username: username.toLowerCase() },
+      select: { privacy: true },
+    });
+
+    if (!owner) {
+      throw new NotFoundException(`User ${username} not found`);
+    }
+
+    const isOwner = requester?.toLowerCase() === username.toLowerCase();
+    const privacy = parsePrivacy(owner.privacy);
+    if ((privacy.profile || privacy.gameList) && !isOwner) {
+      throw new ForbiddenException('This list is private');
+    }
+
+    const list = await this.prisma.client.aquilaGameUserList.findMany({
+      where: {
+        username: username.toLowerCase(),
+      },
+      select: {
+        gameId: true,
+        status: true,
+        progress: true,
+        score: true,
+        updatedAt: true,
+        createdAt: true,
+        game: {
+          select: {
+            titleString: true,
+            coverImage: true,
+          },
+        },
+      },
+    });
+
+    if (!list.length) {
+      return [];
+    }
+
+    return list.map((item) => ({
+      id: item.gameId,
+      title: item.game.titleString ?? '',
+      score: item.score,
+      progress: item.progress,
+      episodes: null,
+      image: item.game.coverImage ?? '',
+      format: 'Game',
+      status: item.status,
+      last_updated: item.updatedAt,
+      last_added: item.createdAt,
+      type: 'game',
+    }));
+  }
+
+  public async getGameListEntry(username: string, gameId: number) {
+    const out = await this.prisma.client.aquilaGameUserList.findUnique({
+      where: {
+        username_gameId: {
+          username: username.toLowerCase(),
+          gameId,
+        },
+      },
+    });
+
+    if (!out) throw new NotFoundException('Game not found in list');
+    return out;
+  }
+
+  public async upsertGameList(
+    username: string,
+    body: {
+      gameId: number;
+      status?: $Enums.GameListStatus;
+      progress?: number;
+      score?: number;
+      startDate?: number;
+      endDate?: number;
+      notes?: string;
+    },
+  ): Promise<{ success: boolean; message: string; error?: any }> {
+    try {
+      const user = await this.prisma.client.user.findUnique({
+        where: { username: username.toLowerCase() },
+        select: { privacy: true },
+      });
+      const privacy = parsePrivacy(user?.privacy);
+      const isPrivate = !!(privacy.profile || privacy.gameList);
+
+      await this.prisma.client.aquilaGameUserList.upsert({
+        where: {
+          username_gameId: {
+            username: username.toLowerCase(),
+            gameId: body.gameId,
+          },
+        },
+        update: {
+          status: body.status,
+          progress: body.progress,
+          score: body.score,
+          startDate: body.startDate,
+          endDate: body.endDate,
+          notes: body.notes,
+        },
+        create: {
+          username: username.toLowerCase(),
+          gameId: body.gameId,
+          status: body.status,
+          progress: body.progress,
+          score: body.score,
+          startDate: body.startDate,
+          endDate: body.endDate,
+          notes: body.notes,
+          private: isPrivate,
+        },
+      });
+    } catch (error) {
+      this.logger.error(error);
+      return {
+        success: false,
+        message: 'Failed to update game list',
+        error: error,
+      };
+    }
+
+    return {
+      success: true,
+      message: 'Game list updated successfully',
+    };
+  }
+
+  public async deleteGameList(
+    username: string,
+    gameId: number,
+  ): Promise<{ success: boolean; message: string; error?: any }> {
+    try {
+      await this.prisma.client.aquilaGameUserList.delete({
+        where: {
+          username_gameId: {
+            username: username.toLowerCase(),
+            gameId,
+          },
+        },
+      });
+
+      return {
+        success: true,
+        message: 'Deleted from list',
+      };
+    } catch (error) {
+      this.logger.error(error);
+      return {
+        success: false,
+        message: 'Failed to delete game from list',
+        error: error,
+      };
+    }
+  }
+
+  // ─────────────────────────── BOOK ───────────────────────────
+
+  public async getBookList(username: string, requester?: string): Promise<ListEntity[]> {
+    const owner = await this.prisma.client.user.findUnique({
+      where: { username: username.toLowerCase() },
+      select: { privacy: true },
+    });
+
+    if (!owner) {
+      throw new NotFoundException(`User ${username} not found`);
+    }
+
+    const isOwner = requester?.toLowerCase() === username.toLowerCase();
+    const privacy = parsePrivacy(owner.privacy);
+    if ((privacy.profile || privacy.bookList) && !isOwner) {
+      throw new ForbiddenException('This list is private');
+    }
+
+    const list = await this.prisma.client.aquilaBookUserList.findMany({
+      where: {
+        username: username.toLowerCase(),
+      },
+      select: {
+        bookId: true,
+        status: true,
+        chapters: true,
+        volumes: true,
+        score: true,
+        updatedAt: true,
+        createdAt: true,
+        book: {
+          select: {
+            titleString: true,
+            coverImage: true,
+          },
+        },
+      },
+    });
+
+    if (!list.length) {
+      return [];
+    }
+
+    return list.map((item) => ({
+      id: item.bookId,
+      title: item.book.titleString ?? '',
+      score: item.score,
+      progress: item.chapters,
+      episodes: null,
+      image: item.book.coverImage ?? '',
+      format: 'Book',
+      status: item.status,
+      last_updated: item.updatedAt,
+      last_added: item.createdAt,
+      type: 'book',
+    }));
+  }
+
+  public async getBookListEntry(username: string, bookId: string) {
+    const out = await this.prisma.client.aquilaBookUserList.findUnique({
+      where: {
+        username_bookId: {
+          username: username.toLowerCase(),
+          bookId,
+        },
+      },
+    });
+
+    if (!out) throw new NotFoundException('Book not found in list');
+    return out;
+  }
+
+  public async upsertBookList(
+    username: string,
+    body: {
+      bookId: string;
+      status?: $Enums.BookListStatus;
+      chapters?: number;
+      volumes?: number;
+      score?: number;
+      startDate?: number;
+      endDate?: number;
+      notes?: string;
+    },
+  ): Promise<{ success: boolean; message: string; error?: any }> {
+    try {
+      const user = await this.prisma.client.user.findUnique({
+        where: { username: username.toLowerCase() },
+        select: { privacy: true },
+      });
+      const privacy = parsePrivacy(user?.privacy);
+      const isPrivate = !!(privacy.profile || privacy.bookList);
+
+      await this.prisma.client.aquilaBookUserList.upsert({
+        where: {
+          username_bookId: {
+            username: username.toLowerCase(),
+            bookId: body.bookId,
+          },
+        },
+        update: {
+          status: body.status,
+          chapters: body.chapters,
+          volumes: body.volumes,
+          score: body.score,
+          startDate: body.startDate,
+          endDate: body.endDate,
+          notes: body.notes,
+        },
+        create: {
+          username: username.toLowerCase(),
+          bookId: body.bookId,
+          status: body.status,
+          chapters: body.chapters,
+          volumes: body.volumes,
+          score: body.score,
+          startDate: body.startDate,
+          endDate: body.endDate,
+          notes: body.notes,
+          private: isPrivate,
+        },
+      });
+    } catch (error) {
+      this.logger.error(error);
+      return {
+        success: false,
+        message: 'Failed to update book list',
+        error: error,
+      };
+    }
+
+    return {
+      success: true,
+      message: 'Book list updated successfully',
+    };
+  }
+
+  public async deleteBookList(
+    username: string,
+    bookId: string,
+  ): Promise<{ success: boolean; message: string; error?: any }> {
+    try {
+      await this.prisma.client.aquilaBookUserList.delete({
+        where: {
+          username_bookId: {
+            username: username.toLowerCase(),
+            bookId,
+          },
+        },
+      });
+
+      return {
+        success: true,
+        message: 'Deleted from list',
+      };
+    } catch (error) {
+      this.logger.error(error);
+      return {
+        success: false,
+        message: 'Failed to delete book from list',
+        error: error,
+      };
+    }
+  }
+
   public async getWatchingList(username: string): Promise<ListEntity[]> {
     const animeWatching = await this.prisma.client.aquilaAnimeUserList.findMany(
       {
@@ -1272,6 +1598,26 @@ export class ListService {
       include: {
         tv: true,
         watchedEpisodes: true,
+      },
+    });
+
+    const gamesPlaying = await this.prisma.client.aquilaGameUserList.findMany({
+      where: {
+        username: username.toLowerCase(),
+        status: $Enums.GameListStatus.PLAYING,
+      },
+      include: {
+        game: true,
+      },
+    });
+
+    const booksReading = await this.prisma.client.aquilaBookUserList.findMany({
+      where: {
+        username: username.toLowerCase(),
+        status: $Enums.BookListStatus.READING,
+      },
+      include: {
+        book: true,
       },
     });
 
@@ -1320,8 +1666,6 @@ export class ListService {
         0,
       );
 
-      // Find the "current" season/episode display
-      // We look for the latest watched episode to show current progress
       const latestWatched = [...item.watchedEpisodes].sort((a, b) => {
         if (a.seasonNum !== b.seasonNum) return b.seasonNum - a.seasonNum;
         return b.episodeNum - a.episodeNum;
@@ -1348,6 +1692,38 @@ export class ListService {
       });
     });
 
+    gamesPlaying.forEach((item) => {
+      watchingList.push({
+        id: item.gameId,
+        title: item.game.titleString ?? '',
+        score: item.score,
+        progress: item.progress ?? 0,
+        episodes: null,
+        image: item.game.coverImage ?? '',
+        format: 'Game',
+        status: item.status,
+        last_updated: item.updatedAt,
+        last_added: item.createdAt,
+        type: 'game',
+      });
+    });
+
+    booksReading.forEach((item) => {
+      watchingList.push({
+        id: item.bookId,
+        title: item.book.titleString ?? '',
+        score: item.score,
+        progress: item.chapters ?? 0,
+        episodes: item.book.chapters,
+        image: item.book.coverImage ?? '',
+        format: 'Book',
+        status: item.status,
+        last_updated: item.updatedAt,
+        last_added: item.createdAt,
+        type: 'book',
+      });
+    });
+
     return watchingList.sort(
       (a, b) => b.last_updated.getTime() - a.last_updated.getTime(),
     );
@@ -1355,14 +1731,58 @@ export class ListService {
 
   public async incrementProgress(
     username: string,
-    mediaType: 'anime' | 'manga' | 'tv',
-    id: number,
+    mediaType: 'anime' | 'manga' | 'tv' | 'game' | 'book',
+    id: number | string,
   ): Promise<{ success: boolean; message: string; data?: any }> {
     const user = username.toLowerCase();
 
+    if (mediaType === 'game') {
+      const gameIdNum = Number(id);
+      if (isNaN(gameIdNum)) throw new Error('Invalid game ID');
+      const entry = await this.prisma.client.aquilaGameUserList.findUnique({
+        where: { username_gameId: { username: user, gameId: gameIdNum } },
+      });
+      if (!entry) throw new NotFoundException('Game not in list');
+
+      const nextProgress = (entry.progress || 0) + 1;
+      await this.prisma.client.aquilaGameUserList.update({
+        where: { id: entry.id },
+        data: {
+          progress: nextProgress,
+        },
+      });
+
+      return { success: true, message: 'Progress updated' };
+    }
+
+    if (mediaType === 'book') {
+      const bookIdStr = String(id);
+      const entry = await this.prisma.client.aquilaBookUserList.findUnique({
+        where: { username_bookId: { username: user, bookId: bookIdStr } },
+        include: { book: true },
+      });
+      if (!entry) throw new NotFoundException('Book not in list');
+
+      const nextProgress = (entry.chapters || 0) + 1;
+      const isCompleted = !!(entry.book.chapters && nextProgress >= entry.book.chapters);
+
+      await this.prisma.client.aquilaBookUserList.update({
+        where: { id: entry.id },
+        data: {
+          chapters: nextProgress,
+          status: isCompleted ? $Enums.BookListStatus.COMPLETED : entry.status,
+          endDate: isCompleted ? Math.floor(Date.now() / 1000) : entry.endDate,
+        },
+      });
+
+      return { success: true, message: 'Progress updated' };
+    }
+
     if (mediaType === 'anime') {
+      const animeIdNum = Number(id);
+      if (isNaN(animeIdNum)) throw new Error('Invalid anime ID');
       const entry = await this.prisma.client.aquilaAnimeUserList.findUnique({
-        where: { username_animeId: { username: user, animeId: id } },
+        where: { username_animeId: { username: user, animeId: animeIdNum } },
         include: { anime: true },
       });
       if (!entry) throw new NotFoundException('Anime not in list');
@@ -1401,7 +1821,7 @@ export class ListService {
       if (nextConnections && typeof nextConnections === 'object') {
         await this.updateConnections(
           user,
-          id,
+          animeIdNum,
           nextConnections,
           isCompleted ? 'COMPLETED' : entry.status,
           nextProgress,
@@ -1417,8 +1837,10 @@ export class ListService {
     }
 
     if (mediaType === 'manga') {
+      const mangaIdNum = Number(id);
+      if (isNaN(mangaIdNum)) throw new Error('Invalid manga ID');
       const entry = await this.prisma.client.aquilaMangaUserList.findUnique({
-        where: { username_mangaId: { username: user, mangaId: id } },
+        where: { username_mangaId: { username: user, mangaId: mangaIdNum } },
         include: { manga: true },
       });
       if (!entry) throw new NotFoundException('Manga not in list');
@@ -1457,7 +1879,7 @@ export class ListService {
       if (nextConnections && typeof nextConnections === 'object') {
         await this.updateMangaConnections(
           user,
-          id,
+          mangaIdNum,
           nextConnections,
           isCompleted ? 'COMPLETED' : entry.status,
           nextProgress,
@@ -1474,8 +1896,10 @@ export class ListService {
     }
 
     if (mediaType === 'tv') {
+      const tvdbIdNum = Number(id);
+      if (isNaN(tvdbIdNum)) throw new Error('Invalid TVDB ID');
       const entry = await this.prisma.client.aquilaTvUserList.findUnique({
-        where: { username_tvdbId: { username: user, tvdbId: id } },
+        where: { username_tvdbId: { username: user, tvdbId: tvdbIdNum } },
         include: { tv: true, watchedEpisodes: true },
       });
       if (!entry) throw new NotFoundException('TV show not in list');
@@ -1531,7 +1955,7 @@ export class ListService {
       if (entry.connections && typeof entry.connections === 'object') {
         await this.updateTvConnections(
           user,
-          id,
+          tvdbIdNum,
           entry.connections,
           isCompleted ? 'COMPLETED' : entry.status,
           entry.score || undefined,

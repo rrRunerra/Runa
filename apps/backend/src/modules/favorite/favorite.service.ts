@@ -129,6 +129,14 @@ export class FavoriteService {
           mediaDetails = await this.prisma.client.aquilaMovie.findUnique({
             where: { tvdbId: mediaIdNum },
           });
+        } else if (fav.type === FavoriteType.GAME) {
+          mediaDetails = await this.prisma.client.aquilaGame.findUnique({
+            where: { rawgId: mediaIdNum },
+          });
+        } else if (fav.type === FavoriteType.BOOK) {
+          mediaDetails = await this.prisma.client.aquilaBook.findUnique({
+            where: { openLibraryId: fav.mediaId },
+          });
         }
       } catch (err) {
         // Silently skip on error
@@ -146,6 +154,12 @@ export class FavoriteService {
           image = mediaDetails.coverImage ?? '';
         } else if (fav.type === FavoriteType.MOVIE) {
           title = mediaDetails.titleEnglish ?? mediaDetails.titleRomaji ?? '';
+          image = mediaDetails.coverImage ?? '';
+        } else if (fav.type === FavoriteType.GAME) {
+          title = mediaDetails.titleString ?? '';
+          image = mediaDetails.coverImage ?? '';
+        } else if (fav.type === FavoriteType.BOOK) {
+          title = mediaDetails.titleString ?? '';
           image = mediaDetails.coverImage ?? '';
         }
       }
