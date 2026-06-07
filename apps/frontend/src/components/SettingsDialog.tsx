@@ -19,6 +19,7 @@ import { SidebarSettingsTab } from "./SidebarSettingsTab";
 import type { AccountSettingsTabRef } from "./AccountSettingsTab";
 import type { PrivacySettingsTabRef } from "./PrivacySettingsTab";
 import type { SidebarSettingsTabRef } from "./SidebarSettingsTab";
+import { useIsMobile } from "@/hooks/use-mobile";
 import type { NavbarConfig } from "@/components/Providers/NavigationProvider";
 
 interface SettingsDialogProps {
@@ -39,6 +40,7 @@ export function SettingsDialog({
   const accountTabRef = useRef<AccountSettingsTabRef>(null);
   const privacyTabRef = useRef<PrivacySettingsTabRef>(null);
   const sidebarTabRef = useRef<SidebarSettingsTabRef>(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (open) {
@@ -48,13 +50,19 @@ export function SettingsDialog({
         setActiveCategory("connections");
       } else if (cat === "privacy") {
         setActiveCategory("privacy");
-      } else if (cat === "sidebar") {
+      } else if (cat === "sidebar" && isMobile) {
         setActiveCategory("sidebar");
       } else {
         setActiveCategory("account");
       }
     }
-  }, [open]);
+  }, [open, isMobile]);
+
+  useEffect(() => {
+    if (activeCategory === "sidebar" && !isMobile) {
+      setActiveCategory("account");
+    }
+  }, [activeCategory, isMobile]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -159,35 +167,37 @@ export function SettingsDialog({
           </button>
 
           {/* Sidebar Settings Tab Button */}
-          <button
-            type="button"
-            onClick={() => setActiveCategory("sidebar")}
-            className={`relative flex items-center gap-3 px-3.5 py-2.5 text-sm font-semibold rounded-xl transition-colors duration-200 whitespace-nowrap outline-hidden cursor-pointer ${
-              activeCategory === "sidebar"
-                ? "text-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {activeCategory === "sidebar" && (
-              <>
-                <motion.div
-                  layoutId="activeSettingsIndicator"
-                  className="absolute left-0 top-2 bottom-2 w-1 bg-primary rounded-r-md"
-                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                />
-                <motion.div
-                  layoutId="activeSettingsHighlight"
-                  className="absolute inset-0 bg-primary/5 rounded-xl border border-primary/10"
-                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                  style={{ pointerEvents: "none" }}
-                />
-              </>
-            )}
-            <span className="relative z-10 flex items-center gap-2.5">
-              <Smartphone className="size-4" />
-              Sidebar Shortcuts
-            </span>
-          </button>
+          {isMobile && (
+            <button
+              type="button"
+              onClick={() => setActiveCategory("sidebar")}
+              className={`relative flex items-center gap-3 px-3.5 py-2.5 text-sm font-semibold rounded-xl transition-colors duration-200 whitespace-nowrap outline-hidden cursor-pointer ${
+                activeCategory === "sidebar"
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {activeCategory === "sidebar" && (
+                <>
+                  <motion.div
+                    layoutId="activeSettingsIndicator"
+                    className="absolute left-0 top-2 bottom-2 w-1 bg-primary rounded-r-md"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                  />
+                  <motion.div
+                    layoutId="activeSettingsHighlight"
+                    className="absolute inset-0 bg-primary/5 rounded-xl border border-primary/10"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    style={{ pointerEvents: "none" }}
+                  />
+                </>
+              )}
+              <span className="relative z-10 flex items-center gap-2.5">
+                <Smartphone className="size-4" />
+                Sidebar Shortcuts
+              </span>
+            </button>
+          )}
         </div>
 
         {/* Right Content Area */}
@@ -249,7 +259,7 @@ export function SettingsDialog({
                     setIsSubmitting={setIsSubmitting}
                   />
                 )}
-                {activeCategory === "sidebar" && (
+                {activeCategory === "sidebar" && isMobile && (
                   <SidebarSettingsTab
                     ref={sidebarTabRef}
                     onOpenChange={onOpenChange}
@@ -292,7 +302,7 @@ export function SettingsDialog({
                 </Button>
               </motion.div>
             )}
-            {activeCategory === "sidebar" && (
+            {activeCategory === "sidebar" && isMobile && (
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <Button
                   onClick={() => sidebarTabRef.current?.handleSave()}

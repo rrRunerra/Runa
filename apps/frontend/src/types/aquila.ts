@@ -21,6 +21,7 @@ export interface MediaSectionProps {
   onIncrement: (item: MediaItem) => void;
   updatingId: string | null;
   onRefresh: () => void;
+  dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
 }
 
 export interface SearchResult {

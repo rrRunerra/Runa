@@ -16,13 +16,65 @@ import { GameEditDialog } from "@/components/aquila/GameEditDialog";
 import { BookEditDialog } from "@/components/aquila/BookEditDialog";
 import { MediaItem, MediaSectionProps } from "@/types/aquila";
 
+export type CategoryType = "anime" | "manga" | "tv" | "movie" | "game" | "book";
 
+const DEFAULT_ORDER: CategoryType[] = ["anime", "manga", "tv", "movie", "game", "book"];
+
+const CATEGORY_CONFIG: Record<
+  CategoryType,
+  { title: string; icon: React.JSX.Element }
+> = {
+  anime: { title: "Anime", icon: <Play className="w-5 h-5" /> },
+  manga: { title: "Manga", icon: <BookOpen className="w-5 h-5" /> },
+  tv: { title: "TV Shows", icon: <Tv className="w-5 h-5" /> },
+  movie: { title: "Movies", icon: <Film className="w-5 h-5" /> },
+  game: { title: "Games", icon: <Gamepad2 className="w-5 h-5" /> },
+  book: { title: "Books", icon: <BookOpen className="w-5 h-5" /> },
+};
 
 export default function AquilaHome(): React.JSX.Element {
   const { data: session, status } = useSession();
   const [watching, setWatching] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  const [categoryOrder, setCategoryOrder] = useState<CategoryType[]>(DEFAULT_ORDER);
+  const [draggedCategory, setDraggedCategory] = useState<CategoryType | null>(null);
+  const [dragAllowedCategory, setDragAllowedCategory] = useState<CategoryType | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, category: CategoryType) => {
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", category);
+    setDraggedCategory(category);
+  };
+
+  const handleDragEnter = (e: React.DragEvent, targetCategory: CategoryType) => {
+    e.preventDefault();
+    if (!draggedCategory || draggedCategory === targetCategory) return;
+
+    setCategoryOrder((prev) => {
+      const newOrder = [...prev];
+      const draggedIdx = newOrder.indexOf(draggedCategory);
+      const targetIdx = newOrder.indexOf(targetCategory);
+      if (draggedIdx !== -1 && targetIdx !== -1) {
+        newOrder.splice(draggedIdx, 1);
+        newOrder.splice(targetIdx, 0, draggedCategory);
+      }
+      return newOrder;
+    });
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDragEnd = () => {
+    if (draggedCategory) {
+      localStorage.setItem("aquila_category_order", JSON.stringify(categoryOrder));
+    }
+    setDraggedCategory(null);
+    setDragAllowedCategory(null);
+  };
 
   const pendingIncrementsRef = useRef<
     Record<
@@ -60,6 +112,27 @@ export default function AquilaHome(): React.JSX.Element {
   useEffect(() => {
     fetchWatching();
   }, [status]);
+
+  useEffect(() => {
+    const savedOrder = localStorage.getItem("aquila_category_order");
+    if (savedOrder) {
+      try {
+        const parsed = JSON.parse(savedOrder) as CategoryType[];
+        const validCategories = ["anime", "manga", "tv", "movie", "game", "book"];
+        if (
+          Array.isArray(parsed) &&
+          parsed.every((cat) => validCategories.includes(cat))
+        ) {
+          const missing = validCategories.filter(
+            (cat) => !parsed.includes(cat as CategoryType),
+          );
+          setCategoryOrder([...parsed, ...missing] as CategoryType[]);
+        }
+      } catch (e) {
+        console.error("Failed to parse category order from localStorage", e);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     document.title = "Aquila > Home";
@@ -167,7 +240,7 @@ export default function AquilaHome(): React.JSX.Element {
     }, 3000);
   };
 
-  const sections = useMemo(() => {
+  const sections = useMemo<Record<CategoryType, MediaItem[]>>(() => {
     const anime = watching.filter((i) => i.type === "anime");
     const manga = watching.filter((i) => i.type === "manga");
     const tv = watching.filter((i) => i.type === "tv");
@@ -236,66 +309,41 @@ export default function AquilaHome(): React.JSX.Element {
           </div>
         ) : (
           <div className="space-y-12 pb-20 px-4 md:px-8 mt-4">
-            {sections.anime.length > 0 && (
-              <MediaSection
-                title="Anime"
-                icon={<Play className="w-5 h-5" />}
-                items={sections.anime}
-                onIncrement={handleIncrement}
-                updatingId={updatingId}
-                onRefresh={fetchWatching}
-              />
-            )}
-            {sections.manga.length > 0 && (
-              <MediaSection
-                title="Manga"
-                icon={<BookOpen className="w-5 h-5" />}
-                items={sections.manga}
-                onIncrement={handleIncrement}
-                updatingId={updatingId}
-                onRefresh={fetchWatching}
-              />
-            )}
-            {sections.tv.length > 0 && (
-              <MediaSection
-                title="TV Shows"
-                icon={<Tv className="w-5 h-5" />}
-                items={sections.tv}
-                onIncrement={handleIncrement}
-                updatingId={updatingId}
-                onRefresh={fetchWatching}
-              />
-            )}
-            {sections.movie.length > 0 && (
-              <MediaSection
-                title="Movies"
-                icon={<Film className="w-5 h-5" />}
-                items={sections.movie}
-                onIncrement={handleIncrement}
-                updatingId={updatingId}
-                onRefresh={fetchWatching}
-              />
-            )}
-            {sections.game.length > 0 && (
-              <MediaSection
-                title="Games"
-                icon={<Gamepad2 className="w-5 h-5" />}
-                items={sections.game}
-                onIncrement={handleIncrement}
-                updatingId={updatingId}
-                onRefresh={fetchWatching}
-              />
-            )}
-            {sections.book.length > 0 && (
-              <MediaSection
-                title="Books"
-                icon={<BookOpen className="w-5 h-5" />}
-                items={sections.book}
-                onIncrement={handleIncrement}
-                updatingId={updatingId}
-                onRefresh={fetchWatching}
-              />
-            )}
+            {categoryOrder.map((category) => {
+              const items = sections[category];
+              if (!items || items.length === 0) return null;
+
+              const config = CATEGORY_CONFIG[category];
+
+              return (
+                <div
+                  key={category}
+                  draggable={dragAllowedCategory === category}
+                  onDragStart={(e) => handleDragStart(e, category)}
+                  onDragEnter={(e) => handleDragEnter(e, category)}
+                  onDragOver={handleDragOver}
+                  onDragEnd={handleDragEnd}
+                  className={cn(
+                    "transition-all duration-300 rounded-3xl p-3 -m-3 border border-transparent",
+                    draggedCategory === category && "opacity-30 border-2 border-dashed border-primary/40 bg-primary/2 scale-[0.98] shadow-lg backdrop-blur-xs",
+                  )}
+                >
+                  <MediaSection
+                    title={config.title}
+                    icon={config.icon}
+                    items={items}
+                    onIncrement={handleIncrement}
+                    updatingId={updatingId}
+                    onRefresh={fetchWatching}
+                    dragHandleProps={{
+                      onMouseDown: () => setDragAllowedCategory(category),
+                      onMouseUp: () => setDragAllowedCategory(null),
+                      onMouseLeave: () => setDragAllowedCategory(null),
+                    }}
+                  />
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
@@ -324,11 +372,21 @@ function MediaSection({
   onIncrement,
   updatingId,
   onRefresh,
+  dragHandleProps,
 }: MediaSectionProps): React.JSX.Element {
   return (
     <section className="space-y-6">
-      <div className="flex items-center gap-3 border-b border-border pb-4">
-        <div className="p-2 bg-primary/10 rounded-lg text-primary">{icon}</div>
+      <div className="flex items-center gap-3 pb-4 group/header">
+        <div
+          {...(dragHandleProps || {})}
+          className={cn(
+            "p-2 bg-primary/10 rounded-lg text-primary select-none",
+            dragHandleProps && "cursor-grab active:cursor-grabbing hover:bg-primary/20 active:bg-primary/30 transition-all duration-200 pointer-events-auto"
+          )}
+          title={dragHandleProps ? "Drag icon to reorder" : undefined}
+        >
+          {icon}
+        </div>
         <h2 className="text-2xl font-bold">{title}</h2>
         <Badge
           variant="secondary"

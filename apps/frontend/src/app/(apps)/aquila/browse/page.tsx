@@ -119,6 +119,11 @@ export default function BrowsePage() {
     
     if (urlType) {
       setType(urlType);
+    } else {
+      const savedType = localStorage.getItem("aquila_browse_category");
+      if (savedType) {
+        setType(savedType);
+      }
     }
     if (urlQuery) {
       setQuery(urlQuery);
@@ -127,6 +132,12 @@ export default function BrowsePage() {
       isLoadedRef.current = true;
     }, 0);
   }, []);
+
+  // Save selected category to localStorage when it changes
+  useEffect(() => {
+    if (!isLoadedRef.current) return;
+    localStorage.setItem("aquila_browse_category", type);
+  }, [type]);
 
   // Update URL search parameters when query or type changes
   useEffect(() => {

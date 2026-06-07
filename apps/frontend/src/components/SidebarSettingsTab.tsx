@@ -11,6 +11,7 @@ import { getAquilaSidebarConfig } from "../../config/aquilaSidebarConfig";
 import { getLynxSidebarConfig } from "../../config/lynxSidebarConfig";
 import { toast } from "sonner";
 
+
 interface Connection {
   id: string;
   provider: string;
