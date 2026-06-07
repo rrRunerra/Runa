@@ -2,7 +2,8 @@ import { Module } from '@nestjs/common';
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { PrismaModule } from './providers/database/prisma.module';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { AnimeModule } from './modules/anime/anime.module';
 import { GameModule } from './modules/game/game.module';
 import { BookModule } from './modules/book/book.module';
@@ -22,6 +23,10 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
     {
        provide: APP_GUARD,
        useClass: ThrottlerGuard
+    },
+    {
+       provide: APP_INTERCEPTOR,
+       useClass: LoggingInterceptor
     }
   ],
   imports: [

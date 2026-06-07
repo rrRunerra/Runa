@@ -323,12 +323,18 @@ export class ListController {
   @Post('/increment')
   public async incrementProgress(
     @Req() req: any,
-    @Body() body: { mediaType: 'anime' | 'manga' | 'tv' | 'game' | 'book'; id: number | string },
+    @Body()
+    body: {
+      mediaType: 'anime' | 'manga' | 'tv' | 'game' | 'book';
+      id: number | string;
+      count?: number;
+    },
   ) {
     return this.listService.incrementProgress(
       req.user.username,
       body.mediaType,
       body.id,
+      body.count,
     );
   }
 

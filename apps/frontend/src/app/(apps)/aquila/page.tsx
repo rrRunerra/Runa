@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { Plus, Play, BookOpen, Tv, Film, Loader2, Menu, Gamepad2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +37,17 @@ export default function AquilaHome(): React.JSX.Element {
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
+  const pendingIncrementsRef = useRef<
+    Record<
+      string,
+      {
+        count: number;
+        originalProgress: number;
+        timeoutId: NodeJS.Timeout | null;
+      }
+    >
+  >({});
+
   const fetchWatching = async () => {
     if (status !== "authenticated") return;
     try {
@@ -65,17 +76,25 @@ export default function AquilaHome(): React.JSX.Element {
 
   useEffect(() => {
     document.title = "Aquila > Home";
-  }, [])
+    return () => {
+      // Clear any pending debounced API calls on unmount
+      Object.values(pendingIncrementsRef.current).forEach((pending) => {
+        if (pending.timeoutId) {
+          clearTimeout(pending.timeoutId);
+        }
+      });
+    };
+  }, []);
 
   const handleIncrement = async (item: MediaItem) => {
-    if (status !== "authenticated" || updatingId) return;
+    if (status !== "authenticated") return;
 
     const mediaType = item.type;
     const key = `${mediaType}-${item.id}`;
-    setUpdatingId(key);
+
+    if (updatingId === key) return;
 
     // Optimistic Update
-    const oldWatching = [...watching];
     setWatching((prev) =>
       prev.map((i) => {
         if (i.id === item.id && i.format === item.format) {
@@ -85,38 +104,80 @@ export default function AquilaHome(): React.JSX.Element {
       }),
     );
 
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/list/increment`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session?.accessToken}`,
-          },
-          body: JSON.stringify({ mediaType, id: item.id }),
-        },
-      );
-
-      if (res.ok) {
-        const result = await res.json();
-        if (result.success) {
-          toast.success(`Progress updated for ${item.title}`);
-          fetchWatching();
-        } else {
-          toast.error(result.message);
-          setWatching(oldWatching);
-        }
-      } else {
-        toast.error("Failed to update progress");
-        setWatching(oldWatching);
-      }
-    } catch (e) {
-      toast.error("An error occurred");
-      setWatching(oldWatching);
-    } finally {
-      setUpdatingId(null);
+    if (!pendingIncrementsRef.current[key]) {
+      pendingIncrementsRef.current[key] = {
+        count: 0,
+        originalProgress: item.progress || 0,
+        timeoutId: null,
+      };
     }
+
+    const pending = pendingIncrementsRef.current[key];
+    pending.count += 1;
+
+    if (pending.timeoutId) {
+      clearTimeout(pending.timeoutId);
+    }
+
+    pending.timeoutId = setTimeout(async () => {
+      const { count, originalProgress } = pending;
+      delete pendingIncrementsRef.current[key];
+      setUpdatingId(key);
+
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/list/increment`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session?.accessToken}`,
+            },
+            body: JSON.stringify({ mediaType, id: item.id, count }),
+          },
+        );
+
+        if (res.ok) {
+          const result = await res.json();
+          if (result.success) {
+            toast.success(`Progress updated for ${item.title}`);
+            fetchWatching();
+          } else {
+            toast.error(result.message);
+            setWatching((prev) =>
+              prev.map((i) => {
+                if (i.id === item.id && i.format === item.format) {
+                  return { ...i, progress: originalProgress };
+                }
+                return i;
+              }),
+            );
+          }
+        } else {
+          toast.error("Failed to update progress");
+          setWatching((prev) =>
+            prev.map((i) => {
+              if (i.id === item.id && i.format === item.format) {
+                return { ...i, progress: originalProgress };
+              }
+              return i;
+            }),
+          );
+        }
+      } catch (e) {
+        toast.error("An error occurred");
+        setWatching((prev) =>
+          prev.map((i) => {
+            if (i.id === item.id && i.format === item.format) {
+              return { ...i, progress: originalProgress };
+            }
+            return i;
+          }),
+        );
+      } finally {
+        setUpdatingId(null);
+      }
+    }, 3000);
   };
 
   const sections = useMemo(() => {

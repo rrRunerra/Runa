@@ -1733,8 +1733,10 @@ export class ListService {
     username: string,
     mediaType: 'anime' | 'manga' | 'tv' | 'game' | 'book',
     id: number | string,
+    count: number = 1,
   ): Promise<{ success: boolean; message: string; data?: any }> {
     const user = username.toLowerCase();
+    const countVal = Math.max(1, count);
 
     if (mediaType === 'game') {
       const gameIdNum = Number(id);
@@ -1744,7 +1746,7 @@ export class ListService {
       });
       if (!entry) throw new NotFoundException('Game not in list');
 
-      const nextProgress = (entry.progress || 0) + 1;
+      const nextProgress = (entry.progress || 0) + countVal;
       await this.prisma.client.aquilaGameUserList.update({
         where: { id: entry.id },
         data: {
@@ -1763,7 +1765,7 @@ export class ListService {
       });
       if (!entry) throw new NotFoundException('Book not in list');
 
-      const nextProgress = (entry.chapters || 0) + 1;
+      const nextProgress = (entry.chapters || 0) + countVal;
       const isCompleted = !!(entry.book.chapters && nextProgress >= entry.book.chapters);
 
       await this.prisma.client.aquilaBookUserList.update({
@@ -1787,7 +1789,7 @@ export class ListService {
       });
       if (!entry) throw new NotFoundException('Anime not in list');
 
-      const nextProgress = (entry.progress || 0) + 1;
+      const nextProgress = (entry.progress || 0) + countVal;
       const isCompleted =
         entry.anime.episodes && nextProgress >= entry.anime.episodes;
 
@@ -1801,7 +1803,7 @@ export class ListService {
             if (conn.progress !== undefined) {
               nextConnections[key] = {
                 ...conn,
-                progress: (Number(conn.progress) || 0) + 1,
+                progress: (Number(conn.progress) || 0) + countVal,
               };
             }
           }
@@ -1845,7 +1847,7 @@ export class ListService {
       });
       if (!entry) throw new NotFoundException('Manga not in list');
 
-      const nextProgress = (entry.chapters || 0) + 1;
+      const nextProgress = (entry.chapters || 0) + countVal;
       const isCompleted =
         entry.manga.chapters && nextProgress >= entry.manga.chapters;
 
@@ -1859,7 +1861,7 @@ export class ListService {
             if (conn.chapters !== undefined) {
               nextConnections[key] = {
                 ...conn,
-                chapters: (Number(conn.chapters) || 0) + 1,
+                chapters: (Number(conn.chapters) || 0) + countVal,
               };
             }
           }
@@ -1910,8 +1912,8 @@ export class ListService {
         0,
       );
 
-      // Find the next episode to watch
-      let nextEp: { seasonNum: number; episodeNum: number } | null = null;
+      // Find the next count episodes to watch
+      let nextEps: { seasonNum: number; episodeNum: number }[] = [];
 
       for (const season of seasons) {
         for (const ep of season.episodes) {
@@ -1920,26 +1922,26 @@ export class ListService {
               we.seasonNum === season.number && we.episodeNum === ep.number,
           );
           if (!isWatched) {
-            nextEp = { seasonNum: season.number, episodeNum: ep.number };
-            break;
+            nextEps.push({ seasonNum: season.number, episodeNum: ep.number });
+            if (nextEps.length === countVal) break;
           }
         }
-        if (nextEp) break;
+        if (nextEps.length === countVal) break;
       }
 
-      if (!nextEp) {
+      if (nextEps.length === 0) {
         return { success: false, message: 'All episodes already watched' };
       }
 
-      await this.prisma.client.aquilaTvWatchedEpisode.create({
-        data: {
+      await this.prisma.client.aquilaTvWatchedEpisode.createMany({
+        data: nextEps.map((ep) => ({
           listId: entry.id,
-          seasonNum: nextEp.seasonNum,
-          episodeNum: nextEp.episodeNum,
-        },
+          seasonNum: ep.seasonNum,
+          episodeNum: ep.episodeNum,
+        })),
       });
 
-      const totalWatched = entry.watchedEpisodes.length + 1;
+      const totalWatched = entry.watchedEpisodes.length + nextEps.length;
       const isCompleted = totalWatched >= totalEpisodes;
 
       if (isCompleted) {
@@ -1969,7 +1971,7 @@ export class ListService {
       return {
         success: true,
         message: 'Progress updated',
-        data: { nextEp, isCompleted },
+        data: { nextEp: nextEps[nextEps.length - 1], isCompleted },
       };
     }
 
