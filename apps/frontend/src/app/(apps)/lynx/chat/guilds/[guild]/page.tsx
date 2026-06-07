@@ -11,29 +11,7 @@ import { cn } from "@/lib/utils";
 // TYPE 15 = FORUM   IGNORE
 // TYPE 4 = CATEGORY  IGNORE
 
-interface Channel {
-  id: string;
-  type: number;
-  last_message_id: string;
-  flags: number;
-  guild_id: string;
-  name: string;
-  parent_id: string;
-  rate_limit_per_user: number;
-  topic: string;
-  position: number;
-  permission_overwrites: PermissionOverwrite[];
-  nsfw: boolean;
-}
-
-interface PermissionOverwrite {
-  id: string;
-  type: string;
-  allow: number;
-  deny: number;
-  allow_new: string;
-  deny_new: string;
-}
+import { Channel } from "@/types/lynx";
 
 async function getChannels(guild: string): Promise<Channel[]> {
   const token = process.env.LYNX_TOKEN!;

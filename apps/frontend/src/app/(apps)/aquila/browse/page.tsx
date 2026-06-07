@@ -28,19 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 
-type SearchResult = {
-  id: string;
-  title: {
-    romaji: string;
-    english: string;
-  };
-  coverImage: {
-    large: string;
-  };
-  format: string;
-  status: string;
-  isAdult: boolean;
-};
+import { SearchResult } from "@/types/aquila";
 
 // Deduplicated fetching hook
 function useSearch() {

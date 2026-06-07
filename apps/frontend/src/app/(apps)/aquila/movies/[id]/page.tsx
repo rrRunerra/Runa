@@ -12,47 +12,7 @@ import Image from "next/image";
 import { MovieEditDialog } from "@/components/aquila/MovieEditDialog";
 import { motion } from "framer-motion";
 
-interface MediaCharacter {
-  name: string;
-  personName?: string;
-  image: string;
-  role?: string;
-}
-
-interface MediaStudio {
-  name: string;
-}
-
-interface MediaTrailer {
-  id: string;
-  name: string;
-  url: string;
-  language?: string;
-  site?: string;
-}
-
-interface Media {
-  id: string;
-  title: {
-    romaji: string;
-    english?: string;
-  };
-  coverImage: {
-    large: string;
-  };
-  bannerImage?: string;
-  format: string;
-  status: string;
-  description: string;
-  runtime?: number;
-  genres: string[];
-  characters?: MediaCharacter[];
-  trailers?: MediaTrailer[];
-  studios?: MediaStudio[];
-  originalCountry?: string;
-  originalLanguage?: string;
-  contentRating?: string;
-}
+import { MediaCharacter, MediaStudio, MediaTrailer, Media } from "@/types/aquila";
 
 const containerVariants = {
   hidden: { opacity: 0 },

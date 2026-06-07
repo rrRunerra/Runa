@@ -19,66 +19,10 @@ import { toast } from "sonner";
 import { TvEditDialog } from "@/components/aquila/TvEditDialog";
 import { motion } from "framer-motion";
 
-interface Episode {
-  id: string;
-  number: number;
-  name: string;
-  overview?: string;
-  image?: string;
-  airDate?: string;
-}
+import { Episode, Season, MediaCharacter, MediaStudio, MediaTrailer, Media } from "@/types/aquila";
 
-interface Season {
-  id: string;
-  number: number;
-  name: string;
-  image?: string;
-  episodeCount: number;
-  episodes: Episode[];
-}
-
-interface MediaCharacter {
-  name: string;
-  personName?: string;
-  image: string;
-  role?: string;
-}
-
-interface MediaStudio {
-  name: string;
-}
-
-interface MediaTrailer {
-  id: string;
-  name: string;
-  url: string;
-  language?: string;
-  site?: string;
-}
-
-interface Media {
-  id: string;
-  title: {
-    romaji: string;
-    english?: string;
-  };
-  coverImage: {
-    large: string;
-  };
-  bannerImage?: string;
-  format: string;
-  status: string;
-  description: string;
-  genres: string[];
-  characters?: MediaCharacter[];
-  trailers?: MediaTrailer[];
-  studios?: MediaStudio[];
+interface TvMedia extends Media {
   seasons: Season[];
-  originalCountry?: string;
-  originalLanguage?: string;
-  tvType?: string;
-  averageRuntime?: number;
-  contentRating?: string;
 }
 
 const containerVariants = {
@@ -102,7 +46,7 @@ export default function TvDetailsPage() {
   const params = useParams();
   const id = params?.id as string;
 
-  const [tv, setTv] = useState<Media | null>(null);
+  const [tv, setTv] = useState<TvMedia | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 

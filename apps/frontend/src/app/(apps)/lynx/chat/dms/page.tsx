@@ -8,16 +8,7 @@ import { Button } from "@/components/ui/button";
 
 export const dynamic = "force-dynamic";
 
-interface DMChannel {
-  id: string;
-  recipient: {
-    id: string;
-    username: string;
-    globalName: string | null;
-    avatarURL: string;
-  };
-  lastMessageId: string | null;
-}
+import { DMChannel } from "@/types/lynx";
 
 async function getActiveDms(): Promise<DMChannel[]> {
   const res = await fetch(`${process.env.LYNX_API_URL}/dms/getDms`, {

@@ -11,27 +11,7 @@ import { toast } from "sonner";
 import { GameEditDialog } from "@/components/aquila/GameEditDialog";
 import { motion } from "framer-motion";
 
-interface Media {
-  id: string;
-  title: {
-    romaji: string;
-    english?: string;
-    native?: string;
-  };
-  coverImage: {
-    extraLarge?: string;
-    large: string;
-  };
-  bannerImage?: string;
-  format: string;
-  status: string;
-  description: string;
-  startDate?: { year: number; month: number; day: number };
-  genres: string[];
-  studios?: { name: string }[];
-  averageScore?: number;
-  popularity?: number;
-}
+import { Media } from "@/types/aquila";
 
 const containerVariants = {
   hidden: { opacity: 0 },

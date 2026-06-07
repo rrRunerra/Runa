@@ -14,22 +14,9 @@ import { TvEditDialog } from "@/components/aquila/TvEditDialog";
 import { MovieEditDialog } from "@/components/aquila/MovieEditDialog";
 import { GameEditDialog } from "@/components/aquila/GameEditDialog";
 import { BookEditDialog } from "@/components/aquila/BookEditDialog";
+import { MediaItem, MediaSectionProps } from "@/types/aquila";
 
-interface MediaItem {
-  id: number | string;
-  title: string;
-  image: string;
-  progress: number;
-  episodes: number | null;
-  format: string;
-  status: string;
-  last_updated: string;
-  type: "anime" | "manga" | "tv" | "movie" | "game" | "book";
-  meta?: {
-    season?: number;
-    episode?: number;
-  };
-}
+
 
 export default function AquilaHome(): React.JSX.Element {
   const { data: session, status } = useSession();
@@ -328,14 +315,7 @@ export default function AquilaHome(): React.JSX.Element {
   );
 }
 
-interface MediaSectionProps {
-  title: string;
-  icon: React.ReactNode;
-  items: MediaItem[];
-  onIncrement: (item: MediaItem) => void;
-  updatingId: string | null;
-  onRefresh: () => void;
-}
+
 
 function MediaSection({
   title,

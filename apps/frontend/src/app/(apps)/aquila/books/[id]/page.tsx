@@ -11,25 +11,7 @@ import { toast } from "sonner";
 import { BookEditDialog } from "@/components/aquila/BookEditDialog";
 import { motion } from "framer-motion";
 
-interface Media {
-  id: string;
-  title: {
-    romaji: string;
-    english?: string;
-    native?: string;
-  };
-  coverImage: {
-    extraLarge?: string;
-    large: string;
-  };
-  bannerImage?: string;
-  format: string;
-  status: string;
-  description: string;
-  startDate?: { year: number; month?: number | null; day?: number | null };
-  genres: string[];
-  studios?: { name: string }[];
-}
+import { Media } from "@/types/aquila";
 
 const containerVariants = {
   hidden: { opacity: 0 },

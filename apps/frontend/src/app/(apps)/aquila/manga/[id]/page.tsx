@@ -11,69 +11,7 @@ import { toast } from "sonner";
 import { MangaEditDialog } from "@/components/aquila/MangaEditDialog";
 import { motion } from "framer-motion";
 
-interface MediaCharacter {
-  name: string;
-  personName?: string;
-  image: string;
-  role?: string;
-}
-
-interface MediaRelation {
-  id: string;
-  relationType: string;
-  title: { romaji: string; english?: string };
-  format: string;
-  type: string;
-}
-
-interface MediaExternalLink {
-  id: string;
-  url: string;
-  site: string;
-}
-
-interface MediaStudio {
-  id?: string;
-  name: string;
-}
-
-interface Media {
-  id: string;
-  title: {
-    romaji: string;
-    english?: string;
-    native?: string;
-  };
-  coverImage: {
-    extraLarge?: string;
-    large: string;
-    color?: string;
-  };
-  bannerImage?: string;
-  format: string;
-  status: string;
-  description: string;
-  startDate?: { year: number; month: number; day: number };
-  endDate?: { year: number; month: number; day: number };
-  chapters?: number;
-  volumes?: number;
-  genres: string[];
-  source?: string;
-  tags?: { id: string; name: string; rank?: number }[];
-  averageScore?: number;
-  popularity?: number;
-  favourites?: number;
-  trending?: number;
-  meanScore?: number;
-  synonyms?: string[];
-  hashtag?: string;
-  countryOfOrigin?: string;
-  relations?: MediaRelation[];
-  characters?: MediaCharacter[];
-  externalLinks?: MediaExternalLink[];
-  studios?: MediaStudio[];
-  staff?: { id: string; name: string; role: string }[];
-}
+import { MediaCharacter, MediaRelation, MediaExternalLink, MediaStudio, Media } from "@/types/aquila";
 
 const containerVariants = {
   hidden: { opacity: 0 },

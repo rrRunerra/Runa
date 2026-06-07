@@ -6,13 +6,7 @@ import AccessDenied from "@/components/lynx/AccessDenied";
 import { PageHeader } from "@/components/lynx/LynxPageHeader";
 import { cn } from "@/lib/utils";
 
-interface GuildMember {
-  id: string;
-  username: string;
-  globalName: string | null;
-  avatarURL: string;
-  status: string;
-}
+import { GuildMember } from "@/types/lynx";
 
 async function getGuildUsers(guildId: string): Promise<GuildMember[]> {
   const res = await fetch(

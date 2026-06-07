@@ -7,6 +7,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { Attachment, Embed, Message } from "@/types/lynx";
 
 const MarkdownComponents: Record<string, React.FC<any>> = {
   a: ({ ...props }: any) => (
@@ -19,11 +20,7 @@ const MarkdownComponents: Record<string, React.FC<any>> = {
   ),
 };
 
-interface Attachment {
-  url: string;
-  name: string;
-  contentType?: string;
-}
+
 
 function MessageMedia({ attachment }: { attachment: Attachment }) {
   const isImage = attachment.contentType?.startsWith("image/");
@@ -106,17 +103,7 @@ function MessageMedia({ attachment }: { attachment: Attachment }) {
   );
 }
 
-interface Embed {
-  title?: string;
-  url?: string;
-  description?: string;
-  color?: number;
-  fields?: { name: string; value: string; inline?: boolean }[];
-  video?: { url: string };
-  image?: { url: string };
-  thumbnail?: { url: string };
-  footer?: { text: string; icon_url?: string };
-}
+
 
 function MessageEmbed({ embed }: { embed: Embed }) {
   const embedColor = embed.color
@@ -219,18 +206,7 @@ function MessageEmbed({ embed }: { embed: Embed }) {
   );
 }
 
-interface Message {
-  id: string;
-  author: {
-    avatarURL?: string;
-    globalName?: string;
-    username: string;
-  };
-  createdTimestamp: number;
-  cleanContent?: string;
-  attachments?: Attachment[];
-  embeds?: Embed[];
-}
+
 
 export default function LiveMessageList({
   initialMessages,
