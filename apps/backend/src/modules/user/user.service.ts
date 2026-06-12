@@ -11,6 +11,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrivacySettingsDto } from './dto/privacy-settings.dto';
 import { MediaService } from '../media/media.service';
+import { BitField, DEFAULT_PERMISSIONS } from '@runa/permissions';
 import bcrypt from 'bcrypt';
 
 const RESERVED_KEYWORDS = new Set([
@@ -68,9 +69,17 @@ export class UserService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mediaService: MediaService,
-  ) {}
+  ) {
+    this.checkHasAdmin();
+  }
 
   private readonly logger = new Logger(UserService.name);
+
+  private hasAdmin = false;
+
+  private async checkHasAdmin() {
+    this.hasAdmin = (await this.prisma.client.user.count()) > 0;
+  }
 
   async create(data: CreateUserDto): Promise<User> {
     const errors: string[] = [];
@@ -99,13 +108,15 @@ export class UserService {
       throw new ConflictException(errors);
     }
 
-    const hasAdmin = await this.prisma.client.user.findFirst({
-      where: {
-        role: 'ADMIN',
-      },
-    });
-
     const passHash = await bcrypt.hash(data.password, 10);
+
+    const permissions = new BitField([...DEFAULT_PERMISSIONS]);
+
+    if (!this.hasAdmin) {
+      permissions.add(BitField.Flags.ADMINISTRATOR);
+    }
+
+    const initialPermissions = permissions.serialize();
 
     return await this.prisma.client.user
       .create({
@@ -113,7 +124,7 @@ export class UserService {
           email: data.email.toLowerCase(),
           username: data.username.toLowerCase(),
           passwordHash: passHash,
-          role: hasAdmin ? 'USER' : 'ADMIN',
+          permissions: initialPermissions,
         },
       })
       .catch((err) => {

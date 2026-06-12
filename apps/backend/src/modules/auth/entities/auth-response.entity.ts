@@ -3,7 +3,7 @@ export class AuthResponseEntity {
     id: string;
     email: string;
     username: string;
-    role: string;
+    permissions: number[];
     avatarUrl: string | null;
     displayName: string | null;
     passwordChangedAt: Date | null;

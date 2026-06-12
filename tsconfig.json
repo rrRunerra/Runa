@@ -4,7 +4,8 @@
     "paths": {
       "@runa/ui": ["packages/ui/src/index.ts"],
       "@runa/connections": ["packages/connections/src/index.ts"],
-      "@runa/connections/metadata": ["packages/connections/src/metadata.ts"]
+      "@runa/connections/metadata": ["packages/connections/src/metadata.ts"],
+      "@runa/permissions": ["packages/permissions/src/index.ts"]
     },
     "target": "ESNext",
     "lib": ["DOM", "DOM.Iterable", "ESNext"],

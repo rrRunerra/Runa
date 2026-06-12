@@ -86,7 +86,7 @@ export const authOptions: NextAuthOptions = {
           token.sidebarCardBackgroundUrl = session.sidebarCardBackgroundUrl;
         if (session.username) token.username = session.username;
         if (session.email) token.email = session.email;
-        if (session.role) token.role = session.role;
+        if (session.permissions) token.permissions = session.permissions;
         if (session.accessToken) token.accessToken = session.accessToken;
         if (session.passwordChangedAt)
           token.passwordChangedAt = session.passwordChangedAt;
@@ -100,7 +100,7 @@ export const authOptions: NextAuthOptions = {
         token.displayName = u.displayName;
         token.avatarUrl = u.avatarUrl;
         token.sidebarCardBackgroundUrl = u.sidebarCardBackgroundUrl;
-        token.role = u.role;
+        token.permissions = u.permissions;
         token.accessToken = u.accessToken;
         token.iat = u.iat;
 
@@ -143,7 +143,7 @@ export const authOptions: NextAuthOptions = {
           displayName: token.displayName,
           avatarUrl: token.avatarUrl,
           sidebarCardBackgroundUrl: token.sidebarCardBackgroundUrl,
-          role: token.role,
+          permissions: token.permissions,
         };
         session.accessToken = token.accessToken;
         session.user.passwordChangedAt = token.passwordChangedAt;

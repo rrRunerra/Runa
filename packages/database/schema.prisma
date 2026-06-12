@@ -15,7 +15,8 @@ model User {
     passwordHash         String
     passwordChangedAt    DateTime?
     privacy              Json?                 @db.Json
-    role                 Role                  @default(USER)
+    permissions          Int[]                 @default([])
+
     displayName          String?
     avatarUrl            String?
     bannerUrl            String?
@@ -163,12 +164,6 @@ model LynxLogs {
     context   String?
     metadata  Json?       @db.Json
     createdAt DateTime    @default(now())
-}
-
-enum Role {
-    USER
-    ADMIN
-    MODERATOR
 }
 
 enum ConnectionProvider {

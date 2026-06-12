@@ -59,7 +59,7 @@ export class DualAuthGuard implements CanActivate {
         request.user = {
           id: record.user?.id,
           username: record.user?.username,
-          role: record.user?.role,
+          permissions: record.user?.permissions,
         };
         return true;
       }
@@ -104,7 +104,7 @@ export class DualAuthGuard implements CanActivate {
           id: payload.sub,
           username: payload.name,
           email: payload.email,
-          role: payload.role,
+          permissions: payload.permissions,
         };
         return true;
       } else if (!isPublic) {

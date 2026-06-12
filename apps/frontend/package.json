@@ -13,6 +13,7 @@
     "@runa/auth": "workspace:*",
     "@runa/connections": "workspace:*",
     "@runa/database": "workspace:*",
+    "@runa/permissions": "workspace:*",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "cmdk": "^1.1.1",
