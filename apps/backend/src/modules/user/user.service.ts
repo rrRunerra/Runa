@@ -10,6 +10,7 @@ import type { User } from '@runa/database';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrivacySettingsDto } from './dto/privacy-settings.dto';
+import { MediaService } from '../media/media.service';
 import bcrypt from 'bcrypt';
 
 const RESERVED_KEYWORDS = new Set([
@@ -64,7 +65,10 @@ export function parsePrivacy(privacy: unknown): PrivacySettings {
 
 @Injectable()
 export class UserService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mediaService: MediaService,
+  ) {}
 
   private readonly logger = new Logger(UserService.name);
 
@@ -179,6 +183,10 @@ export class UserService {
       }
     }
 
+    const oldAvatarUrl = user.avatarUrl;
+    const oldBannerUrl = user.bannerUrl;
+    const oldSidebarCardBackgroundUrl = user.sidebarCardBackgroundUrl;
+
     if (data.displayName !== undefined) {
       updateData.displayName = data.displayName;
     }
@@ -195,10 +203,24 @@ export class UserService {
       updateData.sidebarCardBackgroundUrl = data.sidebarCardBackgroundUrl;
     }
 
-    return await this.prisma.client.user.update({
+    const updatedUser = await this.prisma.client.user.update({
       where: { id: userId },
       data: updateData,
     });
+
+    if (data.avatarUrl !== undefined && data.avatarUrl !== oldAvatarUrl) {
+      this.mediaService.deleteFileByUrl(oldAvatarUrl);
+    }
+
+    if (data.bannerUrl !== undefined && data.bannerUrl !== oldBannerUrl) {
+      this.mediaService.deleteFileByUrl(oldBannerUrl);
+    }
+
+    if (data.sidebarCardBackgroundUrl !== undefined && data.sidebarCardBackgroundUrl !== oldSidebarCardBackgroundUrl) {
+      this.mediaService.deleteFileByUrl(oldSidebarCardBackgroundUrl);
+    }
+
+    return updatedUser;
   }
 
   async getPrivacySettings(username: string): Promise<PrivacySettings> {

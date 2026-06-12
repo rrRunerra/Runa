@@ -11,6 +11,7 @@ jest.mock('fs', () => {
     mkdirSync: jest.fn(),
     writeFileSync: jest.fn(),
     createReadStream: jest.fn(),
+    unlinkSync: jest.fn(),
   };
 });
 
@@ -88,6 +89,61 @@ describe('MediaService', () => {
 
     it('should throw BadRequestException for directory traversal attempt', () => {
       expect(() => service.getFileStream('../../../etc/passwd')).toThrow(BadRequestException);
+    });
+  });
+
+  describe('deleteFile', () => {
+    it('should delete file successfully if it exists', () => {
+      (fs.existsSync as jest.Mock).mockReturnValue(true);
+      (fs.unlinkSync as jest.Mock).mockReturnValue(undefined);
+
+      service.deleteFile('test.png');
+
+      expect(fs.existsSync).toHaveBeenCalled();
+      expect(fs.unlinkSync).toHaveBeenCalled();
+    });
+
+    it('should do nothing if file does not exist', () => {
+      (fs.existsSync as jest.Mock).mockReturnValue(false);
+
+      service.deleteFile('test.png');
+
+      expect(fs.existsSync).toHaveBeenCalled();
+      expect(fs.unlinkSync).not.toHaveBeenCalled();
+    });
+
+    it('should log error and not crash if unlinkSync fails', () => {
+      (fs.existsSync as jest.Mock).mockReturnValue(true);
+      (fs.unlinkSync as jest.Mock).mockImplementation(() => {
+        throw new Error('Permission denied');
+      });
+
+      // Should not throw
+      expect(() => service.deleteFile('test.png')).not.toThrow();
+    });
+
+    it('should throw BadRequestException for directory traversal attempt', () => {
+      expect(() => service.deleteFile('../../../etc/passwd')).toThrow(BadRequestException);
+    });
+  });
+
+  describe('deleteFileByUrl', () => {
+    it('should delete local files with valid url', () => {
+      const deleteFileSpy = jest.spyOn(service, 'deleteFile').mockImplementation(() => {});
+
+      service.deleteFileByUrl('/media/image/test-user_123.jpg');
+
+      expect(deleteFileSpy).toHaveBeenCalledWith('test-user_123.jpg');
+    });
+
+    it('should do nothing if url is empty or not local', () => {
+      const deleteFileSpy = jest.spyOn(service, 'deleteFile');
+
+      service.deleteFileByUrl(null);
+      service.deleteFileByUrl('https://example.com/avatar.jpg');
+      service.deleteFileByUrl('/other/path/test.jpg');
+
+      expect(deleteFileSpy).not.toHaveBeenCalled();
     });
   });
 });

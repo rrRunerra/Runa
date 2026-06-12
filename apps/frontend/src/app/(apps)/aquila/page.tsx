@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useEffect, useState, useMemo, useRef } from "react";
-import { Plus, Play, BookOpen, Tv, Film, Loader2, Menu, Gamepad2 } from "lucide-react";
+import { Plus, Play, BookOpen, Tv, Film, Loader2, Menu, Gamepad2, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
@@ -15,10 +15,28 @@ import { MovieEditDialog } from "@/components/aquila/MovieEditDialog";
 import { GameEditDialog } from "@/components/aquila/GameEditDialog";
 import { BookEditDialog } from "@/components/aquila/BookEditDialog";
 import { MediaItem, MediaSectionProps } from "@/types/aquila";
+import { AnimatePresence, motion } from "framer-motion";
 
 export type CategoryType = "anime" | "manga" | "tv" | "movie" | "game" | "book";
 
 const DEFAULT_ORDER: CategoryType[] = ["anime", "manga", "tv", "movie", "game", "book"];
+
+const getProgressIcon = (type: string) => {
+  switch (type) {
+    case "anime":
+    case "tv":
+      return <Tv className="w-3 h-3 sm:w-3.5 sm:h-3.5" />;
+    case "manga":
+    case "book":
+      return <BookOpen className="w-3 h-3 sm:w-3.5 sm:h-3.5" />;
+    case "game":
+      return <Gamepad2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />;
+    case "movie":
+      return <Film className="w-3 h-3 sm:w-3.5 sm:h-3.5" />;
+    default:
+      return <Play className="w-3 h-3 sm:w-3.5 sm:h-3.5" />;
+  }
+};
 
 const CATEGORY_CONFIG: Record<
   CategoryType,
@@ -374,6 +392,20 @@ function MediaSection({
   onRefresh,
   dragHandleProps,
 }: MediaSectionProps): React.JSX.Element {
+  const localStorageKey = `aquila_collapsed_${title.toLowerCase()}`;
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem(localStorageKey) === "true";
+    }
+    return false;
+  });
+
+  const toggleCollapse = () => {
+    const nextState = !isCollapsed;
+    setIsCollapsed(nextState);
+    localStorage.setItem(localStorageKey, String(nextState));
+  };
+
   return (
     <section className="space-y-6">
       <div className="flex items-center gap-3 pb-4 group/header">
@@ -388,25 +420,54 @@ function MediaSection({
           {icon}
         </div>
         <h2 className="text-2xl font-bold">{title}</h2>
-        <Badge
-          variant="secondary"
-          className="ml-2 bg-primary/5 text-primary border-primary/10"
-        >
-          {items.length} items
-        </Badge>
+        <button onClick={toggleCollapse} className="cursor-pointer select-none">
+          <Badge
+            variant={isCollapsed ? "outline" : "secondary"}
+            className={cn(
+              "ml-2 transition-all duration-300 flex items-center gap-1.5 text-[10px] sm:text-xs font-semibold py-0.5 px-2.5 rounded-full select-none cursor-pointer",
+              isCollapsed 
+                ? "bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-dashed border-red-500/40 shadow-xs" 
+                : "bg-primary/5 hover:bg-primary/15 text-primary border border-primary/10 shadow-inner"
+            )}
+          >
+            {isCollapsed ? (
+              <>
+                <EyeOff className="w-3.5 h-3.5 animate-pulse" />
+                <span>{items.length} hidden</span>
+              </>
+            ) : (
+              <>
+                <Eye className="w-3.5 h-3.5" />
+                <span>{items.length} items</span>
+              </>
+            )}
+          </Badge>
+        </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-[repeat(auto-fill,minmax(140px,1fr))]">
-        {items.map((item: MediaItem) => (
-          <MediaCard
-            key={`${item.type}-${item.id}`}
-            item={item}
-            onIncrement={() => onIncrement(item)}
-            isUpdating={updatingId === `${item.type}-${item.id}`}
-            onRefresh={onRefresh}
-          />
-        ))}
-      </div>
+      <AnimatePresence initial={false}>
+        {!isCollapsed && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-[repeat(auto-fill,minmax(140px,1fr))] pb-1">
+              {items.map((item: MediaItem) => (
+                <MediaCard
+                  key={`${item.type}-${item.id}`}
+                  item={item}
+                  onIncrement={() => onIncrement(item)}
+                  isUpdating={updatingId === `${item.type}-${item.id}`}
+                  onRefresh={onRefresh}
+                />
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </section>
   );
 }
@@ -448,15 +509,31 @@ function MediaCard({
     <>
       <Link
         href={href}
-        className="group relative aspect-2/3 rounded-2xl overflow-hidden border border-border bg-card shadow-sm lg:hover:shadow-2xl lg:hover:border-primary/50 transition-all duration-500 cursor-pointer block"
+        className="group relative aspect-2/3 rounded-xl overflow-hidden border border-white/5 bg-card shadow-md transition-all duration-300 ease-out hover:-translate-y-1 lg:hover:scale-[1.03] lg:hover:shadow-xl lg:hover:shadow-purple-500/5 hover:border-white/10 cursor-pointer block"
       >
         <div className="absolute inset-0 z-0">
           <img
             src={item.image}
             alt={item.title}
-            className="w-full h-full object-cover transition-transform duration-700 lg:group-hover:scale-110"
+            className="w-full h-full object-cover transition-transform duration-500 ease-out lg:group-hover:scale-108"
           />
-          <div className="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent opacity-40 lg:group-hover:opacity-80 transition-opacity duration-500" />
+          <div className="absolute inset-0 bg-linear-to-t from-black/95 via-black/45 to-transparent z-15 opacity-90 transition-opacity duration-300 group-hover:opacity-100" />
+        </div>
+
+        {/* Edit Button */}
+        <div className="absolute top-2 right-2 z-30 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-300 lg:group-hover:scale-100 scale-95">
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-black/45 hover:bg-black/60 border border-white/10 hover:border-primary/30 text-white/90 hover:text-white backdrop-blur-md transition-all cursor-pointer pointer-events-auto flex items-center justify-center p-0"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsEditDialogOpen(true);
+            }}
+          >
+            <Menu className="w-4 h-4" />
+          </Button>
         </div>
 
         {/* Progress Bar */}
@@ -469,51 +546,41 @@ function MediaCard({
           />
         </div>
 
-        {/* Hover Content */}
-        <div className="absolute inset-0 z-20 flex flex-col justify-between p-2.5 sm:p-4 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-500 bg-black/50 backdrop-blur-none lg:bg-black/40 lg:backdrop-blur-[2px]">
-          <div className="flex justify-between items-start w-full">
-            <Badge className="bg-primary/20 backdrop-blur-md border-primary/20 text-primary-foreground text-[10px] font-bold">
-              {item.format}
-            </Badge>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-black/40 hover:bg-black/60 border border-white/10 hover:border-primary/30 text-white/80 hover:text-primary transition-all cursor-pointer pointer-events-auto flex items-center justify-center p-0"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setIsEditDialogOpen(true);
-              }}
-            >
-              <Menu className="w-4 h-4" />
-            </Button>
+        {/* Bottom Content Area */}
+        <div className="absolute bottom-0 left-0 right-0 p-2.5 sm:p-3.5 pb-3 pt-6 sm:pt-8 flex flex-col gap-2 z-20 transition-transform duration-300 ease-out translate-y-1 group-hover:translate-y-0">
+          <div className="flex items-center gap-1.5 order-1 transition-all duration-300 ease-out peer-hover:opacity-0 peer-hover:-translate-y-1 peer-hover:pointer-events-none">
+            {item.progress !== undefined && item.progress !== null && item.progress > 0 && mediaType !== "movie" && (
+              <span className="inline-flex items-center gap-1 sm:gap-1.5 rounded-full px-2 py-0.5 bg-primary/10 text-[color-mix(in_srgb,var(--primary)_60%,white)] border border-primary/20 text-[10px] sm:text-xs font-semibold backdrop-blur-md">
+                {getProgressIcon(mediaType)}
+                <span>
+                  {mediaType === "tv"
+                    ? item.meta?.season
+                      ? `S${item.meta.season} E${item.meta.episode}`
+                      : `Ep ${item.progress}`
+                    : mediaType === "game"
+                      ? `${item.progress}h`
+                      : mediaType === "book"
+                        ? `Ch ${item.progress}`
+                        : `${mediaType === "manga" ? "Ch" : "Ep"} ${item.progress}`}
+                  {item.episodes ? ` / ${item.episodes}` : ""}
+                </span>
+              </span>
+            )}
           </div>
 
-          {/* Bottom Info & Increment Button */}
-          <div className="flex items-end justify-between gap-1.5 w-full transform translate-y-0 lg:translate-y-4 lg:group-hover:translate-y-0 transition-transform duration-500">
-            <div className="flex-1 min-w-0 space-y-0.5 sm:space-y-1">
-              <h3 className="font-bold text-xs sm:text-sm text-white leading-tight line-clamp-1">
-                {item.title}
-              </h3>
-              <p className="text-[9px] sm:text-[10px] font-bold text-white/70 uppercase tracking-widest">
-                {item.type === "tv"
-                  ? item.meta?.season
-                    ? `S${item.meta.season} E${item.meta.episode}`
-                    : "In Progress"
-                  : item.type === "game"
-                    ? `Played ${item.progress} hr`
-                    : item.type === "book"
-                      ? `Ch ${item.progress}`
-                      : `${item.type === "manga" ? "Ch" : "Ep"} ${item.progress}`}
-                {item.episodes ? ` / ${item.episodes}` : ""}
-              </p>
-            </div>
-            
+          <div className="flex items-end justify-between gap-1.5 w-full order-2">
+            <h4 
+              title={item.title}
+              className="peer font-semibold text-xs sm:text-sm text-white/95 line-clamp-2 hover:line-clamp-none leading-snug group-hover:text-primary transition-colors duration-300 tracking-wide wrap-break-word flex-1 cursor-pointer"
+            >
+              {item.title}
+            </h4>
+
             <Button
               size="icon"
               className={cn(
-                "h-7 w-7 sm:h-8 sm:w-8 rounded-full p-0 shadow-lg shrink-0 pointer-events-auto cursor-pointer hover:scale-105 transition-all duration-300",
-                isUpdating ? "bg-primary/50 cursor-not-allowed" : "bg-primary hover:scale-110",
+                "h-7 w-7 sm:h-8 sm:w-8 rounded-full p-0 shadow-md shrink-0 pointer-events-auto cursor-pointer hover:scale-105 transition-all duration-300 z-30 backdrop-blur-md bg-primary/10 border border-primary/25 text-[color-mix(in_srgb,var(--primary)_60%,white)] hover:text-white hover:bg-primary/20 hover:border-primary/40",
+                isUpdating ? "opacity-50 cursor-not-allowed" : "hover:scale-110",
               )}
               onClick={(e) => {
                 e.preventDefault();

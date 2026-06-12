@@ -1,0 +1,735 @@
+"use client";
+
+import { Play, Check, Globe, Clock, Tv2 } from "lucide-react";
+import { useSession } from "next-auth/react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useEffect, useState, useMemo } from "react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import Image from "next/image";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { TvEditDialog } from "@/components/aquila/TvEditDialog";
+import { motion } from "framer-motion";
+
+import { Episode, Season, MediaCharacter, MediaStudio, MediaTrailer, Media } from "@/types/aquila";
+
+interface TvMedia extends Media {
+  seasons: Season[];
+}
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.05 },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 15 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { type: ("spring" as any), stiffness: 100, damping: 15 },
+  },
+};
+
+export default function TvDetailsPage() {
+  const params = useParams();
+  const id = params?.id as string;
+
+  const [tv, setTv] = useState<TvMedia | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  const session = useSession();
+
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [hasListEntry, setHasListEntry] = useState(false);
+  const [watchedEpisodes, setWatchedEpisodes] = useState<
+    { seasonNum: number; episodeNum: number }[]
+  >([]);
+
+  useEffect(() => {
+    async function fetchTv() {
+      if (!id) return;
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/tv/details/${id}`,
+        );
+        if (!res.ok) {
+          setError(true);
+          setLoading(false);
+          return;
+        }
+        const data = await res.json();
+        setTv(data);
+      } catch {
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchTv();
+  }, [id]);
+
+  const fetchListEntry = async () => {
+    if (!tv?.id || session.status !== "authenticated") return;
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/list/tv/entry/${tv.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${session.data.accessToken}`,
+          },
+        },
+      );
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data) {
+          setWatchedEpisodes(data.watchedEpisodes || []);
+          setHasListEntry(true);
+        }
+      } else {
+        setHasListEntry(false);
+      }
+    } catch (e) {
+      console.error("Failed to fetch TV list entry", e);
+    }
+  };
+
+  useEffect(() => {
+    fetchListEntry();
+  }, [session.status, tv?.id]);
+
+  useEffect(() => {
+    document.title = `Aquila > TV > ${tv?.title.english ?? tv?.title.romaji ?? ""}`;
+  }, [tv?.title]);
+
+  const toggleEpisode = async (seasonNum: number, episodeNum: number) => {
+    if (!tv) return;
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/list/tv/entry/${tv.id}/episode`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.data?.accessToken}`,
+          },
+          body: JSON.stringify({ seasonNum, episodeNum }),
+        },
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (data.watched) {
+          setWatchedEpisodes((prev) => [...prev, { seasonNum, episodeNum }]);
+        } else {
+          setWatchedEpisodes((prev) =>
+            prev.filter(
+              (ep) =>
+                !(ep.seasonNum === seasonNum && ep.episodeNum === episodeNum),
+            ),
+          );
+        }
+      }
+    } catch {
+      toast.error("Failed to update episode progress");
+    }
+  };
+
+  const toggleSeason = async (seasonNum: number, watched: boolean) => {
+    if (!tv) return;
+    const season = tv.seasons.find((s) => s.number === seasonNum);
+    if (!season) return;
+
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/list/tv/entry/${tv.id}/season`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.data?.accessToken}`,
+          },
+          body: JSON.stringify({
+            seasonNum,
+            episodes: season.episodes,
+            watched,
+          }),
+        },
+      );
+      if (res.ok) {
+        if (watched) {
+          setWatchedEpisodes((prev) => {
+            const others = prev.filter((ep) => ep.seasonNum !== seasonNum);
+            const seasonEps = season.episodes.map((ep) => ({
+              seasonNum,
+              episodeNum: ep.number,
+            }));
+            return [...others, ...seasonEps];
+          });
+        } else {
+          setWatchedEpisodes((prev) =>
+            prev.filter((ep) => ep.seasonNum !== seasonNum),
+          );
+        }
+        toast.success(
+          watched ? "Season marked as watched" : "Season marked as unwatched",
+        );
+      }
+    } catch {
+      toast.error("Failed to update season progress");
+    }
+  };
+
+  const totalEpisodes = useMemo(() => {
+    if (!tv) return 0;
+    return tv.seasons.reduce((acc, s) => acc + s.episodeCount, 0);
+  }, [tv]);
+
+  const watchedCount = watchedEpisodes.length;
+  const progressPercent =
+    totalEpisodes > 0 ? Math.round((watchedCount / totalEpisodes) * 100) : 0;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center relative overflow-x-hidden">
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-sky-900/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="w-12 h-12 rounded-full border-2 border-dashed border-primary animate-spin" />
+      </div>
+    );
+  }
+
+  if (error || !tv) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 relative overflow-x-hidden">
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+        <h2 className="text-2xl font-bold text-foreground">TV show not found</h2>
+        <Button asChild className="bg-primary hover:bg-primary/90">
+          <Link href="/aquila/browse">Back to Browse</Link>
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background text-foreground pb-32 relative overflow-x-hidden">
+      {/* Background Radial Glowing Auras */}
+      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-[20%] left-[-100px] w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Banner Section */}
+      <div className="relative h-[250px] md:h-[380px] w-full overflow-hidden">
+        <div className="absolute inset-0 bg-linear-to-t from-zinc-950 via-zinc-950/40 to-transparent z-10" />
+        {tv.bannerImage ? (
+          <img
+            src={tv.bannerImage}
+            alt={tv.title?.romaji}
+            className="w-full h-full object-cover scale-105 filter blur-[1px] brightness-75"
+          />
+        ) : (
+          <div className="w-full h-full bg-card" />
+        )}
+
+        {/* TheTVDB Attribution */}
+        <div className="absolute inset-x-0 top-0 z-20 pointer-events-none">
+          <div className="container mx-auto px-4 pt-4 flex justify-end items-start pointer-events-auto">
+            <div className="flex flex-col gap-1 bg-black/50 backdrop-blur-sm p-2 rounded-xl border border-white/10 shadow-md">
+              <span className="text-[8px] text-foreground/60 uppercase font-bold tracking-widest leading-none">
+                Data Provided By
+              </span>
+              <Link
+                href="https://thetvdb.com"
+                target="_blank"
+                className="opacity-80 hover:opacity-100 transition-opacity"
+              >
+                <Image
+                  src="https://thetvdb.com/images/logo.png"
+                  alt="TheTVDB Logo"
+                  width={80}
+                  height={20}
+                  style={{ width: "80px", height: "auto" }}
+                />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 -mt-24 md:-mt-36 relative z-20">
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="show"
+          className="flex flex-col lg:flex-row gap-8"
+        >
+          {/* Left Column - Poster & Actions */}
+          <motion.div
+            variants={itemVariants}
+            className="shrink-0 w-full lg:w-[280px] flex flex-col gap-4"
+          >
+            <div className="bg-card/70 border border-border/60 backdrop-blur-xl shadow-2xl rounded-2xl p-4 flex flex-col sm:flex-row lg:flex-col gap-4 items-center sm:items-start lg:items-stretch">
+              <div className="aspect-2/3 w-40 sm:w-44 lg:w-full rounded-xl overflow-hidden shadow-lg border border-border/30 shrink-0">
+                <img
+                  src={tv.coverImage.large}
+                  alt={tv.title?.romaji}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              <div className="flex-1 flex flex-col gap-3 w-full justify-center">
+                {session.data?.user && (
+                  <>
+                    {!hasListEntry ? (
+                      <>
+                        <Button
+                          className="w-full cursor-pointer bg-primary hover:bg-primary/90 text-foreground font-medium rounded-xl transition-all shadow-lg shadow-primary/20"
+                          size="lg"
+                          onClick={async () => {
+                            try {
+                              const res = await fetch(
+                                `${process.env.NEXT_PUBLIC_API_URL}/list/tv/entry/save`,
+                                {
+                                  method: "POST",
+                                  headers: {
+                                    "Content-Type": "application/json",
+                                    Authorization: `Bearer ${session.data?.accessToken}`,
+                                  },
+                                  body: JSON.stringify({
+                                    tvdbId: parseInt(tv.id),
+                                    status: "PLANNING",
+                                  }),
+                                },
+                              );
+                              if (res.ok) {
+                                toast.success("Added to list!");
+                                setHasListEntry(true);
+                                fetchListEntry();
+                              } else {
+                                toast.error("Failed to add to list");
+                              }
+                            } catch {
+                              toast.error("Failed to add to list");
+                            }
+                          }}
+                        >
+                          Quick Add
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full cursor-pointer border-border/60 hover:bg-muted text-foreground hover:text-foreground rounded-xl"
+                          size="lg"
+                          onClick={() => setIsDialogOpen(true)}
+                        >
+                          Add to List
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        className="w-full cursor-pointer bg-muted hover:bg-zinc-700 border border-border/60 text-foreground rounded-xl"
+                        size="lg"
+                        onClick={() => setIsDialogOpen(true)}
+                      >
+                        Edit Entry
+                      </Button>
+                    )}
+                    <TvEditDialog
+                      media={tv}
+                      hasListEntry={hasListEntry}
+                      open={isDialogOpen}
+                      onOpenChange={setIsDialogOpen}
+                      onSaved={() => fetchListEntry()}
+                      onDeleted={() => {
+                        setHasListEntry(false);
+                        setWatchedEpisodes([]);
+                      }}
+                    />
+                  </>
+                )}
+                {tv.trailers && tv.trailers.length > 0 && (
+                  <Button
+                    variant="outline"
+                    className="w-full border-border/60 hover:bg-muted text-foreground hover:text-foreground rounded-xl"
+                    asChild
+                  >
+                    <a
+                      href={tv.trailers[0].url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-center gap-2"
+                    >
+                      <Play className="h-4 w-4 fill-current" />
+                      Watch Trailer
+                    </a>
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Info Sidebar */}
+            <div className="bg-card/60 border border-border/40 backdrop-blur-xl rounded-2xl p-5 space-y-4">
+              <h3 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+                Information
+              </h3>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
+                  <span className="text-muted-foreground">Format</span>
+                  <span className="font-medium text-foreground">{tv.format}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
+                  <span className="text-muted-foreground">Episodes</span>
+                  <span className="font-medium text-foreground">{totalEpisodes}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
+                  <span className="text-muted-foreground">Seasons</span>
+                  <span className="font-medium text-foreground">{tv.seasons.length}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
+                  <span className="text-muted-foreground">Status</span>
+                  <span className="font-medium text-foreground capitalize">
+                    {tv.status?.replace(/_/g, " ").toLowerCase()}
+                  </span>
+                </div>
+                {tv.originalCountry && (
+                  <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
+                    <span className="text-muted-foreground">Country</span>
+                    <span className="font-medium text-foreground">{tv.originalCountry}</span>
+                  </div>
+                )}
+                {tv.originalLanguage && (
+                  <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
+                    <span className="text-muted-foreground">Language</span>
+                    <span className="font-medium text-foreground uppercase">{tv.originalLanguage}</span>
+                  </div>
+                )}
+                {tv.averageRuntime && (
+                  <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
+                    <span className="text-muted-foreground">Avg Runtime</span>
+                    <span className="font-medium text-foreground">{tv.averageRuntime} min</span>
+                  </div>
+                )}
+                {tv.contentRating && (
+                  <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
+                    <span className="text-muted-foreground">Rating</span>
+                    <Badge className="bg-blue-500/15 border border-primary/30 text-primary text-xs px-2 py-0.5">
+                      {tv.contentRating}
+                    </Badge>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Networks */}
+            {tv.studios && tv.studios.length > 0 && (
+              <div className="bg-card/60 border border-border/40 backdrop-blur-xl rounded-2xl p-5">
+                <h4 className="font-semibold text-sm tracking-wide text-muted-foreground uppercase mb-3">
+                  Networks
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {tv.studios.map((studio) => (
+                    <span
+                      key={studio.name}
+                      className="text-xs bg-muted text-foreground/90 border border-border/40 px-3 py-1.5 rounded-xl"
+                    >
+                      {studio.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Additional Trailers */}
+            {tv.trailers && tv.trailers.length > 1 && (
+              <div className="bg-card/60 border border-border/40 backdrop-blur-xl rounded-2xl p-5">
+                <h4 className="font-semibold text-sm tracking-wide text-muted-foreground uppercase mb-3">
+                  Trailers
+                </h4>
+                <div className="flex flex-col gap-2">
+                  {tv.trailers.slice(1).map((trailer, idx) => (
+                    <a
+                      key={idx}
+                      href={trailer.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-2 text-xs bg-muted hover:bg-zinc-700 text-foreground/90 border border-border/40 px-3 py-2 rounded-xl transition-all"
+                    >
+                      <Play className="w-3 h-3 fill-current" />
+                      {trailer.name || `Trailer ${idx + 2}`}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </motion.div>
+
+          {/* Right Column - Info */}
+          <div className="flex-1 space-y-8 lg:pt-8 mb-32">
+            {/* Header */}
+            <motion.div variants={itemVariants} className="space-y-2">
+              <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">
+                {tv.title.english || tv.title.romaji}
+              </h1>
+              {tv.title.romaji && tv.title.romaji !== tv.title.english && (
+                <p className="text-sm text-muted-foreground italic">
+                  Also known as: {tv.title.romaji}
+                </p>
+              )}
+            </motion.div>
+
+            {/* Quick Info Badges */}
+            <motion.div variants={itemVariants} className="flex flex-wrap gap-3">
+              <div className="bg-card/55 border border-border/40 backdrop-blur-md px-4 py-2.5 rounded-xl flex items-center gap-2">
+                <Tv2 className="w-4 h-4 text-primary" />
+                <span className="text-sm font-semibold text-foreground capitalize">
+                  {tv.status?.replace(/_/g, " ").toLowerCase()}
+                </span>
+              </div>
+              {tv.averageRuntime && (
+                <div className="bg-card/55 border border-border/40 backdrop-blur-md px-4 py-2.5 rounded-xl flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-semibold text-foreground">{tv.averageRuntime} min/ep</span>
+                </div>
+              )}
+              {tv.originalCountry && (
+                <div className="bg-card/55 border border-border/40 backdrop-blur-md px-4 py-2.5 rounded-xl flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-semibold text-foreground">{tv.originalCountry}</span>
+                </div>
+              )}
+              {tv.contentRating && (
+                <Badge className="bg-primary/10 border border-primary/30 text-primary px-4 py-2.5 rounded-xl text-sm font-bold">
+                  {tv.contentRating}
+                </Badge>
+              )}
+            </motion.div>
+
+            {/* Watch Progress */}
+            {hasListEntry && totalEpisodes > 0 && (
+              <motion.div
+                variants={itemVariants}
+                className="bg-card/40 border border-border/30 backdrop-blur-sm p-5 rounded-2xl"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-semibold text-foreground/90">Watch Progress</span>
+                  <span className="text-xs font-bold text-primary tabular-nums">
+                    {watchedCount} / {totalEpisodes} ({progressPercent}%)
+                  </span>
+                </div>
+                <div className="w-full bg-muted/60 h-2 rounded-full overflow-hidden">
+                  <div
+                    className="bg-blue-500 h-full rounded-full transition-all duration-700"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+              </motion.div>
+            )}
+
+            {/* Description */}
+            <motion.div
+              variants={itemVariants}
+              className="bg-card/40 border border-border/30 backdrop-blur-sm p-6 rounded-2xl"
+            >
+              <h3 className="text-lg font-bold text-foreground mb-3">Synopsis</h3>
+              <div
+                className="prose prose-neutral dark:prose-invert dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-sm md:text-base prose-p:my-2 prose-a:text-primary hover:prose-a:text-primary transition-colors"
+                dangerouslySetInnerHTML={{ __html: tv.description }}
+              />
+            </motion.div>
+
+            {/* Genres */}
+            {tv.genres && tv.genres.length > 0 && (
+              <motion.div variants={itemVariants} className="space-y-4">
+                <h3 className="text-lg font-bold text-foreground">Genres</h3>
+                <div className="flex flex-wrap gap-2">
+                  {tv.genres.map((genre) => (
+                    <Badge
+                      key={genre}
+                      className="bg-primary/10 border border-primary/30 hover:bg-primary/15 text-primary px-3 py-1 rounded-xl text-xs font-medium"
+                    >
+                      {genre}
+                    </Badge>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Cast */}
+            {tv.characters && tv.characters.length > 0 && (
+              <motion.div variants={itemVariants} className="space-y-4">
+                <h3 className="text-lg font-bold text-foreground">Cast</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {tv.characters.slice(0, 12).map((char, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between bg-card/50 border border-border/40 backdrop-blur-md p-3 rounded-xl overflow-hidden hover:border-border/60 transition-all group"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        {char.image && char.image.length > 0 ? (
+                          <div className="relative w-12 h-12 rounded-lg overflow-hidden shrink-0">
+                            <img
+                              src={char.image}
+                              alt={char.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                          </div>
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg bg-muted shrink-0 flex items-center justify-center text-muted-foreground text-xs">
+                            ?
+                          </div>
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold truncate text-foreground">
+                            {char.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground capitalize truncate">
+                            {char.role?.toLowerCase()}
+                          </p>
+                        </div>
+                      </div>
+                      {char.personName && (
+                        <span className="text-xs text-muted-foreground truncate ml-3 shrink-0">
+                          {char.personName}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Seasons Accordion */}
+            {tv.seasons && tv.seasons.length > 0 && (
+              <motion.div variants={itemVariants} className="space-y-4">
+                <h3 className="text-xl font-bold text-foreground">Seasons</h3>
+                <Accordion type="multiple" className="w-full space-y-3">
+                  {tv.seasons.map((season) => {
+                    const watchedInSeason = watchedEpisodes.filter(
+                      (ep) => ep.seasonNum === season.number,
+                    ).length;
+                    const seasonProgress =
+                      season.episodeCount > 0
+                        ? Math.round(
+                            (watchedInSeason / season.episodeCount) * 100,
+                          )
+                        : 0;
+
+                    return (
+                      <AccordionItem
+                        key={season.id}
+                        value={season.id}
+                        className="border border-border/40 rounded-2xl overflow-hidden bg-card/40 backdrop-blur-md shadow-none"
+                      >
+                        <AccordionTrigger className="hover:no-underline px-4 py-3 transition-colors hover:bg-muted/30">
+                          <div className="flex items-center gap-6 w-full pr-8">
+                            <div className="shrink-0 w-12 aspect-2/3 rounded-lg overflow-hidden border border-border/50 bg-muted">
+                              <img
+                                src={season.image || tv.coverImage.large}
+                                alt={season.name}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div className="flex-1 flex items-center gap-8 text-left min-w-0">
+                              <div className="flex flex-col">
+                                <h4 className="text-sm font-bold text-foreground truncate">
+                                  Season {season.number}
+                                </h4>
+                                <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-tight">
+                                  {season.episodeCount} Episodes
+                                </span>
+                              </div>
+
+                              {hasListEntry && (
+                                <div className="flex-1 flex items-center gap-4 max-w-[300px]">
+                                  <div className="flex-1 bg-muted/60 h-1 rounded-full overflow-hidden">
+                                    <div
+                                      className="bg-blue-500 h-full transition-all duration-700 rounded-full"
+                                      style={{
+                                        width: `${seasonProgress}%`,
+                                      }}
+                                    />
+                                  </div>
+                                  <span className="text-[11px] font-bold text-primary/80 tabular-nums">
+                                    {watchedInSeason} / {season.episodeCount}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="p-0 border-t border-border/30">
+                          <div className="divide-y divide-zinc-800/20">
+                            {season.episodes.map((episode) => {
+                              const watched = watchedEpisodes.some(
+                                (ep) =>
+                                  ep.seasonNum === season.number &&
+                                  ep.episodeNum === episode.number,
+                              );
+                              return (
+                                <div
+                                  key={episode.id}
+                                  className={cn(
+                                    "flex items-center gap-4 p-3 hover:bg-muted/20 transition-colors group cursor-pointer",
+                                    watched && "bg-blue-500/5",
+                                  )}
+                                  onClick={() =>
+                                    toggleEpisode(season.number, episode.number)
+                                  }
+                                >
+                                  <div
+                                    className={cn(
+                                      "shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
+                                      watched
+                                        ? "bg-blue-500 border-primary text-foreground"
+                                        : "border-zinc-600",
+                                    )}
+                                  >
+                                    {watched && (
+                                      <Check className="w-3.5 h-3.5" />
+                                    )}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-xs font-bold text-foreground">
+                                        {episode.number}. {episode.name}
+                                      </span>
+                                      {episode.airDate && (
+                                        <span className="text-[10px] text-muted-foreground font-medium">
+                                          {episode.airDate}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {episode.overview && (
+                                      <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">
+                                        {episode.overview}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    );
+                  })}
+                </Accordion>
+              </motion.div>
+            )}
+          </div>
+        </motion.div>
+      </div>
+    </div>
+  );
+}

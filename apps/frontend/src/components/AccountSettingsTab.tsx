@@ -1,9 +1,9 @@
 "use client";
 
 import type React from "react";
-import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
+import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import { useSession } from "next-auth/react";
-import { Camera, Eye, EyeOff, Trash, ChevronsUpDown } from "lucide-react";
+import { Camera, Eye, EyeOff, Trash, ChevronsUpDown, Crop } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "./ui/dialog";
+import { ImageCropperDialog } from "./ui/image-cropper-dialog";
 
 interface AccountSettingsTabProps {
   onOpenChange: (open: boolean) => void;
@@ -48,6 +49,10 @@ export const AccountSettingsTab = forwardRef<AccountSettingsTabRef, AccountSetti
   ({ onOpenChange, isSubmitting, setIsSubmitting }, ref) => {
     const { data: session, update } = useSession();
 
+    const avatarInputRef = useRef<HTMLInputElement>(null);
+    const bannerInputRef = useRef<HTMLInputElement>(null);
+    const cardBgInputRef = useRef<HTMLInputElement>(null);
+
     // Form states
     const [displayName, setDisplayName] = useState("");
     const [email, setEmail] = useState("");
@@ -75,6 +80,13 @@ export const AccountSettingsTab = forwardRef<AccountSettingsTabRef, AccountSetti
 
     const [confirmPasswordInput, setConfirmPasswordInput] = useState("");
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+
+    // Cropper states
+    const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+    const [cropType, setCropType] = useState<"avatar" | "banner" | "background" | null>(null);
+    const [isCropperOpen, setIsCropperOpen] = useState(false);
+    const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
+    const [isBannerMenuOpen, setIsBannerMenuOpen] = useState(false);
 
     useEffect(() => {
       if (session?.user?.username) {
@@ -136,18 +148,47 @@ export const AccountSettingsTab = forwardRef<AccountSettingsTabRef, AccountSetti
     const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file) {
-        setAvatarFile(file);
         const url = URL.createObjectURL(file);
-        setAvatarUrl(url);
+        setCropImageSrc(url);
+        setCropType("avatar");
+        setIsCropperOpen(true);
+        e.target.value = "";
       }
     };
 
     const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (file) {
-        setBannerFile(file);
         const url = URL.createObjectURL(file);
+        setCropImageSrc(url);
+        setCropType("banner");
+        setIsCropperOpen(true);
+        e.target.value = "";
+      }
+    };
+
+    const handleCardBgChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        const url = URL.createObjectURL(file);
+        setCropImageSrc(url);
+        setCropType("background");
+        setIsCropperOpen(true);
+        e.target.value = "";
+      }
+    };
+
+    const handleCropComplete = (croppedFile: File) => {
+      const url = URL.createObjectURL(croppedFile);
+      if (cropType === "avatar") {
+        setAvatarFile(croppedFile);
+        setAvatarUrl(url);
+      } else if (cropType === "banner") {
+        setBannerFile(croppedFile);
         setBannerUrl(url);
+      } else if (cropType === "background") {
+        setSidebarCardBackgroundFile(croppedFile);
+        setSidebarCardBackgroundUrl(url);
       }
     };
 
@@ -327,7 +368,11 @@ export const AccountSettingsTab = forwardRef<AccountSettingsTabRef, AccountSetti
         {/* Banner & Avatar section */}
         <div className="relative mb-8">
           {/* Banner */}
-          <div className="h-32 w-full bg-linear-to-r from-indigo-500/20 to-purple-500/20 rounded-xl relative overflow-hidden group/banner border border-border/50">
+          <button
+            type="button"
+            onClick={() => bannerUrl ? setIsBannerMenuOpen(true) : bannerInputRef.current?.click()}
+            className="w-full aspect-3/1 bg-linear-to-r from-indigo-500/20 to-purple-500/20 rounded-xl relative overflow-hidden group/banner border border-border/50 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all duration-200 block text-left"
+          >
             {bannerUrl ? (
               <img src={getSafeImageUrl(bannerUrl)} alt="Banner" className="w-full h-full object-cover" />
             ) : (
@@ -335,35 +380,17 @@ export const AccountSettingsTab = forwardRef<AccountSettingsTabRef, AccountSetti
                 No banner uploaded
               </div>
             )}
-            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/banner:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-3">
-              <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/20 hover:bg-white/35 text-white text-xs font-semibold cursor-pointer transition-colors">
-                <Camera className="size-3.5" />
-                Change
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleBannerChange}
-                />
-              </label>
-              {bannerUrl && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setBannerUrl("");
-                    setBannerFile(null);
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/35 text-red-200 text-xs font-semibold cursor-pointer transition-colors"
-                >
-                  <Trash className="size-3.5" />
-                  Remove
-                </button>
-              )}
+            <div className="absolute inset-0 bg-black/45 opacity-0 group-hover/banner:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+              <Camera className="size-6 text-white" />
             </div>
-          </div>
+          </button>
 
           {/* Avatar */}
-          <div className="absolute -bottom-6 left-6 size-20 rounded-full border-4 border-card overflow-hidden group/avatar bg-muted shadow-md">
+          <button
+            type="button"
+            onClick={() => avatarUrl ? setIsAvatarMenuOpen(true) : avatarInputRef.current?.click()}
+            className="absolute -bottom-6 left-6 size-20 rounded-full border-4 border-card overflow-hidden group/avatar bg-muted shadow-md cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all duration-200 block text-left"
+          >
             {avatarUrl ? (
               <img src={getSafeImageUrl(avatarUrl)} alt="Avatar" className="w-full h-full object-cover" />
             ) : (
@@ -371,31 +398,10 @@ export const AccountSettingsTab = forwardRef<AccountSettingsTabRef, AccountSetti
                 {displayName ? displayName.charAt(0) : session?.user?.username?.charAt(0) || "U"}
               </div>
             )}
-            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center gap-1.5">
-              <label className="flex items-center justify-center p-1.5 rounded-full bg-white/20 hover:bg-white/35 text-white cursor-pointer transition-colors" title="Change Avatar">
-                <Camera className="size-3.5" />
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleAvatarChange}
-                />
-              </label>
-              {avatarUrl && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAvatarUrl("");
-                    setAvatarFile(null);
-                  }}
-                  className="flex items-center justify-center p-1.5 rounded-full bg-red-500/20 hover:bg-red-500/35 text-red-200 cursor-pointer transition-colors"
-                  title="Remove Avatar"
-                >
-                  <Trash className="size-3.5" />
-                </button>
-              )}
+            <div className="absolute inset-0 bg-black/45 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+              <Camera className="size-5 text-white" />
             </div>
-          </div>
+          </button>
         </div>
 
         {/* Custom Sidebar Card Background Section */}
@@ -409,34 +415,42 @@ export const AccountSettingsTab = forwardRef<AccountSettingsTabRef, AccountSetti
               </p>
             </div>
             <div className="flex gap-2">
-              <label className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold cursor-pointer transition-colors shadow-sm">
+              <Button
+                type="button"
+                onClick={() => cardBgInputRef.current?.click()}
+                className="flex items-center gap-1.5 px-3 py-1.5 h-8 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold cursor-pointer transition-colors shadow-sm"
+              >
                 <Camera className="size-3.5" />
                 Choose Background
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      setSidebarCardBackgroundFile(file);
-                      setSidebarCardBackgroundUrl(URL.createObjectURL(file));
-                    }
-                  }}
-                />
-              </label>
+              </Button>
               {sidebarCardBackgroundUrl && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSidebarCardBackgroundUrl("");
-                    setSidebarCardBackgroundFile(null);
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs font-semibold cursor-pointer transition-colors"
-                >
-                  <Trash className="size-3.5" />
-                  Remove
-                </button>
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setCropImageSrc(getSafeImageUrl(sidebarCardBackgroundUrl));
+                      setCropType("background");
+                      setIsCropperOpen(true);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 h-8 rounded-xl border border-zinc-800 text-xs font-semibold hover:bg-muted/50 cursor-pointer"
+                  >
+                    <Crop className="size-3.5" />
+                    Fit
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setSidebarCardBackgroundUrl("");
+                      setSidebarCardBackgroundFile(null);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 h-8 rounded-xl border border-red-500/20 text-red-400 hover:bg-red-500/10 hover:text-red-300 text-xs font-semibold cursor-pointer"
+                  >
+                    <Trash className="size-3.5" />
+                    Remove
+                  </Button>
+                </>
               )}
             </div>
           </div>
@@ -707,6 +721,160 @@ export const AccountSettingsTab = forwardRef<AccountSettingsTabRef, AccountSetti
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Image Cropper Dialog */}
+        <ImageCropperDialog
+          open={isCropperOpen}
+          onOpenChange={setIsCropperOpen}
+          imageSrc={cropImageSrc || ""}
+          aspectRatio={cropType === "banner" ? 3 : cropType === "background" ? 5 : 1}
+          title={
+            cropType === "avatar"
+              ? "Edit Avatar"
+              : cropType === "banner"
+              ? "Edit Banner"
+              : "Edit Background"
+          }
+          description={
+            cropType === "avatar"
+              ? "Drag and zoom to fit your avatar."
+              : cropType === "banner"
+              ? "Drag and zoom to fit your profile banner."
+              : "Drag and zoom to fit your user card background."
+          }
+          onCrop={handleCropComplete}
+        />
+
+        {/* Avatar Options Menu */}
+        <Dialog open={isAvatarMenuOpen} onOpenChange={setIsAvatarMenuOpen}>
+          <DialogContent className="max-w-xs bg-card border border-border shadow-2xl p-6 rounded-2xl">
+            <DialogHeader className="pb-2">
+              <DialogTitle className="text-sm font-bold text-center">Profile Picture Options</DialogTitle>
+            </DialogHeader>
+
+            <div className="flex flex-col gap-2 py-2">
+              <Button
+                onClick={() => {
+                  avatarInputRef.current?.click();
+                  setIsAvatarMenuOpen(false);
+                }}
+                className="flex items-center justify-center gap-2 w-full py-2.5 h-auto rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground font-semibold text-xs cursor-pointer transition-all shadow-xs text-center"
+              >
+                <Camera className="size-3.5" />
+                Upload New Image
+              </Button>
+
+              {avatarUrl && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setCropImageSrc(getSafeImageUrl(avatarUrl));
+                      setCropType("avatar");
+                      setIsCropperOpen(true);
+                      setIsAvatarMenuOpen(false);
+                    }}
+                    className="flex items-center justify-center gap-2 w-full py-2.5 h-auto rounded-xl border border-zinc-800 text-xs font-semibold hover:bg-muted/50"
+                  >
+                    <Crop className="size-3.5" />
+                    Position & Fit
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setAvatarUrl("");
+                      setAvatarFile(null);
+                      setIsAvatarMenuOpen(false);
+                    }}
+                    className="flex items-center justify-center gap-2 w-full py-2.5 h-auto rounded-xl border border-red-500/20 text-red-400 hover:bg-red-500/10 hover:text-red-300 text-xs font-semibold"
+                  >
+                    <Trash className="size-3.5" />
+                    Remove Picture
+                  </Button>
+                </>
+              )}
+
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Banner Options Menu */}
+        <Dialog open={isBannerMenuOpen} onOpenChange={setIsBannerMenuOpen}>
+          <DialogContent className="max-w-xs bg-card border border-border shadow-2xl p-6 rounded-2xl">
+            <DialogHeader className="pb-2">
+              <DialogTitle className="text-sm font-bold text-center">Profile Banner Options</DialogTitle>
+            </DialogHeader>
+
+            <div className="flex flex-col gap-2 py-2">
+              <Button
+                onClick={() => {
+                  bannerInputRef.current?.click();
+                  setIsBannerMenuOpen(false);
+                }}
+                className="flex items-center justify-center gap-2 w-full py-2.5 h-auto rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground font-semibold text-xs cursor-pointer transition-all shadow-xs text-center"
+              >
+                <Camera className="size-3.5" />
+                Upload New Banner
+              </Button>
+
+              {bannerUrl && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setCropImageSrc(getSafeImageUrl(bannerUrl));
+                      setCropType("banner");
+                      setIsCropperOpen(true);
+                      setIsBannerMenuOpen(false);
+                    }}
+                    className="flex items-center justify-center gap-2 w-full py-2.5 h-auto rounded-xl border border-zinc-800 text-xs font-semibold hover:bg-muted/50"
+                  >
+                    <Crop className="size-3.5" />
+                    Position & Fit
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setBannerUrl("");
+                      setBannerFile(null);
+                      setIsBannerMenuOpen(false);
+                    }}
+                    className="flex items-center justify-center gap-2 w-full py-2.5 h-auto rounded-xl border border-red-500/20 text-red-400 hover:bg-red-500/10 hover:text-red-300 text-xs font-semibold"
+                  >
+                    <Trash className="size-3.5" />
+                    Remove Banner
+                  </Button>
+                </>
+              )}
+
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Hidden inputs for direct explorer trigger */}
+        <input
+          ref={avatarInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleAvatarChange}
+        />
+        <input
+          ref={bannerInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleBannerChange}
+        />
+        <input
+          ref={cardBgInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handleCardBgChange}
+        />
       </div>
     );
   }

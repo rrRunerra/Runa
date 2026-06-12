@@ -1,11 +1,12 @@
-import { Injectable, BadRequestException, NotFoundException, StreamableFile } from '@nestjs/common';
-import { existsSync, createReadStream, writeFileSync, mkdirSync } from 'fs';
+import { Injectable, BadRequestException, NotFoundException, StreamableFile, Logger } from '@nestjs/common';
+import { existsSync, createReadStream, writeFileSync, mkdirSync, unlinkSync } from 'fs';
 import { join, resolve } from 'path';
 import { randomUUID } from 'crypto';
 
 @Injectable()
 export class MediaService {
   private readonly uploadDir: string;
+  private readonly logger = new Logger(MediaService.name);
 
   constructor() {
     this.uploadDir = process.env.UPLOAD_DIR
@@ -73,5 +74,33 @@ export class MediaService {
       stream: new StreamableFile(fileStream),
       contentType,
     };
+  }
+
+  deleteFile(filename: string): void {
+    const filePath = resolve(this.uploadDir, filename);
+
+    // Prevent directory traversal attacks
+    if (!filePath.startsWith(this.uploadDir)) {
+      throw new BadRequestException('Invalid file path');
+    }
+
+    if (existsSync(filePath)) {
+      try {
+        unlinkSync(filePath);
+        this.logger.log(`Deleted file: ${filePath}`);
+      } catch (error) {
+        this.logger.error(`Failed to delete file: ${filePath}`, error);
+      }
+    } else {
+      this.logger.warn(`File not found for deletion: ${filePath}`);
+    }
+  }
+
+  deleteFileByUrl(url: string | null | undefined): void {
+    if (!url || !url.startsWith('/media/image/')) {
+      return;
+    }
+    const filename = url.substring('/media/image/'.length);
+    this.deleteFile(filename);
   }
 }

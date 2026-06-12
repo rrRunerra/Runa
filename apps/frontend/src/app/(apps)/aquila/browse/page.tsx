@@ -107,6 +107,7 @@ export default function BrowsePage() {
   const [history, setHistory] = useState<string[]>([]);
   const [openedItems, setOpenedItems] = useState<OpenedItemEntry[]>([]);
   const isLoadedRef = useRef(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [isFocused, setIsFocused] = useState(false);
 
   const { data, isLoading, error, performSearch } = useSearch();
@@ -256,6 +257,7 @@ export default function BrowsePage() {
 
   useEffect(() => {
     document.title = "Aquila > Browse";
+    inputRef.current?.focus();
   }, []);
 
   const handleQueryChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
@@ -390,6 +392,8 @@ export default function BrowsePage() {
               <Search className="h-5 w-5 text-muted-foreground/60" />
             </motion.div>
             <Input
+              ref={inputRef}
+              autoFocus
               value={query}
               onChange={handleQueryChange}
               onFocus={() => setIsFocused(true)}

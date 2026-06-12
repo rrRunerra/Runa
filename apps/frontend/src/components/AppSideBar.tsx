@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 import { signIn, signOut, useSession } from "next-auth/react";
 import type React from "react";
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { apps } from "../../config/apps";
 import { useNavigation } from "@/hooks/useNavigation";
 import type {
@@ -352,7 +352,8 @@ export default function AppSideBar({
 
       {/* ── Nav sections ────────────────────────────────── */}
       <SidebarContent className="no-scrollbar px-2">
-        {resolvedNavConfig
+        <LayoutGroup id="sidebar">
+          {resolvedNavConfig
           .filter(
             (c: NavSection) =>
               (!c.role || session?.user?.role === "ADMIN"
@@ -397,7 +398,7 @@ export default function AppSideBar({
                             tooltip={item.label}
                             className={cn(
                               "relative transition-colors duration-200 rounded-xl h-9.5 px-3",
-                              isActive ? "text-primary font-bold" : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                              isActive ? "text-primary font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                             )}
                           >
                             <Link href={item.href} className="relative z-10 w-full flex items-center">
@@ -428,7 +429,7 @@ export default function AppSideBar({
                               tooltip={item.label}
                               className={cn(
                                 "relative transition-colors duration-200 rounded-xl h-9.5 px-3",
-                                isChildActive ? "text-primary font-bold" : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                                isChildActive ? "text-primary font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                               )}
                             >
                               <span className="flex items-center gap-2.5 w-full relative z-20">
@@ -516,6 +517,7 @@ export default function AppSideBar({
               </SidebarMenu>
             </SidebarGroup>
           ))}
+        </LayoutGroup>
       </SidebarContent>
 
       {/* ── User footer ─────────────────────────────────── */}
