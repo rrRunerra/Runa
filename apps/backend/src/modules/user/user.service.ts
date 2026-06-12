@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../providers/database/prisma.service';
+import { CacheService } from '../../providers/cache/cache.service';
 import type { User } from '@runa/database';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -69,6 +70,7 @@ export class UserService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mediaService: MediaService,
+    private readonly cacheService: CacheService,
   ) {
     this.checkHasAdmin();
   }
@@ -218,6 +220,8 @@ export class UserService {
       where: { id: userId },
       data: updateData,
     });
+
+    await this.cacheService.del(`user:permissions:${userId}`);
 
     if (data.avatarUrl !== undefined && data.avatarUrl !== oldAvatarUrl) {
       this.mediaService.deleteFileByUrl(oldAvatarUrl);

@@ -6,13 +6,19 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { jwtVerify } from 'jose';
-import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
-import { prisma } from '@runa/database';
 import bcrypt from 'bcrypt';
+
+import { prisma } from '@runa/database';
+
+import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
+import { CacheService } from '../../providers/cache/cache.service';
 
 @Injectable()
 export class DualAuthGuard implements CanActivate {
-  constructor(private reflector: Reflector) {}
+  constructor(
+    private readonly reflector: Reflector,
+    private readonly cacheService: CacheService,
+  ) {}
 
   private readonly secret = new TextEncoder().encode(
     process.env.NEXTAUTH_SECRET,
@@ -100,11 +106,23 @@ export class DualAuthGuard implements CanActivate {
           throw new UnauthorizedException('Token expired due to password change');
         }
 
+        const cacheKey = `user:permissions:${userId}`;
+        let permissions = await this.cacheService.get<number[]>(cacheKey);
+
+        if (!permissions) {
+          const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { permissions: true },
+          });
+          permissions = user?.permissions ?? [];
+          await this.cacheService.set(cacheKey, permissions, 86400);
+        }
+
         request.user = {
           id: payload.sub,
           username: payload.name,
           email: payload.email,
-          permissions: payload.permissions,
+          permissions,
         };
         return true;
       } else if (!isPublic) {

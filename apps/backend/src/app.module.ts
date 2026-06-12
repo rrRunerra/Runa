@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { PrismaModule } from './providers/database/prisma.module';
+import { CacheModule } from './providers/cache/cache.module';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { AnimeModule } from './modules/anime/anime.module';
@@ -33,6 +34,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
     UserModule,
     AuthModule,
     PrismaModule,
+    CacheModule,
     AnimeModule,
     GameModule,
     BookModule,
