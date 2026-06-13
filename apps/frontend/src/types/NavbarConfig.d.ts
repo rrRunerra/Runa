@@ -1,14 +1,13 @@
 import { ReactNode } from "react";
 
-export type UserRole = "ADMIN" | "USER";
-
 export interface NavChildItem {
   label: string;
   icon?: ReactNode;
   href: string;
   subtitle?: string;
   badge?: string;
-  role?: UserRole;
+  permission?: bigint | bigint[];
+  permissionOperator?: "all" | "any";
 }
 
 export interface NavItem {
@@ -18,7 +17,8 @@ export interface NavItem {
   subtitle?: string;
   badge?: string;
   children?: NavChildItem[];
-  role?: UserRole;
+  permission?: bigint | bigint[];
+  permissionOperator?: "all" | "any";
   preventRedirect?: boolean;
   position?: number;
 }
@@ -26,7 +26,8 @@ export interface NavItem {
 export interface NavSection {
   section: string;
   items: NavItem[];
-  role?: UserRole;
+  permission?: bigint | bigint[];
+  permissionOperator?: "all" | "any";
 }
 
 export type NavbarConfig = NavSection[];

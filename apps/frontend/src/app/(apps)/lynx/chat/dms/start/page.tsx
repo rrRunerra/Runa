@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { hasPermission, BitField, LynxFlags } from "@runa/permissions";
 import { Suspense, useEffect } from "react";
 import AccessDenied from "@/components/lynx/AccessDenied";
 
@@ -11,7 +12,7 @@ function StartDmContent() {
   const userId = searchParams.get("userId");
 
   const { data: session, status } = useSession();
-  if (status === "unauthenticated" || session?.user.role !== "ADMIN") {
+  if (status === "unauthenticated" || !hasPermission(session?.user?.permissions, LynxFlags.DM_CHAT)) {
     return <AccessDenied />;
   }
 

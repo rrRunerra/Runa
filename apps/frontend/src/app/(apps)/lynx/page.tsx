@@ -1,4 +1,5 @@
 import { auth } from "@runa/auth";
+import { hasPermission, BitField, LynxFlags } from "@runa/permissions";
 import { prisma } from "@runa/database";
 import AccessDenied from "@/components/lynx/AccessDenied";
 import LynxDashboardClient from "@/components/lynx/LynxDashboardClient";
@@ -22,9 +23,11 @@ async function getStats() {
 
 export default async function LynxHome() {
   const session = await auth();
-  if (!session || session.user.role !== "ADMIN") {
-    return <AccessDenied />;
-  }
+  // if (!session || !hasPermission(session.user.permissions, LynxFlags.LOGGED_IN)) {
+  //   return <AccessDenied />;
+  // }
+
+  
 
   // Fetch metrics and recent logs in parallel
   const [stats, initialLogs] = await Promise.all([
@@ -47,6 +50,7 @@ export default async function LynxHome() {
     <LynxDashboardClient
       initialStats={stats}
       initialLogs={serializedLogs}
+      session={ session}
     />
   );
 }

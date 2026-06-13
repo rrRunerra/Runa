@@ -10,6 +10,7 @@ import { apps } from "../../config/apps";
 import { getAquilaSidebarConfig } from "../../config/aquilaSidebarConfig";
 import { getLynxSidebarConfig } from "../../config/lynxSidebarConfig";
 import { toast } from "sonner";
+import { hasPermission } from "@runa/permissions";
 
 
 interface Connection {
@@ -204,18 +205,18 @@ export const SidebarSettingsTab = forwardRef<SidebarSettingsTabRef, SidebarSetti
     }));
 
     // Group availableItems by section
-    const userRole = session?.user?.role;
+    const userPermissions = session?.user?.permissions;
     const groupedItems: Record<string, NavItem[]> = {};
     currentConfig.forEach((sec) => {
       if (sec.section?.toLowerCase() === "phone") return;
       
-      // Check section role access
-      const canAccessSection = !sec.role || userRole === "ADMIN" ? true : sec.role === userRole;
+      // Check section permission access
+      const canAccessSection = !sec.permission || hasPermission(userPermissions, sec.permission, sec.permissionOperator || "any");
       if (!canAccessSection) return;
 
       sec.items.forEach((item) => {
-        // Check item role access
-        const canAccessItem = !item.role || userRole === "ADMIN" ? true : item.role === userRole;
+        // Check item permission access
+        const canAccessItem = !item.permission || hasPermission(userPermissions, item.permission, item.permissionOperator || "all");
         if (!canAccessItem) return;
 
         const secName = sec.section || "General";

@@ -206,6 +206,9 @@ importers:
       '@runa/auth':
         specifier: workspace:*
         version: link:../../packages/auth
+      '@runa/cache':
+        specifier: workspace:*
+        version: link:../../packages/cache
       '@runa/connections':
         specifier: workspace:*
         version: link:../../packages/connections

@@ -1,4 +1,5 @@
 import { auth } from "@runa/auth";
+import { hasPermission, BitField, LynxFlags } from "@runa/permissions";
 import { ChevronRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -29,12 +30,12 @@ export default async function MemberGridPage({
   params: Promise<{ guild: string }>;
 }) {
   const { guild } = await params;
-  const members = await getGuildUsers(guild);
-
   const session = await auth();
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || !hasPermission(session.user.permissions, LynxFlags.GUILD_CHAT)) {
     return <AccessDenied />;
   }
+  const members = await getGuildUsers(guild);
+
 
   return (
     <div className="container mx-auto p-6 md:p-8 space-y-6 md:space-y-8 select-none">

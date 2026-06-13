@@ -1,6 +1,6 @@
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
-import { BitField, hasPermission } from "@runa/permissions";
+import { BitField, hasPermission, LynxFlags, BitFieldResolvable } from "@runa/permissions";
 import "dotenv/config";
 
 const PUBLIC_ROUTES: string[] = [
@@ -21,14 +21,42 @@ const PUBLIC_ROUTES: string[] = [
   "/aquila/browse",
   "/api/auth",
   "/api/auth/callback/credentials",
-  "/aquila"
+  "/aquila",
+  "/lynx",
+  "/polaris/permissions"
 ];
 
-const ADMIN_ROUTES: string[] = [
-  "/lynx/databases",
-  "/lynx/logs",
-  "/lynx/config",
-  "/lynx/chat"
+interface RouteGuard {
+  path: string;
+  permission: BitFieldResolvable;
+  operator?: "all" | "any";
+  redirect: string;
+}
+
+// console.log(new BitField(LynxFlags.GUILD_CHAT).serialize())
+
+const ROUTE_GUARDS: RouteGuard[] = [
+  {
+    path: "/lynx/databases",
+    permission: LynxFlags.MANAGE_DATABASE,
+    redirect: "/lynx/unauthorized",
+  },
+  {
+    path: "/lynx/logs",
+    permission: LynxFlags.VIEW_LOGS,
+    redirect: "/lynx/unauthorized",
+  },
+  {
+    path: "/lynx/config",
+    permission: LynxFlags.MANAGE_CONFIG,
+    redirect: "/lynx/unauthorized",
+  },
+  {
+    path: "/lynx/chat",
+    permission: [LynxFlags.DM_CHAT, LynxFlags.GUILD_CHAT],
+    operator: "any",
+    redirect: "/lynx/unauthorized",
+  },
 ];
 
 function getJwtExpiry(tokenString: string): number | null {
@@ -70,21 +98,17 @@ export default async function proxy(req: NextRequest) {
       return NextResponse.redirect(url);
     }
   }
-  const hasAdmin = hasPermission(token.permissions, BitField.Flags.ADMINISTRATOR);
-  if (ADMIN_ROUTES.some((route) => pathname.startsWith(route)) && !hasAdmin) {
-    if (pathname.startsWith("/lynx")) {
-      url.pathname = "/lynx/unauthorized";
-      return NextResponse.redirect(url);
-    }
-    if (pathname.startsWith("/aquila")) {
-      url.pathname = "/aquila/unauthorized";
-      return NextResponse.redirect(url);
-    }
-    if (pathname.startsWith("/polaris")) {
-      url.pathname = "/polaris/unauthorized";
-      return NextResponse.redirect(url);
+
+  // Route protection by permission
+  for (const guard of ROUTE_GUARDS) {
+    if (pathname.startsWith(guard.path)) {
+      if (!hasPermission(token.permissions, guard.permission, guard.operator || "all")) {
+        url.pathname = guard.redirect;
+        return NextResponse.redirect(url);
+      }
     }
   }
+
   return NextResponse.next();
 }
 

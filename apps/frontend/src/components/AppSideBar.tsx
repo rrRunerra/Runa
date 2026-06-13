@@ -24,6 +24,7 @@ import type {
   NavSection,
   NavItem,
 } from "@/components/Providers/NavigationProvider";
+import { hasPermission } from "@runa/permissions";
 import {
   useSidebar,
   Sidebar,
@@ -353,13 +354,14 @@ export default function AppSideBar({
       {/* ── Nav sections ────────────────────────────────── */}
       <SidebarContent className="no-scrollbar px-2">
         <LayoutGroup id="sidebar">
+          {/* SECTIONS */}
           {resolvedNavConfig
           .filter(
             (c: NavSection) =>
-              (!c.role || session?.user?.role === "ADMIN"
-                ? true
-                : c.role === session?.user?.role) &&
-              c.items.length > 0 &&
+              (!c.permission || hasPermission(session?.user?.permissions, c.permission, c.permissionOperator)) &&
+              c.items.filter((item: NavItem) =>
+                !item.permission || hasPermission(session?.user?.permissions, item.permission, item.permissionOperator || "all")
+              ).length > 0 &&
               c.section?.toLowerCase() !== "phone",
           )
           .map((section: NavSection, sectionIdx: number) => (
@@ -372,9 +374,7 @@ export default function AppSideBar({
               <SidebarMenu className="gap-1.5">
                 {section.items
                   .filter((item: NavItem) =>
-                    !item.role || session?.user?.role === "ADMIN"
-                      ? true
-                      : item.role === session?.user?.role,
+                    !item.permission || hasPermission(session?.user?.permissions, item.permission, item.permissionOperator || "all")
                   )
                   .map((item: NavItem, itemIdx: number) => {
                     const hasChildren =
@@ -453,17 +453,20 @@ export default function AppSideBar({
                           <>
                             {hasHref && (
                               <CollapsibleTrigger asChild>
-                                <SidebarMenuAction className="data-[state=open]:rotate-90">
+                                <SidebarMenuAction className="data-[state=open]:rotate-90 z-30">
                                   <ChevronRight className="size-4 text-muted-foreground/60 hover:text-foreground" />
                                   <span className="sr-only">Toggle</span>
                                 </SidebarMenuAction>
                               </CollapsibleTrigger>
                             )}
-                            <CollapsibleContent>
-                              <SidebarMenuSub className="border-l border-zinc-800/40 ml-4.5 pl-3 py-1 gap-1">
-                                {item.children?.map(
-                                  (child: any, childIdx: number) => {
-                                    const isSubActive = pathname === child.href;
+                             <CollapsibleContent>
+                               <SidebarMenuSub className="border-l border-zinc-800/40 ml-4.5 pl-3 py-1 gap-1">
+                                 {item.children
+                                   ?.filter((child: any) =>
+                                     !child.permission || hasPermission(session?.user?.permissions, child.permission, child.permissionOperator || "all")
+                                   )
+                                   .map((child: any, childIdx: number) => {
+                                     const isSubActive = pathname === child.href;
                                     return (
                                       <SidebarMenuSubItem key={childIdx}>
                                         <SidebarMenuSubButton

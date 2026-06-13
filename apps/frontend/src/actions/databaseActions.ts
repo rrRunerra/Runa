@@ -2,6 +2,7 @@
 
 import { auth } from "@runa/auth";
 import { prisma, Prisma } from "@runa/database";
+import { hasPermission, BitField, LynxFlags } from "@runa/permissions";
 
 export interface FieldConfig {
   name: string;
@@ -107,7 +108,7 @@ function parseFields(modelName: string, inputData: any) {
 
 export async function getDatabaseSchema(modelName: string): Promise<FieldConfig[]> {
   const session = await auth();
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || !hasPermission(session.user.permissions, LynxFlags.MANAGE_DATABASE)) {
     throw new Error("Unauthorized");
   }
 
@@ -124,7 +125,7 @@ export async function getDatabaseRecords(
   pageSize: number
 ): Promise<{ records: any[]; total: number }> {
   const session = await auth();
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || !hasPermission(session.user.permissions, LynxFlags.MANAGE_DATABASE)) {
     throw new Error("Unauthorized");
   }
 
@@ -154,7 +155,7 @@ export async function getDatabaseRecords(
 
 export async function createDatabaseRecord(modelName: string, data: any): Promise<any> {
   const session = await auth();
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || !hasPermission(session.user.permissions, LynxFlags.MANAGE_DATABASE)) {
     throw new Error("Unauthorized");
   }
 
@@ -172,7 +173,7 @@ export async function updateDatabaseRecord(
   data: any
 ): Promise<any> {
   const session = await auth();
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || !hasPermission(session.user.permissions, LynxFlags.MANAGE_DATABASE)) {
     throw new Error("Unauthorized");
   }
 
@@ -194,7 +195,7 @@ export async function updateDatabaseRecord(
 
 export async function deleteDatabaseRecord(modelName: string, id: any): Promise<any> {
   const session = await auth();
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || !hasPermission(session.user.permissions, LynxFlags.MANAGE_DATABASE)) {
     throw new Error("Unauthorized");
   }
 

@@ -14,6 +14,10 @@ import {
   BookOpen
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AuthOptions, Session } from "next-auth";
+import { hasPermission, LynxBitField } from "@runa/permissions";
+
+
 
 interface LogEntry {
   id: number;
@@ -42,11 +46,13 @@ interface StatsPayload {
 interface LynxDashboardClientProps {
   initialStats: StatsPayload | null;
   initialLogs: LogEntry[];
+  session: Session | null
 }
 
 export default function LynxDashboardClient({
   initialStats,
   initialLogs,
+  session
 }: LynxDashboardClientProps) {
   const [stats, setStats] = useState<StatsPayload | null>(initialStats);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -146,7 +152,7 @@ export default function LynxDashboardClient({
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <motion.button
+          {hasPermission(session?.user.permissions, LynxBitField.Flags.VIEW_LOGS) && <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleRefresh}
@@ -155,7 +161,7 @@ export default function LynxDashboardClient({
           >
             <RefreshCw className={cn("size-3.5", isRefreshing && "animate-spin")} />
             Sync Metrics
-          </motion.button>
+          </motion.button>}
         </div>
       </div>
 
@@ -276,7 +282,7 @@ export default function LynxDashboardClient({
           </div>
 
           {/* Quick Logs Terminal Preview */}
-          <motion.div
+          {hasPermission(session?.user.permissions, LynxBitField.Flags.VIEW_LOGS) &&<motion.div
             variants={itemVariants}
             className="rounded-2xl border border-zinc-800/40 bg-zinc-950/20 backdrop-blur-xl p-6 shadow-2xl space-y-4"
           >
@@ -318,7 +324,7 @@ export default function LynxDashboardClient({
                 </div>
               )}
             </div>
-          </motion.div>
+          </motion.div>}
         </div>
       </motion.div>
     </div>

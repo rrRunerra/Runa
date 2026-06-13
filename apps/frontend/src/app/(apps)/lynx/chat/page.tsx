@@ -3,6 +3,7 @@
 import { ChevronRight, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { hasPermission, BitField, LynxFlags } from "@runa/permissions";
 import AccessDenied from "@/components/lynx/AccessDenied";
 import { useNavigation } from "@/hooks/useNavigation";
 import { motion } from "framer-motion";
@@ -12,7 +13,7 @@ export default function ChatPage() {
   const chatItem = getItem("General", "Chat");
 
   const { data: session, status } = useSession();
-  if (status === "unauthenticated" || session?.user.role !== "ADMIN") {
+  if (status === "unauthenticated" || !hasPermission(session?.user?.permissions, [LynxFlags.DM_CHAT, LynxFlags.GUILD_CHAT], "any")) {
     return <AccessDenied />;
   }
 
@@ -52,12 +53,18 @@ export default function ChatPage() {
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
       >
         {chatItem?.children && chatItem.children.length > 0 ? (
-          chatItem.children.map((category) => (
+          chatItem.children
+            .filter((category) =>
+              !category.permission || hasPermission(session?.user?.permissions, category.permission, category.permissionOperator || "all")
+            )
+            .map((category) => (
+           
             <Link
-              key={category.href}
-              href={category.href}
-              className="block h-full"
-            >
+               key={category.href}
+               href={category.href}
+               className="block h-full"
+             >
+
               <motion.div
                 variants={cardVariants}
                 whileHover={{ scale: 1.02, y: -2 }}

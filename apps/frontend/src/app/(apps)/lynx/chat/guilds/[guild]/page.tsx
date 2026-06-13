@@ -1,4 +1,5 @@
 import { auth } from "@runa/auth";
+import { hasPermission, BitField, LynxFlags } from "@runa/permissions";
 import { ChevronRight, Hash, Volume2 } from "lucide-react";
 import Link from "next/link";
 import AccessDenied from "@/components/lynx/AccessDenied";
@@ -39,12 +40,12 @@ export default async function ChannelsPage({
   params: Promise<{ guild: string }>;
 }) {
   const { guild } = await params;
-  const channels: Channel[] = await getChannels(guild);
-
   const session = await auth();
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || !hasPermission(session.user.permissions, LynxFlags.GUILD_CHAT)) {
     return <AccessDenied />;
   }
+  const channels: Channel[] = await getChannels(guild);
+
 
   return (
     <div className="container mx-auto p-8 space-y-8 relative">

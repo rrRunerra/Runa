@@ -7,6 +7,7 @@ import {
   Command,
   Database,
   Dice1,
+  Home,
   Info,
   Key,
   List,
@@ -16,6 +17,7 @@ import {
   Settings,
 } from "lucide-react";
 import type { NavbarConfig } from "@/components/Providers/NavigationProvider";
+import { BitField, LynxFlags } from "@runa/permissions";
 
 interface LynxData {
   commands: { name: string }[];
@@ -65,6 +67,17 @@ export function getLynxSidebarConfig(data: Partial<LynxData>): NavbarConfig {
           icon: <Settings className="h-4 w-4" />,
           subtitle: "Config list",
           position: 4,
+        },
+      ],
+    },
+    {
+      section: "",
+      items: [
+        {
+          label: "Home",
+          href: "/lynx",
+          icon: <Home className="h-4 w-4" />,
+          subtitle: "Home",
         },
       ],
     },
@@ -131,13 +144,15 @@ export function getLynxSidebarConfig(data: Partial<LynxData>): NavbarConfig {
     },
     {
       section: "Administration",
-      role: "ADMIN",
+      permission: [LynxFlags.VIEW_LOGS, LynxFlags.MANAGE_DATABASE, LynxFlags.MANAGE_CONFIG ],
+      permissionOperator: "any",
       items: [
         {
           label: "Logs",
           href: "/lynx/logs",
           icon: <Logs className="h-4 w-4" />,
           subtitle: "List of all logs",
+          permission: LynxFlags.VIEW_LOGS,
           children: [
             {
               label: "All",
@@ -175,6 +190,7 @@ export function getLynxSidebarConfig(data: Partial<LynxData>): NavbarConfig {
           label: "Databases",
           href: "/lynx/databases",
           icon: <Database className="h-4 w-4" />,
+          permission: LynxFlags.MANAGE_DATABASE,
           children: databases.map((db) => ({
             label: db,
             href: `/lynx/databases/${db}`,
@@ -186,6 +202,7 @@ export function getLynxSidebarConfig(data: Partial<LynxData>): NavbarConfig {
           href: "/lynx/config",
           icon: <Settings className="h-4 w-4" />,
           subtitle: "Lynx configuration",
+          permission: LynxFlags.MANAGE_CONFIG,
           children: [
             {
               label: "Homework",
@@ -199,23 +216,27 @@ export function getLynxSidebarConfig(data: Partial<LynxData>): NavbarConfig {
     },
     {
       section: "General",
-      role: "ADMIN",
+      permission: [LynxFlags.LOGGED_IN, LynxFlags.GUILD_CHAT, LynxFlags.DM_CHAT],
+      permissionOperator: "any",
       items: [
         {
           label: "Chat",
           href: "/lynx/chat",
           icon: <MessageSquare className="h-4 w-4" />,
           subtitle: "Send messages in guilds",
+          permission: LynxFlags.LOGGED_IN,
           children: [
             {
               label: "Guilds",
               href: "/lynx/chat/guilds",
               icon: <Dice1 className="h-4 w-4" />,
+              permission: LynxFlags.GUILD_CHAT,
             },
             {
               label: "Direct Messages",
               href: "/lynx/chat/dms",
               icon: <Dice1 className="h-4 w-4" />,
+              permission: LynxFlags.DM_CHAT,
             },
           ],
         },

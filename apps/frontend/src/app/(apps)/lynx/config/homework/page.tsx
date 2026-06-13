@@ -2,6 +2,7 @@
 
 import { Loader2, Save } from "lucide-react";
 import { useSession } from "next-auth/react";
+import { hasPermission, BitField, LynxFlags } from "@runa/permissions";
 import { useState } from "react";
 import AccessDenied from "@/components/lynx/AccessDenied";
 import { PageHeader } from "@/components/lynx/LynxPageHeader";
@@ -15,7 +16,7 @@ export default function HomeworkConfigPage() {
   const [isLoading, setIsLoading] = useState(false);
 
   const { data: session, status } = useSession();
-  if (status === "unauthenticated" || session?.user.role !== "ADMIN") {
+  if (status === "unauthenticated" || !hasPermission(session?.user?.permissions, LynxFlags.MANAGE_CONFIG)) {
     return <AccessDenied />;
   }
 

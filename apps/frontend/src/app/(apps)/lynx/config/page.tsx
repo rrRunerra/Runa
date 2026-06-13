@@ -3,12 +3,13 @@
 import { ChevronRight, Settings, ScrollText } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { hasPermission, BitField, LynxFlags } from "@runa/permissions";
 import AccessDenied from "@/components/lynx/AccessDenied";
 import { motion } from "framer-motion";
 
 export default function ConfigPage() {
   const { data: session, status } = useSession();
-  if (status === "unauthenticated" || session?.user.role !== "ADMIN") {
+  if (status === "unauthenticated" || !hasPermission(session?.user?.permissions, LynxFlags.MANAGE_CONFIG)) {
     return <AccessDenied />;
   }
 

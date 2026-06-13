@@ -1,4 +1,5 @@
 import { auth } from "@runa/auth";
+import { hasPermission, BitField, LynxFlags } from "@runa/permissions";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import AccessDenied from "@/components/lynx/AccessDenied";
@@ -36,7 +37,7 @@ export default async function DmChatPage({
   let error: string | null = null;
 
   const session = await auth();
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || !hasPermission(session.user.permissions, LynxFlags.DM_CHAT)) {
     return <AccessDenied />;
   }
 

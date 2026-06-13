@@ -174,14 +174,19 @@ export class BitField {
 }
 
 export const DEFAULT_PERMISSIONS: readonly number[] = new BitField([
-  PolarisFlags.VIEW, // Default VIEW permission
+  PolarisFlags.VIEW,
+  PolarisFlags.LOGGED_IN,
+  LynxFlags.LOGGED_IN,
+  AquilaFlags.LOGGED_IN,
 ]).serialize();
 
 export function hasPermission(
   permissions: number[] | undefined,
-  permission: bigint,
+  permission: BitFieldResolvable,
+  checkType: "all" | "any" = "all",
   flags: Record<string, bigint> = BitField.Flags
 ): boolean {
   if (!permissions) return false;
-  return new BitField(permissions).has(permission);
+  const bitfield = new BitField(permissions);
+  return checkType === "any" ? bitfield.any(permission) : bitfield.has(permission);
 }

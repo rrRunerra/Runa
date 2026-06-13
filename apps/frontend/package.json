@@ -11,6 +11,7 @@
   "dependencies": {
     "@base-ui/react": "1.2.0",
     "@runa/auth": "workspace:*",
+    "@runa/cache": "workspace:*",
     "@runa/connections": "workspace:*",
     "@runa/database": "workspace:*",
     "@runa/permissions": "workspace:*",

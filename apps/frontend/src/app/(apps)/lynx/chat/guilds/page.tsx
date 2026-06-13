@@ -4,6 +4,7 @@ import { ChevronRight, Server } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { hasPermission, BitField, LynxFlags } from "@runa/permissions";
 import { Suspense, useEffect, useState } from "react";
 import AccessDenied from "@/components/lynx/AccessDenied";
 import { PageHeader } from "@/components/lynx/LynxPageHeader";
@@ -17,7 +18,7 @@ function GuildsContent() {
   >([]);
 
   const { data: session, status } = useSession();
-  if (status === "unauthenticated" || session?.user.role !== "ADMIN") {
+  if (status === "unauthenticated" || !hasPermission(session?.user?.permissions, LynxFlags.GUILD_CHAT)) {
     return <AccessDenied />;
   }
 

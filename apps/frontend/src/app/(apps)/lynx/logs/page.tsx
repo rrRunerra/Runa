@@ -3,6 +3,7 @@
 import { ChevronRight, ScrollText } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
+import { hasPermission, BitField, LynxFlags } from "@runa/permissions";
 import AccessDenied from "@/components/lynx/AccessDenied";
 import { useNavigation } from "@/hooks/useNavigation";
 import { motion } from "framer-motion";
@@ -14,7 +15,7 @@ export default function LogsPage() {
   const logsItem = getItem("Administration", "Logs");
 
   const { data: session, status } = useSession();
-  if (status === "unauthenticated" || session?.user.role !== "ADMIN") {
+  if (status === "unauthenticated" || !hasPermission(session?.user?.permissions, LynxFlags.VIEW_LOGS)) {
     return <AccessDenied />;
   }
 

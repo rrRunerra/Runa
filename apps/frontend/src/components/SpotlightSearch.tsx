@@ -6,6 +6,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { useNavigation } from "@/hooks/useNavigation";
 import { apps } from "../../config/apps";
+import { hasPermission } from "@runa/permissions";
 import {
   CommandDialog,
   CommandInput,
@@ -123,12 +124,23 @@ export default function SpotlightSearch(): React.JSX.Element {
       // Skip phone section if present
       if (section.section?.toLowerCase() === "phone") return;
 
+      // Skip section if user does not have permission for it
+      if (
+        section.permission &&
+        !hasPermission(
+          session?.user?.permissions,
+          section.permission,
+          section.permissionOperator || "all"
+        )
+      ) {
+        return;
+      }
+
       section.items.forEach((navItem) => {
         // Only include if user has access
         if (
-          navItem.role &&
-          session?.user?.role !== "ADMIN" &&
-          navItem.role !== session?.user?.role
+          navItem.permission &&
+          !hasPermission(session?.user?.permissions, navItem.permission, navItem.permissionOperator || "all")
         ) {
           return;
         }
@@ -159,9 +171,8 @@ export default function SpotlightSearch(): React.JSX.Element {
         if (navItem.children && navItem.children.length > 0) {
           navItem.children.forEach((childItem) => {
             if (
-              childItem.role &&
-              session?.user?.role !== "ADMIN" &&
-              childItem.role !== session?.user?.role
+              childItem.permission &&
+              !hasPermission(session?.user?.permissions, childItem.permission, childItem.permissionOperator || "all")
             ) {
               return;
             }

@@ -1,4 +1,5 @@
 import { auth } from "@runa/auth";
+import { hasPermission, BitField, LynxFlags } from "@runa/permissions";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import AccessDenied from "@/components/lynx/AccessDenied";
@@ -44,11 +45,11 @@ export default async function Page({
   const { guild, guild_channel } = await params;
   let data: any[] = []; // eslint-disable-line @typescript-eslint/no-explicit-any
   let error: string | null = null;
-
   const session = await auth();
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || !hasPermission(session.user.permissions, LynxFlags.GUILD_CHAT)) {
     return <AccessDenied />;
   }
+
 
   const [context, messagesRes] = await Promise.all([
     getChatContext(guild, guild_channel),

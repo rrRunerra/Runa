@@ -1,11 +1,12 @@
 import { auth } from "@runa/auth";
+import { hasPermission, BitField, LynxFlags } from "@runa/permissions";
 import { LynxLogType, prisma } from "@runa/database";
 import AccessDenied from "@/components/lynx/AccessDenied";
 import { LogTerminal } from "@/components/lynx/LogTerminal";
 
 export default async function ErrorLogsPage() {
   const session = await auth();
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || !hasPermission(session.user.permissions, LynxFlags.VIEW_LOGS)) {
     return <AccessDenied />;
   }
 

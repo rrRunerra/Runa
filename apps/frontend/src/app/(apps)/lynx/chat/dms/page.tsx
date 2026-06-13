@@ -1,4 +1,5 @@
 import { auth } from "@runa/auth";
+import { hasPermission, BitField, LynxFlags } from "@runa/permissions";
 import { ChevronRight, MessageSquare, User as UserIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -26,7 +27,7 @@ export default async function DmListPage() {
   const dms = await getActiveDms();
 
   const session = await auth();
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || !hasPermission(session.user.permissions, LynxFlags.DM_CHAT)) {
     return <AccessDenied />;
   }
 
