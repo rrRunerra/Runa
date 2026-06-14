@@ -3,6 +3,13 @@ import { BaseConnection } from "../base-connection.js";
 import { AnimeUpdateData, MangaUpdateData } from "../types.js";
 import { ConnectionCapability } from "../metadata.js";
 
+function parseMalDate(dateStr?: string | null): number | null {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return null;
+  return Math.floor(d.getTime() / 1000);
+}
+
 export default class MalConnection extends BaseConnection {
   public readonly providerKey = ConnectionProvider.MAL;
 
@@ -465,5 +472,181 @@ export default class MalConnection extends BaseConnection {
     } else {
       console.log(`MAL manga connection deleted for user ${username}`);
     }
+  }
+
+  private async resolveAnilistIds(malIds: number[], type: "ANIME" | "MANGA"): Promise<Record<number, number>> {
+    const malToAnilistMap: Record<number, number> = {};
+    const batchSize = 40;
+    for (let i = 0; i < malIds.length; i += batchSize) {
+      const batch = malIds.slice(i, i + batchSize);
+      try {
+        const res = await fetch("https://graphql.anilist.co", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            query: `
+              query ($idMal: [Int], $type: MediaType) {
+                Page(page: 1, perPage: 50) {
+                  media(idMal_in: $idMal, type: $type) {
+                    id
+                    idMal
+                  }
+                }
+              }
+            `,
+            variables: {
+              idMal: batch,
+              type,
+            },
+          }),
+        });
+        if (res.ok) {
+          const json = await res.json();
+          const mediaList = json?.data?.Page?.media || [];
+          for (const media of mediaList) {
+            if (media.id && media.idMal) {
+              malToAnilistMap[media.idMal] = media.id;
+            }
+          }
+        } else {
+          console.error(`Failed to resolve AniList IDs batch: ${res.statusText}`);
+        }
+      } catch (err: any) {
+        console.error(`Error resolving AniList IDs batch:`, err.message);
+      }
+      if (i + batchSize < malIds.length) {
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+    }
+    return malToAnilistMap;
+  }
+
+  public async fetchUserList(username: string): Promise<any[]> {
+    const conn = await this.deps.prisma.client.connections.findFirst({
+      where: { username, provider: ConnectionProvider.MAL },
+      select: {
+        id: true,
+        accessToken: true,
+        refreshToken: true,
+        expiresAt: true,
+      },
+    });
+
+    if (!conn) {
+      throw new Error(`No MAL connection found for user ${username}`);
+    }
+
+    let accessToken: string;
+    try {
+      accessToken = await this.getOrRefreshToken(username, conn);
+    } catch (err: any) {
+      throw new Error(`Failed to refresh MAL token: ${err.message}`);
+    }
+
+    const fetchAllPages = async (initialUrl: string) => {
+      let nextUrl: string | null = initialUrl;
+      const entries: any[] = [];
+      while (nextUrl) {
+        const res: any = await fetch(nextUrl, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+        if (!res.ok) {
+          throw new Error(`Failed to fetch MAL list from ${nextUrl}: ${res.statusText}`);
+        }
+        const json: any = await res.json();
+        if (json.data) {
+          entries.push(...json.data);
+        }
+        nextUrl = json.paging?.next || null;
+      }
+      return entries;
+    };
+
+    const [animeEntries, mangaEntries] = await Promise.all([
+      fetchAllPages("https://api.myanimelist.net/v2/users/@me/animelist?fields=list_status{status,score,num_episodes_watched,comments,start_date,finish_date},alternative_titles,num_episodes,main_picture&limit=1000"),
+      fetchAllPages("https://api.myanimelist.net/v2/users/@me/mangalist?fields=list_status{status,score,num_chapters_read,num_volumes_read,comments,start_date,finish_date},alternative_titles,num_chapters,num_volumes,main_picture&limit=1000"),
+    ]);
+
+    const animeMalIds = animeEntries.map((e) => e.node.id);
+    const mangaMalIds = mangaEntries.map((e) => e.node.id);
+
+    const [animeAnilistMap, mangaAnilistMap] = await Promise.all([
+      this.resolveAnilistIds(animeMalIds, "ANIME"),
+      this.resolveAnilistIds(mangaMalIds, "MANGA"),
+    ]);
+
+    const items: any[] = [];
+
+    // Map Anime entries
+    for (const entry of animeEntries) {
+      const malId = entry.node.id;
+      const anilistId = animeAnilistMap[malId] || null;
+
+      let status = "PLANNING";
+      const malStatus = entry.list_status?.status;
+      if (malStatus === "watching") status = "WATCHING";
+      else if (malStatus === "completed") status = "COMPLETED";
+      else if (malStatus === "on_hold") status = "ON_HOLD";
+      else if (malStatus === "dropped") status = "DROPPED";
+
+      items.push({
+        mediaType: "anime",
+        anilistId,
+        malId,
+        title: {
+          romaji: entry.node.title,
+          english: entry.node.alternative_titles?.en || entry.node.title,
+          native: entry.node.alternative_titles?.ja || entry.node.title,
+        },
+        coverImage: entry.node.main_picture?.large || entry.node.main_picture?.medium,
+        episodes: entry.node.num_episodes,
+        status,
+        progress: entry.list_status?.num_episodes_watched || 0,
+        score: entry.list_status?.score || 0,
+        notes: entry.list_status?.comments || "",
+        startDate: parseMalDate(entry.list_status?.start_date),
+        endDate: parseMalDate(entry.list_status?.finish_date),
+      });
+    }
+
+    // Map Manga entries
+    for (const entry of mangaEntries) {
+      const malId = entry.node.id;
+      const anilistId = mangaAnilistMap[malId] || null;
+
+      let status = "PLANNING";
+      const malStatus = entry.list_status?.status;
+      if (malStatus === "reading") status = "READING";
+      else if (malStatus === "completed") status = "COMPLETED";
+      else if (malStatus === "on_hold") status = "ON_HOLD";
+      else if (malStatus === "dropped") status = "DROPPED";
+
+      items.push({
+        mediaType: "manga",
+        anilistId,
+        malId,
+        title: {
+          romaji: entry.node.title,
+          english: entry.node.alternative_titles?.en || entry.node.title,
+          native: entry.node.alternative_titles?.ja || entry.node.title,
+        },
+        coverImage: entry.node.main_picture?.large || entry.node.main_picture?.medium,
+        chapters: entry.node.num_chapters,
+        volumes: entry.node.num_volumes,
+        status,
+        progress: entry.list_status?.num_chapters_read || 0,
+        volumesProgress: entry.list_status?.num_volumes_read || 0,
+        score: entry.list_status?.score || 0,
+        notes: entry.list_status?.comments || "",
+        startDate: parseMalDate(entry.list_status?.start_date),
+        endDate: parseMalDate(entry.list_status?.finish_date),
+      });
+    }
+
+    return items;
   }
 }

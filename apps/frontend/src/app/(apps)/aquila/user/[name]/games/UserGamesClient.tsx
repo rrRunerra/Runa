@@ -1,7 +1,8 @@
 "use client";
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 import { MediaListDisplay } from "../../../../../../components/aquila/media-list/MediaListDisplay";
+import { InfiniteScroll } from "../../../../../../components/aquila/media-list/InfiniteScroll";
 import {
   MediaEntry,
   DisplayType,
@@ -62,6 +63,7 @@ interface SidebarContentsProps {
   sort: string;
   setSort: (sort: any) => void;
   resetFilters: () => void;
+  counts?: Record<string, number>;
 }
 
 const SidebarContents = ({
@@ -77,6 +79,7 @@ const SidebarContents = ({
   sort,
   setSort,
   resetFilters,
+  counts,
 }: SidebarContentsProps) => (
   <>
     {/* Search */}
@@ -97,6 +100,8 @@ const SidebarContents = ({
       </Label>
       {lists.map((list) => {
         const isActive = activeList === list;
+        const countKey = list.toLowerCase().replace(/\s+/g, "_");
+        const count = counts?.[countKey] ?? 0;
         return (
           <button
             key={list}
@@ -105,7 +110,7 @@ const SidebarContents = ({
               onItemClick?.();
             }}
             className={cn(
-              "relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold uppercase tracking-wider transition-colors text-left cursor-pointer select-none",
+              "relative flex items-center justify-between gap-3 px-3 py-2 rounded-xl text-xs font-semibold uppercase tracking-wider transition-colors text-left cursor-pointer select-none w-full",
               isActive ? "text-primary-foreground font-semibold" : "text-muted-foreground hover:text-foreground"
             )}
           >
@@ -117,6 +122,9 @@ const SidebarContents = ({
               />
             )}
             <span className="relative z-10">{list}</span>
+            <span className={cn("ml-auto relative z-10 text-[10px] px-1.5 py-0.5 rounded-md bg-zinc-800/40 text-muted-foreground", isActive && "bg-primary-foreground/20 text-primary-foreground")}>
+              {count}
+            </span>
           </button>
         );
       })}
@@ -157,6 +165,8 @@ const SidebarContents = ({
   </>
 );
 
+const GAMES_PRIORITY_STATUSES = ["Playing", "Completed", "Dropped", "Planning", "On Hold"];
+
 export default function UserGamesPage() {
   const params = useParams();
   const username = params.name as string;
@@ -169,7 +179,8 @@ export default function UserGamesPage() {
   const isOwner = session?.user?.username === username;
 
   const [displayType, setDisplayType] = useState<DisplayType>("grid");
-  const [search, setSearch] = useState("");
+  const [searchVal, setSearchVal] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [activeList, setActiveList] = useState("All");
   const [filters, setFilters] = useState<MediaFilters>({
     format: "",
@@ -189,6 +200,20 @@ export default function UserGamesPage() {
 
   const [gameList, setGameList] = useState<MediaEntry[]>([]);
   const [isPrivate, setIsPrivate] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [priorityIdx, setPriorityIdx] = useState(0);
+  const [priorityOff, setPriorityOff] = useState(0);
+  const isFetchingRef = useRef(false);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchVal);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchVal]);
 
   useEffect(() => {
     if (username) {
@@ -199,39 +224,90 @@ export default function UserGamesPage() {
     }
   }, [username]);
 
-  const fetchGameList = () => {
-    if (username) {
-      const headers: HeadersInit = {};
-      if (session?.accessToken) {
-        headers["Authorization"] = `Bearer ${session.accessToken}`;
-      }
+  const fetchGameList = (currentOffset = 0, isReset = false, statusOverride?: string) => {
+    if (!username) return;
+    if (isFetchingRef.current && !isReset) return;
+    isFetchingRef.current = true;
+    setLoading(true);
 
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/game/user/${username}`, {
-        headers,
-      })
-        .then(async (res) => {
-          if (res.status === 403) {
-            setIsPrivate(true);
-            return null;
-          }
-          if (res.ok) {
-            return res.json();
-          }
-          throw new Error("Failed to fetch list");
-        })
-        .then((data) => {
-          if (data && data.statusCode !== 404) {
-            setGameList(data);
-            setIsPrivate(false);
-          }
-        })
-        .catch((err) => console.error("Failed to fetch games list", err));
+    const headers: HeadersInit = {};
+    if (session?.accessToken) {
+      headers["Authorization"] = `Bearer ${session.accessToken}`;
     }
+
+    const effectiveStatus = statusOverride ?? activeList;
+
+    const queryParams = new URLSearchParams({
+      limit: "30",
+      offset: currentOffset.toString(),
+      status: effectiveStatus,
+      search: debouncedSearch,
+      sort: sort,
+    });
+
+    fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/list/game/user/${username}?${queryParams}`,
+      { headers }
+    )
+      .then(async (res) => {
+        if (res.status === 403) {
+          setIsPrivate(true);
+          return null;
+        }
+        if (res.ok) {
+          return res.json();
+        }
+        throw new Error("Failed to fetch list");
+      })
+      .then((data) => {
+        if (data && data.statusCode !== 404) {
+          setIsPrivate(false);
+          const newEntries = data.entries || [];
+          setGameList((prev) => {
+            if (isReset) return newEntries;
+            const seen = new Set(prev.map((e) => e.id));
+            return [...prev, ...newEntries.filter((e: any) => !seen.has(e.id))];
+          });
+          setCounts(data.counts || {});
+          if (statusOverride !== undefined && activeList === "All") {
+            if (newEntries.length < 30) {
+              const pIdx = GAMES_PRIORITY_STATUSES.indexOf(statusOverride);
+              const nextIdx = pIdx + 1;
+              if (nextIdx < GAMES_PRIORITY_STATUSES.length) {
+                setPriorityIdx(nextIdx);
+                setPriorityOff(0);
+                setHasMore(true);
+              } else {
+                setHasMore(false);
+              }
+            } else {
+              setPriorityOff(currentOffset + newEntries.length);
+              setHasMore(true);
+            }
+          } else {
+            setHasMore(newEntries.length === 30);
+            setOffset(currentOffset + newEntries.length);
+          }
+        }
+      })
+      .catch((err) => console.error("Failed to fetch games list", err))
+      .finally(() => {
+        setLoading(false);
+        isFetchingRef.current = false;
+      });
   };
 
   useEffect(() => {
-    fetchGameList();
-  }, [username, session]);
+    setPriorityIdx(0);
+    setPriorityOff(0);
+    setOffset(0);
+    setHasMore(true);
+    if (activeList === "All") {
+      fetchGameList(0, true, GAMES_PRIORITY_STATUSES[0]);
+    } else {
+      fetchGameList(0, true);
+    }
+  }, [username, session, debouncedSearch, activeList, sort]);
 
   useEffect(() => {
     if (!userData) return;
@@ -248,7 +324,7 @@ export default function UserGamesPage() {
   ];
 
   const resetFilters = () => {
-    setSearch("");
+    setSearchVal("");
     setActiveList("All");
     setFilters({
       format: "",
@@ -259,19 +335,7 @@ export default function UserGamesPage() {
     setSort("last_updated");
   };
 
-  const filteredData = useMemo(() => {
-    return gameList.filter((entry) => {
-      if (search && !entry.title.toLowerCase().includes(search.toLowerCase()))
-        return false;
-
-      if (activeList !== "All") {
-        if (!entry.status.toLowerCase().includes(activeList.toLowerCase()))
-          return false;
-      }
-
-      return true;
-    });
-  }, [search, activeList, gameList]);  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   return (
     <motion.div
@@ -290,8 +354,8 @@ export default function UserGamesPage() {
       >
         <SidebarContents
           idPrefix="desktop"
-          search={search}
-          setSearch={setSearch}
+          search={searchVal}
+          setSearch={setSearchVal}
           activeList={activeList}
           setActiveList={setActiveList}
           lists={lists}
@@ -300,6 +364,7 @@ export default function UserGamesPage() {
           sort={sort}
           setSort={setSort}
           resetFilters={resetFilters}
+          counts={counts}
         />
       </motion.aside>
 
@@ -368,8 +433,8 @@ export default function UserGamesPage() {
                       <SidebarContents
                         idPrefix="mobile"
                         onItemClick={() => setIsSheetOpen(false)}
-                        search={search}
-                        setSearch={setSearch}
+                        search={searchVal}
+                        setSearch={setSearchVal}
                         activeList={activeList}
                         setActiveList={setActiveList}
                         lists={lists}
@@ -378,6 +443,7 @@ export default function UserGamesPage() {
                         sort={sort}
                         setSort={setSort}
                         resetFilters={resetFilters}
+                        counts={counts}
                       />
                     </div>
                   </SheetContent>
@@ -404,14 +470,26 @@ export default function UserGamesPage() {
             </header>
 
             <MediaListDisplay
-              lists={activeList === "All" ? ["Playing", "Completed"] : [activeList]}
-              data={filteredData}
+              lists={activeList === "All" ? ["Playing", "Completed", "Dropped", "Planning", "On Hold"] : [activeList]}
+              data={gameList}
               displayType={displayType}
               filters={filters}
               sort={sort}
               baseUrl="/aquila/games"
               isOwner={isOwner}
-              onRefresh={fetchGameList}
+              onRefresh={() => fetchGameList(0, true, activeList === "All" ? GAMES_PRIORITY_STATUSES[0] : undefined)}
+            />
+
+            <InfiniteScroll
+              onLoadMore={() => {
+                if (activeList === "All") {
+                  fetchGameList(priorityOff, false, GAMES_PRIORITY_STATUSES[priorityIdx]);
+                } else {
+                  fetchGameList(offset, false);
+                }
+              }}
+              hasMore={hasMore}
+              isLoading={loading}
             />
           </>
         )}

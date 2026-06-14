@@ -65,12 +65,16 @@ export const MediaListRow: React.FC<MediaListRowProps> = ({
         >
           <div className="flex items-center gap-3">
             <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-muted">
-              <Image
-                src={entry.image}
-                alt={entry.title}
-                fill
-                className="object-cover"
-              />
+              {/* Native Next.js Image handles lazy loading and sizing */}
+              {entry.image && (
+                <Image
+                  src={entry.image}
+                  alt={entry.title}
+                  fill
+                  sizes="40px"
+                  className="object-cover"
+                />
+              )}
             </div>
             <span className="font-medium text-sm text-foreground group-hover:text-primary transition-colors">
               {entry.title}
@@ -167,4 +171,3 @@ export const MediaListRow: React.FC<MediaListRowProps> = ({
     </>
   );
 };
-

@@ -42,7 +42,7 @@ export class MangaQueueService implements OnModuleInit {
           } finally {
             this.processing.delete(anilistId);
           }
-        }, 3),
+        }, 1),
         catchError((error) => {
           this.logger.error(`Queue error: ${error}`);
           return EMPTY;
@@ -59,93 +59,127 @@ export class MangaQueueService implements OnModuleInit {
   }
 
   private async fetchFromAniList(anilistId: number): Promise<any | null> {
-    const aniListRes = await fetch('https://graphql.anilist.co', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({
-        query: `query ($id: Int) {
-          Media (id: $id, type: MANGA) {
+    const query = `query ($id: Int) {
+      Media (id: $id, type: MANGA) {
+        id
+        idMal
+        title {
+          romaji
+          english
+          native
+        }
+        coverImage {
+          extraLarge
+          large
+        }
+        bannerImage
+        format
+        status
+        description
+        startDate {
+          year
+          month
+          day
+        }
+        endDate {
+          year
+          month
+          day
+        }
+        chapters
+        volumes
+        source
+        averageScore
+        meanScore
+        popularity
+        trending
+        favourites
+        genres
+        synonyms
+        hashtag
+        countryOfOrigin
+        tags {
+          name
+          rank
+        }
+        relations {
+          edges {
             id
-            idMal
-            title {
-              romaji
-              english
-              native
-            }
-            coverImage {
-              extraLarge
-              large
-            }
-            bannerImage
-            format
-            status
-            description
-            startDate {
-              year
-              month
-              day
-            }
-            endDate {
-              year
-              month
-              day
-            }
-            chapters
-            volumes
-            source
-            averageScore
-            meanScore
-            popularity
-            trending
-            favourites
-            genres
-            synonyms
-            hashtag
-            countryOfOrigin
-            tags {
-              name
-              rank
-            }
-            relations {
-              edges {
-                id
-                relationType
-                node {
-                  id
-                  title {
-                    romaji
-                  }
-                  format
-                  type
-                }
+            relationType
+            node {
+              id
+              title {
+                romaji
               }
+              format
+              type
             }
-            characters (perPage: 10, sort: [ROLE, RELEVANCE, ID]) {
-              edges {
-                role
-                node {
-                  name {
-                    full
-                  }
-                  image {
-                    medium
-                  }
-                }
+          }
+        }
+        characters (perPage: 10, sort: [ROLE, RELEVANCE, ID]) {
+          edges {
+            role
+            node {
+              name {
+                full
               }
-            }
-            studios (isMain: true) {
-              nodes {
-                name
+              image {
+                medium
               }
             }
           }
-        }`,
-        variables: { id: anilistId },
-      }),
-    });
+        }
+        studios (isMain: true) {
+          nodes {
+            name
+          }
+        }
+      }
+    }`;
+
+    let aniListRes: Response | null = null;
+    const maxRetries = 5;
+    const baseDelay = 1000;
+
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        // Proactively delay to stay under the 90 req/min limit
+        await new Promise((resolve) => setTimeout(resolve, 750));
+
+        aniListRes = await fetch('https://graphql.anilist.co', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({
+            query,
+            variables: { id: anilistId },
+          }),
+        });
+
+        if (aniListRes.status === 429) {
+          const retryAfter = aniListRes.headers.get('retry-after');
+          const waitTime = retryAfter
+            ? parseInt(retryAfter, 10) * 1000 + 1000
+            : baseDelay * Math.pow(2, i);
+          this.logger.warn(`AniList rate limit hit (429) for manga ${anilistId}. Waiting ${waitTime}ms before retry ${i + 1}/${maxRetries}...`);
+          await new Promise((resolve) => setTimeout(resolve, waitTime));
+          continue;
+        }
+
+        break;
+      } catch (err) {
+        if (i === maxRetries - 1) throw err;
+        const waitTime = baseDelay * Math.pow(2, i);
+        this.logger.warn(`Network error fetching manga ${anilistId}: ${err}. Retrying in ${waitTime}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, waitTime));
+      }
+    }
+
+    if (!aniListRes) {
+      throw new Error('Failed to fetch from AniList: No response received');
+    }
 
     if (!aniListRes.ok) {
       throw new Error(`AniList API error: ${aniListRes.status}`);

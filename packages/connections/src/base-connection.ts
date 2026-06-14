@@ -64,4 +64,9 @@ export abstract class BaseConnection {
    * Deletes a TV show list entry for the user. (Optional capability)
    */
   public deleteTvEntry?(username: string, providerId: number): Promise<void>;
+
+  /**
+   * Fetches user's media list from the provider. (Optional capability)
+   */
+  public fetchUserList?(username: string): Promise<any[]>;
 }

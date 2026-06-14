@@ -85,6 +85,7 @@ const PERMISSION_GROUPS: PermissionGroup[] = [
       { name: "EDIT_TV", flag: AquilaFlags.EDIT_TV, label: "Edit TV Shows", description: "Create and modify TV show database records" },
       { name: "EDIT_GAME", flag: AquilaFlags.EDIT_GAME, label: "Edit Games", description: "Create and modify game database records" },
       { name: "EDIT_BOOK", flag: AquilaFlags.EDIT_BOOK, label: "Edit Books", description: "Create and modify book database records" },
+      { name: "IMPORT_LIST", flag: AquilaFlags.IMPORT_LIST, label: "Import Lists", description: "Import lists from extensions like AniList, MyAnimeList, and Simkl" },
     ]
   }
 ];

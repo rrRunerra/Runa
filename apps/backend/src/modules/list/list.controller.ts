@@ -27,8 +27,21 @@ export class ListController {
   public async getAnimeList(
     @Param('username') username: string,
     @Req() req: any,
-  ): Promise<ListEntity[]> {
-    return this.listService.getAnimeList(username, req.user?.username);
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+    @Query('format') format?: string,
+    @Query('sort') sort?: string,
+  ) {
+    return this.listService.getAnimeList(username, req.user?.username, {
+      limit: limit ? Number(limit) : undefined,
+      offset: offset ? Number(offset) : undefined,
+      status,
+      search,
+      format,
+      sort,
+    });
   }
 
   @Get('/anime/entry/:animeId')
@@ -80,8 +93,21 @@ export class ListController {
   public async getMangaList(
     @Param('username') username: string,
     @Req() req: any,
-  ): Promise<ListEntity[]> {
-    return this.listService.getMangaList(username, req.user?.username);
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+    @Query('format') format?: string,
+    @Query('sort') sort?: string,
+  ) {
+    return this.listService.getMangaList(username, req.user?.username, {
+      limit: limit ? Number(limit) : undefined,
+      offset: offset ? Number(offset) : undefined,
+      status,
+      search,
+      format,
+      sort,
+    });
   }
 
   @Get('/manga/entry/:mangaId')
@@ -134,8 +160,21 @@ export class ListController {
   public async getMovieList(
     @Param('username') username: string,
     @Req() req: any,
-  ): Promise<ListEntity[]> {
-    return this.listService.getMovieList(username, req.user?.username);
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+    @Query('format') format?: string,
+    @Query('sort') sort?: string,
+  ) {
+    return this.listService.getMovieList(username, req.user?.username, {
+      limit: limit ? Number(limit) : undefined,
+      offset: offset ? Number(offset) : undefined,
+      status,
+      search,
+      format,
+      sort,
+    });
   }
 
   @Get('/movie/entry/:tvdbId')
@@ -184,8 +223,21 @@ export class ListController {
   public async getTvList(
     @Param('username') username: string,
     @Req() req: any,
-  ): Promise<ListEntity[]> {
-    return this.listService.getTvList(username, req.user?.username);
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+    @Query('format') format?: string,
+    @Query('sort') sort?: string,
+  ) {
+    return this.listService.getTvList(username, req.user?.username, {
+      limit: limit ? Number(limit) : undefined,
+      offset: offset ? Number(offset) : undefined,
+      status,
+      search,
+      format,
+      sort,
+    });
   }
 
   @Get('/tv/entry/:tvdbId')
@@ -227,8 +279,21 @@ export class ListController {
   public async getGameList(
     @Param('username') username: string,
     @Req() req: any,
-  ): Promise<ListEntity[]> {
-    return this.listService.getGameList(username, req.user?.username);
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+    @Query('format') format?: string,
+    @Query('sort') sort?: string,
+  ) {
+    return this.listService.getGameList(username, req.user?.username, {
+      limit: limit ? Number(limit) : undefined,
+      offset: offset ? Number(offset) : undefined,
+      status,
+      search,
+      format,
+      sort,
+    });
   }
 
   @Get('/game/entry/:gameId')
@@ -274,8 +339,21 @@ export class ListController {
   public async getBookList(
     @Param('username') username: string,
     @Req() req: any,
-  ): Promise<ListEntity[]> {
-    return this.listService.getBookList(username, req.user?.username);
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+    @Query('format') format?: string,
+    @Query('sort') sort?: string,
+  ) {
+    return this.listService.getBookList(username, req.user?.username, {
+      limit: limit ? Number(limit) : undefined,
+      offset: offset ? Number(offset) : undefined,
+      status,
+      search,
+      format,
+      sort,
+    });
   }
 
   @Get('/book/entry/:bookId')

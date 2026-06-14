@@ -9,16 +9,20 @@ import {
   Req,
   Query,
   Res,
+  ForbiddenException,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import { jwtVerify } from 'jose';
+
 import { ConnectionLinkedTo } from '@runa/database';
-import { ConnectionService } from './connection.service';
+import { AquilaBitField } from '@runa/permissions';
+
 import { DualAuthGuard } from '../../common/guards/auth.guard';
+import { Public } from 'src/common/decorators/public.decorator';
+import { ConnectionService } from './connection.service';
 import { UpsertConnectionDto } from './dto/upsert-connection.dto';
 import { RemoveConnectionDto } from './dto/remove-connection.dto';
 import { ConnectionEntity } from './entities/connection.entity';
-import { Public } from 'src/common/decorators/public.decorator';
-import { jwtVerify } from 'jose';
 
 @Controller('connections')
 @UseGuards(DualAuthGuard)
@@ -104,6 +108,33 @@ export class ConnectionController {
         `${targetUrl}${separator}error=oauth_failed&message=${encodeURIComponent(error.message)}`,
       );
     }
+  }
+
+  @Post(':provider/import')
+  async importList(
+    @Req() req: any,
+    @Param('provider') provider: string,
+    @Body() body?: { mediaTypes?: string[] },
+  ) {
+    const bitfield = AquilaBitField.fromRaw(req.user.permissions);
+    if (!bitfield.has('IMPORT_LIST')) {
+      throw new ForbiddenException('You do not have permission to import lists');
+    }
+    const username = req.user.username;
+    return this.connectionService.startImport(username, provider, body?.mediaTypes);
+  }
+
+  @Get(':provider/import/status')
+  async importStatus(
+    @Req() req: any,
+    @Param('provider') provider: string,
+  ) {
+    const bitfield = AquilaBitField.fromRaw(req.user.permissions);
+    if (!bitfield.has('IMPORT_LIST')) {
+      throw new ForbiddenException('You do not have permission to import lists');
+    }
+    const username = req.user.username;
+    return this.connectionService.getImportStatus(username, provider);
   }
 
   private isSafeRedirectUrl(url: string): boolean {

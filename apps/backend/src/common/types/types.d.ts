@@ -69,6 +69,8 @@ export interface MediaEpisode {
 
 export interface Media {
   id: string;
+  malId?: number | null;
+  anilistId?: number | null;
   title: {
     romaji: string;
     english?: string | null;

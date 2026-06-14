@@ -244,6 +244,8 @@ export class AnimeService {
 
     return {
       id: media.id.toString(),
+      anilistId: media.id,
+      malId: media.idMal,
       title: media.title,
       coverImage: media.coverImage,
       bannerImage: media.bannerImage,
@@ -295,6 +297,24 @@ export class AnimeService {
       nextAiringEpisode: media.nextAiringEpisode,
       trailers,
     };
+  }
+
+  public async ensureAnime(anilistId: number, malId?: number | null, title?: string, coverImage?: string) {
+    let anime = await this.animeRepository.findByAnilistId(anilistId);
+    if (!anime) {
+      anime = await this.animeRepository.upsert(anilistId, {
+        anilistId,
+        malId: malId || null,
+        titleRomaji: title || 'Unknown',
+        coverImageLarge: coverImage || '',
+      });
+      this.animeQueueService.addJob(anilistId);
+    } else if (malId && !anime.malId) {
+      anime = await this.animeRepository.upsert(anilistId, {
+        malId,
+      });
+    }
+    return anime;
   }
 }
 

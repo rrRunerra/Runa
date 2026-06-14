@@ -1,7 +1,8 @@
 "use client";
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 import { MediaListDisplay } from "../../../../../../components/aquila/media-list/MediaListDisplay";
+import { InfiniteScroll } from "../../../../../../components/aquila/media-list/InfiniteScroll";
 import {
   MediaEntry,
   DisplayType,
@@ -63,6 +64,7 @@ interface SidebarContentsProps {
   sort: string;
   setSort: (sort: any) => void;
   resetFilters: () => void;
+  counts?: Record<string, number>;
 }
 
 const SidebarContents = ({
@@ -78,6 +80,7 @@ const SidebarContents = ({
   sort,
   setSort,
   resetFilters,
+  counts,
 }: SidebarContentsProps) => (
   <>
     {/* Search */}
@@ -98,6 +101,8 @@ const SidebarContents = ({
       </Label>
       {lists.map((list) => {
         const isActive = activeList === list;
+        const countKey = list.toLowerCase().replace(/\s+/g, "_");
+        const count = counts?.[countKey] ?? 0;
         return (
           <button
             key={list}
@@ -106,7 +111,7 @@ const SidebarContents = ({
               onItemClick?.();
             }}
             className={cn(
-              "relative flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold uppercase tracking-wider transition-colors text-left cursor-pointer select-none",
+              "relative flex items-center justify-between gap-3 px-3 py-2 rounded-xl text-xs font-semibold uppercase tracking-wider transition-colors text-left cursor-pointer select-none w-full",
               isActive ? "text-primary-foreground font-semibold" : "text-muted-foreground hover:text-foreground"
             )}
           >
@@ -118,6 +123,9 @@ const SidebarContents = ({
               />
             )}
             <span className="relative z-10">{list}</span>
+            <span className={cn("ml-auto relative z-10 text-[10px] px-1.5 py-0.5 rounded-md bg-zinc-800/40 text-muted-foreground", isActive && "bg-primary-foreground/20 text-primary-foreground")}>
+              {count}
+            </span>
           </button>
         );
       })}
@@ -194,6 +202,8 @@ const SidebarContents = ({
   </>
 );
 
+const MANGA_PRIORITY_STATUSES = ["Reading", "Completed", "Dropped", "Planning", "On Hold"];
+
 export default function UserMangaPage() {
   const params = useParams();
   const username = params.name as string;
@@ -206,7 +216,8 @@ export default function UserMangaPage() {
   const isOwner = session?.user?.username === username;
 
   const [displayType, setDisplayType] = useState<DisplayType>("grid");
-  const [search, setSearch] = useState("");
+  const [searchVal, setSearchVal] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [activeList, setActiveList] = useState("All");
   const [filters, setFilters] = useState<MediaFilters>({
     format: "",
@@ -226,6 +237,20 @@ export default function UserMangaPage() {
 
   const [mangaList, setMangaList] = useState<MediaEntry[]>([]);
   const [isPrivate, setIsPrivate] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [counts, setCounts] = useState<Record<string, number>>({});
+  const [priorityIdx, setPriorityIdx] = useState(0);
+  const [priorityOff, setPriorityOff] = useState(0);
+  const isFetchingRef = useRef(false);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchVal);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchVal]);
 
   useEffect(() => {
     if (username) {
@@ -236,39 +261,91 @@ export default function UserMangaPage() {
     }
   }, [username]);
 
-  const fetchMangaList = () => {
-    if (username) {
-      const headers: HeadersInit = {};
-      if (session?.accessToken) {
-        headers["Authorization"] = `Bearer ${session.accessToken}`;
-      }
+  const fetchMangaList = (currentOffset = 0, isReset = false, statusOverride?: string) => {
+    if (!username) return;
+    if (isFetchingRef.current && !isReset) return;
+    isFetchingRef.current = true;
+    setLoading(true);
 
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/manga/user/${username}`, {
-        headers,
-      })
-        .then(async (res) => {
-          if (res.status === 403) {
-            setIsPrivate(true);
-            return null;
-          }
-          if (res.ok) {
-            return res.json();
-          }
-          throw new Error("Failed to fetch list");
-        })
-        .then((data) => {
-          if (data && data.statusCode !== 404) {
-            setMangaList(data);
-            setIsPrivate(false);
-          }
-        })
-        .catch((err) => console.error("Failed to fetch manga list", err));
+    const headers: HeadersInit = {};
+    if (session?.accessToken) {
+      headers["Authorization"] = `Bearer ${session.accessToken}`;
     }
+
+    const effectiveStatus = statusOverride ?? activeList;
+
+    const queryParams = new URLSearchParams({
+      limit: "30",
+      offset: currentOffset.toString(),
+      status: effectiveStatus,
+      search: debouncedSearch,
+      format: filters.format || "",
+      sort: sort,
+    });
+
+    fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/list/manga/user/${username}?${queryParams}`,
+      { headers }
+    )
+      .then(async (res) => {
+        if (res.status === 403) {
+          setIsPrivate(true);
+          return null;
+        }
+        if (res.ok) {
+          return res.json();
+        }
+        throw new Error("Failed to fetch list");
+      })
+      .then((data) => {
+        if (data && data.statusCode !== 404) {
+          setIsPrivate(false);
+          const newEntries = data.entries || [];
+          setMangaList((prev) => {
+            if (isReset) return newEntries;
+            const seen = new Set(prev.map((e) => e.id));
+            return [...prev, ...newEntries.filter((e: any) => !seen.has(e.id))];
+          });
+          setCounts(data.counts || {});
+          if (statusOverride !== undefined && activeList === "All") {
+            if (newEntries.length < 30) {
+              const pIdx = MANGA_PRIORITY_STATUSES.indexOf(statusOverride);
+              const nextIdx = pIdx + 1;
+              if (nextIdx < MANGA_PRIORITY_STATUSES.length) {
+                setPriorityIdx(nextIdx);
+                setPriorityOff(0);
+                setHasMore(true);
+              } else {
+                setHasMore(false);
+              }
+            } else {
+              setPriorityOff(currentOffset + newEntries.length);
+              setHasMore(true);
+            }
+          } else {
+            setHasMore(newEntries.length === 30);
+            setOffset(currentOffset + newEntries.length);
+          }
+        }
+      })
+      .catch((err) => console.error("Failed to fetch manga list", err))
+      .finally(() => {
+        setLoading(false);
+        isFetchingRef.current = false;
+      });
   };
 
   useEffect(() => {
-    fetchMangaList();
-  }, [username, session]);
+    setPriorityIdx(0);
+    setPriorityOff(0);
+    setOffset(0);
+    setHasMore(true);
+    if (activeList === "All") {
+      fetchMangaList(0, true, MANGA_PRIORITY_STATUSES[0]);
+    } else {
+      fetchMangaList(0, true);
+    }
+  }, [username, session, debouncedSearch, activeList, filters.format, filters.status, sort]);
 
   useEffect(() => {
     if (!userData) return;
@@ -285,7 +362,7 @@ export default function UserMangaPage() {
   ];
 
   const resetFilters = () => {
-    setSearch("");
+    setSearchVal("");
     setActiveList("All");
     setFilters({
       format: "",
@@ -296,20 +373,7 @@ export default function UserMangaPage() {
     setSort("last_updated");
   };
 
-  // Apply quick search and list filtering here for the Display component
-  const filteredData = useMemo(() => {
-    return mangaList.filter((entry) => {
-      if (search && !entry.title.toLowerCase().includes(search.toLowerCase()))
-        return false;
-
-      if (activeList !== "All") {
-        if (!entry.status.toLowerCase().includes(activeList.toLowerCase()))
-          return false;
-      }
-
-      return true;
-    });
-  }, [search, activeList, mangaList]);  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
 
   return (
     <motion.div
@@ -328,8 +392,8 @@ export default function UserMangaPage() {
       >
         <SidebarContents
           idPrefix="desktop"
-          search={search}
-          setSearch={setSearch}
+          search={searchVal}
+          setSearch={setSearchVal}
           activeList={activeList}
           setActiveList={setActiveList}
           lists={lists}
@@ -338,6 +402,7 @@ export default function UserMangaPage() {
           sort={sort}
           setSort={setSort}
           resetFilters={resetFilters}
+          counts={counts}
         />
       </motion.aside>
 
@@ -406,8 +471,8 @@ export default function UserMangaPage() {
                       <SidebarContents
                         idPrefix="mobile"
                         onItemClick={() => setIsSheetOpen(false)}
-                        search={search}
-                        setSearch={setSearch}
+                        search={searchVal}
+                        setSearch={setSearchVal}
                         activeList={activeList}
                         setActiveList={setActiveList}
                         lists={lists}
@@ -416,6 +481,7 @@ export default function UserMangaPage() {
                         sort={sort}
                         setSort={setSort}
                         resetFilters={resetFilters}
+                        counts={counts}
                       />
                     </div>
                   </SheetContent>
@@ -442,14 +508,26 @@ export default function UserMangaPage() {
             </header>
 
             <MediaListDisplay
-              lists={activeList === "All" ? ["Reading", "Completed"] : [activeList]}
-              data={filteredData}
+              lists={activeList === "All" ? ["Reading", "Completed", "Dropped", "Planning", "On Hold"] : [activeList]}
+              data={mangaList}
               displayType={displayType}
               filters={filters}
               sort={sort}
               baseUrl="/aquila/manga"
               isOwner={isOwner}
-              onRefresh={fetchMangaList}
+              onRefresh={() => fetchMangaList(0, true, activeList === "All" ? MANGA_PRIORITY_STATUSES[0] : undefined)}
+            />
+
+            <InfiniteScroll
+              onLoadMore={() => {
+                if (activeList === "All") {
+                  fetchMangaList(priorityOff, false, MANGA_PRIORITY_STATUSES[priorityIdx]);
+                } else {
+                  fetchMangaList(offset, false);
+                }
+              }}
+              hasMore={hasMore}
+              isLoading={loading}
             />
           </>
         )}

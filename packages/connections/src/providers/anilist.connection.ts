@@ -3,6 +3,14 @@ import { BaseConnection } from "../base-connection.js";
 import { AnimeUpdateData, MangaUpdateData } from "../types.js";
 import { ConnectionCapability } from "../metadata.js";
 
+function fuzzyDateToTimestamp(fuzzy: { year?: number; month?: number; day?: number } | null | undefined): number | null {
+  if (!fuzzy || !fuzzy.year) return null;
+  const month = fuzzy.month ? fuzzy.month - 1 : 0;
+  const day = fuzzy.day || 1;
+  const date = new Date(fuzzy.year, month, day);
+  return Math.floor(date.getTime() / 1000);
+}
+
 export default class AnilistConnection extends BaseConnection {
   public readonly providerKey = ConnectionProvider.ANILIST;
   
@@ -368,5 +376,145 @@ export default class AnilistConnection extends BaseConnection {
 
   public async deleteMangaEntry(username: string, providerId: number): Promise<void> {
     return this.deleteAnilistEntry(username, providerId);
+  }
+
+  public async fetchUserList(username: string): Promise<any[]> {
+    const conn = await this.deps.prisma.client.connections.findFirst({
+      where: { username, provider: ConnectionProvider.ANILIST },
+      select: { accessToken: true, connectionId: true },
+    });
+    if (!conn || !conn.accessToken || !conn.connectionId) {
+      throw new Error(`No active AniList connection for user ${username}`);
+    }
+
+    const fetchList = async (type: "ANIME" | "MANGA") => {
+      const res = await fetch("https://graphql.anilist.co", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${conn.accessToken}`,
+        },
+        body: JSON.stringify({
+          query: `
+            query ($userId: Int, $type: MediaType) {
+              MediaListCollection (userId: $userId, type: $type) {
+                lists {
+                  entries {
+                    status
+                    score (format: POINT_10)
+                    progress
+                    progressVolumes
+                    repeat
+                    notes
+                    startedAt { year month day }
+                    completedAt { year month day }
+                    media {
+                      id
+                      idMal
+                      title {
+                        romaji
+                        english
+                        native
+                      }
+                      coverImage {
+                        large
+                        extraLarge
+                      }
+                      bannerImage
+                      format
+                      status
+                      episodes
+                      chapters
+                      volumes
+                    }
+                  }
+                }
+              }
+            }
+          `,
+          variables: {
+            userId: Number(conn.connectionId),
+            type,
+          },
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Failed to fetch AniList ${type} list: ${res.statusText}`);
+      }
+
+      const data = await res.json();
+      const lists = data.data?.MediaListCollection?.lists || [];
+      const entries: any[] = [];
+      for (const list of lists) {
+        if (list.entries) {
+          entries.push(...list.entries);
+        }
+      }
+      return entries;
+    };
+
+    const [animeEntries, mangaEntries] = await Promise.all([
+      fetchList("ANIME"),
+      fetchList("MANGA"),
+    ]);
+
+    const items: any[] = [];
+
+    // Map anime
+    for (const entry of animeEntries) {
+      let status = "PLANNING";
+      if (entry.status === "CURRENT" || entry.status === "REPEATING") status = "WATCHING";
+      else if (entry.status === "COMPLETED") status = "COMPLETED";
+      else if (entry.status === "PAUSED") status = "ON_HOLD";
+      else if (entry.status === "DROPPED") status = "DROPPED";
+
+      items.push({
+        mediaType: "anime",
+        anilistId: entry.media.id,
+        malId: entry.media.idMal,
+        title: entry.media.title,
+        coverImage: entry.media.coverImage?.large,
+        bannerImage: entry.media.bannerImage,
+        episodes: entry.media.episodes,
+        format: entry.media.format,
+        status,
+        progress: entry.progress,
+        score: entry.score,
+        notes: entry.notes,
+        startDate: fuzzyDateToTimestamp(entry.startedAt),
+        endDate: fuzzyDateToTimestamp(entry.completedAt),
+      });
+    }
+
+    // Map manga
+    for (const entry of mangaEntries) {
+      let status = "PLANNING";
+      if (entry.status === "CURRENT") status = "READING";
+      else if (entry.status === "COMPLETED") status = "COMPLETED";
+      else if (entry.status === "PAUSED") status = "ON_HOLD";
+      else if (entry.status === "DROPPED") status = "DROPPED";
+
+      items.push({
+        mediaType: "manga",
+        anilistId: entry.media.id,
+        malId: entry.media.idMal,
+        title: entry.media.title,
+        coverImage: entry.media.coverImage?.large,
+        bannerImage: entry.media.bannerImage,
+        chapters: entry.media.chapters,
+        volumes: entry.media.volumes,
+        format: entry.media.format,
+        status,
+        progress: entry.progress,
+        volumesProgress: entry.progressVolumes,
+        score: entry.score,
+        notes: entry.notes,
+        startDate: fuzzyDateToTimestamp(entry.startedAt),
+        endDate: fuzzyDateToTimestamp(entry.completedAt),
+      });
+    }
+
+    return items;
   }
 }

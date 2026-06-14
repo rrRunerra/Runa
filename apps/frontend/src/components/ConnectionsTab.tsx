@@ -15,6 +15,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { Switch } from "./ui/switch";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Checkbox } from "./ui/checkbox";
 
 type Connection = {
   id: string;
@@ -28,9 +30,16 @@ type Connection = {
 };
 
 import { apps as registeredApps } from "../../config/apps";
-import { PROVIDERS_METADATA } from "@runa/connections/metadata";
+import { PROVIDERS_METADATA, ConnectionCapability } from "@runa/connections/metadata";
 
 const PROVIDERS = PROVIDERS_METADATA;
+
+const IMPORTABLE_CAPABILITIES: Record<string, { label: string; key: string }> = {
+  [ConnectionCapability.ANIME]: { label: "Anime List", key: "anime" },
+  [ConnectionCapability.MANGA]: { label: "Manga List", key: "manga" },
+  [ConnectionCapability.MOVIES]: { label: "Movies List", key: "movie" },
+  [ConnectionCapability.TV_SHOWS]: { label: "TV Shows List", key: "tv" },
+};
 
 export function ConnectionsTab(): React.JSX.Element {
   const { data: session } = useSession();
@@ -38,6 +47,91 @@ export function ConnectionsTab(): React.JSX.Element {
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState<string | null>(null);
   const [expandedMetadata, setExpandedMetadata] = useState<Record<string, boolean>>({});
+  const [importStatus, setImportStatus] = useState<Record<string, { total: number; processed: number; status: 'processing' | 'completed' | 'failed'; error?: string; failedItems?: any[] }>>({});
+  const [showImportDialog, setShowImportDialog] = useState<string | null>(null);
+  const [selectedMediaTypes, setSelectedMediaTypes] = useState<string[]>([]);
+  const [failedImports, setFailedImports] = useState<{ providerId: string; items: any[] } | null>(null);
+
+
+  const pollImportStatus = useCallback(async (providerId: string) => {
+    if (!session?.accessToken) return;
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/connections/${providerId.toLowerCase()}/import/status`,
+        {
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+        }
+      );
+      if (!res.ok) throw new Error("Failed to fetch import status");
+      const data = await res.json();
+      
+      setImportStatus((prev) => {
+        const old = prev[providerId.toLowerCase()];
+        if (old?.status === "processing") {
+          if (data.status === "completed") {
+            if (data.failedItems && data.failedItems.length > 0) {
+              setFailedImports({ providerId, items: data.failedItems });
+            } else {
+              toast.success(`Import from ${providerId.toUpperCase()} completed successfully!`);
+              setTimeout(() => {
+                window.location.reload();
+              }, 1500);
+            }
+          } else if (data.status === "failed") {
+            toast.error(`Import from ${providerId.toUpperCase()} failed: ${data.error || "Unknown error"}`);
+          }
+        }
+        return {
+          ...prev,
+          [providerId.toLowerCase()]: data,
+        };
+      });
+
+      if (data.status === "processing") {
+        setTimeout(() => pollImportStatus(providerId), 5000);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }, [session, setFailedImports]);
+
+  const handleImport = async (providerId: string, mediaTypes: string[]) => {
+    if (!session?.accessToken) return;
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/connections/${providerId.toLowerCase()}/import`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+          body: JSON.stringify({ mediaTypes }),
+        }
+      );
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || "Failed to start import");
+      }
+      toast.info(`Import started for ${providerId.toUpperCase()}...`);
+      pollImportStatus(providerId);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to start list import.");
+    }
+  };
+
+  const openImportDialog = (providerId: string) => {
+    const provider = PROVIDERS.find((p) => p.id === providerId);
+    if (!provider) return;
+    const initialTypes = provider.capabilities
+      .filter((cap) => cap in IMPORTABLE_CAPABILITIES)
+      .map((cap) => IMPORTABLE_CAPABILITIES[cap].key);
+    setSelectedMediaTypes(initialTypes);
+    setShowImportDialog(providerId);
+  };
 
   const fetchConnections = useCallback(async () => {
     if (!session?.accessToken) return;
@@ -78,6 +172,18 @@ export function ConnectionsTab(): React.JSX.Element {
       window.history.replaceState({}, document.title, newUrl);
     }
   }, [fetchConnections]);
+
+  useEffect(() => {
+    if (!session?.accessToken || isLoading || connections.length === 0) return;
+
+    const importableProviders = ["anilist", "mal", "simkl"];
+    for (const conn of connections) {
+      const providerId = conn.provider.toLowerCase();
+      if (importableProviders.includes(providerId)) {
+        pollImportStatus(providerId);
+      }
+    }
+  }, [session, connections, isLoading, pollImportStatus]);
 
   const handleConnect = (providerId: string) => {
     if (!session?.accessToken) {
@@ -323,6 +429,48 @@ export function ConnectionsTab(): React.JSX.Element {
                       )}
                       {isConnected ? (
                         <>
+                          {["anilist", "mal", "simkl"].includes(provider.id.toLowerCase()) && (
+                            <>
+                              {importStatus[provider.id.toLowerCase()]?.status === "processing" ? (
+                                <div className="flex flex-col gap-1 shrink-0 w-full md:w-auto md:min-w-[140px] mr-2">
+                                  <div className="flex items-center justify-between text-[10px] font-semibold text-muted-foreground">
+                                    <span className="flex items-center gap-1">
+                                      <Spinner className="h-2.5 w-2.5 text-primary animate-spin" />
+                                      Importing list...
+                                    </span>
+                                    <span>
+                                      {importStatus[provider.id.toLowerCase()]?.processed}/
+                                      {importStatus[provider.id.toLowerCase()]?.total}
+                                    </span>
+                                  </div>
+                                  <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
+                                    <div
+                                      className="h-full bg-primary transition-all duration-500 ease-out"
+                                      style={{
+                                        width: `${
+                                          (importStatus[provider.id.toLowerCase()]?.total || 0) > 0
+                                            ? ((importStatus[provider.id.toLowerCase()]?.processed || 0) /
+                                                (importStatus[provider.id.toLowerCase()]?.total || 1)) *
+                                              100
+                                            : 0
+                                        }%`,
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              ) : (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="rounded-lg text-xs font-semibold h-8 border-primary/20 text-primary hover:bg-primary/10 hover:border-primary/40 shrink-0 mr-2 group/import-btn"
+                                  onClick={() => openImportDialog(provider.id)}
+                                >
+                                  <RefreshCw className="h-3.5 w-3.5 mr-1 transition-transform duration-500 ease-in-out group-hover/import-btn:rotate-180" />
+                                  Import List
+                                </Button>
+                              )}
+                            </>
+                          )}
                           <Button
                             variant="outline"
                             size="sm"
@@ -371,6 +519,120 @@ export function ConnectionsTab(): React.JSX.Element {
           </div>
         ))}
       </div>
+
+      <Dialog open={!!showImportDialog} onOpenChange={(open) => { if (!open) setShowImportDialog(null); }}>
+        <DialogContent className="max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="text-base font-semibold text-foreground">Select Lists to Import</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p className="text-xs text-muted-foreground">
+              Choose which watchlists you would like to import from {showImportDialog?.toUpperCase()}.
+            </p>
+            <div className="space-y-3">
+              {PROVIDERS.find(p => p.id === showImportDialog)?.capabilities
+                .filter(cap => cap in IMPORTABLE_CAPABILITIES)
+                .map(cap => {
+                  const { label, key } = IMPORTABLE_CAPABILITIES[cap];
+                  const isChecked = selectedMediaTypes.includes(key);
+                  return (
+                    <div key={key} className="flex items-center gap-3 p-3 rounded-xl border border-border/40 bg-secondary/15 hover:bg-secondary/25 transition-all">
+                      <Checkbox
+                        id={`media-type-${key}`}
+                        checked={isChecked}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedMediaTypes(prev => [...prev, key]);
+                          } else {
+                            setSelectedMediaTypes(prev => prev.filter(k => k !== key));
+                          }
+                        }}
+                      />
+                      <label
+                        htmlFor={`media-type-${key}`}
+                        className="text-xs font-semibold text-foreground select-none cursor-pointer flex-1"
+                      >
+                        {label}
+                      </label>
+                    </div>
+                  );
+                })
+              }
+            </div>
+          </div>
+          <div className="flex items-center justify-end gap-2.5 pt-2">
+            <Button variant="outline" size="sm" onClick={() => setShowImportDialog(null)} className="rounded-lg h-9 text-xs">
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              disabled={selectedMediaTypes.length === 0}
+              onClick={() => {
+                if (showImportDialog) {
+                  handleImport(showImportDialog, selectedMediaTypes);
+                  setShowImportDialog(null);
+                }
+              }}
+              className="rounded-lg h-9 text-xs font-semibold text-primary-foreground bg-primary hover:bg-primary/95"
+            >
+              Start Import
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!failedImports} onOpenChange={(open) => { if (!open) setFailedImports(null); }}>
+        <DialogContent className="max-w-3xl sm:max-w-3xl rounded-2xl border border-border bg-card p-6 shadow-xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="text-base font-semibold text-foreground flex items-center gap-2">
+              <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+              Failed Import Items ({failedImports?.items.length})
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto py-4 space-y-3 pr-1">
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              The following items from <strong>{failedImports?.providerId.toUpperCase()}</strong> could not be imported automatically. You can manually search and link them using the Edit dialog for the respective media entry.
+            </p>
+            <div className="border border-border/60 rounded-xl overflow-hidden bg-muted/10">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-secondary/25 border-b border-border/60 text-muted-foreground font-semibold">
+                    <th className="p-3">Title</th>
+                    <th className="p-3 w-20">Type</th>
+                    <th className="p-3 w-24">ID</th>
+                    <th className="p-3">Reason</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/40">
+                  {failedImports?.items.map((item, idx) => (
+                    <tr key={idx} className="hover:bg-secondary/10 transition-colors">
+                      <td className="p-3 font-medium text-foreground max-w-[280px] truncate" title={item.title}>
+                        {item.title}
+                      </td>
+                      <td className="p-3">
+                        <Badge variant="outline" className="capitalize text-[10px] px-1.5 py-0 font-medium">
+                          {item.mediaType}
+                        </Badge>
+                      </td>
+                      <td className="p-3 font-mono text-[10px] text-muted-foreground">
+                        {item.providerId}
+                      </td>
+                      <td className="p-3 text-amber-500/90 font-medium max-w-[280px] truncate" title={item.reason}>
+                        {item.reason}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div className="flex items-center justify-end pt-3 border-t border-border/40">
+            <Button size="sm" onClick={() => { setFailedImports(null); window.location.reload(); }} className="rounded-lg h-9 text-xs font-semibold px-4">
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -27,6 +27,8 @@ export class MangaRepository {
   toMedia(dbManga: any): Media {
     return {
       id: dbManga.anilistId?.toString() || dbManga.id.toString(),
+      anilistId: dbManga.anilistId,
+      malId: dbManga.malId,
       title: {
         romaji: dbManga.titleRomaji,
         english: dbManga.titleEnglish,

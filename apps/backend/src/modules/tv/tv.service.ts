@@ -91,7 +91,7 @@ export class TvService {
       const updatedAt = new Date(dbTv.updatedAt);
       const timeSinceUpdate = now.getTime() - updatedAt.getTime();
 
-      if (timeSinceUpdate < CACHE_DURATION_MS) {
+      if (timeSinceUpdate < CACHE_DURATION_MS && dbTv.description !== null) {
         return this.tvRepository.toMedia(dbTv);
       }
     }
@@ -260,5 +260,45 @@ export class TvService {
           })
           .filter((s: any) => s.episodes.length > 0) || [],
     };
+  }
+
+  public async ensureTv(tvdbId: number, title?: string, coverImage?: string) {
+    let tv = await this.tvRepository.findByTvdbId(tvdbId);
+    if (!tv || tv.description === null || tv.seasons === null) {
+      try {
+        const fullTv = await this.fetchFromTvdb(tvdbId.toString());
+        const dbData = {
+          tvdbId: parseInt(fullTv.id),
+          titleEnglish: fullTv.title.english || null,
+          titleRomaji: fullTv.title.romaji || null,
+          coverImage: fullTv.coverImage.large || null,
+          bannerImage: fullTv.bannerImage || null,
+          description: fullTv.description || null,
+          status: fullTv.status || null,
+          originalCountry: fullTv.originalCountry || null,
+          originalLanguage: fullTv.originalLanguage || null,
+          tvType: fullTv.tvType || null,
+          averageRuntime: fullTv.averageRuntime || null,
+          contentRating: fullTv.contentRating || null,
+          genres: fullTv.genres || [],
+          studios: fullTv.studios?.map((s) => s.name) || [],
+          cast: fullTv.characters as any,
+          trailers: fullTv.trailers as any,
+          seasons: fullTv.seasons as any,
+        };
+        tv = await this.tvRepository.upsert(tvdbId, dbData);
+      } catch (err) {
+        if (!tv) {
+          this.logger.warn(`Failed to fetch TV series ${tvdbId} details from TVDB synchronously, creating skeleton: ${err.message}`);
+          tv = await this.tvRepository.upsert(tvdbId, {
+            tvdbId,
+            titleRomaji: title || 'Unknown',
+            coverImage: coverImage || '',
+          });
+          this.tvQueueService.addJob(tvdbId);
+        }
+      }
+    }
+    return tv;
   }
 }

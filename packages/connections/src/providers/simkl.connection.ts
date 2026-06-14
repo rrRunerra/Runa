@@ -571,4 +571,160 @@ export default class SimklConnection extends BaseConnection {
   public async deleteMovieEntry(username: string, providerId: number): Promise<void> {
     return this.deleteFromSimkl(username, "movies", providerId);
   }
+
+  public async fetchUserList(username: string): Promise<any[]> {
+    const conn = await this.deps.prisma.client.connections.findFirst({
+      where: { username, provider: ConnectionProvider.SIMKL },
+      select: { accessToken: true },
+    });
+    if (!conn || !conn.accessToken) {
+      throw new Error(`No active Simkl connection for user ${username}`);
+    }
+
+    const clientId = this.deps.env.SIMKL_CLIENT_ID;
+    if (!clientId) {
+      throw new Error("Missing SIMKL_CLIENT_ID configuration");
+    }
+
+    const headers = {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${conn.accessToken}`,
+      "simkl-api-key": clientId,
+      "User-Agent": "Astral-App/1.0",
+    };
+
+    const types = ["anime", "tv", "movies"];
+    const statuses = ["watching", "plantowatch", "completed", "dropped", "onhold"];
+
+    const items: any[] = [];
+
+    for (const type of types) {
+      for (const status of statuses) {
+        try {
+          const res = await fetch(`https://api.simkl.com/sync/all-items/${type}/${status}?extended=full`, {
+            headers,
+          });
+          if (!res.ok) {
+            console.error(`Failed to fetch Simkl items for ${type}/${status}: ${res.statusText}`);
+            continue;
+          }
+          const data = await res.json();
+          const list = Array.isArray(data)
+            ? data
+            : (data.anime || data.shows || data.movies || []);
+
+          for (const entry of list) {
+            const mediaItem = entry.anime || entry.show || entry.movie;
+            if (!mediaItem) continue;
+
+            const title = mediaItem.title;
+            const ids = mediaItem.ids || {};
+
+            let mappedStatus = "PLANNING";
+            if (status === "watching") mappedStatus = "WATCHING";
+            else if (status === "plantowatch") mappedStatus = "PLANNING";
+            else if (status === "completed") mappedStatus = "COMPLETED";
+            else if (status === "onhold") mappedStatus = "ON_HOLD";
+            else if (status === "dropped") mappedStatus = "DROPPED";
+
+            const progress = entry.watched_episodes_count || 0;
+            const score = entry.user_rating || 0;
+            const notes = entry.memo || "";
+
+            if (type === "anime") {
+              const anilistId = ids.anilist ? Number(ids.anilist) : undefined;
+              const malId = ids.mal ? Number(ids.mal) : undefined;
+              const simklId = ids.simkl ? Number(ids.simkl) : undefined;
+
+              if (anilistId || malId) {
+                items.push({
+                  mediaType: "anime",
+                  anilistId,
+                  malId,
+                  simklId,
+                  title: {
+                    romaji: title,
+                    english: title,
+                    native: title,
+                  },
+                  coverImage: mediaItem.poster ? `https://simkl.in/posters/${mediaItem.poster}_m.jpg` : undefined,
+                  status: mappedStatus,
+                  progress,
+                  score,
+                  notes,
+                });
+              }
+            } else if (type === "tv") {
+              let tvdbId = ids.tvdb ? Number(ids.tvdb) : undefined;
+              const simklId = ids.simkl ? Number(ids.simkl) : undefined;
+              if (!tvdbId && title) {
+                const existing = await this.deps.prisma.client.tv.findFirst({
+                  where: {
+                    OR: [
+                      { titleRomaji: { equals: title, mode: "insensitive" } },
+                      { titleEnglish: { equals: title, mode: "insensitive" } },
+                    ],
+                  },
+                  select: { tvdbId: true },
+                });
+                if (existing) {
+                  tvdbId = existing.tvdbId;
+                }
+              }
+
+              if (tvdbId) {
+                items.push({
+                  mediaType: "tv",
+                  tvdbId,
+                  simklId,
+                  title,
+                  coverImage: mediaItem.poster ? `https://simkl.in/posters/${mediaItem.poster}_m.jpg` : undefined,
+                  status: mappedStatus,
+                  progress,
+                  score,
+                  notes,
+                });
+              }
+            } else if (type === "movies") {
+              let tvdbId = ids.tvdb ? Number(ids.tvdb) : undefined;
+              const simklId = ids.simkl ? Number(ids.simkl) : undefined;
+              if (!tvdbId && title) {
+                const existing = await this.deps.prisma.client.movie.findFirst({
+                  where: {
+                    OR: [
+                      { titleRomaji: { equals: title, mode: "insensitive" } },
+                      { titleEnglish: { equals: title, mode: "insensitive" } },
+                    ],
+                  },
+                  select: { tvdbId: true },
+                });
+                if (existing) {
+                  tvdbId = existing.tvdbId;
+                }
+              }
+
+              if (tvdbId) {
+                items.push({
+                  mediaType: "movie",
+                  tvdbId,
+                  simklId,
+                  title,
+                  coverImage: mediaItem.poster ? `https://simkl.in/posters/${mediaItem.poster}_m.jpg` : undefined,
+                  status: mappedStatus,
+                  progress: mappedStatus === "COMPLETED" ? 1 : 0,
+                  score,
+                  notes,
+                });
+              }
+            }
+          }
+        } catch (err: any) {
+          console.error(`Error fetching Simkl items for ${type}/${status}:`, err.message);
+        }
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+    }
+
+    return items;
+  }
 }

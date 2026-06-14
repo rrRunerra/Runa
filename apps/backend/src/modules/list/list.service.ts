@@ -9,6 +9,15 @@ import { PrismaService } from '../../providers/database/prisma.service';
 import { ConnectionsManager } from './connections/connections.manager';
 import ListEntity from './entities/ListEntity';
 
+export interface ListQueryOptions {
+  limit?: number;
+  offset?: number;
+  status?: string;
+  search?: string;
+  format?: string;
+  sort?: string;
+}
+
 @Injectable()
 export class ListService {
   constructor(
@@ -18,7 +27,134 @@ export class ListService {
 
   private readonly logger = new Logger(ListService.name);
 
-  public async getAnimeList(username: string, requester?: string): Promise<ListEntity[]> {
+  private getPrismaStatus<T>(status: string | undefined, enumObj: any): T | undefined {
+    if (!status || status.toLowerCase() === 'all') return undefined;
+    let normalized = status.toUpperCase().replace(/\s+TV$/, '').trim();
+    normalized = normalized.replace(/\s+/g, '_');
+    if (Object.values(enumObj).includes(normalized)) {
+      return normalized as unknown as T;
+    }
+    return undefined;
+  }
+
+  private async getStatusCounts(
+    table: any,
+    username: string,
+  ): Promise<Record<string, number>> {
+    const countGroups = await table.groupBy({
+      by: ['status'],
+      where: { username: username.toLowerCase() },
+      _count: { status: true },
+    });
+
+    const counts: Record<string, number> = { all: 0 };
+    let total = 0;
+    for (const group of countGroups) {
+      const statusKey = group.status.toLowerCase();
+      counts[statusKey] = group._count.status;
+      total += group._count.status;
+    }
+    counts['all'] = total;
+    return counts;
+  }
+
+  private getAnimeOrderBy(sort: string | undefined): any {
+    switch (sort) {
+      case 'title':
+        return { anime: { titleEnglish: 'asc' } };
+      case 'score':
+        return { score: 'desc' };
+      case 'progress':
+        return { progress: 'desc' };
+      case 'last_added':
+        return { createdAt: 'desc' };
+      case 'last_updated':
+      default:
+        return { updatedAt: 'desc' };
+    }
+  }
+
+  private getMangaOrderBy(sort: string | undefined): any {
+    switch (sort) {
+      case 'title':
+        return { manga: { titleEnglish: 'asc' } };
+      case 'score':
+        return { score: 'desc' };
+      case 'progress':
+        return { chapters: 'desc' };
+      case 'last_added':
+        return { createdAt: 'desc' };
+      case 'last_updated':
+      default:
+        return { updatedAt: 'desc' };
+    }
+  }
+
+  private getMovieOrderBy(sort: string | undefined): any {
+    switch (sort) {
+      case 'title':
+        return { movie: { titleEnglish: 'asc' } };
+      case 'score':
+        return { score: 'desc' };
+      case 'last_added':
+        return { createdAt: 'desc' };
+      case 'last_updated':
+      default:
+        return { updatedAt: 'desc' };
+    }
+  }
+
+  private getTvOrderBy(sort: string | undefined): any {
+    switch (sort) {
+      case 'title':
+        return { tv: { titleEnglish: 'asc' } };
+      case 'score':
+        return { score: 'desc' };
+      case 'last_added':
+        return { createdAt: 'desc' };
+      case 'last_updated':
+      default:
+        return { updatedAt: 'desc' };
+    }
+  }
+
+  private getGameOrderBy(sort: string | undefined): any {
+    switch (sort) {
+      case 'title':
+        return { game: { titleString: 'asc' } };
+      case 'score':
+        return { score: 'desc' };
+      case 'progress':
+        return { progress: 'desc' };
+      case 'last_added':
+        return { createdAt: 'desc' };
+      case 'last_updated':
+      default:
+        return { updatedAt: 'desc' };
+    }
+  }
+
+  private getBookOrderBy(sort: string | undefined): any {
+    switch (sort) {
+      case 'title':
+        return { book: { titleString: 'asc' } };
+      case 'score':
+        return { score: 'desc' };
+      case 'progress':
+        return { chapters: 'desc' };
+      case 'last_added':
+        return { createdAt: 'desc' };
+      case 'last_updated':
+      default:
+        return { updatedAt: 'desc' };
+    }
+  }
+
+  public async getAnimeList(
+    username: string,
+    requester?: string,
+    query?: ListQueryOptions,
+  ): Promise<{ entries: ListEntity[]; counts: Record<string, number> }> {
     const owner = await this.prisma.client.user.findUnique({
       where: { username: username.toLowerCase() },
       select: { privacy: true },
@@ -34,33 +170,59 @@ export class ListService {
       throw new ForbiddenException('This list is private');
     }
 
-    const list = await this.prisma.client.aquilaAnimeUserList.findMany({
-      where: {
-        username: username.toLowerCase(),
-      },
-      select: {
-        animeId: true,
-        status: true,
-        progress: true,
-        score: true,
-        updatedAt: true,
-        createdAt: true,
-        anime: {
-          select: {
-            titleEnglish: true,
-            titleRomaji: true,
-            titleNative: true,
-            coverImageLarge: true,
-            episodes: true,
-            format: true,
+    const statusEnum = this.getPrismaStatus<$Enums.AnimeListStatus>(
+      query?.status,
+      $Enums.AnimeListStatus,
+    );
+    const search = query?.search?.trim();
+    const format = query?.format?.trim();
+
+    const whereClause: any = {
+      username: username.toLowerCase(),
+      ...(statusEnum ? { status: statusEnum } : {}),
+    };
+
+    if (format || search) {
+      whereClause.anime = {};
+      if (format) {
+        whereClause.anime.format = format;
+      }
+      if (search) {
+        whereClause.anime.OR = [
+          { titleEnglish: { contains: search, mode: 'insensitive' } },
+          { titleRomaji: { contains: search, mode: 'insensitive' } },
+          { titleNative: { contains: search, mode: 'insensitive' } },
+        ];
+      }
+    }
+
+    const [list, counts] = await Promise.all([
+      this.prisma.client.aquilaAnimeUserList.findMany({
+        where: whereClause,
+        take: query?.limit ?? 30,
+        skip: query?.offset ?? 0,
+        orderBy: this.getAnimeOrderBy(query?.sort),
+        select: {
+          animeId: true,
+          status: true,
+          progress: true,
+          score: true,
+          updatedAt: true,
+          createdAt: true,
+          anime: {
+            select: {
+              titleEnglish: true,
+              titleRomaji: true,
+              titleNative: true,
+              coverImageLarge: true,
+              episodes: true,
+              format: true,
+            },
           },
         },
-      },
-    });
-
-    if (!list.length) {
-      return [];
-    }
+      }),
+      this.getStatusCounts(this.prisma.client.aquilaAnimeUserList, username),
+    ]);
 
     const mappedList: ListEntity[] = list.map((item) => {
       return {
@@ -82,7 +244,7 @@ export class ListService {
       };
     });
 
-    return mappedList;
+    return { entries: mappedList, counts };
   }
 
   public async getAnimeListEntry(username: string, animeId: number) {
@@ -293,7 +455,11 @@ export class ListService {
     }
   }
 
-  public async getMangaList(username: string, requester?: string): Promise<ListEntity[]> {
+  public async getMangaList(
+    username: string,
+    requester?: string,
+    query?: ListQueryOptions,
+  ): Promise<{ entries: ListEntity[]; counts: Record<string, number> }> {
     const owner = await this.prisma.client.user.findUnique({
       where: { username: username.toLowerCase() },
       select: { privacy: true },
@@ -309,34 +475,62 @@ export class ListService {
       throw new ForbiddenException('This list is private');
     }
 
-    const list = await this.prisma.client.aquilaMangaUserList.findMany({
-      where: { username: username.toLowerCase() },
-      select: {
-        mangaId: true,
-        status: true,
-        chapters: true,
-        volumes: true,
-        score: true,
-        updatedAt: true,
-        createdAt: true,
-        manga: {
-          select: {
-            titleEnglish: true,
-            titleRomaji: true,
-            titleNative: true,
-            coverImageLarge: true,
-            chapters: true,
-            format: true,
-          },
-        },
-      },
-    });
+    const statusEnum = this.getPrismaStatus<$Enums.MangaListStatus>(
+      query?.status,
+      $Enums.MangaListStatus,
+    );
+    const search = query?.search?.trim();
+    const format = query?.format?.trim();
 
-    if (!list.length) {
-      return [];
+    const whereClause: any = {
+      username: username.toLowerCase(),
+      ...(statusEnum ? { status: statusEnum } : {}),
+    };
+
+    if (format || search) {
+      whereClause.manga = {};
+      if (format) {
+        whereClause.manga.format = format;
+      }
+      if (search) {
+        whereClause.manga.OR = [
+          { titleEnglish: { contains: search, mode: 'insensitive' } },
+          { titleRomaji: { contains: search, mode: 'insensitive' } },
+          { titleNative: { contains: search, mode: 'insensitive' } },
+        ];
+      }
     }
 
-    return list.map((item) => ({
+    const [list, counts] = await Promise.all([
+      this.prisma.client.aquilaMangaUserList.findMany({
+        where: whereClause,
+        take: query?.limit ?? 30,
+        skip: query?.offset ?? 0,
+        orderBy: this.getMangaOrderBy(query?.sort),
+        select: {
+          mangaId: true,
+          status: true,
+          chapters: true,
+          volumes: true,
+          score: true,
+          updatedAt: true,
+          createdAt: true,
+          manga: {
+            select: {
+              titleEnglish: true,
+              titleRomaji: true,
+              titleNative: true,
+              coverImageLarge: true,
+              chapters: true,
+              format: true,
+            },
+          },
+        },
+      }),
+      this.getStatusCounts(this.prisma.client.aquilaMangaUserList, username),
+    ]);
+
+    const mappedList: ListEntity[] = list.map((item) => ({
       id: item.mangaId,
       title:
         item.manga.titleEnglish ??
@@ -353,6 +547,8 @@ export class ListService {
       last_added: item.createdAt,
       type: 'manga',
     }));
+
+    return { entries: mappedList, counts };
   }
 
 
@@ -696,7 +892,11 @@ export class ListService {
 
   // ─────────────────────────── MOVIE ───────────────────────────
 
-  public async getMovieList(username: string, requester?: string): Promise<ListEntity[]> {
+  public async getMovieList(
+    username: string,
+    requester?: string,
+    query?: ListQueryOptions,
+  ): Promise<{ entries: ListEntity[]; counts: Record<string, number> }> {
     const owner = await this.prisma.client.user.findUnique({
       where: { username: username.toLowerCase() },
       select: { privacy: true },
@@ -712,31 +912,51 @@ export class ListService {
       throw new ForbiddenException('This list is private');
     }
 
-    const list = await this.prisma.client.aquilaMovieUserList.findMany({
-      where: {
-        username: username.toLowerCase(),
-      },
-      select: {
-        tvdbId: true,
-        status: true,
-        score: true,
-        updatedAt: true,
-        createdAt: true,
-        movie: {
-          select: {
-            titleEnglish: true,
-            titleRomaji: true,
-            coverImage: true,
-          },
-        },
-      },
-    });
+    const statusEnum = this.getPrismaStatus<$Enums.MovieListStatus>(
+      query?.status,
+      $Enums.MovieListStatus,
+    );
+    const search = query?.search?.trim();
 
-    if (!list.length) {
-      return [];
+    const whereClause: any = {
+      username: username.toLowerCase(),
+      ...(statusEnum ? { status: statusEnum } : {}),
+    };
+
+    if (search) {
+      whereClause.movie = {
+        OR: [
+          { titleEnglish: { contains: search, mode: 'insensitive' } },
+          { titleRomaji: { contains: search, mode: 'insensitive' } },
+        ],
+      };
     }
 
-    return list.map((item) => ({
+    const [list, counts] = await Promise.all([
+      this.prisma.client.aquilaMovieUserList.findMany({
+        where: whereClause,
+        take: query?.limit ?? 30,
+        skip: query?.offset ?? 0,
+        orderBy: this.getMovieOrderBy(query?.sort),
+        select: {
+          tvdbId: true,
+          status: true,
+          score: true,
+          updatedAt: true,
+          createdAt: true,
+          movie: {
+            select: {
+              titleEnglish: true,
+              titleRomaji: true,
+              coverImage: true,
+            },
+          },
+        },
+      }),
+      this.getStatusCounts(this.prisma.client.aquilaMovieUserList, username),
+    ]);
+
+    const mappedList: ListEntity[] = list.map((item) => ({
       id: item.tvdbId,
       title: item.movie.titleEnglish ?? item.movie.titleRomaji ?? '',
       score: item.score,
@@ -749,6 +969,8 @@ export class ListService {
       type: 'movie',
       format: 'Movie',
     }));
+
+    return { entries: mappedList, counts };
   }
 
   public async getMovieListEntry(username: string, tvdbId: number) {
@@ -896,7 +1118,11 @@ export class ListService {
 
   // ─────────────────────────── TV ───────────────────────────
 
-  public async getTvList(username: string, requester?: string): Promise<ListEntity[]> {
+  public async getTvList(
+    username: string,
+    requester?: string,
+    query?: ListQueryOptions,
+  ): Promise<{ entries: ListEntity[]; counts: Record<string, number> }> {
     const owner = await this.prisma.client.user.findUnique({
       where: { username: username.toLowerCase() },
       select: { privacy: true },
@@ -912,37 +1138,57 @@ export class ListService {
       throw new ForbiddenException('This list is private');
     }
 
-    const list = await this.prisma.client.aquilaTvUserList.findMany({
-      where: {
-        username: username.toLowerCase(),
-      },
-      select: {
-        tvdbId: true,
-        status: true,
-        score: true,
-        updatedAt: true,
-        createdAt: true,
-        tv: {
-          select: {
-            titleEnglish: true,
-            titleRomaji: true,
-            coverImage: true,
-            seasons: true,
-          },
-        },
-        _count: {
-          select: {
-            watchedEpisodes: true,
-          },
-        },
-      },
-    });
+    const statusEnum = this.getPrismaStatus<$Enums.TvListStatus>(
+      query?.status,
+      $Enums.TvListStatus,
+    );
+    const search = query?.search?.trim();
 
-    if (!list.length) {
-      return [];
+    const whereClause: any = {
+      username: username.toLowerCase(),
+      ...(statusEnum ? { status: statusEnum } : {}),
+    };
+
+    if (search) {
+      whereClause.tv = {
+        OR: [
+          { titleEnglish: { contains: search, mode: 'insensitive' } },
+          { titleRomaji: { contains: search, mode: 'insensitive' } },
+        ],
+      };
     }
 
-    return list.map((item) => {
+    const [list, counts] = await Promise.all([
+      this.prisma.client.aquilaTvUserList.findMany({
+        where: whereClause,
+        take: query?.limit ?? 30,
+        skip: query?.offset ?? 0,
+        orderBy: this.getTvOrderBy(query?.sort),
+        select: {
+          tvdbId: true,
+          status: true,
+          score: true,
+          updatedAt: true,
+          createdAt: true,
+          tv: {
+            select: {
+              titleEnglish: true,
+              titleRomaji: true,
+              coverImage: true,
+              seasons: true,
+            },
+          },
+          _count: {
+            select: {
+              watchedEpisodes: true,
+            },
+          },
+        },
+      }),
+      this.getStatusCounts(this.prisma.client.aquilaTvUserList, username),
+    ]);
+
+    const mappedList: ListEntity[] = list.map((item) => {
       // Calculate total episodes from seasons JSON
       let totalEpisodes = 0;
       const seasons = item.tv.seasons as any[];
@@ -966,6 +1212,8 @@ export class ListService {
         type: 'tv',
       };
     });
+
+    return { entries: mappedList, counts };
   }
 
   public async getTvListEntry(username: string, tvdbId: number) {
@@ -1243,7 +1491,11 @@ export class ListService {
 
   // ─────────────────────────── GAME ───────────────────────────
 
-  public async getGameList(username: string, requester?: string): Promise<ListEntity[]> {
+  public async getGameList(
+    username: string,
+    requester?: string,
+    query?: ListQueryOptions,
+  ): Promise<{ entries: ListEntity[]; counts: Record<string, number> }> {
     const owner = await this.prisma.client.user.findUnique({
       where: { username: username.toLowerCase() },
       select: { privacy: true },
@@ -1259,31 +1511,48 @@ export class ListService {
       throw new ForbiddenException('This list is private');
     }
 
-    const list = await this.prisma.client.aquilaGameUserList.findMany({
-      where: {
-        username: username.toLowerCase(),
-      },
-      select: {
-        gameId: true,
-        status: true,
-        progress: true,
-        score: true,
-        updatedAt: true,
-        createdAt: true,
-        game: {
-          select: {
-            titleString: true,
-            coverImage: true,
-          },
-        },
-      },
-    });
+    const statusEnum = this.getPrismaStatus<$Enums.GameListStatus>(
+      query?.status,
+      $Enums.GameListStatus,
+    );
+    const search = query?.search?.trim();
 
-    if (!list.length) {
-      return [];
+    const whereClause: any = {
+      username: username.toLowerCase(),
+      ...(statusEnum ? { status: statusEnum } : {}),
+    };
+
+    if (search) {
+      whereClause.game = {
+        titleString: { contains: search, mode: 'insensitive' },
+      };
     }
 
-    return list.map((item) => ({
+    const [list, counts] = await Promise.all([
+      this.prisma.client.aquilaGameUserList.findMany({
+        where: whereClause,
+        take: query?.limit ?? 30,
+        skip: query?.offset ?? 0,
+        orderBy: this.getGameOrderBy(query?.sort),
+        select: {
+          gameId: true,
+          status: true,
+          progress: true,
+          score: true,
+          updatedAt: true,
+          createdAt: true,
+          game: {
+            select: {
+              titleString: true,
+              coverImage: true,
+            },
+          },
+        },
+      }),
+      this.getStatusCounts(this.prisma.client.aquilaGameUserList, username),
+    ]);
+
+    const mappedList: ListEntity[] = list.map((item) => ({
       id: item.gameId,
       title: item.game.titleString ?? '',
       score: item.score,
@@ -1296,6 +1565,8 @@ export class ListService {
       last_added: item.createdAt,
       type: 'game',
     }));
+
+    return { entries: mappedList, counts };
   }
 
   public async getGameListEntry(username: string, gameId: number) {
@@ -1404,7 +1675,11 @@ export class ListService {
 
   // ─────────────────────────── BOOK ───────────────────────────
 
-  public async getBookList(username: string, requester?: string): Promise<ListEntity[]> {
+  public async getBookList(
+    username: string,
+    requester?: string,
+    query?: ListQueryOptions,
+  ): Promise<{ entries: ListEntity[]; counts: Record<string, number> }> {
     const owner = await this.prisma.client.user.findUnique({
       where: { username: username.toLowerCase() },
       select: { privacy: true },
@@ -1420,32 +1695,49 @@ export class ListService {
       throw new ForbiddenException('This list is private');
     }
 
-    const list = await this.prisma.client.aquilaBookUserList.findMany({
-      where: {
-        username: username.toLowerCase(),
-      },
-      select: {
-        bookId: true,
-        status: true,
-        chapters: true,
-        volumes: true,
-        score: true,
-        updatedAt: true,
-        createdAt: true,
-        book: {
-          select: {
-            titleString: true,
-            coverImage: true,
-          },
-        },
-      },
-    });
+    const statusEnum = this.getPrismaStatus<$Enums.BookListStatus>(
+      query?.status,
+      $Enums.BookListStatus,
+    );
+    const search = query?.search?.trim();
 
-    if (!list.length) {
-      return [];
+    const whereClause: any = {
+      username: username.toLowerCase(),
+      ...(statusEnum ? { status: statusEnum } : {}),
+    };
+
+    if (search) {
+      whereClause.book = {
+        titleString: { contains: search, mode: 'insensitive' },
+      };
     }
 
-    return list.map((item) => ({
+    const [list, counts] = await Promise.all([
+      this.prisma.client.aquilaBookUserList.findMany({
+        where: whereClause,
+        take: query?.limit ?? 30,
+        skip: query?.offset ?? 0,
+        orderBy: this.getBookOrderBy(query?.sort),
+        select: {
+          bookId: true,
+          status: true,
+          chapters: true,
+          volumes: true,
+          score: true,
+          updatedAt: true,
+          createdAt: true,
+          book: {
+            select: {
+              titleString: true,
+              coverImage: true,
+            },
+          },
+        },
+      }),
+      this.getStatusCounts(this.prisma.client.aquilaBookUserList, username),
+    ]);
+
+    const mappedList: ListEntity[] = list.map((item) => ({
       id: item.bookId,
       title: item.book.titleString ?? '',
       score: item.score,
@@ -1458,6 +1750,8 @@ export class ListService {
       last_added: item.createdAt,
       type: 'book',
     }));
+
+    return { entries: mappedList, counts };
   }
 
   public async getBookListEntry(username: string, bookId: string) {

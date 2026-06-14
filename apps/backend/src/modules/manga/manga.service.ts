@@ -114,6 +114,7 @@ export class MangaService {
         query: `query ($id: Int) {
   Media (id: $id, type: MANGA) {
     id
+    idMal
     title {
       romaji
       english
@@ -209,6 +210,8 @@ export class MangaService {
 
     return {
       id: media.id.toString(),
+      anilistId: media.id,
+      malId: media.idMal,
       title: media.title,
       coverImage: media.coverImage,
       bannerImage: media.bannerImage,
@@ -254,6 +257,24 @@ export class MangaService {
       })),
     };
   }
+
+  public async ensureManga(anilistId: number, malId?: number | null, title?: string, coverImage?: string) {
+    let manga = await this.mangaRepository.findByAnilistId(anilistId);
+    if (!manga) {
+      manga = await this.mangaRepository.upsert(anilistId, {
+        anilistId,
+        malId: malId || null,
+        titleRomaji: title || 'Unknown',
+        coverImageLarge: coverImage || '',
+      });
+      this.mangaQueueService.addJob(anilistId);
+    } else if (malId && !manga.malId) {
+      manga = await this.mangaRepository.upsert(anilistId, {
+        malId,
+      });
+    }
+    return manga;
+  }
 }
 
 interface AniListSearchResponse {
@@ -288,6 +309,7 @@ interface AniListGetResponse {
   data: {
     Media: {
       id: number;
+      idMal?: number | null;
       title: {
         romaji: string;
         english: string;

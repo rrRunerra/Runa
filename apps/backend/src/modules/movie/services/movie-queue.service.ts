@@ -103,6 +103,7 @@ export class MovieQueueService implements OnModuleInit {
     const translation = transData.data;
 
     const englishName = translation?.name || movie.name;
+    const englishOverview = translation?.overview || movie.overview || '';
 
     const artworks = movie.artworks || [];
     const movieBanners = artworks.filter((a: any) => a.type === 16 || a.type === 15);
@@ -116,7 +117,7 @@ export class MovieQueueService implements OnModuleInit {
       titleRomaji: movie.name,
       coverImage: movie.image,
       bannerImage: randomBanner,
-      description: movie.overview || '',
+      description: englishOverview,
       status: movie.status?.name || 'FINISHED',
       runtime: movie.runtime,
       genres: movie.genres?.map((g: any) => g.name) || [],

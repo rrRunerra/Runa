@@ -91,7 +91,7 @@ export class MovieService {
       const updatedAt = new Date(dbMovie.updatedAt);
       const timeSinceUpdate = now.getTime() - updatedAt.getTime();
 
-      if (timeSinceUpdate < CACHE_DURATION_MS) {
+      if (timeSinceUpdate < CACHE_DURATION_MS && dbMovie.description !== null) {
         return this.movieRepository.toMedia(dbMovie);
       }
     }
@@ -199,5 +199,42 @@ export class MovieService {
           language: t.language || 'eng',
         })) || [],
     };
+  }
+
+  public async ensureMovie(tvdbId: number, title?: string, coverImage?: string) {
+    let movie = await this.movieRepository.findByTvdbId(tvdbId);
+    if (!movie || movie.description === null) {
+      try {
+        const fullMovie = await this.fetchFromTvdb(tvdbId);
+        const dbData = {
+          tvdbId: parseInt(fullMovie.id),
+          titleEnglish: fullMovie.title.english || null,
+          titleRomaji: fullMovie.title.romaji || null,
+          coverImage: fullMovie.coverImage.large || null,
+          bannerImage: fullMovie.bannerImage || null,
+          description: fullMovie.description || null,
+          status: fullMovie.status || null,
+          runtime: fullMovie.runtime || null,
+          genres: fullMovie.genres || [],
+          studios: fullMovie.studios?.map((s) => s.name) || [],
+          cast: fullMovie.characters as any,
+          trailers: fullMovie.trailers as any,
+          originalCountry: fullMovie.originalCountry || null,
+          originalLanguage: fullMovie.originalLanguage || null,
+          contentRating: fullMovie.contentRating || null,
+        };
+        movie = await this.movieRepository.upsert(tvdbId, dbData);
+      } catch (err) {
+        if (!movie) {
+          movie = await this.movieRepository.upsert(tvdbId, {
+            tvdbId,
+            titleRomaji: title || 'Unknown',
+            coverImage: coverImage || '',
+          });
+          this.movieQueueService.addJob(tvdbId);
+        }
+      }
+    }
+    return movie;
   }
 }

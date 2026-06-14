@@ -38,4 +38,5 @@ export const AquilaFlags = defineFlags([
   "EDIT_TV",
   "EDIT_GAME",
   "EDIT_BOOK",
+  "IMPORT_LIST",
 ], 200);
