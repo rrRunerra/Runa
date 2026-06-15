@@ -5,7 +5,7 @@ import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "re
 import { useSession } from "next-auth/react";
 import { Camera, Eye, EyeOff, Trash, ChevronsUpDown, Crop } from "lucide-react";
 import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { cn, getSafeImageUrl } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -24,22 +24,7 @@ interface AccountSettingsTabProps {
   setIsSubmitting: (submitting: boolean) => void;
 }
 
-const getSafeImageUrl = (url: string): string => {
-  if (!url) return "";
-  if (
-    url.startsWith("http://") ||
-    url.startsWith("https://") ||
-    url.startsWith("blob:") ||
-    url.startsWith("data:")
-  ) {
-    if (url.toLowerCase().includes("javascript:")) {
-      return "";
-    }
-    return url;
-  }
-  const path = url.startsWith("/") ? url : `/${url}`;
-  return `${process.env.NEXT_PUBLIC_API_URL || ""}${path}`;
-};
+
 
 export interface AccountSettingsTabRef {
   handleSave: () => void;

@@ -12,7 +12,7 @@ import {
   LayoutGrid,
 } from "lucide-react";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
+import { cn, getSafeImageUrl } from "@/lib/utils";
 import { signIn, signOut, useSession } from "next-auth/react";
 import type React from "react";
 import { useEffect, useState } from "react";
@@ -88,22 +88,7 @@ interface AppSideBarProps extends React.ComponentProps<typeof Sidebar> {
   appearanceHref?: string;
 }
 
-const getSafeImageUrl = (url: string | null | undefined): string => {
-  if (!url) return "";
-  if (
-    url.startsWith("http://") ||
-    url.startsWith("https://") ||
-    url.startsWith("blob:") ||
-    url.startsWith("data:")
-  ) {
-    if (url.toLowerCase().includes("javascript:")) {
-      return "";
-    }
-    return url;
-  }
-  const path = url.startsWith("/") ? url : `/${url}`;
-  return `${process.env.NEXT_PUBLIC_API_URL || ""}${path}`;
-};
+
 
 export default function AppSideBar({
   navConfig,

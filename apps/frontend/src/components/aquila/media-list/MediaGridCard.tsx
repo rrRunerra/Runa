@@ -5,7 +5,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { Menu, Star, Tv, BookOpen, Gamepad2, Film, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
-// Keep your existing dialog imports here...
+import { AnimeEditDialog } from "@/components/aquila/AnimeEditDialog";
+import { MangaEditDialog } from "@/components/aquila/MangaEditDialog";
+import { TvEditDialog } from "@/components/aquila/TvEditDialog";
+import { MovieEditDialog } from "@/components/aquila/MovieEditDialog";
+import { GameEditDialog } from "@/components/aquila/GameEditDialog";
+import { BookEditDialog } from "@/components/aquila/BookEditDialog";
 import { MediaEntry } from "./types";
 
 interface MediaGridCardProps {
@@ -109,7 +114,70 @@ export const MediaGridCard: React.FC<MediaGridCardProps> = ({ entry, baseUrl, is
         )}
       </div>
 
-      {/* Your Edit Dialogs go here... */}
+      {isOwner && (
+        <>
+          {inferredType === "anime" && (
+            <AnimeEditDialog
+              media={dialogMedia}
+              hasListEntry={true}
+              open={isEditDialogOpen}
+              onOpenChange={setIsEditDialogOpen}
+              onSaved={onRefresh}
+              onDeleted={onRefresh}
+            />
+          )}
+          {inferredType === "manga" && (
+            <MangaEditDialog
+              media={dialogMedia}
+              hasListEntry={true}
+              open={isEditDialogOpen}
+              onOpenChange={setIsEditDialogOpen}
+              onSaved={onRefresh}
+              onDeleted={onRefresh}
+            />
+          )}
+          {inferredType === "tv" && (
+            <TvEditDialog
+              media={{ ...dialogMedia, seasons: [] }}
+              hasListEntry={true}
+              open={isEditDialogOpen}
+              onOpenChange={setIsEditDialogOpen}
+              onSaved={onRefresh}
+              onDeleted={onRefresh}
+            />
+          )}
+          {inferredType === "movie" && (
+            <MovieEditDialog
+              media={dialogMedia}
+              hasListEntry={true}
+              open={isEditDialogOpen}
+              onOpenChange={setIsEditDialogOpen}
+              onSaved={onRefresh}
+              onDeleted={onRefresh}
+            />
+          )}
+          {inferredType === "game" && (
+            <GameEditDialog
+              media={dialogMedia}
+              hasListEntry={true}
+              open={isEditDialogOpen}
+              onOpenChange={setIsEditDialogOpen}
+              onSaved={onRefresh}
+              onDeleted={onRefresh}
+            />
+          )}
+          {inferredType === "book" && (
+            <BookEditDialog
+              media={dialogMedia}
+              hasListEntry={true}
+              open={isEditDialogOpen}
+              onOpenChange={setIsEditDialogOpen}
+              onSaved={onRefresh}
+              onDeleted={onRefresh}
+            />
+          )}
+        </>
+      )}
     </>
   );
 };
