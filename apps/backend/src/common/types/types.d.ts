@@ -119,6 +119,7 @@ export interface Media {
   studios?: MediaStudio[];
   staff?: { id: string; name: string; role: string }[];
   seasons?: MediaSeason[];
+  locked?: boolean;
 }
 
 export interface RemoteId {

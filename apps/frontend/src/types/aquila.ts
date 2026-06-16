@@ -151,4 +151,5 @@ export interface Media {
     episode: number;
   } | null;
   countryOfOrigin?: string;
+  locked?: boolean;
 }

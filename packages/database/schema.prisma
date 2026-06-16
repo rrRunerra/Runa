@@ -234,6 +234,7 @@ model AquilaAnime {
     nextAiringEpisode Json?       @db.Json
     trailers          Json?       @db.Json
 
+    locked          Boolean               @default(false)
     updatedAt       DateTime              @updatedAt
     aquilaUserLists AquilaAnimeUserList[]
 
@@ -344,6 +345,7 @@ model AquilaManga {
     hashtag           String?
     countryOfOrigin   String?
 
+    locked          Boolean               @default(false)
     updatedAt       DateTime              @updatedAt
     aquilaUserLists AquilaMangaUserList[]
 
@@ -428,6 +430,7 @@ model AquilaMovie {
     contentRating    String?
     trailers         Json?    @db.Json
 
+    locked               Boolean               @default(false)
     updatedAt            DateTime              @updatedAt
     aquilaMovieUserLists AquilaMovieUserList[]
 
@@ -461,6 +464,7 @@ model AquilaTv {
 
     contentRating    String?
 
+    locked          Boolean            @default(false)
     updatedAt       DateTime           @updatedAt
     aquilaUserLists AquilaTvUserList[]
 
@@ -606,6 +610,7 @@ model AquilaGame {
     averageScore Float?
     popularity   Int?
 
+    locked          Boolean               @default(false)
     updatedAt       DateTime              @updatedAt
     aquilaUserLists AquilaGameUserList[]
 
@@ -654,6 +659,7 @@ model AquilaBook {
     pages         Int?
     chapters      Int?
 
+    locked          Boolean               @default(false)
     updatedAt       DateTime              @updatedAt
     aquilaUserLists AquilaBookUserList[]
 
