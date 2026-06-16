@@ -91,6 +91,22 @@ const PERMISSION_GROUPS: PermissionGroup[] = [
 ];
 
 function isPermissionEnabled(userPermissions: number[], flag: bigint): boolean {
+  // Check if the user is an administrator (global bypass)
+  const adminBits = BitField.resolve(BitField.Flags.ADMINISTRATOR, {});
+  let hasAdmin = true;
+  for (let i = 0; i < adminBits.length; i++) {
+    const adminWord = adminBits[i] || 0;
+    const userWord = userPermissions[i] || 0;
+    if (adminWord !== 0 && (userWord & adminWord) !== adminWord) {
+      hasAdmin = false;
+      break;
+    }
+  }
+
+  if (hasAdmin && flag !== BitField.Flags.ADMINISTRATOR) {
+    return true;
+  }
+
   const flagBits = BitField.resolve(flag, {});
   for (let i = 0; i < flagBits.length; i++) {
     const flagWord = flagBits[i] || 0;

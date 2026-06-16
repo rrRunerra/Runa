@@ -115,7 +115,9 @@ export class DualAuthGuard implements CanActivate {
             select: { permissions: true },
           });
           permissions = user?.permissions ?? [];
-          await this.cacheService.set(cacheKey, permissions, 86400);
+          const isRedis = process.env.CACHE_DRIVER === 'redis' && process.env.REDIS_URL;
+          const ttl = isRedis ? 86400 : 2; // 2s TTL for in-memory cache to allow quick updates, 24h for Redis
+          await this.cacheService.set(cacheKey, permissions, ttl);
         }
 
         request.user = {
