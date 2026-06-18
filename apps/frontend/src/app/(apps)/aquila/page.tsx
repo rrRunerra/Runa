@@ -367,7 +367,7 @@ export default function AquilaHome(): React.JSX.Element {
       </div>
 
       {/* Image source credit */}
-      <div className="absolute bottom-4 right-6 z-20">
+      <div className="relative self-end mt-auto pb-4 pr-6 z-20">
         <a
           href="https://www.wallpaperflare.com/arknights-lappland-arknights-meng-ziya-wallpaper-yttpm"
           target="_blank"
