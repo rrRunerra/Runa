@@ -32,7 +32,7 @@ const getProgressIcon = (type: string) => {
   }
 };
 
-export const MediaGridCard: React.FC<MediaGridCardProps> = ({ entry, baseUrl, isOwner, onRefresh }) => {
+const MediaGridCardComponent: React.FC<MediaGridCardProps> = ({ entry, baseUrl, isOwner, onRefresh }) => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   const dialogMedia = {
@@ -51,7 +51,7 @@ export const MediaGridCard: React.FC<MediaGridCardProps> = ({ entry, baseUrl, is
 
   return (
     <>
-      <div className="relative group w-full aspect-[2/3] overflow-hidden rounded-xl bg-card border border-white/5 shadow-md transition-all duration-300 ease-out hover:-translate-y-1 lg:hover:scale-[1.03] lg:hover:shadow-xl lg:hover:shadow-purple-500/5 hover:border-white/10">
+      <div className="relative group w-full aspect-2/3 overflow-hidden rounded-xl bg-card border border-white/5 shadow-md transition-all duration-300 ease-out hover:-translate-y-1 lg:hover:scale-[1.03] lg:hover:shadow-xl lg:hover:shadow-purple-500/5 hover:border-white/10">
         <Link
           href={`${baseUrl}/${entry.id}`}
           prefetch={false}
@@ -63,7 +63,7 @@ export const MediaGridCard: React.FC<MediaGridCardProps> = ({ entry, baseUrl, is
                 src={entry.image}
                 alt={entry.title}
                 fill
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, (max-width: 1536px) 20vw, 15vw"
                 className="object-cover transition-transform duration-500 ease-out lg:group-hover:scale-105"
               />
             )}
@@ -74,7 +74,7 @@ export const MediaGridCard: React.FC<MediaGridCardProps> = ({ entry, baseUrl, is
           <div className="absolute bottom-0 left-0 right-0 p-2.5 sm:p-3.5 pt-6 sm:pt-8 flex flex-col gap-2 z-20 transition-transform duration-300 ease-out translate-y-1 group-hover:translate-y-0">
             <h4 
               title={entry.title}
-              className="peer font-semibold text-xs sm:text-sm text-white/95 line-clamp-2 hover:line-clamp-none leading-snug group-hover:text-primary transition-colors duration-300 tracking-wide break-words order-2 cursor-pointer"
+              className="peer font-semibold text-xs sm:text-sm text-white/95 line-clamp-2 hover:line-clamp-none leading-snug group-hover:text-primary transition-colors duration-300 tracking-wide wrap-break-word order-2 cursor-pointer"
             >
               {entry.title}
             </h4>
@@ -114,7 +114,7 @@ export const MediaGridCard: React.FC<MediaGridCardProps> = ({ entry, baseUrl, is
         )}
       </div>
 
-      {isOwner && (
+      {isOwner && isEditDialogOpen && (
         <>
           {inferredType === "anime" && (
             <AnimeEditDialog
@@ -181,3 +181,23 @@ export const MediaGridCard: React.FC<MediaGridCardProps> = ({ entry, baseUrl, is
     </>
   );
 };
+
+export const MediaGridCard = React.memo(
+  MediaGridCardComponent,
+  (prevProps, nextProps) => {
+    return (
+      prevProps.isOwner === nextProps.isOwner &&
+      prevProps.baseUrl === nextProps.baseUrl &&
+      prevProps.entry.id === nextProps.entry.id &&
+      prevProps.entry.title === nextProps.entry.title &&
+      prevProps.entry.score === nextProps.entry.score &&
+      prevProps.entry.progress === nextProps.entry.progress &&
+      prevProps.entry.image === nextProps.entry.image &&
+      prevProps.entry.type === nextProps.entry.type &&
+      prevProps.entry.format === nextProps.entry.format &&
+      prevProps.entry.status === nextProps.entry.status &&
+      prevProps.entry.last_updated === nextProps.entry.last_updated &&
+      prevProps.entry.last_added === nextProps.entry.last_added
+    );
+  }
+);

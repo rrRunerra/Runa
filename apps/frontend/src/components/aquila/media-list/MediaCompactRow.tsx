@@ -19,7 +19,7 @@ interface MediaCompactRowProps {
   onRefresh?: () => void;
 }
 
-export const MediaCompactRow: React.FC<MediaCompactRowProps> = ({
+const MediaCompactRowComponent: React.FC<MediaCompactRowProps> = ({
   entry,
   baseUrl,
   isOwner,
@@ -92,7 +92,7 @@ export const MediaCompactRow: React.FC<MediaCompactRowProps> = ({
         )}
       </div>
 
-      {isOwner && (
+      {isOwner && isEditDialogOpen && (
         <>
           {inferredType === "anime" && (
             <AnimeEditDialog
@@ -159,3 +159,23 @@ export const MediaCompactRow: React.FC<MediaCompactRowProps> = ({
     </>
   );
 };
+
+export const MediaCompactRow = React.memo(
+  MediaCompactRowComponent,
+  (prevProps, nextProps) => {
+    return (
+      prevProps.isOwner === nextProps.isOwner &&
+      prevProps.baseUrl === nextProps.baseUrl &&
+      prevProps.entry.id === nextProps.entry.id &&
+      prevProps.entry.title === nextProps.entry.title &&
+      prevProps.entry.score === nextProps.entry.score &&
+      prevProps.entry.progress === nextProps.entry.progress &&
+      prevProps.entry.image === nextProps.entry.image &&
+      prevProps.entry.type === nextProps.entry.type &&
+      prevProps.entry.format === nextProps.entry.format &&
+      prevProps.entry.status === nextProps.entry.status &&
+      prevProps.entry.last_updated === nextProps.entry.last_updated &&
+      prevProps.entry.last_added === nextProps.entry.last_added
+    );
+  }
+);

@@ -20,7 +20,7 @@ interface MediaListRowProps {
   onRefresh?: () => void;
 }
 
-export const MediaListRow: React.FC<MediaListRowProps> = ({
+const MediaListRowComponent: React.FC<MediaListRowProps> = ({
   entry,
   baseUrl,
   isOwner,
@@ -64,7 +64,7 @@ export const MediaListRow: React.FC<MediaListRowProps> = ({
           className="flex-1 flex cursor-pointer items-center justify-between gap-4 py-1.5 px-2 transition-colors"
         >
           <div className="flex items-center gap-3">
-            <div className="relative h-14 w-10 shrink-0 overflow-hidden rounded-md bg-muted aspect-[2/3]">
+            <div className="relative h-14 w-10 shrink-0 overflow-hidden rounded-md bg-muted aspect-2/3">
               {/* Native Next.js Image handles lazy loading and sizing */}
               {entry.image && (
                 <Image
@@ -104,7 +104,7 @@ export const MediaListRow: React.FC<MediaListRowProps> = ({
         )}
       </div>
 
-      {isOwner && (
+      {isOwner && isEditDialogOpen && (
         <>
           {inferredType === "anime" && (
             <AnimeEditDialog
@@ -171,3 +171,23 @@ export const MediaListRow: React.FC<MediaListRowProps> = ({
     </>
   );
 };
+
+export const MediaListRow = React.memo(
+  MediaListRowComponent,
+  (prevProps, nextProps) => {
+    return (
+      prevProps.isOwner === nextProps.isOwner &&
+      prevProps.baseUrl === nextProps.baseUrl &&
+      prevProps.entry.id === nextProps.entry.id &&
+      prevProps.entry.title === nextProps.entry.title &&
+      prevProps.entry.score === nextProps.entry.score &&
+      prevProps.entry.progress === nextProps.entry.progress &&
+      prevProps.entry.image === nextProps.entry.image &&
+      prevProps.entry.type === nextProps.entry.type &&
+      prevProps.entry.format === nextProps.entry.format &&
+      prevProps.entry.status === nextProps.entry.status &&
+      prevProps.entry.last_updated === nextProps.entry.last_updated &&
+      prevProps.entry.last_added === nextProps.entry.last_added
+    );
+  }
+);

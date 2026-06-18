@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useRef, useCallback } from "react";
 import { MediaEntry, MediaListDisplayProps } from "./types";
 import { MediaListGroup } from "./MediaListGroup";
 
@@ -14,6 +14,13 @@ export const MediaListDisplay: React.FC<MediaListDisplayProps> = ({
   isOwner,
   onRefresh,
 }) => {
+  // Stabilize onRefresh callback to prevent breaking child component memoization
+  const onRefreshRef = useRef(onRefresh);
+  onRefreshRef.current = onRefresh;
+  const stableOnRefresh = useCallback(() => {
+    onRefreshRef.current?.();
+  }, []);
+
   // Memoize filtering to prevent expensive recalculations
   const filteredData = useMemo(() => {
     return data.filter((entry) => {
@@ -85,7 +92,7 @@ export const MediaListDisplay: React.FC<MediaListDisplayProps> = ({
           displayType={displayType}
           baseUrl={baseUrl}
           isOwner={isOwner}
-          onRefresh={onRefresh}
+          onRefresh={stableOnRefresh}
         />
       ))}
 
@@ -100,7 +107,7 @@ export const MediaListDisplay: React.FC<MediaListDisplayProps> = ({
             displayType={displayType}
             baseUrl={baseUrl}
             isOwner={isOwner}
-            onRefresh={onRefresh}
+            onRefresh={stableOnRefresh}
           />
         ))}
     </div>

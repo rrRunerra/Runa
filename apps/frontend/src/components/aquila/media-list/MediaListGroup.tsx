@@ -26,7 +26,7 @@ export const MediaListGroup: React.FC<MediaListGroupProps> = ({
   if (entries.length === 0) return null;
 
   return (
-    <div className="mb-10 w-full" style={{ contentVisibility: "auto" }}>
+    <div className="mb-10 w-full" style={{ contentVisibility: "auto", containIntrinsicSize: "0 600px" }}>
       <h3 className="mb-4 text-xl font-semibold text-foreground">{title}</h3>
       
       {displayType === "grid" && (

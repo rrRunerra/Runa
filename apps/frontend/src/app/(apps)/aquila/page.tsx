@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useRef, memo } from "react";
 import { Plus, Play, BookOpen, Tv, Film, Loader2, Menu, Gamepad2, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ import { GameEditDialog } from "@/components/aquila/GameEditDialog";
 import { BookEditDialog } from "@/components/aquila/BookEditDialog";
 import { MediaItem, MediaSectionProps } from "@/types/aquila";
 import { AnimatePresence, motion } from "framer-motion";
+import React from "react";
 
 export type CategoryType = "anime" | "manga" | "tv" | "movie" | "game" | "book";
 
@@ -407,7 +408,7 @@ function MediaSection({
   };
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6" style={{ contentVisibility: "auto", containIntrinsicSize: "0 400px" }}>
       <div className="flex items-center gap-3 pb-4 group/header">
         <div
           {...(dragHandleProps || {})}
@@ -472,7 +473,7 @@ function MediaSection({
   );
 }
 
-function MediaCard({
+const MediaCardComponent = ({
   item,
   onIncrement,
   isUpdating,
@@ -482,7 +483,7 @@ function MediaCard({
   onIncrement: () => void;
   isUpdating: boolean;
   onRefresh: () => void;
-}): React.JSX.Element {
+}): React.JSX.Element => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const mediaType = item.type;
   const href = `/aquila/${mediaType === "manga"
@@ -515,6 +516,7 @@ function MediaCard({
           <img
             src={item.image}
             alt={item.title}
+            loading="lazy"
             className="w-full h-full object-cover transition-transform duration-500 ease-out lg:group-hover:scale-108"
           />
           <div className="absolute inset-0 bg-linear-to-t from-black/95 via-black/45 to-transparent z-15 opacity-90 transition-opacity duration-300 group-hover:opacity-100" />
@@ -600,7 +602,7 @@ function MediaCard({
       </Link>
 
       {/* Type-specific edit dialog opened by the hamburger icon */}
-      {item.type === "anime" && (
+      {isEditDialogOpen && item.type === "anime" && (
         <AnimeEditDialog
           media={dialogMedia}
           hasListEntry={true}
@@ -610,7 +612,7 @@ function MediaCard({
           onDeleted={onRefresh}
         />
       )}
-      {item.type === "manga" && (
+      {isEditDialogOpen && item.type === "manga" && (
         <MangaEditDialog
           media={dialogMedia}
           hasListEntry={true}
@@ -620,7 +622,7 @@ function MediaCard({
           onDeleted={onRefresh}
         />
       )}
-      {item.type === "tv" && (
+      {isEditDialogOpen && item.type === "tv" && (
         <TvEditDialog
           media={{ ...dialogMedia, seasons: [] }}
           hasListEntry={true}
@@ -630,7 +632,7 @@ function MediaCard({
           onDeleted={onRefresh}
         />
       )}
-      {item.type === "movie" && (
+      {isEditDialogOpen && item.type === "movie" && (
         <MovieEditDialog
           media={dialogMedia}
           hasListEntry={true}
@@ -640,7 +642,7 @@ function MediaCard({
           onDeleted={onRefresh}
         />
       )}
-      {item.type === "game" && (
+      {isEditDialogOpen && item.type === "game" && (
         <GameEditDialog
           media={dialogMedia}
           hasListEntry={true}
@@ -650,7 +652,7 @@ function MediaCard({
           onDeleted={onRefresh}
         />
       )}
-      {item.type === "book" && (
+      {isEditDialogOpen && item.type === "book" && (
         <BookEditDialog
           media={dialogMedia}
           hasListEntry={true}
@@ -662,4 +664,19 @@ function MediaCard({
       )}
     </>
   );
-}
+};
+
+const MediaCard = memo(
+  MediaCardComponent,
+  (prevProps, nextProps) => {
+    return (
+      prevProps.isUpdating === nextProps.isUpdating &&
+      prevProps.item.id === nextProps.item.id &&
+      prevProps.item.progress === nextProps.item.progress &&
+      prevProps.item.image === nextProps.item.image &&
+      prevProps.item.title === nextProps.item.title &&
+      prevProps.item.episodes === nextProps.item.episodes &&
+      prevProps.item.type === nextProps.item.type
+    );
+  }
+);
