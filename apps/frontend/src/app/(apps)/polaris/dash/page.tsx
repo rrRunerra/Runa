@@ -5,165 +5,15 @@ import {
 } from "@/components/stars/CelestialEffectManager";
 import { StarIcon } from "@/components/icons/StarIcon";
 import { StarMap, StarMapHandle } from "@/components/stars/StarMap";
-import { Constellation } from "@/types/constellation";
+import { REFERENCE_CONSTELLATIONS } from "@/lib/constellations";
 import { useSession } from "next-auth/react";
 import { useRef, useState, useEffect } from "react";
+import { ConstellationBuilderModal } from "@/components/stars/ConstellationBuilderModal";
+import { Sparkles } from "lucide-react";
 
 const GREETINGS = ["Hey", "Hi", "Hello", "Greetings", "Hiya", "Welcome"];
 
-const constellations: Constellation[] = [
-  {
-    name: "Lynx",
-    description: "Web interface for discord bot.",
-    redirect: "/lynx",
-    id: "lynx",
-    stars: [
-      {
-        ra: 5.41,
-        dec: 11.91,
-        magnitude: 3,
-        name: "Star 0",
-      },
-      {
-        ra: 5.45,
-        dec: 13.11,
-        magnitude: 3,
-        name: "Star 1",
-      },
-      {
-        ra: 5.55,
-        dec: 13.74,
-        magnitude: 3,
-        name: "Star 2",
-      },
-      {
-        ra: 5.62,
-        dec: 15.54,
-        magnitude: 3,
-        name: "Star 3",
-      },
-      {
-        ra: 5.88,
-        dec: 15.71,
-        magnitude: 3,
-        name: "Star 4",
-      },
-      {
-        ra: 6.24,
-        dec: 19.04,
-        magnitude: 3,
-        name: "Star 5",
-      },
-      {
-        ra: 6.35,
-        dec: 24.57,
-        magnitude: 3,
-        name: "Star 6",
-      },
-      {
-        ra: 6.52,
-        dec: 25.61,
-        magnitude: 3,
-        name: "Star 7",
-      },
-    ],
-    connections: [
-      [0, 1],
-      [1, 2],
-      [2, 3],
-      [3, 4],
-      [4, 5],
-      [5, 6],
-      [6, 7],
-    ],
-  },
-  {
-    name: "Aquila",
-    description: "Media tracking app.",
-    redirect: "/aquila",
-    id: "aquila",
-    stars: [
-      {
-        ra: 25.3,
-        dec: 1.83,
-        magnitude: 3,
-        name: "Star 0",
-      },
-      {
-        ra: 25.24,
-        dec: 2.67,
-        magnitude: 3,
-        name: "Star 1",
-      },
-      {
-        ra: 24.9,
-        dec: 6.27,
-        magnitude: 3,
-        name: "Star 2",
-      },
-      {
-        ra: 24.53,
-        dec: 7.5,
-        magnitude: 3,
-        name: "Star 3",
-      },
-      {
-        ra: 25.06,
-        dec: 8.83,
-        magnitude: 3,
-        name: "Star 4",
-      },
-      {
-        ra: 25.33,
-        dec: 15.5,
-        magnitude: 3,
-        name: "Star 5",
-      },
-      {
-        ra: 25.24,
-        dec: 2.67,
-        magnitude: 3,
-        name: "Star 6",
-      },
-      {
-        ra: 25.06,
-        dec: 8.87,
-        magnitude: 3,
-        name: "Star 7",
-      },
-      {
-        ra: 24.87,
-        dec: 14.53,
-        magnitude: 3,
-        name: "Star 8",
-      },
-      {
-        ra: 24.8,
-        dec: 13.1,
-        magnitude: 3,
-        name: "Star 9",
-      },
-      {
-        ra: 24.74,
-        dec: 11.57,
-        magnitude: 3,
-        name: "Star 10",
-      },
-    ],
-    connections: [
-      [0, 1],
-      [1, 2],
-      [2, 3],
-      [3, 4],
-      [4, 5],
-      [5, 6],
-      [6, 7],
-      [7, 8],
-      [8, 9],
-      [9, 10],
-    ],
-  },
-];
+const constellations = REFERENCE_CONSTELLATIONS;
 
 export default function Dash() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -172,10 +22,34 @@ export default function Dash() {
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const { data: session, status } = useSession();
   const [greeting, setGreeting] = useState(GREETINGS[Math.floor(Math.random() * GREETINGS.length)]);
+  const [isBuilderOpen, setIsBuilderOpen] = useState(false);
+  const [bookmarks, setBookmarks] = useState<any[]>([]);
 
   useEffect(() => {
     document.title = "Polaris > Dashboard";
   }, []);
+
+  const fetchBookmarks = async () => {
+    if (session?.accessToken) {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/polaris/bookmarks`, {
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setBookmarks(data);
+        }
+      } catch (err) {
+        console.error("Error fetching bookmarks:", err);
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchBookmarks();
+  }, [session, isBuilderOpen]);
 
   useEffect(() => {
     let resizeObserver: ResizeObserver | null = null;
@@ -202,6 +76,19 @@ export default function Dash() {
       ? (session.user.displayName ?? session.user.username)
       : null;
 
+  const allConstellations = [
+    ...constellations,
+    ...bookmarks.map((b) => ({
+      name: b.name,
+      description: b.description,
+      redirect: b.redirect,
+      id: b.id,
+      stars: b.stars as any,
+      connections: b.connections as any,
+      icon: b.icon || undefined,
+    })),
+  ];
+
   return (
     <div ref={containerRef} className="w-full min-h-screen bg-black">
       {dimensions.width > 0 && (
@@ -210,7 +97,7 @@ export default function Dash() {
           height={dimensions.height}
           width={dimensions.width}
           numOfStars={30000}
-          constellations={constellations}
+          constellations={allConstellations}
           effects={
             <CelestialEffectManager
               ref={effectManagerRef}
@@ -233,7 +120,7 @@ export default function Dash() {
                 What would you like to explore today?
               </h2>
               <div className="flex flex-wrap justify-center gap-3 mt-4 pointer-events-auto">
-                {constellations.map((constellation) => (
+                {allConstellations.map((constellation) => (
                   <button
                     key={constellation.id}
                     onClick={() =>
@@ -241,7 +128,7 @@ export default function Dash() {
                         constellation.name,
                       )
                     }
-                    className="group relative px-6 py-2.5 bg-white/5 backdrop-blur-md border border-white/10 rounded-xl text-white font-medium tracking-wide transition-all duration-300 hover:bg-white/10 hover:border-white/20 hover:scale-105 hover:shadow-lg hover:shadow-white/5"
+                    className="group relative px-6 py-2.5 bg-white/5 backdrop-blur-md border border-white/10 rounded-xl text-white font-medium tracking-wide transition-all duration-300 hover:bg-white/10 hover:border-white/20 hover:scale-105 hover:shadow-lg hover:shadow-white/5 cursor-pointer"
                   >
                     <span className="relative z-10 flex items-center gap-2">
                       <StarIcon className="w-4 h-4 text-blue-300" />
@@ -250,10 +137,27 @@ export default function Dash() {
                     <div className="absolute inset-0 rounded-xl bg-linear-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   </button>
                 ))}
+
               </div>
             </section>
           </div>
         </StarMap>
+      )}
+
+      {/* Floating Action Button (FAB) in the bottom-right corner to launch the Builder */}
+      <button
+        onClick={() => setIsBuilderOpen(true)}
+        className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5 px-5 py-3 bg-zinc-950/75 hover:bg-zinc-900/80 backdrop-blur-xl border border-indigo-500/35 hover:border-indigo-500/65 rounded-full text-indigo-300 font-semibold text-sm tracking-wide transition-all duration-300 hover:scale-105 hover:shadow-[0_0_20px_rgba(99,102,241,0.25)] shadow-2xl cursor-pointer group"
+      >
+        <Sparkles className="w-4 h-4 text-indigo-400 group-hover:animate-pulse" />
+        Constellation Builder
+      </button>
+
+      {isBuilderOpen && (
+        <ConstellationBuilderModal
+          open={isBuilderOpen}
+          onOpenChange={setIsBuilderOpen}
+        />
       )}
     </div>
   );

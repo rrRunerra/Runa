@@ -10,6 +10,7 @@ import {
   Palette,
   Settings,
   LayoutGrid,
+  Bookmark,
 } from "lucide-react";
 import Link from "next/link";
 import { cn, getSafeImageUrl } from "@/lib/utils";
@@ -58,6 +59,7 @@ import {
 } from "@/components/ui/collapsible";
 import { AppearanceDialog } from "@/components/AppearanceDialog";
 import { SettingsDialog } from "@/components/SettingsDialog";
+import { ConstellationBuilderModal } from "@/components/stars/ConstellationBuilderModal";
 import { usePathname } from "next/navigation";
 
 
@@ -106,6 +108,9 @@ export default function AppSideBar({
   const [activeApp, setActiveApp] = useState(apps[0]);
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isBuilderOpen, setIsBuilderOpen] = useState(false);
+  const [bookmarkName, setBookmarkName] = useState("");
+  const [bookmarkIcon, setBookmarkIcon] = useState("");
 
   useEffect(() => {
     const handleOpenAppearance = () => setIsAppearanceOpen(true);
@@ -633,6 +638,19 @@ export default function AppSideBar({
                       <Settings className="size-4 text-primary/80" />
                       Settings
                     </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="cursor-pointer gap-2.5 px-3 py-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-zinc-800/50 rounded-xl transition-all duration-200"
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        setBookmarkName(document.title || "New Constellation");
+                        const faviconEl = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
+                        setBookmarkIcon(faviconEl?.href || "/favicon.ico");
+                        setIsBuilderOpen(true);
+                      }}
+                    >
+                      <Bookmark className="size-4 text-primary/80" />
+                      Add Bookmark
+                    </DropdownMenuItem>
                   </DropdownMenuGroup>
 
                   <DropdownMenuSeparator className="bg-zinc-800/40 my-1.5" />
@@ -673,6 +691,13 @@ export default function AppSideBar({
         open={isSettingsOpen}
         onOpenChange={setIsSettingsOpen}
         navConfig={navConfig}
+      />
+      <ConstellationBuilderModal
+        open={isBuilderOpen}
+        onOpenChange={setIsBuilderOpen}
+        initialRedirect={pathname}
+        initialName={bookmarkName}
+        initialIcon={bookmarkIcon}
       />
     </Sidebar>
     {isMobile && (

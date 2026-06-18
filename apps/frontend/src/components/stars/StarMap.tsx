@@ -38,6 +38,7 @@ interface StarMapProps {
   constellations?: Constellation[];
   children?: React.ReactNode;
   effects?: React.ReactNode;
+  onMapClick?: (ra: number, dec: number) => void;
 }
 
 export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
@@ -50,6 +51,7 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
       constellations = [],
       children,
       effects,
+      onMapClick,
     },
     ref,
   ) => {
@@ -315,7 +317,7 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
           const startThreshold = distRatio * 0.7; // Earlier start
           const lineIntensity = Math.max(
             0,
-            Math.min(1, (masterIntensity - startThreshold) * 3), // More gradual (3 instead of 5)
+            Math.min(1, (masterIntensity - startThreshold) * 4), // Set to 4 to ensure all lines fill in fully when masterIntensity reaches 1
           );
 
           if (lineIntensity > 0 || !isHovered) {
@@ -523,6 +525,136 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
       window.removeEventListener("mouseup", handleWindowMouseUp);
     };
 
+    const pinchStartDistRef = useRef(0);
+    const pinchStartZoomRef = useRef(0);
+    const isPinchingRef = useRef(false);
+
+    const getTouchDistance = (t1: { clientX: number; clientY: number }, t2: { clientX: number; clientY: number }): number => {
+      const dx = t1.clientX - t2.clientX;
+      const dy = t1.clientY - t2.clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    };
+
+    const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+      if (e.touches.length === 2) {
+        // Pinch-to-zoom start
+        isPinchingRef.current = true;
+        isDraggingRef.current = false;
+        pinchStartDistRef.current = getTouchDistance(e.touches[0], e.touches[1]);
+        pinchStartZoomRef.current = zoom;
+
+        window.addEventListener("touchmove", handleWindowTouchMove, { passive: false });
+        window.addEventListener("touchend", handleWindowTouchEnd);
+        return;
+      }
+
+      if (e.touches.length !== 1) return;
+      const touch = e.touches[0];
+      isDraggingRef.current = true;
+      hasMovedRef.current = false;
+      isPinchingRef.current = false;
+      dragStartRef.current = {
+        x: touch.clientX - offset.x,
+        y: touch.clientY - offset.y,
+      };
+      setIsDragging(true);
+
+      window.addEventListener("touchmove", handleWindowTouchMove, { passive: false });
+      window.addEventListener("touchend", handleWindowTouchEnd);
+    };
+
+    const handleWindowTouchMove = (e: TouchEvent) => {
+      // Prevent browser gestures like scrolling the whole page when panning starmap
+      e.preventDefault();
+
+      // Pinch-to-zoom
+      if (isPinchingRef.current && e.touches.length === 2) {
+        const currentDist = getTouchDistance(e.touches[0], e.touches[1]);
+        const scaleFactor = currentDist / pinchStartDistRef.current;
+        const newZoom = Math.max(0.5, Math.min(2, pinchStartZoomRef.current * scaleFactor));
+
+        if (newZoom !== zoom) {
+          // Zoom towards center of the two fingers
+          const canvas = canvasRef.current;
+          if (canvas) {
+            const rect = canvas.getBoundingClientRect();
+            const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+            const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+
+            const currentScale = BASE_SCALE * zoom;
+            const worldX = (centerX - offset.x) / currentScale;
+            const worldY = (centerY - offset.y) / currentScale;
+
+            const newScale = BASE_SCALE * newZoom;
+            let newOffsetX = centerX - worldX * newScale;
+            let newOffsetY = centerY - worldY * newScale;
+
+            // Apply boundaries
+            const minRA = -18;
+            const maxRA = 42;
+            const minDec = -180;
+            const maxDec = 180;
+
+            const minRaPx = minRA * 15 * newScale;
+            const maxRaPx = maxRA * 15 * newScale;
+            const minDecPx = -maxDec * newScale;
+            const maxDecPx = -minDec * newScale;
+
+            newOffsetX = Math.max(width - maxRaPx, Math.min(-minRaPx, newOffsetX));
+            newOffsetY = Math.max(height - maxDecPx, Math.min(-minDecPx, newOffsetY));
+
+            setZoom(newZoom);
+            setOffset({ x: newOffsetX, y: newOffsetY });
+          }
+        }
+        return;
+      }
+
+      // Single-finger pan
+      if (!isDraggingRef.current || e.touches.length !== 1) return;
+
+      const touch = e.touches[0];
+      let newX = touch.clientX - dragStartRef.current.x;
+      let newY = touch.clientY - dragStartRef.current.y;
+
+      if (!hasMovedRef.current) {
+        const dx = touch.clientX - (dragStartRef.current.x + offset.x);
+        const dy = touch.clientY - (dragStartRef.current.y + offset.y);
+        if (Math.sqrt(dx * dx + dy * dy) > 5) {
+          hasMovedRef.current = true;
+        }
+      }
+
+      const currentScale = BASE_SCALE * zoom;
+      const minRA = -18;
+      const maxRA = 42;
+      const minDec = -180;
+      const maxDec = 180;
+
+      const minRaPx = minRA * 15 * currentScale;
+      const maxRaPx = maxRA * 15 * currentScale;
+      const minDecPx = -maxDec * currentScale;
+      const maxDecPx = -minDec * currentScale;
+
+      const maxOffsetX = -minRaPx;
+      const minOffsetX = width - maxRaPx;
+      const maxOffsetY = -minDecPx;
+      const minOffsetY = height - maxDecPx;
+
+      newX = Math.max(minOffsetX, Math.min(maxOffsetX, newX));
+      newY = Math.max(minOffsetY, Math.min(maxOffsetY, newY));
+
+      setOffset({ x: newX, y: newY });
+    };
+
+    const handleWindowTouchEnd = () => {
+      isDraggingRef.current = false;
+      isPinchingRef.current = false;
+      setIsDragging(false);
+      window.removeEventListener("touchmove", handleWindowTouchMove);
+      window.removeEventListener("touchend", handleWindowTouchEnd);
+    };
+
     // Handle Zoom
     const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
       e.preventDefault();
@@ -654,13 +786,25 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
       }
     };
 
-    const handleClick = (e: React.MouseEvent) => {
+    const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
       // Only trigger if we haven't moved (clicked)
       if (!hasMovedRef.current) {
-        if (hoveredConstellation) {
-          setSelectedConstellation(hoveredConstellation);
+        const rect = e.currentTarget.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+        const currentScale = BASE_SCALE * zoom;
+        
+        const ra = (mouseX - offset.x) / (15 * currentScale);
+        const dec = -(mouseY - offset.y) / currentScale;
+
+        if (onMapClick) {
+          onMapClick(ra, dec);
         } else {
-          setSelectedConstellation(null);
+          if (hoveredConstellation) {
+            setSelectedConstellation(hoveredConstellation);
+          } else {
+            setSelectedConstellation(null);
+          }
         }
       }
     };
@@ -671,7 +815,7 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
           ref={canvasRef}
           width={width}
           height={height}
-          className={`${
+          className={`touch-none ${
             hoveredConstellation
               ? "cursor-pointer"
               : isDragging
@@ -682,6 +826,7 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
           onMouseMove={handleCanvasMouseMove}
           onClick={handleClick}
           onWheel={handleWheel}
+          onTouchStart={handleTouchStart}
         />
 
         {/* Constellation Star Layer (React Icons for extra flair) */}

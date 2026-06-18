@@ -63,6 +63,9 @@ export default function SpotlightSearch(): React.JSX.Element {
     let lastShiftTime = 0;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore held-down key repeats — only count distinct presses
+      if (e.repeat) return;
+
       // Don't trigger if user is inside an input/textarea/editable element
       const activeElement = document.activeElement;
       const isInput =

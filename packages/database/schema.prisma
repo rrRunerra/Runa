@@ -32,6 +32,7 @@ model User {
     gameList             AquilaGameUserList[]
     bookList             AquilaBookUserList[]
     userStats            UserStats[]
+    polarisBookmarks     PolarisUserBookMarks[]
 
     @@index([id])
     @@index([username])
@@ -703,6 +704,22 @@ model UserStats {
     user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@unique([userId, mediaType])
+    @@index([userId])
+}
+
+model PolarisUserBookMarks {
+    id          String   @id @default(nanoid())
+    userId      String
+    name        String
+    description String
+    redirect    String
+    stars       Json     @db.Json
+    connections Json     @db.Json
+    icon        String?
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+    user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
     @@index([userId])
 }
 

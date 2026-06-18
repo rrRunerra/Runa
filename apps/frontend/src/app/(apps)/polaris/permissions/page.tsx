@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useTransition, useMemo } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { 
   Shield, 
   Search, 
@@ -18,15 +19,16 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { BitField, PolarisFlags, LynxFlags, AquilaFlags, hasPermission, PERMISSION_DESCRIPTIONS } from "@runa/permissions";
+
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-
+import PolarisUnauthorized from "@/components/unauthorized/PolarisUnauthorized";
 import { getAllUsers, updateUserPermissions, SafeUser } from "@/actions/permissionActions";
-import { BitField, PolarisFlags, LynxFlags, AquilaFlags } from "@runa/permissions";
 
 interface PermissionDefinition {
   name: string;
@@ -41,53 +43,67 @@ interface PermissionGroup {
   permissions: PermissionDefinition[];
 }
 
+
 const PERMISSION_GROUPS: PermissionGroup[] = [
   {
     name: "Global / Administration",
     icon: <Globe className="size-4 text-purple-400" />,
-    permissions: [
-      { name: "ADMINISTRATOR", flag: BitField.Flags.ADMINISTRATOR, label: "Administrator", description: "Grants bypass access to all pages and permissions" },
-    ]
+    permissions: Object.entries(BitField.Flags).map(([name, flag]) => ({
+      name,
+      flag,
+      label: name === "ADMINISTRATOR" ? "Administrator" : name.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" "),
+      description: PERMISSION_DESCRIPTIONS[name] || `Grants global ${name.toLowerCase()} permission`,
+    })),
   },
   {
     name: "Polaris Account",
     icon: <User className="size-4 text-blue-400" />,
-    permissions: [
-      { name: "VIEW", flag: PolarisFlags.VIEW, label: "View Polaris", description: "Basic access to Polaris platform" },
-      { name: "MANAGE", flag: PolarisFlags.MANAGE, label: "Manage Polaris", description: "Administrative tools inside Polaris" },
-      { name: "LOGGED_IN", flag: PolarisFlags.LOGGED_IN, label: "Logged In", description: "Required flag to access user dashboard" },
-    ]
+    permissions: Object.entries(PolarisFlags).map(([name, flag]) => {
+      const key = `POLARIS_${name}`;
+      return {
+        name,
+        flag,
+        label: name === "LOGGED_IN" ? "Logged In" : `${name.charAt(0).toUpperCase() + name.slice(1).toLowerCase()} Polaris`,
+        description: PERMISSION_DESCRIPTIONS[key] || `Access ${name.toLowerCase()} features in Polaris`,
+      };
+    }),
   },
   {
     name: "Lynx Bot Interface",
     icon: <MessageSquare className="size-4 text-emerald-400" />,
-    permissions: [
-      { name: "VIEW", flag: LynxFlags.VIEW, label: "View Lynx", description: "Access Lynx web interface" },
-      { name: "MANAGE", flag: LynxFlags.MANAGE, label: "Manage Lynx", description: "Full admin rights in Lynx bot" },
-      { name: "LOGGED_IN", flag: LynxFlags.LOGGED_IN, label: "Logged In", description: "General authenticated operations in Lynx" },
-      { name: "MANAGE_DATABASE", flag: LynxFlags.MANAGE_DATABASE, label: "Manage Databases", description: "Inspect and modify databases" },
-      { name: "GUILD_CHAT", flag: LynxFlags.GUILD_CHAT, label: "Guild Chatting", description: "Interact in guild text channels" },
-      { name: "DM_CHAT", flag: LynxFlags.DM_CHAT, label: "Direct Messages", description: "Send private messages via bot" },
-      { name: "VIEW_LOGS", flag: LynxFlags.VIEW_LOGS, label: "View Logs", description: "Access system and bot console audit logs" },
-      { name: "MANAGE_CONFIG", flag: LynxFlags.MANAGE_CONFIG, label: "Manage Config", description: "Configure crons, commands and homework modules" },
-    ]
+    permissions: Object.entries(LynxFlags).map(([name, flag]) => {
+      const key = `LYNX_${name}`;
+      let label = name.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+      if (name === "VIEW") label = "View Lynx";
+      if (name === "MANAGE") label = "Manage Lynx";
+      if (name === "LOGGED_IN") label = "Logged In";
+      if (name === "GUILD_CHAT") label = "Guild Chatting";
+      if (name === "DM_CHAT") label = "Direct Messages";
+      return {
+        name,
+        flag,
+        label,
+        description: PERMISSION_DESCRIPTIONS[key] || `Access ${name.toLowerCase()} features in Lynx`,
+      };
+    }),
   },
   {
     name: "Aquila Media Library",
     icon: <Tv className="size-4 text-amber-400" />,
-    permissions: [
-      { name: "VIEW", flag: AquilaFlags.VIEW, label: "View Aquila", description: "Browse and view library catalogs" },
-      { name: "MANAGE", flag: AquilaFlags.MANAGE, label: "Manage Aquila", description: "Content administrative features" },
-      { name: "LOGGED_IN", flag: AquilaFlags.LOGGED_IN, label: "Logged In", description: "General user actions in Aquila library" },
-      { name: "EDIT_ANIME", flag: AquilaFlags.EDIT_ANIME, label: "Edit Anime", description: "Create and modify anime database records" },
-      { name: "EDIT_MANGA", flag: AquilaFlags.EDIT_MANGA, label: "Edit Manga", description: "Create and modify manga database records" },
-      { name: "EDIT_MOVIE", flag: AquilaFlags.EDIT_MOVIE, label: "Edit Movies", description: "Create and modify movie database records" },
-      { name: "EDIT_TV", flag: AquilaFlags.EDIT_TV, label: "Edit TV Shows", description: "Create and modify TV show database records" },
-      { name: "EDIT_GAME", flag: AquilaFlags.EDIT_GAME, label: "Edit Games", description: "Create and modify game database records" },
-      { name: "EDIT_BOOK", flag: AquilaFlags.EDIT_BOOK, label: "Edit Books", description: "Create and modify book database records" },
-      { name: "IMPORT_LIST", flag: AquilaFlags.IMPORT_LIST, label: "Import Lists", description: "Import lists from extensions like AniList, MyAnimeList, and Simkl" },
-    ]
-  }
+    permissions: Object.entries(AquilaFlags).map(([name, flag]) => {
+      const key = `AQUILA_${name}`;
+      let label = name.split("_").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+      if (name === "VIEW") label = "View Aquila";
+      if (name === "MANAGE") label = "Manage Aquila";
+      if (name === "LOGGED_IN") label = "Logged In";
+      return {
+        name,
+        flag,
+        label,
+        description: PERMISSION_DESCRIPTIONS[key] || `Access ${name.toLowerCase()} features in Aquila`,
+      };
+    }),
+  },
 ];
 
 function isPermissionEnabled(userPermissions: number[], flag: bigint): boolean {
@@ -129,6 +145,8 @@ function togglePermissionInArray(userPermissions: number[], flag: bigint): numbe
 }
 
 export default function PermissionsPage() {
+  const { data: session, status } = useSession();
+
   const [users, setUsers] = useState<SafeUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -140,8 +158,10 @@ export default function PermissionsPage() {
   // Load all users on mount
   useEffect(() => {
     document.title = "Polaris > Permissions Manager";
-    loadUsers();
-  }, []);
+    if (status === "authenticated" && hasPermission(session?.user?.permissions, BitField.Flags.ADMINISTRATOR)) {
+      loadUsers();
+    }
+  }, [status, session]);
 
   const loadUsers = async () => {
     setLoading(true);
@@ -225,6 +245,24 @@ export default function PermissionsPage() {
     return badges;
   };
 
+  if (status === "loading") {
+    return (
+      <div className="w-full min-h-screen bg-black flex flex-col items-center justify-center gap-3 text-muted-foreground font-sans">
+        <Loader2 className="size-8 animate-spin text-purple-400" />
+        <span className="text-xs tracking-wider uppercase opacity-75">Loading secure panel...</span>
+      </div>
+    );
+  }
+
+  if (status === "unauthenticated" || !hasPermission(session?.user?.permissions, BitField.Flags.ADMINISTRATOR)) {
+    return (
+      <PolarisUnauthorized 
+        message="You don't have permission to access the Polaris Permissions Manager."
+        returnUrl="/polaris/dash"
+      />
+    );
+  }
+
   return (
     <div className="w-full min-h-screen bg-black text-foreground antialiased flex flex-col font-sans">
       {/* Premium Header */}
@@ -245,7 +283,7 @@ export default function PermissionsPage() {
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="bg-purple-950/20 text-purple-300 border-purple-800/30 px-3 py-1 font-semibold tracking-wider uppercase text-[9px]">
-            Public Testing Access
+            Administrator Access
           </Badge>
         </div>
       </header>
