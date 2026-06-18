@@ -6,6 +6,7 @@ import { $Enums } from '@runa/database';
 import { MovieUpdateData, TvUpdateData } from '@runa/connections';
 
 import { PrismaService } from '../../providers/database/prisma.service';
+import { StatsService } from '../stats/stats.service';
 import { ConnectionsManager } from './connections/connections.manager';
 import ListEntity from './entities/ListEntity';
 
@@ -23,9 +24,19 @@ export class ListService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly connectionsManager: ConnectionsManager,
+    private readonly statsService: StatsService,
   ) {}
 
   private readonly logger = new Logger(ListService.name);
+
+  private async getUserId(username: string): Promise<string> {
+    const user = await this.prisma.client.user.findUnique({
+      where: { username: username.toLowerCase() },
+      select: { id: true },
+    });
+    if (!user) throw new NotFoundException(`User ${username} not found`);
+    return user.id;
+  }
 
   private getPrismaStatus<T>(status: string | undefined, enumObj: any): T | undefined {
     if (!status || status.toLowerCase() === 'all') return undefined;
@@ -342,6 +353,9 @@ export class ListService {
       };
     }
 
+    const userId = await this.getUserId(username);
+    void this.statsService.recalculate(userId, 'anime');
+
     return {
       success: true,
       message: 'Anime list updated successfully',
@@ -382,6 +396,9 @@ export class ListService {
           }
         }
       }
+
+      const userId = await this.getUserId(username);
+      void this.statsService.recalculate(userId, 'anime');
 
       return {
         success: true,
@@ -651,6 +668,9 @@ export class ListService {
       };
     }
 
+    const userId = await this.getUserId(username);
+    void this.statsService.recalculate(userId, 'manga');
+
     return {
       success: true,
       message: 'Manga list updated successfully',
@@ -691,6 +711,9 @@ export class ListService {
           }
         }
       }
+
+      const userId = await this.getUserId(username);
+      void this.statsService.recalculate(userId, 'manga');
 
       return {
         success: true,
@@ -1061,6 +1084,9 @@ export class ListService {
       };
     }
 
+    const userId = await this.getUserId(username);
+    void this.statsService.recalculate(userId, 'movie');
+
     return {
       success: true,
       message: 'Movie list updated successfully',
@@ -1101,6 +1127,9 @@ export class ListService {
           }
         }
       }
+
+      const userId = await this.getUserId(username);
+      void this.statsService.recalculate(userId, 'movie');
 
       return {
         success: true,
@@ -1307,6 +1336,9 @@ export class ListService {
       };
     }
 
+    const userId = await this.getUserId(username);
+    void this.statsService.recalculate(userId, 'tv');
+
     return {
       success: true,
       message: 'TV list updated successfully',
@@ -1347,6 +1379,9 @@ export class ListService {
           }
         }
       }
+
+      const userId = await this.getUserId(username);
+      void this.statsService.recalculate(userId, 'tv');
 
       return {
         success: true,
@@ -1422,6 +1457,9 @@ export class ListService {
       ).catch((err) => this.logger.error('Failed to sync toggled episode tv connection', err));
     }
 
+    const userId = await this.getUserId(username);
+    void this.statsService.recalculate(userId, 'tv');
+
     return { watched };
   }
 
@@ -1485,6 +1523,9 @@ export class ListService {
         listEntry.rewatched || undefined,
       ).catch((err) => this.logger.error('Failed to sync toggled season tv connection', err));
     }
+
+    const userId = await this.getUserId(username);
+    void this.statsService.recalculate(userId, 'tv');
 
     return { success: true };
   }
@@ -1639,6 +1680,9 @@ export class ListService {
       };
     }
 
+    const userId = await this.getUserId(username);
+    void this.statsService.recalculate(userId, 'game');
+
     return {
       success: true,
       message: 'Game list updated successfully',
@@ -1658,6 +1702,9 @@ export class ListService {
           },
         },
       });
+
+      const userId = await this.getUserId(username);
+      void this.statsService.recalculate(userId, 'game');
 
       return {
         success: true,
@@ -1827,6 +1874,9 @@ export class ListService {
       };
     }
 
+    const userId = await this.getUserId(username);
+    void this.statsService.recalculate(userId, 'book');
+
     return {
       success: true,
       message: 'Book list updated successfully',
@@ -1846,6 +1896,9 @@ export class ListService {
           },
         },
       });
+
+      const userId = await this.getUserId(username);
+      void this.statsService.recalculate(userId, 'book');
 
       return {
         success: true,
@@ -2048,6 +2101,9 @@ export class ListService {
         },
       });
 
+      const userId = await this.getUserId(username);
+      void this.statsService.recalculate(userId, 'game');
+
       return { success: true, message: 'Progress updated' };
     }
 
@@ -2070,6 +2126,9 @@ export class ListService {
           endDate: isCompleted ? Math.floor(Date.now() / 1000) : entry.endDate,
         },
       });
+
+      const userId = await this.getUserId(username);
+      void this.statsService.recalculate(userId, 'book');
 
       return { success: true, message: 'Progress updated' };
     }
@@ -2129,6 +2188,9 @@ export class ListService {
         ).catch((err) => this.logger.error('Failed to sync incremented anime connection', err));
       }
 
+      const userId = await this.getUserId(username);
+      void this.statsService.recalculate(userId, 'anime');
+
       return { success: true, message: 'Progress updated' };
     }
 
@@ -2187,6 +2249,9 @@ export class ListService {
           entry.reread || undefined,
         ).catch((err) => this.logger.error('Failed to sync incremented manga connection', err));
       }
+
+      const userId = await this.getUserId(username);
+      void this.statsService.recalculate(userId, 'manga');
 
       return { success: true, message: 'Progress updated' };
     }
@@ -2261,6 +2326,9 @@ export class ListService {
           entry.rewatched || undefined,
         ).catch((err) => this.logger.error('Failed to sync incremented tv connection', err));
       }
+
+      const userId = await this.getUserId(username);
+      void this.statsService.recalculate(userId, 'tv');
 
       return {
         success: true,

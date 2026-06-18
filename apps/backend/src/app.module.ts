@@ -18,6 +18,7 @@ import { ListModule } from './modules/list/list.module';
 import { FavoriteModule } from './modules/favorite/favorite.module';
 import { MediaModule } from './modules/media/media.module';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { StatsModule } from './modules/stats/stats.module';
 
 @Module({
   providers: [
@@ -47,6 +48,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
     ListModule,
     FavoriteModule,
     MediaModule,
+    StatsModule,
     ThrottlerModule.forRoot({
       throttlers: [
         {

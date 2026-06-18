@@ -5,9 +5,10 @@ import { ListController } from './list.controller';
 import { PrismaModule } from '../../providers/database/prisma.module';
 import { ConnectionModule } from '../connection/connection.module';
 import { ConnectionsManager } from './connections/connections.manager';
+import { StatsModule } from '../stats/stats.module';
 
 @Module({
-  imports: [PrismaModule, ConnectionModule],
+  imports: [PrismaModule, ConnectionModule, StatsModule],
   controllers: [ListController],
   providers: [
     ListService,

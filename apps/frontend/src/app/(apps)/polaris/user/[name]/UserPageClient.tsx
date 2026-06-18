@@ -27,6 +27,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import StatsDashboard from "@/components/aquila/stats/StatsDashboard";
 
 // Custom Brand SVGs
 const DiscordIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -91,7 +92,7 @@ interface FavoriteItem {
   image: string;
 }
 
-type TabType = "overview" | "favorites" | "lists";
+type TabType = "overview" | "favorites" | "lists" | "stats";
 
 export default function UserPageClient() {
   const params = useParams();
@@ -291,7 +292,7 @@ export default function UserPageClient() {
         {/* User Profile Header */}
         <div className="relative w-full rounded-3xl overflow-hidden bg-card/25 border border-border/40 shadow-2xl mb-2">
           {/* Banner Image / Gradient */}
-          <div className="relative h-44 sm:h-60 w-full overflow-hidden bg-gradient-to-r from-indigo-950/40 via-purple-950/40 to-pink-950/40 border-b border-border/20">
+          <div className="relative h-44 sm:h-60 w-full overflow-hidden bg-linear-to-r from-indigo-950/40 via-purple-950/40 to-pink-950/40 border-b border-border/20">
             {user.bannerUrl ? (
               <img
                 src={getSafeImageUrl(user.bannerUrl)}
@@ -299,11 +300,11 @@ export default function UserPageClient() {
                 className="w-full h-full object-cover opacity-90 transition-all duration-700 hover:scale-105"
               />
             ) : (
-              <div className="w-full h-full bg-gradient-to-tr from-primary/20 via-violet-900/10 to-transparent relative">
+              <div className="w-full h-full bg-linear-to-tr from-primary/20 via-violet-900/10 to-transparent relative">
                 <div className="absolute inset-0 bg-radial-at-t from-primary/10 via-transparent to-transparent" />
               </div>
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent" />
+            <div className="absolute inset-0 bg-linear-to-t from-background/80 via-background/20 to-transparent" />
           </div>
 
           {/* User Info Container */}
@@ -366,7 +367,7 @@ export default function UserPageClient() {
         
         {/* Navigation Tabs */}
         <div className="flex items-center gap-1 border-b border-border/40 pb-px shrink-0">
-          {(["overview", "favorites", "lists"] as TabType[]).map((tab) => {
+          {(["overview", "favorites", "lists", "stats"] as TabType[]).map((tab) => {
             const isActive = activeTab === tab;
             return (
               <button
@@ -544,7 +545,7 @@ export default function UserPageClient() {
                                   key={fav.id}
                                   whileHover={{ y: -4 }}
                                   whileTap={{ scale: 0.98 }}
-                                  className="group relative aspect-[2/3] rounded-xl overflow-hidden border border-border/60 bg-card/30 cursor-pointer shadow-md"
+                                  className="group relative aspect-2/3 rounded-xl overflow-hidden border border-border/60 bg-card/30 cursor-pointer shadow-md"
                                 >
                                   {fav.image ? (
                                     <img
@@ -560,7 +561,7 @@ export default function UserPageClient() {
                                   )}
                                   
                                   {/* Hover overlay for title */}
-                                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background via-background/80 to-transparent p-3 pt-6 z-10 transition-opacity duration-200">
+                                  <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-background via-background/80 to-transparent p-3 pt-6 z-10 transition-opacity duration-200">
                                     <p className="text-[10px] md:text-xs font-semibold text-white line-clamp-2 leading-snug">
                                       {fav.title}
                                     </p>
@@ -720,6 +721,11 @@ export default function UserPageClient() {
                     );
                   })}
                 </div>
+              )}
+
+              {/* STATS TAB */}
+              {activeTab === "stats" && name && (
+                <StatsDashboard username={name} />
               )}
 
             </motion.div>

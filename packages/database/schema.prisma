@@ -31,6 +31,7 @@ model User {
     favorites            Favorite[]
     gameList             AquilaGameUserList[]
     bookList             AquilaBookUserList[]
+    userStats            UserStats[]
 
     @@index([id])
     @@index([username])
@@ -690,5 +691,18 @@ model AquilaBookUserList {
     @@unique([username, bookId])
     @@index([username])
     @@index([bookId])
+}
+
+model UserStats {
+    id        String   @id @default(nanoid())
+    userId    String
+    mediaType String   // "anime" | "manga" | "movie" | "tv" | "game" | "book"
+    updatedAt DateTime @updatedAt
+    statsData Json     @db.Json
+
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, mediaType])
+    @@index([userId])
 }
 
