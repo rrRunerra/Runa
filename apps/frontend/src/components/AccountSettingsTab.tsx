@@ -3,7 +3,9 @@
 import type React from "react";
 import { useState, useEffect, useRef, forwardRef, useImperativeHandle } from "react";
 import { useSession } from "next-auth/react";
-import { Camera, Eye, EyeOff, Trash, ChevronsUpDown, Crop } from "lucide-react";
+import { Camera, Eye, EyeOff, Trash, ChevronsUpDown, Crop, Bold, Italic, Link, List, ListOrdered, Heading, Code } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 import { cn, getSafeImageUrl } from "@/lib/utils";
 import { Button } from "./ui/button";
@@ -44,6 +46,58 @@ export const AccountSettingsTab = forwardRef<AccountSettingsTabRef, AccountSetti
     const [avatarUrl, setAvatarUrl] = useState("");
     const [bannerUrl, setBannerUrl] = useState("");
     const [sidebarCardBackgroundUrl, setSidebarCardBackgroundUrl] = useState("");
+    const [profileSettings, setProfileSettings] = useState<any>({});
+    const [bio, setBio] = useState("");
+    const [editorTab, setEditorTab] = useState<"write" | "preview">("write");
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    const insertMarkdown = (syntax: string, placeholder = "") => {
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const text = textarea.value;
+      const selectedText = text.substring(start, end);
+
+      let replacement = "";
+      let newCursorPos = start;
+
+      if (syntax === "bold") {
+        replacement = `**${selectedText || placeholder || "bold text"}**`;
+        newCursorPos = start + (selectedText ? replacement.length : 2);
+      } else if (syntax === "italic") {
+        replacement = `*${selectedText || placeholder || "italic text"}*`;
+        newCursorPos = start + (selectedText ? replacement.length : 1);
+      } else if (syntax === "link") {
+        replacement = `[${selectedText || placeholder || "link text"}](https://example.com)`;
+        newCursorPos = start + (selectedText ? replacement.length : 1);
+      } else if (syntax === "code") {
+        if (selectedText.includes("\n")) {
+          replacement = `\`\`\`\n${selectedText || placeholder || "code block"}\n\`\`\``;
+        } else {
+          replacement = `\`${selectedText || placeholder || "code"}\``;
+        }
+        newCursorPos = start + (selectedText ? replacement.length : 1);
+      } else if (syntax === "heading") {
+        replacement = `\n## ${selectedText || placeholder || "Heading"}\n`;
+        newCursorPos = start + replacement.length;
+      } else if (syntax === "bullet") {
+        replacement = `\n- ${selectedText || placeholder || "List item"}\n`;
+        newCursorPos = start + replacement.length;
+      } else if (syntax === "number") {
+        replacement = `\n1. ${selectedText || placeholder || "List item"}\n`;
+        newCursorPos = start + replacement.length;
+      }
+
+      setBio(text.substring(0, start) + replacement + text.substring(end));
+
+      // Refocus textarea and select the inserted/placeholder text
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(newCursorPos, newCursorPos);
+      }, 0);
+    };
 
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [bannerFile, setBannerFile] = useState<File | null>(null);
@@ -86,6 +140,8 @@ export const AccountSettingsTab = forwardRef<AccountSettingsTabRef, AccountSetti
             setAvatarUrl(data.avatarUrl || "");
             setBannerUrl(data.bannerUrl || "");
             setSidebarCardBackgroundUrl(data.sidebarCardBackgroundUrl || "");
+            setProfileSettings(data.profileSettings || {});
+            setBio(data.profileSettings?.bio || "");
           })
           .catch((err) => {
             console.error("Error fetching user profile:", err);
@@ -329,6 +385,32 @@ export const AccountSettingsTab = forwardRef<AccountSettingsTabRef, AccountSetti
           sidebarCardBackgroundUrl: updateData.sidebarCardBackgroundUrl,
         });
 
+        const bioChanged = bio !== (profileSettings?.bio || "");
+        if (bioChanged) {
+          const settingsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/settings`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session!.accessToken}`,
+            },
+            body: JSON.stringify({
+              profileSettings: {
+                ...profileSettings,
+                bio: bio,
+              },
+            }),
+          });
+
+          if (!settingsRes.ok) {
+            const settingsData = await settingsRes.json();
+            throw new Error(
+              Array.isArray(settingsData.message)
+                ? settingsData.message[0]
+                : settingsData.message || "Failed to update profile description."
+            );
+          }
+        }
+
         toast.success("Profile updated successfully!");
         setIsConfirmOpen(false);
         onOpenChange(false);
@@ -496,6 +578,155 @@ export const AccountSettingsTab = forwardRef<AccountSettingsTabRef, AccountSetti
               )} />
             </div>
           </div>
+        </div>
+
+        {/* Markdown Bio / Description Section */}
+        <div className="space-y-3.5 mt-4 p-4 rounded-2xl border border-zinc-800/50 bg-card/20 backdrop-blur-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div>
+              <span className="text-xs font-semibold text-foreground">About Me (Markdown Bio)</span>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Describe yourself using Markdown. Script/HTML tags are filtered.
+              </p>
+            </div>
+            {/* Write/Preview Switcher */}
+            <div className="flex border border-zinc-800/60 rounded-lg p-0.5 bg-zinc-950/45 shrink-0 self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => setEditorTab("write")}
+                className={cn(
+                  "px-3 py-1 text-[10px] font-bold rounded-md uppercase tracking-wider transition-all cursor-pointer",
+                  editorTab === "write"
+                    ? "bg-primary text-primary-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-white"
+                )}
+              >
+                Write
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditorTab("preview")}
+                className={cn(
+                  "px-3 py-1 text-[10px] font-bold rounded-md uppercase tracking-wider transition-all cursor-pointer",
+                  editorTab === "preview"
+                    ? "bg-primary text-primary-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-white"
+                )}
+              >
+                Preview
+              </button>
+            </div>
+          </div>
+
+          {editorTab === "write" ? (
+            <div className="border border-zinc-800/60 rounded-xl overflow-hidden bg-zinc-950/25 flex flex-col">
+              {/* Markdown Toolbar */}
+              <div className="flex flex-wrap items-center gap-1 p-2 bg-zinc-950/50 border-b border-zinc-800/60">
+                <button
+                  type="button"
+                  onClick={() => insertMarkdown("bold", "bold text")}
+                  className="p-1.5 rounded-lg hover:bg-zinc-800 text-muted-foreground hover:text-white transition-colors cursor-pointer"
+                  title="Bold"
+                >
+                  <Bold className="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => insertMarkdown("italic", "italic text")}
+                  className="p-1.5 rounded-lg hover:bg-zinc-800 text-muted-foreground hover:text-white transition-colors cursor-pointer"
+                  title="Italic"
+                >
+                  <Italic className="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => insertMarkdown("heading", "Heading")}
+                  className="p-1.5 rounded-lg hover:bg-zinc-800 text-muted-foreground hover:text-white transition-colors cursor-pointer"
+                  title="Heading"
+                >
+                  <Heading className="size-3.5" />
+                </button>
+                <div className="w-px h-4 bg-zinc-800 mx-1" />
+                <button
+                  type="button"
+                  onClick={() => insertMarkdown("link", "link text")}
+                  className="p-1.5 rounded-lg hover:bg-zinc-800 text-muted-foreground hover:text-white transition-colors cursor-pointer"
+                  title="Insert Link"
+                >
+                  <Link className="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => insertMarkdown("code", "code")}
+                  className="p-1.5 rounded-lg hover:bg-zinc-800 text-muted-foreground hover:text-white transition-colors cursor-pointer"
+                  title="Code Block"
+                >
+                  <Code className="size-3.5" />
+                </button>
+                <div className="w-px h-4 bg-zinc-800 mx-1" />
+                <button
+                  type="button"
+                  onClick={() => insertMarkdown("bullet", "List item")}
+                  className="p-1.5 rounded-lg hover:bg-zinc-800 text-muted-foreground hover:text-white transition-colors cursor-pointer"
+                  title="Bullet List"
+                >
+                  <List className="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => insertMarkdown("number", "List item")}
+                  className="p-1.5 rounded-lg hover:bg-zinc-800 text-muted-foreground hover:text-white transition-colors cursor-pointer"
+                  title="Numbered List"
+                >
+                  <ListOrdered className="size-3.5" />
+                </button>
+              </div>
+
+              {/* Textarea */}
+              <textarea
+                ref={textareaRef}
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                maxLength={4000}
+                placeholder="Write a description about yourself... (supports markdown)"
+                className="w-full h-36 md:h-44 p-3 bg-transparent text-xs md:text-sm text-foreground focus:outline-hidden placeholder:text-muted-foreground/50 resize-none font-sans"
+              />
+              <div className="flex justify-end px-3 py-1.5 bg-zinc-950/30 border-t border-zinc-800/40 text-[10px] text-muted-foreground font-semibold tabular-nums select-none">
+                {bio.length} / 4000
+              </div>
+            </div>
+          ) : (
+            /* Preview Container */
+            <div className="w-full h-36 md:h-44 overflow-y-auto p-3.5 border border-zinc-800/40 bg-zinc-950/20 rounded-xl text-xs md:text-sm text-muted-foreground leading-relaxed custom-scrollbar animate-in fade-in duration-200">
+              {bio.trim() ? (
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    h1: ({node, ...props}) => <h1 className="text-sm font-black text-white mt-3 mb-1.5 uppercase tracking-wide" {...props} />,
+                    h2: ({node, ...props}) => <h2 className="text-xs font-black text-white mt-2.5 mb-1 uppercase tracking-wide" {...props} />,
+                    h3: ({node, ...props}) => <h3 className="text-[11px] font-bold text-white mt-2 mb-0.5 uppercase tracking-wider" {...props} />,
+                    p: ({node, ...props}) => <p className="mb-2 last:mb-0 text-muted-foreground leading-relaxed" {...props} />,
+                    ul: ({node, ...props}) => <ul className="list-disc pl-4 mb-2 space-y-0.5" {...props} />,
+                    ol: ({node, ...props}) => <ol className="list-decimal pl-4 mb-2 space-y-0.5" {...props} />,
+                    li: ({node, ...props}) => <li className="text-xs text-muted-foreground" {...props} />,
+                    strong: ({node, ...props}) => <strong className="font-extrabold text-white" {...props} />,
+                    em: ({node, ...props}) => <em className="italic" {...props} />,
+                    code: ({node, inline, ...props}: any) => 
+                      inline ? (
+                        <code className="bg-zinc-900 text-zinc-300 px-1 py-0.5 rounded font-mono text-[10px] border border-zinc-800" {...props} />
+                      ) : (
+                        <pre className="bg-zinc-900 border border-zinc-800/80 p-2.5 rounded-lg overflow-x-auto my-2 font-mono text-[10px] text-zinc-200"><code {...props} /></pre>
+                      ),
+                    a: ({node, ...props}) => <a className="text-primary hover:underline font-semibold" target="_blank" rel="noopener noreferrer" {...props} />
+                  }}
+                >
+                  {bio}
+                </ReactMarkdown>
+              ) : (
+                <p className="italic text-muted-foreground/60 text-xs">Nothing to preview. Start writing in the edit tab.</p>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 pt-2">
