@@ -16,7 +16,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { 
   Sparkles, Undo2, Trash2, Copy, Upload, ArrowUp, ArrowDown, 
   ArrowLeft, ArrowRight, HelpCircle, X, Check, RefreshCw, Move, 
-  HelpCircle as HelpIcon, Compass, Plus, Minus
+  HelpCircle as HelpIcon, Compass, Plus, Minus, Pencil
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -55,6 +55,8 @@ export function ConstellationBuilderModal({
   const [bookmarks, setBookmarks] = useState<any[]>([]);
   const [zoom, setZoom] = useState(1);
   const [mobileTab, setMobileTab] = useState<"canvas" | "settings">("canvas");
+  const [activeTab, setActiveTab] = useState<string>("metadata");
+  const [editingBookmarkId, setEditingBookmarkId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchBookmarks = async () => {
@@ -97,6 +99,8 @@ export function ConstellationBuilderModal({
     }
   }, [open, initialRedirect, initialName, initialIcon]);
   const [icon, setIcon] = useState<string>(initialIcon || "");
+  const [connectionColor, setConnectionColor] = useState<string>("");
+  const [starColor, setStarColor] = useState<string>("");
   const [exportFormat, setExportFormat] = useState<"json" | "javascript">("json");
   
   // Sky Map Position Offsets
@@ -532,6 +536,9 @@ export function ConstellationBuilderModal({
     setStars([]);
     setConnections([]);
     setActiveStarIndex(null);
+    setEditingBookmarkId(null);
+    setConnectionColor("");
+    setStarColor("");
     toast.success("Canvas cleared");
   };
 
@@ -560,6 +567,12 @@ export function ConstellationBuilderModal({
     if (data.icon) {
       result += `${indent}icon: "${data.icon}",\n`;
     }
+    if (data.connectionColor) {
+      result += `${indent}connectionColor: "${data.connectionColor}",\n`;
+    }
+    if (data.starColor) {
+      result += `${indent}starColor: "${data.starColor}",\n`;
+    }
 
     result +=    `${indent}stars: [\n${starsStr}\n${indent}],\n` +
                  `${indent}connections: [\n${connsStr}\n${indent}],\n` +
@@ -584,6 +597,8 @@ export function ConstellationBuilderModal({
       })),
       connections,
       ...(icon ? { icon } : {}),
+      ...(connectionColor ? { connectionColor } : {}),
+      ...(starColor ? { starColor } : {}),
     };
     
     if (exportFormat === "json") {
@@ -637,6 +652,8 @@ export function ConstellationBuilderModal({
       setDescription(parsed.description || "Custom built constellation.");
       setRedirect(parsed.redirect || "/custom-constellation");
       setIcon(parsed.icon || "");
+      setConnectionColor(parsed.connectionColor || "");
+      setStarColor(parsed.starColor || "");
 
       // Calculate average RA/Dec to auto-center coordinates if target offsets are not stored in the file
       let avgRa = 0;
@@ -703,6 +720,8 @@ export function ConstellationBuilderModal({
         })),
         connections,
         ...(icon ? { icon } : {}),
+        connectionColor: connectionColor || undefined,
+        starColor: starColor || undefined,
       };
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/polaris/bookmarks`, {
@@ -721,6 +740,7 @@ export function ConstellationBuilderModal({
 
       const result = await res.json();
       toast.success(`Successfully saved "${name}" to database bookmarks!`);
+      window.dispatchEvent(new CustomEvent("runa-bookmarks-changed"));
       
       // Update local bookmarks list
       setBookmarks((prev) => {
@@ -758,6 +778,7 @@ export function ConstellationBuilderModal({
 
       toast.success(`Successfully deleted "${name}" bookmark.`);
       setBookmarks((prev) => prev.filter((b) => b.id !== id));
+      window.dispatchEvent(new CustomEvent("runa-bookmarks-changed"));
     } catch (err: any) {
       toast.error(err.message || "Failed to delete bookmark.");
     }
@@ -792,7 +813,11 @@ export function ConstellationBuilderModal({
     setStars(loadedStars);
     setConnections(b.connections || []);
     setActiveStarIndex(null);
-    toast.success(`Loaded "${b.name}" constellation into workspace!`);
+    setEditingBookmarkId(b.id);
+    setConnectionColor(b.connectionColor || "");
+    setStarColor(b.starColor || "");
+    setActiveTab("metadata");
+    toast.success(`Loaded "${b.name}" constellation into workspace! You can edit its details in the Meta tab.`);
   };
 
   // Construct user's current constellation dynamically to preview on the starmap
@@ -809,6 +834,8 @@ export function ConstellationBuilderModal({
     })),
     connections: connections,
     icon: icon || undefined,
+    connectionColor: connectionColor || undefined,
+    starColor: starColor || undefined,
   };
 
   return (
@@ -1141,7 +1168,7 @@ export function ConstellationBuilderModal({
           {/* RIGHT: Properties, Import/Export, and Help Panel */}
           <div className={cn("w-full lg:w-[385px] border-t lg:border-t-0 lg:border-l border-zinc-800/40 p-4 sm:p-5 flex flex-col gap-4 overflow-y-auto shrink-0 bg-zinc-950/20", mobileTab !== "settings" && "hidden lg:flex")}>
             
-            <Tabs defaultValue="metadata" className="w-full flex flex-col h-full gap-4">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex flex-col h-full gap-4">
               <TabsList className="grid grid-cols-5 w-full bg-zinc-950/50 border border-zinc-800/60 p-[3px] rounded-xl shrink-0">
                 <TabsTrigger value="metadata" className="text-[10px] sm:text-[11px]">
                   Meta
@@ -1208,16 +1235,64 @@ export function ConstellationBuilderModal({
 
                   <div className="flex flex-col gap-1.5">
                     <Label htmlFor="const-icon" className="text-xs text-zinc-400">
-                      Icon (Optional)
+                      Icon URL (Optional)
                     </Label>
                     <Input
                       id="const-icon"
                       type="text"
-                      placeholder="e.g. StarIcon"
+                      placeholder="e.g. /favicons/my-app.ico"
                       value={icon}
                       onChange={(e) => setIcon(e.target.value)}
                       className="h-8 text-xs bg-zinc-950/50 border-zinc-800 focus-visible:ring-indigo-500/20"
                     />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor="const-conn-color" className="text-xs text-zinc-400">
+                        Line Color
+                      </Label>
+                      <div className="flex gap-1.5 items-center">
+                        <Input
+                          id="const-conn-color"
+                          type="text"
+                          placeholder="e.g. #8b5cf6"
+                          value={connectionColor}
+                          onChange={(e) => setConnectionColor(e.target.value)}
+                          className="h-8 text-xs bg-zinc-950/50 border-zinc-800 focus-visible:ring-indigo-500/20 font-mono w-full"
+                        />
+                        <input
+                          type="color"
+                          value={connectionColor || "#ffffff"}
+                          onChange={(e) => setConnectionColor(e.target.value)}
+                          className="size-6 rounded-md border border-zinc-850 bg-transparent cursor-pointer shrink-0 p-0 overflow-hidden"
+                          title="Choose line color"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor="const-star-color" className="text-xs text-zinc-400">
+                        Star Color
+                      </Label>
+                      <div className="flex gap-1.5 items-center">
+                        <Input
+                          id="const-star-color"
+                          type="text"
+                          placeholder="e.g. #f59e0b"
+                          value={starColor}
+                          onChange={(e) => setStarColor(e.target.value)}
+                          className="h-8 text-xs bg-zinc-950/50 border-zinc-800 focus-visible:ring-indigo-500/20 font-mono w-full"
+                        />
+                        <input
+                          type="color"
+                          value={starColor || "#ffffff"}
+                          onChange={(e) => setStarColor(e.target.value)}
+                          className="size-6 rounded-md border border-zinc-850 bg-transparent cursor-pointer shrink-0 p-0 overflow-hidden"
+                          title="Choose star color"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   {/* Offset Positions */}
@@ -1273,9 +1348,31 @@ export function ConstellationBuilderModal({
                       disabled={stars.length === 0}
                       className="w-full mt-2 h-8 text-[11px] bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg flex items-center justify-center gap-1.5 shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Sparkles className="size-3.5" />
-                      Add to Bookmarks
+                      {editingBookmarkId ? (
+                        <>
+                          <Check className="size-3.5" />
+                          Update Bookmark
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="size-3.5" />
+                          Add to Bookmarks
+                        </>
+                      )}
                     </Button>
+                    {editingBookmarkId && (
+                      <Button
+                        onClick={() => {
+                          setEditingBookmarkId(null);
+                          toast.info("Cleared edit session. Creating new bookmark now.");
+                        }}
+                        type="button"
+                        variant="ghost"
+                        className="w-full mt-1.5 h-8 text-[11px] text-zinc-400 hover:text-zinc-200"
+                      >
+                        Cancel Edit (Create New)
+                      </Button>
+                    )}
                   </div>
                 </div>
               </TabsContent>
@@ -1325,10 +1422,11 @@ export function ConstellationBuilderModal({
                               onClick={() => handleLoadBookmark(b)}
                               size="xs"
                               variant="outline"
-                              className="h-7 px-2 rounded-md text-[10px] border-zinc-800 text-indigo-400 hover:text-indigo-300 hover:bg-zinc-900/60 cursor-pointer"
-                              title="Load into workspace"
+                              className="h-7 px-2 rounded-md text-[10px] border-zinc-800 text-indigo-400 hover:text-indigo-300 hover:bg-zinc-900/60 cursor-pointer flex items-center gap-1"
+                              title="Edit bookmark"
                             >
-                              <Upload className="size-3" />
+                              <Pencil className="size-3" />
+                              Edit
                             </Button>
                             <Button
                               onClick={() => handleDeleteBookmark(b.id, b.name)}

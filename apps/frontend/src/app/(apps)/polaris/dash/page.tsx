@@ -86,6 +86,8 @@ export default function Dash() {
       stars: b.stars as any,
       connections: b.connections as any,
       icon: b.icon || undefined,
+      connectionColor: b.connectionColor || undefined,
+      starColor: b.starColor || undefined,
     })),
   ];
 
@@ -123,11 +125,15 @@ export default function Dash() {
                 {allConstellations.map((constellation) => (
                   <button
                     key={constellation.id}
-                    onClick={() =>
-                      starMapRef.current?.navigateToConstellation(
-                        constellation.name,
-                      )
-                    }
+                    onClick={(e) => {
+                      if (e.ctrlKey || e.metaKey) {
+                        window.location.href = constellation.redirect;
+                      } else {
+                        starMapRef.current?.navigateToConstellation(
+                          constellation.name,
+                        );
+                      }
+                    }}
                     className="group relative px-6 py-2.5 bg-white/5 backdrop-blur-md border border-white/10 rounded-xl text-white font-medium tracking-wide transition-all duration-300 hover:bg-white/10 hover:border-white/20 hover:scale-105 hover:shadow-lg hover:shadow-white/5 cursor-pointer"
                   >
                     <span className="relative z-10 flex items-center gap-2">

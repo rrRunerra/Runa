@@ -11,8 +11,8 @@
     "start": "tsx src/index.ts"
   },
   "dependencies": {
-    "@nestjs/common": "^11.1.26",
-    "@nestjs/core": "^11.1.26",
+    "@nestjs/common": "^11.1.27",
+    "@nestjs/core": "^11.1.27",
     "@runa/database": "workspace:*",
     "@runa/edupage": "workspace:*",
     "cors": "^2.8.6",

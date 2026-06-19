@@ -222,7 +222,7 @@ export class ConnectionService implements OnModuleInit {
     
     // Trigger background import without awaiting it
     this.runImportInBackground(username, providerId, mediaTypes).catch((err) => {
-      console.error(`Background import failed for user ${username} on provider ${providerId}:`, err);
+      console.error('Background import failed for user %s on provider %s:', username, providerId, err);
     });
 
     return { status: 'processing' };

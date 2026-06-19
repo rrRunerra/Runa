@@ -6,14 +6,14 @@ export interface UserProfile {
   avatarUrl?: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+const API_URL = process.env.NEXT_PUBLIC_API_URL
 
 /**
  * Strips HTML tags from a string and truncates it.
  */
 export function cleanDescription(html: string | undefined, maxLength = 160): string {
   if (!html) return "";
-  const stripped = html.replace(/<[^>]*>/g, "");
+  const stripped = html.replace(/<[^>]*>/g, "").replace(/</g, "").replace(/>/g, "");
   if (stripped.length <= maxLength) return stripped;
   return stripped.slice(0, maxLength).trim() + "...";
 }

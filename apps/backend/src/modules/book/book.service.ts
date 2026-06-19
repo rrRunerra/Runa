@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
 import type { Media, SearchMedia } from '../../common/types/types';
 import { BookRepository } from './repositories/book.repository';
 import { BookQueueService } from './services/book-queue.service';
@@ -76,6 +76,10 @@ export class BookService {
   }
 
   private async fetchFromOpenLibrary(id: string): Promise<Media> {
+    if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
+      throw new BadRequestException('Invalid book ID format');
+    }
+
     const res = await fetch(`https://openlibrary.org/works/${id}.json`);
     if (!res.ok) {
       throw new Error(`Open Library detail fetch failed: ${res.status}`);
@@ -102,6 +106,9 @@ export class BookService {
       for (const authRef of item.authors.slice(0, 2)) {
         const authKey = authRef.author?.key;
         if (authKey) {
+          if (!/^\/authors\/[a-zA-Z0-9_-]+$/.test(authKey)) {
+            continue;
+          }
           try {
             const authorRes = await fetch(`https://openlibrary.org${authKey}.json`);
             if (authorRes.ok) {

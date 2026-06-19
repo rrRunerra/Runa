@@ -23,6 +23,8 @@ export class PolarisService {
           stars: dto.stars as any,
           connections: dto.connections as any,
           icon: dto.icon || null,
+          connectionColor: dto.connectionColor || null,
+          starColor: dto.starColor || null,
         },
       });
     }
@@ -36,6 +38,8 @@ export class PolarisService {
         stars: dto.stars as any,
         connections: dto.connections as any,
         icon: dto.icon || null,
+        connectionColor: dto.connectionColor || null,
+        starColor: dto.starColor || null,
       },
     });
   }

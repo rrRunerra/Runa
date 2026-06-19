@@ -40,7 +40,13 @@ export class ListService {
 
   private getPrismaStatus<T>(status: string | undefined, enumObj: any): T | undefined {
     if (!status || status.toLowerCase() === 'all') return undefined;
-    let normalized = status.toUpperCase().replace(/\s+TV$/, '').trim();
+    let normalized = status.toUpperCase().trim();
+    if (normalized.endsWith('TV') && normalized.length > 2) {
+      const charBeforeTV = normalized.charAt(normalized.length - 3);
+      if (charBeforeTV === ' ' || charBeforeTV === '\t' || charBeforeTV === '\r' || charBeforeTV === '\n') {
+        normalized = normalized.slice(0, -2).trim();
+      }
+    }
     normalized = normalized.replace(/\s+/g, '_');
     if (Object.values(enumObj).includes(normalized)) {
       return normalized as unknown as T;

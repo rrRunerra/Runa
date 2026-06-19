@@ -5,6 +5,7 @@ interface StarIconProps extends React.SVGProps<SVGSVGElement> {
   intensity?: number;
   showFlare?: boolean;
   showGlow?: boolean;
+  color?: string;
 }
 
 export const StarIcon = ({
@@ -13,6 +14,8 @@ export const StarIcon = ({
   showFlare = true,
   showGlow = true,
   className = "",
+  color,
+  style,
   ...props
 }: StarIconProps) => {
   // Map intensity to opacity values
@@ -28,6 +31,7 @@ export const StarIcon = ({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
+      style={{ color: color, ...style }}
       {...props}
     >
       <defs>
@@ -43,7 +47,7 @@ export const StarIcon = ({
           cx="50"
           cy="50"
           r="30"
-          fill="white"
+          fill="currentColor"
           fillOpacity={glowOpacity}
           style={{ filter: "blur(15px)" }}
         />
@@ -51,7 +55,7 @@ export const StarIcon = ({
 
       {/* Flare Lines */}
       {showFlare && (
-        <g stroke="white" strokeWidth="2" strokeOpacity={flareOpacity}>
+        <g stroke="currentColor" strokeWidth="2" strokeOpacity={flareOpacity}>
           {/* Vertical Flare */}
           <line x1="50" y1="10" x2="50" y2="90" />
           {/* Horizontal Flare */}
@@ -66,12 +70,12 @@ export const StarIcon = ({
            Q53 53 50 80 
            Q47 53 20 50 
            Q47 47 50 20Z"
-        fill="white"
+        fill="currentColor"
         fillOpacity={starOpacity}
       />
 
       {/* Center Core */}
-      <circle cx="50" cy="50" r="2" fill="white" />
+      <circle cx="50" cy="50" r="2" fill="currentColor" />
     </svg>
   );
 };

@@ -24,4 +24,12 @@ export class CreateBookmarkDto {
   @IsString()
   @IsOptional()
   icon?: string;
+
+  @IsString()
+  @IsOptional()
+  connectionColor?: string;
+
+  @IsString()
+  @IsOptional()
+  starColor?: string;
 }

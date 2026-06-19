@@ -6,8 +6,7 @@ import LynxDashboardClient from "@/components/lynx/LynxDashboardClient";
 import "dotenv/config";
 
 async function getStats() {
-  const port = process.env.LYNX_PORT || 4444;
-  const backendUrl = `http://localhost:${port}/stats`;
+  const backendUrl = `${process.env.LYNX_API_URL}/stats`;
   try {
     const res = await fetch(backendUrl, {
       cache: "no-store",

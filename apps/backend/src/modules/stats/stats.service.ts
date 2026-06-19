@@ -14,12 +14,18 @@ export class StatsService {
     if (this.debounceTimeouts.has(key)) {
       clearTimeout(this.debounceTimeouts.get(key)!);
     }
-    const timeout = setTimeout(() => {
-      this.debounceTimeouts.delete(key);
-      this.doRecalculate(userId, mediaType).catch((err: Error) => {
-        this.logger.error(`Error recalculating stats for ${key}: ${err.message}`, err.stack);
-      });
-    }, 5000);
+    const timeout = setTimeout(
+      (uid: string, type: string, k: string) => {
+        this.debounceTimeouts.delete(k);
+        this.doRecalculate(uid, type).catch((err: Error) => {
+          this.logger.error(`Error recalculating stats for ${k}: ${err.message}`, err.stack);
+        });
+      },
+      5000,
+      userId,
+      mediaType,
+      key,
+    );
     this.debounceTimeouts.set(key, timeout);
   }
 

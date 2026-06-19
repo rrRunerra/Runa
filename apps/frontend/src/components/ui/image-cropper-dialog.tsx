@@ -34,6 +34,7 @@ export function ImageCropperDialog({
   description = "Drag to position and use the slider or scroll to zoom.",
   onCrop,
 }: ImageCropperDialogProps) {
+  const safeImageSrc = imageSrc && !imageSrc.trim().toLowerCase().startsWith("javascript:") ? imageSrc : "";
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [rotation, setRotation] = useState(0); // 0, 90, 180, 270
@@ -310,10 +311,10 @@ export function ImageCropperDialog({
           }}
         >
           {/* 1. Low-opacity background image showing the cut-off areas */}
-          {imageSrc && (
+          {safeImageSrc && (
             <img
               ref={imageRef}
-              src={imageSrc}
+              src={safeImageSrc}
               alt="Fitting background"
               crossOrigin="anonymous"
               draggable={false}
@@ -328,7 +329,7 @@ export function ImageCropperDialog({
           )}
 
           {/* 2. Highlighted Crop Area (Window showing full-opacity cropped region) */}
-          {imageSrc && cropWidth > 0 && cropHeight > 0 && (
+          {safeImageSrc && cropWidth > 0 && cropHeight > 0 && (
             <div
               className={`absolute overflow-hidden shadow-2xl border-2 border-white pointer-events-none transition-all duration-75 ${
                 aspectRatio === 1 ? "rounded-full" : "rounded-lg"
@@ -342,7 +343,7 @@ export function ImageCropperDialog({
             >
               {/* Duplicate high-opacity image perfectly aligned in inner coordinates */}
               <img
-                src={imageSrc}
+                src={safeImageSrc}
                 alt="Fitting foreground"
                 crossOrigin="anonymous"
                 draggable={false}

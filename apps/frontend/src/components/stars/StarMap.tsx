@@ -25,6 +25,9 @@ import { StarIcon } from "@/components/icons/StarIcon";
 import Link from "next/link";
 import { Card } from "../ui/card";
 import { Button } from "../ui/button";
+import { ChevronRight, ArrowUpRight, Bookmark } from "lucide-react";
+import { cn, getSafeImageUrl } from "@/lib/utils";
+import React from "react";
 
 export interface StarMapHandle {
   navigateToConstellation: (constellationName: string) => void;
@@ -350,23 +353,24 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
             };
 
             // A. Draw base/faint line (full length)
-            ctx.strokeStyle = `rgba(255, 255, 255, ${isHovered ? 0.05 : 0.1})`;
+            const prevGlobalAlpha = ctx.globalAlpha;
+            ctx.globalAlpha = isHovered ? 0.05 : 0.1;
+            ctx.strokeStyle = constellation.connectionColor || "#ffffff";
             ctx.lineWidth = 1 * zoom;
             ctx.beginPath();
             ctx.moveTo(p1.x, p1.y);
             ctx.lineTo(p2.x, p2.y);
             ctx.stroke();
+            ctx.globalAlpha = prevGlobalAlpha;
 
             // B. Draw Glow & Highlighted "Filling" line
             if (lineIntensity > 0) {
-              // Draw multiple glow layers for a richer effect
-              const coreColor = `rgba(255, 255, 255, ${lineIntensity * 0.9})`;
-
               // Outer soft glow
               ctx.shadowBlur = 15 * lineIntensity * zoom;
-              ctx.shadowColor = "rgba(255, 255, 255, 0.4)";
+              ctx.shadowColor = constellation.connectionColor || "rgba(255, 255, 255, 0.4)";
 
-              ctx.strokeStyle = `rgba(255, 255, 255, ${lineIntensity * 0.25})`;
+              ctx.globalAlpha = lineIntensity * 0.25;
+              ctx.strokeStyle = constellation.connectionColor || "#ffffff";
               ctx.lineWidth = (2 + 4 * lineIntensity) * zoom;
               ctx.beginPath();
               ctx.moveTo(startPoint.x, startPoint.y);
@@ -375,12 +379,15 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
 
               // Core bright line
               ctx.shadowBlur = 0; // Reset for core
-              ctx.strokeStyle = coreColor;
+              ctx.globalAlpha = lineIntensity * 0.9;
+              ctx.strokeStyle = constellation.connectionColor || "#ffffff";
               ctx.lineWidth = (1 + 1.2 * lineIntensity) * zoom;
               ctx.beginPath();
               ctx.moveTo(startPoint.x, startPoint.y);
               ctx.lineTo(endPoint.x, endPoint.y);
               ctx.stroke();
+              
+              ctx.globalAlpha = prevGlobalAlpha;
             }
           }
         });
@@ -801,13 +808,24 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
           onMapClick(ra, dec);
         } else {
           if (hoveredConstellation) {
-            setSelectedConstellation(hoveredConstellation);
+            if (e.ctrlKey || e.metaKey) {
+              window.location.href = hoveredConstellation.redirect;
+            } else {
+              setSelectedConstellation(hoveredConstellation);
+            }
           } else {
             setSelectedConstellation(null);
           }
         }
       }
     };
+
+    const pathParts = selectedConstellation ? selectedConstellation.name.split(/\s*>\s*/) : [];
+    const hasPath = pathParts.length > 1;
+    const displayName = hasPath ? pathParts[pathParts.length - 1] : (selectedConstellation?.name || "");
+    const breadcrumbPath = hasPath ? pathParts.slice(0, -1) : [];
+    const accentColor = selectedConstellation ? (selectedConstellation.starColor || selectedConstellation.connectionColor || '#8B5CF6') : '#8B5CF6';
+    const iconUrl = selectedConstellation ? getSafeImageUrl(selectedConstellation.icon) : "";
 
     return (
       <div className={`relative overflow-hidden select-none ${className}`}>
@@ -878,7 +896,8 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
                     intensity={masterIntensity * intensity}
                     showFlare={starSize > 12 * zoom}
                     showGlow={masterIntensity > 0}
-                    className="text-white"
+                    color={constellation.starColor}
+                    className={constellation.starColor ? "" : "text-white"}
                   />
                 </div>
               );
@@ -1045,39 +1064,72 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
               className="absolute z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2.5rem)] max-w-sm sm:max-w-md cursor-default transition-all duration-300 animate-in fade-in zoom-in-95"
               onClick={(e) => e.stopPropagation()}
             >
-              <StarCard className="w-full border-zinc-800 bg-black/60 shadow-[0_0_50px_rgba(0,0,0,0.8),0_0_30px_rgba(139,92,246,0.15)] hover:border-zinc-700 transition-all duration-500">
-                <CardHeader className="flex flex-row justify-between items-center pb-2">
-                  <div className="flex items-center gap-3">
-                    {selectedConstellation.icon && (
-                      <div className="w-10 h-10 relative rounded-full overflow-hidden border border-white/10 bg-black/50">
+              <StarCard className="w-full border-zinc-800 bg-black/70 shadow-[0_0_50px_rgba(0,0,0,0.85),0_0_30px_rgba(139,92,246,0.15)] hover:border-zinc-700/80 transition-all duration-500 relative overflow-hidden group">
+               
+
+                <CardHeader className="flex flex-row justify-between items-start pb-3 pt-5 z-10 relative">
+                  <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                    {/* Glowing Accent Icon Card */}
+                    <div 
+                      className="w-12 h-12 rounded-xl border flex items-center justify-center relative shrink-0 overflow-hidden bg-zinc-950/80 transition-transform duration-500 group-hover:scale-105"
+                      style={{ 
+                        borderColor: `${accentColor}33`, 
+                        boxShadow: `0 0 20px ${accentColor}1a` 
+                      }}
+                    >
+                      {iconUrl ? (
                         <Image
-                          src={selectedConstellation.icon}
-                          alt={`${selectedConstellation.name} icon`}
-                          width={40}
-                          height={40}
+                          src={iconUrl}
+                          alt={`${displayName} icon`}
+                          width={48}
+                          height={48}
                           className="w-full h-full object-cover"
+                          unoptimized
                         />
-                      </div>
-                    )}
-                    <div>
-                      <CardTitle className="text-xl font-bold text-white tracking-wide flex items-center gap-2">
-                        {selectedConstellation.name}
+                      ) : (
+                        <Bookmark 
+                          className="w-5 h-5" 
+                          style={{ 
+                            color: accentColor,
+                            filter: `drop-shadow(0 0 4px ${accentColor}66)`
+                          }} 
+                        />
+                      )}
+                      
+                    </div>
+
+                    <div className="flex flex-col min-w-0 flex-1">
+                      {breadcrumbPath.length > 0 && (
+                        <div className="flex items-center flex-wrap gap-1 text-[10px] font-bold text-zinc-500 uppercase tracking-widest leading-none mb-1.5">
+                          {breadcrumbPath.map((part, idx) => (
+                            <React.Fragment key={idx}>
+                              {idx > 0 && <ChevronRight className="w-2.5 h-2.5 text-zinc-700 shrink-0" />}
+                              <span className="truncate max-w-[80px]">{part}</span>
+                            </React.Fragment>
+                          ))}
+                        </div>
+                      )}
+                      <CardTitle className="text-lg font-extrabold text-white tracking-wide flex items-center gap-1.5 leading-snug">
+                        <span className="truncate">{displayName}</span>
                         <StarIcon
-                          size={16}
-                          className="text-blue-400"
-                          showFlare={false}
+                          size={14}
+                          color={accentColor}
+                          showFlare={true}
+                          showGlow={false}
+                          className="shrink-0"
                         />
                       </CardTitle>
                     </div>
                   </div>
+
                   <button
                     onClick={() => setSelectedConstellation(null)}
-                    className="text-white/40 hover:text-white hover:bg-white/10 p-1.5 rounded-lg transition-colors cursor-pointer animate-none"
+                    className="text-white/40 hover:text-white hover:bg-white/10 p-2 rounded-xl transition-all duration-300 hover:scale-105 shrink-0 cursor-pointer -mt-1 -mr-1"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
-                      width="18"
-                      height="18"
+                      width="16"
+                      height="16"
                       viewBox="0 0 24 24"
                       fill="none"
                       stroke="currentColor"
@@ -1091,15 +1143,23 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
                   </button>
                 </CardHeader>
 
-                <CardContent>
-                  <CardDescription className="text-zinc-300 mb-4 text-sm leading-relaxed">
-                    {selectedConstellation.description}
+                <CardContent className="pb-4 pt-1 z-10 relative">
+                  <CardDescription className="text-zinc-300 text-sm leading-relaxed font-normal">
+                    {selectedConstellation.description || "No description provided for this constellation."}
                   </CardDescription>
                 </CardContent>
-                <CardFooter>
+
+                <CardFooter className="pt-2 pb-5 z-10 relative">
                   <Link href={selectedConstellation.redirect} className="w-full">
-                    <Button className="w-full h-auto py-2.5 bg-primary hover:bg-primary/80 text-primary-foreground font-semibold rounded-lg shadow-[0_4px_12px_rgba(139,92,246,0.3)] transition-all duration-300">
-                      Visit
+                    <Button 
+                      className="w-full h-11 bg-gradient-to-r hover:opacity-95 text-white font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-2 group/btn relative overflow-hidden shadow-lg border border-white/10 cursor-pointer"
+                      style={{ 
+                        backgroundImage: `linear-gradient(135deg, ${accentColor}dd, ${accentColor}88)`,
+                        
+                      }}
+                    >
+                      <span>Visit</span>
+                      <ArrowUpRight className="w-4 h-4 transition-transform duration-300 group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
                     </Button>
                   </Link>
                 </CardFooter>

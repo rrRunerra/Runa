@@ -90,7 +90,7 @@ export async function updateUserPermissions(
     return { success: true, user: updatedUser };
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Failed to update permissions";
-    console.error(`Failed to update permissions for user ${userId}:`, error);
+    console.error("Failed to update permissions for user %s:", userId, error);
     return { success: false, error: errorMessage };
   }
 }

@@ -89,8 +89,7 @@ export class ConnectionController {
     @Res() res: Response,
   ) {
     const [token, redirectUrl] = (state || '').split(':::');
-    const defaultUrl = `${process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'}/polaris/connections`; // DevSkim: ignore DS137138, DS162092
-    const targetUrl = this.isSafeRedirectUrl(redirectUrl) ? redirectUrl : defaultUrl;
+    const targetUrl = this.getSafeRedirectUrl(redirectUrl);
     const separator = targetUrl.includes('?') ? '&' : '?';
 
     try {
@@ -137,18 +136,32 @@ export class ConnectionController {
     return this.connectionService.getImportStatus(username, provider);
   }
 
-  private isSafeRedirectUrl(url: string): boolean {
-    if (!url) return false;
-    if (url.startsWith('/') && !url.startsWith('//')) {
-      return true;
-    }
+  private getSafeRedirectUrl(url: string): string {
+    const allowedOrigin = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'; // DevSkim: ignore DS137138, DS162092
+    const defaultUrl = `${allowedOrigin}/polaris/connections`;
+    if (!url) return defaultUrl;
+
     try {
-      const parsedUrl = new URL(url);
-      const allowedUrl = new URL(process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'); // DevSkim: ignore DS137138, DS162092
-      return parsedUrl.hostname === allowedUrl.hostname;
+      const parsedUrl = new URL(url, allowedOrigin);
+      const allowedUrl = new URL(allowedOrigin);
+
+      // Check if it's a relative URL to prevent protocol-relative redirects
+      if (url.startsWith('/') && !url.startsWith('//') && !url.startsWith('\\')) {
+        return `${allowedOrigin}${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
+      }
+
+      if (
+        parsedUrl.hostname === allowedUrl.hostname &&
+        parsedUrl.port === allowedUrl.port &&
+        parsedUrl.protocol === allowedUrl.protocol
+      ) {
+        return `${allowedOrigin}${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
+      }
     } catch {
-      return false;
+      // Ignore invalid URLs
     }
+
+    return defaultUrl;
   }
 
   private async decodeToken(token: string) {

@@ -8,4 +8,6 @@ export interface Constellation {
   icon?: string;
   description: string;
   id: string;
+  connectionColor?: string;
+  starColor?: string;
 }

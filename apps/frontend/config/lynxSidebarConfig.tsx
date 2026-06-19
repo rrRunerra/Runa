@@ -216,7 +216,7 @@ export function getLynxSidebarConfig(data: Partial<LynxData>): NavbarConfig {
     },
     {
       section: "General",
-      permission: [LynxFlags.LOGGED_IN, LynxFlags.GUILD_CHAT, LynxFlags.DM_CHAT],
+      permission: [LynxFlags.GUILD_CHAT, LynxFlags.DM_CHAT],
       permissionOperator: "any",
       items: [
         {
@@ -224,7 +224,8 @@ export function getLynxSidebarConfig(data: Partial<LynxData>): NavbarConfig {
           href: "/lynx/chat",
           icon: <MessageSquare className="h-4 w-4" />,
           subtitle: "Send messages in guilds",
-          permission: LynxFlags.LOGGED_IN,
+          permission: [LynxFlags.GUILD_CHAT, LynxFlags.DM_CHAT],
+          permissionOperator: "any",
           children: [
             {
               label: "Guilds",

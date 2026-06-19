@@ -510,6 +510,8 @@ export default function BrowsePage() {
                     const secondaryTitle = item.title.english
                       ? item.title.romaji
                       : null;
+                    const safeType = ["anime", "manga", "movies", "tv", "games", "books"].includes(type) ? type : "anime";
+                    const safeId = encodeURIComponent(item.id);
 
                     return (
                       <motion.div
@@ -533,7 +535,7 @@ export default function BrowsePage() {
                         </button>
 
                         <Link
-                          href={`/aquila/${type}/${item.id}`}
+                          href={`/aquila/${safeType}/${safeId}`}
                           className="flex flex-col gap-2 h-full"
                         >
                           <div className="relative aspect-3/4 w-full overflow-hidden rounded-xl bg-muted shadow-sm group-hover:shadow-md border border-border/50 transition-all">
@@ -626,6 +628,8 @@ export default function BrowsePage() {
               const secondaryTitle = item.title.english
                 ? item.title.romaji
                 : null;
+              const safeType = ["anime", "manga", "movies", "tv", "games", "books"].includes(type) ? type : "anime";
+              const safeId = encodeURIComponent(item.id);
 
               return (
                 <motion.div
@@ -636,7 +640,7 @@ export default function BrowsePage() {
                   className="flex flex-col gap-2 rounded-xl"
                 >
                   <Link
-                    href={`/aquila/${type}/${item.id}`}
+                    href={`/aquila/${safeType}/${safeId}`}
                     onClick={(): void => {
                       saveQuery(query);
                       handleOpenItem(item);

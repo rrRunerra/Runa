@@ -111,6 +111,26 @@ export default function AppSideBar({
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
   const [bookmarkName, setBookmarkName] = useState("");
   const [bookmarkIcon, setBookmarkIcon] = useState("");
+  const [bookmarks, setBookmarks] = useState<any[]>([]);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  const fetchBookmarks = async () => {
+    if (session?.accessToken) {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/polaris/bookmarks`, {
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setBookmarks(data);
+        }
+      } catch (err) {
+        console.error("Error fetching bookmarks in sidebar:", err);
+      }
+    }
+  };
 
   useEffect(() => {
     const handleOpenAppearance = () => setIsAppearanceOpen(true);
@@ -124,6 +144,18 @@ export default function AppSideBar({
       window.removeEventListener("runa-open-settings", handleOpenSettings);
     };
   }, []);
+
+  useEffect(() => {
+    const handleChanged = () => {
+      if (isMenuOpen) {
+        fetchBookmarks();
+      }
+    };
+    window.addEventListener("runa-bookmarks-changed", handleChanged);
+    return () => {
+      window.removeEventListener("runa-bookmarks-changed", handleChanged);
+    };
+  }, [isMenuOpen, session?.accessToken]);
 
   const [resolvedNavConfig, setResolvedNavConfig] = useState<NavbarConfig>(navConfig);
 
@@ -238,7 +270,12 @@ export default function AppSideBar({
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <DropdownMenu>
+            <DropdownMenu onOpenChange={(open) => {
+              setIsMenuOpen(open);
+              if (open) {
+                fetchBookmarks();
+              }
+            }}>
               <DropdownMenuTrigger asChild>
                 <SidebarMenuButton
                   size="lg"
@@ -266,7 +303,7 @@ export default function AppSideBar({
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
               <DropdownMenuContent
-                className="w-80 rounded-2xl bg-zinc-950/90 backdrop-blur-xl border border-zinc-800/80 shadow-2xl p-3"
+                className="w-[400px] rounded-2xl bg-zinc-950/90 backdrop-blur-xl border border-zinc-800/80 shadow-2xl p-3"
                 align="start"
                 side={isMobile ? "bottom" : "right"}
                 sideOffset={12}
@@ -281,14 +318,12 @@ export default function AppSideBar({
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-4 gap-2">
                     {apps.map((app, idx) => {
                       const isActive = activeApp.name === app.name;
                       
                       const hoverBorderClass = app.hoverBorderClass || "hover:border-indigo-500/40 hover:bg-indigo-950/10 hover:shadow-indigo-500/5";
                       const logoWrapperClass = app.logoWrapperClass || "bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 group-hover:bg-indigo-500 group-hover:text-white";
-                      const badgeText = app.badgeText || "";
-                      const badgeColor = app.badgeColor || "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20";
 
                       return (
                         <Link href={app.href} key={idx} className="block">
@@ -297,43 +332,101 @@ export default function AppSideBar({
                             asChild
                           >
                             <motion.div
-                              whileHover={{ scale: 1.02, y: -2 }}
-                              whileTap={{ scale: 0.98 }}
+                              whileHover={{ scale: 1.05, y: -2 }}
+                              whileTap={{ scale: 0.95 }}
                               transition={{ type: "spring", stiffness: 400, damping: 25 }}
                               className={cn(
-                                "group relative flex flex-col items-start gap-2.5 p-3 rounded-xl border border-zinc-800/40 bg-zinc-900/10 cursor-pointer text-left transition-all duration-300 hover:shadow-md outline-hidden select-none",
+                                "group relative flex flex-col items-center justify-center gap-2.5 p-2.5 rounded-xl border border-zinc-800/40 bg-zinc-900/10 cursor-pointer text-center transition-all duration-300 hover:shadow-md outline-hidden select-none w-full",
                                 hoverBorderClass,
                                 isActive && "border-primary/40 bg-primary/5 shadow-md shadow-primary/5"
                               )}
                             >
-                              <div className="flex w-full items-center justify-between">
-                                <div className={cn(
-                                  "flex size-7 items-center justify-center rounded-lg shadow-sm transition-all duration-300",
-                                  logoWrapperClass,
-                                  isActive && "scale-105 shadow-md"
-                                )}>
-                                  {app.logo}
-                                </div>
-                                {badgeText && (
-                                  <span className={cn("text-[9px] px-1.5 py-0.5 rounded-full font-semibold border tracking-wide", badgeColor)}>
-                                    {badgeText}
-                                  </span>
-                                )}
+                              <div className={cn(
+                                "flex size-8 items-center justify-center rounded-lg shadow-sm transition-all duration-300 shrink-0",
+                                logoWrapperClass,
+                                isActive && "scale-105 shadow-md"
+                              )}>
+                                {app.logo}
                               </div>
-                              <div className="flex flex-col gap-0.5 mt-0.5">
-                                <span className="font-bold text-xs text-foreground group-hover:text-foreground">
-                                  {app.name}
-                                </span>
-                                <span className="text-[10px] leading-tight text-muted-foreground line-clamp-1 group-hover:text-muted-foreground/80">
-                                  {app.description}
-                                </span>
-                              </div>
+                              <span className="font-bold text-[10px] tracking-wide text-foreground group-hover:text-foreground truncate w-full text-center">
+                                {app.name}
+                              </span>
                             </motion.div>
                           </DropdownMenuItem>
                         </Link>
                       );
                     })}
                   </div>
+
+                  <DropdownMenuSeparator className="bg-zinc-800/40 my-1" />
+
+                  <div className="flex flex-col gap-2 mt-1">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-muted-foreground text-[10px] uppercase tracking-widest font-bold">
+                        Bookmarks
+                      </span>
+                    </div>
+
+                    {!session ? (
+                      <div className="text-center py-4 px-2 text-xs text-muted-foreground/50 border border-dashed border-zinc-800/40 rounded-xl bg-zinc-900/5">
+                        Log in to view and manage bookmarks.
+                      </div>
+                    ) : bookmarks.length === 0 ? (
+                      <div className="text-center py-4 px-2 text-xs text-muted-foreground/50 border border-dashed border-zinc-800/40 rounded-xl bg-zinc-900/5">
+                        No bookmarks saved. Use "Add Bookmark" in the profile menu.
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-1.5">
+                        {bookmarks.map((bookmark, idx) => {
+                          return (
+                            <Link href={bookmark.redirect} key={idx} className="block">
+                              <DropdownMenuItem
+                                asChild
+                              >
+                                <motion.div
+                                  whileHover={{ scale: 1.01, x: 2 }}
+                                  whileTap={{ scale: 0.99 }}
+                                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                                  className="group flex items-center gap-3 p-2.5 rounded-xl border border-zinc-800/40 bg-zinc-900/10 cursor-pointer text-left transition-all duration-300 hover:border-indigo-500/40 hover:bg-indigo-950/10 hover:shadow-indigo-500/5 hover:shadow-sm outline-hidden select-none"
+                                >
+                                  <div className="flex size-7 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 group-hover:bg-indigo-500 group-hover:text-white shrink-0 transition-all duration-300 relative">
+                                    {bookmark.icon ? (
+                                      <>
+                                        <img
+                                          src={bookmark.icon}
+                                          alt=""
+                                          className="size-4 object-contain rounded-sm"
+                                          onError={(e) => {
+                                            e.currentTarget.style.display = 'none';
+                                            const fallback = e.currentTarget.parentElement?.querySelector('.bookmark-fallback');
+                                            if (fallback) fallback.classList.remove('hidden');
+                                          }}
+                                        />
+                                        <Bookmark className="size-3.5 bookmark-fallback hidden" />
+                                      </>
+                                    ) : (
+                                      <Bookmark className="size-3.5" />
+                                    )}
+                                  </div>
+                                  <div className="flex flex-col min-w-0">
+                                    <span className="font-semibold text-xs text-foreground truncate group-hover:text-foreground">
+                                      {bookmark.name}
+                                    </span>
+                                    {bookmark.description && (
+                                      <span className="text-[10px] leading-tight text-muted-foreground truncate group-hover:text-muted-foreground/80">
+                                        {bookmark.description}
+                                      </span>
+                                    )}
+                                  </div>
+                                </motion.div>
+                              </DropdownMenuItem>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
                 </div>
               </DropdownMenuContent>
             </DropdownMenu>
