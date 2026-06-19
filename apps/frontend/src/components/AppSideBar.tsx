@@ -272,7 +272,12 @@ export default function AppSideBar({
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <AppSwitcherDropdown activeApp={activeApp} triggerClassName="h-12 w-full" />
+            <AppSwitcherDropdown
+              activeApp={activeApp}
+              triggerClassName="h-12 w-full"
+              side={isMobile ? "bottom" : "right"}
+              align={isMobile ? "start" : "start"}
+            />
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>

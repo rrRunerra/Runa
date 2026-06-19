@@ -392,7 +392,7 @@ export default function StatsDashboard({ username }: StatsDashboardProps): React
           onValueChange={(v) => setActiveMedia(v as MediaType)}
           className="w-full shrink-0"
         >
-          <TabsList className="bg-card/20 border border-border/40 p-1 rounded-2xl w-full flex flex-wrap h-auto justify-start gap-1">
+          <TabsList className="bg-card/20 border border-border/40 p-1 rounded-2xl w-full flex flex-nowrap overflow-x-auto no-scrollbar h-auto justify-start gap-1">
             {(Object.keys(MEDIA_CONFIG) as MediaType[]).map((type) => {
               const config = MEDIA_CONFIG[type];
               return (

@@ -68,6 +68,9 @@ export class BookService {
 
       return media;
     } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
       if (dbBook) {
         return this.bookRepository.toMedia(dbBook);
       }

@@ -32,9 +32,9 @@ describe('MediaController', () => {
   });
 
   describe('uploadFile', () => {
-    it('should call mediaService.saveFile with file and username from request', async () => {
+    it('should call mediaService.saveFile with session authenticated username', async () => {
       const mockFile = {} as Express.Multer.File;
-      const mockReq = { user: { username: 'john_doe' } };
+      const mockReq = { user: { username: 'john_doe', authType: 'session' } };
       const expectedResult = { id: '123', filename: 'john_doe_123.png', url: '/media/image/john_doe_123.png' };
       jest.spyOn(service, 'saveFile').mockResolvedValue(expectedResult);
 
@@ -44,9 +44,21 @@ describe('MediaController', () => {
       expect(result).toEqual(expectedResult);
     });
 
-    it('should fall back to anonymous if username is missing', async () => {
+    it('should call mediaService.saveFile with API key authenticated username', async () => {
       const mockFile = {} as Express.Multer.File;
-      const mockReq = { user: {} };
+      const mockReq = { user: { username: 'api_user', authType: 'api-key' } };
+      const expectedResult = { id: '123', filename: 'api_user_123.png', url: '/media/image/api_user_123.png' };
+      jest.spyOn(service, 'saveFile').mockResolvedValue(expectedResult);
+
+      const result = await controller.uploadFile(mockFile, mockReq);
+
+      expect(service.saveFile).toHaveBeenCalledWith(mockFile, 'api_user');
+      expect(result).toEqual(expectedResult);
+    });
+
+    it('should fall back to anonymous if user object or username is missing', async () => {
+      const mockFile = {} as Express.Multer.File;
+      const mockReq = { user: undefined };
       const expectedResult = { id: '123', filename: 'anonymous_123.png', url: '/media/image/anonymous_123.png' };
       jest.spyOn(service, 'saveFile').mockResolvedValue(expectedResult);
 

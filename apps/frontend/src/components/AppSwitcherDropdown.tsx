@@ -90,7 +90,7 @@ export default function AppSwitcherDropdown({
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        className="w-[400px] rounded-2xl bg-zinc-950/90 backdrop-blur-xl border border-zinc-800/80 shadow-2xl p-3 z-50"
+        className="w-[calc(100vw-2rem)] sm:w-[400px] rounded-2xl bg-zinc-950/90 backdrop-blur-xl border border-zinc-800/80 shadow-2xl p-3 z-50"
         align={align}
         side={side}
         sideOffset={sideOffset}
