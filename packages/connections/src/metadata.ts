@@ -103,7 +103,7 @@ export const PROVIDERS_METADATA: ConnectionMetadata[] = [
     name: "Simkl",
     description: "Sync your anime, movies, and TV shows in one place.",
     url: "https://simkl.com",
-    icon: "https://play-lh.googleusercontent.com/DliaDatmrt_M8drBtsafddTyhcxN5W3UAcpQRjoq7MViP3iwHBMegVmKIxDAjHrFACQ",
+    icon: "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/simkl.png",
     accentColor: "bg-[#e50914]/10 border-[#e50914]/20 text-[#e50914] hover:bg-[#e50914]/20",
     glowColor: "shadow-[#e50914]/10",
     capabilities: [ConnectionCapability.ANIME, ConnectionCapability.MOVIES, ConnectionCapability.TV_SHOWS, ConnectionCapability.SHOWCASE],
