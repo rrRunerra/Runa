@@ -2,9 +2,10 @@ import { Module } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UserController } from './user.controller';
 import { MediaModule } from '../media/media.module';
+import { MailModule } from '../../providers/mail/mail.module';
 
 @Module({
-  imports: [MediaModule],
+  imports: [MediaModule, MailModule],
   controllers: [UserController],
   providers: [UserService],
   exports: [UserService],

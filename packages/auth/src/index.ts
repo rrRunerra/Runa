@@ -29,10 +29,30 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         identifier: { label: "Email or Username", type: "text" },
         password: { label: "Password", type: "password" },
+        mfaSuccessToken: { label: "MFA Success Token", type: "text" },
+        passkeyResponse: { label: "Passkey Response", type: "text" },
+        isPasskeyOnly: { label: "Is Passkey Only", type: "text" },
       },
       async authorize(credentials) {
-        if (!credentials?.identifier || !credentials?.password) {
-          throw new Error("Missing credentials");
+        if (!credentials?.identifier && credentials?.isPasskeyOnly !== "true") {
+          throw new Error("Missing identifier");
+        }
+
+        const requestBody: any = {};
+        if (credentials?.identifier) {
+          requestBody.identifier = credentials.identifier;
+        }
+
+        if (credentials?.mfaSuccessToken) {
+          requestBody.mfaSuccessToken = credentials.mfaSuccessToken;
+        } else if (credentials?.isPasskeyOnly === "true") {
+          requestBody.isPasskeyOnly = "true";
+          requestBody.passkeyResponse = credentials.passkeyResponse;
+        } else {
+          if (!credentials.password) {
+            throw new Error("Missing password");
+          }
+          requestBody.password = credentials.password;
         }
 
         const res = await fetch(`${API_URL}/auth/login`, {
@@ -40,16 +60,13 @@ export const authOptions: NextAuthOptions = {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({
-            identifier: credentials.identifier,
-            password: credentials.password,
-          }),
+          body: JSON.stringify(requestBody),
         });
 
         const data = await res.json();
 
         if (!res.ok) {
-          throw new Error(data.message);
+          throw new Error(data.message || "Authentication failed");
         }
 
         return {

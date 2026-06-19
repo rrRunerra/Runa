@@ -568,16 +568,6 @@ export default function AppSideBar({
                       className="cursor-pointer gap-2.5 px-3 py-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-zinc-800/50 rounded-xl transition-all duration-200"
                       onSelect={(e) => {
                         e.preventDefault();
-                        setIsSettingsOpen(true);
-                      }}
-                    >
-                      <Settings className="size-4 text-primary/80" />
-                      Settings
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="cursor-pointer gap-2.5 px-3 py-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-zinc-800/50 rounded-xl transition-all duration-200"
-                      onSelect={(e) => {
-                        e.preventDefault();
                         setBookmarkName(document.title || "New Constellation");
                         const faviconEl = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
                         setBookmarkIcon(faviconEl?.href || "/favicon.ico");
@@ -586,6 +576,16 @@ export default function AppSideBar({
                     >
                       <Bookmark className="size-4 text-primary/80" />
                       Add Bookmark
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="cursor-pointer gap-2.5 px-3 py-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-zinc-800/50 rounded-xl transition-all duration-200"
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        setIsSettingsOpen(true);
+                      }}
+                    >
+                      <Settings className="size-4 text-primary/80" />
+                      Settings
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
 

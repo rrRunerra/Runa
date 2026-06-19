@@ -2,7 +2,7 @@
 
 import type React from "react";
 import { useState, useRef, useEffect } from "react";
-import { User, LinkIcon, Lock, Smartphone } from "lucide-react";
+import { User, LinkIcon, Lock, Smartphone, ShieldCheck } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Dialog,
@@ -16,9 +16,11 @@ import { AccountSettingsTab } from "./AccountSettingsTab";
 import { ConnectionsTab } from "./ConnectionsTab";
 import { PrivacySettingsTab } from "./PrivacySettingsTab";
 import { SidebarSettingsTab } from "./SidebarSettingsTab";
+import { SecuritySettingsTab } from "./SecuritySettingsTab";
 import type { AccountSettingsTabRef } from "./AccountSettingsTab";
 import type { PrivacySettingsTabRef } from "./PrivacySettingsTab";
 import type { SidebarSettingsTabRef } from "./SidebarSettingsTab";
+import type { SecuritySettingsTabRef } from "./SecuritySettingsTab";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { NavbarConfig } from "@/components/Providers/NavigationProvider";
 
@@ -28,7 +30,7 @@ interface SettingsDialogProps {
   navConfig?: NavbarConfig;
 }
 
-type Category = "account" | "connections" | "privacy" | "sidebar";
+type Category = "account" | "connections" | "privacy" | "sidebar" | "security";
 
 export function SettingsDialog({
   open,
@@ -38,6 +40,7 @@ export function SettingsDialog({
   const [activeCategory, setActiveCategory] = useState<Category>("account");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const accountTabRef = useRef<AccountSettingsTabRef>(null);
+  const securityTabRef = useRef<SecuritySettingsTabRef>(null);
   const privacyTabRef = useRef<PrivacySettingsTabRef>(null);
   const sidebarTabRef = useRef<SidebarSettingsTabRef>(null);
   const isMobile = useIsMobile();
@@ -50,6 +53,8 @@ export function SettingsDialog({
         setActiveCategory("connections");
       } else if (cat === "privacy") {
         setActiveCategory("privacy");
+      } else if (cat === "security") {
+        setActiveCategory("security");
       } else if (cat === "sidebar" && isMobile) {
         setActiveCategory("sidebar");
       } else {
@@ -101,6 +106,37 @@ export function SettingsDialog({
             <span className="relative z-10 flex items-center gap-2.5">
               <User className="size-4" />
               Account
+            </span>
+          </button>
+
+          {/* Security Settings Tab Button */}
+          <button
+            type="button"
+            onClick={() => setActiveCategory("security")}
+            className={`relative flex items-center gap-3 px-3.5 py-2.5 text-sm font-semibold rounded-xl transition-colors duration-200 whitespace-nowrap outline-hidden cursor-pointer ${
+              activeCategory === "security"
+                ? "text-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {activeCategory === "security" && (
+              <>
+                <motion.div
+                  layoutId="activeSettingsIndicator"
+                  className="absolute left-0 top-2 bottom-2 w-1 bg-primary rounded-r-md"
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                />
+                <motion.div
+                  layoutId="activeSettingsHighlight"
+                  className="absolute inset-0 bg-primary/5 rounded-xl border border-primary/10"
+                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                  style={{ pointerEvents: "none" }}
+                />
+              </>
+            )}
+            <span className="relative z-10 flex items-center gap-2.5">
+              <ShieldCheck className="size-4" />
+              Security
             </span>
           </button>
 
@@ -205,6 +241,7 @@ export function SettingsDialog({
           <DialogHeader className="p-5 sm:p-6 pb-4 sm:pb-5 border-b border-zinc-800/40 flex flex-row items-center gap-3.5 shrink-0">
             <div className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20 hidden sm:block shrink-0">
               {activeCategory === "account" && <User className="size-5" />}
+              {activeCategory === "security" && <ShieldCheck className="size-5" />}
               {activeCategory === "connections" && <LinkIcon className="size-5" />}
               {activeCategory === "privacy" && <Lock className="size-5" />}
               {activeCategory === "sidebar" && <Smartphone className="size-5" />}
@@ -213,20 +250,24 @@ export function SettingsDialog({
               <DialogTitle className="text-base sm:text-lg font-bold text-foreground">
                 {activeCategory === "account"
                   ? "Account Settings"
-                  : activeCategory === "connections"
-                    ? "Connections & Apps"
-                    : activeCategory === "privacy"
-                      ? "Privacy Preferences"
-                      : "Sidebar Customizer"}
+                  : activeCategory === "security"
+                    ? "Security Settings"
+                    : activeCategory === "connections"
+                      ? "Connections & Apps"
+                      : activeCategory === "privacy"
+                        ? "Privacy Preferences"
+                        : "Sidebar Customizer"}
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
                 {activeCategory === "account"
-                  ? "Manage your display credentials, public-facing avatar, banner, and security passwords."
-                  : activeCategory === "connections"
-                    ? "Link and authorize third-party services and APIs to fetch tracker data automatically."
-                    : activeCategory === "privacy"
-                      ? "Configure who is allowed to view your profile statistics, logs, and tracking lists."
-                      : "Arrange and sort the shortcut options available on your mobile phone dashboard view."}
+                  ? "Manage your display credentials, public-facing avatar, banner, and profile details."
+                  : activeCategory === "security"
+                    ? "Update your password, manage Passkeys, and configure 2FA authentication options."
+                    : activeCategory === "connections"
+                      ? "Link and authorize third-party services and APIs to fetch tracker data automatically."
+                      : activeCategory === "privacy"
+                        ? "Configure who is allowed to view your profile statistics, logs, and tracking lists."
+                        : "Arrange and sort the shortcut options available on your mobile phone dashboard view."}
               </DialogDescription>
             </div>
           </DialogHeader>
@@ -242,9 +283,17 @@ export function SettingsDialog({
                 transition={{ duration: 0.2 }}
                 className="h-full"
               >
-                {activeCategory === "account" && (
+                 {activeCategory === "account" && (
                   <AccountSettingsTab
                     ref={accountTabRef}
+                    onOpenChange={onOpenChange}
+                    isSubmitting={isSubmitting}
+                    setIsSubmitting={setIsSubmitting}
+                  />
+                )}
+                {activeCategory === "security" && (
+                  <SecuritySettingsTab
+                    ref={securityTabRef}
                     onOpenChange={onOpenChange}
                     isSubmitting={isSubmitting}
                     setIsSubmitting={setIsSubmitting}
@@ -284,6 +333,17 @@ export function SettingsDialog({
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 <Button
                   onClick={() => accountTabRef.current?.handleSave()}
+                  disabled={isSubmitting}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl px-5 shadow-lg text-xs sm:text-sm h-9 cursor-pointer"
+                >
+                  {isSubmitting ? "Saving..." : "Save Changes"}
+                </Button>
+              </motion.div>
+            )}
+            {activeCategory === "security" && (
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Button
+                  onClick={() => securityTabRef.current?.handleSave()}
                   disabled={isSubmitting}
                   className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl px-5 shadow-lg text-xs sm:text-sm h-9 cursor-pointer"
                 >

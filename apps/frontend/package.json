@@ -15,6 +15,7 @@
     "@runa/connections": "workspace:*",
     "@runa/database": "workspace:*",
     "@runa/permissions": "workspace:*",
+    "@simplewebauthn/browser": "^13.3.0",
     "@tanstack/react-virtual": "^3.14.3",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
@@ -28,6 +29,7 @@
     "next": "^16.2.9",
     "next-auth": "^4.24.14",
     "next-themes": "^0.4.6",
+    "qrcode": "^1.5.4",
     "radix-ui": "1.4.3",
     "react": "19.2.4",
     "react-day-picker": "^9.14.0",
@@ -45,6 +47,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.1",
     "@types/node": "^20.19.43",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "babel-plugin-react-compiler": "1.0.0",

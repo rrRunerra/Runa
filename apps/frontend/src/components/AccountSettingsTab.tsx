@@ -103,18 +103,6 @@ export const AccountSettingsTab = forwardRef<AccountSettingsTabRef, AccountSetti
     const [bannerFile, setBannerFile] = useState<File | null>(null);
     const [sidebarCardBackgroundFile, setSidebarCardBackgroundFile] = useState<File | null>(null);
 
-    const [newPassword, setNewPassword] = useState("");
-    const [confirmPassword, setConfirmPassword] = useState("");
-    const [showNewPassword, setShowNewPassword] = useState(false);
-    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    const [passwordTouched, setPasswordTouched] = useState(false);
-    const [passwordCriteria, setPasswordCriteria] = useState({
-      length: false,
-      maxLength: false,
-      uppercase: false,
-      number: false,
-      special: false,
-    });
     const [emailError, setEmailError] = useState("");
 
     const [confirmPasswordInput, setConfirmPasswordInput] = useState("");
@@ -150,41 +138,13 @@ export const AccountSettingsTab = forwardRef<AccountSettingsTabRef, AccountSetti
         setAvatarFile(null);
         setBannerFile(null);
         setSidebarCardBackgroundFile(null);
-        setNewPassword("");
-        setConfirmPassword("");
         setConfirmPasswordInput("");
         setIsConfirmOpen(false);
-        setPasswordTouched(false);
-        setPasswordCriteria({
-          length: false,
-          maxLength: false,
-          uppercase: false,
-          number: false,
-          special: false,
-        });
         setEmailError("");
       }
     }, [session]);
 
     const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    const validatePassword = (value: string) => {
-      setPasswordCriteria({
-        length: value.length >= 16,
-        maxLength: value.length <= 64,
-        uppercase: /[A-Z]/.test(value),
-        number: /[0-9]{2,}/.test(value),
-        special: /[!@#$%^&*(),.?":{}|<>~'_\-+=/\\[\]`]/.test(value),
-      });
-    };
-
-    const isPasswordValid =
-      !newPassword ||
-      (passwordCriteria.length &&
-        passwordCriteria.maxLength &&
-        passwordCriteria.uppercase &&
-        passwordCriteria.number &&
-        passwordCriteria.special);
 
     const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
@@ -244,20 +204,9 @@ export const AccountSettingsTab = forwardRef<AccountSettingsTabRef, AccountSetti
         return;
       }
 
-      if (newPassword && !isPasswordValid) {
-        toast.error("Password does not meet the required criteria.");
-        return;
-      }
-
-      if (newPassword && newPassword !== confirmPassword) {
-        toast.error("New passwords do not match.");
-        return;
-      }
-
       const emailChanged = email.toLowerCase() !== session.user.email.toLowerCase();
 
-      if (emailChanged || newPassword) {
-        setConfirmPasswordInput("");
+      if (emailChanged) {
         setIsConfirmOpen(true);
       } else {
         executeSave("");
@@ -349,10 +298,6 @@ export const AccountSettingsTab = forwardRef<AccountSettingsTabRef, AccountSetti
         const emailChanged = email.toLowerCase() !== session!.user.email.toLowerCase();
         if (emailChanged) {
           updatePayload.email = email.toLowerCase();
-        }
-
-        if (newPassword) {
-          updatePayload.newPassword = newPassword;
         }
 
         if (passwordToVerify) {
@@ -729,8 +674,8 @@ export const AccountSettingsTab = forwardRef<AccountSettingsTabRef, AccountSetti
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 pt-2">
-          {/* Left Column - Details */}
+        <div className="max-w-md p-4 rounded-2xl border border-zinc-800/50 bg-card/20 backdrop-blur-xs pt-2">
+          {/* Details Column */}
           <div className="space-y-4">
             <div>
               <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -751,7 +696,7 @@ export const AccountSettingsTab = forwardRef<AccountSettingsTabRef, AccountSetti
                 className="h-9 px-3"
               />
             </div>
-
+ 
             <div className="space-y-1.5">
               <Label htmlFor="email">
                 {emailError ? (
@@ -774,115 +719,6 @@ export const AccountSettingsTab = forwardRef<AccountSettingsTabRef, AccountSetti
                   emailError && "border-red-500/50 bg-red-500/5 focus-visible:ring-red-500/30"
                 )}
               />
-            </div>
-          </div>
-
-          {/* Right Column - Password */}
-          <div className="space-y-4">
-            <div>
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Security & Password
-              </h4>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
-                Update your password credentials.
-              </p>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="new-password">New Password</Label>
-              <div className="relative">
-                <Input
-                  id="new-password"
-                  type={showNewPassword ? "text" : "password"}
-                  value={newPassword}
-                  maxLength={64}
-                  onChange={(e) => {
-                    setNewPassword(e.target.value);
-                    validatePassword(e.target.value);
-                    if (!passwordTouched) setPasswordTouched(true);
-                  }}
-                  onFocus={() => { if (!passwordTouched && newPassword.length > 0) setPasswordTouched(true); }}
-                  onBlur={() => setPasswordTouched(false)}
-                  placeholder="••••••••"
-                  className={cn(
-                    "h-9 px-3 pr-9",
-                    newPassword && !isPasswordValid && "border-red-500/50 bg-red-500/5 focus-visible:ring-red-500/30"
-                  )}
-                />
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  onClick={() => setShowNewPassword((v) => !v)}
-                >
-                  {showNewPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-                </button>
-              </div>
-
-              {(passwordTouched || (newPassword.length > 0 && !isPasswordValid)) && (
-                <div className="mt-1.5 p-3 rounded-xl bg-muted/30 border border-border/50 animate-in fade-in slide-in-from-top-1 duration-150">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                    Password Criteria
-                  </p>
-                  <ul className="grid grid-cols-1 gap-1.5">
-                    {[
-                      { key: "length", label: "Min 16 characters" },
-                      { key: "maxLength", label: "Max 64 characters" },
-                      { key: "uppercase", label: "One uppercase letter" },
-                      { key: "number", label: "Two numbers" },
-                      { key: "special", label: "One special character" },
-                    ].map((item) => (
-                      <li
-                        key={item.key}
-                        className={cn(
-                          "flex items-center gap-2 text-[11px] transition-all duration-200",
-                          passwordCriteria[item.key as keyof typeof passwordCriteria]
-                            ? "text-emerald-500 font-medium"
-                            : "text-muted-foreground/60",
-                        )}
-                      >
-                        <div
-                          className={cn(
-                            "size-1.5 rounded-full transition-all",
-                            passwordCriteria[item.key as keyof typeof passwordCriteria]
-                              ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]"
-                              : "bg-muted-foreground/30",
-                          )}
-                        />
-                        {item.label}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="confirm-password">Confirm Password</Label>
-              <div className="relative">
-                <Input
-                  id="confirm-password"
-                  type={showConfirmPassword ? "text" : "password"}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className={cn(
-                    "h-9 px-3 pr-9",
-                    confirmPassword && newPassword !== confirmPassword && "border-red-500/50 bg-red-500/5 focus-visible:ring-red-500/30"
-                  )}
-                />
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  onClick={() => setShowConfirmPassword((v) => !v)}
-                >
-                  {showConfirmPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
-                </button>
-              </div>
-              {confirmPassword && newPassword !== confirmPassword && (
-                <p className="text-[11px] text-red-500 mt-1">Passwords do not match.</p>
-              )}
             </div>
           </div>
         </div>

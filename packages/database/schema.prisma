@@ -34,8 +34,28 @@ model User {
     userStats            UserStats[]
     polarisBookmarks     PolarisUserBookMarks[]
 
+    // MFA Configuration Fields
+    totpSecret           String?
+    totpEnabled          Boolean               @default(false)
+    emailMfaEnabled      Boolean               @default(false)
+    backupCodes          String[]              @default([])
+    passkeys             Passkey[]
+
     @@index([id])
     @@index([username])
+}
+
+model Passkey {
+    id         String   @id // The base64url encoded credential ID
+    publicKey  String   // The base64url encoded public key
+    counter    Int      // Credential counter
+    transports String[] // Transports (usb, nfc, ble, internal, hybrid)
+    name       String?  // Nickname/label for the passkey
+    createdAt  DateTime @default(now())
+    userId     String
+    user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([userId])
 }
 
 model ApiKey {

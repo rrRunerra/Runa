@@ -8,6 +8,7 @@ import {
   NotFoundException,
   Put,
   Req,
+  Delete,
 } from '@nestjs/common';
 import { parsePrivacy, UserService } from './user.service';
 import { DualAuthGuard } from '../../common/guards/auth.guard';
@@ -87,5 +88,71 @@ export class UserController {
   async update(@Req() req: any, @Body() data: UpdateUserDto) {
     const userId = req.user.id;
     return this.usersService.update(userId, data);
+  }
+
+  // --- User MFA Management Endpoints ---
+
+  @Post('mfa/totp/setup')
+  async setupTotp(@Req() req: any) {
+    return this.usersService.generateTotpSetup(req.user.id);
+  }
+
+  @Post('mfa/totp/enable')
+  async enableTotp(@Req() req: any, @Body('code') code: string) {
+    return this.usersService.enableTotp(req.user.id, code);
+  }
+
+  @Post('mfa/totp/disable')
+  async disableTotp(@Req() req: any) {
+    return this.usersService.disableTotp(req.user.id);
+  }
+
+  @Post('mfa/email/send-setup-code')
+  async sendEmailMfaSetupCode(@Req() req: any) {
+    return this.usersService.sendEmailMfaSetupCode(req.user.id);
+  }
+
+  @Post('mfa/email/enable')
+  async enableEmailMfa(@Req() req: any, @Body('code') code: string) {
+    return this.usersService.enableEmailMfa(req.user.id, code);
+  }
+
+  @Post('mfa/email/disable')
+  async disableEmailMfa(@Req() req: any) {
+    return this.usersService.disableEmailMfa(req.user.id);
+  }
+
+  @Post('mfa/backup-codes/regenerate')
+  async regenerateBackupCodes(@Req() req: any) {
+    return this.usersService.regenerateBackupCodes(req.user.id);
+  }
+
+  @Post('mfa/passkey/register-options')
+  async generatePasskeyRegisterOptions(@Req() req: any) {
+    return this.usersService.generatePasskeyRegisterOptions(req.user.id);
+  }
+
+  @Post('mfa/passkey/register-verify')
+  async verifyPasskeyRegister(
+    @Req() req: any,
+    @Body('response') response: any,
+    @Body('name') name?: string,
+  ) {
+    return this.usersService.verifyPasskeyRegister(req.user.id, response, name);
+  }
+
+  @Get('mfa/passkeys')
+  async getPasskeys(@Req() req: any) {
+    return this.usersService.getPasskeys(req.user.id);
+  }
+
+  @Get('mfa/status')
+  async getMfaStatus(@Req() req: any) {
+    return this.usersService.getMfaStatus(req.user.id);
+  }
+
+  @Delete('mfa/passkey/:id')
+  async deletePasskey(@Req() req: any, @Param('id') id: string) {
+    return this.usersService.deletePasskey(req.user.id, id);
   }
 }

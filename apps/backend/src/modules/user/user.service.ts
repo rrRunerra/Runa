@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { CacheService } from '../../providers/cache/cache.service';
+import { MailService } from '../../providers/mail/mail.service';
 import type { User } from '@runa/database';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -14,6 +15,13 @@ import { PrivacySettingsDto } from './dto/privacy-settings.dto';
 import { MediaService } from '../media/media.service';
 import { BitField, DEFAULT_PERMISSIONS } from '@runa/permissions';
 import bcrypt from 'bcrypt';
+import { generateSecret, generateURI, verify } from 'otplib';
+import { encrypt, decrypt } from '../../common/utils/crypto';
+import * as crypto from 'crypto';
+import {
+  generateRegistrationOptions,
+  verifyRegistrationResponse,
+} from '@simplewebauthn/server';
 
 const RESERVED_KEYWORDS = new Set([
   "break", "case", "catch", "class", "const", "continue", "debugger",
@@ -71,6 +79,7 @@ export class UserService {
     private readonly prisma: PrismaService,
     private readonly mediaService: MediaService,
     private readonly cacheService: CacheService,
+    private readonly mailService: MailService,
   ) {
     this.checkHasAdmin();
   }
@@ -332,5 +341,357 @@ export class UserService {
       where: { id: userId },
       data: { profileSettings: settings },
     });
+  }
+
+  // --- MFA Configuration & Setup Methods ---
+
+  async generateTotpSetup(userId: string) {
+    const user = await this.prisma.client.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    const secret = generateSecret();
+    const otpauthUrl = generateURI({
+      issuer: 'Runa',
+      label: user.username,
+      secret,
+    });
+
+    // Save pending secret to cache for 10 minutes
+    await this.cacheService.set(`pending-totp:${userId}`, secret, 600);
+
+    return { secret, otpauthUrl };
+  }
+
+  async enableTotp(userId: string, code: string): Promise<string[]> {
+    const user = await this.prisma.client.user.findUnique({
+      where: { id: userId },
+      include: { passkeys: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    const pendingSecret = await this.cacheService.get<string>(`pending-totp:${userId}`);
+    if (!pendingSecret) {
+      throw new BadRequestException('TOTP setup has expired or was not initiated');
+    }
+
+    const verifyResult = await verify({ token: code, secret: pendingSecret });
+    if (!verifyResult.valid) {
+      throw new BadRequestException('Invalid verification code');
+    }
+
+    // Encrypt the TOTP secret
+    const encryptedSecret = encrypt(pendingSecret);
+
+    // Check if we need to generate backup codes (only if no other MFA was active)
+    const isMfaActive = user.totpEnabled || user.emailMfaEnabled || user.passkeys.length > 0;
+    let backupCodes: string[] = [];
+    let hashedBackupCodes: string[] = [];
+
+    if (!isMfaActive) {
+      const generated = await this.generateBackupCodesRaw();
+      backupCodes = generated.plain;
+      hashedBackupCodes = generated.hashed;
+    }
+
+    await this.prisma.client.user.update({
+      where: { id: userId },
+      data: {
+        totpSecret: encryptedSecret,
+        totpEnabled: true,
+        ...(hashedBackupCodes.length > 0 ? { backupCodes: hashedBackupCodes } : {}),
+      },
+    });
+
+    await this.cacheService.del(`pending-totp:${userId}`);
+
+    return backupCodes;
+  }
+
+  async disableTotp(userId: string) {
+    const user = await this.prisma.client.user.findUnique({
+      where: { id: userId },
+      include: { passkeys: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    const remainingMfa = user.emailMfaEnabled || user.passkeys.length > 0;
+
+    await this.prisma.client.user.update({
+      where: { id: userId },
+      data: {
+        totpEnabled: false,
+        totpSecret: null,
+        ...(!remainingMfa ? { backupCodes: [] } : {}),
+      },
+    });
+
+    return { success: true };
+  }
+
+  async sendEmailMfaSetupCode(userId: string) {
+    const user = await this.prisma.client.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    await this.cacheService.set(`pending-email-mfa:${userId}`, code, 300); // 5 min expiry
+
+    await this.mailService.sendMail(
+      user.email,
+      'Runa - Enable Email Multi-Factor Authentication',
+      `Your verification code is: ${code}. This code is valid for 5 minutes.`,
+    );
+
+    return { success: true };
+  }
+
+  async enableEmailMfa(userId: string, code: string): Promise<string[]> {
+    const user = await this.prisma.client.user.findUnique({
+      where: { id: userId },
+      include: { passkeys: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    const cachedCode = await this.cacheService.get<string>(`pending-email-mfa:${userId}`);
+    if (!cachedCode || cachedCode !== code) {
+      throw new BadRequestException('Invalid or expired verification code');
+    }
+
+    const isMfaActive = user.totpEnabled || user.emailMfaEnabled || user.passkeys.length > 0;
+    let backupCodes: string[] = [];
+    let hashedBackupCodes: string[] = [];
+
+    if (!isMfaActive) {
+      const generated = await this.generateBackupCodesRaw();
+      backupCodes = generated.plain;
+      hashedBackupCodes = generated.hashed;
+    }
+
+    await this.prisma.client.user.update({
+      where: { id: userId },
+      data: {
+        emailMfaEnabled: true,
+        ...(hashedBackupCodes.length > 0 ? { backupCodes: hashedBackupCodes } : {}),
+      },
+    });
+
+    await this.cacheService.del(`pending-email-mfa:${userId}`);
+
+    return backupCodes;
+  }
+
+  async disableEmailMfa(userId: string) {
+    const user = await this.prisma.client.user.findUnique({
+      where: { id: userId },
+      include: { passkeys: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    const remainingMfa = user.totpEnabled || user.passkeys.length > 0;
+
+    await this.prisma.client.user.update({
+      where: { id: userId },
+      data: {
+        emailMfaEnabled: false,
+        ...(!remainingMfa ? { backupCodes: [] } : {}),
+      },
+    });
+
+    return { success: true };
+  }
+
+  private async generateBackupCodesRaw(): Promise<{ plain: string[]; hashed: string[] }> {
+    const plain: string[] = [];
+    const hashed: string[] = [];
+
+    for (let i = 0; i < 10; i++) {
+      const code = crypto.randomBytes(5).toString('hex');
+      plain.push(code);
+      hashed.push(await bcrypt.hash(code, 10));
+    }
+
+    return { plain, hashed };
+  }
+
+  async regenerateBackupCodes(userId: string): Promise<string[]> {
+    const user = await this.prisma.client.user.findUnique({
+      where: { id: userId },
+      include: { passkeys: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    const isMfaActive = user.totpEnabled || user.emailMfaEnabled || user.passkeys.length > 0;
+    if (!isMfaActive) {
+      throw new BadRequestException('MFA must be active to generate backup codes');
+    }
+
+    const { plain, hashed } = await this.generateBackupCodesRaw();
+
+    await this.prisma.client.user.update({
+      where: { id: userId },
+      data: {
+        backupCodes: hashed,
+      },
+    });
+
+    return plain;
+  }
+
+  // --- WebAuthn / Passkey Registration Methods ---
+
+  async generatePasskeyRegisterOptions(userId: string) {
+    const user = await this.prisma.client.user.findUnique({
+      where: { id: userId },
+      include: { passkeys: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    const rpID = process.env.RP_ID || new URL(process.env.NEXT_PUBLIC_URL || 'http://localhost:3000').hostname;
+
+    const options = await generateRegistrationOptions({
+      rpName: 'Runa',
+      rpID,
+      userID: new Uint8Array(Buffer.from(user.id)),
+      userName: user.username,
+      userDisplayName: user.displayName || user.username,
+      excludeCredentials: user.passkeys.map((pk) => ({
+        id: pk.id,
+        type: 'public-key',
+      })),
+      authenticatorSelection: {
+        residentKey: 'required',
+        userVerification: 'preferred',
+      },
+    });
+
+    await this.cacheService.set(`passkey-reg-challenge:${userId}`, options.challenge, 300);
+
+    return options;
+  }
+
+  async verifyPasskeyRegister(userId: string, body: any, name?: string): Promise<string[]> {
+    const user = await this.prisma.client.user.findUnique({
+      where: { id: userId },
+      include: { passkeys: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    const expectedChallenge = await this.cacheService.get<string>(`passkey-reg-challenge:${userId}`);
+    if (!expectedChallenge) {
+      throw new BadRequestException('Passkey registration challenge expired');
+    }
+
+    const rpID = process.env.RP_ID || new URL(process.env.NEXT_PUBLIC_URL || 'http://localhost:3000').hostname;
+    const expectedOrigin = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000';
+
+    let verification;
+    try {
+      verification = await verifyRegistrationResponse({
+        response: body,
+        expectedChallenge,
+        expectedOrigin,
+        expectedRPID: rpID,
+      });
+    } catch (err: any) {
+      throw new BadRequestException(err.message || 'Passkey verification failed');
+    }
+
+    if (!verification.verified || !verification.registrationInfo) {
+      throw new BadRequestException('Passkey verification failed');
+    }
+
+    const { id: credentialID, publicKey: credentialPublicKey, counter, transports } = verification.registrationInfo.credential;
+
+    const isMfaActive = user.totpEnabled || user.emailMfaEnabled || user.passkeys.length > 0;
+    let backupCodes: string[] = [];
+    let hashedBackupCodes: string[] = [];
+
+    if (!isMfaActive) {
+      const generated = await this.generateBackupCodesRaw();
+      backupCodes = generated.plain;
+      hashedBackupCodes = generated.hashed;
+    }
+
+    await this.prisma.client.$transaction([
+      this.prisma.client.passkey.create({
+        data: {
+          id: credentialID,
+          publicKey: Buffer.from(credentialPublicKey).toString('base64url'),
+          counter: counter,
+          transports: (transports as string[]) || body.response.transports || [],
+          name: name || 'Passkey',
+          userId: user.id,
+        },
+      }),
+      this.prisma.client.user.update({
+        where: { id: userId },
+        data: {
+          ...(hashedBackupCodes.length > 0 ? { backupCodes: hashedBackupCodes } : {}),
+        },
+      }),
+    ]);
+
+    await this.cacheService.del(`passkey-reg-challenge:${userId}`);
+
+    return backupCodes;
+  }
+
+  async deletePasskey(userId: string, passkeyId: string) {
+    const user = await this.prisma.client.user.findUnique({
+      where: { id: userId },
+      include: { passkeys: true },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    const passkey = user.passkeys.find((pk) => pk.id === passkeyId);
+    if (!passkey) throw new NotFoundException('Passkey not found');
+
+    await this.prisma.client.passkey.delete({
+      where: { id: passkeyId },
+    });
+
+    const remainingPasskeys = user.passkeys.filter((pk) => pk.id !== passkeyId).length;
+    const remainingMfa = user.totpEnabled || user.emailMfaEnabled || remainingPasskeys > 0;
+
+    if (!remainingMfa) {
+      await this.prisma.client.user.update({
+        where: { id: userId },
+        data: {
+          backupCodes: [],
+        },
+      });
+    }
+
+    return { success: true };
+  }
+
+  async getPasskeys(userId: string) {
+    return await this.prisma.client.passkey.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        name: true,
+        createdAt: true,
+      },
+    });
+  }
+
+  async getMfaStatus(userId: string) {
+    const user = await this.prisma.client.user.findUnique({
+      where: { id: userId },
+      include: { passkeys: true },
+    });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+    return {
+      totpEnabled: user.totpEnabled,
+      emailMfaEnabled: user.emailMfaEnabled,
+      hasBackupCodes: user.backupCodes.length > 0,
+      passkeysCount: user.passkeys.length,
+    };
   }
 }

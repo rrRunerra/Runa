@@ -248,7 +248,7 @@ export default function UserPageClient() {
         {/* User Profile Header */}
         <div className="relative w-full rounded-3xl overflow-hidden bg-card/25 border border-border/40 shadow-2xl mb-2">
           {/* Banner Image / Gradient */}
-          <div className="relative w-full aspect-[21/9] sm:aspect-[3/1] max-h-[260px] overflow-hidden bg-linear-to-r from-indigo-950/40 via-purple-950/40 to-pink-950/40 border-b border-border/20">
+          <div className="relative w-full aspect-21/9 sm:aspect-3/1 max-h-[260px] overflow-hidden bg-linear-to-r from-indigo-950/40 via-purple-950/40 to-pink-950/40 border-b border-border/20">
             {user.bannerUrl ? (
               <img
                 src={getSafeImageUrl(user.bannerUrl)}

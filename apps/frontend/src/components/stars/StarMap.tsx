@@ -1152,7 +1152,7 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
                 <CardFooter className="pt-2 pb-5 z-10 relative">
                   <Link href={selectedConstellation.redirect} className="w-full">
                     <Button 
-                      className="w-full h-11 bg-gradient-to-r hover:opacity-95 text-white font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-2 group/btn relative overflow-hidden shadow-lg border border-white/10 cursor-pointer"
+                      className="w-full h-11 bg-linear-to-r hover:opacity-95 text-white font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-2 group/btn relative overflow-hidden shadow-lg border border-white/10 cursor-pointer"
                       style={{ 
                         backgroundImage: `linear-gradient(135deg, ${accentColor}dd, ${accentColor}88)`,
                         
