@@ -43,40 +43,6 @@ export class UserController {
     return this.usersService.updatePrivacySettings(userId, data);
   }
 
-  @Public()
-  @Get(':username')
-  async findOne(@Param('username') username: string) {
-    const user = await this.usersService.findByUsername(username);
-    if (!user) {
-      throw new NotFoundException(`User with username ${username} not found`);
-    }
-    // Map connections to hide tokens, filtering out private ones
-    const safeConnections = (user as any).connections
-      ?.filter((conn: any) => !conn.private)
-      ?.map((conn: any) => ({
-        id: conn.id,
-        provider: conn.provider,
-        linkedUsername: conn.linkedUsername,
-        linkedTo: conn.linkedTo,
-        private: conn.private,
-        metadata: conn.metadata,
-      })) || [];
-
-    const privacy = parsePrivacy(user.privacy);
-
-    // Return only public fields
-    return {
-      id: user.id,
-      username: user.username,
-      displayName: user.displayName,
-      avatarUrl: user.avatarUrl,
-      bannerUrl: user.bannerUrl,
-      sidebarCardBackgroundUrl: (user as any).sidebarCardBackgroundUrl,
-      profileSettings: user.profileSettings,
-      private: privacy.profile,
-      connections: safeConnections,
-    };
-  }
 
   @Put('settings')
   async updateSettings(@Req() req: any, @Body() data: { profileSettings: any }) {
@@ -154,5 +120,88 @@ export class UserController {
   @Delete('mfa/passkey/:id')
   async deletePasskey(@Req() req: any, @Param('id') id: string) {
     return this.usersService.deletePasskey(req.user.id, id);
+  }
+
+  // --- Device Management Endpoints ---
+
+  @Get('devices')
+  async getDevices(@Req() req: any) {
+    return this.usersService.getDevices(req.user.id);
+  }
+
+  @Delete('device/:id')
+  async deleteDevice(@Req() req: any, @Param('id') id: string) {
+    return this.usersService.deleteDevice(req.user.id, id);
+  }
+
+  @Post('device/register')
+  async registerDevice(@Req() req: any, @Body() body: any) {
+    return this.usersService.registerDevice(req.user.id, body);
+  }
+
+  @Get('device/status/:id')
+  async getDeviceStatus(@Req() req: any, @Param('id') id: string) {
+    return this.usersService.getDeviceStatus(req.user.id, id);
+  }
+
+  // --- Thunderbird Email Accounts Endpoints ---
+
+  @Get('emails')
+  async getEmailAccounts(@Req() req: any) {
+    return this.usersService.getEmailAccounts(req.user.username);
+  }
+
+  @Post('emails')
+  async addEmailAccount(@Req() req: any, @Body() body: any) {
+    return this.usersService.addEmailAccount(req.user.username, body);
+  }
+
+  @Put('emails/:id')
+  async updateEmailAccount(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: any,
+  ) {
+    return this.usersService.updateEmailAccount(req.user.username, id, body);
+  }
+
+  @Delete('emails/:id')
+  async deleteEmailAccount(@Req() req: any, @Param('id') id: string) {
+    return this.usersService.deleteEmailAccount(req.user.username, id);
+  }
+
+  @Public()
+  @Get(':username')
+  async findOne(@Param('username') username: string) {
+    const user = await this.usersService.findByUsername(username);
+    if (!user) {
+      throw new NotFoundException(`User with username ${username} not found`);
+    }
+    // Map connections to hide tokens, filtering out private ones
+    const safeConnections = (user as any).connections
+      ?.filter((conn: any) => !conn.private)
+      ?.map((conn: any) => ({
+        id: conn.id,
+        provider: conn.provider,
+        linkedUsername: conn.linkedUsername,
+        linkedTo: conn.linkedTo,
+        private: conn.private,
+        metadata: conn.metadata,
+      })) || [];
+
+    const privacy = parsePrivacy(user.privacy);
+
+    // Return only public fields
+    return {
+      id: user.id,
+      username: user.username,
+      displayName: user.displayName,
+      avatarUrl: user.avatarUrl,
+      bannerUrl: user.bannerUrl,
+      sidebarCardBackgroundUrl: (user as any).sidebarCardBackgroundUrl,
+      profileSettings: user.profileSettings,
+      private: privacy.profile,
+      connections: safeConnections,
+    };
   }
 }

@@ -4,24 +4,17 @@
     "type": "split",
     "children": [
       {
-        "id": "41ce1a16e287466f",
+        "id": "4a205ed7d0a2ea76",
         "type": "tabs",
         "children": [
           {
-            "id": "50b613a672eeb31f",
+            "id": "82058646d97b8be6",
             "type": "leaf",
             "state": {
-              "type": "canvas",
-              "state": {
-                "file": "api-routes.canvas",
-                "viewState": {
-                  "x": -154.49900921562914,
-                  "y": 251.57436017283675,
-                  "zoom": -0.6666666666666665
-                }
-              },
-              "icon": "lucide-layout-dashboard",
-              "title": "api-routes"
+              "type": "empty",
+              "state": {},
+              "icon": "lucide-file",
+              "title": "New tab"
             }
           }
         ]
@@ -187,9 +180,11 @@
       "bases:Create new base": false
     }
   },
-  "active": "50b613a672eeb31f",
+  "active": "82058646d97b8be6",
   "lastOpenFiles": [
-    "Untitled.md",
-    "api-routes.canvas"
+    "ADR-001-E2EE-core-design.md",
+    "E2EE-glossary.md",
+    "api-routes.canvas",
+    "Untitled.md"
   ]
 }

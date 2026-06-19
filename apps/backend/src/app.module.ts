@@ -20,6 +20,7 @@ import { MediaModule } from './modules/media/media.module';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { StatsModule } from './modules/stats/stats.module';
 import { PolarisModule } from './modules/polaris/polaris.module';
+import { NotificationModule } from './modules/notification/notification.module';
 
 @Module({
   providers: [
@@ -51,6 +52,7 @@ import { PolarisModule } from './modules/polaris/polaris.module';
     MediaModule,
     StatsModule,
     PolarisModule,
+    NotificationModule,
     ThrottlerModule.forRoot({
       throttlers: [
         {

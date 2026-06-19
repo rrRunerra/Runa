@@ -18,8 +18,10 @@ import {
   Plus,
   QrCode,
   Check,
-  AlertCircle
+  AlertCircle,
+  Badge,
 } from "lucide-react";
+import { Badge as UiBadge } from "./ui/badge";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -67,6 +69,9 @@ export const SecuritySettingsTab = forwardRef<SecuritySettingsTabRef, SecuritySe
     const [emailMfaEnabled, setEmailMfaEnabled] = useState(false);
     const [passkeys, setPasskeys] = useState<any[]>([]);
     const [hasBackupCodes, setHasBackupCodes] = useState(false);
+
+    // Devices States
+    const [devices, setDevices] = useState<any[]>([]);
 
     // TOTP setup states
     const [isTotpSetupOpen, setIsTotpSetupOpen] = useState(false);
@@ -127,39 +132,8 @@ export const SecuritySettingsTab = forwardRef<SecuritySettingsTabRef, SecuritySe
     const fetchMfaSettings = async () => {
       if (!session?.user?.username || !session?.accessToken) return;
       try {
-        // Fetch full profile info to see TOTP & Email settings
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/${session.user.username}`);
-        if (res.ok) {
-          const profileData = await res.json();
-          // Note: profile endpoint maps public fields, so we need settings.
-          // Or let's fetch passkeys and check user object.
-        }
 
-        // We can check user fields by making a PUT/GET settings fetch
-        const settingsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/${session.user.username}`);
-        // But since user/:username might filter those out for privacy, let's make sure we get them from a secure endpoint, or we map them in the profile endpoint.
-        // Wait, does user/:username return totpEnabled?
-        // Let's see: user/:username returns user details.
-        // Let's check user/:username response or if we have a dedicated user settings route.
-        // UserController.findOne(':username') returns public fields. It does not return totpEnabled or emailMfaEnabled.
-        // Let's write a settings GET endpoint or just fetch user details by ID/token!
-        // Actually, we can fetch user profile via a secure endpoint or use the token info.
-        // Let's add a secure endpoint: GET /user/mfa/status in UserController!
-        // Wait, is there an endpoint? Let's check UserController.
-        // In UserController, we don't have GET /user/mfa/status, but we can make one, or we can fetch current user settings.
-        // Let's make sure we hit GET /user/privacy or similar, or just check the token.
-        // Better yet: we can fetch from a secure endpoint `GET /user/mfa/status`!
-        // Let's check what endpoints we already have. We have `GET /user/privacy`.
-        // Let's implement `GET /user/mfa/status` on UserController:
-        // Wait! We can also add it to `findOne` or add a specific route in UserController.
-        // Let's search UserController again. It has:
-        // `GET /user/privacy`, `PUT /user/privacy`, `GET :username`, `PUT settings`, `PUT update`.
-        // Let's fetch from `GET /user/mfa/status` which we will add to UserController in NestJS!
-        // Wait, did we add it? Let's check UserController in user.controller.ts.
-        // Ah, we added:
-        // `GET mfa/passkeys`
-        // We can add `GET mfa/status` to `UserController` to return `{ totpEnabled, emailMfaEnabled, hasBackupCodes, passkeysCount }`.
-        // Let's make sure we fetch it. Let's do that!
+        
         const statusRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/mfa/status`, {
           headers: {
             Authorization: `Bearer ${session.accessToken}`,
@@ -187,9 +161,46 @@ export const SecuritySettingsTab = forwardRef<SecuritySettingsTabRef, SecuritySe
       }
     };
 
+    const fetchDevices = async () => {
+      if (!session?.accessToken) return;
+      try {
+        const devRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/devices`, {
+          headers: { Authorization: `Bearer ${session.accessToken}` },
+        });
+        if (devRes.ok) {
+          const devData = await devRes.json();
+          setDevices(devData);
+        }
+      } catch (err) {
+        console.error("Error fetching devices:", err);
+      }
+    };
+
     useEffect(() => {
       fetchMfaSettings();
+      fetchDevices();
     }, [session]);
+
+    const handleRevokeDevice = async (deviceId: string) => {
+      if (!session?.accessToken) return;
+      if (!window.confirm("Are you sure you want to revoke trust for this device? It will lose access to decrypt E2EE files and chat messages.")) return;
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/device/${deviceId}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${session.accessToken}` },
+        });
+        if (res.ok) {
+          toast.success("Device revoked successfully.");
+          fetchDevices();
+        } else {
+          throw new Error("Failed to revoke device");
+        }
+      } catch (err: any) {
+        toast.error(err.message || "Revoke failed.");
+      }
+    };
+
+
 
     // QR code is drawn directly via the qrCanvasRef callback ref
 
@@ -806,6 +817,54 @@ export const SecuritySettingsTab = forwardRef<SecuritySettingsTabRef, SecuritySe
             </div>
           </div>
         )}
+
+        {/* Device Management Section */}
+        <div className="space-y-4 pt-4 border-t border-zinc-800/40">
+          <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+            Connected Devices
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {devices.map((device) => (
+              <div
+                key={device.id}
+                className="p-4 rounded-2xl border border-zinc-800/40 bg-zinc-950/20 flex items-center justify-between gap-3"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10 border border-primary/20 text-primary shrink-0">
+                    <Smartphone className="size-4.5" />
+                  </div>
+                  <div className="space-y-0.5 text-left min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-foreground truncate">
+                        {device.deviceName}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-muted-foreground block truncate max-w-[200px]">
+                      {device.userAgent || "Unknown User Agent"}
+                    </span>
+                    <span className="text-[9px] text-muted-foreground/60 block">
+                      Last Active: {new Date(device.lastActiveAt).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+                <Button
+                  onClick={() => handleRevokeDevice(device.id)}
+                  variant="ghost"
+                  className="h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 cursor-pointer shrink-0"
+                >
+                  <Trash className="size-4" />
+                </Button>
+              </div>
+            ))}
+            {devices.length === 0 && (
+              <div className="col-span-full p-6 text-center rounded-2xl border border-dashed border-zinc-800 text-xs text-muted-foreground">
+                No registered devices found.
+              </div>
+            )}
+          </div>
+        </div>
+
+
 
         {/* ── Setup Authenticator app Dialog ── */}
         <Dialog open={isTotpSetupOpen} onOpenChange={setIsTotpSetupOpen}>

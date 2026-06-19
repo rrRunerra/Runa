@@ -11,6 +11,7 @@ import {
   Settings,
   LayoutGrid,
   Bookmark,
+  Bell,
 } from "lucide-react";
 import Link from "next/link";
 import { cn, getSafeImageUrl } from "@/lib/utils";
@@ -44,6 +45,8 @@ import {
   SidebarGroupLabel,
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { NotificationsModal } from "./NotificationsModal";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -110,6 +113,8 @@ export default function AppSideBar({
   const [activeApp, setActiveApp] = useState(apps[0]);
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
   const [bookmarkName, setBookmarkName] = useState("");
   const [bookmarkIcon, setBookmarkIcon] = useState("");
@@ -478,12 +483,19 @@ export default function AppSideBar({
                       </>
                     )}
                     
-                    <Avatar className="h-9 w-9 border border-zinc-800/60 shadow-sm shrink-0 z-10">
-                      <AvatarImage src={session.user?.avatarUrl ? getSafeImageUrl(session.user.avatarUrl) : ""} />
-                      <AvatarFallback className="rounded-md bg-primary/10 text-primary z-10">
-                        {session.user?.username?.charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                    <div className="relative shrink-0 z-10">
+                      <Avatar className="h-9 w-9 border border-zinc-800/60 shadow-sm">
+                        <AvatarImage src={session.user?.avatarUrl ? getSafeImageUrl(session.user.avatarUrl) : ""} />
+                        <AvatarFallback className="rounded-md bg-primary/10 text-primary">
+                          {session.user?.username?.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[8px] font-bold text-primary-foreground border border-zinc-950">
+                          {unreadCount}
+                        </span>
+                      )}
+                    </div>
                     <div className="grid flex-1 text-left text-sm leading-tight ml-1.5 z-10">
                       <span className={cn(
                         "truncate font-semibold",
@@ -559,6 +571,21 @@ export default function AppSideBar({
                   <DropdownMenuSeparator className="bg-zinc-800/40 my-1.5" />
 
                   <DropdownMenuGroup className="space-y-0.5">
+                    <DropdownMenuItem
+                      className="cursor-pointer gap-2.5 px-3 py-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-zinc-800/50 rounded-xl transition-all duration-200"
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        setIsNotificationsOpen(true);
+                      }}
+                    >
+                      <Bell className="size-4 text-primary/80" />
+                      Notifications
+                      {unreadCount > 0 && (
+                        <Badge className="ml-auto h-4 px-1 bg-primary text-primary-foreground text-[8px] font-bold rounded-full flex items-center justify-center min-w-4">
+                          {unreadCount}
+                        </Badge>
+                      )}
+                    </DropdownMenuItem>
                     <DropdownMenuItem
                       className="cursor-pointer gap-2.5 px-3 py-2.5 text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-zinc-800/50 rounded-xl transition-all duration-200"
                       onSelect={(e) => {
@@ -639,6 +666,11 @@ export default function AppSideBar({
         initialRedirect={pathname}
         initialName={bookmarkName}
         initialIcon={bookmarkIcon}
+      />
+      <NotificationsModal
+        open={isNotificationsOpen}
+        onOpenChange={setIsNotificationsOpen}
+        onUnreadCountChange={setUnreadCount}
       />
     </Sidebar>
     {isMobile && (

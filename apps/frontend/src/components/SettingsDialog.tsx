@@ -2,7 +2,7 @@
 
 import type React from "react";
 import { useState, useRef, useEffect } from "react";
-import { User, LinkIcon, Lock, Smartphone, ShieldCheck } from "lucide-react";
+import { User, LinkIcon, Lock, Smartphone, ShieldCheck, Mail } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Dialog,
@@ -17,12 +17,14 @@ import { ConnectionsTab } from "./ConnectionsTab";
 import { PrivacySettingsTab } from "./PrivacySettingsTab";
 import { SidebarSettingsTab } from "./SidebarSettingsTab";
 import { SecuritySettingsTab } from "./SecuritySettingsTab";
+import { MailSettingsTab } from "./MailSettingsTab";
 import type { AccountSettingsTabRef } from "./AccountSettingsTab";
 import type { PrivacySettingsTabRef } from "./PrivacySettingsTab";
 import type { SidebarSettingsTabRef } from "./SidebarSettingsTab";
 import type { SecuritySettingsTabRef } from "./SecuritySettingsTab";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { NavbarConfig } from "@/components/Providers/NavigationProvider";
+import { usePathname } from "next/navigation";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -30,7 +32,7 @@ interface SettingsDialogProps {
   navConfig?: NavbarConfig;
 }
 
-type Category = "account" | "connections" | "privacy" | "sidebar" | "security";
+type Category = "account" | "connections" | "privacy" | "sidebar" | "security" | "mailAccounts";
 
 export function SettingsDialog({
   open,
@@ -44,6 +46,8 @@ export function SettingsDialog({
   const privacyTabRef = useRef<PrivacySettingsTabRef>(null);
   const sidebarTabRef = useRef<SidebarSettingsTabRef>(null);
   const isMobile = useIsMobile();
+  const pathname = usePathname();
+  const isPegasus = pathname.startsWith("/pegasus");
 
   useEffect(() => {
     if (open) {
@@ -139,6 +143,39 @@ export function SettingsDialog({
               Security
             </span>
           </button>
+
+          {/* Mail Accounts Settings Tab Button */}
+          {isPegasus && (
+            <button
+              type="button"
+              onClick={() => setActiveCategory("mailAccounts")}
+              className={`relative flex items-center gap-3 px-3.5 py-2.5 text-sm font-semibold rounded-xl transition-colors duration-200 whitespace-nowrap outline-hidden cursor-pointer ${
+                activeCategory === "mailAccounts"
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {activeCategory === "mailAccounts" && (
+                <>
+                  <motion.div
+                    layoutId="activeSettingsIndicator"
+                    className="absolute left-0 top-2 bottom-2 w-1 bg-primary rounded-r-md"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                  />
+                  <motion.div
+                    layoutId="activeSettingsHighlight"
+                    className="absolute inset-0 bg-primary/5 rounded-xl border border-primary/10"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    style={{ pointerEvents: "none" }}
+                  />
+                </>
+              )}
+              <span className="relative z-10 flex items-center gap-2.5">
+                <Mail className="size-4" />
+                Mail Accounts
+              </span>
+            </button>
+          )}
 
           {/* Connections Settings Tab Button */}
           <button
@@ -245,6 +282,7 @@ export function SettingsDialog({
               {activeCategory === "connections" && <LinkIcon className="size-5" />}
               {activeCategory === "privacy" && <Lock className="size-5" />}
               {activeCategory === "sidebar" && <Smartphone className="size-5" />}
+              {activeCategory === "mailAccounts" && <Mail className="size-5" />}
             </div>
             <div className="space-y-0.5">
               <DialogTitle className="text-base sm:text-lg font-bold text-foreground">
@@ -256,7 +294,9 @@ export function SettingsDialog({
                       ? "Connections & Apps"
                       : activeCategory === "privacy"
                         ? "Privacy Preferences"
-                        : "Sidebar Customizer"}
+                        : activeCategory === "sidebar"
+                          ? "Sidebar Customizer"
+                          : "Mail Accounts"}
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
                 {activeCategory === "account"
@@ -267,7 +307,9 @@ export function SettingsDialog({
                       ? "Link and authorize third-party services and APIs to fetch tracker data automatically."
                       : activeCategory === "privacy"
                         ? "Configure who is allowed to view your profile statistics, logs, and tracking lists."
-                        : "Arrange and sort the shortcut options available on your mobile phone dashboard view."}
+                        : activeCategory === "sidebar"
+                          ? "Arrange and sort the shortcut options available on your mobile phone dashboard view."
+                          : "Configure your linked email IMAP/SMTP accounts and identity configurations."}
               </DialogDescription>
             </div>
           </DialogHeader>
@@ -315,6 +357,7 @@ export function SettingsDialog({
                     navConfig={navConfig}
                   />
                 )}
+                {activeCategory === "mailAccounts" && <MailSettingsTab />}
               </motion.div>
             </AnimatePresence>
           </div>

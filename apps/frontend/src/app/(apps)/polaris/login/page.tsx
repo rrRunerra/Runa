@@ -65,7 +65,6 @@ export default function Page() {
     }));
     setStars(generatedStars);
   }, []);
-
   const handleRedirect = () => {
     const callbackUrl = new URLSearchParams(window.location.search).get("callbackUrl");
     let safeRedirect = "/polaris/dash";
@@ -85,6 +84,84 @@ export default function Page() {
       }
     }
     router.push(safeRedirect);
+  };
+
+  const registerDeviceOnLogin = async (accessToken: string): Promise<void> => {
+    const existingDeviceId = localStorage.getItem("runa_device_id");
+    if (existingDeviceId) return;
+
+    try {
+      const { generateKeyPair, exportPublicKey } = await import("@/lib/crypto");
+
+      // Generate Identity Key
+      const identityKeys = await generateKeyPair();
+      const identityPublicKey = await exportPublicKey(identityKeys.publicKey);
+      const identityPrivateKeyJwk = await window.crypto.subtle.exportKey("jwk", identityKeys.privateKey);
+
+      // Generate Signed PreKey
+      const signedPreKeys = await generateKeyPair();
+      const signedPrePublicKey = await exportPublicKey(signedPreKeys.publicKey);
+      const signedPrePrivateKeyJwk = await window.crypto.subtle.exportKey("jwk", signedPreKeys.privateKey);
+
+      // Generate 5 One-time PreKeys
+      const preKeysPublic: string[] = [];
+      const preKeysPrivateJwks: Record<string, unknown> = {};
+      for (let i = 0; i < 5; i++) {
+        const preKeys = await generateKeyPair();
+        const preKeyPublic = await exportPublicKey(preKeys.publicKey);
+        preKeysPublic.push(preKeyPublic);
+        
+        const preKeyPrivateJwk = await window.crypto.subtle.exportKey("jwk", preKeys.privateKey);
+        preKeysPrivateJwks[preKeyPublic] = preKeyPrivateJwk;
+      }
+
+      // Deduce device name
+      const userAgent = navigator.userAgent;
+      let deviceType = "Unknown Device";
+      if (/Windows/i.test(userAgent)) deviceType = "Windows Device";
+      else if (/Macintosh|Mac OS/i.test(userAgent)) deviceType = "Mac Device";
+      else if (/Linux/i.test(userAgent)) deviceType = "Linux Device";
+      else if (/Android/i.test(userAgent)) deviceType = "Android Device";
+      else if (/iPhone|iPad|iPod/i.test(userAgent)) deviceType = "iOS Device";
+
+      let browserName = "Browser";
+      if (/Chrome/i.test(userAgent) && !/Edge|Edg/i.test(userAgent)) browserName = "Chrome";
+      else if (/Safari/i.test(userAgent) && !/Chrome/i.test(userAgent)) browserName = "Safari";
+      else if (/Firefox/i.test(userAgent)) browserName = "Firefox";
+      else if (/Edge|Edg/i.test(userAgent)) browserName = "Edge";
+
+      const deviceName = `${deviceType} (${browserName})`;
+
+      // Call register API
+      const registerRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/device/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          deviceName,
+          userAgent,
+          identityKey: identityPublicKey,
+          signedPreKey: signedPrePublicKey,
+          preKeys: preKeysPublic,
+        }),
+      });
+
+      if (!registerRes.ok) {
+        throw new Error("Failed to register device on server");
+      }
+
+      const deviceData = await registerRes.json();
+      
+      // Save to localStorage
+      localStorage.setItem("runa_device_id", deviceData.id);
+      localStorage.setItem("runa_identity_private_key", JSON.stringify(identityPrivateKeyJwk));
+      localStorage.setItem("runa_signed_prekey_private_key", JSON.stringify(signedPrePrivateKeyJwk));
+      localStorage.setItem("runa_prekeys_private_keys", JSON.stringify(preKeysPrivateJwks));
+    } catch (err) {
+      console.error("Device registration failed:", err);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -155,6 +232,13 @@ export default function Page() {
       if (res?.error) {
         throw new Error("Credentials login failed. Please try again.");
       } else if (res?.ok) {
+        const sessionRes = await fetch("/api/auth/session");
+        if (sessionRes.ok) {
+          const sessionData = await sessionRes.json();
+          if (sessionData?.accessToken) {
+            await registerDeviceOnLogin(sessionData.accessToken);
+          }
+        }
         handleRedirect();
       }
     } catch (err: any) {
@@ -254,7 +338,7 @@ export default function Page() {
     }
   };
 
-  const completeLoginWithSuccessToken = async (successToken: string) => {
+  const completeLoginWithSuccessToken = async (successToken: string): Promise<void> => {
     const res = await signIn("credentials", {
       redirect: false,
       identifier: identifier.trim().toLowerCase(),
@@ -265,6 +349,13 @@ export default function Page() {
       setMessage("❌ Session establishment failed.");
       setLoading(false);
     } else if (res?.ok) {
+      const sessionRes = await fetch("/api/auth/session");
+      if (sessionRes.ok) {
+        const sessionData = await sessionRes.json();
+        if (sessionData?.accessToken) {
+          await registerDeviceOnLogin(sessionData.accessToken);
+        }
+      }
       handleRedirect();
     }
   };
@@ -300,6 +391,13 @@ export default function Page() {
       if (res?.error) {
         setMessage("❌ Passkey login failed. Check credentials.");
       } else if (res?.ok) {
+        const sessionRes = await fetch("/api/auth/session");
+        if (sessionRes.ok) {
+          const sessionData = await sessionRes.json();
+          if (sessionData?.accessToken) {
+            await registerDeviceOnLogin(sessionData.accessToken);
+          }
+        }
         handleRedirect();
       }
     } catch (err: any) {

@@ -33,6 +33,9 @@ model User {
     bookList             AquilaBookUserList[]
     userStats            UserStats[]
     polarisBookmarks     PolarisUserBookMarks[]
+    emailAccounts        UserEmailAccount[]
+    devices              Device[]
+    notifications        Notification[]
 
     // MFA Configuration Fields
     totpSecret           String?
@@ -743,5 +746,81 @@ model PolarisUserBookMarks {
     user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@index([userId])
+}
+
+model UserEmailAccount {
+    id                String   @id @default(nanoid())
+    username          String
+    accountName       String
+    color             String   @default("#8B00FF")
+    senderName        String
+    emailAddress      String
+    replyToAddress    String?
+    organization      String?
+    signatureText     String?
+    useHtmlSignature  Boolean  @default(false)
+    encryptedPassword String
+    encryptionIv      String
+    imapHost          String
+    imapPort          Int
+    imapSecure        Boolean
+    smtpHost          String
+    smtpPort          Int
+    smtpSecure        Boolean
+    createdAt         DateTime @default(now())
+    updatedAt         DateTime @updatedAt
+    user              User     @relation(fields: [username], references: [username], onDelete: Cascade)
+
+    @@index([username])
+}
+
+model Device {
+    id                 String   @id @default(nanoid())
+    userId             String
+    deviceName         String
+    userAgent          String?
+    lastActiveAt       DateTime @default(now())
+    identityKey        String
+    signedPreKey       String
+    encryptedMasterKey String?
+    user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    preKeys            PreKey[]
+
+    @@index([userId])
+}
+
+model PreKey {
+    id       String @id @default(nanoid())
+    deviceId String
+    key      String
+    device   Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+    @@index([deviceId])
+}
+
+model Notification {
+    id        String             @id @default(nanoid())
+    userId    String
+    title     String
+    message   String
+    type      NotificationType   @default(INFO)
+    status    NotificationStatus @default(PENDING)
+    metadata  Json?              @db.Json
+    createdAt DateTime           @default(now())
+    user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([userId])
+}
+
+enum NotificationType {
+    INFO
+    INTERACTIVE
+}
+
+enum NotificationStatus {
+    PENDING
+    APPROVED
+    DENIED
+    READ
 }
 

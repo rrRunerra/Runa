@@ -694,4 +694,223 @@ export class UserService {
       passkeysCount: user.passkeys.length,
     };
   }
+
+  // --- Device Management Methods ---
+
+  async getDevices(userId: string) {
+    return await this.prisma.client.device.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        deviceName: true,
+        userAgent: true,
+        lastActiveAt: true,
+        identityKey: true,
+        signedPreKey: true,
+        encryptedMasterKey: true,
+      },
+    });
+  }
+
+  async deleteDevice(userId: string, deviceId: string) {
+    const device = await this.prisma.client.device.findFirst({
+      where: { id: deviceId, userId },
+    });
+    if (!device) throw new NotFoundException('Device not found');
+
+    await this.prisma.client.device.delete({
+      where: { id: deviceId },
+    });
+
+    return { success: true };
+  }
+
+  async registerDevice(userId: string, data: { deviceName: string; userAgent?: string; identityKey: string; signedPreKey: string; preKeys?: string[] }) {
+    const existing = await this.prisma.client.device.findFirst({
+      where: { identityKey: data.identityKey, userId },
+    });
+
+    if (existing) {
+      const updated = await this.prisma.client.device.update({
+        where: { id: existing.id },
+        data: {
+          deviceName: data.deviceName,
+          userAgent: data.userAgent || null,
+          lastActiveAt: new Date(),
+          signedPreKey: data.signedPreKey,
+        },
+      });
+      return updated;
+    }
+
+    const device = await this.prisma.client.device.create({
+      data: {
+        userId,
+        deviceName: data.deviceName,
+        userAgent: data.userAgent || null,
+        identityKey: data.identityKey,
+        signedPreKey: data.signedPreKey,
+      },
+    });
+
+    if (data.preKeys && data.preKeys.length > 0) {
+      await this.prisma.client.preKey.createMany({
+        data: data.preKeys.map(key => ({
+          deviceId: device.id,
+          key,
+        })),
+      });
+    }
+
+    const otherDevices = await this.prisma.client.device.findMany({
+      where: { userId, id: { not: device.id } },
+    });
+
+    if (otherDevices.length > 0) {
+      await this.prisma.client.notification.create({
+        data: {
+          userId,
+          title: 'New Device Link Request',
+          message: `A new device "${data.deviceName}" wants to link to your account.`,
+          type: 'INTERACTIVE',
+          status: 'PENDING',
+          metadata: {
+            deviceId: device.id,
+            deviceName: data.deviceName,
+            publicKey: data.identityKey,
+          } as any,
+        },
+      });
+    }
+
+    return device;
+  }
+
+  async getDeviceStatus(userId: string, deviceId: string) {
+    const device = await this.prisma.client.device.findFirst({
+      where: { id: deviceId, userId },
+      select: {
+        id: true,
+        encryptedMasterKey: true,
+      },
+    });
+    if (!device) throw new NotFoundException('Device not found');
+    return {
+      id: device.id,
+      approved: device.encryptedMasterKey !== null,
+      encryptedMasterKey: device.encryptedMasterKey,
+    };
+  }
+
+  // --- Thunderbird Email Accounts Management Methods ---
+
+  async getEmailAccounts(username: string) {
+    const list = await this.prisma.client.userEmailAccount.findMany({
+      where: { username },
+      orderBy: { createdAt: 'asc' },
+    });
+
+    return list.map(account => {
+      let decryptedPassword = '';
+      try {
+        decryptedPassword = decrypt(account.encryptedPassword);
+      } catch (e) {
+        decryptedPassword = 'Decryption failed';
+      }
+
+      return {
+        id: account.id,
+        accountName: account.accountName,
+        color: account.color,
+        senderName: account.senderName,
+        emailAddress: account.emailAddress,
+        replyToAddress: account.replyToAddress,
+        organization: account.organization,
+        signatureText: account.signatureText,
+        useHtmlSignature: account.useHtmlSignature,
+        imapHost: account.imapHost,
+        imapPort: account.imapPort,
+        imapSecure: account.imapSecure,
+        smtpHost: account.smtpHost,
+        smtpPort: account.smtpPort,
+        smtpSecure: account.smtpSecure,
+        password: decryptedPassword,
+      };
+    });
+  }
+
+  async addEmailAccount(username: string, data: any) {
+    const encryptedPassword = encrypt(data.password);
+    const iv = encryptedPassword.split(':')[0];
+
+    return await this.prisma.client.userEmailAccount.create({
+      data: {
+        username,
+        accountName: data.accountName,
+        color: data.color || '#8B00FF',
+        senderName: data.senderName,
+        emailAddress: data.emailAddress,
+        replyToAddress: data.replyToAddress || null,
+        organization: data.organization || null,
+        signatureText: data.signatureText || null,
+        useHtmlSignature: data.useHtmlSignature === true,
+        imapHost: data.imapHost,
+        imapPort: parseInt(data.imapPort, 10),
+        imapSecure: data.imapSecure === true,
+        smtpHost: data.smtpHost,
+        smtpPort: parseInt(data.smtpPort, 10),
+        smtpSecure: data.smtpSecure === true,
+        encryptedPassword,
+        encryptionIv: iv,
+      },
+    });
+  }
+
+  async updateEmailAccount(username: string, accountId: string, data: any) {
+    const account = await this.prisma.client.userEmailAccount.findFirst({
+      where: { id: accountId, username },
+    });
+    if (!account) throw new NotFoundException('Email account not found');
+
+    const updateData: any = {
+      accountName: data.accountName,
+      color: data.color,
+      senderName: data.senderName,
+      emailAddress: data.emailAddress,
+      replyToAddress: data.replyToAddress || null,
+      organization: data.organization || null,
+      signatureText: data.signatureText || null,
+      useHtmlSignature: data.useHtmlSignature === true,
+      imapHost: data.imapHost,
+      imapPort: parseInt(data.imapPort, 10),
+      imapSecure: data.imapSecure === true,
+      smtpHost: data.smtpHost,
+      smtpPort: parseInt(data.smtpPort, 10),
+      smtpSecure: data.smtpSecure === true,
+    };
+
+    if (data.password) {
+      const encrypted = encrypt(data.password);
+      updateData.encryptedPassword = encrypted;
+      updateData.encryptionIv = encrypted.split(':')[0];
+    }
+
+    return await this.prisma.client.userEmailAccount.update({
+      where: { id: accountId },
+      data: updateData,
+    });
+  }
+
+  async deleteEmailAccount(username: string, accountId: string) {
+    const account = await this.prisma.client.userEmailAccount.findFirst({
+      where: { id: accountId, username },
+    });
+    if (!account) throw new NotFoundException('Email account not found');
+
+    await this.prisma.client.userEmailAccount.delete({
+      where: { id: accountId },
+    });
+
+    return { success: true };
+  }
 }
