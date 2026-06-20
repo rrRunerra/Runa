@@ -755,6 +755,7 @@ model UserEmailAccount {
     color             String   @default("#8B00FF")
     senderName        String
     emailAddress      String
+    loginEmail        String?
     replyToAddress    String?
     organization      String?
     signatureText     String?
@@ -770,8 +771,47 @@ model UserEmailAccount {
     createdAt         DateTime @default(now())
     updatedAt         DateTime @updatedAt
     user              User     @relation(fields: [username], references: [username], onDelete: Cascade)
+    emailMessages     EmailMessage[]
 
     @@index([username])
+}
+
+model EmailMessage {
+    id                 String            @id @default(nanoid())
+    userEmailAccountId String
+    uid                Int
+    messageId          String?
+    subject            String?
+    from               String?
+    to                 String?
+    cc                 String?
+    bcc                String?
+    date               DateTime?
+    bodyText           String?
+    bodyHtml           String?
+    read               Boolean           @default(false)
+    flagged            Boolean           @default(false)
+    folder             String
+    createdAt          DateTime          @default(now())
+    updatedAt          DateTime          @updatedAt
+    emailAccount       UserEmailAccount  @relation(fields: [userEmailAccountId], references: [id], onDelete: Cascade)
+    attachments        EmailAttachment[]
+
+    @@unique([userEmailAccountId, folder, uid])
+    @@index([userEmailAccountId])
+}
+
+model EmailAttachment {
+    id             String       @id @default(nanoid())
+    emailMessageId String
+    filename       String
+    contentType    String
+    size           Int
+    content        Bytes
+    createdAt      DateTime     @default(now())
+    emailMessage   EmailMessage @relation(fields: [emailMessageId], references: [id], onDelete: Cascade)
+
+    @@index([emailMessageId])
 }
 
 model Device {

@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { EmailAccountModule } from './modules/email-account/email-account.module';
 import { PrismaModule } from './providers/database/prisma.module';
 import { CacheModule } from './providers/cache/cache.module';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
@@ -27,7 +28,7 @@ import { NotificationModule } from './modules/notification/notification.module';
     {
        provide: APP_GUARD,
        useClass: ThrottlerGuard
-    },
+     },
     {
        provide: APP_INTERCEPTOR,
        useClass: LoggingInterceptor
@@ -36,6 +37,7 @@ import { NotificationModule } from './modules/notification/notification.module';
   imports: [
     UserModule,
     AuthModule,
+    EmailAccountModule,
     PrismaModule,
     CacheModule,
     AnimeModule,

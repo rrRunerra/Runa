@@ -59,7 +59,7 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
   /**
    * Broadcasts a notification to all active connections of a specific user.
    */
-  sendToUser(userId: string, event: string, payload: Notification): void {
+  sendToUser(userId: string, event: string, payload: any): void {
     this.server.to(userId).emit(event, payload);
   }
 

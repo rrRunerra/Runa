@@ -41,5 +41,107 @@ export const REFERENCE_CONSTELLATIONS: Constellation[] = [
     connections: [
       [0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 9], [9, 10]
     ]
-  }
+  },
+  {
+  name: "Pegasus",
+  description: "Email client",
+  redirect: "/pegasus",
+  id: "pegasus",
+  stars: [
+    {
+      ra: -3.28,
+      dec: 96.14,
+      magnitude: 3.0,
+      name: "Star 0",
+    },
+    {
+      ra: -3.44,
+      dec: 95.74,
+      magnitude: 3.0,
+      name: "Star 1",
+    },
+    {
+      ra: -3.70,
+      dec: 95.07,
+      magnitude: 3.0,
+      name: "Star 2",
+    },
+    {
+      ra: -3.74,
+      dec: 95.60,
+      magnitude: 3.0,
+      name: "Star 3",
+    },
+    {
+      ra: -3.83,
+      dec: 97.14,
+      magnitude: 3.0,
+      name: "Star 4",
+    },
+    {
+      ra: -3.68,
+      dec: 98.10,
+      magnitude: 3.0,
+      name: "Star 5",
+    },
+    {
+      ra: -3.47,
+      dec: 99.30,
+      magnitude: 3.0,
+      name: "Star 6",
+    },
+    {
+      ra: -4.25,
+      dec: 98.20,
+      magnitude: 3.0,
+      name: "Star 7",
+    },
+    {
+      ra: -4.35,
+      dec: 91.90,
+      magnitude: 3.0,
+      name: "Star 8",
+    },
+    {
+      ra: -3.84,
+      dec: 91.27,
+      magnitude: 3.0,
+      name: "Star 9",
+    },
+    {
+      ra: -3.68,
+      dec: 89.30,
+      magnitude: 3.0,
+      name: "Star 10",
+    },
+    {
+      ra: -3.45,
+      dec: 87.30,
+      magnitude: 3.0,
+      name: "Star 11",
+    },
+    {
+      ra: -3.25,
+      dec: 88.94,
+      magnitude: 3.0,
+      name: "Star 12",
+    },
+  ],
+  connections: [
+    [0, 1],
+    [1, 2],
+    [2, 3],
+    [3, 4],
+    [4, 5],
+    [5, 6],
+    [6, 4],
+    [4, 7],
+    [7, 8],
+    [8, 9],
+    [9, 4],
+    [9, 10],
+    [10, 11],
+    [11, 12],
+  ],
+}
 ];

@@ -5,6 +5,7 @@ import {
   Edit,
   FileText,
   Inbox,
+  Mail,
   Send,
   ShieldAlert,
   Trash,
@@ -13,7 +14,7 @@ import type { NavbarConfig } from "@/components/Providers/NavigationProvider";
 
 export const getPegasusSidebarConfig = (
   session: any,
-  emailAccounts: any[] = []
+  emailAccounts: any[] = [],
 ): NavbarConfig => {
   const configs: NavbarConfig = [
     {
@@ -26,7 +27,6 @@ export const getPegasusSidebarConfig = (
           subtitle: "Compose mail",
           position: 1,
         },
-        
       ],
     },
     {
@@ -40,58 +40,82 @@ export const getPegasusSidebarConfig = (
         },
       ],
     },
+    {
+      section: "Accounts",
+      items: emailAccounts.map((account) => {
+        return {
+          label: account.accountName,
+          href: `/pegasus/account/${account.id}`,
+          icon: <Mail className="h-4 w-4" style={{ color: account.color }} />,
+          subtitle: account.emailAddress,
+          children: [
+            {
+              label: "Inbox",
+              href: `/pegasus/account/${account.id}/inbox`,
+              icon: (
+                <Inbox className="h-4 w-4" style={{ color: account.color }} />
+              ),
+              subtitle: "Incoming mail",
+            },
+            {
+              label: "Drafts",
+              href: `/pegasus/account/${account.id}/drafts`,
+              icon: (
+                <FileText
+                  className="h-4 w-4"
+                  style={{ color: account.color }}
+                />
+              ),
+              subtitle: "Drafts",
+            },
+            {
+              label: "Sent",
+              href: `/pegasus/account/${account.id}/sent`,
+              icon: (
+                <Send className="h-4 w-4" style={{ color: account.color }} />
+              ),
+              subtitle: "Sent mail",
+            },
+            {
+              label: "Outbox",
+              href: `/pegasus/account/${account.id}/outbox`,
+              icon: (
+                <Send className="h-4 w-4" style={{ color: account.color }} />
+              ),
+              subtitle: "Outbox",
+            },
+            {
+              label: "Archive",
+              href: `/pegasus/account/${account.id}/archive`,
+              icon: (
+                <Archive className="h-4 w-4" style={{ color: account.color }} />
+              ),
+              subtitle: "Archive",
+            },
+            {
+              label: "Junk",
+              href: `/pegasus/account/${account.id}/junk`,
+              icon: (
+                <ShieldAlert
+                  className="h-4 w-4"
+                  style={{ color: account.color }}
+                />
+              ),
+              subtitle: "Spam",
+            },
+            {
+              label: "Trash",
+              href: `/pegasus/account/${account.id}/trash`,
+              icon: (
+                <Trash className="h-4 w-4" style={{ color: account.color }} />
+              ),
+              subtitle: "Trash",
+            },
+          ],
+        };
+      }),
+    },
   ];
-
-  // Add a section for each email account with children folders
-  emailAccounts.forEach((account) => {
-    configs.push({
-      section: account.accountName,
-      items: [
-        {
-          label: "Inbox",
-          href: `/pegasus/account/${account.id}/inbox`,
-          icon: <Inbox className="h-4 w-4" style={{ color: account.color }} />,
-          subtitle: "Incoming mail",
-        },
-        {
-          label: "Drafts",
-          href: `/pegasus/account/${account.id}/drafts`,
-          icon: <FileText className="h-4 w-4" style={{ color: account.color }} />,
-          subtitle: "Drafts",
-        },
-        {
-          label: "Sent",
-          href: `/pegasus/account/${account.id}/sent`,
-          icon: <Send className="h-4 w-4" style={{ color: account.color }} />,
-          subtitle: "Sent mail",
-        },
-        {
-          label: "Outbox",
-          href: `/pegasus/account/${account.id}/outbox`,
-          icon: <Send className="h-4 w-4" style={{ color: account.color }} />,
-          subtitle: "Outbox",
-        },
-        {
-          label: "Archive",
-          href: `/pegasus/account/${account.id}/archive`,
-          icon: <Archive className="h-4 w-4" style={{ color: account.color }} />,
-          subtitle: "Archive",
-        },
-        {
-          label: "Junk",
-          href: `/pegasus/account/${account.id}/junk`,
-          icon: <ShieldAlert className="h-4 w-4" style={{ color: account.color }} />,
-          subtitle: "Spam",
-        },
-        {
-          label: "Trash",
-          href: `/pegasus/account/${account.id}/trash`,
-          icon: <Trash className="h-4 w-4" style={{ color: account.color }} />,
-          subtitle: "Trash",
-        },
-      ],
-    });
-  });
 
   return configs;
 };

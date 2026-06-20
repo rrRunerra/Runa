@@ -144,32 +144,6 @@ export class UserController {
     return this.usersService.getDeviceStatus(req.user.id, id);
   }
 
-  // --- Thunderbird Email Accounts Endpoints ---
-
-  @Get('emails')
-  async getEmailAccounts(@Req() req: any) {
-    return this.usersService.getEmailAccounts(req.user.username);
-  }
-
-  @Post('emails')
-  async addEmailAccount(@Req() req: any, @Body() body: any) {
-    return this.usersService.addEmailAccount(req.user.username, body);
-  }
-
-  @Put('emails/:id')
-  async updateEmailAccount(
-    @Req() req: any,
-    @Param('id') id: string,
-    @Body() body: any,
-  ) {
-    return this.usersService.updateEmailAccount(req.user.username, id, body);
-  }
-
-  @Delete('emails/:id')
-  async deleteEmailAccount(@Req() req: any, @Param('id') id: string) {
-    return this.usersService.deleteEmailAccount(req.user.username, id);
-  }
-
   @Public()
   @Get(':username')
   async findOne(@Param('username') username: string) {

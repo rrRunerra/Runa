@@ -44,4 +44,4 @@ ENV PORT=4000
 
 EXPOSE 4000
 
-CMD ["pnpm", "--filter", "backend", "start:prod"]
+CMD ["node", "apps/backend/dist/main.js"]

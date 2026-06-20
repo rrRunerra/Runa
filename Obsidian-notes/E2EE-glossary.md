@@ -69,6 +69,12 @@ The process of splitting large files (>50MB) into smaller segments (chunks) prio
 ### Hash Fragment Decryption
 A zero-knowledge link sharing technique. The encryption key for a shared file is appended to the share link after the `#` character. Because browsers do not transmit the URL fragment to the server, visitors can load the client-side decryption app, download the encrypted file blob, and decrypt it locally without the server ever seeing the key.
 
+### Background Email Synchronization
+A scheduled background service in Runa that periodically connects to remote IMAP mail servers to fetch new email messages and sync changes (such as flag modifications or deletions) into the local database cache.
+
+### Full Local Cache (Mail)
+An archiving strategy where Runa downloads and stores all email envelope fields, message text/HTML bodies, and attachments in its local database. This guarantees that messages remain preserved and readable offline in Pegasus, even if they are deleted or purged from the remote email provider.
+
 ---
 
 ## 4. Notifications Engine

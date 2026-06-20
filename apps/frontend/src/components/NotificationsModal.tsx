@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import { toast } from "sonner";
 import {
@@ -43,6 +44,7 @@ export function NotificationsModal({
   onUnreadCountChange,
 }: NotificationsModalProps) {
   const { data: session } = useSession();
+  const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [passwords, setPasswords] = useState<Record<string, string>>({});
@@ -97,7 +99,20 @@ export function NotificationsModal({
 
     socket.on("notification:created", (newNotification: Notification) => {
       setNotifications((prev) => [newNotification, ...prev]);
-      toast.info(`New Notification: ${newNotification.title}`);
+      const meta = newNotification.metadata as any;
+      if (meta && meta.type === "email") {
+        toast.info(`New Email: ${newNotification.title}`, {
+          description: newNotification.message,
+          action: {
+            label: "Open",
+            onClick: () => {
+              router.push(`/pegasus/account/${meta.emailAccountId}/${meta.emailFolder}?messageId=${meta.emailMessageId}`);
+            },
+          },
+        });
+      } else {
+        toast.info(`New Notification: ${newNotification.title}`);
+      }
     });
 
     socket.on("notification:updated", (updatedNotification: Notification) => {
@@ -263,7 +278,19 @@ export function NotificationsModal({
                 return (
                   <div
                     key={n.id}
-                    className="p-4 rounded-xl border border-zinc-800/50 bg-zinc-900/10 hover:bg-zinc-900/35 transition-all duration-200 flex flex-col gap-3 relative overflow-hidden"
+                    onClick={() => {
+                      const meta = n.metadata as any;
+                      if (meta && meta.type === "email") {
+                        onOpenChange(false);
+                        router.push(`/pegasus/account/${meta.emailAccountId}/${meta.emailFolder}?messageId=${meta.emailMessageId}`);
+                        handleDismiss(n.id);
+                      }
+                    }}
+                    className={`p-4 rounded-xl border border-zinc-800/50 bg-zinc-900/10 hover:bg-zinc-900/35 transition-all duration-200 flex flex-col gap-3 relative overflow-hidden ${
+                      n.metadata && (n.metadata as any).type === "email"
+                        ? "cursor-pointer hover:border-zinc-700 hover:bg-zinc-900/30"
+                        : ""
+                    }`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex gap-3">

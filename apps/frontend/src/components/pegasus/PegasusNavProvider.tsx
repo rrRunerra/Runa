@@ -17,7 +17,7 @@ export default function PegasusNavProvider({
 
   const fetchEmailAccounts = (): void => {
     if (session?.accessToken) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/emails`, {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/emails`, {
         headers: {
           Authorization: `Bearer ${session.accessToken}`,
         },

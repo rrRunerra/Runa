@@ -28,6 +28,7 @@ export function MailSettingsTab(): React.JSX.Element {
   const [emailColor, setEmailColor] = useState<string>("#8B00FF");
   const [emailSenderName, setEmailSenderName] = useState<string>("");
   const [emailAddressField, setEmailAddressField] = useState<string>("");
+  const [emailLoginField, setEmailLoginField] = useState<string>("");
   const [emailReplyTo, setEmailReplyTo] = useState<string>("");
   const [emailOrganization, setEmailOrganization] = useState<string>("");
   const [emailSignature, setEmailSignature] = useState<string>("");
@@ -45,7 +46,7 @@ export function MailSettingsTab(): React.JSX.Element {
   const fetchEmailAccounts = async (): Promise<void> => {
     if (!session?.accessToken) return;
     try {
-      const emailRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/emails`, {
+      const emailRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/emails`, {
         headers: { Authorization: `Bearer ${session.accessToken}` },
       });
       if (emailRes.ok) {
@@ -69,6 +70,7 @@ export function MailSettingsTab(): React.JSX.Element {
       color: emailColor,
       senderName: emailSenderName,
       emailAddress: emailAddressField,
+      loginEmail: emailLoginField || null,
       replyToAddress: emailReplyTo || null,
       organization: emailOrganization || null,
       signatureText: emailSignature || null,
@@ -85,7 +87,7 @@ export function MailSettingsTab(): React.JSX.Element {
     try {
       let res;
       if (editingEmailAccount) {
-        res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/emails/${editingEmailAccount.id}`, {
+        res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/emails/${editingEmailAccount.id}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
@@ -94,7 +96,7 @@ export function MailSettingsTab(): React.JSX.Element {
           body: JSON.stringify(payload),
         });
       } else {
-        res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/emails`, {
+        res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/emails`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -146,6 +148,7 @@ export function MailSettingsTab(): React.JSX.Element {
     setEmailColor("#8B00FF");
     setEmailSenderName("");
     setEmailAddressField("");
+    setEmailLoginField("");
     setEmailReplyTo("");
     setEmailOrganization("");
     setEmailSignature("");
@@ -159,12 +162,59 @@ export function MailSettingsTab(): React.JSX.Element {
     setSmtpSecure(true);
   };
 
+  const handleAutodetect = async (): Promise<void> => {
+    const autodetectEmail = emailLoginField || emailAddressField;
+    if (!autodetectEmail || !autodetectEmail.includes("@")) {
+      toast.error("Please enter a valid email address first.");
+      return;
+    }
+    const domain = autodetectEmail.split("@")[1].toLowerCase().trim();
+    if (!domain) return;
+
+    if (!session?.accessToken) {
+      toast.error("Session authentication required.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/emails/autoconfig/${domain}`, {
+        headers: { Authorization: `Bearer ${session.accessToken}` },
+      });
+
+      if (res.ok) {
+        const config = await res.json();
+        setImapHost(config.imapHost || `imap.${domain}`);
+        setImapPort(config.imapPort ? String(config.imapPort) : "993");
+        setImapSecure(config.imapSecure !== false);
+        setSmtpHost(config.smtpHost || `smtp.${domain}`);
+        setSmtpPort(config.smtpPort ? String(config.smtpPort) : "465");
+        setSmtpSecure(config.smtpSecure !== false);
+
+        toast.success(`Server settings auto-filled for ${domain}!`);
+      } else {
+        throw new Error("Failed to autodetect configurations.");
+      }
+    } catch (err) {
+      console.error("Autodetect error:", err);
+      toast.error("Could not autodetect settings. Using generic defaults.");
+      
+      // Fallback local guess
+      setImapHost(`imap.${domain}`);
+      setImapPort("993");
+      setImapSecure(true);
+      setSmtpHost(`smtp.${domain}`);
+      setSmtpPort("465");
+      setSmtpSecure(true);
+    }
+  };
+
   const openEditEmailAccount = (account: any): void => {
     setEditingEmailAccount(account);
     setEmailAccountName(account.accountName);
     setEmailColor(account.color);
     setEmailSenderName(account.senderName);
     setEmailAddressField(account.emailAddress);
+    setEmailLoginField(account.loginEmail || "");
     setEmailReplyTo(account.replyToAddress || "");
     setEmailOrganization(account.organization || "");
     setEmailSignature(account.signatureText || "");
@@ -218,6 +268,9 @@ export function MailSettingsTab(): React.JSX.Element {
                   </span>
                   <span className="text-[10px] text-muted-foreground block truncate">
                     {account.emailAddress}
+                    {account.loginEmail && account.loginEmail !== account.emailAddress && (
+                      <span className="text-muted-foreground/50"> · login: {account.loginEmail}</span>
+                    )}
                   </span>
                   <span className="text-[9px] text-muted-foreground/60 block truncate">
                     IMAP: {account.imapHost} | SMTP: {account.smtpHost}
@@ -252,7 +305,7 @@ export function MailSettingsTab(): React.JSX.Element {
 
       {/* Thunderbird Email Setup Dialog */}
       <Dialog open={isEmailAccountDialogOpen} onOpenChange={setIsEmailAccountDialogOpen}>
-        <DialogContent className="max-w-2xl bg-zinc-950 border border-zinc-800 shadow-2xl p-6 rounded-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-3xl md:max-w-4xl bg-zinc-950 border border-zinc-800 shadow-2xl p-6 rounded-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="pb-3 border-b border-zinc-800/40">
             <DialogTitle className="text-md font-bold">
               {editingEmailAccount ? "Edit Email Account" : "Link Email Account"}
@@ -312,9 +365,12 @@ export function MailSettingsTab(): React.JSX.Element {
                   id="email-address-field"
                   value={emailAddressField}
                   onChange={(e) => setEmailAddressField(e.target.value)}
-                  placeholder="e.g. yki@runerra.org"
+                  placeholder="e.g. yuki@runerra.org"
                   className="h-9 px-3 bg-zinc-900 border-zinc-800 rounded-xl text-xs"
                 />
+                <p className="text-[10px] text-muted-foreground/60">
+                  The address recipients see in the From field.
+                </p>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="reply-to">Reply-to Address (Optional)</Label>
@@ -336,18 +392,6 @@ export function MailSettingsTab(): React.JSX.Element {
                   className="h-9 px-3 bg-zinc-900 border-zinc-800 rounded-xl text-xs"
                 />
               </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="email-password">Account Password</Label>
-              <Input
-                id="email-password"
-                type="password"
-                value={emailPassword}
-                onChange={(e) => setEmailPassword(e.target.value)}
-                placeholder="SMTP/IMAP server password"
-                className="h-9 px-3 bg-zinc-900 border-zinc-800 rounded-xl text-xs"
-              />
             </div>
 
             <div className="space-y-1.5">
@@ -373,8 +417,45 @@ export function MailSettingsTab(): React.JSX.Element {
               />
             </div>
 
-            <div className="space-y-1 mt-1">
-              <h5 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Server Settings</h5>
+            <div className="flex items-center justify-between mt-1">
+              <div className="space-y-1">
+                <h5 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Server Settings</h5>
+              </div>
+              <Button
+                type="button"
+                onClick={handleAutodetect}
+                variant="outline"
+                className="h-7 rounded-lg border border-zinc-800 hover:bg-zinc-800 text-[10px] px-2.5 font-semibold shrink-0 cursor-pointer"
+              >
+                Autodetect
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="login-email">Login Email (Authentication)</Label>
+                <Input
+                  id="login-email"
+                  value={emailLoginField}
+                  onChange={(e) => setEmailLoginField(e.target.value)}
+                  placeholder={emailAddressField || "e.g. yki@runerra.org"}
+                  className="h-9 px-3 bg-zinc-900 border-zinc-800 rounded-xl text-xs"
+                />
+                <p className="text-[10px] text-muted-foreground/60">
+                  IMAP/SMTP login username. Leave blank to use the identity email above.
+                </p>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="email-password">Account Password</Label>
+                <Input
+                  id="email-password"
+                  type="password"
+                  value={emailPassword}
+                  onChange={(e) => setEmailPassword(e.target.value)}
+                  placeholder="SMTP/IMAP server password"
+                  className="h-9 px-3 bg-zinc-900 border-zinc-800 rounded-xl text-xs"
+                />
+              </div>
             </div>
 
             {/* IMAP & SMTP Settings */}
