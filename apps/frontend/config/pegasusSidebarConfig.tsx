@@ -11,21 +11,38 @@ import {
   Trash,
 } from "lucide-react";
 import type { NavbarConfig } from "@/components/Providers/NavigationProvider";
+import { ComposeEmailModal } from "@/components/pegasus/ComposeEmailModal";
+import { SidebarMenuButton } from "@/components/ui/sidebar";
 
 export const getPegasusSidebarConfig = (
   session: any,
   emailAccounts: any[] = [],
 ): NavbarConfig => {
+  const defaultAccountId = emailAccounts[0]?.id;
+
   const configs: NavbarConfig = [
     {
       section: "Phone",
       items: [
         {
           label: "Compose",
-          href: "/pegasus/compose",
           icon: <Edit className="h-4 w-4" />,
           subtitle: "Compose mail",
           position: 1,
+          preventRedirect: true,
+          component: (
+            <ComposeEmailModal accountId={defaultAccountId}>
+              <SidebarMenuButton
+                tooltip="Compose"
+                className="relative transition-colors duration-200 rounded-xl h-9.5 px-3 text-muted-foreground hover:text-foreground hover:bg-white/5 cursor-pointer"
+              >
+                <span className="flex items-center gap-2.5 w-full relative z-20">
+                  <Edit className="h-4 w-4" />
+                  <span className="truncate">Compose</span>
+                </span>
+              </SidebarMenuButton>
+            </ComposeEmailModal>
+          ),
         },
       ],
     },
@@ -33,10 +50,24 @@ export const getPegasusSidebarConfig = (
       section: "",
       items: [
         {
-          label: "Compose Mail",
-          href: "/pegasus/compose",
+          label: "Compose",
           icon: <Edit className="h-4 w-4" />,
-          subtitle: "Compose a new email",
+          subtitle: "Compose mail",
+          position: 1,
+          preventRedirect: true,
+          component: (
+            <ComposeEmailModal accountId={defaultAccountId}>
+              <SidebarMenuButton
+                tooltip="Compose"
+                className="relative transition-colors duration-200 rounded-xl h-9.5 px-3 text-muted-foreground hover:text-foreground hover:bg-white/5 cursor-pointer"
+              >
+                <span className="flex items-center gap-2.5 w-full relative z-20">
+                  <Edit className="h-4 w-4" />
+                  <span className="truncate">Compose</span>
+                </span>
+              </SidebarMenuButton>
+            </ComposeEmailModal>
+          ),
         },
       ],
     },

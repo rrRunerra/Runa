@@ -91,7 +91,7 @@ export function NotificationsModal({
   useEffect(() => {
     if (!session?.accessToken) return;
 
-    const wsUrl = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || "http://localhost:5000";
+    const wsUrl = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || (typeof window !== "undefined" ? window.location.origin : "");
     const socket: Socket = io(`${wsUrl}/notifications`, {
       query: { token: session.accessToken },
       transports: ["websocket"],

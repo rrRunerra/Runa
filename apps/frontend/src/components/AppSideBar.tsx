@@ -328,7 +328,9 @@ export default function AppSideBar({
 
                     const MenuItem = (
                       <SidebarMenuItem key={itemIdx}>
-                        {hasHref ? (
+                        {item.component ? (
+                          item.component
+                        ) : hasHref ? (
                           <SidebarMenuButton
                             asChild
                             tooltip={item.label}
@@ -337,7 +339,7 @@ export default function AppSideBar({
                               isActive ? "text-primary font-semibold" : "text-muted-foreground hover:text-foreground hover:bg-white/5"
                             )}
                           >
-                            <Link href={item.href} className="relative z-10 w-full flex items-center">
+                            <Link href={item.href || "#"} className="relative z-10 w-full flex items-center">
                               {isActive && (
                                 <>
                                   <motion.div
@@ -405,28 +407,32 @@ export default function AppSideBar({
                                      const isSubActive = pathname === child.href;
                                     return (
                                       <SidebarMenuSubItem key={childIdx}>
-                                        <SidebarMenuSubButton
-                                          asChild
-                                          className={cn(
-                                            "relative transition-colors duration-200 rounded-lg px-2.5 py-1.5 h-8",
-                                            isSubActive ? "text-primary font-semibold" : "text-muted-foreground/80 hover:text-foreground hover:bg-white/5"
-                                          )}
-                                        >
-                                          <Link href={child.href} className="relative z-10 w-full flex items-center">
-                                            {isSubActive && (
-                                              <motion.div
-                                                layoutId="activeSubmenuHighlight"
-                                                className="absolute inset-0 bg-primary/5 rounded-lg border border-primary/5"
-                                                transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                                                style={{ pointerEvents: "none" }}
-                                              />
+                                        {child.component ? (
+                                          child.component
+                                        ) : (
+                                          <SidebarMenuSubButton
+                                            asChild
+                                            className={cn(
+                                              "relative transition-colors duration-200 rounded-lg px-2.5 py-1.5 h-8",
+                                              isSubActive ? "text-primary font-semibold" : "text-muted-foreground/80 hover:text-foreground hover:bg-white/5"
                                             )}
-                                            <span className="flex items-center gap-2 relative z-20">
-                                              {child.icon}
-                                              <span className="truncate">{truncate(child.label, 16)}</span>
-                                            </span>
-                                          </Link>
-                                        </SidebarMenuSubButton>
+                                          >
+                                            <Link href={child.href || "#"} className="relative z-10 w-full flex items-center">
+                                              {isSubActive && (
+                                                <motion.div
+                                                  layoutId="activeSubmenuHighlight"
+                                                  className="absolute inset-0 bg-primary/5 rounded-lg border border-primary/5"
+                                                  transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                                                  style={{ pointerEvents: "none" }}
+                                                />
+                                              )}
+                                              <span className="flex items-center gap-2 relative z-20">
+                                                {child.icon}
+                                                <span className="truncate">{truncate(child.label, 16)}</span>
+                                              </span>
+                                            </Link>
+                                          </SidebarMenuSubButton>
+                                        )}
                                       </SidebarMenuSubItem>
                                     );
                                   }
@@ -763,6 +769,9 @@ function DockItem({
   item: NavItem;
   isActive: boolean;
 }): React.JSX.Element {
+  if (item.component) {
+    return <>{item.component}</>;
+  }
   return (
     <Link
       href={item.href || "#"}

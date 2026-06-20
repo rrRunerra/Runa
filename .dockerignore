@@ -27,3 +27,7 @@
 .env*
 .env
 !.env.example
+
+# SKILLS
+.agent
+.agents

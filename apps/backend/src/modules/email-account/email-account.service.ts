@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger, BadRequestException } from '@nestjs/common';
 import { resolveMx } from 'dns/promises';
 import * as nodemailer from 'nodemailer';
 import { ImapFlow } from 'imapflow';
@@ -15,6 +15,20 @@ export interface EmailAutoconfigResult {
   smtpHost: string;
   smtpPort: number;
   smtpSecure: boolean;
+}
+
+function isDomainOrSubdomain(hostname: string, targetDomain: string): boolean {
+  const normalized = hostname.endsWith('.') ? hostname.slice(0, -1) : hostname;
+  return normalized === targetDomain || normalized.endsWith('.' + targetDomain);
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 @Injectable()
@@ -143,6 +157,12 @@ export class EmailAccountService {
   async fetchEmailAutoconfig(domain: string): Promise<EmailAutoconfigResult> {
     const normalizedDomain = domain.toLowerCase().trim();
 
+    // Validate domain to prevent SSRF and invalid resolveMx calls
+    const domainRegex = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/;
+    if (!normalizedDomain || normalizedDomain.length > 253 || !domainRegex.test(normalizedDomain)) {
+      throw new BadRequestException('Invalid domain name');
+    }
+
     // 1. Thunderbird ISPDB lookup
     try {
       const url = `https://autoconfig.thunderbird.net/v1.1/${normalizedDomain}`;
@@ -194,7 +214,10 @@ export class EmailAccountService {
         for (const record of mxRecords) {
           const exchange = record.exchange.toLowerCase();
 
-          if (exchange.includes('google.com') || exchange.includes('googlemail.com')) {
+          if (
+            isDomainOrSubdomain(exchange, 'google.com') ||
+            isDomainOrSubdomain(exchange, 'googlemail.com')
+          ) {
             return {
               imapHost: 'imap.gmail.com',
               imapPort: 993,
@@ -206,9 +229,9 @@ export class EmailAccountService {
           }
 
           if (
-            exchange.includes('outlook.com') ||
-            exchange.includes('mail.protection.outlook.com') ||
-            exchange.includes('lync.com')
+            isDomainOrSubdomain(exchange, 'outlook.com') ||
+            isDomainOrSubdomain(exchange, 'mail.protection.outlook.com') ||
+            isDomainOrSubdomain(exchange, 'lync.com')
           ) {
             return {
               imapHost: 'outlook.office365.com',
@@ -220,7 +243,7 @@ export class EmailAccountService {
             };
           }
 
-          if (exchange.includes('purelymail.com')) {
+          if (isDomainOrSubdomain(exchange, 'purelymail.com')) {
             return {
               imapHost: 'imap.purelymail.com',
               imapPort: 993,
@@ -231,7 +254,10 @@ export class EmailAccountService {
             };
           }
 
-          if (exchange.includes('zoho.com') || exchange.includes('zoho.eu')) {
+          if (
+            isDomainOrSubdomain(exchange, 'zoho.com') ||
+            isDomainOrSubdomain(exchange, 'zoho.eu')
+          ) {
             return {
               imapHost: 'imap.zoho.com',
               imapPort: 993,
@@ -751,13 +777,15 @@ export class EmailAccountService {
       ? `"${account.senderName}" <${account.emailAddress}>`
       : account.emailAddress;
 
+    const escapedBodyHtml = escapeHtml(data.body).replace(/\n/g, '<br />');
+
     const mailOptions: nodemailer.SendMailOptions = {
       from,
       to: data.to,
       cc: data.cc || undefined,
       subject: data.subject,
       text: data.body,
-      html: data.body.replace(/\n/g, '<br />'),
+      html: escapedBodyHtml,
     };
 
     let info: nodemailer.SentMessageInfo;
@@ -790,7 +818,7 @@ export class EmailAccountService {
         cc: data.cc || null,
         date: new Date(),
         bodyText: data.body,
-        bodyHtml: data.body.replace(/\n/g, '<br />'),
+        bodyHtml: escapedBodyHtml,
         read: true,
         folder: 'sent',
       },

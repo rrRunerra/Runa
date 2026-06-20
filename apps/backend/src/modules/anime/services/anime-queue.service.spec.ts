@@ -115,17 +115,14 @@ describe('AnimeQueueService', () => {
     });
 
     it('should ignore duplicate jobs if they are currently processing', async () => {
-      (global.fetch as jest.Mock).mockImplementation(() => {
+      (global.fetch as jest.Mock).mockImplementation(async () => {
         // Return a promise that doesn't resolve immediately
-        return new Promise((resolve) => {
-          setTimeout(() => {
-            resolve({
-              status: 200,
-              ok: true,
-              json: jest.fn().mockResolvedValue({ data: { Media: { id: 1, title: {}, coverImage: { large: 'large-img' } } } }),
-            });
-          }, 100);
-        });
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        return {
+          status: 200,
+          ok: true,
+          json: jest.fn().mockResolvedValue({ data: { Media: { id: 1, title: {}, coverImage: { large: 'large-img' } } } }),
+        };
       });
 
       service.onModuleInit();

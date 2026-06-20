@@ -3,7 +3,9 @@ import { ReactNode } from "react";
 export interface NavChildItem {
   label: string;
   icon?: ReactNode;
-  href: string;
+  href?: string;
+  component?: ReactNode;
+  preventRedirect?: boolean;
   subtitle?: string;
   badge?: string;
   permission?: bigint | bigint[];
@@ -13,7 +15,8 @@ export interface NavChildItem {
 export interface NavItem {
   label: string;
   icon?: ReactNode;
-  href: string;
+  href?: string;
+  component?: ReactNode;
   subtitle?: string;
   badge?: string;
   children?: NavChildItem[];

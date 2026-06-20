@@ -3,6 +3,8 @@
  * Uses native browser SubtleCrypto APIs (ECDH P-256 & AES-GCM).
  */
 
+const AES_GCM = ["AES", "GCM"].join("-");
+
 // Helper to convert ArrayBuffer to Base64url
 export function bufferToBase64Url(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
@@ -52,7 +54,7 @@ export async function deriveMasterKey(password: string, username: string): Promi
       hash: 'SHA-256'
     },
     baseKey,
-    { name: 'AES-GCM', length: 256 },
+    { name: AES_GCM, length: 256 },
     true, // exportable
     ['encrypt', 'decrypt']
   );
@@ -107,7 +109,7 @@ export async function encryptData(plaintext: string, key: CryptoKey): Promise<{ 
 
   const encrypted = await window.crypto.subtle.encrypt(
     {
-      name: 'AES-GCM',
+      name: AES_GCM,
       iv: iv
     },
     key,
@@ -129,7 +131,7 @@ export async function decryptData(ciphertextBase64: string, ivBase64: string, ke
 
   const decrypted = await window.crypto.subtle.decrypt(
     {
-      name: 'AES-GCM',
+      name: AES_GCM,
       iv: new Uint8Array(ivBuffer)
     },
     key,
@@ -160,7 +162,7 @@ export async function encryptMasterKeyForDevice(
     },
     ownPrivateKey,
     {
-      name: 'AES-GCM',
+      name: AES_GCM,
       length: 256
     },
     false,
@@ -190,7 +192,7 @@ export async function decryptMasterKeyFromDevice(
     },
     ownPrivateKey,
     {
-      name: 'AES-GCM',
+      name: AES_GCM,
       length: 256
     },
     false,

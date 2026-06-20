@@ -57,7 +57,7 @@ describe('DualAuthGuard', () => {
     cacheService = module.get<CacheService>(CacheService);
   });
 
-  const createMockContext = (headers: Record<string, string>, url = 'http://localhost/', isPublic = false) => {
+  const createMockContext = (headers: Record<string, string>, url = 'http://127.0.0.1/', isPublic = false) => {
     reflector.getAllAndOverride = jest.fn().mockReturnValue(isPublic);
 
     const req = {
@@ -175,7 +175,7 @@ describe('DualAuthGuard', () => {
 
       it('should authenticate successfully with a token in query parameter', async () => {
         const token = 'valid-query-token';
-        const context = createMockContext({}, `http://localhost/route?token=${token}`);
+        const context = createMockContext({}, `http://127.0.0.1/route?token=${token}`);
 
         const mockPayload = {
           sub: 'user-id',
@@ -224,7 +224,7 @@ describe('DualAuthGuard', () => {
 
     describe('Public Routes', () => {
       it('should bypass authentication check if route is marked public and no credentials present', async () => {
-        const context = createMockContext({}, 'http://localhost/', true);
+        const context = createMockContext({}, 'http://127.0.0.1/', true);
 
         const result = await guard.canActivate(context);
 
@@ -235,7 +235,7 @@ describe('DualAuthGuard', () => {
 
       it('should populate req.user if valid credentials are provided on public route', async () => {
         const token = 'valid-jwt-token';
-        const context = createMockContext({ authorization: `Bearer ${token}` }, 'http://localhost/', true);
+        const context = createMockContext({ authorization: `Bearer ${token}` }, 'http://127.0.0.1/', true);
 
         const mockPayload = {
           sub: 'user-id',
@@ -262,7 +262,7 @@ describe('DualAuthGuard', () => {
 
       it('should succeed even if credentials are invalid on public route (errors suppressed)', async () => {
         const token = 'invalid-jwt-token';
-        const context = createMockContext({ authorization: `Bearer ${token}` }, 'http://localhost/', true);
+        const context = createMockContext({ authorization: `Bearer ${token}` }, 'http://127.0.0.1/', true);
 
         (jwtVerify as jest.Mock).mockRejectedValue(new Error('Invalid token signature'));
 
@@ -276,7 +276,7 @@ describe('DualAuthGuard', () => {
 
     describe('No Credentials', () => {
       it('should throw UnauthorizedException if route is private and no credentials are provided', async () => {
-        const context = createMockContext({}, 'http://localhost/', false);
+        const context = createMockContext({}, 'http://127.0.0.1/', false);
 
         await expect(guard.canActivate(context)).rejects.toThrow(new UnauthorizedException('No authentication token found'));
       });

@@ -65,14 +65,16 @@ export function MailSettingsTab(): React.JSX.Element {
   const handleSaveEmailAccount = async (): Promise<void> => {
     if (!session?.accessToken) return;
 
+    const finalEmailAddress = emailAddressField.trim() || emailLoginField.trim();
+
     const payload = {
       accountName: emailAccountName,
       color: emailColor,
       senderName: emailSenderName,
-      emailAddress: emailAddressField,
-      loginEmail: emailLoginField || null,
-      replyToAddress: emailReplyTo || null,
-      organization: emailOrganization || null,
+      emailAddress: finalEmailAddress,
+      loginEmail: emailLoginField.trim() || null,
+      replyToAddress: emailReplyTo.trim() || null,
+      organization: emailOrganization.trim() || null,
       signatureText: emailSignature || null,
       useHtmlSignature: emailUseHtmlSig,
       password: emailPassword,
@@ -550,7 +552,7 @@ export function MailSettingsTab(): React.JSX.Element {
             </Button>
             <Button
               onClick={handleSaveEmailAccount}
-              disabled={!emailAccountName || !emailAddressField || !emailPassword}
+              disabled={!emailAccountName || (!emailAddressField.trim() && !emailLoginField.trim()) || !emailPassword}
               className="bg-primary hover:bg-primary/95 text-primary-foreground font-bold rounded-xl px-5 text-xs h-9 cursor-pointer"
             >
               {editingEmailAccount ? "Update Account" : "Link Account"}

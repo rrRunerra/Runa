@@ -13,7 +13,35 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL
  */
 export function cleanDescription(html: string | undefined, maxLength = 160): string {
   if (!html) return "";
-  const stripped = html.replace(/<[^>]*>/g, "").replace(/</g, "").replace(/>/g, "");
+
+  let result = "";
+  let inTag = false;
+  let quoteChar: string | null = null;
+
+  for (let i = 0; i < html.length; i++) {
+    const char = html[i];
+
+    if (inTag) {
+      if (quoteChar) {
+        if (char === quoteChar) {
+          quoteChar = null;
+        }
+      } else if (char === '"' || char === "'") {
+        quoteChar = char;
+      } else if (char === '>') {
+        inTag = false;
+      }
+    } else {
+      if (char === '<') {
+        inTag = true;
+      } else {
+        result += char;
+      }
+    }
+  }
+
+  // Clean up any double spaces, trim, and truncate
+  const stripped = result.replace(/\s+/g, " ").trim();
   if (stripped.length <= maxLength) return stripped;
   return stripped.slice(0, maxLength).trim() + "...";
 }

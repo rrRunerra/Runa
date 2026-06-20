@@ -29,6 +29,8 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { io, Socket } from "socket.io-client";
+import { ComposeEmailModal } from "@/components/pegasus/ComposeEmailModal";
+import { cn } from "@/lib/utils";
 
 interface Attachment {
   id: string;
@@ -94,7 +96,6 @@ export default function EmailFolderView({
   const [composeCc, setComposeCc] = useState<string>("");
   const [composeSubject, setComposeSubject] = useState<string>("");
   const [composeBody, setComposeBody] = useState<string>("");
-  const [sendingEmail, setSendingEmail] = useState<boolean>(false);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [activeAccount, setActiveAccount] = useState<any | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -228,7 +229,7 @@ export default function EmailFolderView({
 
     const wsUrl =
       process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") ||
-      "http://localhost:5000";
+      (typeof window !== "undefined" ? window.location.origin : "");
     const socket: Socket = io(`${wsUrl}/notifications`, {
       query: { token: session.accessToken },
       transports: ["websocket"],
@@ -359,60 +360,6 @@ export default function EmailFolderView({
       setComposeBody(
         `\n\n---------- Forwarded message ---------\nFrom: ${detailedMessage.from}\nDate: ${new Date(detailedMessage.date).toLocaleString()}\nSubject: ${detailedMessage.subject}\nTo: ${detailedMessage.to}\n${detailedMessage.cc ? `Cc: ${detailedMessage.cc}\n` : ""}\n${detailedMessage.bodyText}`,
       );
-    }
-  };
-
-  const handleSendEmail = async (): Promise<void> => {
-    if (!session?.accessToken) {
-      toast.error("You must be logged in to send emails.");
-      return;
-    }
-    if (!composeTo.trim()) {
-      toast.error("Please specify at least one recipient in the 'To' field.");
-      return;
-    }
-
-    setSendingEmail(true);
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/emails/${accountId}/send`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.accessToken}`,
-          },
-          body: JSON.stringify({
-            to: composeTo,
-            cc: composeCc || undefined,
-            subject: composeSubject,
-            body: composeBody,
-          }),
-        },
-      );
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to send email.");
-      }
-
-      toast.success("Email sent successfully!");
-      setIsComposing(false);
-      setComposeAction(null);
-
-      // If currently viewing 'sent' folder, refresh messages list
-      if (folder.toLowerCase() === "sent") {
-        fetchMessages();
-      }
-    } catch (err: unknown) {
-      console.error(err);
-      const msg =
-        err instanceof Error
-          ? err.message
-          : "SMTP delivery failed. Check credentials.";
-      toast.error(msg);
-    } finally {
-      setSendingEmail(false);
     }
   };
 
@@ -1023,24 +970,37 @@ export default function EmailFolderView({
               No messages found.
             </div>
           ) : (
-            filteredMessages.map((msg) => {
-              const isSelected = selectedMessageId === msg.id;
-              const isChecked = selectedIds.includes(msg.id);
-              return (
-                <div
-                  key={msg.id}
-                  onClick={() => handleSelectMessage(msg.id)}
-                  className={`group relative p-3 rounded-2xl cursor-pointer transition-all border flex gap-3 items-start ${
-                    isSelected
-                      ? "bg-zinc-900 border-zinc-700/60"
-                      : "bg-transparent border-transparent hover:bg-zinc-900/30 hover:border-zinc-800/40"
-                  }`}
-                >
-                  {/* Left Column: Checkbox or dot */}
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    className="flex items-center justify-center size-5 shrink-0 mt-0.5"
+            <motion.div 
+              initial="hidden" 
+              animate="visible" 
+              variants={{
+                visible: { transition: { staggerChildren: 0.05 } }
+              }}
+              className="flex flex-col gap-2"
+            >
+              {filteredMessages.map((msg) => {
+                const isSelected = selectedMessageId === msg.id;
+                const isChecked = selectedIds.includes(msg.id);
+                return (
+                  <motion.div
+                    variants={{
+                      hidden: { opacity: 0, y: 10 },
+                      visible: { opacity: 1, y: 0 }
+                    }}
+                    key={msg.id}
+                    onClick={() => handleSelectMessage(msg.id)}
+                    className={cn(
+                      "group relative p-4 rounded-2xl cursor-pointer transition-all border flex gap-3 items-start",
+                      isSelected
+                        ? "bg-primary/5 border-primary/20 shadow-md"
+                        : "bg-card/30 backdrop-blur-xs border-border/60 hover:border-primary/30 hover:shadow-lg"
+                    )}
                   >
+                    {/* Left Column: Checkbox or dot */}
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex items-center justify-center size-5 shrink-0 mt-0.5"
+                    >
                     <input
                       type="checkbox"
                       checked={isChecked}
@@ -1137,9 +1097,10 @@ export default function EmailFolderView({
                       </div>
                     </div>
                   </div>
-                </div>
+                </motion.div>
               );
-            })
+            })}
+            </motion.div>
           )}
         </div>
       </div>
@@ -1148,8 +1109,9 @@ export default function EmailFolderView({
       <div
         className={`${
           showDetailOnMobile ? "flex" : "hidden md:flex"
-        } flex-1 flex-col bg-zinc-950 h-full overflow-hidden`}
+        } flex-1 flex-col h-full overflow-hidden p-2 md:p-4`}
       >
+        <div className="flex-1 flex flex-col bg-zinc-950/90 backdrop-blur-xl border border-zinc-800/80 shadow-2xl rounded-2xl overflow-hidden relative">
         <AnimatePresence mode="wait">
           {!selectedMessageId ? (
             <motion.div
@@ -1431,136 +1393,19 @@ export default function EmailFolderView({
             </motion.div>
           ) : null}
         </AnimatePresence>
+        </div>
       </div>
 
       {/* Compose/Reply Modal Dialog */}
-      <AnimatePresence>
-        {isComposing && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              transition={{ duration: 0.2 }}
-              className="w-full max-w-2xl bg-zinc-900 border border-zinc-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
-            >
-              {/* Header */}
-              <div className="p-4 border-b border-zinc-805 bg-zinc-950/60 backdrop-blur-md flex items-center justify-between">
-                <span className="text-xs font-semibold text-zinc-300 uppercase tracking-wider">
-                  {composeAction === "compose" && "New Message"}
-                  {composeAction === "reply" && "Reply"}
-                  {composeAction === "replyAll" && "Reply All"}
-                  {composeAction === "forward" && "Forward"}
-                </span>
-                <button
-                  onClick={() => {
-                    setIsComposing(false);
-                    setComposeAction(null);
-                  }}
-                  className="text-zinc-500 hover:text-zinc-350 transition-colors text-sm p-1"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {/* Form Content */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-4 no-scrollbar">
-                {/* From Account Info */}
-                <div className="flex items-center gap-2 text-xs text-zinc-400">
-                  <span className="w-16 font-medium text-zinc-500">From:</span>
-                  <span className="text-zinc-300 font-semibold">
-                    {activeAccount
-                      ? `${activeAccount.senderName} <${activeAccount.emailAddress}>`
-                      : "Loading account..."}
-                  </span>
-                </div>
-
-                {/* To Field */}
-                <div className="flex items-center gap-2 text-xs text-zinc-400 border-t border-zinc-800/40 pt-3">
-                  <span className="w-16 font-medium text-zinc-500">To:</span>
-                  <input
-                    type="text"
-                    value={composeTo}
-                    onChange={(e) => setComposeTo(e.target.value)}
-                    placeholder="recipient@example.com"
-                    className="flex-1 bg-transparent border-0 focus:ring-0 focus:outline-none text-zinc-200"
-                  />
-                </div>
-
-                {/* Cc Field */}
-                {(composeAction === "replyAll" ||
-                  composeAction === "compose") && (
-                  <div className="flex items-center gap-2 text-xs text-zinc-400 border-t border-zinc-800/40 pt-3">
-                    <span className="w-16 font-medium text-zinc-500">Cc:</span>
-                    <input
-                      type="text"
-                      value={composeCc}
-                      onChange={(e) => setComposeCc(e.target.value)}
-                      placeholder="cc@example.com"
-                      className="flex-1 bg-transparent border-0 focus:ring-0 focus:outline-none text-zinc-200"
-                    />
-                  </div>
-                )}
-
-                {/* Subject Field */}
-                <div className="flex items-center gap-2 text-xs text-zinc-400 border-t border-zinc-800/40 pt-3">
-                  <span className="w-16 font-medium text-zinc-500">
-                    Subject:
-                  </span>
-                  <input
-                    type="text"
-                    value={composeSubject}
-                    onChange={(e) => setComposeSubject(e.target.value)}
-                    placeholder="Subject line"
-                    className="flex-1 bg-transparent border-0 focus:ring-0 focus:outline-none text-zinc-200"
-                  />
-                </div>
-
-                {/* Body Content */}
-                <div className="border-t border-zinc-800/40 pt-4">
-                  <textarea
-                    rows={12}
-                    value={composeBody}
-                    onChange={(e) => setComposeBody(e.target.value)}
-                    className="w-full bg-transparent border-0 focus:ring-0 focus:outline-none text-sm text-zinc-200 placeholder-zinc-650 resize-none font-sans min-h-[250px]"
-                    placeholder="Write your email here..."
-                  />
-                </div>
-              </div>
-
-              {/* Footer Actions */}
-              <div className="p-4 bg-zinc-950/60 border-t border-zinc-800 flex items-center justify-end gap-3">
-                <button
-                  onClick={() => {
-                    setIsComposing(false);
-                    setComposeAction(null);
-                  }}
-                  className="px-4 py-2 text-xs border border-zinc-800 hover:border-zinc-700 hover:bg-zinc-900 rounded-xl text-zinc-400 hover:text-zinc-200 transition-all font-medium"
-                >
-                  Discard
-                </button>
-                <button
-                  disabled={sendingEmail}
-                  onClick={handleSendEmail}
-                  className="px-4 py-2 text-xs bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl transition-all font-medium flex items-center gap-2 shadow-[0_0_12px_rgba(16,185,129,0.3)] hover:shadow-[0_0_16px_rgba(16,185,129,0.5)]"
-                >
-                  {sendingEmail ? (
-                    <>
-                      <Loader2 className="size-3.5 animate-spin" />
-                      <span>Sending...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Send className="size-3.5" />
-                      <span>Send Mail</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <ComposeEmailModal
+        accountId={accountId}
+        open={isComposing}
+        onOpenChange={setIsComposing}
+        defaultTo={composeTo}
+        defaultCc={composeCc}
+        defaultSubject={composeSubject}
+        defaultBody={composeBody}
+      />
 
       {/* Delete Confirmation Modal */}
       <AnimatePresence>

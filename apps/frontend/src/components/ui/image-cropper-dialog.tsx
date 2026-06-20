@@ -25,6 +25,23 @@ interface ImageCropperDialogProps {
   onCrop: (croppedFile: File) => void;
 }
 
+const isSafeUrl = (url: string): boolean => {
+  const trimmed = url.trim();
+  // Safe relative paths
+  if (trimmed.startsWith("/") && !trimmed.startsWith("//")) {
+    return true;
+  }
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol.toLowerCase() === "data:") {
+      return parsed.pathname.startsWith("image/");
+    }
+    return ["http:", "https:", "blob:"].includes(parsed.protocol.toLowerCase());
+  } catch {
+    return false;
+  }
+};
+
 export function ImageCropperDialog({
   open,
   onOpenChange,
@@ -34,7 +51,7 @@ export function ImageCropperDialog({
   description = "Drag to position and use the slider or scroll to zoom.",
   onCrop,
 }: ImageCropperDialogProps) {
-  const safeImageSrc = imageSrc && !imageSrc.trim().toLowerCase().startsWith("javascript:") ? imageSrc : "";
+  const safeImageSrc = imageSrc && isSafeUrl(imageSrc) ? imageSrc : "";
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [rotation, setRotation] = useState(0); // 0, 90, 180, 270
