@@ -54,7 +54,7 @@ export default function DatabasesPage() {
       >
         {databasesItem?.children && databasesItem.children.length > 0 ? (
           databasesItem.children.map((category) => (
-            <Link key={category.href} href={category.href} className="block h-full">
+            <Link key={category.href || category.label} href={category.href || "#"} className="block h-full">
               <motion.div
                 variants={cardVariants}
                 whileHover={{ scale: 1.02, y: -2 }}
@@ -68,7 +68,7 @@ export default function DatabasesPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="size-10 rounded-xl border border-zinc-800 bg-zinc-900/50 text-primary flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform duration-300">
-                        {databasesItem.icon || <Database className="size-5" />}
+                        {databasesItem?.icon || <Database className="size-5" />}
                       </div>
                       <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">
                         {category.label}

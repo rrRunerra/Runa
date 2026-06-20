@@ -153,6 +153,7 @@ export default function SpotlightSearch(): React.JSX.Element {
 
         // Add main navigation item
         if (navItem.href && isFromActiveApp) {
+          const href = navItem.href;
           items.push({
             id: `nav-${navItem.label.toLowerCase()}`,
             label: navItem.label,
@@ -165,7 +166,7 @@ export default function SpotlightSearch(): React.JSX.Element {
             badge: section.section,
             action: () => {
               setOpen(false);
-              router.push(navItem.href);
+              router.push(href);
             },
           });
         }
@@ -183,6 +184,9 @@ export default function SpotlightSearch(): React.JSX.Element {
             const isChildFromActiveApp = childItem.href && childItem.href.startsWith(activeApp.href);
             if (!isChildFromActiveApp) return;
 
+            const childHref = childItem.href;
+            if (!childHref) return;
+
             items.push({
               id: `nav-${navItem.label.toLowerCase()}-${childItem.label.toLowerCase()}`,
               label: `${navItem.label} › ${childItem.label}`,
@@ -195,7 +199,7 @@ export default function SpotlightSearch(): React.JSX.Element {
               badge: section.section,
               action: () => {
                 setOpen(false);
-                router.push(childItem.href);
+                router.push(childHref);
               },
             });
           });

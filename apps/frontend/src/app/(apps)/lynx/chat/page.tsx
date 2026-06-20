@@ -60,8 +60,8 @@ export default function ChatPage() {
             .map((category) => (
            
             <Link
-               key={category.href}
-               href={category.href}
+               key={category.href || category.label}
+               href={category.href || "#"}
                className="block h-full"
              >
 
@@ -78,7 +78,7 @@ export default function ChatPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="size-10 rounded-xl border border-zinc-800 bg-zinc-900/50 text-primary flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform duration-300">
-                        {chatItem.icon || <MessageSquare className="size-5" />}
+                        {chatItem?.icon || <MessageSquare className="size-5" />}
                       </div>
                       <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">
                         {category.label}

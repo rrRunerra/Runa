@@ -53,7 +53,7 @@ export default function LogsPage() {
       >
         {logsItem?.children && logsItem.children.length > 0 ? (
           logsItem.children.map((category) => (
-            <Link key={category.href} href={category.href} className="block h-full">
+            <Link key={category.href || category.label} href={category.href || "#"} className="block h-full">
               <motion.div
                 variants={cardVariants}
                 whileHover={{ scale: 1.02, y: -2 }}
