@@ -23,6 +23,7 @@ interface ComposeEmailModalProps {
   accountId?: string;
   defaultTo?: string;
   defaultCc?: string;
+  defaultBcc?: string;
   defaultSubject?: string;
   defaultBody?: string;
   open?: boolean;
@@ -41,6 +42,7 @@ export function ComposeEmailModal({
   accountId,
   defaultTo = "",
   defaultCc = "",
+  defaultBcc = "",
   defaultSubject = "",
   defaultBody = "",
   open: controlledOpen,
@@ -59,10 +61,14 @@ export function ComposeEmailModal({
   const [ccEmails, setCcEmails] = useState<string[]>([]);
   const [ccInput, setCcInput] = useState<string>("");
 
+  const [bccEmails, setBccEmails] = useState<string[]>([]);
+  const [bccInput, setBccInput] = useState<string>("");
+
   const [subject, setSubject] = useState<string>(defaultSubject);
   const [body, setBody] = useState<string>(defaultBody);
   const [sending, setSending] = useState<boolean>(false);
   const [showCc, setShowCc] = useState<boolean>(!!defaultCc);
+  const [showBcc, setShowBcc] = useState<boolean>(!!defaultBcc);
 
   const [accounts, setAccounts] = useState<EmailAccount[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>(accountId || "");
@@ -94,14 +100,25 @@ export function ComposeEmailModal({
       setCcEmails(initialCc);
       setCcInput("");
 
+      // Parse defaultBcc
+      const initialBcc = defaultBcc
+        ? defaultBcc
+            .split(/[,;\s]+/)
+            .map((em) => em.trim())
+            .filter(Boolean)
+        : [];
+      setBccEmails(initialBcc);
+      setBccInput("");
+
       setSubject(defaultSubject);
       setBody(defaultBody);
       setShowCc(!!defaultCc);
+      setShowBcc(!!defaultBcc);
       if (accountId) {
         setSelectedAccountId(accountId);
       }
     }
-  }, [open, defaultTo, defaultCc, defaultSubject, defaultBody, accountId]);
+  }, [open, defaultTo, defaultCc, defaultBcc, defaultSubject, defaultBody, accountId]);
 
   // Fetch accounts when modal is open and session is available
   React.useEffect(() => {
@@ -292,6 +309,76 @@ export function ComposeEmailModal({
     }
   };
 
+  // Key handlers for Bcc field
+  const handleBccKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" || e.key === "," || e.key === " ") {
+      e.preventDefault();
+      const val = bccInput.trim().replace(/,$/, "");
+      if (val) {
+        if (isValidEmail(val)) {
+          if (!bccEmails.includes(val)) {
+            setBccEmails([...bccEmails, val]);
+          }
+          setBccInput("");
+        } else {
+          toast.error(`"${val}" is not a valid email address.`);
+        }
+      }
+    } else if (e.key === "Backspace" && !bccInput && bccEmails.length > 0) {
+      setBccInput(bccEmails[bccEmails.length - 1]);
+      setBccEmails(bccEmails.slice(0, -1));
+    }
+  };
+
+  const handleBccChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    if (val.endsWith(",") || val.endsWith(" ")) {
+      const email = val.slice(0, -1).trim();
+      if (email) {
+        if (isValidEmail(email)) {
+          if (!bccEmails.includes(email)) {
+            setBccEmails([...bccEmails, email]);
+          }
+          setBccInput("");
+        } else {
+          toast.error(`"${email}" is not a valid email address.`);
+        }
+      } else {
+        setBccInput("");
+      }
+    } else {
+      setBccInput(val);
+    }
+  };
+
+  const handleBccPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pasteData = e.clipboardData.getData("text");
+    const parts = pasteData.split(/[,;\s]+/);
+    const validEmails: string[] = [];
+    let hasInvalid = false;
+
+    for (const part of parts) {
+      const em = part.trim();
+      if (em) {
+        if (isValidEmail(em)) {
+          if (!bccEmails.includes(em) && !validEmails.includes(em)) {
+            validEmails.push(em);
+          }
+        } else {
+          hasInvalid = true;
+        }
+      }
+    }
+
+    if (validEmails.length > 0) {
+      setBccEmails([...bccEmails, ...validEmails]);
+    }
+    if (hasInvalid) {
+      toast.error("Some invalid email addresses were skipped.");
+    }
+  };
+
   const handleSend = async (): Promise<void> => {
     if (!session?.accessToken) {
       toast.error("You must be logged in to send emails.");
@@ -318,8 +405,17 @@ export function ComposeEmailModal({
       }
     }
 
+    const trimmedBccInput = bccInput.trim();
+    if (showBcc && trimmedBccInput) {
+      if (!isValidEmail(trimmedBccInput)) {
+        toast.error(`"${trimmedBccInput}" in the Bcc field is not a valid email address.`);
+        return;
+      }
+    }
+
     const finalTo = [...toEmails, ...(trimmedToInput ? [trimmedToInput] : [])].join(", ");
     const finalCc = [...ccEmails, ...(trimmedCcInput ? [trimmedCcInput] : [])].join(", ");
+    const finalBcc = [...bccEmails, ...(trimmedBccInput ? [trimmedBccInput] : [])].join(", ");
 
     if (!finalTo.trim()) {
       toast.error("Please specify at least one recipient.");
@@ -339,6 +435,7 @@ export function ComposeEmailModal({
           body: JSON.stringify({
             to: finalTo,
             cc: showCc && finalCc ? finalCc : undefined,
+            bcc: showBcc && finalBcc ? finalBcc : undefined,
             subject,
             body,
           }),
@@ -437,15 +534,26 @@ export function ComposeEmailModal({
                 <FieldLabel className="text-xs font-semibold text-zinc-500 select-none">
                   To
                 </FieldLabel>
-                {!showCc && (
-                  <button
-                    type="button"
-                    onClick={() => setShowCc(true)}
-                    className="text-[10px] font-bold text-zinc-500 hover:text-emerald-400 bg-zinc-900/50 hover:bg-emerald-950/30 border border-zinc-800 hover:border-emerald-900/50 rounded-md px-1.5 py-0.5 transition-all select-none cursor-pointer font-sans shrink-0"
-                  >
-                    Cc
-                  </button>
-                )}
+                <div className="flex items-center gap-1.5">
+                  {!showCc && (
+                    <button
+                      type="button"
+                      onClick={() => setShowCc(true)}
+                      className="text-[10px] font-bold text-zinc-500 hover:text-emerald-400 bg-zinc-900/50 hover:bg-emerald-950/30 border border-zinc-800 hover:border-emerald-900/50 rounded-md px-1.5 py-0.5 transition-all select-none cursor-pointer font-sans shrink-0"
+                    >
+                      Cc
+                    </button>
+                  )}
+                  {!showBcc && (
+                    <button
+                      type="button"
+                      onClick={() => setShowBcc(true)}
+                      className="text-[10px] font-bold text-zinc-500 hover:text-emerald-400 bg-zinc-900/50 hover:bg-emerald-950/30 border border-zinc-800 hover:border-emerald-900/50 rounded-md px-1.5 py-0.5 transition-all select-none cursor-pointer font-sans shrink-0"
+                    >
+                      Bcc
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="w-full flex flex-wrap gap-1.5 items-center min-h-[36px] bg-zinc-900/30 dark:bg-zinc-900/30 border border-zinc-800/60 rounded-xl p-1.5 focus-within:border-zinc-700/80 transition-colors">
                 <AnimatePresence>
@@ -535,6 +643,69 @@ export function ComposeEmailModal({
                         onKeyDown={handleCcKeyDown}
                         onPaste={handleCcPaste}
                         placeholder={ccEmails.length === 0 ? "cc1@example.com, cc2@example.com" : ""}
+                        className="bg-transparent dark:bg-transparent border-0 border-transparent shadow-none h-7 text-xs/relaxed text-zinc-200 placeholder-zinc-600 focus-visible:ring-0 focus-visible:ring-offset-0 px-1 py-0 min-w-[120px] flex-1"
+                      />
+                    </div>
+                  </Field>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Bcc Row */}
+            <AnimatePresence initial={false}>
+              {showBcc && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className="overflow-hidden w-full"
+                >
+                  <Field className="flex flex-col gap-1.5 border-b border-zinc-800/40 py-2.5 px-3 w-full">
+                    <div className="flex items-center justify-between w-full">
+                      <FieldLabel className="text-xs font-semibold text-zinc-500 select-none">
+                        Bcc
+                      </FieldLabel>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBccEmails([]);
+                          setBccInput("");
+                          setShowBcc(false);
+                        }}
+                        className="text-[10px] font-bold text-zinc-500 hover:text-red-400 bg-zinc-900/50 hover:bg-red-950/30 border border-zinc-800 hover:border-red-900/50 rounded-md px-1.5 py-0.5 transition-all select-none cursor-pointer font-sans shrink-0"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                    <div className="w-full flex flex-wrap gap-1.5 items-center min-h-[36px] bg-zinc-900/30 dark:bg-zinc-900/30 border border-zinc-800/60 rounded-xl p-1.5 focus-within:border-zinc-700/80 transition-colors">
+                      <AnimatePresence>
+                        {bccEmails.map((email, idx) => (
+                          <motion.div
+                            key={email}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.8 }}
+                            transition={{ duration: 0.12 }}
+                            className="bg-zinc-850 hover:bg-zinc-800 border border-zinc-805 text-zinc-200 pl-2 pr-1 py-0.5 rounded-lg text-xs flex items-center gap-1 transition-all select-none max-w-full truncate"
+                          >
+                            <span className="truncate">{email}</span>
+                            <button
+                              type="button"
+                              onClick={() => setBccEmails(bccEmails.filter((_, i) => i !== idx))}
+                              className="text-zinc-400 hover:text-red-400 p-0.5 rounded-md hover:bg-zinc-700/60 transition-colors cursor-pointer"
+                            >
+                              <X className="size-3" />
+                            </button>
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
+                      <Input
+                        value={bccInput}
+                        onChange={handleBccChange}
+                        onKeyDown={handleBccKeyDown}
+                        onPaste={handleBccPaste}
+                        placeholder={bccEmails.length === 0 ? "bcc1@example.com, bcc2@example.com" : ""}
                         className="bg-transparent dark:bg-transparent border-0 border-transparent shadow-none h-7 text-xs/relaxed text-zinc-200 placeholder-zinc-600 focus-visible:ring-0 focus-visible:ring-offset-0 px-1 py-0 min-w-[120px] flex-1"
                       />
                     </div>

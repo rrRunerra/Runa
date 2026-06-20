@@ -201,3 +201,130 @@ export async function decryptMasterKeyFromDevice(
 
   return decryptData(encryptedPayload, iv, sharedKey);
 }
+
+/**
+ * Decrypts the symmetric email data key using the user's private ECDH key
+ */
+export async function decryptEmailDataKey(
+  payload: { ephemeralPublicKey: string; iv: string; tag: string; ciphertext: string },
+  privateKey: CryptoKey
+): Promise<CryptoKey> {
+  const serverPubKeyBuf = base64UrlToBuffer(payload.ephemeralPublicKey);
+  const serverPublicKey = await window.crypto.subtle.importKey(
+    'raw',
+    serverPubKeyBuf,
+    {
+      name: 'ECDH',
+      namedCurve: 'P-256'
+    },
+    true,
+    []
+  );
+
+  const sharedSecretBits = await window.crypto.subtle.deriveBits(
+    {
+      name: 'ECDH',
+      public: serverPublicKey
+    },
+    privateKey,
+    256
+  );
+
+  const aesKeyBuffer = await window.crypto.subtle.digest('SHA-256', sharedSecretBits);
+
+  const wrappingKey = await window.crypto.subtle.importKey(
+    'raw',
+    aesKeyBuffer,
+    { name: 'AES-GCM' },
+    false,
+    ['decrypt']
+  );
+
+  const ciphertextBuf = base64UrlToBuffer(payload.ciphertext);
+  const ivBuf = base64UrlToBuffer(payload.iv);
+  const tagBuf = base64UrlToBuffer(payload.tag);
+
+  const ciphertextWithTag = new Uint8Array(ciphertextBuf.byteLength + tagBuf.byteLength);
+  ciphertextWithTag.set(new Uint8Array(ciphertextBuf), 0);
+  ciphertextWithTag.set(new Uint8Array(tagBuf), ciphertextBuf.byteLength);
+
+  const rawDataKey = await window.crypto.subtle.decrypt(
+    {
+      name: 'AES-GCM',
+      iv: new Uint8Array(ivBuf)
+    },
+    wrappingKey,
+    ciphertextWithTag
+  );
+
+  return window.crypto.subtle.importKey(
+    'raw',
+    rawDataKey,
+    { name: 'AES-GCM' },
+    false,
+    ['decrypt']
+  );
+}
+
+/**
+ * Decrypts a string that was encrypted on the server in "iv:ciphertext:tag" (hex) format
+ */
+export async function decryptEmailString(encryptedText: string, dataKey: CryptoKey): Promise<string> {
+  const parts = encryptedText.split(':');
+  if (parts.length !== 3) {
+    throw new Error('Invalid encrypted email text format');
+  }
+
+  const hexToBuf = (hex: string) => {
+    const bytes = new Uint8Array(hex.length / 2);
+    for (let i = 0; i < hex.length; i += 2) {
+      bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
+    }
+    return bytes.buffer;
+  };
+
+  const iv = hexToBuf(parts[0]);
+  const ciphertext = hexToBuf(parts[1]);
+  const tag = hexToBuf(parts[2]);
+
+  const ciphertextWithTag = new Uint8Array(ciphertext.byteLength + tag.byteLength);
+  ciphertextWithTag.set(new Uint8Array(ciphertext), 0);
+  ciphertextWithTag.set(new Uint8Array(tag), ciphertext.byteLength);
+
+  const decrypted = await window.crypto.subtle.decrypt(
+    {
+      name: 'AES-GCM',
+      iv: new Uint8Array(iv)
+    },
+    dataKey,
+    ciphertextWithTag
+  );
+
+  return new TextDecoder().decode(decrypted);
+}
+
+/**
+ * Decrypts a buffer that was encrypted on the server in "[iv (12B) | tag (16B) | ciphertext]" format
+ */
+export async function decryptEmailBuffer(encryptedBuffer: ArrayBuffer, dataKey: CryptoKey): Promise<ArrayBuffer> {
+  if (encryptedBuffer.byteLength < 28) {
+    throw new Error('Invalid encrypted email buffer format');
+  }
+
+  const iv = encryptedBuffer.slice(0, 12);
+  const tag = encryptedBuffer.slice(12, 28);
+  const ciphertext = encryptedBuffer.slice(28);
+
+  const ciphertextWithTag = new Uint8Array(ciphertext.byteLength + tag.byteLength);
+  ciphertextWithTag.set(new Uint8Array(ciphertext), 0);
+  ciphertextWithTag.set(new Uint8Array(tag), ciphertext.byteLength);
+
+  return window.crypto.subtle.decrypt(
+    {
+      name: 'AES-GCM',
+      iv: new Uint8Array(iv)
+    },
+    dataKey,
+    ciphertextWithTag
+  );
+}

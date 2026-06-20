@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
@@ -60,8 +60,54 @@ export function NotificationsModal({
     }
   }, [unreadCount, onUnreadCountChange]);
 
+  // Helper to load E2E private key from localStorage and import it
+  const getPrivateKey = useCallback(async (): Promise<CryptoKey | null> => {
+    const stored = localStorage.getItem("runa_user_private_key");
+    if (!stored) return null;
+    try {
+      const jwk = JSON.parse(stored);
+      return await window.crypto.subtle.importKey(
+        "jwk",
+        jwk,
+        {
+          name: "ECDH",
+          namedCurve: "P-256",
+        },
+        true,
+        ["deriveKey", "deriveBits"]
+      );
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const decryptNotification = useCallback(async (n: any, privKey: CryptoKey | null): Promise<any> => {
+    const meta = n.metadata as any;
+    if (!meta || !meta.encryptedKey || !privKey) return n;
+
+    try {
+      const { decryptEmailDataKey, decryptEmailString } = await import("@/lib/crypto");
+      const dataKey = await decryptEmailDataKey(meta.encryptedKey, privKey);
+      
+      let decryptedTitle = n.title;
+      try { decryptedTitle = await decryptEmailString(n.title, dataKey); } catch {}
+
+      let decryptedMessage = n.message;
+      try { decryptedMessage = await decryptEmailString(n.message, dataKey); } catch {}
+
+      return {
+        ...n,
+        title: decryptedTitle,
+        message: decryptedMessage,
+      };
+    } catch (err) {
+      console.error("Failed to decrypt notification:", err);
+      return n;
+    }
+  }, []);
+
   // Fetch notifications initially
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     if (!session?.accessToken) return;
     setIsLoading(true);
     try {
@@ -72,37 +118,46 @@ export function NotificationsModal({
       });
       if (res.ok) {
         const data = await res.json();
-        setNotifications(data);
+        try {
+          const privKey = await getPrivateKey();
+          const decrypted = await Promise.all(data.map((n: any) => decryptNotification(n, privKey)));
+          setNotifications(decrypted);
+        } catch (decErr) {
+          console.error("Failed to decrypt fetched notifications:", decErr);
+          setNotifications(data);
+        }
       }
     } catch (err) {
       console.error("Failed to fetch notifications:", err);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [session, getPrivateKey, decryptNotification]);
 
   useEffect(() => {
     if (open && session?.accessToken) {
       fetchNotifications();
     }
-  }, [open, session]);
+  }, [open, session, fetchNotifications]);
 
   // Setup WebSocket connection for live notifications
   useEffect(() => {
     if (!session?.accessToken) return;
 
-    const wsUrl = process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") || (typeof window !== "undefined" ? window.location.origin : "");
+    const wsUrl = process.env.NEXT_PUBLIC_API_URL || (typeof window !== "undefined" ? window.location.origin : "");
     const socket: Socket = io(`${wsUrl}/notifications`, {
       query: { token: session.accessToken },
       transports: ["websocket"],
     });
 
-    socket.on("notification:created", (newNotification: Notification) => {
-      setNotifications((prev) => [newNotification, ...prev]);
-      const meta = newNotification.metadata as any;
+    socket.on("notification:created", async (newNotification: Notification) => {
+      const privKey = await getPrivateKey();
+      const decrypted = await decryptNotification(newNotification, privKey);
+      setNotifications((prev) => [decrypted, ...prev]);
+      const meta = decrypted.metadata as any;
       if (meta && meta.type === "email") {
-        toast.info(`New Email: ${newNotification.title}`, {
-          description: newNotification.message,
+        toast.info(`New Email: ${decrypted.title}`, {
+          description: decrypted.message,
           action: {
             label: "Open",
             onClick: () => {
@@ -111,20 +166,35 @@ export function NotificationsModal({
           },
         });
       } else {
-        toast.info(`New Notification: ${newNotification.title}`);
+        toast.info(`New Notification: ${decrypted.title}`);
       }
     });
 
-    socket.on("notification:updated", (updatedNotification: Notification) => {
+    socket.on("notification:updated", async (updatedNotification: Notification) => {
+      const privKey = await getPrivateKey();
+      const decrypted = await decryptNotification(updatedNotification, privKey);
       setNotifications((prev) =>
-        prev.map((n) => (n.id === updatedNotification.id ? updatedNotification : n))
+        prev.map((n) => (n.id === decrypted.id ? decrypted : n))
       );
+    });
+
+    socket.on("notification:deleted", ({ id }: { id: string }) => {
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+    });
+
+    socket.on("notifications:cleared", () => {
+      setNotifications([]);
+    });
+
+    socket.on("email:new", (data: any) => {
+      const event = new CustomEvent("runa-email-new", { detail: data });
+      window.dispatchEvent(event);
     });
 
     return () => {
       socket.disconnect();
     };
-  }, [session?.accessToken]);
+  }, [session?.accessToken, getPrivateKey, decryptNotification, router]);
 
   // Mark a notification as read/dismissed
   const handleDismiss = async (id: string) => {
@@ -146,6 +216,46 @@ export function NotificationsModal({
       }
     } catch (err) {
       toast.error("Failed to dismiss notification");
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!session?.accessToken) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notifications/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+      });
+      if (res.ok) {
+        setNotifications((prev) => prev.filter((n) => n.id !== id));
+        toast.success("Notification deleted");
+      } else {
+        throw new Error("Failed to delete");
+      }
+    } catch (err) {
+      toast.error("Failed to delete notification");
+    }
+  };
+
+  const handleClearAll = async () => {
+    if (!session?.accessToken) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notifications`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+      });
+      if (res.ok) {
+        setNotifications([]);
+        toast.success("All notifications cleared");
+      } else {
+        throw new Error("Failed to clear");
+      }
+    } catch (err) {
+      toast.error("Failed to clear notifications");
     }
   };
 
@@ -244,12 +354,24 @@ export function NotificationsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg bg-zinc-950/95 backdrop-blur-xl border border-zinc-800/80 shadow-2xl p-6 rounded-2xl">
+      <DialogContent className="sm:max-w-2xl bg-zinc-950/95 backdrop-blur-xl border border-zinc-800/80 shadow-2xl p-6 rounded-2xl">
         <DialogHeader className="pb-3 border-b border-zinc-800/40">
-          <DialogTitle className="flex items-center gap-2 text-md font-bold text-foreground">
-            <Bell className="size-4.5 text-primary" />
-            Notification Center
-          </DialogTitle>
+          <div className="flex items-center justify-between w-full pr-8">
+            <DialogTitle className="flex items-center gap-2 text-md font-bold text-foreground">
+              <Bell className="size-4.5 text-primary" />
+              Notification Center
+            </DialogTitle>
+            {notifications.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearAll}
+                className="h-7 text-[10px] font-bold text-red-400 hover:text-red-300 hover:bg-red-500/10 border border-red-500/20 rounded-md px-2 transition-all cursor-pointer"
+              >
+                Clear All
+              </Button>
+            )}
+          </div>
           <DialogDescription className="text-xs text-muted-foreground mt-1">
             Manage your incoming status logs and interactive authorizations.
           </DialogDescription>
@@ -269,7 +391,7 @@ export function NotificationsModal({
             <span className="text-[10px] text-muted-foreground/60">We will notify you here when things happen.</span>
           </div>
         ) : (
-          <ScrollArea className="max-h-[360px] pr-1.5 py-2">
+          <ScrollArea className="max-h-[500px] pr-1.5 py-2">
             <div className="space-y-3.5">
               {notifications.map((n) => {
                 const isInteractive = n.type === "INTERACTIVE";
@@ -292,8 +414,8 @@ export function NotificationsModal({
                         : ""
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex gap-3">
+                    <div className="flex items-start justify-between gap-3 w-full min-w-0">
+                      <div className="flex items-start gap-3 min-w-0 flex-1">
                         <div className="p-2 rounded-lg bg-primary/10 border border-primary/20 text-primary mt-0.5 shrink-0">
                           {isInteractive ? (
                             <Smartphone className="size-4" />
@@ -301,14 +423,14 @@ export function NotificationsModal({
                             <Bell className="size-4" />
                           )}
                         </div>
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-foreground">
+                        <div className="space-y-1 min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap min-w-0">
+                            <span className="text-xs font-bold text-foreground break-words max-w-full">
                               {n.title}
                             </span>
                             <Badge
                               variant="outline"
-                              className={`text-[9px] px-1.5 py-0.5 font-bold uppercase tracking-wider ${
+                              className={`text-[9px] px-1.5 py-0.5 font-bold uppercase tracking-wider shrink-0 ${
                                 n.status === "PENDING"
                                   ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
                                   : n.status === "APPROVED"
@@ -321,7 +443,7 @@ export function NotificationsModal({
                               {n.status}
                             </Badge>
                           </div>
-                          <p className="text-[11px] text-muted-foreground leading-normal">
+                          <p className="text-[11px] text-muted-foreground leading-normal break-all">
                             {n.message}
                           </p>
                           <span className="text-[9px] text-muted-foreground/50 block">
@@ -330,12 +452,15 @@ export function NotificationsModal({
                         </div>
                       </div>
 
-                      {!isInteractive && isPending && (
+                      {(!isInteractive || !isPending) && (
                         <Button
                           size="icon"
                           variant="ghost"
-                          onClick={() => handleDismiss(n.id)}
-                          className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground cursor-pointer shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(n.id);
+                          }}
+                          className="h-8 w-8 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 cursor-pointer shrink-0 transition-colors"
                         >
                           <Trash2 className="size-4" />
                         </Button>

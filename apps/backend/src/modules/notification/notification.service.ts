@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { NotificationGateway } from './notification.gateway';
 import { Notification, NotificationType, NotificationStatus, DeviceApprovalMetadata } from '@runa/notifications';
@@ -111,6 +112,48 @@ export class NotificationService {
     const notification = this.mapToDto(updatedNotification);
     this.gateway.sendToUser(userId, 'notification:updated', notification);
     return notification;
+  }
+
+  async delete(userId: string, id: string): Promise<void> {
+    const existing = await this.prisma.client.notification.findFirst({
+      where: { id, userId },
+    });
+
+    if (!existing) {
+      throw new NotFoundException(`Notification with ID ${id} not found`);
+    }
+
+    await this.prisma.client.notification.delete({
+      where: { id },
+    });
+
+    this.gateway.sendToUser(userId, 'notification:deleted', { id });
+  }
+
+  async deleteAll(userId: string): Promise<void> {
+    await this.prisma.client.notification.deleteMany({
+      where: { userId },
+    });
+
+    this.gateway.sendToUser(userId, 'notifications:cleared', {});
+  }
+
+  @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
+  async deleteOldNotifications(): Promise<void> {
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+    const result = await this.prisma.client.notification.deleteMany({
+      where: {
+        createdAt: {
+          lt: oneWeekAgo,
+        },
+      },
+    });
+
+    if (result.count > 0) {
+      console.log(`[Notification Cleanup] Deleted ${result.count} notifications older than a week.`);
+    }
   }
 
   private mapToDto(record: any): Notification {

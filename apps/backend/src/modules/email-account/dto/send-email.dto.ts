@@ -11,6 +11,10 @@ export class SendEmailDto {
 
   @IsString()
   @IsOptional()
+  bcc?: string;
+
+  @IsString()
+  @IsOptional()
   subject?: string;
 
   @IsString()

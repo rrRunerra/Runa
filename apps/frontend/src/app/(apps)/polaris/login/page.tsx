@@ -164,6 +164,66 @@ export default function Page() {
     }
   };
 
+  const initializeE2eeKeysOnLogin = async (accessToken: string, username: string, password: string): Promise<void> => {
+    try {
+      const { deriveMasterKey, generateKeyPair, exportPublicKey, encryptData, decryptData } = await import("@/lib/crypto");
+
+      // 1. Fetch E2EE keys status from server
+      const getRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/e2e-keys`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      if (!getRes.ok) throw new Error("Failed to check E2EE keys status");
+      const e2eKeys = await getRes.json();
+
+      const masterKey = await deriveMasterKey(password, username);
+
+      if (!e2eKeys.userPublicKey) {
+        // Create user keypair
+        const userKeyPair = await generateKeyPair();
+        const userPublicKeyBase64 = await exportPublicKey(userKeyPair.publicKey);
+        
+        // Export private key as JWK string
+        const userPrivateKeyJwk = await window.crypto.subtle.exportKey("jwk", userKeyPair.privateKey);
+        const userPrivateKeyStr = JSON.stringify(userPrivateKeyJwk);
+
+        // Encrypt private key string using masterKey
+        const encryptedPrivate = await encryptData(userPrivateKeyStr, masterKey);
+
+        // Upload to server
+        const putRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/e2e-keys`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            userPublicKey: userPublicKeyBase64,
+            encryptedUserPrivateKey: JSON.stringify(encryptedPrivate),
+          }),
+        });
+        if (!putRes.ok) throw new Error("Failed to store E2EE keys on server");
+
+        // Save decrypted private key in localStorage
+        localStorage.setItem("runa_user_private_key", userPrivateKeyStr);
+      } else if (e2eKeys.encryptedUserPrivateKey) {
+        // Decrypt existing user private key using masterKey
+        const encryptedPrivate = JSON.parse(e2eKeys.encryptedUserPrivateKey);
+        const userPrivateKeyStr = await decryptData(
+          encryptedPrivate.ciphertext,
+          encryptedPrivate.iv,
+          masterKey
+        );
+
+        // Save to localStorage
+        localStorage.setItem("runa_user_private_key", userPrivateKeyStr);
+      }
+    } catch (err) {
+      console.error("E2EE key initialization failed:", err);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -237,6 +297,7 @@ export default function Page() {
           const sessionData = await sessionRes.json();
           if (sessionData?.accessToken) {
             await registerDeviceOnLogin(sessionData.accessToken);
+            await initializeE2eeKeysOnLogin(sessionData.accessToken, lower, password);
           }
         }
         handleRedirect();
@@ -354,6 +415,7 @@ export default function Page() {
         const sessionData = await sessionRes.json();
         if (sessionData?.accessToken) {
           await registerDeviceOnLogin(sessionData.accessToken);
+          await initializeE2eeKeysOnLogin(sessionData.accessToken, identifier.trim().toLowerCase(), password);
         }
       }
       handleRedirect();

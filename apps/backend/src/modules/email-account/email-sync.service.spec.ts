@@ -136,7 +136,7 @@ describe('EmailSyncService', () => {
       mockPrismaClient.userEmailAccount.findUnique.mockResolvedValue(mockAccount);
       mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-1' });
       mockPrismaClient.emailMessage.findFirst.mockResolvedValue({ uid: 5 }); // last cached UID is 5
-      mockPrismaClient.emailMessage.create.mockResolvedValue({ id: 'msg-rec-1' });
+      mockPrismaClient.emailMessage.create.mockResolvedValue({ id: 'msg-rec-1', read: true });
 
       await service.syncAccount('acc-1');
 

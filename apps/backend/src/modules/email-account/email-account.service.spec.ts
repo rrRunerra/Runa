@@ -57,6 +57,9 @@ describe('EmailAccountService', () => {
       delete: jest.fn(),
       deleteMany: jest.fn(),
     },
+    user: {
+      findUnique: jest.fn(),
+    },
   };
 
   const mockPrisma = {
@@ -69,6 +72,7 @@ describe('EmailAccountService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockPrismaClient.user.findUnique.mockResolvedValue(null);
 
     mockFetch = jest.fn();
     global.fetch = mockFetch;
@@ -338,11 +342,13 @@ describe('EmailAccountService', () => {
           from: '"Test Sender" <sender@example.com>',
           to: 'recipient@example.com',
           cc: 'cc@example.com',
+          bcc: null,
           date: expect.any(Date),
           bodyText: 'World content',
           bodyHtml: 'World content',
           read: true,
           folder: 'sent',
+          encryptedKey: undefined,
         },
       });
 

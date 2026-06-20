@@ -28,7 +28,6 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { io, Socket } from "socket.io-client";
 import { ComposeEmailModal } from "@/components/pegasus/ComposeEmailModal";
 import { cn } from "@/lib/utils";
 
@@ -47,11 +46,13 @@ interface Message {
   from: string;
   to: string;
   cc: string | null;
+  bcc?: string | null;
   date: string;
   read: boolean;
   flagged: boolean;
   folder: string;
   attachments: Attachment[];
+  encryptedKey?: any;
 }
 
 interface DetailedMessage extends Message {
@@ -101,6 +102,131 @@ export default function EmailFolderView({
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
+  // Helper to load E2E private key from localStorage and import it
+  const getPrivateKey = useCallback(async (): Promise<CryptoKey | null> => {
+    const stored = localStorage.getItem("runa_user_private_key");
+    if (!stored) return null;
+    try {
+      const jwk = JSON.parse(stored);
+      return await window.crypto.subtle.importKey(
+        "jwk",
+        jwk,
+        {
+          name: "ECDH",
+          namedCurve: "P-256",
+        },
+        true,
+        ["deriveKey", "deriveBits"]
+      );
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const decryptMessageObj = useCallback(async (msg: Message): Promise<Message> => {
+    if (!msg.encryptedKey) return msg;
+    const privKey = await getPrivateKey();
+    if (!privKey) return msg;
+
+    try {
+      const { decryptEmailDataKey, decryptEmailString } = await import("@/lib/crypto");
+      const dataKey = await decryptEmailDataKey(msg.encryptedKey as any, privKey);
+      
+      let decryptedSubject = msg.subject;
+      try { decryptedSubject = await decryptEmailString(msg.subject, dataKey); } catch {}
+
+      let decryptedFrom = msg.from;
+      try { decryptedFrom = msg.from ? await decryptEmailString(msg.from, dataKey) : msg.from; } catch {}
+
+      let decryptedTo = msg.to;
+      try { decryptedTo = msg.to ? await decryptEmailString(msg.to, dataKey) : msg.to; } catch {}
+
+      let decryptedCc = msg.cc;
+      try { decryptedCc = msg.cc ? await decryptEmailString(msg.cc, dataKey) : msg.cc; } catch {}
+
+      let decryptedBcc = msg.bcc;
+      try { decryptedBcc = msg.bcc ? await decryptEmailString(msg.bcc, dataKey) : msg.bcc; } catch {}
+
+      const decryptedAttachments = await Promise.all(
+        (msg.attachments || []).map(async (att) => {
+          try {
+            const decFilename = await decryptEmailString(att.filename, dataKey);
+            return { ...att, filename: decFilename };
+          } catch {
+            return att;
+          }
+        })
+      );
+
+      return {
+        ...msg,
+        subject: decryptedSubject,
+        from: decryptedFrom,
+        to: decryptedTo,
+        cc: decryptedCc,
+        bcc: decryptedBcc,
+        attachments: decryptedAttachments,
+      };
+    } catch (err) {
+      console.error("Failed to decrypt message in list:", err);
+      return msg;
+    }
+  }, [getPrivateKey]);
+
+  const decryptDetailedMessageObj = useCallback(async (msg: DetailedMessage): Promise<DetailedMessage> => {
+    if (!msg.encryptedKey) return msg;
+    const privKey = await getPrivateKey();
+    if (!privKey) return msg;
+
+    try {
+      const { decryptEmailDataKey, decryptEmailString } = await import("@/lib/crypto");
+      const dataKey = await decryptEmailDataKey(msg.encryptedKey as any, privKey);
+      
+      let decryptedSubject = msg.subject;
+      try { decryptedSubject = await decryptEmailString(msg.subject, dataKey); } catch {}
+
+      let decryptedFrom = msg.from;
+      try { decryptedFrom = msg.from ? await decryptEmailString(msg.from, dataKey) : msg.from; } catch {}
+
+      let decryptedTo = msg.to;
+      try { decryptedTo = msg.to ? await decryptEmailString(msg.to, dataKey) : msg.to; } catch {}
+
+      let decryptedCc = msg.cc;
+      try { decryptedCc = msg.cc ? await decryptEmailString(msg.cc, dataKey) : msg.cc; } catch {}
+
+      let decryptedBcc = msg.bcc;
+      try { decryptedBcc = msg.bcc ? await decryptEmailString(msg.bcc, dataKey) : msg.bcc; } catch {}
+
+      const decryptedBodyText = await decryptEmailString(msg.bodyText, dataKey);
+      const decryptedBodyHtml = await decryptEmailString(msg.bodyHtml, dataKey);
+      const decryptedAttachments = await Promise.all(
+        (msg.attachments || []).map(async (att) => {
+          try {
+            const decFilename = await decryptEmailString(att.filename, dataKey);
+            return { ...att, filename: decFilename };
+          } catch {
+            return att;
+          }
+        })
+      );
+
+      return {
+        ...msg,
+        subject: decryptedSubject,
+        from: decryptedFrom,
+        to: decryptedTo,
+        cc: decryptedCc,
+        bcc: decryptedBcc,
+        bodyText: decryptedBodyText,
+        bodyHtml: decryptedBodyHtml,
+        attachments: decryptedAttachments,
+      };
+    } catch (err) {
+      console.error("Failed to decrypt detailed message:", err);
+      return msg;
+    }
+  }, [getPrivateKey]);
+
   // Fetch messages in the folder
   const fetchMessages = useCallback(async (): Promise<void> => {
     if (!session?.accessToken) return;
@@ -117,7 +243,11 @@ export default function EmailFolderView({
       );
       if (!res.ok) throw new Error("Failed to fetch messages");
       const data = await res.json();
-      setMessages(Array.isArray(data) ? data : []);
+      const list = Array.isArray(data) ? data : [];
+      const decrypted = await Promise.all(
+        list.map((msg) => decryptMessageObj(msg))
+      );
+      setMessages(decrypted);
     } catch (err: unknown) {
       console.error(err);
       setError("Failed to load messages. Please verify SMTP/IMAP settings.");
@@ -125,7 +255,7 @@ export default function EmailFolderView({
       setMessages((prev) => (Array.isArray(prev) ? prev : []));
       setLoading(false);
     }
-  }, [accountId, folder, session?.accessToken]);
+  }, [accountId, folder, session?.accessToken, decryptMessageObj]);
 
   const fetchAccounts = useCallback(async (): Promise<void> => {
     if (!session?.accessToken) return;
@@ -169,7 +299,8 @@ export default function EmailFolderView({
         }
         if (!res.ok) throw new Error("Failed to fetch message details");
         const data: DetailedMessage = await res.json();
-        setDetailedMessage(data);
+        const decrypted = await decryptDetailedMessageObj(data);
+        setDetailedMessage(decrypted);
 
         // If unread, mark as read on the backend
         setMessages((prev) => {
@@ -199,7 +330,7 @@ export default function EmailFolderView({
         setLoadingDetail(false);
       }
     },
-    [accountId, session?.accessToken],
+    [accountId, session?.accessToken, decryptDetailedMessageObj],
   );
 
   useEffect(() => {
@@ -223,45 +354,49 @@ export default function EmailFolderView({
     fetchMessageDetail,
   ]);
 
-  // Setup WebSocket connection for live emails
+  // Listen to live email events dispatched from the global notifications socket connection
   useEffect(() => {
-    if (!session?.accessToken) return;
+    const handleEmailNew = async (e: Event) => {
+      const data = (e as CustomEvent).detail;
+      // If the email belongs to this account and folder, refresh messages list
+      if (
+        data.accountId === accountId &&
+        data.folder.toLowerCase() === folder.toLowerCase()
+      ) {
+        fetchMessages();
+      }
 
-    const wsUrl =
-      process.env.NEXT_PUBLIC_API_URL?.replace("/api", "") ||
-      (typeof window !== "undefined" ? window.location.origin : "");
-    const socket: Socket = io(`${wsUrl}/notifications`, {
-      query: { token: session.accessToken },
-      transports: ["websocket"],
-    });
-
-    socket.on(
-      "email:new",
-      (data: { accountId: string; folder: string; message: any }) => {
-        // If the email belongs to this account and folder, refresh messages list
-        if (
-          data.accountId === accountId &&
-          data.folder.toLowerCase() === folder.toLowerCase()
-        ) {
-          fetchMessages();
-        }
-
-        // Show toast if a new email is in the inbox and matches this account
-        if (
-          data.folder.toLowerCase() === "inbox" &&
-          data.accountId === accountId
-        ) {
-          toast.info(`New mail: ${data.message.subject || "(No Subject)"}`, {
-            description: `From: ${data.message.from}`,
-          });
-        }
-      },
-    );
-
-    return () => {
-      socket.disconnect();
+      // Show toast if a new email is in the inbox and matches this account
+      if (
+        data.folder.toLowerCase() === "inbox" &&
+        data.accountId === accountId
+      ) {
+        const decryptedMsg = await decryptMessageObj(data.message);
+        toast.info(`New mail: ${decryptedMsg.subject || "(No Subject)"}`, {
+          description: `From: ${decryptedMsg.from}`,
+        });
+      }
     };
-  }, [session?.accessToken, accountId, folder, fetchMessages]);
+
+    window.addEventListener("runa-email-new", handleEmailNew);
+    return () => {
+      window.removeEventListener("runa-email-new", handleEmailNew);
+    };
+  }, [accountId, folder, fetchMessages, decryptMessageObj]);
+
+  // Handle local E2EE unlock event
+  useEffect(() => {
+    const handleE2eeUnlocked = () => {
+      fetchMessages();
+      if (selectedMessageId) {
+        fetchMessageDetail(selectedMessageId);
+      }
+    };
+    window.addEventListener("runa-e2ee-unlocked", handleE2eeUnlocked);
+    return () => {
+      window.removeEventListener("runa-e2ee-unlocked", handleE2eeUnlocked);
+    };
+  }, [fetchMessages, fetchMessageDetail, selectedMessageId]);
 
   useEffect(() => {
     setLoadRemoteContent(false);
@@ -641,11 +776,34 @@ export default function EmailFolderView({
         },
       );
       if (!res.ok) throw new Error("Download failed");
-      const blob = await res.blob();
+      
+      let finalBuffer = await res.arrayBuffer();
+      let finalFilename = filename;
+
+      if (detailedMessage?.encryptedKey) {
+        try {
+          const privKey = await getPrivateKey();
+          if (privKey) {
+            const { decryptEmailDataKey, decryptEmailBuffer, decryptEmailString } = await import("@/lib/crypto");
+            const dataKey = await decryptEmailDataKey(detailedMessage.encryptedKey as any, privKey);
+            
+            finalBuffer = await decryptEmailBuffer(finalBuffer, dataKey);
+            try {
+              finalFilename = await decryptEmailString(filename, dataKey);
+            } catch {
+              // Ignore filename decryption if it fails or was not encrypted
+            }
+          }
+        } catch (decErr) {
+          console.error("Failed to decrypt attachment content on download:", decErr);
+        }
+      }
+
+      const blob = new Blob([finalBuffer]);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = filename;
+      a.download = finalFilename;
       document.body.appendChild(a);
       a.click();
       a.remove();

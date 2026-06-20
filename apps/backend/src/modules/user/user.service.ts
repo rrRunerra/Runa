@@ -801,4 +801,31 @@ export class UserService {
       encryptedMasterKey: device.encryptedMasterKey,
     };
   }
+
+  async updateE2eeKeys(userId: string, userPublicKey: string, encryptedUserPrivateKey: string) {
+    const user = await this.prisma.client.user.findUnique({
+      where: { id: userId },
+    });
+    if (!user) throw new NotFoundException('User not found');
+
+    return await this.prisma.client.user.update({
+      where: { id: userId },
+      data: {
+        userPublicKey,
+        encryptedUserPrivateKey,
+      },
+    });
+  }
+
+  async getE2eeKeys(userId: string) {
+    const user = await this.prisma.client.user.findUnique({
+      where: { id: userId },
+      select: {
+        userPublicKey: true,
+        encryptedUserPrivateKey: true,
+      },
+    });
+    if (!user) throw new NotFoundException('User not found');
+    return user;
+  }
 }

@@ -4,6 +4,11 @@ import * as nodemailer from 'nodemailer';
 import { ImapFlow } from 'imapflow';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { encrypt, decrypt } from '../../common/utils/crypto';
+import {
+  generateDataKey,
+  encryptWithDataKey,
+  encryptDataKeyForUser,
+} from '../../common/utils/e2e-crypto';
 import { EmailAccountDto } from './dto/email-account.dto';
 import { SendEmailDto } from './dto/send-email.dto';
 import { NotificationGateway } from '../notification/notification.gateway';
@@ -353,10 +358,12 @@ export class EmailAccountService {
         from: true,
         to: true,
         cc: true,
+        bcc: true,
         date: true,
         read: true,
         flagged: true,
         folder: true,
+        encryptedKey: true,
         attachments: {
           select: {
             id: true,
@@ -783,6 +790,7 @@ export class EmailAccountService {
       from,
       to: data.to,
       cc: data.cc || undefined,
+      bcc: data.bcc || undefined,
       subject: data.subject,
       text: data.body,
       html: escapedBodyHtml,
@@ -806,30 +814,61 @@ export class EmailAccountService {
     });
     const nextUid = lastSentMessage ? lastSentMessage.uid + 1 : 1;
 
+    const userRecord = await this.prisma.client.user.findUnique({
+      where: { username },
+      select: { id: true, userPublicKey: true },
+    });
+
+    let subject = data.subject || '';
+    let bodyText = data.body || '';
+    let bodyHtml = escapedBodyHtml || '';
+    let toVal = data.to || '';
+    let fromVal = from || '';
+    let ccVal = data.cc || null;
+    let bccVal = data.bcc || null;
+    let encryptedKey = null;
+
+    if (userRecord && userRecord.userPublicKey) {
+      try {
+        const dataKey = generateDataKey();
+        subject = encryptWithDataKey(subject, dataKey);
+        bodyText = encryptWithDataKey(bodyText, dataKey);
+        bodyHtml = encryptWithDataKey(bodyHtml, dataKey);
+        
+        if (toVal) toVal = encryptWithDataKey(toVal, dataKey);
+        if (fromVal) fromVal = encryptWithDataKey(fromVal, dataKey);
+        if (ccVal) ccVal = encryptWithDataKey(ccVal, dataKey);
+        if (bccVal) bccVal = encryptWithDataKey(bccVal, dataKey);
+
+        encryptedKey = encryptDataKeyForUser(userRecord.userPublicKey, dataKey) as any;
+      } catch (encErr) {
+        this.logger.error(`E2EE encryption failed for sent email:`, encErr);
+      }
+    }
+
     // Create the message in database
     const savedMessage = await this.prisma.client.emailMessage.create({
       data: {
         userEmailAccountId: accountId,
         uid: nextUid,
         messageId: info.messageId || null,
-        subject: data.subject,
-        from,
-        to: data.to,
-        cc: data.cc || null,
+        subject,
+        from: fromVal,
+        to: toVal,
+        cc: ccVal || null,
+        bcc: bccVal || null,
         date: new Date(),
-        bodyText: data.body,
-        bodyHtml: escapedBodyHtml,
+        bodyText,
+        bodyHtml,
         read: true,
         folder: 'sent',
+        encryptedKey: encryptedKey || undefined,
       },
     });
 
     try {
-      const user = await this.prisma.client.user.findUnique({
-        where: { username },
-      });
-      if (user) {
-        this.gateway.sendToUser(user.id, 'email:new', {
+      if (userRecord) {
+        this.gateway.sendToUser(userRecord.id, 'email:new', {
           accountId,
           folder: 'sent',
           message: savedMessage,

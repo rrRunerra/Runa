@@ -4,6 +4,12 @@ import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { decrypt } from '../../common/utils/crypto';
+import {
+  generateDataKey,
+  encryptWithDataKey,
+  encryptBufferWithDataKey,
+  encryptDataKeyForUser,
+} from '../../common/utils/e2e-crypto';
 import { NotificationGateway } from '../notification/notification.gateway';
 
 interface SyncState {
@@ -73,6 +79,11 @@ export class EmailSyncService {
     });
     if (!account) return;
 
+    const user = await this.prisma.client.user.findUnique({
+      where: { username: account.username },
+      select: { id: true, userPublicKey: true },
+    });
+
     let decryptedPassword = '';
     try {
       decryptedPassword = decrypt(account.encryptedPassword);
@@ -135,26 +146,48 @@ export class EmailSyncService {
               continue;
             }
 
-            const subject = parsed.subject || '';
-            const fromStr = parsed.from ? parsed.from.text : '';
-            const toStr = parsed.to
+            let subject = parsed.subject || '';
+            let fromStr = parsed.from ? parsed.from.text : '';
+            let toStr = parsed.to
               ? Array.isArray(parsed.to)
                 ? parsed.to.map((t: any) => t.text).join(', ')
                 : parsed.to.text
               : '';
-            const ccStr = parsed.cc
+            let ccStr = parsed.cc
               ? Array.isArray(parsed.cc)
                 ? parsed.cc.map((t: any) => t.text).join(', ')
                 : parsed.cc.text
               : '';
-            const bccStr = parsed.bcc
+            let bccStr = parsed.bcc
               ? Array.isArray(parsed.bcc)
                 ? parsed.bcc.map((t: any) => t.text).join(', ')
                 : parsed.bcc.text
               : '';
             const date = parsed.date || new Date();
-            const bodyText = parsed.text || '';
-            const bodyHtml = parsed.html || '';
+            let bodyText = parsed.text || '';
+            let bodyHtml = parsed.html || '';
+
+            let encryptedKey = null;
+            let dataKey: Buffer | null = null;
+
+            if (user && user.userPublicKey) {
+              try {
+                dataKey = generateDataKey();
+                subject = encryptWithDataKey(subject, dataKey);
+                bodyText = encryptWithDataKey(bodyText, dataKey);
+                bodyHtml = encryptWithDataKey(bodyHtml, dataKey);
+
+                if (fromStr) fromStr = encryptWithDataKey(fromStr, dataKey);
+                if (toStr) toStr = encryptWithDataKey(toStr, dataKey);
+                if (ccStr) ccStr = encryptWithDataKey(ccStr, dataKey);
+                if (bccStr) bccStr = encryptWithDataKey(bccStr, dataKey);
+
+                encryptedKey = encryptDataKeyForUser(user.userPublicKey, dataKey) as any;
+              } catch (encErr) {
+                this.logger.error(`E2EE encryption failed for UID ${msg.uid} on account ${account.emailAddress}:`, encErr);
+                dataKey = null;
+              }
+            }
 
             // Cache metadata and body content locally in the database
             const emailRecord = await this.prisma.client.emailMessage.create({
@@ -173,16 +206,17 @@ export class EmailSyncService {
                 read: msg.flags ? msg.flags.has('\\Seen') : false,
                 flagged: msg.flags ? msg.flags.has('\\Flagged') : false,
                 folder: standardFolder,
+                encryptedKey: encryptedKey || undefined,
               },
             });
 
             try {
-              const user = await this.prisma.client.user.findUnique({
+              const userRecord = await this.prisma.client.user.findUnique({
                 where: { username: account.username },
               });
-              if (user) {
+              if (userRecord) {
                 // Emit email:new for live inbox list updates
-                this.gateway.sendToUser(user.id, 'email:new', {
+                this.gateway.sendToUser(userRecord.id, 'email:new', {
                   accountId: account.id,
                   folder: standardFolder,
                   message: emailRecord,
@@ -190,23 +224,40 @@ export class EmailSyncService {
 
                 // Create a system notification if email is unread and in Inbox
                 if (standardFolder === 'inbox' && !emailRecord.read) {
+                  let notifTitle = parsed.subject || '(No Subject)';
+                  let notifMessage = `New email from ${fromStr}`;
+
+                  if (dataKey && encryptedKey) {
+                    try {
+                      notifTitle = encryptWithDataKey(notifTitle, dataKey);
+                      notifMessage = encryptWithDataKey(`New email from ${parsed.from ? parsed.from.text : ''}`, dataKey);
+                    } catch (notifEncErr) {
+                      this.logger.error('Failed to encrypt notification titles/messages:', notifEncErr);
+                    }
+                  }
+
+                  const metadataPayload: any = {
+                    type: 'email',
+                    emailAccountId: account.id,
+                    emailFolder: standardFolder,
+                    emailMessageId: emailRecord.id,
+                  };
+                  if (encryptedKey) {
+                    metadataPayload.encryptedKey = encryptedKey;
+                  }
+
                   const notif = await this.prisma.client.notification.create({
                     data: {
-                      userId: user.id,
-                      title: subject || '(No Subject)',
-                      message: `New email from ${fromStr}`,
+                      userId: userRecord.id,
+                      title: notifTitle,
+                      message: notifMessage,
                       type: 'INFO',
                       status: 'PENDING',
-                      metadata: {
-                        type: 'email',
-                        emailAccountId: account.id,
-                        emailFolder: standardFolder,
-                        emailMessageId: emailRecord.id,
-                      },
+                      metadata: metadataPayload,
                     },
                   });
 
-                  this.gateway.sendToUser(user.id, 'notification:created', {
+                  this.gateway.sendToUser(userRecord.id, 'notification:created', {
                     id: notif.id,
                     userId: notif.userId,
                     title: notif.title,
@@ -225,13 +276,25 @@ export class EmailSyncService {
             // Parse and cache attachments as binary blobs (Bytes) in the database
             if (parsed.attachments && parsed.attachments.length > 0) {
               for (const attach of parsed.attachments) {
+                let filename = attach.filename || 'unnamed';
+                let content = attach.content;
+
+                if (dataKey) {
+                  try {
+                    filename = encryptWithDataKey(filename, dataKey);
+                    content = encryptBufferWithDataKey(content, dataKey);
+                  } catch (attachEncErr) {
+                    this.logger.error(`Attachment E2EE encryption failed for UID ${msg.uid}:`, attachEncErr);
+                  }
+                }
+
                 await this.prisma.client.emailAttachment.create({
                   data: {
                     emailMessageId: emailRecord.id,
-                    filename: attach.filename || 'unnamed',
+                    filename,
                     contentType: attach.contentType,
                     size: attach.size,
-                    content: attach.content, // Buffer
+                    content, // Buffer
                   },
                 });
               }

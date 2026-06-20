@@ -144,6 +144,23 @@ export class UserController {
     return this.usersService.getDeviceStatus(req.user.id, id);
   }
 
+  @Put(['e2ee-keys', 'e2e-keys'])
+  async updateE2eeKeys(
+    @Req() req: any,
+    @Body() body: { userPublicKey: string; encryptedUserPrivateKey: string },
+  ) {
+    return this.usersService.updateE2eeKeys(
+      req.user.id,
+      body.userPublicKey,
+      body.encryptedUserPrivateKey,
+    );
+  }
+
+  @Get(['e2ee-keys', 'e2e-keys'])
+  async getE2eeKeys(@Req() req: any) {
+    return this.usersService.getE2eeKeys(req.user.id);
+  }
+
   @Public()
   @Get(':username')
   async findOne(@Param('username') username: string) {

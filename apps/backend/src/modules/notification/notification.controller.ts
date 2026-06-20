@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Delete,
   Body,
   Param,
   UseGuards,
@@ -46,5 +47,17 @@ export class NotificationController {
       body.notificationId,
       body.encryptedMasterKey,
     );
+  }
+
+  @Delete(':id')
+  async delete(@Req() req: any, @Param('id') id: string): Promise<void> {
+    const userId = req.user.id;
+    await this.notificationService.delete(userId, id);
+  }
+
+  @Delete()
+  async deleteAll(@Req() req: any): Promise<void> {
+    const userId = req.user.id;
+    await this.notificationService.deleteAll(userId);
   }
 }

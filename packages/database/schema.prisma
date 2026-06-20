@@ -44,6 +44,10 @@ model User {
     backupCodes          String[]              @default([])
     passkeys             Passkey[]
 
+    // E2EE Keys
+    userPublicKey        String?
+    encryptedUserPrivateKey String?
+
     @@index([id])
     @@index([username])
 }
@@ -794,6 +798,7 @@ model EmailMessage {
     folder             String
     createdAt          DateTime          @default(now())
     updatedAt          DateTime          @updatedAt
+    encryptedKey       Json?             @db.Json
     emailAccount       UserEmailAccount  @relation(fields: [userEmailAccountId], references: [id], onDelete: Cascade)
     attachments        EmailAttachment[]
 
