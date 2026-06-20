@@ -47,8 +47,8 @@ export default function ApisPage() {
         {apisItem?.children && apisItem.children.length > 0 ? (
           apisItem.children.map((category) => (
             <Link
-              key={category.href}
-              href={category.href}
+              key={category.href || category.label}
+              href={category.href || "#"}
               className="block h-full"
             >
               <motion.div
