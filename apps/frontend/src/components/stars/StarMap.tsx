@@ -26,7 +26,8 @@ import Link from "next/link";
 import { Card } from "../ui/card";
 import { Button } from "../ui/button";
 import { ChevronRight, ArrowUpRight, Bookmark } from "lucide-react";
-import { cn, getSafeImageUrl } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { getSafeImageUrl } from "@/lib/inputValidation";
 import React from "react";
 
 export interface StarMapHandle {
@@ -367,7 +368,8 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
             if (lineIntensity > 0) {
               // Outer soft glow
               ctx.shadowBlur = 15 * lineIntensity * zoom;
-              ctx.shadowColor = constellation.connectionColor || "rgba(255, 255, 255, 0.4)";
+              ctx.shadowColor =
+                constellation.connectionColor || "rgba(255, 255, 255, 0.4)";
 
               ctx.globalAlpha = lineIntensity * 0.25;
               ctx.strokeStyle = constellation.connectionColor || "#ffffff";
@@ -386,7 +388,7 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
               ctx.moveTo(startPoint.x, startPoint.y);
               ctx.lineTo(endPoint.x, endPoint.y);
               ctx.stroke();
-              
+
               ctx.globalAlpha = prevGlobalAlpha;
             }
           }
@@ -536,7 +538,10 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
     const pinchStartZoomRef = useRef(0);
     const isPinchingRef = useRef(false);
 
-    const getTouchDistance = (t1: { clientX: number; clientY: number }, t2: { clientX: number; clientY: number }): number => {
+    const getTouchDistance = (
+      t1: { clientX: number; clientY: number },
+      t2: { clientX: number; clientY: number },
+    ): number => {
       const dx = t1.clientX - t2.clientX;
       const dy = t1.clientY - t2.clientY;
       return Math.sqrt(dx * dx + dy * dy);
@@ -547,10 +552,15 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
         // Pinch-to-zoom start
         isPinchingRef.current = true;
         isDraggingRef.current = false;
-        pinchStartDistRef.current = getTouchDistance(e.touches[0], e.touches[1]);
+        pinchStartDistRef.current = getTouchDistance(
+          e.touches[0],
+          e.touches[1],
+        );
         pinchStartZoomRef.current = zoom;
 
-        window.addEventListener("touchmove", handleWindowTouchMove, { passive: false });
+        window.addEventListener("touchmove", handleWindowTouchMove, {
+          passive: false,
+        });
         window.addEventListener("touchend", handleWindowTouchEnd);
         return;
       }
@@ -566,7 +576,9 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
       };
       setIsDragging(true);
 
-      window.addEventListener("touchmove", handleWindowTouchMove, { passive: false });
+      window.addEventListener("touchmove", handleWindowTouchMove, {
+        passive: false,
+      });
       window.addEventListener("touchend", handleWindowTouchEnd);
     };
 
@@ -578,15 +590,20 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
       if (isPinchingRef.current && e.touches.length === 2) {
         const currentDist = getTouchDistance(e.touches[0], e.touches[1]);
         const scaleFactor = currentDist / pinchStartDistRef.current;
-        const newZoom = Math.max(0.5, Math.min(2, pinchStartZoomRef.current * scaleFactor));
+        const newZoom = Math.max(
+          0.5,
+          Math.min(2, pinchStartZoomRef.current * scaleFactor),
+        );
 
         if (newZoom !== zoom) {
           // Zoom towards center of the two fingers
           const canvas = canvasRef.current;
           if (canvas) {
             const rect = canvas.getBoundingClientRect();
-            const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
-            const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
+            const centerX =
+              (e.touches[0].clientX + e.touches[1].clientX) / 2 - rect.left;
+            const centerY =
+              (e.touches[0].clientY + e.touches[1].clientY) / 2 - rect.top;
 
             const currentScale = BASE_SCALE * zoom;
             const worldX = (centerX - offset.x) / currentScale;
@@ -607,8 +624,14 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
             const minDecPx = -maxDec * newScale;
             const maxDecPx = -minDec * newScale;
 
-            newOffsetX = Math.max(width - maxRaPx, Math.min(-minRaPx, newOffsetX));
-            newOffsetY = Math.max(height - maxDecPx, Math.min(-minDecPx, newOffsetY));
+            newOffsetX = Math.max(
+              width - maxRaPx,
+              Math.min(-minRaPx, newOffsetX),
+            );
+            newOffsetY = Math.max(
+              height - maxDecPx,
+              Math.min(-minDecPx, newOffsetY),
+            );
 
             setZoom(newZoom);
             setOffset({ x: newOffsetX, y: newOffsetY });
@@ -800,7 +823,7 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
         const mouseX = e.clientX - rect.left;
         const mouseY = e.clientY - rect.top;
         const currentScale = BASE_SCALE * zoom;
-        
+
         const ra = (mouseX - offset.x) / (15 * currentScale);
         const dec = -(mouseY - offset.y) / currentScale;
 
@@ -820,12 +843,22 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
       }
     };
 
-    const pathParts = selectedConstellation ? selectedConstellation.name.split(/\s*>\s*/) : [];
+    const pathParts = selectedConstellation
+      ? selectedConstellation.name.split(/\s*>\s*/)
+      : [];
     const hasPath = pathParts.length > 1;
-    const displayName = hasPath ? pathParts[pathParts.length - 1] : (selectedConstellation?.name || "");
+    const displayName = hasPath
+      ? pathParts[pathParts.length - 1]
+      : selectedConstellation?.name || "";
     const breadcrumbPath = hasPath ? pathParts.slice(0, -1) : [];
-    const accentColor = selectedConstellation ? (selectedConstellation.starColor || selectedConstellation.connectionColor || '#8B5CF6') : '#8B5CF6';
-    const iconUrl = selectedConstellation ? getSafeImageUrl(selectedConstellation.icon) : "";
+    const accentColor = selectedConstellation
+      ? selectedConstellation.starColor ||
+        selectedConstellation.connectionColor ||
+        "#8B5CF6"
+      : "#8B5CF6";
+    const iconUrl = selectedConstellation
+      ? getSafeImageUrl(selectedConstellation.icon)
+      : "";
 
     return (
       <div className={`relative overflow-hidden select-none ${className}`}>
@@ -1065,16 +1098,14 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
               onClick={(e) => e.stopPropagation()}
             >
               <StarCard className="w-full border-zinc-800 bg-black/70 shadow-[0_0_50px_rgba(0,0,0,0.85),0_0_30px_rgba(139,92,246,0.15)] hover:border-zinc-700/80 transition-all duration-500 relative overflow-hidden group">
-               
-
                 <CardHeader className="flex flex-row justify-between items-start pb-3 pt-5 z-10 relative">
                   <div className="flex items-center gap-3.5 min-w-0 flex-1">
                     {/* Glowing Accent Icon Card */}
-                    <div 
+                    <div
                       className="w-12 h-12 rounded-xl border flex items-center justify-center relative shrink-0 overflow-hidden bg-zinc-950/80 transition-transform duration-500 group-hover:scale-105"
-                      style={{ 
-                        borderColor: `${accentColor}33`, 
-                        boxShadow: `0 0 20px ${accentColor}1a` 
+                      style={{
+                        borderColor: `${accentColor}33`,
+                        boxShadow: `0 0 20px ${accentColor}1a`,
                       }}
                     >
                       {iconUrl ? (
@@ -1087,15 +1118,14 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
                           unoptimized
                         />
                       ) : (
-                        <Bookmark 
-                          className="w-5 h-5" 
-                          style={{ 
+                        <Bookmark
+                          className="w-5 h-5"
+                          style={{
                             color: accentColor,
-                            filter: `drop-shadow(0 0 4px ${accentColor}66)`
-                          }} 
+                            filter: `drop-shadow(0 0 4px ${accentColor}66)`,
+                          }}
                         />
                       )}
-                      
                     </div>
 
                     <div className="flex flex-col min-w-0 flex-1">
@@ -1103,8 +1133,12 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
                         <div className="flex items-center flex-wrap gap-1 text-[10px] font-bold text-zinc-500 uppercase tracking-widest leading-none mb-1.5">
                           {breadcrumbPath.map((part, idx) => (
                             <React.Fragment key={idx}>
-                              {idx > 0 && <ChevronRight className="w-2.5 h-2.5 text-zinc-700 shrink-0" />}
-                              <span className="truncate max-w-[80px]">{part}</span>
+                              {idx > 0 && (
+                                <ChevronRight className="w-2.5 h-2.5 text-zinc-700 shrink-0" />
+                              )}
+                              <span className="truncate max-w-[80px]">
+                                {part}
+                              </span>
                             </React.Fragment>
                           ))}
                         </div>
@@ -1145,17 +1179,20 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
 
                 <CardContent className="pb-4 pt-1 z-10 relative">
                   <CardDescription className="text-zinc-300 text-sm leading-relaxed font-normal">
-                    {selectedConstellation.description || "No description provided for this constellation."}
+                    {selectedConstellation.description ||
+                      "No description provided for this constellation."}
                   </CardDescription>
                 </CardContent>
 
                 <CardFooter className="pt-2 pb-5 z-10 relative">
-                  <Link href={selectedConstellation.redirect} className="w-full">
-                    <Button 
+                  <Link
+                    href={selectedConstellation.redirect}
+                    className="w-full"
+                  >
+                    <Button
                       className="w-full h-11 bg-linear-to-r hover:opacity-95 text-white font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-2 group/btn relative overflow-hidden shadow-lg border border-white/10 cursor-pointer"
-                      style={{ 
+                      style={{
                         backgroundImage: `linear-gradient(135deg, ${accentColor}dd, ${accentColor}88)`,
-                        
                       }}
                     >
                       <span>Visit</span>

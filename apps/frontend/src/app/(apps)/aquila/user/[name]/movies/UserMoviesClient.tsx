@@ -21,7 +21,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSession } from "next-auth/react";
 import * as Lucide from "lucide-react";
 import { motion } from "framer-motion";
-import { cn, getSafeImageUrl } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { getSafeImageUrl } from "@/lib/inputValidation";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -50,7 +51,11 @@ export default function UserMoviesPage() {
   const { data: session } = useSession();
 
   if (!username) {
-    return <div className="text-center py-20 text-muted-foreground">Username not found</div>;
+    return (
+      <div className="text-center py-20 text-muted-foreground">
+        Username not found
+      </div>
+    );
   }
 
   const isOwner = session?.user?.username === username;
@@ -102,7 +107,11 @@ export default function UserMoviesPage() {
     }
   }, [username]);
 
-  const fetchMoviesList = (currentOffset = 0, isReset = false, statusOverride?: string) => {
+  const fetchMoviesList = (
+    currentOffset = 0,
+    isReset = false,
+    statusOverride?: string,
+  ) => {
     if (!username) return;
     if (isFetchingRef.current && !isReset) return;
     isFetchingRef.current = true;
@@ -126,7 +135,7 @@ export default function UserMoviesPage() {
 
     fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/list/movie/user/${username}?${queryParams}`,
-      { headers }
+      { headers },
     )
       .then(async (res) => {
         if (res.status === 403) {
@@ -145,7 +154,7 @@ export default function UserMoviesPage() {
           setMoviesList((prev) => {
             if (isReset) return newEntries;
             const seen = new Set(prev.map((e) => e.id));
-            return [...prev, ...newEntries.filter((e:any ) => !seen.has(e.id))];
+            return [...prev, ...newEntries.filter((e: any) => !seen.has(e.id))];
           });
           setCounts(data.counts || {});
           if (statusOverride !== undefined && activeList === "All") {
@@ -186,7 +195,15 @@ export default function UserMoviesPage() {
     } else {
       fetchMoviesList(0, true);
     }
-  }, [username, session, debouncedSearch, activeList, filters.format, filters.status, sort]);
+  }, [
+    username,
+    session,
+    debouncedSearch,
+    activeList,
+    filters.format,
+    filters.status,
+    sort,
+  ]);
 
   useEffect(() => {
     if (!userData) return;
@@ -245,10 +262,11 @@ export default function UserMoviesPage() {
             <div className="relative px-6 pb-6 pt-3 flex flex-col sm:flex-row sm:items-end gap-5">
               {/* Avatar - overlapping the banner */}
               <div className="relative -mt-16 sm:-mt-20 shrink-0 self-start sm:self-auto z-20">
-                <Avatar
-                  className="h-24 w-24 sm:h-32 sm:w-32 border-4 border-zinc-950 ring-4 ring-primary/20 shadow-2xl rounded-full"
-                >
-                  <AvatarImage src={getSafeImageUrl(userData.avatarUrl)} alt={userData.username} />
+                <Avatar className="h-24 w-24 sm:h-32 sm:w-32 border-4 border-zinc-950 ring-4 ring-primary/20 shadow-2xl rounded-full">
+                  <AvatarImage
+                    src={getSafeImageUrl(userData.avatarUrl)}
+                    alt={userData.username}
+                  />
                   <AvatarFallback className="text-3xl font-extrabold bg-zinc-900 text-primary border border-zinc-800">
                     {userData.displayName?.[0]?.toUpperCase() ||
                       userData.username?.[0]?.toUpperCase() ||
@@ -280,9 +298,12 @@ export default function UserMoviesPage() {
             <div className="size-16 rounded-full bg-primary/10 flex items-center justify-center mb-4 text-primary">
               <Lucide.Lock className="size-8" />
             </div>
-            <h3 className="text-lg font-bold text-foreground">This list is private</h3>
+            <h3 className="text-lg font-bold text-foreground">
+              This list is private
+            </h3>
             <p className="text-sm text-muted-foreground max-w-sm mt-1">
-              The owner of this list has set their privacy preferences to private.
+              The owner of this list has set their privacy preferences to
+              private.
             </p>
           </div>
         ) : (
@@ -302,23 +323,30 @@ export default function UserMoviesPage() {
                         onClick={() => setActiveList(list)}
                         className={cn(
                           "relative flex items-center gap-2.5 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-200 cursor-pointer select-none shrink-0",
-                          isActive 
-                            ? "text-primary-foreground font-semibold" 
-                            : "text-muted-foreground hover:text-foreground hover:bg-zinc-800/20"
+                          isActive
+                            ? "text-primary-foreground font-semibold"
+                            : "text-muted-foreground hover:text-foreground hover:bg-zinc-800/20",
                         )}
                       >
                         {isActive && (
                           <motion.div
                             layoutId="activeHorizontalListHighlight"
                             className="absolute inset-0 bg-primary rounded-xl -z-10 shadow-lg shadow-primary/20"
-                            transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                            transition={{
+                              type: "spring",
+                              stiffness: 380,
+                              damping: 30,
+                            }}
                           />
                         )}
                         <span className="relative z-10">{list}</span>
-                        <span className={cn(
-                          "relative z-10 text-[10px] px-1.5 py-0.5 rounded-md bg-zinc-800/50 text-muted-foreground transition-colors", 
-                          isActive && "bg-primary-foreground/20 text-primary-foreground"
-                        )}>
+                        <span
+                          className={cn(
+                            "relative z-10 text-[10px] px-1.5 py-0.5 rounded-md bg-zinc-800/50 text-muted-foreground transition-colors",
+                            isActive &&
+                              "bg-primary-foreground/20 text-primary-foreground",
+                          )}
+                        >
                           {count}
                         </span>
                       </button>
@@ -343,7 +371,9 @@ export default function UserMoviesPage() {
                 {/* Sort */}
                 <div className="flex items-center gap-2.5">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] font-semibold text-muted-foreground/80 hidden sm:inline">Sort</span>
+                    <span className="text-[11px] font-semibold text-muted-foreground/80 hidden sm:inline">
+                      Sort
+                    </span>
                     <Select value={sort} onValueChange={(v: any) => setSort(v)}>
                       <SelectTrigger className="h-9.5 min-w-[130px] bg-zinc-950/40 border border-zinc-800/50 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
                         <SelectValue placeholder="Sort By" />
@@ -352,7 +382,9 @@ export default function UserMoviesPage() {
                         <SelectItem value="title">Title</SelectItem>
                         <SelectItem value="score">Score</SelectItem>
                         <SelectItem value="progress">Progress</SelectItem>
-                        <SelectItem value="last_updated">Last Updated</SelectItem>
+                        <SelectItem value="last_updated">
+                          Last Updated
+                        </SelectItem>
                         <SelectItem value="last_added">Last Added</SelectItem>
                       </SelectContent>
                     </Select>
@@ -363,7 +395,10 @@ export default function UserMoviesPage() {
 
             <header className="flex items-center justify-between mt-4">
               <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/75">
-                {activeList} Movies ({counts?.[activeList.toLowerCase().replace(/\s+/g, "_")] ?? moviesList.length})
+                {activeList} Movies (
+                {counts?.[activeList.toLowerCase().replace(/\s+/g, "_")] ??
+                  moviesList.length}
+                )
               </h3>
               <div className="flex items-center gap-1.5 bg-zinc-950/40 p-1 rounded-xl border border-zinc-850 shadow-inner ml-auto">
                 {[
@@ -396,13 +431,25 @@ export default function UserMoviesPage() {
               sort={sort}
               baseUrl="/aquila/movies"
               isOwner={isOwner}
-              onRefresh={() => fetchMoviesList(0, true, activeList === "All" ? MOVIES_PRIORITY_STATUSES[0] : undefined)}
+              onRefresh={() =>
+                fetchMoviesList(
+                  0,
+                  true,
+                  activeList === "All"
+                    ? MOVIES_PRIORITY_STATUSES[0]
+                    : undefined,
+                )
+              }
             />
 
             <InfiniteScroll
               onLoadMore={() => {
                 if (activeList === "All") {
-                  fetchMoviesList(priorityOff, false, MOVIES_PRIORITY_STATUSES[priorityIdx]);
+                  fetchMoviesList(
+                    priorityOff,
+                    false,
+                    MOVIES_PRIORITY_STATUSES[priorityIdx],
+                  );
                 } else {
                   fetchMoviesList(offset, false);
                 }

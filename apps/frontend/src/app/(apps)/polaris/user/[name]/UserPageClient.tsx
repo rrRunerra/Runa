@@ -6,7 +6,8 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { Lock, Inbox, ArrowLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { cn, getSafeImageUrl } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { getSafeImageUrl } from "@/lib/inputValidation";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +16,10 @@ import OverviewTab from "./components/OverviewTab";
 import FavoritesTab from "./components/FavoritesTab";
 import ListsTab from "./components/ListsTab";
 import StatsTab from "./components/StatsTab";
-import { getConnectionIcon, getConnectionColorClass } from "./components/ConnectionHelpers";
+import {
+  getConnectionIcon,
+  getConnectionColorClass,
+} from "./components/ConnectionHelpers";
 import Image from "next/image";
 import AppSwitcherDropdown from "@/components/AppSwitcherDropdown";
 import { apps } from "../../../../../../config/apps";
@@ -51,12 +55,23 @@ export default function UserPageClient() {
 
   const [user, setUser] = useState<UserProfileData | null>(null);
   const [favorites, setFavorites] = useState<FavoriteItem[]>([]);
-  const [listCounts, setListCounts] = useState<Record<string, { counts?: Record<string, number>; total: number; private?: boolean; failed?: boolean }>>({});
+  const [listCounts, setListCounts] = useState<
+    Record<
+      string,
+      {
+        counts?: Record<string, number>;
+        total: number;
+        private?: boolean;
+        failed?: boolean;
+      }
+    >
+  >({});
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>("overview");
 
-  const isOwner = session?.user?.username?.toLowerCase() === name?.toLowerCase();
+  const isOwner =
+    session?.user?.username?.toLowerCase() === name?.toLowerCase();
 
   useEffect(() => {
     if (name) {
@@ -72,7 +87,9 @@ export default function UserPageClient() {
       setError(null);
       try {
         // 1. Fetch main user profile
-        const userRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/${name}`);
+        const userRes = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/user/${name}`,
+        );
         if (!userRes.ok) {
           if (userRes.status === 404) {
             throw new Error("User not found");
@@ -89,13 +106,16 @@ export default function UserPageClient() {
         }
 
         // 2. Fetch favorites and list details concurrently using Promise.allSettled
-        const favPromise = fetch(`${process.env.NEXT_PUBLIC_API_URL}/favorites/user/${name}`)
-          .then(async (r) => (r.ok ? r.json() : []));
+        const favPromise = fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/favorites/user/${name}`,
+        ).then(async (r) => (r.ok ? r.json() : []));
 
         const categories = ["anime", "manga", "tv", "movie", "game", "book"];
         const listPromises = categories.map(async (cat) => {
           try {
-            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/${cat}/user/${name}?limit=1`);
+            const res = await fetch(
+              `${process.env.NEXT_PUBLIC_API_URL}/list/${cat}/user/${name}?limit=1`,
+            );
             if (res.ok) {
               const data = await res.json();
               return { category: cat, data };
@@ -111,7 +131,7 @@ export default function UserPageClient() {
 
         const [favResult, ...listResults] = await Promise.all([
           favPromise,
-          ...listPromises
+          ...listPromises,
         ]);
 
         setFavorites(favResult);
@@ -123,14 +143,13 @@ export default function UserPageClient() {
           } else if (res.data) {
             countsMap[res.category] = {
               counts: res.data.counts || {},
-              total: res.data.counts?.all || 0
+              total: res.data.counts?.all || 0,
             };
           } else {
             countsMap[res.category] = { total: 0, failed: true };
           }
         });
         setListCounts(countsMap);
-
       } catch (err: any) {
         setError(err.message || "Failed to load profile details");
       } finally {
@@ -179,10 +198,21 @@ export default function UserPageClient() {
           <div className="p-3.5 rounded-2xl bg-destructive/10 text-destructive border border-destructive/20 mb-4">
             <Inbox className="size-8" aria-hidden="true" />
           </div>
-          <h1 className="text-xl font-bold text-white mb-2">{error || "User not found"}</h1>
-          <p className="text-xs text-muted-foreground">The profile page could not be loaded. Ensure the spelling is correct.</p>
-          <Link href="/polaris/dash" className="mt-6 rounded-xl focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/50">
-            <Button variant="ghost" className="text-xs text-muted-foreground hover:text-white hover:bg-muted rounded-xl h-9 flex items-center gap-1.5">
+          <h1 className="text-xl font-bold text-white mb-2">
+            {error || "User not found"}
+          </h1>
+          <p className="text-xs text-muted-foreground">
+            The profile page could not be loaded. Ensure the spelling is
+            correct.
+          </p>
+          <Link
+            href="/polaris/dash"
+            className="mt-6 rounded-xl focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/50"
+          >
+            <Button
+              variant="ghost"
+              className="text-xs text-muted-foreground hover:text-white hover:bg-muted rounded-xl h-9 flex items-center gap-1.5"
+            >
               <ArrowLeft className="size-3.5" aria-hidden="true" />
               Back to Dashboard
             </Button>
@@ -200,10 +230,21 @@ export default function UserPageClient() {
           <div className="p-3.5 rounded-2xl bg-primary/10 text-primary border border-primary/20 mb-4">
             <Lock className="size-8" aria-hidden="true" />
           </div>
-          <h1 className="text-xl font-bold text-white mb-2">This profile is private</h1>
-          <p className="text-xs text-muted-foreground">@{user.username} has chosen to keep their profile credentials private.</p>
-          <Link href="/polaris/dash" className="mt-6 rounded-xl focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/50">
-            <Button variant="ghost" className="text-xs text-muted-foreground hover:text-white hover:bg-muted rounded-xl h-9 flex items-center gap-1.5">
+          <h1 className="text-xl font-bold text-white mb-2">
+            This profile is private
+          </h1>
+          <p className="text-xs text-muted-foreground">
+            @{user.username} has chosen to keep their profile credentials
+            private.
+          </p>
+          <Link
+            href="/polaris/dash"
+            className="mt-6 rounded-xl focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/50"
+          >
+            <Button
+              variant="ghost"
+              className="text-xs text-muted-foreground hover:text-white hover:bg-muted rounded-xl h-9 flex items-center gap-1.5"
+            >
               <ArrowLeft className="size-3.5" aria-hidden="true" />
               Back to Dashboard
             </Button>
@@ -216,16 +257,23 @@ export default function UserPageClient() {
   const displayName = user.displayName || user.username;
   const bio = user.profileSettings?.bio || "";
   const location = user.profileSettings?.location || "";
-  const joinedDate = user.profileSettings?.joinedAt 
-    ? new Date(user.profileSettings.joinedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long' })
+  const joinedDate = user.profileSettings?.joinedAt
+    ? new Date(user.profileSettings.joinedAt).toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "long",
+      })
     : null;
 
   // Sum of total items across public lists
-  const totalItemsTracked = Object.values(listCounts).reduce((acc, curr) => acc + (curr.total || 0), 0);
+  const totalItemsTracked = Object.values(listCounts).reduce(
+    (acc, curr) => acc + (curr.total || 0),
+    0,
+  );
   const polarisApp = apps.find((a) => a.name === "Polaris") || apps[3];
 
   // Filter connections: don't show private ones if we are not the owner
-  const visibleConnections = user.connections?.filter((conn: any) => isOwner || !conn.private) || [];
+  const visibleConnections =
+    user.connections?.filter((conn: any) => isOwner || !conn.private) || [];
 
   return (
     <div className="relative flex flex-col w-full min-h-screen gap-6 p-4 lg:p-6 bg-background text-foreground antialiased font-sans">
@@ -234,7 +282,6 @@ export default function UserPageClient() {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col gap-6 w-full z-10">
-        
         {/* Top-Left App Switcher */}
         <div className="flex justify-start">
           <AppSwitcherDropdown
@@ -257,7 +304,10 @@ export default function UserPageClient() {
               />
             ) : (
               <div className="w-full h-full bg-linear-to-tr from-primary/20 via-violet-900/10 to-transparent relative">
-                <div className="absolute inset-0 bg-radial-at-t from-primary/10 via-transparent to-transparent" aria-hidden="true" />
+                <div
+                  className="absolute inset-0 bg-radial-at-t from-primary/10 via-transparent to-transparent"
+                  aria-hidden="true"
+                />
               </div>
             )}
             <div className="absolute inset-0 bg-linear-to-t from-background/80 via-background/20 to-transparent" />
@@ -269,7 +319,10 @@ export default function UserPageClient() {
               {/* Avatar - overlapping the banner */}
               <div className="relative -mt-16 sm:-mt-20 shrink-0 self-start sm:self-auto z-20">
                 <Avatar className="h-24 w-24 sm:h-32 sm:w-32 border-4 border-background ring-4 ring-primary/20 shadow-2xl rounded-full">
-                  <AvatarImage src={getSafeImageUrl(user.avatarUrl)} alt={user.username} />
+                  <AvatarImage
+                    src={getSafeImageUrl(user.avatarUrl)}
+                    alt={user.username}
+                  />
                   <AvatarFallback className="text-3xl font-extrabold bg-muted text-primary border border-border/60">
                     {displayName.charAt(0).toUpperCase()}
                   </AvatarFallback>
@@ -286,7 +339,10 @@ export default function UserPageClient() {
                     Profile
                   </span>
                   {isOwner && (
-                    <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 text-[9px] font-bold py-0.5 tracking-wider uppercase">
+                    <Badge
+                      variant="outline"
+                      className="bg-primary/5 text-primary border-primary/20 text-[9px] font-bold py-0.5 tracking-wider uppercase"
+                    >
                       You
                     </Badge>
                   )}
@@ -298,48 +354,69 @@ export default function UserPageClient() {
             </div>
           </div>
         </div>
-        
+
         {/* Navigation Tabs */}
-        <div className="flex items-center gap-1 border-b border-border/40 pb-px shrink-0" role="tablist" aria-label="User profile tabs">
-          {(["overview", "favorites", "lists", "stats"] as TabType[]).map((tab) => {
-            const isActive = activeTab === tab;
-            return (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                role="tab"
-                aria-selected={isActive}
-                aria-controls={`tabpanel-${tab}`}
-                id={`tab-${tab}`}
-                className={cn(
-                  "relative px-4 py-3 text-xs md:text-sm font-semibold transition-all select-none cursor-pointer uppercase tracking-wider",
-                  "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 rounded-t-xl",
-                  isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {isActive && (
-                  <>
-                    <motion.div
-                      layoutId="activeUserTabIndicator"
-                      className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-t-md"
-                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                    />
-                    <motion.div
-                      layoutId="activeUserTabHighlight"
-                      className="absolute inset-0 bg-primary/5 rounded-t-xl"
-                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                      style={{ pointerEvents: "none" }}
-                    />
-                  </>
-                )}
-                <span>{tab}</span>
-              </button>
-            );
-          })}
+        <div
+          className="flex items-center gap-1 border-b border-border/40 pb-px shrink-0"
+          role="tablist"
+          aria-label="User profile tabs"
+        >
+          {(["overview", "favorites", "lists", "stats"] as TabType[]).map(
+            (tab) => {
+              const isActive = activeTab === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  role="tab"
+                  aria-selected={isActive}
+                  aria-controls={`tabpanel-${tab}`}
+                  id={`tab-${tab}`}
+                  className={cn(
+                    "relative px-4 py-3 text-xs md:text-sm font-semibold transition-all select-none cursor-pointer uppercase tracking-wider",
+                    "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 rounded-t-xl",
+                    isActive
+                      ? "text-primary"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {isActive && (
+                    <>
+                      <motion.div
+                        layoutId="activeUserTabIndicator"
+                        className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-t-md"
+                        transition={{
+                          type: "spring",
+                          stiffness: 380,
+                          damping: 30,
+                        }}
+                      />
+                      <motion.div
+                        layoutId="activeUserTabHighlight"
+                        className="absolute inset-0 bg-primary/5 rounded-t-xl"
+                        transition={{
+                          type: "spring",
+                          stiffness: 380,
+                          damping: 30,
+                        }}
+                        style={{ pointerEvents: "none" }}
+                      />
+                    </>
+                  )}
+                  <span>{tab}</span>
+                </button>
+              );
+            },
+          )}
         </div>
 
         {/* Tab Content Panel */}
-        <div className="flex-1 pt-4" role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
+        <div
+          className="flex-1 pt-4"
+          role="tabpanel"
+          id={`tabpanel-${activeTab}`}
+          aria-labelledby={`tab-${activeTab}`}
+        >
           <AnimatePresence mode="wait">
             <motion.div
               key={activeTab}
@@ -348,13 +425,9 @@ export default function UserPageClient() {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.15 }}
             >
-              
               {/* OVERVIEW TAB */}
               {activeTab === "overview" && (
-                <OverviewTab
-                  bio={bio}
-                  connections={visibleConnections}
-                />
+                <OverviewTab bio={bio} connections={visibleConnections} />
               )}
 
               {/* FAVORITES TAB */}
@@ -368,14 +441,10 @@ export default function UserPageClient() {
               )}
 
               {/* STATS TAB */}
-              {activeTab === "stats" && name && (
-                <StatsTab name={name} />
-              )}
-
+              {activeTab === "stats" && name && <StatsTab name={name} />}
             </motion.div>
           </AnimatePresence>
         </div>
-
       </main>
     </div>
   );
