@@ -211,12 +211,12 @@ export const SidebarSettingsTab = forwardRef<SidebarSettingsTabRef, SidebarSetti
       if (sec.section?.toLowerCase() === "phone") return;
       
       // Check section permission access
-      const canAccessSection = !sec.permission || hasPermission(userPermissions, sec.permission, sec.permissionOperator || "any");
+      const canAccessSection = !sec.permission || hasPermission(userPermissions, sec.permission, "any");
       if (!canAccessSection) return;
 
       sec.items.forEach((item) => {
         // Check item permission access
-        const canAccessItem = !item.permission || hasPermission(userPermissions, item.permission, item.permissionOperator || "all");
+        const canAccessItem = !item.permission || hasPermission(userPermissions, item.permission, "any");
         if (!canAccessItem) return;
 
         const secName = sec.section || "General";

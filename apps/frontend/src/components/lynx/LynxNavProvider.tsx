@@ -3,11 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import AppSideBar from "@/components/AppSideBar";
 import { getLynxSidebarConfig } from "../../../config/lynxSidebarConfig";
+import { useSession } from "next-auth/react";
+import { filterSidebarConfig } from "@/lib/navigation";
+import RrSidebar from "../rrComponents/rrSidebar";
 
 async function safeFetch<T>(url: string, fallback: T): Promise<T> {
   try {
     const res = await fetch(url, {
-      cache: "force-cache"
+      cache: "force-cache",
     });
     if (!res.ok) return fallback;
     return await res.json();
@@ -26,6 +29,7 @@ interface LynxNavProviderProps {
  * and builds the nav config, then passes it into the generic sidebar.
  */
 export default function LynxNavProvider({ children }: LynxNavProviderProps) {
+  const { data: session } = useSession();
   const [data, setData] = useState({
     commands: [] as { name: string }[],
     events: [] as { name: string }[],
@@ -46,14 +50,14 @@ export default function LynxNavProvider({ children }: LynxNavProviderProps) {
     });
   }, []);
 
-  const navConfig = useMemo(() => getLynxSidebarConfig(data), [data]);
+  const sidebarConfig = useMemo(() => {
+    const rawConfig = getLynxSidebarConfig(data);
+    return filterSidebarConfig(rawConfig, session?.user?.permissions);
+  }, [data, session?.user?.permissions]);
 
   return (
     <>
-      <AppSideBar
-        navConfig={navConfig}
-        connectionsHref="/polaris/connections"
-      />
+      <RrSidebar sidebarConfig={sidebarConfig} />
       {children}
     </>
   );

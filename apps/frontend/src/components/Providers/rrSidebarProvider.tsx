@@ -1,60 +1,34 @@
 "use client";
 import { createContext, ReactNode, useCallback, useState } from "react";
+import { 
+  SidebarConfig, 
+  SidebarSection, 
+  SidebarItem, 
+  SidebarItemChild 
+} from "@/types/SidebarConfig";
 
-export interface NavChildItem {
-  label: string;
-  icon?: ReactNode;
-  href?: string;
-  component?: ReactNode;
-  preventRedirect?: boolean;
-  subtitle?: string;
-  badge?: string;
-  permission?: bigint | bigint[];
-}
-
-export interface NavItem {
-  label: string;
-  icon?: ReactNode;
-  href?: string;
-  subtitle?: string;
-  badge?: string;
-  children?: NavChildItem[];
-  permission?: bigint | bigint[];
-  preventRedirect?: boolean;
-  position?: number;
-  component?: React.ReactNode;
-}
-
-export interface NavSection {
-  section: string;
-  items: NavItem[];
-  permission?: bigint | bigint[];
-}
-
-export type NavbarConfig = NavSection[];
-
-interface NavigationContextType {
-  navbarConfig: NavbarConfig;
-  setNavbarConfig: (
-    config: NavbarConfig | ((prev: NavbarConfig) => NavbarConfig),
+interface SidebarContextType {
+  sidebarConfig: SidebarConfig;
+  setSidebarConfig: (
+    config: SidebarConfig | ((prev: SidebarConfig) => SidebarConfig),
   ) => void;
-  getSection: (sectionName: string) => NavSection | undefined;
+  getSection: (sectionName: string) => SidebarSection | undefined;
   getItem: (
     sectionName: string,
     itemLabel: string,
-    section?: string,
-  ) => NavItem | undefined;
+  ) => SidebarItem | undefined;
   getChild: (
     sectionName: string,
     parentLabel: string,
     childLabel: string,
-  ) => NavItem | undefined;
-  insertSection: (section: NavSection, position?: number) => void;
-  insertItem: (sectionName: string, item: NavItem) => void;
+  ) => SidebarItemChild | undefined;
+  insertSection: (section: SidebarSection, position?: number) => void;
+  insertItem: (sectionName: string, item: SidebarItem, position?: number) => void;
   insertChild: (
     sectionName: string,
     parentLabel: string,
-    child: NavItem,
+    child: SidebarItemChild,
+    position?: number,
   ) => void;
   removeSection: (sectionName: string) => void;
   removeItem: (sectionName: string, itemLabel: string) => void;
@@ -72,18 +46,18 @@ interface NavigationContextType {
   ) => void;
 }
 
-export const NavigationContext = createContext<
-  NavigationContextType | undefined
+export const SidebarNavigationContext = createContext<
+  SidebarContextType | undefined
 >(undefined);
 
-export function NavigationProvider({ children }: { children: ReactNode }) {
-  const [navbarConfig, setNavbarConfig] = useState<NavbarConfig>([]);
+export function SidebarProvider({ children }: { children: ReactNode }) {
+  const [sidebarConfig, setSidebarConfig] = useState<SidebarConfig>([]);
 
   const getSection = useCallback(
     (sectionName: string) => {
-      return navbarConfig.find((s) => s.section === sectionName);
+      return sidebarConfig.find((s) => s.section === sectionName);
     },
-    [navbarConfig],
+    [sidebarConfig],
   );
 
   const getItem = useCallback(
@@ -103,8 +77,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   );
 
   const insertSection = useCallback(
-    (section: NavSection, position: number = 0) => {
-      setNavbarConfig((prev) => {
+    (section: SidebarSection, position: number = 0) => {
+      setSidebarConfig((prev) => {
         const newConfig = [...prev];
         newConfig.splice(position, 0, section);
         return newConfig;
@@ -113,26 +87,32 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const insertItem = useCallback((sectionName: string, item: NavItem) => {
-    setNavbarConfig((prev) =>
-      prev.map((s) =>
-        s.section === sectionName ? { ...s, items: [...s.items, item] } : s,
-      ),
+  const insertItem = useCallback((sectionName: string, item: SidebarItem, position?: number) => {
+    setSidebarConfig((prev) =>
+      prev.map((s) => {
+        if (s.section !== sectionName) return s;
+        const newItems = [...s.items];
+        const insertIdx = position !== undefined ? position : newItems.length;
+        newItems.splice(insertIdx, 0, item);
+        return { ...s, items: newItems };
+      }),
     );
   }, []);
 
   const insertChild = useCallback(
-    (sectionName: string, parentLabel: string, child: NavItem) => {
-      setNavbarConfig((prev) =>
+    (sectionName: string, parentLabel: string, child: SidebarItemChild, position?: number) => {
+      setSidebarConfig((prev) =>
         prev.map((s) => {
           if (s.section !== sectionName) return s;
           return {
             ...s,
-            items: s.items.map((i) =>
-              i.label === parentLabel
-                ? { ...i, children: [...(i.children || []), child] }
-                : i,
-            ),
+            items: s.items.map((i) => {
+              if (i.label !== parentLabel) return i;
+              const newChildren = [...(i.children || [])];
+              const insertIdx = position !== undefined ? position : newChildren.length;
+              newChildren.splice(insertIdx, 0, child);
+              return { ...i, children: newChildren };
+            }),
           };
         }),
       );
@@ -140,12 +120,13 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+
   const removeSection = useCallback((sectionName: string) => {
-    setNavbarConfig((prev) => prev.filter((s) => s.section !== sectionName));
+    setSidebarConfig((prev) => prev.filter((s) => s.section !== sectionName));
   }, []);
 
   const removeItem = useCallback((sectionName: string, itemLabel: string) => {
-    setNavbarConfig((prev) =>
+    setSidebarConfig((prev) =>
       prev.map((s) => {
         if (s.section !== sectionName) return s;
         return {
@@ -158,7 +139,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   const removeChild = useCallback(
     (sectionName: string, parentLabel: string, childLabel: string) => {
-      setNavbarConfig((prev) =>
+      setSidebarConfig((prev) =>
         prev.map((s) => {
           if (s.section !== sectionName) return s;
           return {
@@ -179,7 +160,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
 
   const updateBadge = useCallback(
     (sectionName: string, itemLabel: string, badge: string) => {
-      setNavbarConfig((prev) =>
+      setSidebarConfig((prev) =>
         prev.map((s) => {
           if (s.section !== sectionName) return s;
           return {
@@ -201,7 +182,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       childLabel: string,
       badge: string,
     ) => {
-      setNavbarConfig((prev) =>
+      setSidebarConfig((prev) =>
         prev.map((s) => {
           if (s.section !== sectionName) return s;
           return {
@@ -223,10 +204,10 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <NavigationContext.Provider
+    <SidebarNavigationContext.Provider
       value={{
-        navbarConfig,
-        setNavbarConfig,
+        sidebarConfig,
+        setSidebarConfig,
         getSection,
         getItem,
         getChild,
@@ -241,6 +222,6 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
-    </NavigationContext.Provider>
+    </SidebarNavigationContext.Provider>
   );
 }

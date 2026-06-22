@@ -133,7 +133,7 @@ export default function SpotlightSearch(): React.JSX.Element {
         !hasPermission(
           session?.user?.permissions,
           section.permission,
-          section.permissionOperator || "all"
+          "any"
         )
       ) {
         return;
@@ -143,7 +143,7 @@ export default function SpotlightSearch(): React.JSX.Element {
         // Only include if user has access
         if (
           navItem.permission &&
-          !hasPermission(session?.user?.permissions, navItem.permission, navItem.permissionOperator || "all")
+          !hasPermission(session?.user?.permissions, navItem.permission, "any")
         ) {
           return;
         }
@@ -176,7 +176,7 @@ export default function SpotlightSearch(): React.JSX.Element {
           navItem.children.forEach((childItem) => {
             if (
               childItem.permission &&
-              !hasPermission(session?.user?.permissions, childItem.permission, childItem.permissionOperator || "all")
+              !hasPermission(session?.user?.permissions, childItem.permission, "any")
             ) {
               return;
             }

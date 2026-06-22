@@ -13,23 +13,22 @@ import {
 import type { NavbarConfig } from "@/components/Providers/NavigationProvider";
 import { ComposeEmailModal } from "@/components/pegasus/ComposeEmailModal";
 import { SidebarMenuButton } from "@/components/ui/sidebar";
+import { SidebarConfig } from "@/types/SidebarConfig";
 
 export const getPegasusSidebarConfig = (
-  session: any,
   emailAccounts: any[] = [],
-): NavbarConfig => {
+): SidebarConfig => {
   const defaultAccountId = emailAccounts[0]?.id;
 
-  const configs: NavbarConfig = [
+  return [
     {
-      section: "Phone",
+      section: "#$Phone",
       items: [
         {
           label: "Compose",
           icon: <Edit className="h-4 w-4" />,
           subtitle: "Compose mail",
           position: 1,
-          preventRedirect: true,
           component: (
             <ComposeEmailModal accountId={defaultAccountId}>
               <SidebarMenuButton
@@ -54,7 +53,6 @@ export const getPegasusSidebarConfig = (
           icon: <Edit className="h-4 w-4" />,
           subtitle: "Compose mail",
           position: 1,
-          preventRedirect: true,
           component: (
             <ComposeEmailModal accountId={defaultAccountId}>
               <SidebarMenuButton
@@ -77,12 +75,14 @@ export const getPegasusSidebarConfig = (
         return {
           label: account.accountName,
           href: `/pegasus/account/${account.id}`,
+          preventRedirect: true,
           icon: <Mail className="h-4 w-4" style={{ color: account.color }} />,
           subtitle: account.emailAddress,
           children: [
             {
               label: "Inbox",
               href: `/pegasus/account/${account.id}/inbox`,
+              preventRedirect: true,
               icon: (
                 <Inbox className="h-4 w-4" style={{ color: account.color }} />
               ),
@@ -91,6 +91,7 @@ export const getPegasusSidebarConfig = (
             {
               label: "Drafts",
               href: `/pegasus/account/${account.id}/drafts`,
+              preventRedirect: true,
               icon: (
                 <FileText
                   className="h-4 w-4"
@@ -102,6 +103,7 @@ export const getPegasusSidebarConfig = (
             {
               label: "Sent",
               href: `/pegasus/account/${account.id}/sent`,
+              preventRedirect: true,
               icon: (
                 <Send className="h-4 w-4" style={{ color: account.color }} />
               ),
@@ -110,6 +112,7 @@ export const getPegasusSidebarConfig = (
             {
               label: "Outbox",
               href: `/pegasus/account/${account.id}/outbox`,
+              preventRedirect: true,
               icon: (
                 <Send className="h-4 w-4" style={{ color: account.color }} />
               ),
@@ -118,6 +121,7 @@ export const getPegasusSidebarConfig = (
             {
               label: "Archive",
               href: `/pegasus/account/${account.id}/archive`,
+              preventRedirect: true,
               icon: (
                 <Archive className="h-4 w-4" style={{ color: account.color }} />
               ),
@@ -126,6 +130,7 @@ export const getPegasusSidebarConfig = (
             {
               label: "Junk",
               href: `/pegasus/account/${account.id}/junk`,
+              preventRedirect: true,
               icon: (
                 <ShieldAlert
                   className="h-4 w-4"
@@ -137,6 +142,7 @@ export const getPegasusSidebarConfig = (
             {
               label: "Trash",
               href: `/pegasus/account/${account.id}/trash`,
+              preventRedirect: true,
               icon: (
                 <Trash className="h-4 w-4" style={{ color: account.color }} />
               ),
@@ -147,6 +153,4 @@ export const getPegasusSidebarConfig = (
       }),
     },
   ];
-
-  return configs;
 };

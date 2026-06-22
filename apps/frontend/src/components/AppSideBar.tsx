@@ -304,7 +304,7 @@ export default function AppSideBar({
                     hasPermission(
                       session?.user?.permissions,
                       c.permission,
-                      c.permissionOperator,
+                      "any",
                     )) &&
                   c.items.filter(
                     (item: NavItem) =>
@@ -312,7 +312,7 @@ export default function AppSideBar({
                       hasPermission(
                         session?.user?.permissions,
                         item.permission,
-                        item.permissionOperator || "all",
+                        "any",
                       ),
                   ).length > 0 &&
                   c.section?.toLowerCase() !== "phone",
@@ -332,7 +332,7 @@ export default function AppSideBar({
                           hasPermission(
                             session?.user?.permissions,
                             item.permission,
-                            item.permissionOperator || "all",
+                            "any",
                           ),
                       )
                       .map((item: NavItem, itemIdx: number) => {
@@ -453,7 +453,7 @@ export default function AppSideBar({
                                           hasPermission(
                                             session?.user?.permissions,
                                             child.permission,
-                                            child.permissionOperator || "all",
+                                            "any",
                                           ),
                                       )
                                       .map((child: any, childIdx: number) => {
