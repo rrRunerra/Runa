@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import type React from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import {
   LinkIcon,
@@ -8,15 +9,23 @@ import {
   ExternalLink,
   RefreshCw,
 } from "lucide-react";
-import { Button } from "./ui/button";
-import { Badge } from "./ui/badge";
-import { Spinner } from "./ui/spinner";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
-import { Switch } from "./ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
-import { Checkbox } from "./ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 
 type Connection = {
   id: string;
@@ -29,7 +38,7 @@ type Connection = {
   metadata?: any;
 };
 
-import { apps as registeredApps } from "../../config/apps";
+import { apps as registeredApps } from "../../../../config/apps";
 import { PROVIDERS_METADATA, ConnectionCapability } from "@runa/connections/metadata";
 
 const PROVIDERS = PROVIDERS_METADATA;
@@ -41,10 +50,14 @@ const IMPORTABLE_CAPABILITIES: Record<string, { label: string; key: string }> = 
   [ConnectionCapability.TV_SHOWS]: { label: "TV Shows List", key: "tv" },
 };
 
-export function ConnectionsTab(): React.JSX.Element {
+interface RrConnectionsTabProps {
+  onOpenChange: (open: boolean) => void;
+}
+
+export function RrConnectionsTab({ onOpenChange }: RrConnectionsTabProps): React.JSX.Element {
   const { data: session } = useSession();
   const [connections, setConnections] = useState<Connection[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isActionLoading, setIsActionLoading] = useState<string | null>(null);
   const [expandedMetadata, setExpandedMetadata] = useState<Record<string, boolean>>({});
   const [importStatus, setImportStatus] = useState<Record<string, { total: number; processed: number; status: 'processing' | 'completed' | 'failed'; error?: string; failedItems?: any[] }>>({});
@@ -52,8 +65,7 @@ export function ConnectionsTab(): React.JSX.Element {
   const [selectedMediaTypes, setSelectedMediaTypes] = useState<string[]>([]);
   const [failedImports, setFailedImports] = useState<{ providerId: string; items: any[] } | null>(null);
 
-
-  const pollImportStatus = useCallback(async (providerId: string) => {
+  const pollImportStatus = useCallback(async (providerId: string): Promise<void> => {
     if (!session?.accessToken) return;
     try {
       const res = await fetch(
@@ -97,7 +109,7 @@ export function ConnectionsTab(): React.JSX.Element {
     }
   }, [session, setFailedImports]);
 
-  const handleImport = async (providerId: string, mediaTypes: string[]) => {
+  const handleImport = async (providerId: string, mediaTypes: string[]): Promise<void> => {
     if (!session?.accessToken) return;
     try {
       const res = await fetch(
@@ -123,7 +135,7 @@ export function ConnectionsTab(): React.JSX.Element {
     }
   };
 
-  const openImportDialog = (providerId: string) => {
+  const openImportDialog = (providerId: string): void => {
     const provider = PROVIDERS.find((p) => p.id === providerId);
     if (!provider) return;
     const initialTypes = provider.capabilities
@@ -133,7 +145,7 @@ export function ConnectionsTab(): React.JSX.Element {
     setShowImportDialog(providerId);
   };
 
-  const fetchConnections = useCallback(async () => {
+  const fetchConnections = useCallback(async (): Promise<void> => {
     if (!session?.accessToken) return;
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/connections`, {
@@ -155,7 +167,6 @@ export function ConnectionsTab(): React.JSX.Element {
   useEffect(() => {
     fetchConnections();
 
-    // Check for callback parameters
     const params = new URLSearchParams(window.location.search);
     if (params.get("success") === "true") {
       toast.success("Account connected successfully!");
@@ -185,7 +196,7 @@ export function ConnectionsTab(): React.JSX.Element {
     }
   }, [session, connections, isLoading, pollImportStatus]);
 
-  const handleConnect = (providerId: string) => {
+  const handleConnect = (providerId: string): void => {
     if (!session?.accessToken) {
       toast.error("You must be logged in to link accounts.");
       return;
@@ -195,7 +206,7 @@ export function ConnectionsTab(): React.JSX.Element {
     window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/connections/${providerId.toLowerCase()}/connect?token=${session.accessToken}&redirectUrl=${redirectUrl}`;
   };
 
-  const handleDisconnect = async (providerId: string) => {
+  const handleDisconnect = async (providerId: string): Promise<void> => {
     if (!confirm(`Are you sure you want to disconnect ${providerId.toUpperCase()}?`)) {
       return;
     }
@@ -225,7 +236,7 @@ export function ConnectionsTab(): React.JSX.Element {
     }
   };
 
-  const handleTogglePrivate = async (providerId: string, currentPrivate: boolean) => {
+  const handleTogglePrivate = async (providerId: string, currentPrivate: boolean): Promise<void> => {
     if (!session?.accessToken) return;
     setIsActionLoading(providerId);
     try {
@@ -264,7 +275,7 @@ export function ConnectionsTab(): React.JSX.Element {
     }
   };
 
-  const toggleMetadata = (providerId: string) => {
+  const toggleMetadata = (providerId: string): void => {
     setExpandedMetadata((prev) => ({
       ...prev,
       [providerId]: !prev[providerId],
@@ -299,7 +310,7 @@ export function ConnectionsTab(): React.JSX.Element {
   });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold text-foreground">
@@ -319,19 +330,19 @@ export function ConnectionsTab(): React.JSX.Element {
         </Button>
       </div>
 
-      <div className="space-y-8">
+      <div className="space-y-6">
         {apps.map((app): React.JSX.Element => (
-          <div key={app.name} className="space-y-3">
-            <div className="px-1 border-b border-border/40 pb-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-primary">
+          <Card key={app.name}>
+            <CardHeader className="border-b border-border/40 pb-3">
+              <CardTitle className="text-xs font-bold uppercase tracking-wider text-primary">
                 {app.name}
-              </h4>
-              <p className="text-[11px] text-muted-foreground mt-0.5">
+              </CardTitle>
+              <CardDescription className="text-[11px] text-muted-foreground mt-0.5">
                 {app.description}
-              </p>
-            </div>
+              </CardDescription>
+            </CardHeader>
 
-            <div className="space-y-3.5">
+            <CardContent className="space-y-4 pt-4">
               {app.providers.map((provider): React.JSX.Element => {
                 const conn = getConnection(provider.id);
                 const isConnected = !!conn;
@@ -344,14 +355,14 @@ export function ConnectionsTab(): React.JSX.Element {
                       "group relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl border transition-all duration-300 bg-card/30 backdrop-blur-xs",
                       isConnected
                         ? "border-emerald-500/20 hover:border-emerald-500/40"
-                        : "border-border/60 hover:border-primary/30"
+                        : "border-border hover:border-primary/30"
                     )}
                   >
                     {/* Left Side: Logo & Info */}
                     <div className="flex items-start gap-3.5">
                       <div
                         className={cn(
-                          "flex items-center justify-center size-11 rounded-xl overflow-hidden shadow-sm transition-transform duration-500 group-hover:scale-105 group-hover:rotate-2 shrink-0 bg-secondary/30 border border-border/30",
+                          "flex items-center justify-center size-11 rounded-xl overflow-hidden shadow-sm transition-transform duration-500 group-hover:scale-105 group-hover:rotate-2 shrink-0 bg-secondary/30 border border-border",
                           provider.glowColor && `shadow-md ${provider.glowColor}`
                         )}
                       >
@@ -515,9 +526,20 @@ export function ConnectionsTab(): React.JSX.Element {
                   </div>
                 );
               })}
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         ))}
+      </div>
+
+      {/* Done Closing button */}
+      <div className="flex justify-end pt-4 border-t border-border mt-6">
+        <Button
+          variant="outline"
+          onClick={() => onOpenChange(false)}
+          className="text-xs sm:text-sm h-9 px-5 rounded-xl cursor-pointer"
+        >
+          Close Settings
+        </Button>
       </div>
 
       <Dialog open={!!showImportDialog} onOpenChange={(open) => { if (!open) setShowImportDialog(null); }}>
@@ -536,7 +558,7 @@ export function ConnectionsTab(): React.JSX.Element {
                   const { label, key } = IMPORTABLE_CAPABILITIES[cap];
                   const isChecked = selectedMediaTypes.includes(key);
                   return (
-                    <div key={key} className="flex items-center gap-3 p-3 rounded-xl border border-border/40 bg-secondary/15 hover:bg-secondary/25 transition-all">
+                    <div key={key} className="flex items-center gap-3 p-3 rounded-xl border border-border bg-secondary/15 hover:bg-secondary/25 transition-all">
                       <Checkbox
                         id={`media-type-${key}`}
                         checked={isChecked}
@@ -593,17 +615,17 @@ export function ConnectionsTab(): React.JSX.Element {
             <p className="text-xs text-muted-foreground leading-relaxed">
               The following items from <strong>{failedImports?.providerId.toUpperCase()}</strong> could not be imported automatically. You can manually search and link them using the Edit dialog for the respective media entry.
             </p>
-            <div className="border border-border/60 rounded-xl overflow-hidden bg-muted/10">
+            <div className="border border-border rounded-xl overflow-hidden bg-muted/10">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="bg-secondary/25 border-b border-border/60 text-muted-foreground font-semibold">
+                  <tr className="bg-secondary/25 border-b border-border text-muted-foreground font-semibold">
                     <th className="p-3">Title</th>
                     <th className="p-3 w-20">Type</th>
                     <th className="p-3 w-24">ID</th>
                     <th className="p-3">Reason</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border/40">
+                <tbody className="divide-y divide-border">
                   {failedImports?.items.map((item, idx) => (
                     <tr key={idx} className="hover:bg-secondary/10 transition-colors">
                       <td className="p-3 font-medium text-foreground max-w-[280px] truncate" title={item.title}>
@@ -626,7 +648,7 @@ export function ConnectionsTab(): React.JSX.Element {
               </table>
             </div>
           </div>
-          <div className="flex items-center justify-end pt-3 border-t border-border/40">
+          <div className="flex items-center justify-end pt-3 border-t border-border">
             <Button size="sm" onClick={() => { setFailedImports(null); window.location.reload(); }} className="rounded-lg h-9 text-xs font-semibold px-4">
               Close
             </Button>

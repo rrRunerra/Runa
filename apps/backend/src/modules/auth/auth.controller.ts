@@ -26,6 +26,17 @@ export class AuthController {
   }
 
   @Public()
+  @Post('mfa/device/send')
+  @Throttle({default: {limit: 5, ttl: 60000}})
+  @HttpCode(HttpStatus.OK)
+  async sendDeviceMfaCode(
+    @Body('tempToken') tempToken: string,
+    @Body('deviceId') deviceId: string,
+  ) {
+    return this.authService.sendDeviceMfaCode(tempToken, deviceId);
+  }
+
+  @Public()
   @Post('mfa/verify')
   @Throttle({default: {limit: 10, ttl: 60000}})
   @HttpCode(HttpStatus.OK)

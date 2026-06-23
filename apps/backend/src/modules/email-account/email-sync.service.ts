@@ -3,13 +3,13 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 import { PrismaService } from '../../providers/database/prisma.service';
-import { decrypt } from '../../common/utils/crypto';
+import { decrypt } from '@runa/crypto/server';
 import {
   generateDataKey,
   encryptWithDataKey,
   encryptBufferWithDataKey,
   encryptDataKeyForUser,
-} from '../../common/utils/e2e-crypto';
+} from '@runa/crypto/node';
 import { NotificationGateway } from '../notification/notification.gateway';
 
 interface SyncState {

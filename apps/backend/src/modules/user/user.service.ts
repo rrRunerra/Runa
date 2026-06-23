@@ -16,7 +16,7 @@ import { MediaService } from '../media/media.service';
 import { BitField, DEFAULT_PERMISSIONS } from '@runa/permissions';
 import bcrypt from 'bcrypt';
 import { generateSecret, generateURI, verify } from 'otplib';
-import { encrypt, decrypt } from '../../common/utils/crypto';
+import { encrypt, decrypt } from '@runa/crypto/server';
 import * as crypto from 'crypto';
 import {
   generateRegistrationOptions,

@@ -4,7 +4,6 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useTheme } from "next-themes";
-import { useNavigation } from "@/hooks/useNavigation";
 import { apps } from "../../config/apps";
 import { hasPermission } from "@runa/permissions";
 import {
@@ -32,6 +31,7 @@ import {
   User,
 } from "lucide-react";
 import React from "react";
+import { useRRSidebar } from "@/hooks/useRRSidebar";
 
 interface SpotlightSearchItem {
   id: string;
@@ -48,7 +48,7 @@ export default function SpotlightSearch(): React.JSX.Element {
   const pathname = usePathname();
   const { data: session } = useSession();
   const { theme, setTheme } = useTheme();
-  const { navbarConfig } = useNavigation();
+  const { sidebarConfig } = useRRSidebar();
 
   const [open, setOpen] = useState<boolean>(false);
   const [search, setSearch] = useState<string>("");
@@ -71,7 +71,8 @@ export default function SpotlightSearch(): React.JSX.Element {
       const isInput =
         activeElement instanceof HTMLInputElement ||
         activeElement instanceof HTMLTextAreaElement ||
-        (activeElement && activeElement.getAttribute("contenteditable") === "true");
+        (activeElement &&
+          activeElement.getAttribute("contenteditable") === "true");
 
       if (e.key === "Shift") {
         const now = Date.now();
@@ -122,34 +123,17 @@ export default function SpotlightSearch(): React.JSX.Element {
   const activeApp = apps.find((app) => pathname?.startsWith(app.href));
 
   // 2. Navigation Category (dynamically extracted from active Navigation Context)
-  if (activeApp && navbarConfig && navbarConfig.length > 0) {
-    navbarConfig.forEach((section) => {
+  if (activeApp && sidebarConfig && sidebarConfig.length > 0) {
+    sidebarConfig.forEach((section) => {
       // Skip phone section if present
       if (section.section?.toLowerCase() === "phone") return;
 
-      // Skip section if user does not have permission for it
-      if (
-        section.permission &&
-        !hasPermission(
-          session?.user?.permissions,
-          section.permission,
-          "any"
-        )
-      ) {
-        return;
-      }
-
       section.items.forEach((navItem) => {
         // Only include if user has access
-        if (
-          navItem.permission &&
-          !hasPermission(session?.user?.permissions, navItem.permission, "any")
-        ) {
-          return;
-        }
 
         // Only include if it belongs to the active app
-        const isFromActiveApp = navItem.href && navItem.href.startsWith(activeApp.href);
+        const isFromActiveApp =
+          navItem.href && navItem.href.startsWith(activeApp.href);
 
         // Add main navigation item
         if (navItem.href && isFromActiveApp) {
@@ -159,7 +143,9 @@ export default function SpotlightSearch(): React.JSX.Element {
             label: navItem.label,
             category: "Navigation",
             icon: navItem.icon ? (
-              <span className="opacity-60 group-data-selected/command-item:opacity-100">{navItem.icon}</span>
+              <span className="opacity-60 group-data-selected/command-item:opacity-100">
+                {navItem.icon}
+              </span>
             ) : (
               <Compass className="size-4 opacity-60" />
             ),
@@ -174,14 +160,8 @@ export default function SpotlightSearch(): React.JSX.Element {
         // Add children sub-items
         if (navItem.children && navItem.children.length > 0) {
           navItem.children.forEach((childItem) => {
-            if (
-              childItem.permission &&
-              !hasPermission(session?.user?.permissions, childItem.permission, "any")
-            ) {
-              return;
-            }
-
-            const isChildFromActiveApp = childItem.href && childItem.href.startsWith(activeApp.href);
+            const isChildFromActiveApp =
+              childItem.href && childItem.href.startsWith(activeApp.href);
             if (!isChildFromActiveApp) return;
 
             const childHref = childItem.href;
@@ -192,7 +172,9 @@ export default function SpotlightSearch(): React.JSX.Element {
               label: `${navItem.label} › ${childItem.label}`,
               category: "Navigation",
               icon: childItem.icon ? (
-                <span className="opacity-60 group-data-selected/command-item:opacity-100">{childItem.icon}</span>
+                <span className="opacity-60 group-data-selected/command-item:opacity-100">
+                  {childItem.icon}
+                </span>
               ) : (
                 <ChevronRight className="size-4 opacity-60" />
               ),
@@ -215,7 +197,9 @@ export default function SpotlightSearch(): React.JSX.Element {
       id: "action-profile",
       label: "My Profile",
       category: "Actions",
-      icon: <User className="size-4 opacity-60 group-data-selected/command-item:opacity-100" />,
+      icon: (
+        <User className="size-4 opacity-60 group-data-selected/command-item:opacity-100" />
+      ),
       action: () => {
         setOpen(false);
         router.push(`/polaris/user/${session.user.username}`);
@@ -228,7 +212,9 @@ export default function SpotlightSearch(): React.JSX.Element {
     id: "action-settings",
     label: "Open Settings",
     category: "Actions",
-    icon: <Settings className="size-4 opacity-60 group-data-selected/command-item:opacity-100" />,
+    icon: (
+      <Settings className="size-4 opacity-60 group-data-selected/command-item:opacity-100" />
+    ),
     action: () => {
       setOpen(false);
       window.dispatchEvent(new CustomEvent("runa-open-settings"));
@@ -240,7 +226,9 @@ export default function SpotlightSearch(): React.JSX.Element {
     id: "action-appearance",
     label: "Open Appearance Customizer",
     category: "Actions",
-    icon: <Palette className="size-4 opacity-60 group-data-selected/command-item:opacity-100" />,
+    icon: (
+      <Palette className="size-4 opacity-60 group-data-selected/command-item:opacity-100" />
+    ),
     action: () => {
       setOpen(false);
       window.dispatchEvent(new CustomEvent("runa-open-appearance"));
@@ -252,7 +240,9 @@ export default function SpotlightSearch(): React.JSX.Element {
     id: "action-theme-dark",
     label: "Switch Theme: Dark Mode",
     category: "Actions",
-    icon: <Moon className="size-4 opacity-60 group-data-selected/command-item:opacity-100" />,
+    icon: (
+      <Moon className="size-4 opacity-60 group-data-selected/command-item:opacity-100" />
+    ),
     action: () => {
       setTheme("dark");
       setOpen(false);
@@ -263,7 +253,9 @@ export default function SpotlightSearch(): React.JSX.Element {
     id: "action-theme-light",
     label: "Switch Theme: Light Mode",
     category: "Actions",
-    icon: <Sun className="size-4 opacity-60 group-data-selected/command-item:opacity-100" />,
+    icon: (
+      <Sun className="size-4 opacity-60 group-data-selected/command-item:opacity-100" />
+    ),
     action: () => {
       setTheme("light");
       setOpen(false);
@@ -274,7 +266,9 @@ export default function SpotlightSearch(): React.JSX.Element {
     id: "action-theme-system",
     label: "Switch Theme: System Settings",
     category: "Actions",
-    icon: <Laptop className="size-4 opacity-60 group-data-selected/command-item:opacity-100" />,
+    icon: (
+      <Laptop className="size-4 opacity-60 group-data-selected/command-item:opacity-100" />
+    ),
     action: () => {
       setTheme("system");
       setOpen(false);
@@ -287,7 +281,9 @@ export default function SpotlightSearch(): React.JSX.Element {
       id: "action-logout",
       label: "Log Out",
       category: "Actions",
-      icon: <LogOut className="size-4 text-destructive group-data-selected/command-item:text-destructive-foreground" />,
+      icon: (
+        <LogOut className="size-4 text-destructive group-data-selected/command-item:text-destructive-foreground" />
+      ),
       action: () => {
         setOpen(false);
         signOut({ redirect: false });
@@ -296,14 +292,19 @@ export default function SpotlightSearch(): React.JSX.Element {
   }
 
   // Filter items based on search input
-  const filteredItems = items.filter((item) =>
-    item.label.toLowerCase().includes(search.toLowerCase()) ||
-    item.category.toLowerCase().includes(search.toLowerCase()) ||
-    (item.badge && item.badge.toLowerCase().includes(search.toLowerCase()))
+  const filteredItems = items.filter(
+    (item) =>
+      item.label.toLowerCase().includes(search.toLowerCase()) ||
+      item.category.toLowerCase().includes(search.toLowerCase()) ||
+      (item.badge && item.badge.toLowerCase().includes(search.toLowerCase())),
   );
 
-  const applicationsGroup = filteredItems.filter((i) => i.category === "Applications");
-  const navigationGroup = filteredItems.filter((i) => i.category === "Navigation");
+  const applicationsGroup = filteredItems.filter(
+    (i) => i.category === "Applications",
+  );
+  const navigationGroup = filteredItems.filter(
+    (i) => i.category === "Navigation",
+  );
   const actionsGroup = filteredItems.filter((i) => i.category === "Actions");
 
   return (
@@ -354,9 +355,10 @@ export default function SpotlightSearch(): React.JSX.Element {
           </CommandGroup>
         )}
 
-        {applicationsGroup.length > 0 && (navigationGroup.length > 0 || actionsGroup.length > 0) && (
-          <CommandSeparator className="my-2.5 bg-border/40" />
-        )}
+        {applicationsGroup.length > 0 &&
+          (navigationGroup.length > 0 || actionsGroup.length > 0) && (
+            <CommandSeparator className="my-2.5 bg-border/40" />
+          )}
 
         {navigationGroup.length > 0 && (
           <CommandGroup heading="Navigation" className="px-2">
@@ -409,14 +411,22 @@ export default function SpotlightSearch(): React.JSX.Element {
       <div className="border-t border-border/35 bg-muted/30 px-5 py-3 flex items-center justify-between text-xs text-muted-foreground select-none">
         <div className="flex items-center gap-2">
           <span>Navigate:</span>
-          <kbd className="px-1.5 py-0.5 rounded-sm bg-muted border border-border/50 font-mono text-[10px]">↑</kbd>
-          <kbd className="px-1.5 py-0.5 rounded-sm bg-muted border border-border/50 font-mono text-[10px]">↓</kbd>
+          <kbd className="px-1.5 py-0.5 rounded-sm bg-muted border border-border/50 font-mono text-[10px]">
+            ↑
+          </kbd>
+          <kbd className="px-1.5 py-0.5 rounded-sm bg-muted border border-border/50 font-mono text-[10px]">
+            ↓
+          </kbd>
           <span className="ml-1.5">Select:</span>
-          <kbd className="px-1.5 py-0.5 rounded-sm bg-muted border border-border/50 font-mono text-[10px]">⏎</kbd>
+          <kbd className="px-1.5 py-0.5 rounded-sm bg-muted border border-border/50 font-mono text-[10px]">
+            ⏎
+          </kbd>
         </div>
         <div className="flex items-center gap-1.5">
           <span>Double-tap</span>
-          <kbd className="px-1.5 py-0.5 rounded-sm bg-primary/10 border border-primary/20 font-sans font-semibold text-[10px] text-primary">Shift</kbd>
+          <kbd className="px-1.5 py-0.5 rounded-sm bg-primary/10 border border-primary/20 font-sans font-semibold text-[10px] text-primary">
+            Shift
+          </kbd>
           <span>to close</span>
         </div>
       </div>

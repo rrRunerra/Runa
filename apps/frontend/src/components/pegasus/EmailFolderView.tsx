@@ -30,6 +30,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { ComposeEmailModal } from "@/components/pegasus/ComposeEmailModal";
 import { cn } from "@/lib/utils";
+import { useRRe2ee } from "@/components/Providers/rrE2eeProvider";
 
 interface Attachment {
   id: string;
@@ -102,130 +103,173 @@ export default function EmailFolderView({
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  // Helper to load E2E private key from localStorage and import it
-  const getPrivateKey = useCallback(async (): Promise<CryptoKey | null> => {
-    const stored = localStorage.getItem("runa_user_private_key");
-    if (!stored) return null;
-    try {
-      const jwk = JSON.parse(stored);
-      return await window.crypto.subtle.importKey(
-        "jwk",
-        jwk,
-        {
-          name: "ECDH",
-          namedCurve: "P-256",
-        },
-        true,
-        ["deriveKey", "deriveBits"]
-      );
-    } catch {
-      return null;
-    }
-  }, []);
+  const { getPrivateKey } = useRRe2ee();
 
-  const decryptMessageObj = useCallback(async (msg: Message): Promise<Message> => {
-    if (!msg.encryptedKey) return msg;
-    const privKey = await getPrivateKey();
-    if (!privKey) return msg;
+  const decryptMessageObj = useCallback(
+    async (msg: Message): Promise<Message> => {
+      if (!msg.encryptedKey) return msg;
+      const privKey = await getPrivateKey();
+      if (!privKey) return msg;
 
-    try {
-      const { decryptEmailDataKey, decryptEmailString } = await import("@/lib/crypto");
-      const dataKey = await decryptEmailDataKey(msg.encryptedKey as any, privKey);
-      
-      let decryptedSubject = msg.subject;
-      try { decryptedSubject = await decryptEmailString(msg.subject, dataKey); } catch {}
+      try {
+        const { decryptEmailDataKey, decryptEmailString } =
+          await import("@runa/crypto/browser");
+        const dataKey = await decryptEmailDataKey(
+          msg.encryptedKey as any,
+          privKey,
+        );
 
-      let decryptedFrom = msg.from;
-      try { decryptedFrom = msg.from ? await decryptEmailString(msg.from, dataKey) : msg.from; } catch {}
+        let decryptedSubject = msg.subject;
+        try {
+          decryptedSubject = await decryptEmailString(msg.subject, dataKey);
+        } catch {}
 
-      let decryptedTo = msg.to;
-      try { decryptedTo = msg.to ? await decryptEmailString(msg.to, dataKey) : msg.to; } catch {}
+        let decryptedFrom = msg.from;
+        try {
+          decryptedFrom = msg.from
+            ? await decryptEmailString(msg.from, dataKey)
+            : msg.from;
+        } catch {}
 
-      let decryptedCc = msg.cc;
-      try { decryptedCc = msg.cc ? await decryptEmailString(msg.cc, dataKey) : msg.cc; } catch {}
+        let decryptedTo = msg.to;
+        try {
+          decryptedTo = msg.to
+            ? await decryptEmailString(msg.to, dataKey)
+            : msg.to;
+        } catch {}
 
-      let decryptedBcc = msg.bcc;
-      try { decryptedBcc = msg.bcc ? await decryptEmailString(msg.bcc, dataKey) : msg.bcc; } catch {}
+        let decryptedCc = msg.cc;
+        try {
+          decryptedCc = msg.cc
+            ? await decryptEmailString(msg.cc, dataKey)
+            : msg.cc;
+        } catch {}
 
-      const decryptedAttachments = await Promise.all(
-        (msg.attachments || []).map(async (att) => {
-          try {
-            const decFilename = await decryptEmailString(att.filename, dataKey);
-            return { ...att, filename: decFilename };
-          } catch {
-            return att;
-          }
-        })
-      );
+        let decryptedBcc = msg.bcc;
+        try {
+          decryptedBcc = msg.bcc
+            ? await decryptEmailString(msg.bcc, dataKey)
+            : msg.bcc;
+        } catch {}
 
-      return {
-        ...msg,
-        subject: decryptedSubject,
-        from: decryptedFrom,
-        to: decryptedTo,
-        cc: decryptedCc,
-        bcc: decryptedBcc,
-        attachments: decryptedAttachments,
-      };
-    } catch (err) {
-      console.error("Failed to decrypt message in list:", err);
-      return msg;
-    }
-  }, [getPrivateKey]);
+        const decryptedAttachments = await Promise.all(
+          (msg.attachments || []).map(async (att) => {
+            try {
+              const decFilename = await decryptEmailString(
+                att.filename,
+                dataKey,
+              );
+              return { ...att, filename: decFilename };
+            } catch {
+              return att;
+            }
+          }),
+        );
 
-  const decryptDetailedMessageObj = useCallback(async (msg: DetailedMessage): Promise<DetailedMessage> => {
-    if (!msg.encryptedKey) return msg;
-    const privKey = await getPrivateKey();
-    if (!privKey) return msg;
+        return {
+          ...msg,
+          subject: decryptedSubject,
+          from: decryptedFrom,
+          to: decryptedTo,
+          cc: decryptedCc,
+          bcc: decryptedBcc,
+          attachments: decryptedAttachments,
+        };
+      } catch (err) {
+        console.error("Failed to decrypt message in list:", err);
+        return msg;
+      }
+    },
+    [getPrivateKey],
+  );
 
-    try {
-      const { decryptEmailDataKey, decryptEmailString } = await import("@/lib/crypto");
-      const dataKey = await decryptEmailDataKey(msg.encryptedKey as any, privKey);
-      
-      let decryptedSubject = msg.subject;
-      try { decryptedSubject = await decryptEmailString(msg.subject, dataKey); } catch {}
+  const decryptDetailedMessageObj = useCallback(
+    async (msg: DetailedMessage): Promise<DetailedMessage> => {
+      if (!msg.encryptedKey) return msg;
+      const privKey = await getPrivateKey();
+      if (!privKey) return msg;
 
-      let decryptedFrom = msg.from;
-      try { decryptedFrom = msg.from ? await decryptEmailString(msg.from, dataKey) : msg.from; } catch {}
+      try {
+        const { decryptEmailDataKey, decryptEmailString } =
+          await import("@runa/crypto/browser");
+        const dataKey = await decryptEmailDataKey(
+          msg.encryptedKey as any,
+          privKey,
+        );
 
-      let decryptedTo = msg.to;
-      try { decryptedTo = msg.to ? await decryptEmailString(msg.to, dataKey) : msg.to; } catch {}
+        let decryptedSubject = msg.subject;
+        try {
+          decryptedSubject = await decryptEmailString(msg.subject, dataKey);
+        } catch {}
 
-      let decryptedCc = msg.cc;
-      try { decryptedCc = msg.cc ? await decryptEmailString(msg.cc, dataKey) : msg.cc; } catch {}
+        let decryptedFrom = msg.from;
+        try {
+          decryptedFrom = msg.from
+            ? await decryptEmailString(msg.from, dataKey)
+            : msg.from;
+        } catch {}
 
-      let decryptedBcc = msg.bcc;
-      try { decryptedBcc = msg.bcc ? await decryptEmailString(msg.bcc, dataKey) : msg.bcc; } catch {}
+        let decryptedTo = msg.to;
+        try {
+          decryptedTo = msg.to
+            ? await decryptEmailString(msg.to, dataKey)
+            : msg.to;
+        } catch {}
 
-      const decryptedBodyText = await decryptEmailString(msg.bodyText, dataKey);
-      const decryptedBodyHtml = await decryptEmailString(msg.bodyHtml, dataKey);
-      const decryptedAttachments = await Promise.all(
-        (msg.attachments || []).map(async (att) => {
-          try {
-            const decFilename = await decryptEmailString(att.filename, dataKey);
-            return { ...att, filename: decFilename };
-          } catch {
-            return att;
-          }
-        })
-      );
+        let decryptedCc = msg.cc;
+        try {
+          decryptedCc = msg.cc
+            ? await decryptEmailString(msg.cc, dataKey)
+            : msg.cc;
+        } catch {}
 
-      return {
-        ...msg,
-        subject: decryptedSubject,
-        from: decryptedFrom,
-        to: decryptedTo,
-        cc: decryptedCc,
-        bcc: decryptedBcc,
-        bodyText: decryptedBodyText,
-        bodyHtml: decryptedBodyHtml,
-        attachments: decryptedAttachments,
-      };
-    } catch (err) {
-      console.error("Failed to decrypt detailed message:", err);
-      return msg;
-    }
-  }, [getPrivateKey]);
+        let decryptedBcc = msg.bcc;
+        try {
+          decryptedBcc = msg.bcc
+            ? await decryptEmailString(msg.bcc, dataKey)
+            : msg.bcc;
+        } catch {}
+
+        const decryptedBodyText = await decryptEmailString(
+          msg.bodyText,
+          dataKey,
+        );
+        const decryptedBodyHtml = await decryptEmailString(
+          msg.bodyHtml,
+          dataKey,
+        );
+        const decryptedAttachments = await Promise.all(
+          (msg.attachments || []).map(async (att) => {
+            try {
+              const decFilename = await decryptEmailString(
+                att.filename,
+                dataKey,
+              );
+              return { ...att, filename: decFilename };
+            } catch {
+              return att;
+            }
+          }),
+        );
+
+        return {
+          ...msg,
+          subject: decryptedSubject,
+          from: decryptedFrom,
+          to: decryptedTo,
+          cc: decryptedCc,
+          bcc: decryptedBcc,
+          bodyText: decryptedBodyText,
+          bodyHtml: decryptedBodyHtml,
+          attachments: decryptedAttachments,
+        };
+      } catch (err) {
+        console.error("Failed to decrypt detailed message:", err);
+        return msg;
+      }
+    },
+    [getPrivateKey],
+  );
 
   // Fetch messages in the folder
   const fetchMessages = useCallback(async (): Promise<void> => {
@@ -245,7 +289,7 @@ export default function EmailFolderView({
       const data = await res.json();
       const list = Array.isArray(data) ? data : [];
       const decrypted = await Promise.all(
-        list.map((msg) => decryptMessageObj(msg))
+        list.map((msg) => decryptMessageObj(msg)),
       );
       setMessages(decrypted);
     } catch (err: unknown) {
@@ -776,7 +820,7 @@ export default function EmailFolderView({
         },
       );
       if (!res.ok) throw new Error("Download failed");
-      
+
       let finalBuffer = await res.arrayBuffer();
       let finalFilename = filename;
 
@@ -784,9 +828,16 @@ export default function EmailFolderView({
         try {
           const privKey = await getPrivateKey();
           if (privKey) {
-            const { decryptEmailDataKey, decryptEmailBuffer, decryptEmailString } = await import("@/lib/crypto");
-            const dataKey = await decryptEmailDataKey(detailedMessage.encryptedKey as any, privKey);
-            
+            const {
+              decryptEmailDataKey,
+              decryptEmailBuffer,
+              decryptEmailString,
+            } = await import("@runa/crypto/browser");
+            const dataKey = await decryptEmailDataKey(
+              detailedMessage.encryptedKey as any,
+              privKey,
+            );
+
             finalBuffer = await decryptEmailBuffer(finalBuffer, dataKey);
             try {
               finalFilename = await decryptEmailString(filename, dataKey);
@@ -795,7 +846,10 @@ export default function EmailFolderView({
             }
           }
         } catch (decErr) {
-          console.error("Failed to decrypt attachment content on download:", decErr);
+          console.error(
+            "Failed to decrypt attachment content on download:",
+            decErr,
+          );
         }
       }
 
@@ -1128,11 +1182,11 @@ export default function EmailFolderView({
               No messages found.
             </div>
           ) : (
-            <motion.div 
-              initial="hidden" 
-              animate="visible" 
+            <motion.div
+              initial="hidden"
+              animate="visible"
               variants={{
-                visible: { transition: { staggerChildren: 0.05 } }
+                visible: { transition: { staggerChildren: 0.05 } },
               }}
               className="flex flex-col gap-2"
             >
@@ -1143,7 +1197,7 @@ export default function EmailFolderView({
                   <motion.div
                     variants={{
                       hidden: { opacity: 0, y: 10 },
-                      visible: { opacity: 1, y: 0 }
+                      visible: { opacity: 1, y: 0 },
                     }}
                     key={msg.id}
                     onClick={() => handleSelectMessage(msg.id)}
@@ -1151,7 +1205,7 @@ export default function EmailFolderView({
                       "group relative p-4 rounded-2xl cursor-pointer transition-all border flex gap-3 items-start",
                       isSelected
                         ? "bg-primary/5 border-primary/20 shadow-md"
-                        : "bg-card/30 backdrop-blur-xs border-border/60 hover:border-primary/30 hover:shadow-lg"
+                        : "bg-card/30 backdrop-blur-xs border-border/60 hover:border-primary/30 hover:shadow-lg",
                     )}
                   >
                     {/* Left Column: Checkbox or dot */}
@@ -1159,105 +1213,105 @@ export default function EmailFolderView({
                       onClick={(e) => e.stopPropagation()}
                       className="flex items-center justify-center size-5 shrink-0 mt-0.5"
                     >
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
-                        setSelectedIds((prev) =>
-                          checked
-                            ? [...prev, msg.id]
-                            : prev.filter((id) => id !== msg.id),
-                        );
-                      }}
-                      className={`size-4 rounded border-zinc-805 bg-zinc-900 text-emerald-600 focus:ring-emerald-500/25 accent-emerald-500 cursor-pointer transition-all ${
-                        selectedIds.length > 0 || isChecked
-                          ? "block animate-fade-in"
-                          : "hidden group-hover:block"
-                      }`}
-                    />
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setSelectedIds((prev) =>
+                            checked
+                              ? [...prev, msg.id]
+                              : prev.filter((id) => id !== msg.id),
+                          );
+                        }}
+                        className={`size-4 rounded border-zinc-805 bg-zinc-900 text-emerald-600 focus:ring-emerald-500/25 accent-emerald-500 cursor-pointer transition-all ${
+                          selectedIds.length > 0 || isChecked
+                            ? "block animate-fade-in"
+                            : "hidden group-hover:block"
+                        }`}
+                      />
 
-                    <div
-                      className={`transition-all ${
-                        selectedIds.length > 0 || isChecked
-                          ? "hidden"
-                          : "block group-hover:hidden"
-                      }`}
-                    >
-                      {!msg.read ? (
-                        <span className="size-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)] block" />
-                      ) : (
-                        <span className="size-1.5 rounded-full bg-zinc-700 block" />
-                      )}
+                      <div
+                        className={`transition-all ${
+                          selectedIds.length > 0 || isChecked
+                            ? "hidden"
+                            : "block group-hover:hidden"
+                        }`}
+                      >
+                        {!msg.read ? (
+                          <span className="size-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)] block" />
+                        ) : (
+                          <span className="size-1.5 rounded-full bg-zinc-700 block" />
+                        )}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Right Column: Message Contents */}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span
-                          className={`text-sm min-w-0 truncate ${
-                            !msg.read
-                              ? "font-bold text-zinc-100"
-                              : "text-zinc-300"
-                          }`}
-                        >
-                          {getSenderName(msg.from)}
+                    {/* Right Column: Message Contents */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2 mb-1">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span
+                            className={`text-sm min-w-0 truncate ${
+                              !msg.read
+                                ? "font-bold text-zinc-100"
+                                : "text-zinc-300"
+                            }`}
+                          >
+                            {getSenderName(msg.from)}
+                          </span>
+                        </div>
+                        <span className="text-xs text-zinc-500 shrink-0 font-light">
+                          {getFormattedDate(msg.date)}
                         </span>
                       </div>
-                      <span className="text-xs text-zinc-500 shrink-0 font-light">
-                        {getFormattedDate(msg.date)}
-                      </span>
-                    </div>
 
-                    <h4
-                      className={`text-xs truncate mb-1 ${
-                        !msg.read
-                          ? "font-semibold text-zinc-200"
-                          : "text-zinc-400"
-                      }`}
-                    >
-                      {msg.subject || "(No Subject)"}
-                    </h4>
+                      <h4
+                        className={`text-xs truncate mb-1 ${
+                          !msg.read
+                            ? "font-semibold text-zinc-200"
+                            : "text-zinc-400"
+                        }`}
+                      >
+                        {msg.subject || "(No Subject)"}
+                      </h4>
 
-                    <div className="flex items-center justify-between gap-4">
-                      <p className="text-xs text-zinc-500 truncate max-w-[280px]">
-                        {msg.attachments?.length > 0
-                          ? "📎 Has Attachments"
-                          : "No attachments"}
-                      </p>
-                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            updateMessageStatus(msg.id, {
-                              flagged: !msg.flagged,
-                            });
-                          }}
-                          className={`hover:text-zinc-200 transition-colors ${
-                            msg.flagged ? "text-amber-500" : "text-zinc-500"
-                          }`}
-                        >
-                          <Star
-                            className={`size-3.5 ${msg.flagged ? "fill-amber-500" : ""}`}
-                          />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteConfirmId(msg.id);
-                          }}
-                          className="text-zinc-500 hover:text-red-400 transition-colors"
-                        >
-                          <Trash2 className="size-3.5" />
-                        </button>
+                      <div className="flex items-center justify-between gap-4">
+                        <p className="text-xs text-zinc-500 truncate max-w-[280px]">
+                          {msg.attachments?.length > 0
+                            ? "📎 Has Attachments"
+                            : "No attachments"}
+                        </p>
+                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              updateMessageStatus(msg.id, {
+                                flagged: !msg.flagged,
+                              });
+                            }}
+                            className={`hover:text-zinc-200 transition-colors ${
+                              msg.flagged ? "text-amber-500" : "text-zinc-500"
+                            }`}
+                          >
+                            <Star
+                              className={`size-3.5 ${msg.flagged ? "fill-amber-500" : ""}`}
+                            />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteConfirmId(msg.id);
+                            }}
+                            className="text-zinc-500 hover:text-red-400 transition-colors"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </motion.div>
-              );
-            })}
+                  </motion.div>
+                );
+              })}
             </motion.div>
           )}
         </div>
@@ -1270,287 +1324,290 @@ export default function EmailFolderView({
         } flex-1 flex-col h-full overflow-hidden p-2 md:p-4`}
       >
         <div className="flex-1 flex flex-col bg-zinc-950/90 backdrop-blur-xl border border-zinc-800/80 shadow-2xl rounded-2xl overflow-hidden relative">
-        <AnimatePresence mode="wait">
-          {!selectedMessageId ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex flex-col items-center justify-center flex-1 text-center p-8 space-y-4"
-            >
-              <div className="size-16 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-600">
-                <Mail className="size-8" />
-              </div>
-              <div className="space-y-1 max-w-xs">
-                <h3 className="text-sm font-semibold text-zinc-300">
-                  No message selected
-                </h3>
-                <p className="text-xs text-zinc-500 leading-relaxed">
-                  Choose a message from the list to display its complete
-                  contents and attachments.
-                </p>
-              </div>
-            </motion.div>
-          ) : loadingDetail ? (
-            <div className="flex flex-col items-center justify-center flex-1 space-y-3">
-              <Loader2 className="size-6 text-zinc-500 animate-spin" />
-              <span className="text-xs text-zinc-500">
-                Loading message details...
-              </span>
-            </div>
-          ) : messageNotFound ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex flex-col items-center justify-center flex-1 text-center p-8 space-y-4"
-            >
-              <div className="size-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
-                <Trash2 className="size-8" />
-              </div>
-              <div className="space-y-1 max-w-xs">
-                <h3 className="text-sm font-semibold text-zinc-300">
-                  Email not found
-                </h3>
-                <p className="text-xs text-zinc-500 leading-relaxed">
-                  This email may have been deleted or moved to another folder.
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setSelectedMessageId(null);
-                  setMessageNotFound(false);
-                  setShowDetailOnMobile(false);
-                }}
-                className="px-3 py-1.5 text-xs bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-xl text-zinc-300 transition-all"
+          <AnimatePresence mode="wait">
+            {!selectedMessageId ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex flex-col items-center justify-center flex-1 text-center p-8 space-y-4"
               >
-                Go back
-              </button>
-            </motion.div>
-          ) : detailedMessage ? (
-            <motion.div
-              initial={{ opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="flex flex-col flex-1 h-full overflow-hidden"
-            >
-              {/* Toolbar */}
-              <div className="flex items-center justify-between p-3 border-b border-zinc-800 bg-zinc-950/60 backdrop-blur-md">
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setShowDetailOnMobile(false)}
-                    className="md:hidden p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900 rounded-lg transition-colors"
-                  >
-                    <ChevronLeft className="size-5" />
-                  </button>
-                  <button
-                    onClick={() =>
-                      updateMessageStatus(detailedMessage.id, {
-                        read: !detailedMessage.read,
-                      })
-                    }
-                    className="px-2.5 py-1 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900 rounded-lg border border-zinc-800/80 transition-all"
-                  >
-                    Mark {detailedMessage.read ? "Unread" : "Read"}
-                  </button>
-
-                  <div className="h-4 w-px bg-zinc-800 mx-1" />
-
-                  {detailedMessage.folder === "trash" && (
-                    <>
-                      <button
-                        onClick={() => {
-                          toast.promise(
-                            updateMessageStatus(detailedMessage.id, {
-                              folder: "inbox",
-                            }),
-                            {
-                              loading: "Restoring email...",
-                              success: "Email restored to Inbox",
-                              error: "Failed to restore email",
-                            },
-                          );
-                        }}
-                        className="px-2.5 py-1 text-xs text-emerald-400 hover:text-emerald-350 hover:bg-emerald-500/10 rounded-lg border border-emerald-500/20 transition-all flex items-center gap-1.5 font-medium"
-                      >
-                        <RotateCcw className="size-3.5" />
-                        <span>Restore to Inbox</span>
-                      </button>
-                      <div className="h-4 w-px bg-zinc-800 mx-1" />
-                    </>
-                  )}
-
-                  <button
-                    onClick={() => handleInitiateCompose("reply")}
-                    className="px-2.5 py-1 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900 rounded-lg border border-zinc-800/80 transition-all flex items-center gap-1.5"
-                  >
-                    <Reply className="size-3.5" />
-                    <span>Reply</span>
-                  </button>
-
-                  {detailedMessage.cc && (
+                <div className="size-16 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-600">
+                  <Mail className="size-8" />
+                </div>
+                <div className="space-y-1 max-w-xs">
+                  <h3 className="text-sm font-semibold text-zinc-300">
+                    No message selected
+                  </h3>
+                  <p className="text-xs text-zinc-500 leading-relaxed">
+                    Choose a message from the list to display its complete
+                    contents and attachments.
+                  </p>
+                </div>
+              </motion.div>
+            ) : loadingDetail ? (
+              <div className="flex flex-col items-center justify-center flex-1 space-y-3">
+                <Loader2 className="size-6 text-zinc-500 animate-spin" />
+                <span className="text-xs text-zinc-500">
+                  Loading message details...
+                </span>
+              </div>
+            ) : messageNotFound ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex flex-col items-center justify-center flex-1 text-center p-8 space-y-4"
+              >
+                <div className="size-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
+                  <Trash2 className="size-8" />
+                </div>
+                <div className="space-y-1 max-w-xs">
+                  <h3 className="text-sm font-semibold text-zinc-300">
+                    Email not found
+                  </h3>
+                  <p className="text-xs text-zinc-500 leading-relaxed">
+                    This email may have been deleted or moved to another folder.
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedMessageId(null);
+                    setMessageNotFound(false);
+                    setShowDetailOnMobile(false);
+                  }}
+                  className="px-3 py-1.5 text-xs bg-zinc-900 border border-zinc-800 hover:border-zinc-700 rounded-xl text-zinc-300 transition-all"
+                >
+                  Go back
+                </button>
+              </motion.div>
+            ) : detailedMessage ? (
+              <motion.div
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="flex flex-col flex-1 h-full overflow-hidden"
+              >
+                {/* Toolbar */}
+                <div className="flex items-center justify-between p-3 border-b border-zinc-800 bg-zinc-950/60 backdrop-blur-md">
+                  <div className="flex items-center gap-2">
                     <button
-                      onClick={() => handleInitiateCompose("replyAll")}
+                      onClick={() => setShowDetailOnMobile(false)}
+                      className="md:hidden p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900 rounded-lg transition-colors"
+                    >
+                      <ChevronLeft className="size-5" />
+                    </button>
+                    <button
+                      onClick={() =>
+                        updateMessageStatus(detailedMessage.id, {
+                          read: !detailedMessage.read,
+                        })
+                      }
+                      className="px-2.5 py-1 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900 rounded-lg border border-zinc-800/80 transition-all"
+                    >
+                      Mark {detailedMessage.read ? "Unread" : "Read"}
+                    </button>
+
+                    <div className="h-4 w-px bg-zinc-800 mx-1" />
+
+                    {detailedMessage.folder === "trash" && (
+                      <>
+                        <button
+                          onClick={() => {
+                            toast.promise(
+                              updateMessageStatus(detailedMessage.id, {
+                                folder: "inbox",
+                              }),
+                              {
+                                loading: "Restoring email...",
+                                success: "Email restored to Inbox",
+                                error: "Failed to restore email",
+                              },
+                            );
+                          }}
+                          className="px-2.5 py-1 text-xs text-emerald-400 hover:text-emerald-350 hover:bg-emerald-500/10 rounded-lg border border-emerald-500/20 transition-all flex items-center gap-1.5 font-medium"
+                        >
+                          <RotateCcw className="size-3.5" />
+                          <span>Restore to Inbox</span>
+                        </button>
+                        <div className="h-4 w-px bg-zinc-800 mx-1" />
+                      </>
+                    )}
+
+                    <button
+                      onClick={() => handleInitiateCompose("reply")}
                       className="px-2.5 py-1 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900 rounded-lg border border-zinc-800/80 transition-all flex items-center gap-1.5"
                     >
-                      <ReplyAll className="size-3.5" />
-                      <span>Reply All</span>
+                      <Reply className="size-3.5" />
+                      <span>Reply</span>
                     </button>
-                  )}
 
-                  <button
-                    onClick={() => handleInitiateCompose("forward")}
-                    className="px-2.5 py-1 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900 rounded-lg border border-zinc-800/80 transition-all flex items-center gap-1.5"
-                  >
-                    <Forward className="size-3.5" />
-                    <span>Forward</span>
-                  </button>
+                    {detailedMessage.cc && (
+                      <button
+                        onClick={() => handleInitiateCompose("replyAll")}
+                        className="px-2.5 py-1 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900 rounded-lg border border-zinc-800/80 transition-all flex items-center gap-1.5"
+                      >
+                        <ReplyAll className="size-3.5" />
+                        <span>Reply All</span>
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => handleInitiateCompose("forward")}
+                      className="px-2.5 py-1 text-xs text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900 rounded-lg border border-zinc-800/80 transition-all flex items-center gap-1.5"
+                    >
+                      <Forward className="size-3.5" />
+                      <span>Forward</span>
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() =>
+                        updateMessageStatus(detailedMessage.id, {
+                          flagged: !detailedMessage.flagged,
+                        })
+                      }
+                      className={`p-1.5 rounded-lg border border-zinc-800/80 hover:bg-zinc-900 transition-all ${
+                        detailedMessage.flagged
+                          ? "text-amber-500 border-amber-500/20 bg-amber-500/5"
+                          : "text-zinc-400 hover:text-zinc-200"
+                      }`}
+                    >
+                      <Star
+                        className={`size-4 ${detailedMessage.flagged ? "fill-amber-500" : ""}`}
+                      />
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirmId(detailedMessage.id)}
+                      className="p-1.5 text-zinc-400 hover:text-red-400 hover:bg-red-500/5 hover:border-red-500/20 border border-zinc-800/80 rounded-lg transition-all"
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() =>
-                      updateMessageStatus(detailedMessage.id, {
-                        flagged: !detailedMessage.flagged,
-                      })
-                    }
-                    className={`p-1.5 rounded-lg border border-zinc-800/80 hover:bg-zinc-900 transition-all ${
-                      detailedMessage.flagged
-                        ? "text-amber-500 border-amber-500/20 bg-amber-500/5"
-                        : "text-zinc-400 hover:text-zinc-200"
-                    }`}
-                  >
-                    <Star
-                      className={`size-4 ${detailedMessage.flagged ? "fill-amber-500" : ""}`}
-                    />
-                  </button>
-                  <button
-                    onClick={() => setDeleteConfirmId(detailedMessage.id)}
-                    className="p-1.5 text-zinc-400 hover:text-red-400 hover:bg-red-500/5 hover:border-red-500/20 border border-zinc-800/80 rounded-lg transition-all"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
-                </div>
-              </div>
 
-              {/* Reader Contents */}
-              <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-6">
-                {/* Header */}
-                <div className="space-y-4 border-b border-zinc-800/60 pb-6">
-                  <h1 className="text-xl font-bold text-zinc-100 tracking-tight leading-snug">
-                    {detailedMessage.subject || "(No Subject)"}
-                  </h1>
+                {/* Reader Contents */}
+                <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-6">
+                  {/* Header */}
+                  <div className="space-y-4 border-b border-zinc-800/60 pb-6">
+                    <h1 className="text-xl font-bold text-zinc-100 tracking-tight leading-snug">
+                      {detailedMessage.subject || "(No Subject)"}
+                    </h1>
 
-                  <div className="flex items-start gap-3">
-                    <div className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 shrink-0">
-                      <User className="size-5" />
-                    </div>
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
-                        <span className="text-sm font-semibold text-zinc-200 truncate">
-                          {getSenderName(detailedMessage.from)}
-                        </span>
-                        <span className="text-xs text-zinc-500 font-light">
-                          {new Date(detailedMessage.date).toLocaleString()}
-                        </span>
+                    <div className="flex items-start gap-3">
+                      <div className="size-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 shrink-0">
+                        <User className="size-5" />
                       </div>
-                      <div className="text-xs text-zinc-500 truncate">
-                        From:{" "}
-                        <span className="text-zinc-400">
-                          {getSenderEmail(detailedMessage.from)}
-                        </span>
-                      </div>
-                      <div className="text-xs text-zinc-500 truncate">
-                        To:{" "}
-                        <span className="text-zinc-400">
-                          {detailedMessage.to}
-                        </span>
-                      </div>
-                      {detailedMessage.cc && (
-                        <div className="text-xs text-zinc-500 truncate">
-                          Cc:{" "}
-                          <span className="text-zinc-400">
-                            {detailedMessage.cc}
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                          <span className="text-sm font-semibold text-zinc-200 truncate">
+                            {getSenderName(detailedMessage.from)}
+                          </span>
+                          <span className="text-xs text-zinc-500 font-light">
+                            {new Date(detailedMessage.date).toLocaleString()}
                           </span>
                         </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Remote Content Warning */}
-                {hasRemoteContent && !loadRemoteContent && (
-                  <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-200 text-xs rounded-xl flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-2">
-                      <ShieldAlert className="size-4 text-amber-400 shrink-0 animate-pulse" />
-                      <span>
-                        To protect your privacy, remote content and images in
-                        this message have been blocked.
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => setLoadRemoteContent(true)}
-                      className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 hover:text-amber-100 rounded-lg transition-all shrink-0 font-medium"
-                    >
-                      Show Images
-                    </button>
-                  </div>
-                )}
-
-                {/* Email Body Iframe */}
-                <div className="border border-zinc-900 rounded-2xl bg-zinc-950 p-2 overflow-hidden">
-                  <iframe
-                    srcDoc={srcDocContent}
-                    sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
-                    onLoad={handleIframeLoad}
-                    style={{ height: `${iframeHeight}px` }}
-                    className="w-full border-0 bg-transparent text-zinc-100"
-                    title="Email Contents"
-                  />
-                </div>
-
-                {/* Attachments Section */}
-                {detailedMessage.attachments &&
-                  detailedMessage.attachments.length > 0 && (
-                    <div className="space-y-3 pt-4 border-t border-zinc-800/60">
-                      <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-                        Attachments ({detailedMessage.attachments.length})
-                      </h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {detailedMessage.attachments.map((file) => (
-                          <div
-                            key={file.id}
-                            className="flex items-center justify-between p-3 bg-zinc-900 border border-zinc-850 hover:border-zinc-800 rounded-xl transition-all"
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <div className="p-2 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-400">
-                                <FileText className="size-4" />
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-xs font-medium text-zinc-200 truncate max-w-[140px]">
-                                  {file.filename}
-                                </p>
-                                <p className="text-[10px] text-zinc-500">
-                                  {formatBytes(file.size)}
-                                </p>
-                              </div>
-                            </div>
-                            <button
-                              onClick={() =>
-                                handleDownloadAttachment(file.id, file.filename)
-                              }
-                              className="p-1.5 bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-zinc-200 rounded-lg transition-colors shrink-0"
-                            >
-                              <Download className="size-3.5" />
-                            </button>
+                        <div className="text-xs text-zinc-500 truncate">
+                          From:{" "}
+                          <span className="text-zinc-400">
+                            {getSenderEmail(detailedMessage.from)}
+                          </span>
+                        </div>
+                        <div className="text-xs text-zinc-500 truncate">
+                          To:{" "}
+                          <span className="text-zinc-400">
+                            {detailedMessage.to}
+                          </span>
+                        </div>
+                        {detailedMessage.cc && (
+                          <div className="text-xs text-zinc-500 truncate">
+                            Cc:{" "}
+                            <span className="text-zinc-400">
+                              {detailedMessage.cc}
+                            </span>
                           </div>
-                        ))}
+                        )}
                       </div>
                     </div>
+                  </div>
+
+                  {/* Remote Content Warning */}
+                  {hasRemoteContent && !loadRemoteContent && (
+                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-200 text-xs rounded-xl flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-2">
+                        <ShieldAlert className="size-4 text-amber-400 shrink-0 animate-pulse" />
+                        <span>
+                          To protect your privacy, remote content and images in
+                          this message have been blocked.
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => setLoadRemoteContent(true)}
+                        className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 hover:text-amber-100 rounded-lg transition-all shrink-0 font-medium"
+                      >
+                        Show Images
+                      </button>
+                    </div>
                   )}
-              </div>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
+
+                  {/* Email Body Iframe */}
+                  <div className="border border-zinc-900 rounded-2xl bg-zinc-950 p-2 overflow-hidden">
+                    <iframe
+                      srcDoc={srcDocContent}
+                      sandbox="allow-same-origin allow-popups allow-popups-to-escape-sandbox"
+                      onLoad={handleIframeLoad}
+                      style={{ height: `${iframeHeight}px` }}
+                      className="w-full border-0 bg-transparent text-zinc-100"
+                      title="Email Contents"
+                    />
+                  </div>
+
+                  {/* Attachments Section */}
+                  {detailedMessage.attachments &&
+                    detailedMessage.attachments.length > 0 && (
+                      <div className="space-y-3 pt-4 border-t border-zinc-800/60">
+                        <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
+                          Attachments ({detailedMessage.attachments.length})
+                        </h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                          {detailedMessage.attachments.map((file) => (
+                            <div
+                              key={file.id}
+                              className="flex items-center justify-between p-3 bg-zinc-900 border border-zinc-850 hover:border-zinc-800 rounded-xl transition-all"
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="p-2 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-400">
+                                  <FileText className="size-4" />
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-xs font-medium text-zinc-200 truncate max-w-[140px]">
+                                    {file.filename}
+                                  </p>
+                                  <p className="text-[10px] text-zinc-500">
+                                    {formatBytes(file.size)}
+                                  </p>
+                                </div>
+                              </div>
+                              <button
+                                onClick={() =>
+                                  handleDownloadAttachment(
+                                    file.id,
+                                    file.filename,
+                                  )
+                                }
+                                className="p-1.5 bg-zinc-950 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-zinc-200 rounded-lg transition-colors shrink-0"
+                              >
+                                <Download className="size-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                </div>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
         </div>
       </div>
 

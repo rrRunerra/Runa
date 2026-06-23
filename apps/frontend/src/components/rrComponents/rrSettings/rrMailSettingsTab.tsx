@@ -1,21 +1,34 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import type React from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { Plus, Trash, Mail } from "lucide-react";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
+import { Plus, Trash } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "./ui/dialog";
+} from "@/components/ui/dialog";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
 
-export function MailSettingsTab(): React.JSX.Element {
+interface RrMailSettingsTabProps {
+  onOpenChange: (open: boolean) => void;
+}
+
+export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): React.JSX.Element {
   const { data: session } = useSession();
 
   // Email Accounts States
@@ -113,7 +126,6 @@ export function MailSettingsTab(): React.JSX.Element {
         setIsEmailAccountDialogOpen(false);
         fetchEmailAccounts();
         resetEmailForm();
-        // Emit custom event to notify sidebar config update
         window.dispatchEvent(new CustomEvent("runa-sidebar-changed"));
       } else {
         throw new Error("Failed to save email account");
@@ -134,7 +146,6 @@ export function MailSettingsTab(): React.JSX.Element {
       if (res.ok) {
         toast.success("Email account removed");
         fetchEmailAccounts();
-        // Emit custom event to notify sidebar config update
         window.dispatchEvent(new CustomEvent("runa-sidebar-changed"));
       } else {
         throw new Error("Failed to delete email account");
@@ -200,7 +211,6 @@ export function MailSettingsTab(): React.JSX.Element {
       console.error("Autodetect error:", err);
       toast.error("Could not autodetect settings. Using generic defaults.");
       
-      // Fallback local guess
       setImapHost(`imap.${domain}`);
       setImapPort("993");
       setImapSecure(true);
@@ -232,83 +242,89 @@ export function MailSettingsTab(): React.JSX.Element {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Email Accounts Management Section (Thunderbird style) */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="space-y-0.5">
-            <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-              Linked Email Accounts (Thunderbird Style)
-            </h4>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              Add multiple email addresses and configure IMAP/SMTP credentials.
-            </p>
-          </div>
-          <Button
-            onClick={() => { resetEmailForm(); setIsEmailAccountDialogOpen(true); }}
-            className="h-8 rounded-lg bg-primary hover:bg-primary/95 text-primary-foreground text-xs font-semibold px-3 cursor-pointer"
-          >
-            <Plus className="size-3.5 mr-1" />
-            Link Email Account
-          </Button>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 border-b border-border/40">
+        <div className="space-y-0.5">
+          <CardTitle>Linked Email Accounts</CardTitle>
+          <CardDescription>
+            Add multiple email addresses and configure IMAP/SMTP credentials.
+          </CardDescription>
         </div>
+        <Button
+          onClick={() => { resetEmailForm(); setIsEmailAccountDialogOpen(true); }}
+          className="h-8 rounded-lg cursor-pointer"
+        >
+          <Plus className="size-3.5 mr-1" />
+          Link Email Account
+        </Button>
+      </CardHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-          {emailAccounts.map((account) => (
-            <div
-              key={account.id}
-              className="p-4 rounded-2xl border border-zinc-800/40 bg-zinc-950/25 flex items-center justify-between gap-3"
-            >
-              <div className="flex items-center gap-3 min-w-0">
-                <div
-                  className="size-3 rounded-full shrink-0 border border-black/20"
-                  style={{ backgroundColor: account.color }}
-                />
-                <div className="space-y-0.5 text-left min-w-0">
-                  <span className="text-xs font-bold text-foreground block truncate">
-                    {account.accountName}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground block truncate">
-                    {account.emailAddress}
-                    {account.loginEmail && account.loginEmail !== account.emailAddress && (
-                      <span className="text-muted-foreground/50"> · login: {account.loginEmail}</span>
-                    )}
-                  </span>
-                  <span className="text-[9px] text-muted-foreground/60 block truncate">
-                    IMAP: {account.imapHost} | SMTP: {account.smtpHost}
-                  </span>
-                </div>
-              </div>
-              <div className="flex gap-1.5 shrink-0">
-                <Button
-                  onClick={() => openEditEmailAccount(account)}
-                  variant="ghost"
-                  className="h-8 px-2.5 rounded-lg text-xs font-semibold text-zinc-300 hover:bg-zinc-800"
-                >
-                  Edit
-                </Button>
-                <Button
-                  onClick={() => handleDeleteEmailAccount(account.id)}
-                  variant="ghost"
-                  className="h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 cursor-pointer"
-                >
-                  <Trash className="size-4" />
-                </Button>
+      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6">
+        {emailAccounts.map((account) => (
+          <div
+            key={account.id}
+            className="p-4 rounded-xl border border-border bg-card/40 flex items-center justify-between gap-3"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div
+                className="size-3 rounded-full shrink-0 border border-black/20"
+                style={{ backgroundColor: account.color }}
+              />
+              <div className="space-y-0.5 text-left min-w-0">
+                <span className="text-xs font-bold text-foreground block truncate">
+                  {account.accountName}
+                </span>
+                <span className="text-[10px] text-muted-foreground block truncate">
+                  {account.emailAddress}
+                  {account.loginEmail && account.loginEmail !== account.emailAddress && (
+                    <span className="text-muted-foreground/50"> · login: {account.loginEmail}</span>
+                  )}
+                </span>
+                <span className="text-[9px] text-muted-foreground/60 block truncate">
+                  IMAP: {account.imapHost} | SMTP: {account.smtpHost}
+                </span>
               </div>
             </div>
-          ))}
-          {emailAccounts.length === 0 && (
-            <div className="col-span-full p-6 text-center rounded-2xl border border-dashed border-zinc-800 text-xs text-muted-foreground">
-              No linked email accounts found. Add one to get started!
+            <div className="flex gap-1.5 shrink-0">
+              <Button
+                onClick={() => openEditEmailAccount(account)}
+                variant="ghost"
+                className="h-8 px-2.5 rounded-lg text-xs font-semibold text-foreground hover:bg-muted"
+              >
+                Edit
+              </Button>
+              <Button
+                onClick={() => handleDeleteEmailAccount(account.id)}
+                variant="ghost"
+                className="h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer"
+              >
+                <Trash className="size-4" />
+              </Button>
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        ))}
+        {emailAccounts.length === 0 && (
+          <div className="col-span-full p-6 text-center rounded-xl border border-dashed border-border text-xs text-muted-foreground">
+            No linked email accounts found. Add one to get started!
+          </div>
+        )}
+      </CardContent>
+
+      {/* Done Closing button */}
+      <CardFooter className="flex justify-end pt-4 border-t border-border mt-6">
+        <Button
+          variant="outline"
+          onClick={() => onOpenChange(false)}
+          className="text-xs sm:text-sm h-9 px-5 rounded-xl cursor-pointer"
+        >
+          Close Settings
+        </Button>
+      </CardFooter>
 
       {/* Thunderbird Email Setup Dialog */}
       <Dialog open={isEmailAccountDialogOpen} onOpenChange={setIsEmailAccountDialogOpen}>
-        <DialogContent className="sm:max-w-3xl md:max-w-4xl bg-zinc-950 border border-zinc-800 shadow-2xl p-6 rounded-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="pb-3 border-b border-zinc-800/40">
+        <DialogContent className="sm:max-w-3xl md:max-w-4xl bg-card border border-border shadow-2xl p-6 rounded-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="pb-3 border-b border-border/40">
             <DialogTitle className="text-md font-bold">
               {editingEmailAccount ? "Edit Email Account" : "Link Email Account"}
             </DialogTitle>
@@ -327,7 +343,7 @@ export function MailSettingsTab(): React.JSX.Element {
                   value={emailAccountName}
                   onChange={(e) => setEmailAccountName(e.target.value)}
                   placeholder="e.g. Personal Purelymail"
-                  className="h-9 px-3 bg-zinc-900 border-zinc-800 rounded-xl text-xs"
+                  className="h-9 px-3 text-xs"
                 />
               </div>
               <div className="space-y-1.5">
@@ -358,7 +374,7 @@ export function MailSettingsTab(): React.JSX.Element {
                   value={emailSenderName}
                   onChange={(e) => setEmailSenderName(e.target.value)}
                   placeholder="e.g. Yki"
-                  className="h-9 px-3 bg-zinc-900 border-zinc-800 rounded-xl text-xs"
+                  className="h-9 px-3 text-xs"
                 />
               </div>
               <div className="space-y-1.5">
@@ -368,7 +384,7 @@ export function MailSettingsTab(): React.JSX.Element {
                   value={emailAddressField}
                   onChange={(e) => setEmailAddressField(e.target.value)}
                   placeholder="e.g. yuki@runerra.org"
-                  className="h-9 px-3 bg-zinc-900 border-zinc-800 rounded-xl text-xs"
+                  className="h-9 px-3 text-xs"
                 />
                 <p className="text-[10px] text-muted-foreground/60">
                   The address recipients see in the From field.
@@ -381,7 +397,7 @@ export function MailSettingsTab(): React.JSX.Element {
                   value={emailReplyTo}
                   onChange={(e) => setEmailReplyTo(e.target.value)}
                   placeholder="Alternative reply destination"
-                  className="h-9 px-3 bg-zinc-900 border-zinc-800 rounded-xl text-xs"
+                  className="h-9 px-3 text-xs"
                 />
               </div>
               <div className="space-y-1.5">
@@ -391,7 +407,7 @@ export function MailSettingsTab(): React.JSX.Element {
                   value={emailOrganization}
                   onChange={(e) => setEmailOrganization(e.target.value)}
                   placeholder="e.g. Runa Dev Group"
-                  className="h-9 px-3 bg-zinc-900 border-zinc-800 rounded-xl text-xs"
+                  className="h-9 px-3 text-xs"
                 />
               </div>
             </div>
@@ -405,7 +421,7 @@ export function MailSettingsTab(): React.JSX.Element {
                     type="checkbox"
                     checked={emailUseHtmlSig}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmailUseHtmlSig(e.target.checked)}
-                    className="size-3.5 bg-zinc-900 border-zinc-800 text-primary rounded-xs"
+                    className="size-3.5 bg-background border-border text-primary rounded-xs cursor-pointer"
                   />
                   <Label htmlFor="use-html" className="text-[10px] cursor-pointer">Use HTML formatting</Label>
                 </div>
@@ -415,7 +431,7 @@ export function MailSettingsTab(): React.JSX.Element {
                 value={emailSignature}
                 onChange={(e) => setEmailSignature(e.target.value)}
                 placeholder="Add your mail signature text..."
-                className="w-full min-h-[70px] p-3 text-xs bg-zinc-900 border border-zinc-800 rounded-xl focus:outline-hidden focus:ring-1 focus:ring-primary focus:border-primary text-foreground font-sans"
+                className="w-full min-h-[70px] p-3 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-foreground font-sans"
               />
             </div>
 
@@ -427,7 +443,7 @@ export function MailSettingsTab(): React.JSX.Element {
                 type="button"
                 onClick={handleAutodetect}
                 variant="outline"
-                className="h-7 rounded-lg border border-zinc-800 hover:bg-zinc-800 text-[10px] px-2.5 font-semibold shrink-0 cursor-pointer"
+                className="h-7 rounded-lg border border-border hover:bg-muted text-[10px] px-2.5 font-semibold shrink-0 cursor-pointer"
               >
                 Autodetect
               </Button>
@@ -441,7 +457,7 @@ export function MailSettingsTab(): React.JSX.Element {
                   value={emailLoginField}
                   onChange={(e) => setEmailLoginField(e.target.value)}
                   placeholder={emailAddressField || "e.g. yki@runerra.org"}
-                  className="h-9 px-3 bg-zinc-900 border-zinc-800 rounded-xl text-xs"
+                  className="h-9 px-3 text-xs"
                 />
                 <p className="text-[10px] text-muted-foreground/60">
                   IMAP/SMTP login username. Leave blank to use the identity email above.
@@ -455,13 +471,13 @@ export function MailSettingsTab(): React.JSX.Element {
                   value={emailPassword}
                   onChange={(e) => setEmailPassword(e.target.value)}
                   placeholder="SMTP/IMAP server password"
-                  className="h-9 px-3 bg-zinc-900 border-zinc-800 rounded-xl text-xs"
+                  className="h-9 px-3 text-xs"
                 />
               </div>
             </div>
 
             {/* IMAP & SMTP Settings */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 rounded-xl border border-zinc-800/60 bg-zinc-950/40">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 rounded-xl border border-border bg-muted/40">
               {/* Incoming IMAP */}
               <div className="space-y-3.5">
                 <span className="text-[10px] font-bold text-primary uppercase tracking-wide">Incoming (IMAP)</span>
@@ -472,7 +488,7 @@ export function MailSettingsTab(): React.JSX.Element {
                     value={imapHost}
                     onChange={(e) => setImapHost(e.target.value)}
                     placeholder="imap.purelymail.com"
-                    className="h-8 px-2.5 bg-zinc-900 border-zinc-800 rounded-lg text-xs"
+                    className="h-8 px-2.5 text-xs"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -483,7 +499,7 @@ export function MailSettingsTab(): React.JSX.Element {
                       value={imapPort}
                       onChange={(e) => setImapPort(e.target.value)}
                       placeholder="993"
-                      className="h-8 px-2.5 bg-zinc-900 border-zinc-800 rounded-lg text-xs"
+                      className="h-8 px-2.5 text-xs"
                     />
                   </div>
                   <div className="flex flex-col justify-center gap-1.5 pt-4">
@@ -493,7 +509,7 @@ export function MailSettingsTab(): React.JSX.Element {
                         type="checkbox"
                         checked={imapSecure}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setImapSecure(e.target.checked)}
-                        className="size-3.5 bg-zinc-900 border-zinc-800 text-primary rounded-xs"
+                        className="size-3.5 bg-background border-border text-primary rounded-xs cursor-pointer"
                       />
                       <Label htmlFor="imap-secure" className="text-[10px] cursor-pointer">SSL/TLS</Label>
                     </div>
@@ -511,7 +527,7 @@ export function MailSettingsTab(): React.JSX.Element {
                     value={smtpHost}
                     onChange={(e) => setSmtpHost(e.target.value)}
                     placeholder="smtp.purelymail.com"
-                    className="h-8 px-2.5 bg-zinc-900 border-zinc-800 rounded-lg text-xs"
+                    className="h-8 px-2.5 text-xs"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
@@ -522,7 +538,7 @@ export function MailSettingsTab(): React.JSX.Element {
                       value={smtpPort}
                       onChange={(e) => setSmtpPort(e.target.value)}
                       placeholder="465"
-                      className="h-8 px-2.5 bg-zinc-900 border-zinc-800 rounded-lg text-xs"
+                      className="h-8 px-2.5 text-xs"
                     />
                   </div>
                   <div className="flex flex-col justify-center gap-1.5 pt-4">
@@ -532,7 +548,7 @@ export function MailSettingsTab(): React.JSX.Element {
                         type="checkbox"
                         checked={smtpSecure}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSmtpSecure(e.target.checked)}
-                        className="size-3.5 bg-zinc-900 border-zinc-800 text-primary rounded-xs"
+                        className="size-3.5 bg-background border-border text-primary rounded-xs cursor-pointer"
                       />
                       <Label htmlFor="smtp-secure" className="text-[10px] cursor-pointer">SSL/TLS</Label>
                     </div>
@@ -542,11 +558,11 @@ export function MailSettingsTab(): React.JSX.Element {
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-3 border-t border-zinc-800/40">
+          <div className="flex justify-end gap-3 pt-3 border-t border-border">
             <Button
               variant="ghost"
               onClick={() => setIsEmailAccountDialogOpen(false)}
-              className="text-muted-foreground hover:text-foreground hover:bg-zinc-800/40 rounded-xl text-xs h-9 cursor-pointer"
+              className="text-muted-foreground hover:text-foreground rounded-xl text-xs h-9 cursor-pointer"
             >
               Cancel
             </Button>
@@ -560,6 +576,6 @@ export function MailSettingsTab(): React.JSX.Element {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </Card>
   );
 }

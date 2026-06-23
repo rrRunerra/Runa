@@ -10,7 +10,6 @@ import {
   ShieldAlert,
   Trash,
 } from "lucide-react";
-import type { NavbarConfig } from "@/components/Providers/NavigationProvider";
 import { ComposeEmailModal } from "@/components/pegasus/ComposeEmailModal";
 import { SidebarMenuButton } from "@/components/ui/sidebar";
 import { SidebarConfig } from "@/types/SidebarConfig";

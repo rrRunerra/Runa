@@ -5,32 +5,142 @@ import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
+  SidebarGroup,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   useSidebar,
 } from "../ui/sidebar";
-import { SidebarConfig, SidebarItem } from "../../types/SidebarConfig";
+import {
+  SidebarConfig,
+  SidebarItem,
+  SidebarItemChild,
+  SidebarSection,
+} from "../../types/SidebarConfig";
 import { useSession } from "next-auth/react";
 import { useRRSidebar } from "@/hooks/useRRSidebar";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { Command, LayoutGrid } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ChevronRight, Command, LayoutGrid } from "lucide-react";
 import RrAppMenu from "./rrAppMenu";
 import RrUserMenu from "./rrUserMenu";
-import { motion } from "framer-motion";
+import { LayoutGroup, motion } from "framer-motion";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import RrBottomDock from "./rrBottomDock";
+import { rrApps } from "../../../config/rrApps";
+import path from "path";
+import { Badge } from "../ui/badge";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "../ui/collapsible";
 
 export default function RrSidebar({ sidebarConfig, ...props }: rrSidebarProps) {
   const { data: session } = useSession();
   const pathname = usePathname();
+  const { isMobile, setOpenMobile } = useSidebar();
 
   const { setSidebarConfig } = useRRSidebar(sidebarConfig);
   const [resolvedSidebarConfig, setResolvedSidebarConfig] =
     useState<SidebarConfig>(sidebarConfig);
-  const { isMobile, setOpenMobile } = useSidebar();
+
+  useEffect(() => {
+    const getActiveAppHref = () => {
+      if (typeof window !== "undefined") {
+        const pathname = window.location.pathname;
+        const currentApp = rrApps.find((app) => pathname.startsWith(app.href));
+        if (currentApp) {
+          return currentApp.href;
+        }
+      }
+      return "";
+    };
+
+    const loadAndInjectCustomDock = () => {
+      const storageKey = `runa-phone-dock-items-${getActiveAppHref()}`;
+      const stored = localStorage.getItem(storageKey);
+
+      let customDockMap: Record<string, string | null> | null = null;
+      if (stored) {
+        try {
+          customDockMap = JSON.parse(stored);
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      if (customDockMap) {
+        const phoneSectionIdx = sidebarConfig.findIndex(
+          (s) => s.section?.toLowerCase().replace(/[^a-z]/g, "") === "phone",
+        );
+
+        if (phoneSectionIdx !== -1) {
+          const findItemByHref = (
+            key: string | null | undefined,
+          ): SidebarItem | undefined => {
+            if (!key) return undefined;
+            for (const section of sidebarConfig) {
+              for (const item of section.items) {
+                const itemKey = item.href || (item.component ? `label:${item.label}` : undefined);
+                if (itemKey === key) return item;
+                if (item.children) {
+                  for (const child of item.children) {
+                    const childKey = child.href || (child.component ? `label:${child.label}` : undefined);
+                    if (childKey === key) return child;
+                  }
+                }
+              }
+            }
+            return undefined;
+          };
+
+          const newItems: SidebarItem[] = [];
+          for (const pos of ["1", "2", "3", "4"]) {
+            const key = customDockMap[pos];
+            if (key) {
+              const matchedItem = findItemByHref(key);
+              if (matchedItem) {
+                newItems.push({
+                  ...matchedItem,
+                  position: parseInt(pos, 10),
+                });
+              }
+            }
+          }
+
+          const updatedSidebarConfig = sidebarConfig.map((section, idx) => {
+            if (idx === phoneSectionIdx) {
+              return {
+                ...section,
+                items: newItems,
+              };
+            }
+            return section;
+          });
+
+          setResolvedSidebarConfig(updatedSidebarConfig);
+        } else {
+          setResolvedSidebarConfig(sidebarConfig);
+        }
+      } else {
+        setResolvedSidebarConfig(sidebarConfig);
+      }
+    };
+
+    loadAndInjectCustomDock();
+  }, [sidebarConfig]);
+
+  useEffect(() => {
+    setSidebarConfig(() => resolvedSidebarConfig);
+  }, [resolvedSidebarConfig, setSidebarConfig]);
 
   return (
     <>
@@ -42,17 +152,174 @@ export default function RrSidebar({ sidebarConfig, ...props }: rrSidebarProps) {
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
-        <SidebarContent>
-          {/*
-             TODO 
-            */}
+        <SidebarContent className="no-scrollbar">
+          <LayoutGroup id="sidebar">
+            {/* SECTIONS */}
+
+            {resolvedSidebarConfig
+              .filter(
+                (section: SidebarSection) =>
+                  section.section.toLowerCase() !== "#$phone",
+              )
+              .map((section: SidebarSection, sectionIdx: number) => (
+                <SidebarGroup key={sectionIdx}>
+                  {section.section && (
+                    <SidebarGroupLabel>{section.section}</SidebarGroupLabel>
+                  )}
+
+                  <SidebarMenu>
+                    {section.items.map((item: SidebarItem, itemIdx: number) => {
+                      const hasChildren =
+                        item.children && item.children.length > 0;
+                      const hasHref = !!item.href;
+
+                      const truncate = (str: string, n: number) =>
+                        str.length > n ? `${str.slice(0, n)}...` : str;
+
+                      const isChildActive =
+                        hasChildren &&
+                        item.children!.some(
+                          (child: SidebarItemChild) => pathname === child.href,
+                        );
+                      const isActive =
+                        (item.href && pathname === item.href) || isChildActive;
+
+                      const MenuItem = (
+                        <SidebarMenuItem key={itemIdx}>
+                          {item.component ? (
+                            item.component
+                          ) : hasHref ? (
+                            <SidebarMenuButton
+                              asChild
+                              tooltip={item.label}
+                              isActive={isActive}
+                            >
+                              <Link
+                                href={item.href || "#"}
+                                className="w-full flex items-center justify-between"
+                              >
+                                <span className="flex items-center gap-2">
+                                  {item.icon}
+                                  <span className="truncate">
+                                    {truncate(item.label, 18)}
+                                  </span>
+                                </span>
+                                {item.badge && (
+                                  <Badge variant="outline">{item.badge}</Badge>
+                                )}
+                              </Link>
+                            </SidebarMenuButton>
+                          ) : (
+                            <CollapsibleTrigger asChild>
+                              <SidebarMenuButton
+                                tooltip={item.label}
+                                isActive={isActive}
+                              >
+                                <span className="w-full flex items-center justify-between">
+                                  <span className="flex items-center gap-2">
+                                    {item.icon}
+                                    <span className="truncate">
+                                      {truncate(item.label, 18)}
+                                    </span>
+                                  </span>
+                                  <span className="flex items-center gap-1.5 ml-auto">
+                                    {item.badge && (
+                                      <Badge variant="outline">
+                                        {item.badge}
+                                      </Badge>
+                                    )}
+                                    <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                                  </span>
+                                </span>
+                              </SidebarMenuButton>
+                            </CollapsibleTrigger>
+                          )}
+
+                          {hasChildren && (
+                            <>
+                              {hasHref && (
+                                <CollapsibleTrigger asChild>
+                                  <SidebarMenuAction className="data-[state=open]:rotate-90">
+                                    <ChevronRight />
+                                    <span className="sr-only">Toggle</span>
+                                  </SidebarMenuAction>
+                                </CollapsibleTrigger>
+                              )}
+                              <CollapsibleContent>
+                                <SidebarMenuSub className="">
+                                  {item.children?.map(
+                                    (
+                                      child: SidebarItemChild,
+                                      childIdx: number,
+                                    ) => {
+                                      const isSubActive =
+                                        pathname === child.href;
+                                      return (
+                                        <SidebarMenuSubItem key={childIdx}>
+                                          {child.component ? (
+                                            child.component
+                                          ) : (
+                                            <SidebarMenuSubButton
+                                              asChild
+                                              isActive={isSubActive}
+                                            >
+                                              <Link
+                                                href={child.href || "#"}
+                                                className="w-full flex items-center justify-between"
+                                              >
+                                                <span className="flex items-center gap-2">
+                                                  {child.icon}
+                                                  <span className="truncate">
+                                                    {truncate(child.label, 16)}
+                                                  </span>
+                                                </span>
+                                                {child.badge && (
+                                                  <Badge variant="outline">
+                                                    {child.badge}
+                                                  </Badge>
+                                                )}
+                                              </Link>
+                                            </SidebarMenuSubButton>
+                                          )}
+                                        </SidebarMenuSubItem>
+                                      );
+                                    },
+                                  )}
+                                </SidebarMenuSub>
+                              </CollapsibleContent>
+                            </>
+                          )}
+                        </SidebarMenuItem>
+                      );
+
+                      if (hasChildren) {
+                        return (
+                          <Collapsible
+                            key={itemIdx}
+                            asChild
+                            defaultOpen={isChildActive}
+                            className="group/collapsible mt-1"
+                          >
+                            {MenuItem}
+                          </Collapsible>
+                        );
+                      }
+
+                      return MenuItem;
+                    })}
+                  </SidebarMenu>
+                </SidebarGroup>
+              ))}
+          </LayoutGroup>
         </SidebarContent>
         <SidebarFooter>
-          <RrUserMenu session={session} />
+          <SidebarMenu>
+            <RrUserMenu session={session} />
+          </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
       {isMobile && (
-        <BottomDock
+        <RrBottomDock
           navConfig={resolvedSidebarConfig}
           pathname={pathname}
           setOpenMobile={setOpenMobile}
@@ -62,128 +329,6 @@ export default function RrSidebar({ sidebarConfig, ...props }: rrSidebarProps) {
   );
 }
 
-function BottomDock({
-  navConfig,
-  pathname,
-  setOpenMobile,
-}: {
-  navConfig: SidebarConfig;
-  pathname: string;
-  setOpenMobile: (open: boolean) => void;
-}): React.JSX.Element | null {
-  const phoneSection = navConfig.find(
-    (s) => s.section?.toLowerCase() === "#$phone",
-  );
-  if (!phoneSection || phoneSection.items.length === 0) return null;
-
-  const items = phoneSection.items;
-
-  // Find items for each position (1 to 4)
-  const item1 = items.find((i) => i.position === 1);
-  const item2 = items.find((i) => i.position === 2);
-  const item3 = items.find((i) => i.position === 3);
-  const item4 = items.find((i) => i.position === 4);
-
-  // Group items into left and right buckets dynamically
-  const leftItems: SidebarItem[] = [];
-  const rightItems: SidebarItem[] = [];
-
-  if (item1) leftItems.push(item1);
-
-  if (!item3 && !item4) {
-    // 2 position should be on the left if 3 and 4 are empty
-    if (item2) leftItems.push(item2);
-  } else if (!item3 && item4) {
-    // same for 4 if 3 is empty (position 4 goes on the left side)
-    if (item2) leftItems.push(item2);
-    leftItems.push(item4);
-  } else {
-    // default distribution
-    if (item2) leftItems.push(item2);
-    if (item3) rightItems.push(item3);
-    if (item4) rightItems.push(item4);
-  }
-
-  return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between gap-1 px-3 py-2 bg-zinc-950/80 backdrop-blur-xl border border-zinc-800/80 shadow-2xl w-[calc(100%-2rem)] max-w-sm md:hidden select-none rounded-full">
-      {/* Left items */}
-      <div className="flex items-center gap-0.5 flex-1 justify-around">
-        {leftItems.map((item) => (
-          <DockItem
-            key={item.label}
-            item={item}
-            isActive={pathname === item.href}
-          />
-        ))}
-      </div>
-
-      {/* Middle Switcher Button */}
-      <motion.button
-        onClick={() => setOpenMobile(true)}
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.95 }}
-        className="flex items-center justify-center size-10.5 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 cursor-pointer shrink-0 mx-1.5"
-        aria-label="Toggle Navigation Drawer"
-      >
-        <LayoutGrid className="size-4" />
-      </motion.button>
-
-      {/* Right items */}
-      <div className="flex items-center gap-0.5 flex-1 justify-around">
-        {rightItems.map((item) => (
-          <DockItem
-            key={item.label}
-            item={item}
-            isActive={pathname === item.href}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function DockItem({
-  item,
-  isActive,
-}: {
-  item: SidebarItem;
-  isActive: boolean;
-}): React.JSX.Element {
-  if (item.component) {
-    return <>{item.component}</>;
-  }
-  return (
-    <Link
-      href={item.href || "#"}
-      className={cn(
-        "relative flex flex-col items-center justify-center gap-0.5 px-2.5 py-1.5 rounded-full transition-colors duration-200 min-w-[58px]",
-        isActive
-          ? "text-primary font-bold"
-          : "text-muted-foreground/70 hover:text-foreground",
-      )}
-    >
-      {isActive && (
-        <motion.div
-          layoutId="activeDockBubble"
-          className="absolute inset-0 bg-primary/10 rounded-full border border-primary/20"
-          transition={{ type: "spring", stiffness: 380, damping: 30 }}
-          style={{ pointerEvents: "none" }}
-        />
-      )}
-      <span
-        className={cn(
-          "relative z-10 transition-transform duration-200",
-          isActive && "scale-105",
-        )}
-      >
-        {item.icon}
-      </span>
-      <span className="text-[9px] tracking-tight font-medium relative z-10">
-        {item.label}
-      </span>
-    </Link>
-  );
-}
 
 interface rrSidebarProps extends React.ComponentProps<typeof Sidebar> {
   sidebarConfig: SidebarConfig;

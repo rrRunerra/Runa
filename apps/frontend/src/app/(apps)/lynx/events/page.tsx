@@ -2,28 +2,28 @@
 
 import { ChevronRight, Activity } from "lucide-react";
 import Link from "next/link";
-import { useNavigation } from "@/hooks/useNavigation";
 import { motion } from "framer-motion";
+import { useRRSidebar } from "@/hooks/useRRSidebar";
 
 export default function EventsPage() {
-  const { getItem } = useNavigation();
+  const { getItem } = useRRSidebar();
   const eventsItem = getItem("Structures", "Events");
 
   const containerVariants = {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
-      transition: { staggerChildren: 0.04 }
-    }
+      transition: { staggerChildren: 0.04 },
+    },
   };
 
   const cardVariants = {
     hidden: { opacity: 0, y: 12 },
-    show: { 
-      opacity: 1, 
+    show: {
+      opacity: 1,
       y: 0,
-      transition: { type: "spring", stiffness: 350, damping: 26 }
-    }
+      transition: { type: "spring", stiffness: 350, damping: 26 },
+    },
   } as const;
 
   return (
@@ -34,7 +34,8 @@ export default function EventsPage() {
           Bot Events
         </h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Monitor real-time system event listeners, event payloads, and trigger handlers.
+          Monitor real-time system event listeners, event payloads, and trigger
+          handlers.
         </p>
       </div>
 
@@ -73,7 +74,8 @@ export default function EventsPage() {
                     <ChevronRight className="size-4 text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition-all" />
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed pl-1">
-                    {category.subtitle || "Monitor and debug active event listeners."}
+                    {category.subtitle ||
+                      "Monitor and debug active event listeners."}
                   </p>
                 </div>
               </motion.div>

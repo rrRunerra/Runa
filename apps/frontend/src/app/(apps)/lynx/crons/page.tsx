@@ -2,28 +2,29 @@
 
 import { ChevronRight, Clock } from "lucide-react";
 import Link from "next/link";
-import { useNavigation } from "@/hooks/useNavigation";
+
 import { motion } from "framer-motion";
+import { useRRSidebar } from "@/hooks/useRRSidebar";
 
 export default function CronsPage() {
-  const { getItem } = useNavigation();
+  const { getItem } = useRRSidebar();
   const cronsItem = getItem("Structures", "Crons");
 
   const containerVariants = {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
-      transition: { staggerChildren: 0.04 }
-    }
+      transition: { staggerChildren: 0.04 },
+    },
   };
 
   const cardVariants = {
     hidden: { opacity: 0, y: 12 },
-    show: { 
-      opacity: 1, 
+    show: {
+      opacity: 1,
       y: 0,
-      transition: { type: "spring", stiffness: 350, damping: 26 }
-    }
+      transition: { type: "spring", stiffness: 350, damping: 26 },
+    },
   } as const;
 
   return (
@@ -34,7 +35,8 @@ export default function CronsPage() {
           Scheduled Crons
         </h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Manage system cron schedules, active cron timers, and recurring background workers.
+          Manage system cron schedules, active cron timers, and recurring
+          background workers.
         </p>
       </div>
 

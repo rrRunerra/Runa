@@ -28,7 +28,8 @@ import { useSidebar } from "../ui/sidebar";
 import Link from "next/link";
 import { ConstellationBuilderModal } from "../stars/ConstellationBuilderModal";
 import { NotificationsModal } from "../NotificationsModal";
-import { SettingsDialog } from "../SettingsDialog";
+import { SettingsDialog } from "./rrSettings/rrSettingsModal";
+import { AppearanceDialog } from "../AppearanceDialog";
 
 export default function RrUserMenu({ session }: { session: Session | null }) {
   const [unreadCount, setUnreadCount] = useState(0);
@@ -77,7 +78,7 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
                           : ""
                       }
                     />
-                    <AvatarFallback className="rounded-md bg-primary/10 text-primary">
+                    <AvatarFallback>
                       {session.user?.username?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
@@ -150,7 +151,7 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
                         }
                         alt={session.user?.username}
                       />
-                      <AvatarFallback className="rounded-md bg-primary/10 text-primary font-bold z-10">
+                      <AvatarFallback>
                         {session.user?.username?.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
@@ -257,19 +258,19 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
         </SidebarMenuItem>
       )}
 
-      {/* {isAppearanceOpen && (
-        <AppearanceSettingsModal
+      {isAppearanceOpen && (
+        <AppearanceDialog
           open={isAppearanceOpen}
           onOpenChange={setIsAppearanceOpen}
         />
-      )} */}
+      )}
 
-      {/* {isSettingsOpen && (
+      {isSettingsOpen && (
         <SettingsDialog
           open={isSettingsOpen}
           onOpenChange={setIsSettingsOpen}
         />
-      )} */}
+      )}
 
       {isNotificationsOpen && (
         <NotificationsModal

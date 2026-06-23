@@ -13,6 +13,7 @@
     "@runa/auth": "workspace:*",
     "@runa/cache": "workspace:*",
     "@runa/connections": "workspace:*",
+    "@runa/crypto": "workspace:*",
     "@runa/database": "workspace:*",
     "@runa/notifications": "workspace:*",
     "@runa/permissions": "workspace:*",

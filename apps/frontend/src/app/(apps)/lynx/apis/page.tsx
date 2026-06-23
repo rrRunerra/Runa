@@ -2,28 +2,28 @@
 
 import { ChevronRight, Sliders } from "lucide-react";
 import Link from "next/link";
-import { useNavigation } from "@/hooks/useNavigation";
 import { motion } from "framer-motion";
+import { useRRSidebar } from "@/hooks/useRRSidebar";
 
 export default function ApisPage() {
-  const { getItem } = useNavigation();
+  const { getItem } = useRRSidebar();
   const apisItem = getItem("Structures", "APIs");
 
   const containerVariants = {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
-      transition: { staggerChildren: 0.04 }
-    }
+      transition: { staggerChildren: 0.04 },
+    },
   };
 
   const cardVariants = {
     hidden: { opacity: 0, y: 12 },
-    show: { 
-      opacity: 1, 
+    show: {
+      opacity: 1,
       y: 0,
-      transition: { type: "spring", stiffness: 350, damping: 26 }
-    }
+      transition: { type: "spring", stiffness: 350, damping: 26 },
+    },
   } as const;
 
   return (
@@ -34,7 +34,8 @@ export default function ApisPage() {
           Registered APIs
         </h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Configure external webhooks, API endpoints, and direct connector services.
+          Configure external webhooks, API endpoints, and direct connector
+          services.
         </p>
       </div>
 

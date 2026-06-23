@@ -6,13 +6,10 @@ import {
   useEffect,
   useRef,
   forwardRef,
-  useImperativeHandle,
 } from "react";
 import { useSession } from "next-auth/react";
 import {
   Camera,
-  Eye,
-  EyeOff,
   Trash,
   ChevronsUpDown,
   Crop,
@@ -28,33 +25,32 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "./ui/dialog";
-import { ImageCropperDialog } from "./ui/image-cropper-dialog";
+} from "@/components/ui/dialog";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
+import { ImageCropperDialog } from "@/components/ui/image-cropper-dialog";
 import { getSafeImageUrl } from "@/lib/inputValidation";
 
-interface AccountSettingsTabProps {
+interface RrAccountSettingsTabProps {
   onOpenChange: (open: boolean) => void;
-  isSubmitting: boolean;
-  setIsSubmitting: (submitting: boolean) => void;
 }
 
-export interface AccountSettingsTabRef {
-  handleSave: () => void;
-}
-
-export const AccountSettingsTab = forwardRef<
-  AccountSettingsTabRef,
-  AccountSettingsTabProps
->(({ onOpenChange, isSubmitting, setIsSubmitting }, ref) => {
+export const RrAccountSettingsTab = ({ onOpenChange }: RrAccountSettingsTabProps): React.JSX.Element => {
   const { data: session, update } = useSession();
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -62,17 +58,18 @@ export const AccountSettingsTab = forwardRef<
   const cardBgInputRef = useRef<HTMLInputElement>(null);
 
   // Form states
-  const [displayName, setDisplayName] = useState("");
-  const [email, setEmail] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
-  const [bannerUrl, setBannerUrl] = useState("");
-  const [sidebarCardBackgroundUrl, setSidebarCardBackgroundUrl] = useState("");
+  const [displayName, setDisplayName] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
+  const [avatarUrl, setAvatarUrl] = useState<string>("");
+  const [bannerUrl, setBannerUrl] = useState<string>("");
+  const [sidebarCardBackgroundUrl, setSidebarCardBackgroundUrl] = useState<string>("");
   const [profileSettings, setProfileSettings] = useState<any>({});
-  const [bio, setBio] = useState("");
+  const [bio, setBio] = useState<string>("");
   const [editorTab, setEditorTab] = useState<"write" | "preview">("write");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  const insertMarkdown = (syntax: string, placeholder = "") => {
+  const insertMarkdown = (syntax: string, placeholder = ""): void => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
@@ -113,7 +110,6 @@ export const AccountSettingsTab = forwardRef<
 
     setBio(text.substring(0, start) + replacement + text.substring(end));
 
-    // Refocus textarea and select the inserted/placeholder text
     setTimeout(() => {
       textarea.focus();
       textarea.setSelectionRange(newCursorPos, newCursorPos);
@@ -122,22 +118,19 @@ export const AccountSettingsTab = forwardRef<
 
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
-  const [sidebarCardBackgroundFile, setSidebarCardBackgroundFile] =
-    useState<File | null>(null);
+  const [sidebarCardBackgroundFile, setSidebarCardBackgroundFile] = useState<File | null>(null);
 
-  const [emailError, setEmailError] = useState("");
+  const [emailError, setEmailError] = useState<string>("");
 
-  const [confirmPasswordInput, setConfirmPasswordInput] = useState("");
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState<string>("");
+  const [isConfirmOpen, setIsConfirmOpen] = useState<boolean>(false);
 
   // Cropper states
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
-  const [cropType, setCropType] = useState<
-    "avatar" | "banner" | "background" | null
-  >(null);
-  const [isCropperOpen, setIsCropperOpen] = useState(false);
-  const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState(false);
-  const [isBannerMenuOpen, setIsBannerMenuOpen] = useState(false);
+  const [cropType, setCropType] = useState<"avatar" | "banner" | "background" | null>(null);
+  const [isCropperOpen, setIsCropperOpen] = useState<boolean>(false);
+  const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState<boolean>(false);
+  const [isBannerMenuOpen, setIsBannerMenuOpen] = useState<boolean>(false);
 
   useEffect(() => {
     if (session?.user?.username) {
@@ -170,7 +163,7 @@ export const AccountSettingsTab = forwardRef<
 
   const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const file = e.target.files?.[0];
     if (file) {
       const url = URL.createObjectURL(file);
@@ -181,7 +174,7 @@ export const AccountSettingsTab = forwardRef<
     }
   };
 
-  const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleBannerChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const file = e.target.files?.[0];
     if (file) {
       const url = URL.createObjectURL(file);
@@ -192,7 +185,7 @@ export const AccountSettingsTab = forwardRef<
     }
   };
 
-  const handleCardBgChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCardBgChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const file = e.target.files?.[0];
     if (file) {
       const url = URL.createObjectURL(file);
@@ -203,7 +196,7 @@ export const AccountSettingsTab = forwardRef<
     }
   };
 
-  const handleCropComplete = (croppedFile: File) => {
+  const handleCropComplete = (croppedFile: File): void => {
     const url = URL.createObjectURL(croppedFile);
     if (cropType === "avatar") {
       setAvatarFile(croppedFile);
@@ -217,7 +210,7 @@ export const AccountSettingsTab = forwardRef<
     }
   };
 
-  const handlePreSave = () => {
+  const handleSave = async (): Promise<void> => {
     if (!session?.accessToken) {
       toast.error("You must be logged in to update your profile.");
       return;
@@ -228,8 +221,7 @@ export const AccountSettingsTab = forwardRef<
       return;
     }
 
-    const emailChanged =
-      email.toLowerCase() !== session.user.email.toLowerCase();
+    const emailChanged = email.toLowerCase() !== session.user.email.toLowerCase();
 
     if (emailChanged) {
       setIsConfirmOpen(true);
@@ -238,11 +230,7 @@ export const AccountSettingsTab = forwardRef<
     }
   };
 
-  useImperativeHandle(ref, () => ({
-    handleSave: handlePreSave,
-  }));
-
-  const executeSave = async (passwordToVerify: string) => {
+  const executeSave = async (passwordToVerify: string): Promise<void> => {
     setIsSubmitting(true);
 
     try {
@@ -331,8 +319,7 @@ export const AccountSettingsTab = forwardRef<
         sidebarCardBackgroundUrl: finalBackgroundUrl || null,
       };
 
-      const emailChanged =
-        email.toLowerCase() !== session!.user.email.toLowerCase();
+      const emailChanged = session?.user?.email ? email.toLowerCase() !== session.user.email.toLowerCase() : true;
       if (emailChanged) {
         updatePayload.email = email.toLowerCase();
       }
@@ -411,18 +398,14 @@ export const AccountSettingsTab = forwardRef<
 
   return (
     <div className="space-y-6">
-      <div>
-        <h3 className="text-sm font-semibold text-foreground">
-          Profile Banner & Avatar
-        </h3>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          Customize your profile banner (recommended: 1200x400px) and avatar
-          image (recommended: 512x512px).
-        </p>
-      </div>
-
-      {/* Banner & Avatar section */}
-      <div className="relative mb-8">
+      <Card className="overflow-visible">
+        <CardHeader>
+          <CardTitle>Profile Banner & Avatar</CardTitle>
+          <CardDescription>
+            Customize your profile banner (recommended: 1200x400px) and avatar image (recommended: 512x512px).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="relative pb-8">
         {/* Banner */}
         <button
           type="button"
@@ -431,7 +414,7 @@ export const AccountSettingsTab = forwardRef<
               ? setIsBannerMenuOpen(true)
               : bannerInputRef.current?.click()
           }
-          className="w-full aspect-3/1 bg-linear-to-r from-indigo-500/20 to-purple-500/20 rounded-xl relative overflow-hidden group/banner border border-border/50 cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all duration-200 block text-left"
+          className="w-full aspect-[3/1] bg-gradient-to-r from-indigo-500/20 to-purple-500/20 rounded-xl relative overflow-hidden group/banner border border-border cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all duration-200 block text-left"
         >
           {bannerUrl ? (
             <img
@@ -476,147 +459,143 @@ export const AccountSettingsTab = forwardRef<
             <Camera className="size-5 text-white" />
           </div>
         </button>
-      </div>
+      </CardContent>
+    </Card>
 
       {/* Custom Sidebar Card Background Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-2xl border border-zinc-800/50 bg-card/20 backdrop-blur-xs mt-2">
-        {/* Uploader Controls */}
-        <div className="flex flex-col justify-center space-y-3">
-          <div>
-            <span className="text-xs font-semibold text-foreground">
-              Sidebar User Card Background
-            </span>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              Upload a custom image to style the bottom user card in your
-              sidebar (recommended: 480x96px).
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              onClick={() => cardBgInputRef.current?.click()}
-              className="flex items-center gap-1.5 px-3 py-1.5 h-8 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold cursor-pointer transition-colors shadow-sm"
-            >
-              <Camera className="size-3.5" />
-              Choose Background
-            </Button>
-            {sidebarCardBackgroundUrl && (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setCropImageSrc(getSafeImageUrl(sidebarCardBackgroundUrl));
-                    setCropType("background");
-                    setIsCropperOpen(true);
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 h-8 rounded-xl border border-zinc-800 text-xs font-semibold hover:bg-muted/50 cursor-pointer"
-                >
-                  <Crop className="size-3.5" />
-                  Fit
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setSidebarCardBackgroundUrl("");
-                    setSidebarCardBackgroundFile(null);
-                  }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 h-8 rounded-xl border border-red-500/20 text-red-400 hover:bg-red-500/10 hover:text-red-300 text-xs font-semibold cursor-pointer"
-                >
-                  <Trash className="size-3.5" />
-                  Remove
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Live Showcase Preview */}
-        <div className="flex flex-col justify-center items-center p-4 rounded-xl border border-dashed border-zinc-800 bg-zinc-900/10 relative overflow-hidden min-h-[90px]">
-          <div className="text-[9px] uppercase tracking-wider text-muted-foreground/60 mb-2 font-bold select-none">
-            Sidebar Card Showcase
-          </div>
-          {/* Preview Card */}
-          <div className="h-12 w-full max-w-[240px] flex items-center gap-2 px-3 py-2 rounded-xl border border-zinc-800/40 bg-zinc-950/40 backdrop-blur-xl relative overflow-hidden transition-all duration-300 isolate transform-[translate3d(0,0,0)]">
-            {/* Custom Card Background Image */}
-            {sidebarCardBackgroundUrl && (
-              <>
-                <div
-                  className="absolute inset-0 bg-cover bg-center z-0"
-                  style={{
-                    backgroundImage: `url(${sidebarCardBackgroundUrl.startsWith("blob:") ? sidebarCardBackgroundUrl : getSafeImageUrl(sidebarCardBackgroundUrl)})`,
-                  }}
-                />
-                <div className="absolute inset-0 bg-linear-to-r from-black/85 via-black/40 to-transparent z-0" />
-              </>
-            )}
-
-            <div className="relative size-8 rounded-full border border-zinc-800/60 shadow-sm shrink-0 overflow-hidden z-10 bg-muted">
-              {avatarUrl ? (
-                <img
-                  src={
-                    avatarUrl.startsWith("blob:")
-                      ? avatarUrl
-                      : getSafeImageUrl(avatarUrl)
-                  }
-                  alt="Avatar"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs uppercase">
-                  {displayName
-                    ? displayName.charAt(0).toUpperCase()
-                    : session?.user?.username?.charAt(0).toUpperCase() || "U"}
-                </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Sidebar User Card Background</CardTitle>
+          <CardDescription>
+            Upload a custom image to style the bottom user card in your sidebar (recommended: 480x96px).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Uploader Controls */}
+          <div className="flex flex-col justify-center space-y-3">
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                onClick={() => cardBgInputRef.current?.click()}
+                className="h-8 rounded-lg cursor-pointer"
+              >
+                <Camera className="size-3.5 mr-1" />
+                Choose Background
+              </Button>
+              {sidebarCardBackgroundUrl && (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setCropImageSrc(getSafeImageUrl(sidebarCardBackgroundUrl));
+                      setCropType("background");
+                      setIsCropperOpen(true);
+                    }}
+                    className="h-8 rounded-lg cursor-pointer"
+                  >
+                    <Crop className="size-3.5 mr-1" />
+                    Fit
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setSidebarCardBackgroundUrl("");
+                      setSidebarCardBackgroundFile(null);
+                    }}
+                    className="h-8 rounded-lg border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive cursor-pointer"
+                  >
+                    <Trash className="size-3.5 mr-1" />
+                    Remove
+                  </Button>
+                </>
               )}
             </div>
+          </div>
 
-            <div className="grid flex-1 text-left text-xs leading-tight ml-1.5 z-10">
-              <span
-                className={cn(
-                  "truncate font-bold",
-                  sidebarCardBackgroundUrl ? "text-white" : "text-foreground",
+          {/* Live Showcase Preview */}
+          <div className="flex flex-col justify-center items-center p-4 rounded-xl border border-dashed border-border bg-muted/10 relative overflow-hidden min-h-[90px]">
+            <div className="text-[9px] uppercase tracking-wider text-muted-foreground/60 mb-2 font-bold select-none">
+              Sidebar Card Showcase
+            </div>
+            {/* Preview Card */}
+            <div className="h-12 w-full max-w-[240px] flex items-center gap-2 px-3 py-2 rounded-xl border border-border bg-card/40 backdrop-blur-xl relative overflow-hidden transition-all duration-300 isolate transform-[translate3d(0,0,0)]">
+              {/* Custom Card Background Image */}
+              {sidebarCardBackgroundUrl && (
+                <>
+                  <div
+                    className="absolute inset-0 bg-cover bg-center z-0"
+                    style={{
+                      backgroundImage: `url(${sidebarCardBackgroundUrl.startsWith("blob:") ? sidebarCardBackgroundUrl : getSafeImageUrl(sidebarCardBackgroundUrl)})`,
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/40 to-transparent z-0" />
+                </>
+              )}
+
+              <div className="relative size-8 rounded-full border border-border shadow-sm shrink-0 overflow-hidden z-10 bg-muted">
+                {avatarUrl ? (
+                  <img
+                    src={
+                      avatarUrl.startsWith("blob:")
+                        ? avatarUrl
+                        : getSafeImageUrl(avatarUrl)
+                    }
+                    alt="Avatar"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs uppercase">
+                    {displayName
+                      ? displayName.charAt(0).toUpperCase()
+                      : session?.user?.username?.charAt(0).toUpperCase() || "U"}
+                  </div>
                 )}
-              >
-                {displayName || session?.user?.username || "Username"}
-              </span>
-              <span
+              </div>
+
+              <div className="grid flex-1 text-left text-xs leading-tight ml-1.5 z-10">
+                <span
+                  className={cn(
+                    "truncate font-bold",
+                    sidebarCardBackgroundUrl ? "text-white" : "text-foreground",
+                  )}
+                >
+                  {displayName || session?.user?.username || "Username"}
+                </span>
+                <span
+                  className={cn(
+                    "truncate text-[10px]",
+                    sidebarCardBackgroundUrl
+                      ? "text-zinc-300"
+                      : "text-muted-foreground/80",
+                  )}
+                >
+                  {email || session?.user?.email || "email@example.com"}
+                </span>
+              </div>
+              <ChevronsUpDown
                 className={cn(
-                  "truncate text-[10px]",
+                  "ml-auto size-3.5 z-10",
                   sidebarCardBackgroundUrl
-                    ? "text-zinc-300"
-                    : "text-muted-foreground/80",
+                    ? "text-zinc-400"
+                    : "text-muted-foreground/60",
                 )}
-              >
-                {email || session?.user?.email || "email@example.com"}
-              </span>
+              />
             </div>
-            <ChevronsUpDown
-              className={cn(
-                "ml-auto size-3.5 z-10",
-                sidebarCardBackgroundUrl
-                  ? "text-zinc-400"
-                  : "text-muted-foreground/60",
-              )}
-            />
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Markdown Bio / Description Section */}
-      <div className="space-y-3.5 mt-4 p-4 rounded-2xl border border-zinc-800/50 bg-card/20 backdrop-blur-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-          <div>
-            <span className="text-xs font-semibold text-foreground">
-              About Me (Markdown Bio)
-            </span>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              Describe yourself using Markdown. Script/HTML tags are filtered.
-            </p>
+      <Card>
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 space-y-0">
+          <div className="space-y-0.5">
+            <CardTitle>About Me (Markdown Bio)</CardTitle>
+            <CardDescription>Describe yourself using Markdown. Script/HTML tags are filtered.</CardDescription>
           </div>
           {/* Write/Preview Switcher */}
-          <div className="flex border border-zinc-800/60 rounded-lg p-0.5 bg-zinc-950/45 shrink-0 self-start sm:self-auto">
+          <div className="flex border border-border rounded-lg p-0.5 bg-muted/45 shrink-0 self-start sm:self-auto">
             <button
               type="button"
               onClick={() => setEditorTab("write")}
@@ -624,7 +603,7 @@ export const AccountSettingsTab = forwardRef<
                 "px-3 py-1 text-[10px] font-bold rounded-md uppercase tracking-wider transition-all cursor-pointer",
                 editorTab === "write"
                   ? "bg-primary text-primary-foreground shadow-xs"
-                  : "text-muted-foreground hover:text-white",
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
               Write
@@ -636,187 +615,183 @@ export const AccountSettingsTab = forwardRef<
                 "px-3 py-1 text-[10px] font-bold rounded-md uppercase tracking-wider transition-all cursor-pointer",
                 editorTab === "preview"
                   ? "bg-primary text-primary-foreground shadow-xs"
-                  : "text-muted-foreground hover:text-white",
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
               Preview
             </button>
           </div>
-        </div>
+        </CardHeader>
 
-        {editorTab === "write" ? (
-          <div className="border border-zinc-800/60 rounded-xl overflow-hidden bg-zinc-950/25 flex flex-col">
-            {/* Markdown Toolbar */}
-            <div className="flex flex-wrap items-center gap-1 p-2 bg-zinc-950/50 border-b border-zinc-800/60">
-              <button
-                type="button"
-                onClick={() => insertMarkdown("bold", "bold text")}
-                className="p-1.5 rounded-lg hover:bg-zinc-800 text-muted-foreground hover:text-white transition-colors cursor-pointer"
-                title="Bold"
-              >
-                <Bold className="size-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => insertMarkdown("italic", "italic text")}
-                className="p-1.5 rounded-lg hover:bg-zinc-800 text-muted-foreground hover:text-white transition-colors cursor-pointer"
-                title="Italic"
-              >
-                <Italic className="size-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => insertMarkdown("heading", "Heading")}
-                className="p-1.5 rounded-lg hover:bg-zinc-800 text-muted-foreground hover:text-white transition-colors cursor-pointer"
-                title="Heading"
-              >
-                <Heading className="size-3.5" />
-              </button>
-              <div className="w-px h-4 bg-zinc-800 mx-1" />
-              <button
-                type="button"
-                onClick={() => insertMarkdown("link", "link text")}
-                className="p-1.5 rounded-lg hover:bg-zinc-800 text-muted-foreground hover:text-white transition-colors cursor-pointer"
-                title="Insert Link"
-              >
-                <Link className="size-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => insertMarkdown("code", "code")}
-                className="p-1.5 rounded-lg hover:bg-zinc-800 text-muted-foreground hover:text-white transition-colors cursor-pointer"
-                title="Code Block"
-              >
-                <Code className="size-3.5" />
-              </button>
-              <div className="w-px h-4 bg-zinc-800 mx-1" />
-              <button
-                type="button"
-                onClick={() => insertMarkdown("bullet", "List item")}
-                className="p-1.5 rounded-lg hover:bg-zinc-800 text-muted-foreground hover:text-white transition-colors cursor-pointer"
-                title="Bullet List"
-              >
-                <List className="size-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => insertMarkdown("number", "List item")}
-                className="p-1.5 rounded-lg hover:bg-zinc-800 text-muted-foreground hover:text-white transition-colors cursor-pointer"
-                title="Numbered List"
-              >
-                <ListOrdered className="size-3.5" />
-              </button>
-            </div>
+        <CardContent>
+          {editorTab === "write" ? (
+            <div className="border border-border rounded-xl overflow-hidden bg-muted/25 flex flex-col">
+              {/* Markdown Toolbar */}
+              <div className="flex flex-wrap items-center gap-1 p-2 bg-muted/50 border-b border-border">
+                <button
+                  type="button"
+                  onClick={() => insertMarkdown("bold", "bold text")}
+                  className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  title="Bold"
+                >
+                  <Bold className="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => insertMarkdown("italic", "italic text")}
+                  className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  title="Italic"
+                >
+                  <Italic className="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => insertMarkdown("heading", "Heading")}
+                  className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  title="Heading"
+                >
+                  <Heading className="size-3.5" />
+                </button>
+                <div className="w-px h-4 bg-border mx-1" />
+                <button
+                  type="button"
+                  onClick={() => insertMarkdown("link", "link text")}
+                  className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  title="Insert Link"
+                >
+                  <Link className="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => insertMarkdown("code", "code")}
+                  className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  title="Code Block"
+                >
+                  <Code className="size-3.5" />
+                </button>
+                <div className="w-px h-4 bg-border mx-1" />
+                <button
+                  type="button"
+                  onClick={() => insertMarkdown("bullet", "List item")}
+                  className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  title="Bullet List"
+                >
+                  <List className="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => insertMarkdown("number", "List item")}
+                  className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                  title="Numbered List"
+                >
+                  <ListOrdered className="size-3.5" />
+                </button>
+              </div>
 
-            {/* Textarea */}
-            <textarea
-              ref={textareaRef}
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              maxLength={4000}
-              placeholder="Write a description about yourself... (supports markdown)"
-              className="w-full h-36 md:h-44 p-3 bg-transparent text-xs md:text-sm text-foreground focus:outline-hidden placeholder:text-muted-foreground/50 resize-none font-sans"
-            />
-            <div className="flex justify-end px-3 py-1.5 bg-zinc-950/30 border-t border-zinc-800/40 text-[10px] text-muted-foreground font-semibold tabular-nums select-none">
-              {bio.length} / 4000
+              {/* Textarea */}
+              <textarea
+                ref={textareaRef}
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                maxLength={4000}
+                placeholder="Write a description about yourself... (supports markdown)"
+                className="w-full h-36 md:h-44 p-3 bg-transparent text-xs md:text-sm text-foreground focus:outline-none placeholder:text-muted-foreground/50 resize-none font-sans"
+              />
+              <div className="flex justify-end px-3 py-1.5 bg-muted/30 border-t border-border text-[10px] text-muted-foreground font-semibold tabular-nums select-none">
+                {bio.length} / 4000
+              </div>
             </div>
-          </div>
-        ) : (
-          /* Preview Container */
-          <div className="w-full h-36 md:h-44 overflow-y-auto p-3.5 border border-zinc-800/40 bg-zinc-950/20 rounded-xl text-xs md:text-sm text-muted-foreground leading-relaxed custom-scrollbar animate-in fade-in duration-200">
-            {bio.trim() ? (
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  h1: ({ node, ...props }) => (
-                    <h1
-                      className="text-sm font-black text-white mt-3 mb-1.5 uppercase tracking-wide"
-                      {...props}
-                    />
-                  ),
-                  h2: ({ node, ...props }) => (
-                    <h2
-                      className="text-xs font-black text-white mt-2.5 mb-1 uppercase tracking-wide"
-                      {...props}
-                    />
-                  ),
-                  h3: ({ node, ...props }) => (
-                    <h3
-                      className="text-[11px] font-bold text-white mt-2 mb-0.5 uppercase tracking-wider"
-                      {...props}
-                    />
-                  ),
-                  p: ({ node, ...props }) => (
-                    <p
-                      className="mb-2 last:mb-0 text-muted-foreground leading-relaxed"
-                      {...props}
-                    />
-                  ),
-                  ul: ({ node, ...props }) => (
-                    <ul
-                      className="list-disc pl-4 mb-2 space-y-0.5"
-                      {...props}
-                    />
-                  ),
-                  ol: ({ node, ...props }) => (
-                    <ol
-                      className="list-decimal pl-4 mb-2 space-y-0.5"
-                      {...props}
-                    />
-                  ),
-                  li: ({ node, ...props }) => (
-                    <li className="text-xs text-muted-foreground" {...props} />
-                  ),
-                  strong: ({ node, ...props }) => (
-                    <strong className="font-extrabold text-white" {...props} />
-                  ),
-                  em: ({ node, ...props }) => (
-                    <em className="italic" {...props} />
-                  ),
-                  code: ({ node, inline, ...props }: any) =>
-                    inline ? (
-                      <code
-                        className="bg-zinc-900 text-zinc-300 px-1 py-0.5 rounded font-mono text-[10px] border border-zinc-800"
+          ) : (
+            /* Preview Container */
+            <div className="w-full h-36 md:h-44 overflow-y-auto p-3.5 border border-border bg-muted/10 rounded-xl text-xs md:text-sm text-muted-foreground leading-relaxed custom-scrollbar animate-in fade-in duration-200">
+              {bio.trim() ? (
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    h1: ({ ...props }) => (
+                      <h1
+                        className="text-sm font-black text-foreground mt-3 mb-1.5 uppercase tracking-wide"
                         {...props}
                       />
-                    ) : (
-                      <pre className="bg-zinc-900 border border-zinc-800/80 p-2.5 rounded-lg overflow-x-auto my-2 font-mono text-[10px] text-zinc-200">
-                        <code {...props} />
-                      </pre>
                     ),
-                  a: ({ node, ...props }) => (
-                    <a
-                      className="text-primary hover:underline font-semibold"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      {...props}
-                    />
-                  ),
-                }}
-              >
-                {bio}
-              </ReactMarkdown>
-            ) : (
-              <p className="italic text-muted-foreground/60 text-xs">
-                Nothing to preview. Start writing in the edit tab.
-              </p>
-            )}
-          </div>
-        )}
-      </div>
+                    h2: ({ ...props }) => (
+                      <h2
+                        className="text-xs font-black text-foreground mt-2.5 mb-1 uppercase tracking-wide"
+                        {...props}
+                      />
+                    ),
+                    h3: ({ ...props }) => (
+                      <h3
+                        className="text-[11px] font-bold text-foreground mt-2 mb-0.5 uppercase tracking-wider"
+                        {...props}
+                      />
+                    ),
+                    p: ({ ...props }) => (
+                      <p
+                        className="mb-2 last:mb-0 text-muted-foreground leading-relaxed"
+                        {...props}
+                      />
+                    ),
+                    ul: ({ ...props }) => (
+                      <ul
+                        className="list-disc pl-4 mb-2 space-y-0.5"
+                        {...props}
+                      />
+                    ),
+                    ol: ({ ...props }) => (
+                      <ol
+                        className="list-decimal pl-4 mb-2 space-y-0.5"
+                        {...props}
+                      />
+                    ),
+                    li: ({ ...props }) => (
+                      <li className="text-xs text-muted-foreground" {...props} />
+                    ),
+                    strong: ({ ...props }) => (
+                      <strong className="font-extrabold text-foreground" {...props} />
+                    ),
+                    em: ({ ...props }) => (
+                      <em className="italic" {...props} />
+                    ),
+                    code: ({ inline, ...props }: any) =>
+                      inline ? (
+                        <code
+                          className="bg-muted text-muted-foreground px-1 py-0.5 rounded font-mono text-[10px] border border-border"
+                          {...props}
+                        />
+                      ) : (
+                        <pre className="bg-muted border border-border p-2.5 rounded-lg overflow-x-auto my-2 font-mono text-[10px] text-muted-foreground">
+                          <code {...props} />
+                        </pre>
+                      ),
+                    a: ({ ...props }) => (
+                      <a
+                        className="text-primary hover:underline font-semibold"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        {...props}
+                      />
+                    ),
+                  }}
+                >
+                  {bio}
+                </ReactMarkdown>
+              ) : (
+                <p className="italic text-muted-foreground/60 text-xs">
+                  Nothing to preview. Start writing in the edit tab.
+                </p>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-      <div className="max-w-md p-4 rounded-2xl border border-zinc-800/50 bg-card/20 backdrop-blur-xs pt-2">
-        {/* Details Column */}
-        <div className="space-y-4">
-          <div>
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-              Profile Information
-            </h4>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              Your public-facing details.
-            </p>
-          </div>
-
+      <Card className="max-w-md">
+        <CardHeader>
+          <CardTitle>Profile Information</CardTitle>
+          <CardDescription>Your public-facing details.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="display-name">Display Name</Label>
             <Input
@@ -831,7 +806,7 @@ export const AccountSettingsTab = forwardRef<
           <div className="space-y-1.5">
             <Label htmlFor="email">
               {emailError ? (
-                <span className="text-red-500">{emailError}</span>
+                <span className="text-destructive">{emailError}</span>
               ) : (
                 "Email Address"
               )}
@@ -848,11 +823,30 @@ export const AccountSettingsTab = forwardRef<
               className={cn(
                 "h-9 px-3",
                 emailError &&
-                  "border-red-500/50 bg-red-500/5 focus-visible:ring-red-500/30",
+                  "border-destructive/50 bg-destructive/5 focus-visible:ring-destructive/30",
               )}
             />
           </div>
-        </div>
+        </CardContent>
+      </Card>
+
+      {/* Action Footer */}
+      <div className="flex justify-end gap-3 pt-4 border-t border-border mt-6">
+        <Button
+          variant="ghost"
+          onClick={() => onOpenChange(false)}
+          className="text-xs sm:text-sm text-muted-foreground hover:text-foreground rounded-xl h-9 cursor-pointer"
+          disabled={isSubmitting}
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSave}
+          disabled={isSubmitting}
+          className="bg-primary hover:bg-primary/95 text-primary-foreground font-semibold rounded-xl px-5 shadow-lg text-xs sm:text-sm h-9 cursor-pointer"
+        >
+          {isSubmitting ? "Saving..." : "Save Changes"}
+        </Button>
       </div>
 
       {/* Password Confirmation Dialog */}
@@ -864,7 +858,7 @@ export const AccountSettingsTab = forwardRef<
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground mt-1">
               Please enter your current password to authorize changes to your
-              email or password.
+              email.
             </DialogDescription>
           </DialogHeader>
 
@@ -897,7 +891,7 @@ export const AccountSettingsTab = forwardRef<
             <Button
               variant="ghost"
               onClick={() => setIsConfirmOpen(false)}
-              className="text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg text-sm"
+              className="text-muted-foreground hover:text-foreground rounded-lg text-sm"
               disabled={isSubmitting}
             >
               Cancel
@@ -969,7 +963,7 @@ export const AccountSettingsTab = forwardRef<
                     setIsCropperOpen(true);
                     setIsAvatarMenuOpen(false);
                   }}
-                  className="flex items-center justify-center gap-2 w-full py-2.5 h-auto rounded-xl border border-zinc-800 text-xs font-semibold hover:bg-muted/50"
+                  className="flex items-center justify-center gap-2 w-full py-2.5 h-auto rounded-xl border border-border text-xs font-semibold hover:bg-muted/50"
                 >
                   <Crop className="size-3.5" />
                   Position & Fit
@@ -982,7 +976,7 @@ export const AccountSettingsTab = forwardRef<
                     setAvatarFile(null);
                     setIsAvatarMenuOpen(false);
                   }}
-                  className="flex items-center justify-center gap-2 w-full py-2.5 h-auto rounded-xl border border-red-500/20 text-red-400 hover:bg-red-500/10 hover:text-red-300 text-xs font-semibold"
+                  className="flex items-center justify-center gap-2 w-full py-2.5 h-auto rounded-xl border border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive text-xs font-semibold"
                 >
                   <Trash className="size-3.5" />
                   Remove Picture
@@ -1024,7 +1018,7 @@ export const AccountSettingsTab = forwardRef<
                     setIsCropperOpen(true);
                     setIsBannerMenuOpen(false);
                   }}
-                  className="flex items-center justify-center gap-2 w-full py-2.5 h-auto rounded-xl border border-zinc-800 text-xs font-semibold hover:bg-muted/50"
+                  className="flex items-center justify-center gap-2 w-full py-2.5 h-auto rounded-xl border border-border text-xs font-semibold hover:bg-muted/50"
                 >
                   <Crop className="size-3.5" />
                   Position & Fit
@@ -1037,7 +1031,7 @@ export const AccountSettingsTab = forwardRef<
                     setBannerFile(null);
                     setIsBannerMenuOpen(false);
                   }}
-                  className="flex items-center justify-center gap-2 w-full py-2.5 h-auto rounded-xl border border-red-500/20 text-red-400 hover:bg-red-500/10 hover:text-red-300 text-xs font-semibold"
+                  className="flex items-center justify-center gap-2 w-full py-2.5 h-auto rounded-xl border border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive text-xs font-semibold"
                 >
                   <Trash className="size-3.5" />
                   Remove Banner
@@ -1072,6 +1066,4 @@ export const AccountSettingsTab = forwardRef<
       />
     </div>
   );
-});
-
-AccountSettingsTab.displayName = "AccountSettingsTab";
+};

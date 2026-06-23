@@ -3,7 +3,7 @@ import { SidebarNavigationContext } from "@/components/Providers/rrSidebarProvid
 import { SidebarConfig } from "@/types/SidebarConfig";
 import { useContext, useEffect } from "react";
 
-export function useRRSidebar(config: SidebarConfig) {
+export function useRRSidebar(config?: SidebarConfig) {
   const context = useContext(SidebarNavigationContext);
 
   if (context === undefined) {

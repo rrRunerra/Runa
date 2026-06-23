@@ -3,12 +3,12 @@ import { resolveMx } from 'dns/promises';
 import * as nodemailer from 'nodemailer';
 import { ImapFlow } from 'imapflow';
 import { PrismaService } from '../../providers/database/prisma.service';
-import { encrypt, decrypt } from '../../common/utils/crypto';
+import { encrypt, decrypt } from '@runa/crypto/server';
 import {
   generateDataKey,
   encryptWithDataKey,
   encryptDataKeyForUser,
-} from '../../common/utils/e2e-crypto';
+} from '@runa/crypto/node';
 import { EmailAccountDto } from './dto/email-account.dto';
 import { SendEmailDto } from './dto/send-email.dto';
 import { NotificationGateway } from '../notification/notification.gateway';

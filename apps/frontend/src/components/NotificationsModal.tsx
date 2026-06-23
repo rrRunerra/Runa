@@ -26,11 +26,14 @@ import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import { Notification, NotificationStatus } from "@runa/notifications";
 import {
-  Notification,
-  NotificationStatus,
-} from "@runa/notifications";
-import { deriveMasterKey, encryptMasterKeyForDevice, exportPublicKey, generateKeyPair } from "@/lib/crypto";
+  deriveMasterKey,
+  encryptMasterKeyForDevice,
+  exportPublicKey,
+  generateKeyPair,
+} from "@runa/crypto/browser";
+import { useRRe2ee } from "@/components/Providers/rrE2eeProvider";
 
 interface NotificationsModalProps {
   open: boolean;
@@ -45,13 +48,14 @@ export function NotificationsModal({
 }: NotificationsModalProps) {
   const { data: session } = useSession();
   const router = useRouter();
+  const { getPrivateKey } = useRRe2ee();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [passwords, setPasswords] = useState<Record<string, string>>({});
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   const unreadCount = notifications.filter(
-    (n) => n.status === "PENDING"
+    (n) => n.status === "PENDING",
   ).length;
 
   useEffect(() => {
@@ -60,68 +64,66 @@ export function NotificationsModal({
     }
   }, [unreadCount, onUnreadCountChange]);
 
-  // Helper to load E2E private key from localStorage and import it
-  const getPrivateKey = useCallback(async (): Promise<CryptoKey | null> => {
-    const stored = localStorage.getItem("runa_user_private_key");
-    if (!stored) return null;
-    try {
-      const jwk = JSON.parse(stored);
-      return await window.crypto.subtle.importKey(
-        "jwk",
-        jwk,
-        {
-          name: "ECDH",
-          namedCurve: "P-256",
-        },
-        true,
-        ["deriveKey", "deriveBits"]
-      );
-    } catch {
-      return null;
-    }
-  }, []);
+  const decryptNotification = useCallback(
+    async (n: any, privKey: CryptoKey | null): Promise<any> => {
+      const meta = n.metadata as any;
+      if (!meta || !meta.encryptedKey || !privKey) return n;
 
-  const decryptNotification = useCallback(async (n: any, privKey: CryptoKey | null): Promise<any> => {
-    const meta = n.metadata as any;
-    if (!meta || !meta.encryptedKey || !privKey) return n;
+      try {
+        const { decryptEmailDataKey, decryptEmailString } =
+          await import("@runa/crypto/browser");
+        const dataKey = await decryptEmailDataKey(meta.encryptedKey, privKey);
 
-    try {
-      const { decryptEmailDataKey, decryptEmailString } = await import("@/lib/crypto");
-      const dataKey = await decryptEmailDataKey(meta.encryptedKey, privKey);
-      
-      let decryptedTitle = n.title;
-      try { decryptedTitle = await decryptEmailString(n.title, dataKey); } catch {}
+        let decryptedTitle = n.title;
+        try {
+          decryptedTitle = await decryptEmailString(n.title, dataKey);
+        } catch {}
 
-      let decryptedMessage = n.message;
-      try { decryptedMessage = await decryptEmailString(n.message, dataKey); } catch {}
+        let decryptedMessage = n.message;
+        try {
+          decryptedMessage = await decryptEmailString(n.message, dataKey);
+        } catch {}
 
-      return {
-        ...n,
-        title: decryptedTitle,
-        message: decryptedMessage,
-      };
-    } catch (err) {
-      console.error("Failed to decrypt notification:", err);
-      return n;
-    }
-  }, []);
+        return {
+          ...n,
+          title: decryptedTitle,
+          message: decryptedMessage,
+        };
+      } catch (err) {
+        console.error("Failed to decrypt notification:", err);
+        return n;
+      }
+    },
+    [],
+  );
 
   // Fetch notifications initially
   const fetchNotifications = useCallback(async () => {
     if (!session?.accessToken) return;
     setIsLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notifications`, {
-        headers: {
-          Authorization: `Bearer ${session.accessToken}`,
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/notifications`,
+        {
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+          },
         },
-      });
+      );
       if (res.ok) {
         const data = await res.json();
         try {
           const privKey = await getPrivateKey();
-          const decrypted = await Promise.all(data.map((n: any) => decryptNotification(n, privKey)));
-          setNotifications(decrypted);
+          const decrypted = await Promise.all(
+            data.map((n: any) => decryptNotification(n, privKey)),
+          );
+          const filtered = decrypted.filter((n: any) => {
+            if (n.metadata?.targetDeviceId) {
+              return n.metadata.targetDeviceId === localStorage.getItem("runa_device_id");
+            }
+            return true;
+          });
+          setNotifications(filtered);
         } catch (decErr) {
           console.error("Failed to decrypt fetched notifications:", decErr);
           setNotifications(data);
@@ -144,7 +146,9 @@ export function NotificationsModal({
   useEffect(() => {
     if (!session?.accessToken) return;
 
-    const wsUrl = process.env.NEXT_PUBLIC_API_URL || (typeof window !== "undefined" ? window.location.origin : "");
+    const wsUrl =
+      process.env.NEXT_PUBLIC_API_URL ||
+      (typeof window !== "undefined" ? window.location.origin : "");
     const socket: Socket = io(`${wsUrl}/notifications`, {
       query: { token: session.accessToken },
       transports: ["websocket"],
@@ -153,6 +157,10 @@ export function NotificationsModal({
     socket.on("notification:created", async (newNotification: Notification) => {
       const privKey = await getPrivateKey();
       const decrypted = await decryptNotification(newNotification, privKey);
+      const targetDeviceId = (decrypted.metadata as any)?.targetDeviceId;
+      if (targetDeviceId && targetDeviceId !== localStorage.getItem("runa_device_id")) {
+        return; // Ignore notification intended for another device
+      }
       setNotifications((prev) => [decrypted, ...prev]);
       const meta = decrypted.metadata as any;
       if (meta && meta.type === "email") {
@@ -161,7 +169,9 @@ export function NotificationsModal({
           action: {
             label: "Open",
             onClick: () => {
-              router.push(`/pegasus/account/${meta.emailAccountId}/${meta.emailFolder}?messageId=${meta.emailMessageId}`);
+              router.push(
+                `/pegasus/account/${meta.emailAccountId}/${meta.emailFolder}?messageId=${meta.emailMessageId}`,
+              );
             },
           },
         });
@@ -170,13 +180,19 @@ export function NotificationsModal({
       }
     });
 
-    socket.on("notification:updated", async (updatedNotification: Notification) => {
-      const privKey = await getPrivateKey();
-      const decrypted = await decryptNotification(updatedNotification, privKey);
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === decrypted.id ? decrypted : n))
-      );
-    });
+    socket.on(
+      "notification:updated",
+      async (updatedNotification: Notification) => {
+        const privKey = await getPrivateKey();
+        const decrypted = await decryptNotification(
+          updatedNotification,
+          privKey,
+        );
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === decrypted.id ? decrypted : n)),
+        );
+      },
+    );
 
     socket.on("notification:deleted", ({ id }: { id: string }) => {
       setNotifications((prev) => prev.filter((n) => n.id !== id));
@@ -200,17 +216,22 @@ export function NotificationsModal({
   const handleDismiss = async (id: string) => {
     if (!session?.accessToken) return;
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notifications/${id}/status`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.accessToken}`,
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/notifications/${id}/status`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+          body: JSON.stringify({ status: "READ" }),
         },
-        body: JSON.stringify({ status: "READ" }),
-      });
+      );
       if (res.ok) {
         setNotifications((prev) =>
-          prev.map((n) => (n.id === id ? { ...n, status: "READ" as NotificationStatus } : n))
+          prev.map((n) =>
+            n.id === id ? { ...n, status: "READ" as NotificationStatus } : n,
+          ),
         );
         toast.success("Notification dismissed");
       }
@@ -222,12 +243,15 @@ export function NotificationsModal({
   const handleDelete = async (id: string) => {
     if (!session?.accessToken) return;
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notifications/${id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session.accessToken}`,
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/notifications/${id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+          },
         },
-      });
+      );
       if (res.ok) {
         setNotifications((prev) => prev.filter((n) => n.id !== id));
         toast.success("Notification deleted");
@@ -242,12 +266,15 @@ export function NotificationsModal({
   const handleClearAll = async () => {
     if (!session?.accessToken) return;
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notifications`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session.accessToken}`,
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/notifications`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+          },
         },
-      });
+      );
       if (res.ok) {
         setNotifications([]);
         toast.success("All notifications cleared");
@@ -264,17 +291,22 @@ export function NotificationsModal({
     if (!session?.accessToken) return;
     setProcessingId(id);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notifications/${id}/status`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.accessToken}`,
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/notifications/${id}/status`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+          body: JSON.stringify({ status: "DENIED" }),
         },
-        body: JSON.stringify({ status: "DENIED" }),
-      });
+      );
       if (res.ok) {
         setNotifications((prev) =>
-          prev.map((n) => (n.id === id ? { ...n, status: "DENIED" as NotificationStatus } : n))
+          prev.map((n) =>
+            n.id === id ? { ...n, status: "DENIED" as NotificationStatus } : n,
+          ),
         );
         toast.success("Device request denied");
       }
@@ -290,49 +322,70 @@ export function NotificationsModal({
     if (!session?.accessToken || !session?.user?.username) return;
     const password = passwords[id];
     if (!password) {
-      toast.error("Please enter your account password to authorize this device.");
+      toast.error(
+        "Please enter your account password to authorize this device.",
+      );
       return;
     }
 
     setProcessingId(id);
     try {
       // 1. Derive master key from password
-      const masterCryptoKey = await deriveMasterKey(password, session.user.username);
-      
+      const masterCryptoKey = await deriveMasterKey(
+        password,
+        session.user.username,
+      );
+
       // Export derived master key as raw material (base64url)
-      const exportedMasterBuffer = await window.crypto.subtle.exportKey("raw", masterCryptoKey);
-      const masterKeyMaterial = btoa(String.fromCharCode(...new Uint8Array(exportedMasterBuffer)));
+      const exportedMasterBuffer = await window.crypto.subtle.exportKey(
+        "raw",
+        masterCryptoKey,
+      );
+      const masterKeyMaterial = btoa(
+        String.fromCharCode(...new Uint8Array(exportedMasterBuffer)),
+      );
 
       // 2. Generate temporary keypair for the ECDH key exchange
       const ownKeyPair = await generateKeyPair();
-      
+
       // 3. Encrypt the master key material using ECDH key wrapping
       const { ciphertext, iv } = await encryptMasterKeyForDevice(
         masterKeyMaterial,
         requestPublicKey,
-        ownKeyPair.privateKey
+        ownKeyPair.privateKey,
       );
 
       // Export own temporary public key to send alongside
       const ownPublicKeyBase64 = await exportPublicKey(ownKeyPair.publicKey);
 
       // 4. Send approval package to server
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notifications/approve`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.accessToken}`,
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/notifications/approve`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+          body: JSON.stringify({
+            notificationId: id,
+            // We payload both the ciphertext, iv, and the sender public key
+            encryptedMasterKey: JSON.stringify({
+              ciphertext,
+              iv,
+              senderPublicKey: ownPublicKeyBase64,
+            }),
+          }),
         },
-        body: JSON.stringify({
-          notificationId: id,
-          // We payload both the ciphertext, iv, and the sender public key
-          encryptedMasterKey: JSON.stringify({ ciphertext, iv, senderPublicKey: ownPublicKeyBase64 }),
-        }),
-      });
+      );
 
       if (res.ok) {
         setNotifications((prev) =>
-          prev.map((n) => (n.id === id ? { ...n, status: "APPROVED" as NotificationStatus } : n))
+          prev.map((n) =>
+            n.id === id
+              ? { ...n, status: "APPROVED" as NotificationStatus }
+              : n,
+          ),
         );
         toast.success("Device authorized successfully!");
         setPasswords((prev) => {
@@ -380,15 +433,21 @@ export function NotificationsModal({
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <Loader2 className="size-6 text-primary animate-spin" />
-            <span className="text-xs text-muted-foreground">Loading alerts...</span>
+            <span className="text-xs text-muted-foreground">
+              Loading alerts...
+            </span>
           </div>
         ) : notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-2.5 text-center">
             <div className="p-3.5 rounded-full bg-zinc-900 border border-zinc-800/60 text-muted-foreground/40">
               <Bell className="size-6" />
             </div>
-            <span className="text-xs font-semibold text-muted-foreground">No notifications yet</span>
-            <span className="text-[10px] text-muted-foreground/60">We will notify you here when things happen.</span>
+            <span className="text-xs font-semibold text-muted-foreground">
+              No notifications yet
+            </span>
+            <span className="text-[10px] text-muted-foreground/60">
+              We will notify you here when things happen.
+            </span>
           </div>
         ) : (
           <ScrollArea className="max-h-[500px] pr-1.5 py-2">
@@ -404,7 +463,9 @@ export function NotificationsModal({
                       const meta = n.metadata as any;
                       if (meta && meta.type === "email") {
                         onOpenChange(false);
-                        router.push(`/pegasus/account/${meta.emailAccountId}/${meta.emailFolder}?messageId=${meta.emailMessageId}`);
+                        router.push(
+                          `/pegasus/account/${meta.emailAccountId}/${meta.emailFolder}?messageId=${meta.emailMessageId}`,
+                        );
                         handleDismiss(n.id);
                       }
                     }}
@@ -425,7 +486,7 @@ export function NotificationsModal({
                         </div>
                         <div className="space-y-1 min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap min-w-0">
-                            <span className="text-xs font-bold text-foreground break-words max-w-full">
+                            <span className="text-xs font-bold text-foreground wrap-break-word max-w-full">
                               {n.title}
                             </span>
                             <Badge
@@ -434,10 +495,10 @@ export function NotificationsModal({
                                 n.status === "PENDING"
                                   ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
                                   : n.status === "APPROVED"
-                                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                                  : n.status === "DENIED"
-                                  ? "bg-red-500/10 text-red-400 border-red-500/20"
-                                  : "bg-zinc-800 text-zinc-400 border-zinc-700/50"
+                                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                    : n.status === "DENIED"
+                                      ? "bg-red-500/10 text-red-400 border-red-500/20"
+                                      : "bg-zinc-800 text-zinc-400 border-zinc-700/50"
                               }`}
                             >
                               {n.status}
@@ -504,7 +565,9 @@ export function NotificationsModal({
                           </Button>
                           <Button
                             size="sm"
-                            onClick={() => handleApprove(n.id, n.metadata?.publicKey || "")}
+                            onClick={() =>
+                              handleApprove(n.id, n.metadata?.publicKey || "")
+                            }
                             disabled={processingId === n.id || !passwords[n.id]}
                             className="h-8 rounded-lg px-4 bg-primary text-primary-foreground text-xs font-semibold"
                           >
