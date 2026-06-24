@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
+import { useFetch } from "@/hooks/useFetch";
 import QRCode from "qrcode";
 import { startRegistration } from "@simplewebauthn/browser";
 import {
@@ -134,58 +135,58 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
       passwordCriteria.number &&
       passwordCriteria.special);
 
-  // Fetch user MFA settings on mount / session change
-  const fetchMfaSettings = async (): Promise<void> => {
-    if (!session?.user?.username || !session?.accessToken) return;
-    try {
-      const statusRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/mfa/status`, {
-        headers: {
-          Authorization: `Bearer ${session.accessToken}`,
-        },
-      });
-      if (statusRes.ok) {
-        const statusData = await statusRes.json();
-        setTotpEnabled(statusData.totpEnabled);
-        setEmailMfaEnabled(statusData.emailMfaEnabled);
-        setHasBackupCodes(statusData.hasBackupCodes);
-      }
-
-      // Fetch passkeys
-      const passkeysRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/mfa/passkeys`, {
-        headers: {
-          Authorization: `Bearer ${session.accessToken}`,
-        },
-      });
-      if (passkeysRes.ok) {
-        const passkeysData = await passkeysRes.json();
-        setPasskeys(Array.isArray(passkeysData) ? passkeysData : []);
-      }
-    } catch (err) {
-      console.error("Error fetching MFA settings:", err);
+  const { data: mfaStatusData, refetch: refetchMfaSettings } = useFetch<any>(
+    session?.accessToken ? `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/status` : "",
+    {
+      headers: { Authorization: `Bearer ${session?.accessToken}` },
+      enabled: !!session?.accessToken,
     }
-  };
+  );
 
-  const fetchDevices = async (): Promise<void> => {
-    if (!session?.accessToken) return;
-    try {
-      const devRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/devices`, {
-        headers: { Authorization: `Bearer ${session.accessToken}` },
-      });
-      if (devRes.ok) {
-        const devData = await devRes.json();
-        setDevices(devData);
-      }
-    } catch (err) {
-      console.error("Error fetching devices:", err);
+  const { data: passkeysData, refetch: refetchPasskeys } = useFetch<any[]>(
+    session?.accessToken ? `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/passkeys` : "",
+    {
+      headers: { Authorization: `Bearer ${session?.accessToken}` },
+      enabled: !!session?.accessToken,
     }
-  };
+  );
+
+  const { data: devicesData, refetch: refetchDevices } = useFetch<any[]>(
+    session?.accessToken ? `${process.env.NEXT_PUBLIC_API_URL}/user/devices` : "",
+    {
+      headers: { Authorization: `Bearer ${session?.accessToken}` },
+      enabled: !!session?.accessToken,
+    }
+  );
 
   useEffect(() => {
-    if (session?.accessToken) {
-      fetchMfaSettings();
-      fetchDevices();
+    if (mfaStatusData) {
+      setTotpEnabled(mfaStatusData.totpEnabled);
+      setEmailMfaEnabled(mfaStatusData.emailMfaEnabled);
+      setHasBackupCodes(mfaStatusData.hasBackupCodes);
     }
-  }, [session]);
+  }, [mfaStatusData]);
+
+  useEffect(() => {
+    if (passkeysData) {
+      setPasskeys(Array.isArray(passkeysData) ? passkeysData : []);
+    }
+  }, [passkeysData]);
+
+  useEffect(() => {
+    if (devicesData) {
+      setDevices(Array.isArray(devicesData) ? devicesData : []);
+    }
+  }, [devicesData]);
+
+  const fetchMfaSettings = (): void => {
+    refetchMfaSettings();
+    refetchPasskeys();
+  };
+
+  const fetchDevices = (): void => {
+    refetchDevices();
+  };
 
   const handleRevokeDevice = async (deviceId: string): Promise<void> => {
     if (!session?.accessToken) return;
@@ -709,127 +710,151 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
           Verification Methods
         </h4>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Authenticator App (TOTP) */}
-          <Card className="flex flex-col justify-between">
-            <CardHeader className="space-y-2 pb-2">
-              <div className="flex items-center justify-between">
-                <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                  <Smartphone className="size-4.5" />
+        <div className="space-y-4">
+          {/* Auth app and Email code next to each other */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Authenticator App (TOTP) */}
+            <Card className="flex flex-col justify-between">
+              <CardHeader className="space-y-2 pb-2">
+                <div className="flex items-center justify-between">
+                  <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                    <Smartphone className="size-4.5" />
+                  </div>
+                  <UiBadge variant={totpEnabled ? "default" : "outline"}>
+                    {totpEnabled ? "Active" : "Inactive"}
+                  </UiBadge>
                 </div>
-                <UiBadge variant={totpEnabled ? "default" : "outline"}>
-                  {totpEnabled ? "Active" : "Inactive"}
-                </UiBadge>
-              </div>
-              <CardTitle className="text-sm font-bold text-foreground">Authenticator App</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 pb-4">
-              <p className="text-[11px] text-muted-foreground leading-relaxed">
-                Use application tools like Google Authenticator or 1Password to generate 6-digit verification codes.
-              </p>
-            </CardContent>
-            <CardFooter className="pt-0">
-              <Button
-                onClick={totpEnabled ? () => { setDisableMethod("totp"); setIsConfirmDisableOpen(true); } : initiateTotpSetup}
-                variant={totpEnabled ? "outline" : "default"}
-                className={cn(
-                  "w-full h-9 rounded-xl font-semibold text-xs transition-all cursor-pointer",
-                  totpEnabled && "hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
-                )}
-              >
-                {totpEnabled ? "Disconnect" : "Setup TOTP"}
-              </Button>
-            </CardFooter>
-          </Card>
-
-          {/* Email Verification OTP */}
-          <Card className="flex flex-col justify-between">
-            <CardHeader className="space-y-2 pb-2">
-              <div className="flex items-center justify-between">
-                <div className="p-2 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20">
-                  <Mail className="size-4.5" />
-                </div>
-                <UiBadge variant={emailMfaEnabled ? "default" : "outline"}>
-                  {emailMfaEnabled ? "Active" : "Inactive"}
-                </UiBadge>
-              </div>
-              <CardTitle className="text-sm font-bold text-foreground">Email One-Time Code</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 pb-4">
-              <p className="text-[11px] text-muted-foreground leading-relaxed">
-                Receive temporary verification codes sent to your primary registered email address on login attempt.
-              </p>
-            </CardContent>
-            <CardFooter className="pt-0">
-              <Button
-                onClick={emailMfaEnabled ? () => { setDisableMethod("email"); setIsConfirmDisableOpen(true); } : initiateEmailMfaSetup}
-                variant={emailMfaEnabled ? "outline" : "default"}
-                className={cn(
-                  "w-full h-9 rounded-xl font-semibold text-xs transition-all cursor-pointer",
-                  emailMfaEnabled && "hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
-                )}
-              >
-                {emailMfaEnabled ? "Disconnect" : "Setup Email OTP"}
-              </Button>
-            </CardFooter>
-          </Card>
-
-          {/* WebAuthn Passkeys */}
-          <Card className="flex flex-col justify-between">
-            <CardHeader className="space-y-2 pb-2">
-              <div className="flex items-center justify-between">
-                <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                  <Key className="size-4.5" />
-                </div>
-                <UiBadge variant={passkeys.length > 0 ? "default" : "outline"}>
-                  {passkeys.length > 0 ? `${passkeys.length} Registered` : "Inactive"}
-                </UiBadge>
-              </div>
-              <CardTitle className="text-sm font-bold text-foreground">Passkeys / Biometrics</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 pb-4">
-              <p className="text-[11px] text-muted-foreground leading-relaxed">
-                Log in passwordlessly or complete 2FA securely using Face ID, Touch ID, Windows Hello, or hardware keys.
-              </p>
-            </CardContent>
-            <CardFooter className="pt-0">
-              <Button
-                onClick={() => setIsPasskeyRegisterOpen(true)}
-                className="w-full h-9 rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground font-semibold text-xs transition-all cursor-pointer"
-              >
-                <Plus className="size-3.5 mr-1" />
-                Add Passkey
-              </Button>
-            </CardFooter>
-          </Card>
-        </div>
-      </div>
-
-      {/* Passkey Management List */}
-      {passkeys.length > 0 && (
-        <div className="p-4 rounded-2xl border border-border bg-card/15 mt-2">
-          <h5 className="text-xs font-bold text-foreground mb-3">Registered Passkeys</h5>
-          <div className="divide-y divide-border space-y-2.5">
-            {passkeys.map((pk) => (
-              <div key={pk.id} className="flex items-center justify-between pt-2.5 first:pt-0">
-                <div className="space-y-0.5 text-left">
-                  <span className="text-xs font-bold text-foreground block">{pk.name || "Unnamed Passkey"}</span>
-                  <span className="text-[10px] text-muted-foreground">
-                    Added: {new Date(pk.createdAt).toLocaleString()}
-                  </span>
-                </div>
+                <CardTitle className="text-sm font-bold text-foreground">Authenticator App</CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 pb-4">
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Use application tools like Google Authenticator or 1Password to generate 6-digit verification codes.
+                </p>
+              </CardContent>
+              <CardFooter className="pt-0">
                 <Button
-                  onClick={() => triggerDeletePasskey(pk.id)}
-                  variant="ghost"
-                  className="h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer"
+                  onClick={totpEnabled ? () => { setDisableMethod("totp"); setIsConfirmDisableOpen(true); } : initiateTotpSetup}
+                  variant={totpEnabled ? "outline" : "default"}
+                  className={cn(
+                    "w-full h-9 rounded-xl font-semibold text-xs transition-all cursor-pointer",
+                    totpEnabled && "hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                  )}
                 >
-                  <Trash className="size-4" />
+                  {totpEnabled ? "Disconnect" : "Setup TOTP"}
                 </Button>
-              </div>
-            ))}
+              </CardFooter>
+            </Card>
+
+            {/* Email Verification OTP */}
+            <Card className="flex flex-col justify-between">
+              <CardHeader className="space-y-2 pb-2">
+                <div className="flex items-center justify-between">
+                  <div className="p-2 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20">
+                    <Mail className="size-4.5" />
+                  </div>
+                  <UiBadge variant={emailMfaEnabled ? "default" : "outline"}>
+                    {emailMfaEnabled ? "Active" : "Inactive"}
+                  </UiBadge>
+                </div>
+                <CardTitle className="text-sm font-bold text-foreground">Email One-Time Code</CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 pb-4">
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Receive temporary verification codes sent to your primary registered email address on login attempt.
+                </p>
+              </CardContent>
+              <CardFooter className="pt-0">
+                <Button
+                  onClick={emailMfaEnabled ? () => { setDisableMethod("email"); setIsConfirmDisableOpen(true); } : initiateEmailMfaSetup}
+                  variant={emailMfaEnabled ? "outline" : "default"}
+                  className={cn(
+                    "w-full h-9 rounded-xl font-semibold text-xs transition-all cursor-pointer",
+                    emailMfaEnabled && "hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                  )}
+                >
+                  {emailMfaEnabled ? "Disconnect" : "Setup Email OTP"}
+                </Button>
+              </CardFooter>
+            </Card>
+          </div>
+
+          {/* Passkeys and Registered passkeys list next to each other */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* WebAuthn Passkeys */}
+            <Card className="flex flex-col justify-between">
+              <CardHeader className="space-y-2 pb-2">
+                <div className="flex items-center justify-between">
+                  <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <Key className="size-4.5" />
+                  </div>
+                  <UiBadge variant={passkeys.length > 0 ? "default" : "outline"}>
+                    {passkeys.length > 0 ? `${passkeys.length} Registered` : "Inactive"}
+                  </UiBadge>
+                </div>
+                <CardTitle className="text-sm font-bold text-foreground">Passkeys / Biometrics</CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 pb-4">
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Log in passwordlessly or complete 2FA securely using Face ID, Touch ID, Windows Hello, or hardware keys.
+                </p>
+              </CardContent>
+              <CardFooter className="pt-0">
+                <Button
+                  onClick={() => setIsPasskeyRegisterOpen(true)}
+                  className="w-full h-9 rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground font-semibold text-xs transition-all cursor-pointer"
+                >
+                  <Plus className="size-3.5 mr-1" />
+                  Add Passkey
+                </Button>
+              </CardFooter>
+            </Card>
+
+            {/* Registered Passkeys List */}
+            <Card className="flex flex-col justify-between">
+              <CardHeader className="space-y-2 pb-2">
+                <div className="flex items-center justify-between">
+                  <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <Key className="size-4.5" />
+                  </div>
+                  <UiBadge variant="outline">
+                    {passkeys.length > 0 ? `${passkeys.length} Saved` : "None"}
+                  </UiBadge>
+                </div>
+                <CardTitle className="text-sm font-bold text-foreground">Registered Passkeys</CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 pb-4">
+                {passkeys.length > 0 ? (
+                  <div className="divide-y divide-border space-y-2.5 overflow-y-auto max-h-[120px] no-scrollbar">
+                    {passkeys.map((pk) => (
+                      <div key={pk.id} className="flex items-center justify-between pt-2.5 first:pt-0">
+                        <div className="space-y-0.5 text-left min-w-0 flex-1">
+                          <span className="text-xs font-bold text-foreground block truncate">{pk.name || "Unnamed Passkey"}</span>
+                          <span className="text-[10px] text-muted-foreground block">
+                            Added: {new Date(pk.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <Button
+                          onClick={() => triggerDeletePasskey(pk.id)}
+                          variant="ghost"
+                          className="h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer shrink-0 ml-2"
+                        >
+                          <Trash className="size-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full py-4 text-center text-muted-foreground/40">
+                    <Key className="size-5 mb-1.5 opacity-30" />
+                    <span className="text-[10px]">No passkeys registered yet.</span>
+                  </div>
+                )}
+              </CardContent>
+              <CardFooter className="pt-0 h-9" />
+            </Card>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Device Management Section */}
       <div className="space-y-4 pt-4 border-t border-border">

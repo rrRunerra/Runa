@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useFetch } from "@/hooks/useFetch";
 import { 
   Tv, 
   BookOpen, 
@@ -50,42 +51,20 @@ const MEDIA_CONFIG: Record<
 
 const PIE_COLORS = ["#a855f7", "#64748b", "#f97316", "#06b6d4", "#ec4899", "#10b981"];
 
-export default function StatsDashboard({ username }: StatsDashboardProps): React.JSX.Element {
+export default function RrStatsDashboard({ username }: StatsDashboardProps): React.JSX.Element {
   const [activeMedia, setActiveMedia] = useState<MediaType>("anime");
-  const [stats, setStats] = useState<any>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState<boolean>(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/stats/${username}/${activeMedia}`
-        );
-        if (!res.ok) {
-          if (res.status === 403) {
-            throw new Error("This statistics page is private.");
-          }
-          throw new Error("Failed to load statistics.");
-        }
-        const data = await res.json();
-        setStats(data);
-      } catch (err: any) {
-        setError(err.message || "An error occurred.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStats();
-  }, [username, activeMedia]);
+  const { data: stats, loading, error: fetchError } = useFetch<any>(
+    `${process.env.NEXT_PUBLIC_API_URL}/stats/${username}/${activeMedia}`,
+    { useCache: true }
+  );
+  
+  const error = fetchError ? (fetchError.message === "Request failed" ? "This statistics page is private or failed to load." : fetchError.message) : null;
 
   const renderStatsOverview = () => {
     if (!stats) return null;
@@ -94,53 +73,53 @@ export default function StatsDashboard({ username }: StatsDashboardProps): React
 
     if (activeMedia === "anime") {
       cards.push(
-        { title: "Total Anime", value: stats.count || 0, desc: "Titles in list", icon: <BarChart2 className="w-4 h-4 text-purple-400" /> },
-        { title: "Episodes Watched", value: stats.episodesWatched || 0, desc: "Total progress", icon: <Play className="w-4 h-4 text-purple-400" /> },
-        { title: "Days Watched", value: stats.daysWatched || 0, desc: "Total time spent", icon: <Clock className="w-4 h-4 text-purple-400" /> },
-        { title: "Hours Planned", value: stats.hoursPlanned || 0, desc: "In planning list", icon: <ListPlus className="w-4 h-4 text-purple-400" /> },
-        { title: "Mean Score", value: stats.meanScore || "0.0", desc: "Average rating", icon: <TrendingUp className="w-4 h-4 text-purple-400" /> },
-        { title: "Standard Deviation", value: stats.standardDeviation || "0.0", desc: "Rating spread", icon: <HelpCircle className="w-4 h-4 text-purple-400" /> }
+        { title: "Total Anime", value: stats.count || 0, desc: "Titles in list", icon: <BarChart2 className="w-4 h-4 text-primary" /> },
+        { title: "Episodes Watched", value: stats.episodesWatched || 0, desc: "Total progress", icon: <Play className="w-4 h-4 text-primary" /> },
+        { title: "Days Watched", value: stats.daysWatched || 0, desc: "Total time spent", icon: <Clock className="w-4 h-4 text-primary" /> },
+        { title: "Hours Planned", value: stats.hoursPlanned || 0, desc: "In planning list", icon: <ListPlus className="w-4 h-4 text-primary" /> },
+        { title: "Mean Score", value: stats.meanScore || "0.0", desc: "Average rating", icon: <TrendingUp className="w-4 h-4 text-primary" /> },
+        { title: "Standard Deviation", value: stats.standardDeviation || "0.0", desc: "Rating spread", icon: <HelpCircle className="w-4 h-4 text-primary" /> }
       );
     } else if (activeMedia === "manga") {
       cards.push(
-        { title: "Total Manga", value: stats.count || 0, desc: "Titles in list", icon: <BarChart2 className="w-4 h-4 text-purple-400" /> },
-        { title: "Chapters Read", value: stats.chaptersRead || 0, desc: "Total progress", icon: <BookOpen className="w-4 h-4 text-purple-400" /> },
-        { title: "Volumes Read", value: stats.volumesRead || 0, desc: "Total volumes completed", icon: <Book className="w-4 h-4 text-purple-400" /> },
-        { title: "Chapters Planned", value: stats.chaptersPlanned || 0, desc: "In planning list", icon: <ListPlus className="w-4 h-4 text-purple-400" /> },
-        { title: "Mean Score", value: stats.meanScore || "0.0", desc: "Average rating", icon: <TrendingUp className="w-4 h-4 text-purple-400" /> },
-        { title: "Standard Deviation", value: stats.standardDeviation || "0.0", desc: "Rating spread", icon: <HelpCircle className="w-4 h-4 text-purple-400" /> }
+        { title: "Total Manga", value: stats.count || 0, desc: "Titles in list", icon: <BarChart2 className="w-4 h-4 text-primary" /> },
+        { title: "Chapters Read", value: stats.chaptersRead || 0, desc: "Total progress", icon: <BookOpen className="w-4 h-4 text-primary" /> },
+        { title: "Volumes Read", value: stats.volumesRead || 0, desc: "Total volumes completed", icon: <Book className="w-4 h-4 text-primary" /> },
+        { title: "Chapters Planned", value: stats.chaptersPlanned || 0, desc: "In planning list", icon: <ListPlus className="w-4 h-4 text-primary" /> },
+        { title: "Mean Score", value: stats.meanScore || "0.0", desc: "Average rating", icon: <TrendingUp className="w-4 h-4 text-primary" /> },
+        { title: "Standard Deviation", value: stats.standardDeviation || "0.0", desc: "Rating spread", icon: <HelpCircle className="w-4 h-4 text-primary" /> }
       );
     } else if (activeMedia === "tv") {
       cards.push(
-        { title: "Total TV Shows", value: stats.count || 0, desc: "Shows in list", icon: <BarChart2 className="w-4 h-4 text-purple-400" /> },
-        { title: "Episodes Watched", value: stats.episodesWatched || 0, desc: "Total progress", icon: <Play className="w-4 h-4 text-purple-400" /> },
-        { title: "Hours Watched", value: stats.hoursWatched || 0, desc: "Total watch time", icon: <Clock className="w-4 h-4 text-purple-400" /> },
-        { title: "Mean Score", value: stats.meanScore || "0.0", desc: "Average rating", icon: <TrendingUp className="w-4 h-4 text-purple-400" /> },
-        { title: "Standard Deviation", value: stats.standardDeviation || "0.0", desc: "Rating spread", icon: <HelpCircle className="w-4 h-4 text-purple-400" /> }
+        { title: "Total TV Shows", value: stats.count || 0, desc: "Shows in list", icon: <BarChart2 className="w-4 h-4 text-primary" /> },
+        { title: "Episodes Watched", value: stats.episodesWatched || 0, desc: "Total progress", icon: <Play className="w-4 h-4 text-primary" /> },
+        { title: "Hours Watched", value: stats.hoursWatched || 0, desc: "Total watch time", icon: <Clock className="w-4 h-4 text-primary" /> },
+        { title: "Mean Score", value: stats.meanScore || "0.0", desc: "Average rating", icon: <TrendingUp className="w-4 h-4 text-primary" /> },
+        { title: "Standard Deviation", value: stats.standardDeviation || "0.0", desc: "Rating spread", icon: <HelpCircle className="w-4 h-4 text-primary" /> }
       );
     } else if (activeMedia === "movie") {
       cards.push(
-        { title: "Total Movies", value: stats.count || 0, desc: "Movies in list", icon: <BarChart2 className="w-4 h-4 text-purple-400" /> },
-        { title: "Hours Watched", value: stats.hoursWatched || 0, desc: "Completed watch time", icon: <Clock className="w-4 h-4 text-purple-400" /> },
-        { title: "Hours Planned", value: stats.hoursPlanned || 0, desc: "In planning list", icon: <ListPlus className="w-4 h-4 text-purple-400" /> },
-        { title: "Mean Score", value: stats.meanScore || "0.0", desc: "Average rating", icon: <TrendingUp className="w-4 h-4 text-purple-400" /> },
-        { title: "Standard Deviation", value: stats.standardDeviation || "0.0", desc: "Rating spread", icon: <HelpCircle className="w-4 h-4 text-purple-400" /> }
+        { title: "Total Movies", value: stats.count || 0, desc: "Movies in list", icon: <BarChart2 className="w-4 h-4 text-primary" /> },
+        { title: "Hours Watched", value: stats.hoursWatched || 0, desc: "Completed watch time", icon: <Clock className="w-4 h-4 text-primary" /> },
+        { title: "Hours Planned", value: stats.hoursPlanned || 0, desc: "In planning list", icon: <ListPlus className="w-4 h-4 text-primary" /> },
+        { title: "Mean Score", value: stats.meanScore || "0.0", desc: "Average rating", icon: <TrendingUp className="w-4 h-4 text-primary" /> },
+        { title: "Standard Deviation", value: stats.standardDeviation || "0.0", desc: "Rating spread", icon: <HelpCircle className="w-4 h-4 text-primary" /> }
       );
     } else if (activeMedia === "game") {
       cards.push(
-        { title: "Total Games", value: stats.count || 0, desc: "Games in list", icon: <Gamepad2 className="w-4 h-4 text-purple-400" /> },
-        { title: "Hours Played", value: stats.hoursPlayed || 0, desc: "Total gameplay time", icon: <Clock className="w-4 h-4 text-purple-400" /> },
-        { title: "Mean Score", value: stats.meanScore || "0.0", desc: "Average rating", icon: <TrendingUp className="w-4 h-4 text-purple-400" /> },
-        { title: "Standard Deviation", value: stats.standardDeviation || "0.0", desc: "Rating spread", icon: <HelpCircle className="w-4 h-4 text-purple-400" /> }
+        { title: "Total Games", value: stats.count || 0, desc: "Games in list", icon: <Gamepad2 className="w-4 h-4 text-primary" /> },
+        { title: "Hours Played", value: stats.hoursPlayed || 0, desc: "Total gameplay time", icon: <Clock className="w-4 h-4 text-primary" /> },
+        { title: "Mean Score", value: stats.meanScore || "0.0", desc: "Average rating", icon: <TrendingUp className="w-4 h-4 text-primary" /> },
+        { title: "Standard Deviation", value: stats.standardDeviation || "0.0", desc: "Rating spread", icon: <HelpCircle className="w-4 h-4 text-primary" /> }
       );
     } else if (activeMedia === "book") {
       cards.push(
-        { title: "Total Books", value: stats.count || 0, desc: "Books in list", icon: <BookOpen className="w-4 h-4 text-purple-400" /> },
-        { title: "Chapters Read", value: stats.chaptersRead || 0, desc: "Total chapters progress", icon: <Book className="w-4 h-4 text-purple-400" /> },
-        { title: "Volumes Read", value: stats.volumesRead || 0, desc: "Total volumes completed", icon: <ListPlus className="w-4 h-4 text-purple-400" /> },
-        { title: "Pages Read", value: stats.pagesRead || 0, desc: "Completed books pages", icon: <CheckCircle className="w-4 h-4 text-purple-400" /> },
-        { title: "Mean Score", value: stats.meanScore || "0.0", desc: "Average rating", icon: <TrendingUp className="w-4 h-4 text-purple-400" /> },
-        { title: "Standard Deviation", value: stats.standardDeviation || "0.0", desc: "Rating spread", icon: <HelpCircle className="w-4 h-4 text-purple-400" /> }
+        { title: "Total Books", value: stats.count || 0, desc: "Books in list", icon: <BookOpen className="w-4 h-4 text-primary" /> },
+        { title: "Chapters Read", value: stats.chaptersRead || 0, desc: "Total chapters progress", icon: <Book className="w-4 h-4 text-primary" /> },
+        { title: "Volumes Read", value: stats.volumesRead || 0, desc: "Total volumes completed", icon: <ListPlus className="w-4 h-4 text-primary" /> },
+        { title: "Pages Read", value: stats.pagesRead || 0, desc: "Completed books pages", icon: <CheckCircle className="w-4 h-4 text-primary" /> },
+        { title: "Mean Score", value: stats.meanScore || "0.0", desc: "Average rating", icon: <TrendingUp className="w-4 h-4 text-primary" /> },
+        { title: "Standard Deviation", value: stats.standardDeviation || "0.0", desc: "Rating spread", icon: <HelpCircle className="w-4 h-4 text-primary" /> }
       );
     }
 
@@ -149,16 +128,16 @@ export default function StatsDashboard({ username }: StatsDashboardProps): React
         {cards.map((card, idx) => (
           <div
             key={idx}
-            className="flex items-center gap-3.5 p-4 rounded-2xl border border-border/40 bg-card/25 shadow-md backdrop-blur-xs select-none hover:border-primary/10 transition-all"
+            className="flex items-center gap-3.5 p-4 rounded-xl border bg-card shadow-sm select-none hover:border-primary/30 transition-all"
           >
-            <div className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400">
+            <div className="p-2.5 rounded-lg bg-primary/10 text-primary">
               {card.icon}
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                 {card.title}
               </div>
-              <div className="text-xl font-black text-white mt-0.5 leading-none">
+              <div className="text-xl font-black text-foreground mt-0.5 leading-none">
                 {card.value}
               </div>
               <div className="text-[9px] text-muted-foreground/80 mt-1 truncate">
@@ -212,7 +191,7 @@ export default function StatsDashboard({ username }: StatsDashboardProps): React
             </PieChart>
           </ResponsiveContainer>
           <div className="absolute flex flex-col items-center select-none pointer-events-none">
-            <span className="text-xl font-black text-white leading-none">{total}</span>
+            <span className="text-xl font-black text-foreground leading-none">{total}</span>
             <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold mt-1">Total</span>
           </div>
         </div>
@@ -225,8 +204,8 @@ export default function StatsDashboard({ username }: StatsDashboardProps): React
             return (
               <div key={item.name} className="space-y-1.5">
                 <div className="flex justify-between items-center text-xs">
-                  <span className="font-semibold text-zinc-300 truncate max-w-[140px]">{item.name}</span>
-                  <span className="font-bold text-white">{pct}%</span>
+                  <span className="font-semibold text-muted-foreground truncate max-w-[140px]">{item.name}</span>
+                  <span className="font-bold text-foreground">{pct}%</span>
                 </div>
                 <div className="h-2 w-full rounded-full bg-muted/30 overflow-hidden">
                   <div
@@ -245,9 +224,9 @@ export default function StatsDashboard({ username }: StatsDashboardProps): React
   const renderCharts = () => {
     if (!stats || stats.count === 0) {
       return (
-        <Card className="border-border/40 bg-card/25 backdrop-blur-xs rounded-2xl p-12 text-center flex flex-col items-center justify-center gap-3">
+        <Card className="border shadow-sm bg-card p-12 text-center flex flex-col items-center justify-center gap-3">
           <HelpCircle className="size-10 text-muted-foreground/40 stroke-1" />
-          <div className="text-sm font-semibold text-white">No statistics calculated yet</div>
+          <div className="text-sm font-semibold text-foreground">No statistics calculated yet</div>
           <p className="text-xs text-muted-foreground max-w-xs">
             Add items and update your progress list to see statistics graphs here.
           </p>
@@ -258,10 +237,10 @@ export default function StatsDashboard({ username }: StatsDashboardProps): React
     if (!mounted) {
       return (
         <div className="space-y-6">
-          <Skeleton className="h-64 w-full rounded-2xl" />
+          <Skeleton className="h-64 w-full rounded-xl" />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Skeleton className="h-64 w-full rounded-2xl" />
-            <Skeleton className="h-64 w-full rounded-2xl" />
+            <Skeleton className="h-64 w-full rounded-xl" />
+            <Skeleton className="h-64 w-full rounded-xl" />
           </div>
         </div>
       );
@@ -291,9 +270,9 @@ export default function StatsDashboard({ username }: StatsDashboardProps): React
         {/* Score and Count Range Charts */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Score Chart */}
-          <Card className="border-border/40 bg-card/25 backdrop-blur-xs rounded-2xl">
+          <Card className="border shadow-sm bg-card">
             <CardHeader className="pb-3 flex flex-row items-center justify-between">
-              <CardTitle className="text-white text-xs font-bold uppercase tracking-wider">Score Distribution</CardTitle>
+              <CardTitle className="text-foreground text-xs font-bold uppercase tracking-wider">Score Distribution</CardTitle>
             </CardHeader>
             <CardContent className="min-w-0">
               <div className="h-56 w-full min-w-0">
@@ -315,9 +294,9 @@ export default function StatsDashboard({ username }: StatsDashboardProps): React
 
           {/* Episode / Chapter Count Range Chart */}
           {progressData && (
-            <Card className="border-border/40 bg-card/25 backdrop-blur-xs rounded-2xl">
+            <Card className="border shadow-sm bg-card">
               <CardHeader className="pb-3">
-                <CardTitle className="text-white text-xs font-bold uppercase tracking-wider">
+                <CardTitle className="text-foreground text-xs font-bold uppercase tracking-wider">
                   {activeMedia === "anime" ? "Episode Count" : "Chapter Count"} Distribution
                 </CardTitle>
               </CardHeader>
@@ -345,9 +324,9 @@ export default function StatsDashboard({ username }: StatsDashboardProps): React
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {/* Format Distribution */}
           {stats.formatDistribution && (
-            <Card className="border-border/40 bg-card/25 backdrop-blur-xs rounded-2xl">
+            <Card className="border shadow-sm bg-card">
               <CardHeader className="pb-3">
-                <CardTitle className="text-white text-xs font-bold uppercase tracking-wider">Format Distribution</CardTitle>
+                <CardTitle className="text-foreground text-xs font-bold uppercase tracking-wider">Format Distribution</CardTitle>
               </CardHeader>
               <CardContent>
                 {renderDistributionList(stats.formatDistribution, stats.count)}
@@ -357,9 +336,9 @@ export default function StatsDashboard({ username }: StatsDashboardProps): React
 
           {/* Status Distribution */}
           {stats.statusDistribution && (
-            <Card className="border-border/40 bg-card/25 backdrop-blur-xs rounded-2xl">
+            <Card className="border shadow-sm bg-card">
               <CardHeader className="pb-3">
-                <CardTitle className="text-white text-xs font-bold uppercase tracking-wider">Status Distribution</CardTitle>
+                <CardTitle className="text-foreground text-xs font-bold uppercase tracking-wider">Status Distribution</CardTitle>
               </CardHeader>
               <CardContent>
                 {renderDistributionList(stats.statusDistribution, stats.count)}
@@ -369,9 +348,9 @@ export default function StatsDashboard({ username }: StatsDashboardProps): React
 
           {/* Country Distribution */}
           {stats.countryDistribution && (
-            <Card className="border-border/40 bg-card/25 backdrop-blur-xs rounded-2xl md:col-span-2 xl:col-span-1">
+            <Card className="border shadow-sm bg-card md:col-span-2 xl:col-span-1">
               <CardHeader className="pb-3">
-                <CardTitle className="text-white text-xs font-bold uppercase tracking-wider">Country Distribution</CardTitle>
+                <CardTitle className="text-foreground text-xs font-bold uppercase tracking-wider">Country Distribution</CardTitle>
               </CardHeader>
               <CardContent>
                 {renderDistributionList(stats.countryDistribution, stats.count)}
@@ -392,14 +371,14 @@ export default function StatsDashboard({ username }: StatsDashboardProps): React
           onValueChange={(v) => setActiveMedia(v as MediaType)}
           className="w-full shrink-0"
         >
-          <TabsList className="bg-card/20 border border-border/40 p-1 rounded-2xl w-full flex flex-nowrap overflow-x-auto no-scrollbar h-auto justify-start gap-1">
+          <TabsList className="bg-muted border p-1 rounded-lg w-full flex flex-nowrap overflow-x-auto no-scrollbar h-auto justify-start gap-1">
             {(Object.keys(MEDIA_CONFIG) as MediaType[]).map((type) => {
               const config = MEDIA_CONFIG[type];
               return (
                 <TabsTrigger
                   key={type}
                   value={type}
-                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider cursor-pointer transition-all data-[state=active]:bg-primary/10 data-[state=active]:text-primary border border-transparent data-[state=active]:border-primary/20 shrink-0"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-md text-xs font-bold uppercase tracking-wider cursor-pointer transition-all data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm shrink-0"
                 >
                   {config.icon}
                   <span>{config.title}</span>
@@ -409,7 +388,7 @@ export default function StatsDashboard({ username }: StatsDashboardProps): React
           </TabsList>
         </Tabs>
         <div 
-          className="flex items-center gap-1.5 text-[10px] text-muted-foreground/35 select-none hover:text-muted-foreground/60 transition-colors pl-2 cursor-help w-fit" 
+          className="flex items-center gap-1.5 text-[10px] text-muted-foreground/50 select-none hover:text-muted-foreground/80 transition-colors pl-2 cursor-help w-fit" 
           title="Statistics are compiled and cached in the background. Metrics and distributions may temporarily deviate during rapid updates or imports."
         >
           <HelpCircle className="w-3 h-3 stroke-[1.5]" />
@@ -419,16 +398,16 @@ export default function StatsDashboard({ username }: StatsDashboardProps): React
 
       {loading ? (
         <div className="space-y-6">
-          <Skeleton className="h-24 w-full rounded-2xl" />
+          <Skeleton className="h-24 w-full rounded-xl" />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Skeleton className="h-64 w-full rounded-2xl" />
-            <Skeleton className="h-64 w-full rounded-2xl" />
+            <Skeleton className="h-64 w-full rounded-xl" />
+            <Skeleton className="h-64 w-full rounded-xl" />
           </div>
         </div>
       ) : error ? (
-        <Card className="border-border/40 bg-card/25 backdrop-blur-xs rounded-2xl p-12 text-center flex flex-col items-center justify-center gap-3">
+        <Card className="border shadow-sm bg-card p-12 text-center flex flex-col items-center justify-center gap-3">
           <HelpCircle className="size-10 text-red-400 stroke-1" />
-          <div className="text-sm font-semibold text-white">{error}</div>
+          <div className="text-sm font-semibold text-foreground">{error}</div>
           <p className="text-xs text-muted-foreground max-w-xs">
             Make sure your list is public or check back again later.
           </p>

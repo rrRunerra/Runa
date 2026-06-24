@@ -4,6 +4,7 @@ import type React from "react";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
+import { useFetch } from "@/hooks/useFetch";
 import { Plus, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,24 +57,23 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
   const [smtpPort, setSmtpPort] = useState<string>("465");
   const [smtpSecure, setSmtpSecure] = useState<boolean>(true);
 
-  const fetchEmailAccounts = async (): Promise<void> => {
-    if (!session?.accessToken) return;
-    try {
-      const emailRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/emails`, {
-        headers: { Authorization: `Bearer ${session.accessToken}` },
-      });
-      if (emailRes.ok) {
-        const emailData = await emailRes.json();
-        setEmailAccounts(emailData);
-      }
-    } catch (err) {
-      console.error("Error fetching email accounts:", err);
+  const { data: emailAccountsData, refetch: refetchEmailAccounts } = useFetch<any[]>(
+    session?.accessToken ? `${process.env.NEXT_PUBLIC_API_URL}/emails` : "",
+    {
+      headers: { Authorization: `Bearer ${session?.accessToken}` },
+      enabled: !!session?.accessToken,
     }
-  };
+  );
 
   useEffect(() => {
-    fetchEmailAccounts();
-  }, [session]);
+    if (emailAccountsData) {
+      setEmailAccounts(Array.isArray(emailAccountsData) ? emailAccountsData : []);
+    }
+  }, [emailAccountsData]);
+
+  const fetchEmailAccounts = (): void => {
+    refetchEmailAccounts();
+  };
 
   const handleSaveEmailAccount = async (): Promise<void> => {
     if (!session?.accessToken) return;
@@ -266,10 +266,6 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
             className="p-4 rounded-xl border border-border bg-card/40 flex items-center justify-between gap-3"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div
-                className="size-3 rounded-full shrink-0 border border-black/20"
-                style={{ backgroundColor: account.color }}
-              />
               <div className="space-y-0.5 text-left min-w-0">
                 <span className="text-xs font-bold text-foreground block truncate">
                   {account.accountName}
@@ -335,30 +331,15 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
 
           <div className="py-4 space-y-4 text-left">
             {/* Identity & Aesthetics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="account-name">Account Name</Label>
-                <Input
-                  id="account-name"
-                  value={emailAccountName}
-                  onChange={(e) => setEmailAccountName(e.target.value)}
-                  placeholder="e.g. Personal Purelymail"
-                  className="h-9 px-3 text-xs"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="account-color">Visual Color Tag</Label>
-                <div className="flex items-center gap-3">
-                  <Input
-                    id="account-color"
-                    type="color"
-                    value={emailColor}
-                    onChange={(e) => setEmailColor(e.target.value)}
-                    className="h-9 w-12 p-0 bg-transparent border-0 rounded-xl cursor-pointer"
-                  />
-                  <span className="text-xs font-mono font-semibold text-muted-foreground">{emailColor}</span>
-                </div>
-              </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="account-name">Account Name</Label>
+              <Input
+                id="account-name"
+                value={emailAccountName}
+                onChange={(e) => setEmailAccountName(e.target.value)}
+                placeholder="e.g. Personal Purelymail"
+                className="h-9 px-3 text-xs"
+              />
             </div>
 
             <div className="space-y-1 mt-1">

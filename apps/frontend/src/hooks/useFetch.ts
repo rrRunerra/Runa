@@ -1,11 +1,18 @@
 import { useEffect, useState, useRef } from "react";
 
+const globalCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_TTL = 1000 * 60 * 5; // 5 minutes
+
 export function useFetch<T>(
   url: string,
-  options?: RequestInit & { enabled?: boolean },
+  options?: RequestInit & { enabled?: boolean; useCache?: boolean }
 ) {
-  const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(options?.enabled !== false);
+  const cacheKey = options?.useCache ? url : null;
+  const initialCache = cacheKey ? globalCache.get(cacheKey) : null;
+  const isCacheValid = initialCache && (Date.now() - initialCache.timestamp < CACHE_TTL);
+
+  const [data, setData] = useState<T | null>(isCacheValid ? initialCache.data : null);
+  const [loading, setLoading] = useState(!isCacheValid && options?.enabled !== false);
   const [error, setError] = useState<Error | null>(null);
   const [refetchIndex, setRefetchIndex] = useState(0);
 
@@ -17,16 +24,27 @@ export function useFetch<T>(
   const bodyString = typeof options?.body === "string" ? options.body : "";
   const method = options?.method;
   const enabled = options?.enabled;
+  const useCache = options?.useCache;
 
   useEffect(() => {
     const controller = new AbortController();
 
     if (enabled === false) {
-      setLoading(false);
+      if (!isCacheValid) setLoading(false);
       return;
     }
 
     async function load() {
+      // Check cache again in case it was populated by another component instance
+      if (useCache) {
+        const cached = globalCache.get(url);
+        if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+          setData(cached.data);
+          setLoading(false);
+          return; // Skip fetch if we have valid cache
+        }
+      }
+
       try {
         setLoading(true);
         setError(null);
@@ -38,6 +56,11 @@ export function useFetch<T>(
         if (!res.ok) throw new Error("Request failed");
 
         const json = await res.json();
+        
+        if (useCache) {
+          globalCache.set(url, { data: json, timestamp: Date.now() });
+        }
+        
         setData(json);
       } catch (err) {
         if ((err as Error).name !== "AbortError") setError(err as Error);
@@ -48,7 +71,7 @@ export function useFetch<T>(
 
     load();
     return () => controller.abort();
-  }, [url, method, headersString, bodyString, enabled, refetchIndex]);
+  }, [url, method, headersString, bodyString, enabled, refetchIndex, useCache]);
 
   const refetch = () => setRefetchIndex((prev) => prev + 1);
 

@@ -859,6 +859,8 @@ model Notification {
 
 enum NotificationType {
     INFO
+    CONFIRMATION
+    PROMPT
     INTERACTIVE
 }
 

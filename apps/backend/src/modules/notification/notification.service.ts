@@ -11,10 +11,22 @@ export class NotificationService {
     private readonly gateway: NotificationGateway,
   ) {}
 
-  async findAll(userId: string): Promise<Notification[]> {
+  async findAll(
+    userId: string,
+    skip?: number,
+    take?: number,
+    type?: NotificationType,
+    status?: NotificationStatus,
+  ): Promise<Notification[]> {
+    const where: any = { userId };
+    if (type) where.type = type;
+    if (status) where.status = status;
+
     const records = await this.prisma.client.notification.findMany({
-      where: { userId },
+      where,
       orderBy: { createdAt: 'desc' },
+      skip: skip ? Number(skip) : undefined,
+      take: take ? Number(take) : undefined,
     });
 
     return records.map((record) => this.mapToDto(record));

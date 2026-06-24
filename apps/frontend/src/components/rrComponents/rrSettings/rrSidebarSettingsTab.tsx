@@ -6,6 +6,7 @@ import { LayoutGrid, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SidebarConfig, SidebarItem, SidebarItemChild } from "@/types/SidebarConfig";
 import { useSession } from "next-auth/react";
+import { useFetch } from "@/hooks/useFetch";
 import { apps } from "../../../../config/apps";
 import { getAquilaSidebarConfig } from "../../../../config/aquilaSidebarConfig";
 import { getLynxSidebarConfig } from "../../../../config/lynxSidebarConfig";
@@ -62,27 +63,37 @@ export function RrSidebarSettingsTab({
   const [connections, setConnections] = useState<Connection[]>([]);
   const [emails, setEmails] = useState<any[]>([]);
 
-  useEffect(() => {
-    if (session?.accessToken) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/connections`, {
-        headers: {
-          Authorization: `Bearer ${session.accessToken}`,
-        },
-      })
-        .then((res) => res.json())
-        .then((data) => setConnections(Array.isArray(data) ? data : []))
-        .catch((err) => console.error("Failed to fetch connections", err));
-
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/emails`, {
-        headers: {
-          Authorization: `Bearer ${session.accessToken}`,
-        },
-      })
-        .then((res) => res.json())
-        .then((data) => setEmails(Array.isArray(data) ? data : []))
-        .catch((err) => console.error("Failed to fetch emails", err));
+  const { data: connectionsData } = useFetch<Connection[]>(
+    session?.accessToken ? `${process.env.NEXT_PUBLIC_API_URL}/connections` : "",
+    {
+      headers: {
+        Authorization: `Bearer ${session?.accessToken}`,
+      },
+      enabled: !!session?.accessToken,
     }
-  }, [session?.accessToken]);
+  );
+
+  const { data: emailsData } = useFetch<any[]>(
+    session?.accessToken ? `${process.env.NEXT_PUBLIC_API_URL}/emails` : "",
+    {
+      headers: {
+        Authorization: `Bearer ${session?.accessToken}`,
+      },
+      enabled: !!session?.accessToken,
+    }
+  );
+
+  useEffect(() => {
+    if (connectionsData) {
+      setConnections(Array.isArray(connectionsData) ? connectionsData : []);
+    }
+  }, [connectionsData]);
+
+  useEffect(() => {
+    if (emailsData) {
+      setEmails(Array.isArray(emailsData) ? emailsData : []);
+    }
+  }, [emailsData]);
 
   const getActiveAppHref = (): string => {
     if (typeof window === "undefined") return "/aquila";

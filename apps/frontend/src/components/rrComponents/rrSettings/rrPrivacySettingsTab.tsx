@@ -3,6 +3,7 @@
 import type React from "react";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { useFetch } from "@/hooks/useFetch";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -33,35 +34,30 @@ export const RrPrivacySettingsTab = ({ onOpenChange }: RrPrivacySettingsTabProps
   const [loading, setLoading] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  useEffect(() => {
-    if (session?.accessToken) {
-      setLoading(true);
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/privacy`, {
-        headers: {
-          Authorization: `Bearer ${session.accessToken}`,
-        },
-      })
-        .then((res) => {
-          if (res.ok) return res.json();
-          throw new Error("Failed to fetch privacy settings");
-        })
-        .then((data) => {
-          setProfilePrivate(data.profile || false);
-          setAnimeListPrivate(data.animeList || false);
-          setMangaListPrivate(data.mangaList || false);
-          setTvListPrivate(data.tvList || false);
-          setMovieListPrivate(data.movieList || false);
-          setConnectionsPrivate(data.connections || false);
-        })
-        .catch((err) => {
-          console.error("Error fetching privacy settings:", err);
-          toast.error("Failed to load privacy settings.");
-        })
-        .finally(() => {
-          setLoading(false);
-        });
+  const { data: privacyData, loading: privacyLoading } = useFetch<any>(
+    session?.accessToken ? `${process.env.NEXT_PUBLIC_API_URL}/user/privacy` : "",
+    {
+      headers: {
+        Authorization: `Bearer ${session?.accessToken}`,
+      },
+      enabled: !!session?.accessToken,
     }
-  }, [session]);
+  );
+
+  useEffect(() => {
+    if (privacyData) {
+      setProfilePrivate(privacyData.profile || false);
+      setAnimeListPrivate(privacyData.animeList || false);
+      setMangaListPrivate(privacyData.mangaList || false);
+      setTvListPrivate(privacyData.tvList || false);
+      setMovieListPrivate(privacyData.movieList || false);
+      setConnectionsPrivate(privacyData.connections || false);
+    }
+  }, [privacyData]);
+
+  useEffect(() => {
+    setLoading(privacyLoading);
+  }, [privacyLoading]);
 
   const handleSaveSettings = async (): Promise<void> => {
     if (!session?.accessToken) {

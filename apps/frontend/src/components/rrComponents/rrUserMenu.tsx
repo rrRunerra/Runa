@@ -1,7 +1,8 @@
+"use client";
+
 import { Session } from "next-auth";
 import { SidebarMenuButton, SidebarMenuItem } from "../ui/sidebar";
 import {
-  Badge,
   Bell,
   Bookmark,
   ChevronsUpDown,
@@ -22,14 +23,17 @@ import {
 } from "../ui/dropdown-menu";
 import { getSafeImageUrl } from "@/lib/inputValidation";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "../ui/sidebar";
 import Link from "next/link";
+import { io, Socket } from "socket.io-client";
+import { useFetch } from "@/hooks/useFetch";
+import { Badge } from "../ui/badge";
 import { ConstellationBuilderModal } from "../stars/ConstellationBuilderModal";
-import { NotificationsModal } from "../NotificationsModal";
+import { RrNotificationsModal } from "./rrNotificationsModal";
 import { SettingsDialog } from "./rrSettings/rrSettingsModal";
-import { AppearanceDialog } from "../AppearanceDialog";
+import { RrAppearanceModal } from "./rrAppearanceModal";
 
 export default function RrUserMenu({ session }: { session: Session | null }) {
   const [unreadCount, setUnreadCount] = useState(0);
@@ -43,6 +47,71 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
   const [bookmarkIcon, setBookmarkIcon] = useState("");
 
   const { isMobile } = useSidebar();
+
+  const { data: notificationsData, refetch: refetchNotifications } = useFetch<any[]>(
+    session?.accessToken ? `${process.env.NEXT_PUBLIC_API_URL}/notifications` : "",
+    {
+      headers: {
+        Authorization: `Bearer ${session?.accessToken}`,
+      },
+      enabled: !!session?.accessToken,
+    }
+  );
+
+  useEffect(() => {
+    if (notificationsData) {
+      const activeDeviceId = typeof window !== "undefined" ? localStorage.getItem("runa_device_id") : null;
+      const pendingCount = notificationsData.filter((n: any) => {
+        if (n.status !== "PENDING") return false;
+        if (n.metadata?.targetDeviceId) {
+          return n.metadata.targetDeviceId === activeDeviceId;
+        }
+        return true;
+      }).length;
+      setUnreadCount(pendingCount);
+    }
+  }, [notificationsData]);
+
+  useEffect(() => {
+    if (!session?.accessToken) return;
+
+    const wsUrl =
+      process.env.NEXT_PUBLIC_API_URL ||
+      (typeof window !== "undefined" ? window.location.origin : "");
+    const socket: Socket = io(`${wsUrl}/notifications`, {
+      query: { token: session.accessToken },
+      transports: ["websocket"],
+    });
+
+    const handleCreated = (newNotification: any) => {
+      const activeDeviceId = typeof window !== "undefined" ? localStorage.getItem("runa_device_id") : null;
+      if (newNotification.metadata?.targetDeviceId && newNotification.metadata.targetDeviceId !== activeDeviceId) {
+        return;
+      }
+      refetchNotifications();
+    };
+
+    const handleUpdated = () => {
+      refetchNotifications();
+    };
+
+    const handleDelete = () => {
+      refetchNotifications();
+    };
+
+    const handleCleared = () => {
+      refetchNotifications();
+    };
+
+    socket.on("notification:created", handleCreated);
+    socket.on("notification:updated", handleUpdated);
+    socket.on("notification:deleted", handleDelete);
+    socket.on("notifications:cleared", handleCleared);
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [session?.accessToken, refetchNotifications]);
 
   return (
     <>
@@ -259,7 +328,7 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
       )}
 
       {isAppearanceOpen && (
-        <AppearanceDialog
+        <RrAppearanceModal
           open={isAppearanceOpen}
           onOpenChange={setIsAppearanceOpen}
         />
@@ -273,7 +342,7 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
       )}
 
       {isNotificationsOpen && (
-        <NotificationsModal
+        <RrNotificationsModal
           open={isNotificationsOpen}
           onOpenChange={setIsNotificationsOpen}
         />

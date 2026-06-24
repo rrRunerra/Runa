@@ -8,6 +8,7 @@ import {
   Param,
   UseGuards,
   Req,
+  Query,
 } from '@nestjs/common';
 import { NotificationService } from './notification.service';
 import { DualAuthGuard } from '../../common/guards/auth.guard';
@@ -21,9 +22,15 @@ export class NotificationController {
   constructor(private readonly notificationService: NotificationService) {}
 
   @Get()
-  async findAll(@Req() req: any): Promise<Notification[]> {
+  async findAll(
+    @Req() req: any,
+    @Query('skip') skip?: number,
+    @Query('take') take?: number,
+    @Query('type') type?: string,
+    @Query('status') status?: string,
+  ): Promise<Notification[]> {
     const userId = req.user.id;
-    return this.notificationService.findAll(userId);
+    return this.notificationService.findAll(userId, skip, take, type as any, status as any);
   }
 
   @Put(':id/status')

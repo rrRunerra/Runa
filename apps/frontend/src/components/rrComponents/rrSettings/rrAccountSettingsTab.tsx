@@ -8,6 +8,7 @@ import {
   forwardRef,
 } from "react";
 import { useSession } from "next-auth/react";
+import { useFetch } from "@/hooks/useFetch";
 import {
   Camera,
   Trash,
@@ -132,26 +133,27 @@ export const RrAccountSettingsTab = ({ onOpenChange }: RrAccountSettingsTabProps
   const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState<boolean>(false);
   const [isBannerMenuOpen, setIsBannerMenuOpen] = useState<boolean>(false);
 
+  const { data: profileData } = useFetch<any>(
+    session?.user?.username ? `${process.env.NEXT_PUBLIC_API_URL}/user/${session.user.username}` : "",
+    {
+      enabled: !!session?.user?.username,
+    }
+  );
+
+  useEffect(() => {
+    if (profileData) {
+      setDisplayName(profileData.displayName || "");
+      setEmail(session?.user?.email || "");
+      setAvatarUrl(profileData.avatarUrl || "");
+      setBannerUrl(profileData.bannerUrl || "");
+      setSidebarCardBackgroundUrl(profileData.sidebarCardBackgroundUrl || "");
+      setProfileSettings(profileData.profileSettings || {});
+      setBio(profileData.profileSettings?.bio || "");
+    }
+  }, [profileData, session]);
+
   useEffect(() => {
     if (session?.user?.username) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/${session.user.username}`)
-        .then((res) => {
-          if (res.ok) return res.json();
-          throw new Error("Failed to fetch user profile");
-        })
-        .then((data) => {
-          setDisplayName(data.displayName || "");
-          setEmail(session.user.email || "");
-          setAvatarUrl(data.avatarUrl || "");
-          setBannerUrl(data.bannerUrl || "");
-          setSidebarCardBackgroundUrl(data.sidebarCardBackgroundUrl || "");
-          setProfileSettings(data.profileSettings || {});
-          setBio(data.profileSettings?.bio || "");
-        })
-        .catch((err) => {
-          console.error("Error fetching user profile:", err);
-        });
-
       setAvatarFile(null);
       setBannerFile(null);
       setSidebarCardBackgroundFile(null);

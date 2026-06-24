@@ -3,6 +3,7 @@
 import type React from "react";
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import { useFetch } from "@/hooks/useFetch";
 import {
   LinkIcon,
   Unlink,
@@ -145,28 +146,31 @@ export function RrConnectionsTab({ onOpenChange }: RrConnectionsTabProps): React
     setShowImportDialog(providerId);
   };
 
-  const fetchConnections = useCallback(async (): Promise<void> => {
-    if (!session?.accessToken) return;
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/connections`, {
-        headers: {
-          Authorization: `Bearer ${session.accessToken}`,
-        },
-      });
-      if (!res.ok) throw new Error("Failed to fetch connections");
-      const data = await res.json();
-      setConnections(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to load connections.");
-    } finally {
-      setIsLoading(false);
+  const { data: connectionsData, loading: connectionsLoading, refetch: refetchConnections } = useFetch<Connection[]>(
+    session?.accessToken ? `${process.env.NEXT_PUBLIC_API_URL}/connections` : "",
+    {
+      headers: {
+        Authorization: `Bearer ${session?.accessToken}`,
+      },
+      enabled: !!session?.accessToken,
     }
-  }, [session]);
+  );
 
   useEffect(() => {
-    fetchConnections();
+    if (connectionsData) {
+      setConnections(Array.isArray(connectionsData) ? connectionsData : []);
+    }
+  }, [connectionsData]);
 
+  useEffect(() => {
+    setIsLoading(connectionsLoading);
+  }, [connectionsLoading]);
+
+  const fetchConnections = useCallback((): void => {
+    refetchConnections();
+  }, [refetchConnections]);
+
+  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("success") === "true") {
       toast.success("Account connected successfully!");
@@ -182,7 +186,7 @@ export function RrConnectionsTab({ onOpenChange }: RrConnectionsTabProps): React
       const newUrl = window.location.pathname + "?settings=connections";
       window.history.replaceState({}, document.title, newUrl);
     }
-  }, [fetchConnections]);
+  }, []);
 
   useEffect(() => {
     if (!session?.accessToken || isLoading || connections.length === 0) return;

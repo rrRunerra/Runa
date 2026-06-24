@@ -3,12 +3,30 @@ import Image from "next/image";
 import Link from "next/link";
 import { Heart } from "lucide-react";
 import { motion } from "framer-motion";
-import { Card } from "@/components/ui/card";
+import { useFetch } from "@/hooks/useFetch";
 import { getSafeImageUrl } from "@/lib/inputValidation";
-import { FavoriteItem } from "../UserPageClient";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyMedia,
+} from "@/components/ui/empty";
+
+export interface FavoriteItem {
+  id: string;
+  userId: string;
+  type: string;
+  mediaId: string;
+  createdAt: string;
+  title: string;
+  image: string;
+}
 
 interface FavoritesTabProps {
-  favorites: FavoriteItem[];
+  username: string;
+  session: any;
 }
 
 function getMediaUrl(type: string, mediaId: string): string {
@@ -22,47 +40,72 @@ function getMediaUrl(type: string, mediaId: string): string {
   return `/aquila/browse`;
 }
 
-export default function FavoritesTab({ favorites }: FavoritesTabProps) {
-  const animeFavs = useMemo(
-    () => favorites.filter((f) => f.type === "ANIME"),
-    [favorites],
-  );
-  const mangaFavs = useMemo(
-    () => favorites.filter((f) => f.type === "MANGA"),
-    [favorites],
-  );
-  const tvFavs = useMemo(
-    () => favorites.filter((f) => f.type === "TV"),
-    [favorites],
-  );
-  const movieFavs = useMemo(
-    () => favorites.filter((f) => f.type === "MOVIE"),
-    [favorites],
-  );
-  const gameFavs = useMemo(
-    () => favorites.filter((f) => f.type === "GAME"),
-    [favorites],
-  );
-  const bookFavs = useMemo(
-    () => favorites.filter((f) => f.type === "BOOK"),
-    [favorites],
+export default function RrFavoritesTab({
+  username,
+  session,
+}: FavoritesTabProps): React.ReactNode {
+  const { data: favorites, loading } = useFetch<FavoriteItem[]>(
+    username ? `${process.env.NEXT_PUBLIC_API_URL}/favorites/user/${username}` : "",
+    {
+      headers: session?.accessToken
+        ? { Authorization: `Bearer ${session.accessToken}` }
+        : undefined,
+      enabled: !!username,
+      useCache: true,
+    }
   );
 
+  const animeFavs = useMemo(
+    () => favorites?.filter((f) => f.type === "ANIME") || [],
+    [favorites]
+  );
+  const mangaFavs = useMemo(
+    () => favorites?.filter((f) => f.type === "MANGA") || [],
+    [favorites]
+  );
+  const tvFavs = useMemo(
+    () => favorites?.filter((f) => f.type === "TV") || [],
+    [favorites]
+  );
+  const movieFavs = useMemo(
+    () => favorites?.filter((f) => f.type === "MOVIE") || [],
+    [favorites]
+  );
+  const gameFavs = useMemo(
+    () => favorites?.filter((f) => f.type === "GAME") || [],
+    [favorites]
+  );
+  const bookFavs = useMemo(
+    () => favorites?.filter((f) => f.type === "BOOK") || [],
+    [favorites]
+  );
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
+        {Array.from({ length: 8 }).map((_, idx) => (
+          <Skeleton key={idx} className="aspect-2/3 w-full rounded-xl" />
+        ))}
+      </div>
+    );
+  }
+
+  const hasFavorites = favorites && favorites.length > 0;
+
   return (
-    <div className="space-y-8">
-      {favorites.length === 0 ? (
-        <Card className="border-border/60 bg-card/30 backdrop-blur-xs rounded-2xl p-12 text-center flex flex-col items-center justify-center gap-3">
-          <Heart
-            className="size-10 text-muted-foreground/40 stroke-1"
-            aria-hidden="true"
-          />
-          <div className="text-sm font-semibold text-white">
-            No favorites added yet
-          </div>
-          <p className="text-xs text-muted-foreground max-w-xs">
-            Tracks and items favorited on Aquila will show up here.
-          </p>
-        </Card>
+    <div className="flex flex-col gap-8 w-full">
+      {!hasFavorites ? (
+        <Empty className="border border-dashed p-12 rounded-2xl flex flex-col items-center justify-center gap-3">
+          <EmptyMedia variant="icon">
+            <Heart className="text-muted-foreground/50 fill-none" />
+          </EmptyMedia>
+          <EmptyHeader>
+            <EmptyTitle>No favorites added yet</EmptyTitle>
+            <EmptyDescription>
+              Tracks and items favorited on Aquila will show up here.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       ) : (
         <>
           {[
@@ -75,13 +118,13 @@ export default function FavoritesTab({ favorites }: FavoritesTabProps) {
           ]
             .filter((grp) => grp.items.length > 0)
             .map((grp) => (
-              <div key={grp.title} className="space-y-3">
-                <div className="flex items-center gap-2 border-b border-border/40 pb-2">
+              <div key={grp.title} className="flex flex-col gap-3">
+                <div className="flex items-center gap-2 border-b pb-2">
                   <Heart
-                    className="size-4 text-purple-400 fill-purple-400/20"
+                    className="size-4 text-primary fill-primary/10"
                     aria-hidden="true"
                   />
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-white">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
                     {grp.title} ({grp.items.length})
                   </h3>
                 </div>
@@ -96,7 +139,7 @@ export default function FavoritesTab({ favorites }: FavoritesTabProps) {
                       <motion.div
                         whileHover={{ y: -4 }}
                         whileTap={{ scale: 0.98 }}
-                        className="group relative aspect-2/3 rounded-xl overflow-hidden border border-border/60 bg-card/30 cursor-pointer shadow-md"
+                        className="group relative aspect-2/3 rounded-xl overflow-hidden border bg-card cursor-pointer shadow-sm"
                       >
                         {fav.image ? (
                           <Image
@@ -107,14 +150,14 @@ export default function FavoritesTab({ favorites }: FavoritesTabProps) {
                             className="object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center p-3 text-center text-[10px] text-muted-foreground/60 bg-muted italic">
+                          <div className="w-full h-full flex items-center justify-center p-3 text-center text-xs text-muted-foreground/60 bg-muted italic">
                             {fav.title || "No Image"}
                           </div>
                         )}
 
                         {/* Hover overlay for title */}
                         <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-background via-background/80 to-transparent p-3 pt-6 z-10 transition-opacity duration-200">
-                          <p className="text-[10px] md:text-xs font-semibold text-white line-clamp-2 leading-snug">
+                          <p className="text-xs font-semibold text-white line-clamp-2 leading-snug">
                             {fav.title}
                           </p>
                         </div>

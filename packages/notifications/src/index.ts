@@ -1,4 +1,4 @@
-export type NotificationType = "INFO" | "INTERACTIVE";
+export type NotificationType = "INFO" | "CONFIRMATION" | "PROMPT" | "INTERACTIVE";
 export type NotificationStatus = "PENDING" | "APPROVED" | "DENIED" | "READ";
 
 export interface DeviceApprovalMetadata {
@@ -16,7 +16,7 @@ export interface Notification {
   message: string;
   type: NotificationType;
   status: NotificationStatus;
-  metadata: DeviceApprovalMetadata | null;
+  metadata: DeviceApprovalMetadata | Record<string, any> | null;
   createdAt: Date;
 }
 
