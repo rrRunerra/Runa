@@ -1,5 +1,5 @@
-import { notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 
-export default function TVPage() {
-  return notFound();
+export default function TvPage() {
+  return redirect("/aquila/not-found");
 }

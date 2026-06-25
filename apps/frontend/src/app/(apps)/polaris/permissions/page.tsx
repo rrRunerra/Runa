@@ -27,8 +27,9 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import PolarisUnauthorized from "@/components/unauthorized/PolarisUnauthorized";
+import { redirect } from "next/navigation";
 import { getAllUsers, updateUserPermissions, SafeUser } from "@/actions/permissionActions";
+
 
 interface PermissionDefinition {
   name: string;
@@ -255,12 +256,7 @@ export default function PermissionsPage() {
   }
 
   if (status === "unauthenticated" || !hasPermission(session?.user?.permissions, BitField.Flags.ADMINISTRATOR)) {
-    return (
-      <PolarisUnauthorized 
-        message="You don't have permission to access the Polaris Permissions Manager."
-        returnUrl="/polaris/dash"
-      />
-    );
+    redirect("/polaris/unauthorized");
   }
 
   return (
