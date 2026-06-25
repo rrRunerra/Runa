@@ -4,8 +4,8 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useTheme } from "next-themes";
-import { apps } from "../../config/apps";
-import { hasPermission } from "@runa/permissions";
+import { apps } from "../../../config/apps";
+import { useSidebar } from "@/components/ui/sidebar";
 import {
   CommandDialog,
   CommandInput,
@@ -24,11 +24,11 @@ import {
   Sun,
   Laptop,
   ArrowRight,
-  AppWindow,
   Compass,
   Palette,
   ChevronRight,
   User,
+  PanelLeft,
 } from "lucide-react";
 import React from "react";
 import { useRRSidebar } from "@/hooks/useRRSidebar";
@@ -43,30 +43,33 @@ interface SpotlightSearchItem {
   badge?: string;
 }
 
-export default function SpotlightSearch(): React.JSX.Element {
+export default function RrSpotlightSearch(): React.JSX.Element {
   const router = useRouter();
   const pathname = usePathname();
   const { data: session } = useSession();
   const { theme, setTheme } = useTheme();
   const { sidebarConfig } = useRRSidebar();
+  const { toggleSidebar } = useSidebar();
 
   const [open, setOpen] = useState<boolean>(false);
   const [search, setSearch] = useState<string>("");
+  const [activeFilter, setActiveFilter] = useState<"all" | "apps" | "pages" | "actions">("all");
+
 
   const openRef = useRef<boolean>(open);
   useEffect(() => {
     openRef.current = open;
   }, [open]);
 
+
+
   // Double-Shift key detection
   useEffect(() => {
     let lastShiftTime = 0;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore held-down key repeats — only count distinct presses
       if (e.repeat) return;
 
-      // Don't trigger if user is inside an input/textarea/editable element
       const activeElement = document.activeElement;
       const isInput =
         activeElement instanceof HTMLInputElement ||
@@ -77,7 +80,6 @@ export default function SpotlightSearch(): React.JSX.Element {
       if (e.key === "Shift") {
         const now = Date.now();
         if (now - lastShiftTime < 300) {
-          // Double Shift detected
           const isOpen = openRef.current;
           if (isOpen || !isInput) {
             e.preventDefault();
@@ -86,7 +88,6 @@ export default function SpotlightSearch(): React.JSX.Element {
         }
         lastShiftTime = now;
       } else {
-        // Reset if other keys are pressed
         lastShiftTime = 0;
       }
     };
@@ -96,6 +97,17 @@ export default function SpotlightSearch(): React.JSX.Element {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
+
+
+
+  // Helper function to dispatch settings tab redirection custom events
+  const triggerSettingsTab = (category: string): void => {
+    setOpen(false);
+    const url = new URL(window.location.href);
+    url.searchParams.set("settings", category);
+    window.history.replaceState(null, "", url.toString());
+    window.dispatchEvent(new CustomEvent("runa-open-settings"));
+  };
 
   // Build the list of searchable items
   const items: SpotlightSearchItem[] = [];
@@ -107,7 +119,7 @@ export default function SpotlightSearch(): React.JSX.Element {
       label: app.name,
       category: "Applications",
       icon: (
-        <div className="flex size-6 items-center justify-center rounded-md border border-border/50 bg-background text-foreground shadow-sm group-data-selected/command-item:border-primary/30">
+        <div className="flex size-6 items-center justify-center rounded-md border border-border/55 bg-background text-foreground shadow-xs group-data-selected/command-item:border-primary/40 group-data-selected/command-item:scale-105 transition-all">
           {app.logo}
         </div>
       ),
@@ -119,35 +131,31 @@ export default function SpotlightSearch(): React.JSX.Element {
     });
   });
 
-  // Find active application based on current pathname
   const activeApp = apps.find((app) => pathname?.startsWith(app.href));
 
   // 2. Navigation Category (dynamically extracted from active Navigation Context)
   if (activeApp && sidebarConfig && sidebarConfig.length > 0) {
-    sidebarConfig.forEach((section) => {
-      // Skip phone section if present
+    sidebarConfig.forEach((section, sectionIdx) => {
       if (section.section?.toLowerCase() === "phone") return;
 
-      section.items.forEach((navItem) => {
-        // Only include if user has access
+      const sectionKey = (section.section || `sec-${sectionIdx}`).toLowerCase().replace(/\s+/g, "-");
 
-        // Only include if it belongs to the active app
+      section.items.forEach((navItem) => {
         const isFromActiveApp =
           navItem.href && navItem.href.startsWith(activeApp.href);
 
-        // Add main navigation item
         if (navItem.href && isFromActiveApp) {
           const href = navItem.href;
           items.push({
-            id: `nav-${navItem.label.toLowerCase()}`,
+            id: `nav-${sectionKey}-${navItem.label.toLowerCase().replace(/\s+/g, "-")}`,
             label: navItem.label,
             category: "Navigation",
             icon: navItem.icon ? (
-              <span className="opacity-60 group-data-selected/command-item:opacity-100">
+              <span className="opacity-70 group-data-selected/command-item:opacity-100 transition-opacity">
                 {navItem.icon}
               </span>
             ) : (
-              <Compass className="size-4 opacity-60" />
+              <Compass className="size-4 opacity-70" />
             ),
             badge: section.section,
             action: () => {
@@ -157,7 +165,6 @@ export default function SpotlightSearch(): React.JSX.Element {
           });
         }
 
-        // Add children sub-items
         if (navItem.children && navItem.children.length > 0) {
           navItem.children.forEach((childItem) => {
             const isChildFromActiveApp =
@@ -168,15 +175,15 @@ export default function SpotlightSearch(): React.JSX.Element {
             if (!childHref) return;
 
             items.push({
-              id: `nav-${navItem.label.toLowerCase()}-${childItem.label.toLowerCase()}`,
+              id: `nav-${sectionKey}-${navItem.label.toLowerCase().replace(/\s+/g, "-")}-${childItem.label.toLowerCase().replace(/\s+/g, "-")}`,
               label: `${navItem.label} › ${childItem.label}`,
               category: "Navigation",
               icon: childItem.icon ? (
-                <span className="opacity-60 group-data-selected/command-item:opacity-100">
+                <span className="opacity-70 group-data-selected/command-item:opacity-100 transition-opacity">
                   {childItem.icon}
                 </span>
               ) : (
-                <ChevronRight className="size-4 opacity-60" />
+                <ChevronRight className="size-4 opacity-70" />
               ),
               badge: section.section,
               action: () => {
@@ -198,8 +205,9 @@ export default function SpotlightSearch(): React.JSX.Element {
       label: "My Profile",
       category: "Actions",
       icon: (
-        <User className="size-4 opacity-60 group-data-selected/command-item:opacity-100" />
+        <User className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
       ),
+      badge: "Account Details",
       action: () => {
         setOpen(false);
         router.push(`/polaris/user/${session.user.username}`);
@@ -207,17 +215,98 @@ export default function SpotlightSearch(): React.JSX.Element {
     });
   }
 
-  // Settings Action
+  // Settings Main Action
   items.push({
     id: "action-settings",
     label: "Open Settings",
     category: "Actions",
     icon: (
-      <Settings className="size-4 opacity-60 group-data-selected/command-item:opacity-100" />
+      <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
     ),
+    badge: "System Settings",
     action: () => {
       setOpen(false);
       window.dispatchEvent(new CustomEvent("runa-open-settings"));
+    },
+  });
+
+  // Direct Settings Tabs Actions
+  items.push({
+    id: "action-settings-account",
+    label: "Account Settings",
+    category: "Actions",
+    icon: <User className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+    badge: "Settings tab",
+    action: () => triggerSettingsTab("account"),
+  });
+
+  items.push({
+    id: "action-settings-security",
+    label: "Security Settings",
+    category: "Actions",
+    icon: <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+    badge: "Settings tab",
+    action: () => triggerSettingsTab("security"),
+  });
+
+  items.push({
+    id: "action-settings-privacy",
+    label: "Privacy Settings",
+    category: "Actions",
+    icon: <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+    badge: "Settings tab",
+    action: () => triggerSettingsTab("privacy"),
+  });
+
+  items.push({
+    id: "action-settings-connections",
+    label: "Connections Settings",
+    category: "Actions",
+    icon: <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+    badge: "Settings tab",
+    action: () => triggerSettingsTab("connections"),
+  });
+
+  // Conditional Mail Settings tab if we're in Pegasus
+  const isPegasus = pathname?.startsWith("/pegasus");
+  if (isPegasus) {
+    items.push({
+      id: "action-settings-mail",
+      label: "Mail Settings",
+      category: "Actions",
+      icon: <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+      badge: "Settings tab",
+      action: () => triggerSettingsTab("mailAccounts"),
+    });
+  }
+
+  // Constellation Builder Action
+  items.push({
+    id: "action-constellation-builder",
+    label: "Constellation Builder Workspace",
+    category: "Actions",
+    icon: (
+      <Sparkles className="size-4 opacity-70 text-amber-500 group-data-selected/command-item:opacity-100" />
+    ),
+    badge: "Stars Editor",
+    action: () => {
+      setOpen(false);
+      window.dispatchEvent(new CustomEvent("runa-open-builder"));
+    },
+  });
+
+  // Toggle Sidebar Action
+  items.push({
+    id: "action-sidebar-toggle",
+    label: "Toggle Left Sidebar",
+    category: "Actions",
+    icon: (
+      <PanelLeft className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
+    ),
+    badge: "UI Shortcut",
+    action: () => {
+      setOpen(false);
+      toggleSidebar();
     },
   });
 
@@ -227,8 +316,9 @@ export default function SpotlightSearch(): React.JSX.Element {
     label: "Open Appearance Customizer",
     category: "Actions",
     icon: (
-      <Palette className="size-4 opacity-60 group-data-selected/command-item:opacity-100" />
+      <Palette className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
     ),
+    badge: "Visual customizer",
     action: () => {
       setOpen(false);
       window.dispatchEvent(new CustomEvent("runa-open-appearance"));
@@ -241,8 +331,9 @@ export default function SpotlightSearch(): React.JSX.Element {
     label: "Switch Theme: Dark Mode",
     category: "Actions",
     icon: (
-      <Moon className="size-4 opacity-60 group-data-selected/command-item:opacity-100" />
+      <Moon className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
     ),
+    badge: "System UI Theme",
     action: () => {
       setTheme("dark");
       setOpen(false);
@@ -254,8 +345,9 @@ export default function SpotlightSearch(): React.JSX.Element {
     label: "Switch Theme: Light Mode",
     category: "Actions",
     icon: (
-      <Sun className="size-4 opacity-60 group-data-selected/command-item:opacity-100" />
+      <Sun className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
     ),
+    badge: "System UI Theme",
     action: () => {
       setTheme("light");
       setOpen(false);
@@ -267,8 +359,9 @@ export default function SpotlightSearch(): React.JSX.Element {
     label: "Switch Theme: System Settings",
     category: "Actions",
     icon: (
-      <Laptop className="size-4 opacity-60 group-data-selected/command-item:opacity-100" />
+      <Laptop className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
     ),
+    badge: "System UI Theme",
     action: () => {
       setTheme("system");
       setOpen(false);
@@ -284,6 +377,7 @@ export default function SpotlightSearch(): React.JSX.Element {
       icon: (
         <LogOut className="size-4 text-destructive group-data-selected/command-item:text-destructive-foreground" />
       ),
+      badge: "Session logout",
       action: () => {
         setOpen(false);
         signOut({ redirect: false });
@@ -291,21 +385,36 @@ export default function SpotlightSearch(): React.JSX.Element {
     });
   }
 
-  // Filter items based on search input
-  const filteredItems = items.filter(
-    (item) =>
+  // Filter items based on active category filter tab and search text
+  const filteredItems = items.filter((item) => {
+    // 1. Text Search Filter
+    const searchMatch =
       item.label.toLowerCase().includes(search.toLowerCase()) ||
       item.category.toLowerCase().includes(search.toLowerCase()) ||
-      (item.badge && item.badge.toLowerCase().includes(search.toLowerCase())),
-  );
+      (item.badge && item.badge.toLowerCase().includes(search.toLowerCase()));
+
+    if (!searchMatch) return false;
+
+    // 2. Category Tab Filter
+    if (activeFilter === "apps") return item.category === "Applications";
+    if (activeFilter === "pages") return item.category === "Navigation";
+    if (activeFilter === "actions") return item.category === "Actions";
+    
+    return true; // "all"
+  });
+
+  // Split into structural groups for command sections
+
 
   const applicationsGroup = filteredItems.filter(
-    (i) => i.category === "Applications",
+    (i) => i.category === "Applications"
   );
   const navigationGroup = filteredItems.filter(
-    (i) => i.category === "Navigation",
+    (i) => i.category === "Navigation"
   );
-  const actionsGroup = filteredItems.filter((i) => i.category === "Actions");
+  const actionsGroup = filteredItems.filter(
+    (i) => i.category === "Actions"
+  );
 
   return (
     <CommandDialog
@@ -313,21 +422,50 @@ export default function SpotlightSearch(): React.JSX.Element {
       onOpenChange={setOpen}
       title="Spotlight Search"
       description="Quickly switch apps, jump to navigation pages, or perform platform actions."
-      className="sm:max-w-3xl! bg-popover/90 backdrop-blur-xl border border-border/40 shadow-2xl p-0 overflow-hidden"
+      className="sm:max-w-3xl bg-popover border border-border shadow-2xl p-0 overflow-hidden"
     >
-      <div className="relative border-b border-border/30 w-full">
+      <div className="flex flex-col relative border-b border-border w-full bg-popover shrink-0">
         <CommandInput
           placeholder="Search apps, pages, actions... (Double Shift to close)"
           value={search}
           onValueChange={setSearch}
-          className="border-none bg-transparent focus:ring-0 focus:outline-hidden py-4 px-3 w-full text-base"
+          className="border-none bg-transparent focus:ring-0 focus:outline-hidden py-4 px-3 w-full text-base placeholder:text-muted-foreground/60"
         />
+
+        {/* Category Quick Filter Tags */}
+        <div className="flex items-center gap-1.5 px-4 pb-3 overflow-x-auto select-none no-scrollbar">
+          {(["all", "apps", "pages", "actions"] as const).map((filter) => {
+            const isActive = activeFilter === filter;
+            return (
+              <button
+                key={filter}
+                type="button"
+                onClick={() => setActiveFilter(filter)}
+                className={`px-3 py-1 text-[10px] font-bold tracking-wider rounded-full uppercase border cursor-pointer transition-all duration-200 ${
+                  isActive
+                    ? "bg-primary border-primary text-primary-foreground shadow-xs scale-102"
+                    : "bg-muted/40 hover:bg-muted/70 text-muted-foreground hover:text-foreground border-border"
+                }`}
+              >
+                {filter === "all"
+                  ? "All"
+                  : filter === "apps"
+                  ? "Apps"
+                  : filter === "pages"
+                  ? "Pages"
+                  : "Actions"}
+              </button>
+            );
+          })}
+        </div>
       </div>
-      <CommandList className="max-h-[480px] overflow-y-auto p-3 no-scrollbar">
+
+      <CommandList className="max-h-[480px] overflow-y-auto p-3 no-scrollbar bg-popover">
         <CommandEmpty className="py-8 text-center text-sm text-muted-foreground">
           No matches found for &ldquo;{search}&rdquo;
         </CommandEmpty>
 
+        {/* Applications Section */}
         {applicationsGroup.length > 0 && (
           <CommandGroup heading="Applications" className="px-2">
             {applicationsGroup.map((item) => (
@@ -360,13 +498,14 @@ export default function SpotlightSearch(): React.JSX.Element {
             <CommandSeparator className="my-2.5 bg-border/40" />
           )}
 
+        {/* Navigation Section */}
         {navigationGroup.length > 0 && (
           <CommandGroup heading="Navigation" className="px-2">
             {navigationGroup.map((item) => (
               <CommandItem
                 key={item.id}
                 onSelect={item.action}
-                className="flex items-center gap-4 p-3 rounded-xl hover:bg-sidebar-accent cursor-pointer transition-all duration-200"
+                className="flex items-center gap-4 p-3 rounded-xl hover:bg-sidebar-accent cursor-pointer transition-all duration-200 group/item"
               >
                 <div className="flex size-7 items-center justify-center rounded-lg border border-border/30 bg-background/50 text-muted-foreground group-data-selected/command-item:bg-primary group-data-selected/command-item:text-primary-foreground group-data-selected/command-item:border-transparent transition-colors shadow-2xs">
                   {item.icon}
@@ -375,7 +514,7 @@ export default function SpotlightSearch(): React.JSX.Element {
                   {item.label}
                 </span>
                 {item.badge && (
-                  <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-muted border border-border/30 text-muted-foreground">
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted border border-border/30 text-muted-foreground font-semibold">
                     {item.badge}
                   </span>
                 )}
@@ -388,13 +527,14 @@ export default function SpotlightSearch(): React.JSX.Element {
           <CommandSeparator className="my-2.5 bg-border/40" />
         )}
 
+        {/* Actions Section */}
         {actionsGroup.length > 0 && (
           <CommandGroup heading="System Actions" className="px-2">
             {actionsGroup.map((item) => (
               <CommandItem
                 key={item.id}
                 onSelect={item.action}
-                className="flex items-center gap-4 p-3 rounded-xl hover:bg-sidebar-accent cursor-pointer transition-all duration-200"
+                className="flex items-center gap-4 p-3 rounded-xl hover:bg-sidebar-accent cursor-pointer transition-all duration-200 group/item"
               >
                 <div className="flex size-7 items-center justify-center rounded-lg border border-border/30 bg-background/50 text-muted-foreground group-data-selected/command-item:bg-accent group-data-selected/command-item:text-accent-foreground group-data-selected/command-item:border-transparent transition-colors shadow-2xs">
                   {item.icon}
@@ -402,13 +542,18 @@ export default function SpotlightSearch(): React.JSX.Element {
                 <span className="font-semibold text-sm text-foreground flex-1">
                   {item.label}
                 </span>
+                {item.badge && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted/60 border border-border/20 text-muted-foreground font-medium">
+                    {item.badge}
+                  </span>
+                )}
               </CommandItem>
             ))}
           </CommandGroup>
         )}
       </CommandList>
 
-      <div className="border-t border-border/35 bg-muted/30 px-5 py-3 flex items-center justify-between text-xs text-muted-foreground select-none">
+      <div className="border-t border-border bg-muted/30 px-5 py-3 flex items-center justify-between text-xs text-muted-foreground select-none shrink-0">
         <div className="flex items-center gap-2">
           <span>Navigate:</span>
           <kbd className="px-1.5 py-0.5 rounded-sm bg-muted border border-border/50 font-mono text-[10px]">
@@ -424,7 +569,7 @@ export default function SpotlightSearch(): React.JSX.Element {
         </div>
         <div className="flex items-center gap-1.5">
           <span>Double-tap</span>
-          <kbd className="px-1.5 py-0.5 rounded-sm bg-primary/10 border border-primary/20 font-sans font-semibold text-[10px] text-primary">
+          <kbd className="px-1.5 py-0.5 rounded-sm bg-primary/10 border border-primary/20 font-sans font-semibold text-[10px] text-primary animate-pulse">
             Shift
           </kbd>
           <span>to close</span>

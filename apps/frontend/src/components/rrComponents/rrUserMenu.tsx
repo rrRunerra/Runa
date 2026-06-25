@@ -113,6 +113,46 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
     };
   }, [session?.accessToken, refetchNotifications]);
 
+  useEffect(() => {
+    const handleOpenSettings = (e: Event) => {
+      const customEvent = e as CustomEvent<{ category?: string }>;
+      const category = customEvent.detail?.category;
+      if (category) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("settings", category);
+        window.history.replaceState(null, "", url.toString());
+      }
+      setIsSettingsOpen(true);
+    };
+
+    const handleOpenAppearance = () => {
+      setIsAppearanceOpen(true);
+    };
+
+    const handleOpenBuilder = (e: Event) => {
+      const customEvent = e as CustomEvent<{ name?: string; icon?: string; redirect?: string }>;
+      if (customEvent.detail) {
+        if (customEvent.detail.name) setBookmarkName(customEvent.detail.name);
+        if (customEvent.detail.icon) setBookmarkIcon(customEvent.detail.icon);
+      } else {
+        setBookmarkName(document.title || "New Bookmark");
+        const faviconEl = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
+        setBookmarkIcon(faviconEl?.href || "/favicon.ico");
+      }
+      setIsBuilderOpen(true);
+    };
+
+    window.addEventListener("runa-open-settings", handleOpenSettings);
+    window.addEventListener("runa-open-appearance", handleOpenAppearance);
+    window.addEventListener("runa-open-builder", handleOpenBuilder);
+
+    return () => {
+      window.removeEventListener("runa-open-settings", handleOpenSettings);
+      window.removeEventListener("runa-open-appearance", handleOpenAppearance);
+      window.removeEventListener("runa-open-builder", handleOpenBuilder);
+    };
+  }, []);
+
   return (
     <>
       {session ? (
