@@ -30,7 +30,7 @@ import Link from "next/link";
 import { io, Socket } from "socket.io-client";
 import { useFetch } from "@/hooks/useFetch";
 import { Badge } from "../ui/badge";
-import { ConstellationBuilderModal } from "../stars/ConstellationBuilderModal";
+import { RrConstellationBuilderModal } from "./rrConstellationBuilderModal";
 import { RrNotificationsModal } from "./rrNotificationsModal";
 import { SettingsDialog } from "./rrSettings/rrSettingsModal";
 import { RrAppearanceModal } from "./rrAppearanceModal";
@@ -349,7 +349,7 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
       )}
 
       {isBuilderOpen && (
-        <ConstellationBuilderModal
+        <RrConstellationBuilderModal
           open={isBuilderOpen}
           onOpenChange={setIsBuilderOpen}
           initialIcon={bookmarkIcon}

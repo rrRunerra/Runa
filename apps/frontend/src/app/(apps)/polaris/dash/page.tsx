@@ -8,7 +8,7 @@ import { StarMap, StarMapHandle } from "@/components/stars/StarMap";
 import { REFERENCE_CONSTELLATIONS } from "@/lib/constellations";
 import { useSession } from "next-auth/react";
 import { useRef, useState, useEffect } from "react";
-import { ConstellationBuilderModal } from "@/components/stars/ConstellationBuilderModal";
+import { RrConstellationBuilderModal } from "@/components/rrComponents/rrConstellationBuilderModal";
 import { Sparkles } from "lucide-react";
 
 const GREETINGS = ["Hey", "Hi", "Hello", "Greetings", "Hiya", "Welcome"];
@@ -160,7 +160,7 @@ export default function Dash() {
       </button>
 
       {isBuilderOpen && (
-        <ConstellationBuilderModal
+        <RrConstellationBuilderModal
           open={isBuilderOpen}
           onOpenChange={setIsBuilderOpen}
         />
