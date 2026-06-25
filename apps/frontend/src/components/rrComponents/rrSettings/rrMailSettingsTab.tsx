@@ -24,6 +24,7 @@ import {
   CardContent,
   CardFooter,
 } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 interface RrMailSettingsTabProps {
   onOpenChange: (open: boolean) => void;
@@ -331,15 +332,48 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
 
           <div className="py-4 space-y-4 text-left">
             {/* Identity & Aesthetics */}
-            <div className="space-y-1.5">
-              <Label htmlFor="account-name">Account Name</Label>
-              <Input
-                id="account-name"
-                value={emailAccountName}
-                onChange={(e) => setEmailAccountName(e.target.value)}
-                placeholder="e.g. Personal Purelymail"
-                className="h-9 px-3 text-xs"
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="account-name">Account Name</Label>
+                <Input
+                  id="account-name"
+                  value={emailAccountName}
+                  onChange={(e) => setEmailAccountName(e.target.value)}
+                  placeholder="e.g. Personal Purelymail"
+                  className="h-9 px-3 text-xs"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="account-color">Sidebar Indicator Color</Label>
+                <div className="flex items-center gap-3">
+                  <div
+                    className="size-9 rounded-lg border border-zinc-800/80 shadow-inner shrink-0 transition-colors"
+                    style={{ backgroundColor: emailColor }}
+                  />
+                  <Input
+                    id="account-color"
+                    type="color"
+                    value={emailColor}
+                    onChange={(e) => setEmailColor(e.target.value)}
+                    className="h-9 w-14 p-0.5 bg-zinc-900 border-zinc-800 rounded-lg cursor-pointer"
+                  />
+                  <div className="flex gap-1.5 items-center overflow-x-auto py-1">
+                    {["#8B00FF", "#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#EC4899", "#6366F1"].map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setEmailColor(c)}
+                        className={cn(
+                          "size-5 rounded-full border border-black/40 cursor-pointer transition-all hover:scale-110 shrink-0",
+                          emailColor === c && "ring-1 ring-primary ring-offset-1 ring-offset-zinc-950"
+                        )}
+                        style={{ backgroundColor: c }}
+                        aria-label={`Select color ${c}`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="space-y-1 mt-1">

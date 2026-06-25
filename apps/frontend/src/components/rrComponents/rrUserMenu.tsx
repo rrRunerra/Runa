@@ -10,6 +10,9 @@ import {
   LogOut,
   Palette,
   Settings,
+  Shield,
+  ShieldAlert,
+  ShieldCheck,
 } from "lucide-react";
 import { signIn, signOut } from "next-auth/react";
 import {
@@ -32,8 +35,17 @@ import { useFetch } from "@/hooks/useFetch";
 import { Badge } from "../ui/badge";
 import { RrConstellationBuilderModal } from "./rrConstellationBuilderModal";
 import { RrNotificationsModal } from "./rrNotificationsModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "../ui/dialog";
+import { Button } from "../ui/button";
 import { SettingsDialog } from "./rrSettings/rrSettingsModal";
 import { RrAppearanceModal } from "./rrAppearanceModal";
+import { useRRe2ee } from "@/components/Providers/rrE2eeProvider";
 
 export default function RrUserMenu({ session }: { session: Session | null }) {
   const [unreadCount, setUnreadCount] = useState(0);
@@ -42,25 +54,35 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
+  const [showLockConfirmation, setShowLockConfirmation] = useState(false);
 
   const [bookmarkName, setBookmarkName] = useState("");
   const [bookmarkIcon, setBookmarkIcon] = useState("");
 
   const { isMobile } = useSidebar();
+  const { isE2eeUnlocked, isKeysExist, lockE2ee, setShowUnlockDialog } =
+    useRRe2ee();
 
-  const { data: notificationsData, refetch: refetchNotifications } = useFetch<any[]>(
-    session?.accessToken ? `${process.env.NEXT_PUBLIC_API_URL}/notifications` : "",
+  const { data: notificationsData, refetch: refetchNotifications } = useFetch<
+    any[]
+  >(
+    session?.accessToken
+      ? `${process.env.NEXT_PUBLIC_API_URL}/notifications`
+      : "",
     {
       headers: {
         Authorization: `Bearer ${session?.accessToken}`,
       },
       enabled: !!session?.accessToken,
-    }
+    },
   );
 
   useEffect(() => {
     if (notificationsData) {
-      const activeDeviceId = typeof window !== "undefined" ? localStorage.getItem("runa_device_id") : null;
+      const activeDeviceId =
+        typeof window !== "undefined"
+          ? localStorage.getItem("runa_device_id")
+          : null;
       const pendingCount = notificationsData.filter((n: any) => {
         if (n.status !== "PENDING") return false;
         if (n.metadata?.targetDeviceId) {
@@ -84,8 +106,14 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
     });
 
     const handleCreated = (newNotification: any) => {
-      const activeDeviceId = typeof window !== "undefined" ? localStorage.getItem("runa_device_id") : null;
-      if (newNotification.metadata?.targetDeviceId && newNotification.metadata.targetDeviceId !== activeDeviceId) {
+      const activeDeviceId =
+        typeof window !== "undefined"
+          ? localStorage.getItem("runa_device_id")
+          : null;
+      if (
+        newNotification.metadata?.targetDeviceId &&
+        newNotification.metadata.targetDeviceId !== activeDeviceId
+      ) {
         return;
       }
       refetchNotifications();
@@ -130,13 +158,18 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
     };
 
     const handleOpenBuilder = (e: Event) => {
-      const customEvent = e as CustomEvent<{ name?: string; icon?: string; redirect?: string }>;
+      const customEvent = e as CustomEvent<{
+        name?: string;
+        icon?: string;
+        redirect?: string;
+      }>;
       if (customEvent.detail) {
         if (customEvent.detail.name) setBookmarkName(customEvent.detail.name);
         if (customEvent.detail.icon) setBookmarkIcon(customEvent.detail.icon);
       } else {
         setBookmarkName(document.title || "New Bookmark");
-        const faviconEl = document.querySelector<HTMLLinkElement>("link[rel~='icon']");
+        const faviconEl =
+          document.querySelector<HTMLLinkElement>("link[rel~='icon']");
         setBookmarkIcon(faviconEl?.href || "/favicon.ico");
       }
       setIsBuilderOpen(true);
@@ -155,7 +188,10 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
       window.removeEventListener("runa-open-settings", handleOpenSettings);
       window.removeEventListener("runa-open-appearance", handleOpenAppearance);
       window.removeEventListener("runa-open-builder", handleOpenBuilder);
-      window.removeEventListener("runa-open-notifications", handleOpenNotifications);
+      window.removeEventListener(
+        "runa-open-notifications",
+        handleOpenNotifications,
+      );
     };
   }, []);
 
@@ -347,6 +383,33 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
                   <Settings />
                   Settings
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    if (isE2eeUnlocked) {
+                      setShowLockConfirmation(true);
+                    } else {
+                      setShowUnlockDialog(true);
+                    }
+                  }}
+                >
+                  {isE2eeUnlocked ? (
+                    <ShieldCheck className="text-emerald-400" />
+                  ) : (
+                    <Shield className="text-amber-500" />
+                  )}
+                  <span>Encryption</span>
+                  <Badge
+                    className={cn(
+                      "ml-auto h-4 px-1.5 border text-[8px] font-bold rounded-full flex items-center justify-center",
+                      isE2eeUnlocked
+                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                        : "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
+                    )}
+                  >
+                    {isE2eeUnlocked ? "Active" : "Locked"}
+                  </Badge>
+                </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => signOut({ redirect: false })}>
@@ -402,6 +465,45 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
           initialName={bookmarkName}
           initialRedirect={window.location.href}
         />
+      )}
+
+      {showLockConfirmation && (
+        <Dialog
+          open={showLockConfirmation}
+          onOpenChange={setShowLockConfirmation}
+        >
+          <DialogContent className="max-w-md bg-zinc-950/95 backdrop-blur-xl border border-zinc-800/80 shadow-2xl p-6 rounded-2xl">
+            <DialogHeader className="pb-3 border-b border-zinc-800/40">
+              <DialogTitle className="flex items-center gap-2 text-md font-bold text-foreground">
+                <ShieldAlert className="size-5 text-red-500" />
+                Lock Encryption?
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                This will remove your decryption keys from this device. You will
+                need to enter your account password to decrypt chats and files
+                again.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                variant="ghost"
+                onClick={() => setShowLockConfirmation(false)}
+                className="h-9 px-4 text-xs font-semibold text-zinc-400 hover:text-white"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  lockE2ee();
+                  setShowLockConfirmation(false);
+                }}
+                className="h-9 px-4 bg-red-600 hover:bg-red-500 text-white border border-red-500/30 text-xs font-semibold rounded-lg shadow-lg active:scale-95 transition-all"
+              >
+                Lock Encryption
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </>
   );

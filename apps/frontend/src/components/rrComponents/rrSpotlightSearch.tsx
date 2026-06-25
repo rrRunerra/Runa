@@ -30,9 +30,11 @@ import {
   User,
   PanelLeft,
   Bell,
+  Shield,
 } from "lucide-react";
 import React from "react";
 import { useRRSidebar } from "@/hooks/useRRSidebar";
+import { useRRe2ee } from "@/components/Providers/rrE2eeProvider";
 
 interface SpotlightSearchItem {
   id: string;
@@ -51,6 +53,7 @@ export default function RrSpotlightSearch(): React.JSX.Element {
   const { theme, setTheme } = useTheme();
   const { sidebarConfig } = useRRSidebar();
   const { toggleSidebar } = useSidebar();
+  const { isE2eeUnlocked, setShowUnlockDialog } = useRRe2ee();
 
   const [open, setOpen] = useState<boolean>(false);
   const [search, setSearch] = useState<string>("");
@@ -244,6 +247,23 @@ export default function RrSpotlightSearch(): React.JSX.Element {
       window.dispatchEvent(new CustomEvent("runa-open-notifications"));
     },
   });
+
+  // Unlock E2EE Action (only visible if not unlocked)
+  if (!isE2eeUnlocked) {
+    items.push({
+      id: "action-unlock-e2ee",
+      label: "Unlock Encryption",
+      category: "Actions",
+      icon: (
+        <Shield className="size-4 opacity-70 group-data-selected/command-item:opacity-100 text-amber-500" />
+      ),
+      badge: "Encryption",
+      action: () => {
+        setOpen(false);
+        setShowUnlockDialog(true);
+      },
+    });
+  }
 
   // Direct Settings Tabs Actions
   items.push({
