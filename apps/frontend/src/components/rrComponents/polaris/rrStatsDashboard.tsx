@@ -2,19 +2,19 @@
 
 import React, { useState, useEffect } from "react";
 import { useFetch } from "@/hooks/useFetch";
-import { 
-  Tv, 
-  BookOpen, 
-  Gamepad2, 
-  Film, 
-  Book, 
-  Play, 
-  BarChart2, 
+import {
+  Tv,
+  BookOpen,
+  Gamepad2,
+  Film,
+  Book,
+  Play,
+  BarChart2,
   HelpCircle,
   TrendingUp,
   Clock,
   CheckCircle,
-  ListPlus
+  ListPlus,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -28,7 +28,7 @@ import {
   ResponsiveContainer,
   PieChart,
   Pie,
-  Cell
+  Cell,
 } from "recharts";
 
 interface StatsDashboardProps {
@@ -41,17 +41,45 @@ const MEDIA_CONFIG: Record<
   MediaType,
   { title: string; icon: React.ReactNode; color: string }
 > = {
-  anime: { title: "Anime", icon: <Play className="w-4 h-4" />, color: "#a855f7" },
-  manga: { title: "Manga", icon: <BookOpen className="w-4 h-4" />, color: "#c084fc" },
-  tv: { title: "TV Shows", icon: <Tv className="w-4 h-4" />, color: "#818cf8" },
-  movie: { title: "Movies", icon: <Film className="w-4 h-4" />, color: "#38bdf8" },
-  game: { title: "Games", icon: <Gamepad2 className="w-4 h-4" />, color: "#f43f5e" },
-  book: { title: "Books", icon: <Book className="w-4 h-4" />, color: "#fb7185" },
+  anime: {
+    title: "Anime",
+    icon: <Play className="w-4 h-4" />,
+    color: "var(--chart-1)",
+  },
+  manga: {
+    title: "Manga",
+    icon: <BookOpen className="w-4 h-4" />,
+    color: "var(--chart-2)",
+  },
+  tv: { title: "TV Shows", icon: <Tv className="w-4 h-4" />, color: "var(--chart-3)" },
+  movie: {
+    title: "Movies",
+    icon: <Film className="w-4 h-4" />,
+    color: "var(--chart-4)",
+  },
+  game: {
+    title: "Games",
+    icon: <Gamepad2 className="w-4 h-4" />,
+    color: "var(--chart-5)",
+  },
+  book: {
+    title: "Books",
+    icon: <Book className="w-4 h-4" />,
+    color: "var(--chart-1)",
+  },
 };
 
-const PIE_COLORS = ["#a855f7", "#64748b", "#f97316", "#06b6d4", "#ec4899", "#10b981"];
+const PIE_COLORS = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+];
 
-export default function RrStatsDashboard({ username }: StatsDashboardProps): React.JSX.Element {
+export default function RrStatsDashboard({
+  username,
+}: StatsDashboardProps): React.JSX.Element {
   const [activeMedia, setActiveMedia] = useState<MediaType>("anime");
   const [mounted, setMounted] = useState<boolean>(false);
 
@@ -59,67 +87,240 @@ export default function RrStatsDashboard({ username }: StatsDashboardProps): Rea
     setMounted(true);
   }, []);
 
-  const { data: stats, loading, error: fetchError } = useFetch<any>(
+  const {
+    data: stats,
+    loading,
+    error: fetchError,
+  } = useFetch<any>(
     `${process.env.NEXT_PUBLIC_API_URL}/stats/${username}/${activeMedia}`,
-    { useCache: true }
+    { useCache: true },
   );
-  
-  const error = fetchError ? (fetchError.message === "Request failed" ? "This statistics page is private or failed to load." : fetchError.message) : null;
+
+  const error = fetchError
+    ? fetchError.message === "Request failed"
+      ? "This statistics page is private or failed to load."
+      : fetchError.message
+    : null;
 
   const renderStatsOverview = () => {
     if (!stats) return null;
 
-    const cards: { title: string; value: string | number; desc: string; icon: React.ReactNode }[] = [];
+    const cards: {
+      title: string;
+      value: string | number;
+      desc: string;
+      icon: React.ReactNode;
+    }[] = [];
 
     if (activeMedia === "anime") {
       cards.push(
-        { title: "Total Anime", value: stats.count || 0, desc: "Titles in list", icon: <BarChart2 className="w-4 h-4 text-primary" /> },
-        { title: "Episodes Watched", value: stats.episodesWatched || 0, desc: "Total progress", icon: <Play className="w-4 h-4 text-primary" /> },
-        { title: "Days Watched", value: stats.daysWatched || 0, desc: "Total time spent", icon: <Clock className="w-4 h-4 text-primary" /> },
-        { title: "Hours Planned", value: stats.hoursPlanned || 0, desc: "In planning list", icon: <ListPlus className="w-4 h-4 text-primary" /> },
-        { title: "Mean Score", value: stats.meanScore || "0.0", desc: "Average rating", icon: <TrendingUp className="w-4 h-4 text-primary" /> },
-        { title: "Standard Deviation", value: stats.standardDeviation || "0.0", desc: "Rating spread", icon: <HelpCircle className="w-4 h-4 text-primary" /> }
+        {
+          title: "Total Anime",
+          value: stats.count || 0,
+          desc: "Titles in list",
+          icon: <BarChart2 className="w-4 h-4 text-primary" />,
+        },
+        {
+          title: "Episodes Watched",
+          value: stats.episodesWatched || 0,
+          desc: "Total progress",
+          icon: <Play className="w-4 h-4 text-primary" />,
+        },
+        {
+          title: "Days Watched",
+          value: stats.daysWatched || 0,
+          desc: "Total time spent",
+          icon: <Clock className="w-4 h-4 text-primary" />,
+        },
+        {
+          title: "Hours Planned",
+          value: stats.hoursPlanned || 0,
+          desc: "In planning list",
+          icon: <ListPlus className="w-4 h-4 text-primary" />,
+        },
+        {
+          title: "Mean Score",
+          value: stats.meanScore || "0.0",
+          desc: "Average rating",
+          icon: <TrendingUp className="w-4 h-4 text-primary" />,
+        },
+        {
+          title: "Standard Deviation",
+          value: stats.standardDeviation || "0.0",
+          desc: "Rating spread",
+          icon: <HelpCircle className="w-4 h-4 text-primary" />,
+        },
       );
     } else if (activeMedia === "manga") {
       cards.push(
-        { title: "Total Manga", value: stats.count || 0, desc: "Titles in list", icon: <BarChart2 className="w-4 h-4 text-primary" /> },
-        { title: "Chapters Read", value: stats.chaptersRead || 0, desc: "Total progress", icon: <BookOpen className="w-4 h-4 text-primary" /> },
-        { title: "Volumes Read", value: stats.volumesRead || 0, desc: "Total volumes completed", icon: <Book className="w-4 h-4 text-primary" /> },
-        { title: "Chapters Planned", value: stats.chaptersPlanned || 0, desc: "In planning list", icon: <ListPlus className="w-4 h-4 text-primary" /> },
-        { title: "Mean Score", value: stats.meanScore || "0.0", desc: "Average rating", icon: <TrendingUp className="w-4 h-4 text-primary" /> },
-        { title: "Standard Deviation", value: stats.standardDeviation || "0.0", desc: "Rating spread", icon: <HelpCircle className="w-4 h-4 text-primary" /> }
+        {
+          title: "Total Manga",
+          value: stats.count || 0,
+          desc: "Titles in list",
+          icon: <BarChart2 className="w-4 h-4 text-primary" />,
+        },
+        {
+          title: "Chapters Read",
+          value: stats.chaptersRead || 0,
+          desc: "Total progress",
+          icon: <BookOpen className="w-4 h-4 text-primary" />,
+        },
+        {
+          title: "Volumes Read",
+          value: stats.volumesRead || 0,
+          desc: "Total volumes completed",
+          icon: <Book className="w-4 h-4 text-primary" />,
+        },
+        {
+          title: "Chapters Planned",
+          value: stats.chaptersPlanned || 0,
+          desc: "In planning list",
+          icon: <ListPlus className="w-4 h-4 text-primary" />,
+        },
+        {
+          title: "Mean Score",
+          value: stats.meanScore || "0.0",
+          desc: "Average rating",
+          icon: <TrendingUp className="w-4 h-4 text-primary" />,
+        },
+        {
+          title: "Standard Deviation",
+          value: stats.standardDeviation || "0.0",
+          desc: "Rating spread",
+          icon: <HelpCircle className="w-4 h-4 text-primary" />,
+        },
       );
     } else if (activeMedia === "tv") {
       cards.push(
-        { title: "Total TV Shows", value: stats.count || 0, desc: "Shows in list", icon: <BarChart2 className="w-4 h-4 text-primary" /> },
-        { title: "Episodes Watched", value: stats.episodesWatched || 0, desc: "Total progress", icon: <Play className="w-4 h-4 text-primary" /> },
-        { title: "Hours Watched", value: stats.hoursWatched || 0, desc: "Total watch time", icon: <Clock className="w-4 h-4 text-primary" /> },
-        { title: "Mean Score", value: stats.meanScore || "0.0", desc: "Average rating", icon: <TrendingUp className="w-4 h-4 text-primary" /> },
-        { title: "Standard Deviation", value: stats.standardDeviation || "0.0", desc: "Rating spread", icon: <HelpCircle className="w-4 h-4 text-primary" /> }
+        {
+          title: "Total TV Shows",
+          value: stats.count || 0,
+          desc: "Shows in list",
+          icon: <BarChart2 className="w-4 h-4 text-primary" />,
+        },
+        {
+          title: "Episodes Watched",
+          value: stats.episodesWatched || 0,
+          desc: "Total progress",
+          icon: <Play className="w-4 h-4 text-primary" />,
+        },
+        {
+          title: "Hours Watched",
+          value: stats.hoursWatched || 0,
+          desc: "Total watch time",
+          icon: <Clock className="w-4 h-4 text-primary" />,
+        },
+        {
+          title: "Mean Score",
+          value: stats.meanScore || "0.0",
+          desc: "Average rating",
+          icon: <TrendingUp className="w-4 h-4 text-primary" />,
+        },
+        {
+          title: "Standard Deviation",
+          value: stats.standardDeviation || "0.0",
+          desc: "Rating spread",
+          icon: <HelpCircle className="w-4 h-4 text-primary" />,
+        },
       );
     } else if (activeMedia === "movie") {
       cards.push(
-        { title: "Total Movies", value: stats.count || 0, desc: "Movies in list", icon: <BarChart2 className="w-4 h-4 text-primary" /> },
-        { title: "Hours Watched", value: stats.hoursWatched || 0, desc: "Completed watch time", icon: <Clock className="w-4 h-4 text-primary" /> },
-        { title: "Hours Planned", value: stats.hoursPlanned || 0, desc: "In planning list", icon: <ListPlus className="w-4 h-4 text-primary" /> },
-        { title: "Mean Score", value: stats.meanScore || "0.0", desc: "Average rating", icon: <TrendingUp className="w-4 h-4 text-primary" /> },
-        { title: "Standard Deviation", value: stats.standardDeviation || "0.0", desc: "Rating spread", icon: <HelpCircle className="w-4 h-4 text-primary" /> }
+        {
+          title: "Total Movies",
+          value: stats.count || 0,
+          desc: "Movies in list",
+          icon: <BarChart2 className="w-4 h-4 text-primary" />,
+        },
+        {
+          title: "Hours Watched",
+          value: stats.hoursWatched || 0,
+          desc: "Completed watch time",
+          icon: <Clock className="w-4 h-4 text-primary" />,
+        },
+        {
+          title: "Hours Planned",
+          value: stats.hoursPlanned || 0,
+          desc: "In planning list",
+          icon: <ListPlus className="w-4 h-4 text-primary" />,
+        },
+        {
+          title: "Mean Score",
+          value: stats.meanScore || "0.0",
+          desc: "Average rating",
+          icon: <TrendingUp className="w-4 h-4 text-primary" />,
+        },
+        {
+          title: "Standard Deviation",
+          value: stats.standardDeviation || "0.0",
+          desc: "Rating spread",
+          icon: <HelpCircle className="w-4 h-4 text-primary" />,
+        },
       );
     } else if (activeMedia === "game") {
       cards.push(
-        { title: "Total Games", value: stats.count || 0, desc: "Games in list", icon: <Gamepad2 className="w-4 h-4 text-primary" /> },
-        { title: "Hours Played", value: stats.hoursPlayed || 0, desc: "Total gameplay time", icon: <Clock className="w-4 h-4 text-primary" /> },
-        { title: "Mean Score", value: stats.meanScore || "0.0", desc: "Average rating", icon: <TrendingUp className="w-4 h-4 text-primary" /> },
-        { title: "Standard Deviation", value: stats.standardDeviation || "0.0", desc: "Rating spread", icon: <HelpCircle className="w-4 h-4 text-primary" /> }
+        {
+          title: "Total Games",
+          value: stats.count || 0,
+          desc: "Games in list",
+          icon: <Gamepad2 className="w-4 h-4 text-primary" />,
+        },
+        {
+          title: "Hours Played",
+          value: stats.hoursPlayed || 0,
+          desc: "Total gameplay time",
+          icon: <Clock className="w-4 h-4 text-primary" />,
+        },
+        {
+          title: "Mean Score",
+          value: stats.meanScore || "0.0",
+          desc: "Average rating",
+          icon: <TrendingUp className="w-4 h-4 text-primary" />,
+        },
+        {
+          title: "Standard Deviation",
+          value: stats.standardDeviation || "0.0",
+          desc: "Rating spread",
+          icon: <HelpCircle className="w-4 h-4 text-primary" />,
+        },
       );
     } else if (activeMedia === "book") {
       cards.push(
-        { title: "Total Books", value: stats.count || 0, desc: "Books in list", icon: <BookOpen className="w-4 h-4 text-primary" /> },
-        { title: "Chapters Read", value: stats.chaptersRead || 0, desc: "Total chapters progress", icon: <Book className="w-4 h-4 text-primary" /> },
-        { title: "Volumes Read", value: stats.volumesRead || 0, desc: "Total volumes completed", icon: <ListPlus className="w-4 h-4 text-primary" /> },
-        { title: "Pages Read", value: stats.pagesRead || 0, desc: "Completed books pages", icon: <CheckCircle className="w-4 h-4 text-primary" /> },
-        { title: "Mean Score", value: stats.meanScore || "0.0", desc: "Average rating", icon: <TrendingUp className="w-4 h-4 text-primary" /> },
-        { title: "Standard Deviation", value: stats.standardDeviation || "0.0", desc: "Rating spread", icon: <HelpCircle className="w-4 h-4 text-primary" /> }
+        {
+          title: "Total Books",
+          value: stats.count || 0,
+          desc: "Books in list",
+          icon: <BookOpen className="w-4 h-4 text-primary" />,
+        },
+        {
+          title: "Chapters Read",
+          value: stats.chaptersRead || 0,
+          desc: "Total chapters progress",
+          icon: <Book className="w-4 h-4 text-primary" />,
+        },
+        {
+          title: "Volumes Read",
+          value: stats.volumesRead || 0,
+          desc: "Total volumes completed",
+          icon: <ListPlus className="w-4 h-4 text-primary" />,
+        },
+        {
+          title: "Pages Read",
+          value: stats.pagesRead || 0,
+          desc: "Completed books pages",
+          icon: <CheckCircle className="w-4 h-4 text-primary" />,
+        },
+        {
+          title: "Mean Score",
+          value: stats.meanScore || "0.0",
+          desc: "Average rating",
+          icon: <TrendingUp className="w-4 h-4 text-primary" />,
+        },
+        {
+          title: "Standard Deviation",
+          value: stats.standardDeviation || "0.0",
+          desc: "Rating spread",
+          icon: <HelpCircle className="w-4 h-4 text-primary" />,
+        },
       );
     }
 
@@ -150,7 +351,10 @@ export default function RrStatsDashboard({ username }: StatsDashboardProps): Rea
     );
   };
 
-  const renderDistributionList = (dist: Record<string, number>, total: number) => {
+  const renderDistributionList = (
+    dist: Record<string, number>,
+    total: number,
+  ) => {
     if (!dist || Object.keys(dist).length === 0) {
       return (
         <div className="flex items-center justify-center h-full text-xs italic text-muted-foreground">
@@ -185,14 +389,21 @@ export default function RrStatsDashboard({ username }: StatsDashboardProps): Rea
                 dataKey="value"
               >
                 {pieData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={PIE_COLORS[index % PIE_COLORS.length]}
+                  />
                 ))}
               </Pie>
             </PieChart>
           </ResponsiveContainer>
           <div className="absolute flex flex-col items-center select-none pointer-events-none">
-            <span className="text-xl font-black text-foreground leading-none">{total}</span>
-            <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold mt-1">Total</span>
+            <span className="text-xl font-black text-foreground leading-none">
+              {total}
+            </span>
+            <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold mt-1">
+              Total
+            </span>
           </div>
         </div>
 
@@ -204,7 +415,9 @@ export default function RrStatsDashboard({ username }: StatsDashboardProps): Rea
             return (
               <div key={item.name} className="space-y-1.5">
                 <div className="flex justify-between items-center text-xs">
-                  <span className="font-semibold text-muted-foreground truncate max-w-[140px]">{item.name}</span>
+                  <span className="font-semibold text-muted-foreground truncate max-w-[140px]">
+                    {item.name}
+                  </span>
                   <span className="font-bold text-foreground">{pct}%</span>
                 </div>
                 <div className="h-2 w-full rounded-full bg-muted/30 overflow-hidden">
@@ -226,9 +439,12 @@ export default function RrStatsDashboard({ username }: StatsDashboardProps): Rea
       return (
         <Card className="border shadow-sm bg-card p-12 text-center flex flex-col items-center justify-center gap-3">
           <HelpCircle className="size-10 text-muted-foreground/40 stroke-1" />
-          <div className="text-sm font-semibold text-foreground">No statistics calculated yet</div>
+          <div className="text-sm font-semibold text-foreground">
+            No statistics calculated yet
+          </div>
           <p className="text-xs text-muted-foreground max-w-xs">
-            Add items and update your progress list to see statistics graphs here.
+            Add items and update your progress list to see statistics graphs
+            here.
           </p>
         </Card>
       );
@@ -247,23 +463,29 @@ export default function RrStatsDashboard({ username }: StatsDashboardProps): Rea
     }
 
     // Prepare score distribution data for Recharts BarChart
-    const scoreData = Object.entries(stats.scoreDistribution || {}).map(([score, count]) => ({
-      name: score,
-      count: count as number,
-    }));
+    const scoreData = Object.entries(stats.scoreDistribution || {}).map(
+      ([score, count]) => ({
+        name: score,
+        count: count as number,
+      }),
+    );
 
     // Prepare progress/count distribution data if available
-    const progressData = stats.episodeCountDistribution 
-      ? Object.entries(stats.episodeCountDistribution).map(([range, count]) => ({
-          name: range,
-          count: count as number,
-        }))
+    const progressData = stats.episodeCountDistribution
+      ? Object.entries(stats.episodeCountDistribution).map(
+          ([range, count]) => ({
+            name: range,
+            count: count as number,
+          }),
+        )
       : stats.chapterCountDistribution
-      ? Object.entries(stats.chapterCountDistribution).map(([range, count]) => ({
-          name: range,
-          count: count as number,
-        }))
-      : null;
+        ? Object.entries(stats.chapterCountDistribution).map(
+            ([range, count]) => ({
+              name: range,
+              count: count as number,
+            }),
+          )
+        : null;
 
     return (
       <div className="space-y-6">
@@ -272,20 +494,45 @@ export default function RrStatsDashboard({ username }: StatsDashboardProps): Rea
           {/* Score Chart */}
           <Card className="border shadow-sm bg-card">
             <CardHeader className="pb-3 flex flex-row items-center justify-between">
-              <CardTitle className="text-foreground text-xs font-bold uppercase tracking-wider">Score Distribution</CardTitle>
+              <CardTitle className="text-foreground text-xs font-bold uppercase tracking-wider">
+                Score Distribution
+              </CardTitle>
             </CardHeader>
             <CardContent className="min-w-0">
               <div className="h-56 w-full min-w-0">
                 <ResponsiveContainer width="99%" height={224} debounce={100}>
-                  <BarChart data={scoreData} margin={{ top: 20, right: 10, left: -25, bottom: 0 }}>
-                    <XAxis dataKey="name" tick={{ fill: "#94a3b8", fontSize: 10 }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} axisLine={false} tickLine={false} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: "#09090b", borderColor: "#27272a", borderRadius: "12px", fontSize: "11px" }}
-                      labelStyle={{ fontWeight: "bold", color: "#a855f7" }}
-                      cursor={{ fill: "rgba(168, 85, 247, 0.04)" }}
+                  <BarChart
+                    data={scoreData}
+                    margin={{ top: 20, right: 10, left: -25, bottom: 0 }}
+                  >
+                    <XAxis
+                      dataKey="name"
+                      tick={{ fill: "var(--muted-foreground)", fontSize: 10 }}
+                      axisLine={false}
+                      tickLine={false}
                     />
-                    <Bar dataKey="count" fill="#a855f7" radius={[6, 6, 0, 0]} maxBarSize={30} />
+                    <YAxis
+                      tick={{ fill: "var(--muted-foreground)", fontSize: 10 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "var(--card)",
+                        borderColor: "var(--border)",
+                        borderRadius: "12px",
+                        fontSize: "11px",
+                      }}
+                      labelStyle={{ fontWeight: "bold", color: "var(--primary)" }}
+                      itemStyle={{ color: "var(--foreground)" }}
+                      cursor={{ fill: "var(--primary)", opacity: 0.04 }}
+                    />
+                    <Bar
+                      dataKey="count"
+                      fill="var(--primary)"
+                      radius={[6, 6, 0, 0]}
+                      maxBarSize={30}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
@@ -297,21 +544,45 @@ export default function RrStatsDashboard({ username }: StatsDashboardProps): Rea
             <Card className="border shadow-sm bg-card">
               <CardHeader className="pb-3">
                 <CardTitle className="text-foreground text-xs font-bold uppercase tracking-wider">
-                  {activeMedia === "anime" ? "Episode Count" : "Chapter Count"} Distribution
+                  {activeMedia === "anime" ? "Episode Count" : "Chapter Count"}{" "}
+                  Distribution
                 </CardTitle>
               </CardHeader>
               <CardContent className="min-w-0">
                 <div className="h-56 w-full min-w-0">
                   <ResponsiveContainer width="99%" height={224} debounce={100}>
-                    <BarChart data={progressData} margin={{ top: 20, right: 10, left: -25, bottom: 0 }}>
-                      <XAxis dataKey="name" tick={{ fill: "#94a3b8", fontSize: 9 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: "#94a3b8", fontSize: 10 }} axisLine={false} tickLine={false} />
-                      <Tooltip
-                        contentStyle={{ backgroundColor: "#09090b", borderColor: "#27272a", borderRadius: "12px", fontSize: "11px" }}
-                        labelStyle={{ fontWeight: "bold", color: "#a855f7" }}
-                        cursor={{ fill: "rgba(168, 85, 247, 0.04)" }}
+                    <BarChart
+                      data={progressData}
+                      margin={{ top: 20, right: 10, left: -25, bottom: 0 }}
+                    >
+                      <XAxis
+                        dataKey="name"
+                        tick={{ fill: "var(--muted-foreground)", fontSize: 9 }}
+                        axisLine={false}
+                        tickLine={false}
                       />
-                      <Bar dataKey="count" fill="#c084fc" radius={[6, 6, 0, 0]} maxBarSize={35} />
+                      <YAxis
+                        tick={{ fill: "var(--muted-foreground)", fontSize: 10 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "var(--card)",
+                          borderColor: "var(--border)",
+                          borderRadius: "12px",
+                          fontSize: "11px",
+                        }}
+                        labelStyle={{ fontWeight: "bold", color: "var(--primary)" }}
+                        itemStyle={{ color: "var(--foreground)" }}
+                        cursor={{ fill: "var(--primary)", opacity: 0.04 }}
+                      />
+                      <Bar
+                        dataKey="count"
+                        fill="var(--chart-2)"
+                        radius={[6, 6, 0, 0]}
+                        maxBarSize={35}
+                      />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -326,7 +597,9 @@ export default function RrStatsDashboard({ username }: StatsDashboardProps): Rea
           {stats.formatDistribution && (
             <Card className="border shadow-sm bg-card">
               <CardHeader className="pb-3">
-                <CardTitle className="text-foreground text-xs font-bold uppercase tracking-wider">Format Distribution</CardTitle>
+                <CardTitle className="text-foreground text-xs font-bold uppercase tracking-wider">
+                  Format Distribution
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 {renderDistributionList(stats.formatDistribution, stats.count)}
@@ -338,7 +611,9 @@ export default function RrStatsDashboard({ username }: StatsDashboardProps): Rea
           {stats.statusDistribution && (
             <Card className="border shadow-sm bg-card">
               <CardHeader className="pb-3">
-                <CardTitle className="text-foreground text-xs font-bold uppercase tracking-wider">Status Distribution</CardTitle>
+                <CardTitle className="text-foreground text-xs font-bold uppercase tracking-wider">
+                  Status Distribution
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 {renderDistributionList(stats.statusDistribution, stats.count)}
@@ -350,7 +625,9 @@ export default function RrStatsDashboard({ username }: StatsDashboardProps): Rea
           {stats.countryDistribution && (
             <Card className="border shadow-sm bg-card md:col-span-2 xl:col-span-1">
               <CardHeader className="pb-3">
-                <CardTitle className="text-foreground text-xs font-bold uppercase tracking-wider">Country Distribution</CardTitle>
+                <CardTitle className="text-foreground text-xs font-bold uppercase tracking-wider">
+                  Country Distribution
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 {renderDistributionList(stats.countryDistribution, stats.count)}
@@ -387,12 +664,14 @@ export default function RrStatsDashboard({ username }: StatsDashboardProps): Rea
             })}
           </TabsList>
         </Tabs>
-        <div 
-          className="flex items-center gap-1.5 text-[10px] text-muted-foreground/50 select-none hover:text-muted-foreground/80 transition-colors pl-2 cursor-help w-fit" 
+        <div
+          className="flex items-center gap-1.5 text-[10px] text-muted-foreground/50 select-none hover:text-muted-foreground/80 transition-colors pl-2 cursor-help w-fit"
           title="Statistics are compiled and cached in the background. Metrics and distributions may temporarily deviate during rapid updates or imports."
         >
           <HelpCircle className="w-3 h-3 stroke-[1.5]" />
-          <span>Stats are cached and updated periodically | May not be 100% accurate</span>
+          <span>
+            Stats are cached and updated periodically | May not be 100% accurate
+          </span>
         </div>
       </div>
 
