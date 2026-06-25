@@ -14,7 +14,7 @@ import {
   Loader2,
   Trash2,
   Filter,
-  Lock
+  Lock,
 } from "lucide-react";
 import {
   Dialog,
@@ -35,7 +35,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Notification, NotificationStatus, NotificationType } from "@runa/notifications";
+import {
+  Notification,
+  NotificationStatus,
+  NotificationType,
+} from "@runa/notifications";
 import {
   deriveMasterKey,
   encryptMasterKeyForDevice,
@@ -60,8 +64,10 @@ export function RrNotificationsModal({
   const { data: session } = useSession();
   const router = useRouter();
   const { getPrivateKey } = useRRe2ee();
-  
-  const [notifications, setNotifications] = useState<(Notification & { _decryptionFailed?: boolean })[]>([]);
+
+  const [notifications, setNotifications] = useState<
+    (Notification & { _decryptionFailed?: boolean })[]
+  >([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -71,7 +77,9 @@ export function RrNotificationsModal({
 
   const observerTarget = useRef<HTMLDivElement>(null);
 
-  const unreadCount = notifications.filter((n) => n.status === "PENDING").length;
+  const unreadCount = notifications.filter(
+    (n) => n.status === "PENDING",
+  ).length;
 
   useEffect(() => {
     if (onUnreadCountChange) {
@@ -82,17 +90,34 @@ export function RrNotificationsModal({
   const decryptNotification = useCallback(
     async (n: any, privKey: CryptoKey | null): Promise<any> => {
       const meta = n.metadata as any;
-      if (!meta || !meta.encryptedKey || !privKey) return n;
+      const isEncrypted = !!(meta && meta.encryptedKey);
+
+      if (!isEncrypted) return n;
+
+      if (!privKey) {
+        return {
+          ...n,
+          title: "Encrypted Notification",
+          message:
+            "This notification is encrypted and could not be decrypted on this device.",
+          _decryptionFailed: true,
+        };
+      }
 
       try {
-        const { decryptEmailDataKey, decryptEmailString } = await import("@runa/crypto/browser");
+        const { decryptEmailDataKey, decryptEmailString } =
+          await import("@runa/crypto/browser");
         const dataKey = await decryptEmailDataKey(meta.encryptedKey, privKey);
 
         let decryptedTitle = n.title;
-        try { decryptedTitle = await decryptEmailString(n.title, dataKey); } catch {}
+        try {
+          decryptedTitle = await decryptEmailString(n.title, dataKey);
+        } catch {}
 
         let decryptedMessage = n.message;
-        try { decryptedMessage = await decryptEmailString(n.message, dataKey); } catch {}
+        try {
+          decryptedMessage = await decryptEmailString(n.message, dataKey);
+        } catch {}
 
         return {
           ...n,
@@ -104,7 +129,8 @@ export function RrNotificationsModal({
         return {
           ...n,
           title: "Encrypted Notification",
-          message: "This notification is encrypted and could not be decrypted on this device.",
+          message:
+            "This notification is encrypted and could not be decrypted on this device.",
           _decryptionFailed: true,
         };
       }
@@ -112,67 +138,80 @@ export function RrNotificationsModal({
     [],
   );
 
-  const fetchNotifications = useCallback(async (skip = 0, append = false) => {
-    if (!session?.accessToken) return;
-    
-    if (skip === 0) setIsLoading(true);
-    else setIsFetchingMore(true);
+  const fetchNotifications = useCallback(
+    async (skip = 0, append = false) => {
+      if (!session?.accessToken) return;
 
-    try {
-      const query = new URLSearchParams({ take: PAGE_SIZE.toString(), skip: skip.toString() });
-      if (filterType !== "ALL") {
-        query.append("type", filterType);
-      }
+      if (skip === 0) setIsLoading(true);
+      else setIsFetchingMore(true);
 
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/notifications?${query.toString()}`,
-        {
-          headers: {
-            Authorization: `Bearer ${session.accessToken}`,
+      try {
+        const query = new URLSearchParams({
+          take: PAGE_SIZE.toString(),
+          skip: skip.toString(),
+        });
+        if (filterType !== "ALL") {
+          query.append("type", filterType);
+        }
+
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/notifications?${query.toString()}`,
+          {
+            headers: {
+              Authorization: `Bearer ${session.accessToken}`,
+            },
           },
-        },
-      );
+        );
 
-      if (res.ok) {
-        const data = await res.json();
-        
-        if (data.length < PAGE_SIZE) {
-          setHasMore(false);
-        } else {
-          setHasMore(true);
+        if (res.ok) {
+          const data = await res.json();
+
+          if (data.length < PAGE_SIZE) {
+            setHasMore(false);
+          } else {
+            setHasMore(true);
+          }
+
+          let processedData = [];
+          try {
+            const privKey = await getPrivateKey();
+            processedData = await Promise.all(
+              data.map((n: any) => decryptNotification(n, privKey)),
+            );
+
+            // Filter out device requests not intended for this device
+            processedData = processedData.filter((n: any) => {
+              if (n.metadata?.targetDeviceId) {
+                return (
+                  n.metadata.targetDeviceId ===
+                  localStorage.getItem("runa_device_id")
+                );
+              }
+              return true;
+            });
+          } catch (decErr) {
+            console.error("Failed to decrypt fetched notifications:", decErr);
+            processedData = data.map((n: any) => ({
+              ...n,
+              title: "Encrypted Notification",
+              message: "Failed to load decryption keys.",
+              _decryptionFailed: true,
+            }));
+          }
+
+          setNotifications((prev) =>
+            append ? [...prev, ...processedData] : processedData,
+          );
         }
-
-        let processedData = [];
-        try {
-          const privKey = await getPrivateKey();
-          processedData = await Promise.all(data.map((n: any) => decryptNotification(n, privKey)));
-          
-          // Filter out device requests not intended for this device
-          processedData = processedData.filter((n: any) => {
-            if (n.metadata?.targetDeviceId) {
-              return n.metadata.targetDeviceId === localStorage.getItem("runa_device_id");
-            }
-            return true;
-          });
-        } catch (decErr) {
-          console.error("Failed to decrypt fetched notifications:", decErr);
-          processedData = data.map((n: any) => ({
-            ...n,
-            title: "Encrypted Notification",
-            message: "Failed to load decryption keys.",
-            _decryptionFailed: true
-          }));
-        }
-
-        setNotifications((prev) => append ? [...prev, ...processedData] : processedData);
+      } catch (err) {
+        console.error("Failed to fetch notifications:", err);
+      } finally {
+        setIsLoading(false);
+        setIsFetchingMore(false);
       }
-    } catch (err) {
-      console.error("Failed to fetch notifications:", err);
-    } finally {
-      setIsLoading(false);
-      setIsFetchingMore(false);
-    }
-  }, [session, getPrivateKey, decryptNotification, filterType]);
+    },
+    [session, getPrivateKey, decryptNotification, filterType],
+  );
 
   useEffect(() => {
     if (open && session?.accessToken) {
@@ -183,11 +222,16 @@ export function RrNotificationsModal({
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore && !isLoading && !isFetchingMore) {
+        if (
+          entries[0].isIntersecting &&
+          hasMore &&
+          !isLoading &&
+          !isFetchingMore
+        ) {
           fetchNotifications(notifications.length, true);
         }
       },
-      { threshold: 1.0 }
+      { threshold: 1.0 },
     );
 
     if (observerTarget.current) {
@@ -197,7 +241,13 @@ export function RrNotificationsModal({
     return () => {
       if (observerTarget.current) observer.unobserve(observerTarget.current);
     };
-  }, [hasMore, isLoading, isFetchingMore, notifications.length, fetchNotifications]);
+  }, [
+    hasMore,
+    isLoading,
+    isFetchingMore,
+    notifications.length,
+    fetchNotifications,
+  ]);
 
   // Setup WebSocket connection for live notifications
   useEffect(() => {
@@ -213,22 +263,33 @@ export function RrNotificationsModal({
 
     socket.on("notification:created", async (newNotification: Notification) => {
       if (filterType !== "ALL" && newNotification.type !== filterType) return;
-      
+
       const privKey = await getPrivateKey();
       const decrypted = await decryptNotification(newNotification, privKey);
       const targetDeviceId = (decrypted.metadata as any)?.targetDeviceId;
-      if (targetDeviceId && targetDeviceId !== localStorage.getItem("runa_device_id")) {
+      if (
+        targetDeviceId &&
+        targetDeviceId !== localStorage.getItem("runa_device_id")
+      ) {
         return;
       }
       setNotifications((prev) => [decrypted, ...prev]);
       toast.info(`New Notification: ${decrypted.title}`);
     });
 
-    socket.on("notification:updated", async (updatedNotification: Notification) => {
-      const privKey = await getPrivateKey();
-      const decrypted = await decryptNotification(updatedNotification, privKey);
-      setNotifications((prev) => prev.map((n) => (n.id === decrypted.id ? decrypted : n)));
-    });
+    socket.on(
+      "notification:updated",
+      async (updatedNotification: Notification) => {
+        const privKey = await getPrivateKey();
+        const decrypted = await decryptNotification(
+          updatedNotification,
+          privKey,
+        );
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === decrypted.id ? decrypted : n)),
+        );
+      },
+    );
 
     socket.on("notification:deleted", ({ id }: { id: string }) => {
       setNotifications((prev) => prev.filter((n) => n.id !== id));
@@ -241,18 +302,34 @@ export function RrNotificationsModal({
     return () => {
       socket.disconnect();
     };
-  }, [session?.accessToken, getPrivateKey, decryptNotification, router, filterType]);
+  }, [
+    session?.accessToken,
+    getPrivateKey,
+    decryptNotification,
+    router,
+    filterType,
+  ]);
 
   const handleDismiss = async (id: string) => {
     if (!session?.accessToken) return;
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notifications/${id}/status`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.accessToken}` },
-        body: JSON.stringify({ status: "READ" }),
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/notifications/${id}/status`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+          body: JSON.stringify({ status: "READ" }),
+        },
+      );
       if (res.ok) {
-        setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, status: "READ" as NotificationStatus } : n));
+        setNotifications((prev) =>
+          prev.map((n) =>
+            n.id === id ? { ...n, status: "READ" as NotificationStatus } : n,
+          ),
+        );
         toast.success("Notification dismissed");
       }
     } catch (err) {
@@ -263,10 +340,13 @@ export function RrNotificationsModal({
   const handleDelete = async (id: string) => {
     if (!session?.accessToken) return;
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notifications/${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${session.accessToken}` },
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/notifications/${id}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${session.accessToken}` },
+        },
+      );
       if (res.ok) {
         setNotifications((prev) => prev.filter((n) => n.id !== id));
         toast.success("Notification deleted");
@@ -281,10 +361,13 @@ export function RrNotificationsModal({
   const handleClearAll = async () => {
     if (!session?.accessToken) return;
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notifications`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${session.accessToken}` },
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/notifications`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${session.accessToken}` },
+        },
+      );
       if (res.ok) {
         setNotifications([]);
         toast.success("All notifications cleared");
@@ -296,18 +379,33 @@ export function RrNotificationsModal({
     }
   };
 
-  const handleGenericStatusUpdate = async (id: string, status: "APPROVED" | "DENIED") => {
+  const handleGenericStatusUpdate = async (
+    id: string,
+    status: "APPROVED" | "DENIED",
+  ) => {
     if (!session?.accessToken) return;
     setProcessingId(id);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notifications/${id}/status`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.accessToken}` },
-        body: JSON.stringify({ status }),
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/notifications/${id}/status`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+          body: JSON.stringify({ status }),
+        },
+      );
       if (res.ok) {
-        setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, status: status as NotificationStatus } : n));
-        toast.success(status === "APPROVED" ? "Request Approved" : "Request Denied");
+        setNotifications((prev) =>
+          prev.map((n) =>
+            n.id === id ? { ...n, status: status as NotificationStatus } : n,
+          ),
+        );
+        toast.success(
+          status === "APPROVED" ? "Request Approved" : "Request Denied",
+        );
       }
     } catch (err) {
       toast.error(`Failed to update request`);
@@ -320,32 +418,66 @@ export function RrNotificationsModal({
     if (!session?.accessToken || !session?.user?.username) return;
     const password = passwords[id];
     if (!password) {
-      toast.error("Please enter your account password to authorize this device.");
+      toast.error(
+        "Please enter your account password to authorize this device.",
+      );
       return;
     }
 
     setProcessingId(id);
     try {
-      const masterCryptoKey = await deriveMasterKey(password, session.user.username);
-      const exportedMasterBuffer = await window.crypto.subtle.exportKey("raw", masterCryptoKey);
-      const masterKeyMaterial = btoa(String.fromCharCode(...new Uint8Array(exportedMasterBuffer)));
+      const masterCryptoKey = await deriveMasterKey(
+        password,
+        session.user.username,
+      );
+      const exportedMasterBuffer = await window.crypto.subtle.exportKey(
+        "raw",
+        masterCryptoKey,
+      );
+      const masterKeyMaterial = btoa(
+        String.fromCharCode(...new Uint8Array(exportedMasterBuffer)),
+      );
       const ownKeyPair = await generateKeyPair();
-      const { ciphertext, iv } = await encryptMasterKeyForDevice(masterKeyMaterial, requestPublicKey, ownKeyPair.privateKey);
+      const { ciphertext, iv } = await encryptMasterKeyForDevice(
+        masterKeyMaterial,
+        requestPublicKey,
+        ownKeyPair.privateKey,
+      );
       const ownPublicKeyBase64 = await exportPublicKey(ownKeyPair.publicKey);
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notifications/approve`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.accessToken}` },
-        body: JSON.stringify({
-          notificationId: id,
-          encryptedMasterKey: JSON.stringify({ ciphertext, iv, senderPublicKey: ownPublicKeyBase64 }),
-        }),
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/notifications/approve`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+          body: JSON.stringify({
+            notificationId: id,
+            encryptedMasterKey: JSON.stringify({
+              ciphertext,
+              iv,
+              senderPublicKey: ownPublicKeyBase64,
+            }),
+          }),
+        },
+      );
 
       if (res.ok) {
-        setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, status: "APPROVED" as NotificationStatus } : n));
+        setNotifications((prev) =>
+          prev.map((n) =>
+            n.id === id
+              ? { ...n, status: "APPROVED" as NotificationStatus }
+              : n,
+          ),
+        );
         toast.success("Device authorized successfully!");
-        setPasswords((prev) => { const next = { ...prev }; delete next[id]; return next; });
+        setPasswords((prev) => {
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
       } else {
         const errorData = await res.json();
         throw new Error(errorData.message || "Failed to submit authorization");
@@ -357,7 +489,10 @@ export function RrNotificationsModal({
     }
   };
 
-  const handleAction = (n: Notification & { _decryptionFailed?: boolean }, actionType: "APPROVE" | "DENY") => {
+  const handleAction = (
+    n: Notification & { _decryptionFailed?: boolean },
+    actionType: "APPROVE" | "DENY",
+  ) => {
     if (n.type === "INTERACTIVE") {
       if (actionType === "APPROVE") {
         handleApproveDevice(n.id, (n.metadata as any)?.publicKey || "");
@@ -365,7 +500,10 @@ export function RrNotificationsModal({
         handleGenericStatusUpdate(n.id, "DENIED");
       }
     } else if (n.type === "CONFIRMATION" || n.type === "PROMPT") {
-      handleGenericStatusUpdate(n.id, actionType === "APPROVE" ? "APPROVED" : "DENIED");
+      handleGenericStatusUpdate(
+        n.id,
+        actionType === "APPROVE" ? "APPROVED" : "DENIED",
+      );
     }
   };
 
@@ -412,21 +550,26 @@ export function RrNotificationsModal({
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <Loader2 className="size-6 text-primary animate-spin" />
-            <span className="text-xs text-muted-foreground">Loading alerts...</span>
+            <span className="text-xs text-muted-foreground">
+              Loading alerts...
+            </span>
           </div>
         ) : notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-2.5 text-center">
             <div className="p-3.5 rounded-full bg-muted border text-muted-foreground">
               <Bell className="size-6" />
             </div>
-            <span className="text-xs font-semibold text-muted-foreground">No notifications yet</span>
+            <span className="text-xs font-semibold text-muted-foreground">
+              No notifications yet
+            </span>
           </div>
         ) : (
           <ScrollArea className="max-h-[500px] pr-2 py-2">
             <div className="space-y-3">
               {notifications.map((n) => {
                 const isPending = n.status === "PENDING";
-                const requiresInput = n.type === "INTERACTIVE" || n.type === "PROMPT";
+                const requiresInput =
+                  n.type === "INTERACTIVE" || n.type === "PROMPT";
                 const isActionable = n.type !== "INFO" && isPending;
 
                 return (
@@ -436,34 +579,50 @@ export function RrNotificationsModal({
                   >
                     <div className="flex items-start justify-between gap-3 w-full min-w-0">
                       <div className="flex items-start gap-3 min-w-0 flex-1">
-                        <div className={`p-2 rounded-lg border shrink-0 mt-0.5 ${
-                          n._decryptionFailed ? 'bg-red-500/10 border-red-500/20 text-red-500' :
-                          n.type === "INTERACTIVE" ? 'bg-primary/10 border-primary/20 text-primary' :
-                          n.type === "CONFIRMATION" ? 'bg-blue-500/10 border-blue-500/20 text-blue-500' :
-                          'bg-muted text-muted-foreground'
-                        }`}>
-                          {n._decryptionFailed ? <Lock className="size-4" /> :
-                           n.type === "INTERACTIVE" ? <Smartphone className="size-4" /> :
-                           <Bell className="size-4" />}
+                        <div
+                          className={`p-2 rounded-lg border shrink-0 mt-0.5 ${
+                            n._decryptionFailed
+                              ? "bg-red-500/10 border-red-500/20 text-red-500"
+                              : n.type === "INTERACTIVE"
+                                ? "bg-primary/10 border-primary/20 text-primary"
+                                : n.type === "CONFIRMATION"
+                                  ? "bg-blue-500/10 border-blue-500/20 text-blue-500"
+                                  : "bg-muted text-muted-foreground"
+                          }`}
+                        >
+                          {n._decryptionFailed ? (
+                            <Lock className="size-4" />
+                          ) : n.type === "INTERACTIVE" ? (
+                            <Smartphone className="size-4" />
+                          ) : (
+                            <Bell className="size-4" />
+                          )}
                         </div>
                         <div className="space-y-1 min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap min-w-0">
-                            <span className={`text-xs font-bold wrap-break-word max-w-full ${n._decryptionFailed ? 'text-red-500' : 'text-foreground'}`}>
+                            <span
+                              className={`text-xs font-bold wrap-break-word max-w-full ${n._decryptionFailed ? "text-red-500" : "text-foreground"}`}
+                            >
                               {n.title}
                             </span>
                             <Badge
                               variant="outline"
                               className={`text-[9px] px-1.5 py-0.5 font-bold uppercase tracking-wider shrink-0 ${
-                                n.status === "PENDING" ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
-                                : n.status === "APPROVED" ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-                                : n.status === "DENIED" ? "bg-red-500/10 text-red-500 border-red-500/20"
-                                : "bg-muted text-muted-foreground"
+                                n.status === "PENDING"
+                                  ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                                  : n.status === "APPROVED"
+                                    ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                                    : n.status === "DENIED"
+                                      ? "bg-red-500/10 text-red-500 border-red-500/20"
+                                      : "bg-muted text-muted-foreground"
                               }`}
                             >
                               {n.status}
                             </Badge>
                           </div>
-                          <p className={`text-[11px] leading-normal break-words ${n._decryptionFailed ? 'text-red-400/80 italic' : 'text-muted-foreground'}`}>
+                          <p
+                            className={`text-[11px] leading-normal wrap-break-word ${n._decryptionFailed ? "text-red-400/80 italic" : "text-muted-foreground"}`}
+                          >
                             {n.message}
                           </p>
                           <span className="text-[9px] text-muted-foreground/60 block">
@@ -472,7 +631,7 @@ export function RrNotificationsModal({
                         </div>
                       </div>
 
-                      {(!isActionable) && (
+                      {!isActionable && (
                         <Button
                           size="icon"
                           variant="ghost"
@@ -488,15 +647,31 @@ export function RrNotificationsModal({
                       <div className="mt-1 border-t pt-3 space-y-3.5">
                         {requiresInput && (
                           <div className="space-y-1.5">
-                            <Label htmlFor={`input-${n.id}`} className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide">
-                              {n.type === "INTERACTIVE" ? "Account Password" : "Input Required"}
+                            <Label
+                              htmlFor={`input-${n.id}`}
+                              className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide"
+                            >
+                              {n.type === "INTERACTIVE"
+                                ? "Account Password"
+                                : "Input Required"}
                             </Label>
                             <Input
                               id={`input-${n.id}`}
-                              type={n.type === "INTERACTIVE" ? "password" : "text"}
-                              placeholder={n.type === "INTERACTIVE" ? "Enter password to authorize" : "Enter details..."}
+                              type={
+                                n.type === "INTERACTIVE" ? "password" : "text"
+                              }
+                              placeholder={
+                                n.type === "INTERACTIVE"
+                                  ? "Enter password to authorize"
+                                  : "Enter details..."
+                              }
                               value={passwords[n.id] || ""}
-                              onChange={(e) => setPasswords((prev) => ({ ...prev, [n.id]: e.target.value }))}
+                              onChange={(e) =>
+                                setPasswords((prev) => ({
+                                  ...prev,
+                                  [n.id]: e.target.value,
+                                }))
+                              }
                               className="h-8 px-2.5 text-xs rounded-md"
                             />
                           </div>
@@ -515,10 +690,17 @@ export function RrNotificationsModal({
                           <Button
                             size="sm"
                             onClick={() => handleAction(n, "APPROVE")}
-                            disabled={processingId === n.id || (requiresInput && !passwords[n.id])}
+                            disabled={
+                              processingId === n.id ||
+                              (requiresInput && !passwords[n.id])
+                            }
                             className="h-8 rounded-md px-4 bg-primary text-primary-foreground text-xs font-semibold"
                           >
-                            {processingId === n.id ? <Loader2 className="size-3.5 mr-1 animate-spin" /> : <CheckCircle className="size-3.5 mr-1" />}
+                            {processingId === n.id ? (
+                              <Loader2 className="size-3.5 mr-1 animate-spin" />
+                            ) : (
+                              <CheckCircle className="size-3.5 mr-1" />
+                            )}
                             {n.type === "INTERACTIVE" ? "Authorize" : "Approve"}
                           </Button>
                         </div>
@@ -527,10 +709,15 @@ export function RrNotificationsModal({
                   </div>
                 );
               })}
-              
+
               {/* Infinite Scroll Trigger */}
-              <div ref={observerTarget} className="h-4 w-full flex items-center justify-center py-4">
-                {isFetchingMore && <Loader2 className="size-4 text-primary animate-spin" />}
+              <div
+                ref={observerTarget}
+                className="h-4 w-full flex items-center justify-center py-4"
+              >
+                {isFetchingMore && (
+                  <Loader2 className="size-4 text-primary animate-spin" />
+                )}
               </div>
             </div>
           </ScrollArea>

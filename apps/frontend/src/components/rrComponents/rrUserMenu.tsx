@@ -142,14 +142,20 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
       setIsBuilderOpen(true);
     };
 
+    const handleOpenNotifications = () => {
+      setIsNotificationsOpen(true);
+    };
+
     window.addEventListener("runa-open-settings", handleOpenSettings);
     window.addEventListener("runa-open-appearance", handleOpenAppearance);
     window.addEventListener("runa-open-builder", handleOpenBuilder);
+    window.addEventListener("runa-open-notifications", handleOpenNotifications);
 
     return () => {
       window.removeEventListener("runa-open-settings", handleOpenSettings);
       window.removeEventListener("runa-open-appearance", handleOpenAppearance);
       window.removeEventListener("runa-open-builder", handleOpenBuilder);
+      window.removeEventListener("runa-open-notifications", handleOpenNotifications);
     };
   }, []);
 

@@ -29,6 +29,7 @@ import {
   ChevronRight,
   User,
   PanelLeft,
+  Bell,
 } from "lucide-react";
 import React from "react";
 import { useRRSidebar } from "@/hooks/useRRSidebar";
@@ -53,15 +54,14 @@ export default function RrSpotlightSearch(): React.JSX.Element {
 
   const [open, setOpen] = useState<boolean>(false);
   const [search, setSearch] = useState<string>("");
-  const [activeFilter, setActiveFilter] = useState<"all" | "apps" | "pages" | "actions">("all");
-
+  const [activeFilter, setActiveFilter] = useState<
+    "all" | "apps" | "pages" | "actions"
+  >("all");
 
   const openRef = useRef<boolean>(open);
   useEffect(() => {
     openRef.current = open;
   }, [open]);
-
-
 
   // Double-Shift key detection
   useEffect(() => {
@@ -97,8 +97,6 @@ export default function RrSpotlightSearch(): React.JSX.Element {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
-
-
 
   // Helper function to dispatch settings tab redirection custom events
   const triggerSettingsTab = (category: string): void => {
@@ -138,7 +136,9 @@ export default function RrSpotlightSearch(): React.JSX.Element {
     sidebarConfig.forEach((section, sectionIdx) => {
       if (section.section?.toLowerCase() === "phone") return;
 
-      const sectionKey = (section.section || `sec-${sectionIdx}`).toLowerCase().replace(/\s+/g, "-");
+      const sectionKey = (section.section || `sec-${sectionIdx}`)
+        .toLowerCase()
+        .replace(/\s+/g, "-");
 
       section.items.forEach((navItem) => {
         const isFromActiveApp =
@@ -230,12 +230,29 @@ export default function RrSpotlightSearch(): React.JSX.Element {
     },
   });
 
+  // Notifications Action
+  items.push({
+    id: "action-notifications",
+    label: "Open Notifications Feed",
+    category: "Actions",
+    icon: (
+      <Bell className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
+    ),
+    badge: "System Alerts",
+    action: () => {
+      setOpen(false);
+      window.dispatchEvent(new CustomEvent("runa-open-notifications"));
+    },
+  });
+
   // Direct Settings Tabs Actions
   items.push({
     id: "action-settings-account",
     label: "Account Settings",
     category: "Actions",
-    icon: <User className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+    icon: (
+      <User className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
+    ),
     badge: "Settings tab",
     action: () => triggerSettingsTab("account"),
   });
@@ -244,7 +261,9 @@ export default function RrSpotlightSearch(): React.JSX.Element {
     id: "action-settings-security",
     label: "Security Settings",
     category: "Actions",
-    icon: <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+    icon: (
+      <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
+    ),
     badge: "Settings tab",
     action: () => triggerSettingsTab("security"),
   });
@@ -253,7 +272,9 @@ export default function RrSpotlightSearch(): React.JSX.Element {
     id: "action-settings-privacy",
     label: "Privacy Settings",
     category: "Actions",
-    icon: <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+    icon: (
+      <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
+    ),
     badge: "Settings tab",
     action: () => triggerSettingsTab("privacy"),
   });
@@ -262,7 +283,9 @@ export default function RrSpotlightSearch(): React.JSX.Element {
     id: "action-settings-connections",
     label: "Connections Settings",
     category: "Actions",
-    icon: <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+    icon: (
+      <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
+    ),
     badge: "Settings tab",
     action: () => triggerSettingsTab("connections"),
   });
@@ -274,7 +297,9 @@ export default function RrSpotlightSearch(): React.JSX.Element {
       id: "action-settings-mail",
       label: "Mail Settings",
       category: "Actions",
-      icon: <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+      icon: (
+        <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
+      ),
       badge: "Settings tab",
       action: () => triggerSettingsTab("mailAccounts"),
     });
@@ -399,22 +424,19 @@ export default function RrSpotlightSearch(): React.JSX.Element {
     if (activeFilter === "apps") return item.category === "Applications";
     if (activeFilter === "pages") return item.category === "Navigation";
     if (activeFilter === "actions") return item.category === "Actions";
-    
+
     return true; // "all"
   });
 
   // Split into structural groups for command sections
 
-
   const applicationsGroup = filteredItems.filter(
-    (i) => i.category === "Applications"
+    (i) => i.category === "Applications",
   );
   const navigationGroup = filteredItems.filter(
-    (i) => i.category === "Navigation"
+    (i) => i.category === "Navigation",
   );
-  const actionsGroup = filteredItems.filter(
-    (i) => i.category === "Actions"
-  );
+  const actionsGroup = filteredItems.filter((i) => i.category === "Actions");
 
   return (
     <CommandDialog
@@ -450,10 +472,10 @@ export default function RrSpotlightSearch(): React.JSX.Element {
                 {filter === "all"
                   ? "All"
                   : filter === "apps"
-                  ? "Apps"
-                  : filter === "pages"
-                  ? "Pages"
-                  : "Actions"}
+                    ? "Apps"
+                    : filter === "pages"
+                      ? "Pages"
+                      : "Actions"}
               </button>
             );
           })}
