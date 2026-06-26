@@ -3,7 +3,8 @@
 import type React from "react";
 import { useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
-import { useFetch } from "@/hooks/useFetch";
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -99,14 +100,11 @@ export const RrApiKeysTab = ({
 
   const {
     data: keys,
-    loading,
-    refetch,
-  } = useFetch<ApiKeyEntry[]>(
-    session?.accessToken ? `${process.env.NEXT_PUBLIC_API_URL}/api-key` : "",
-    {
-      headers: { Authorization: `Bearer ${session?.accessToken}` },
-      enabled: !!session?.accessToken,
-    },
+    isLoading: loading,
+    mutate: refetch,
+  } = useSWR<ApiKeyEntry[]>(
+    session?.accessToken ? [`${process.env.NEXT_PUBLIC_API_URL}/api-key`, session.accessToken] : null,
+    fetcher
   );
 
   const handleCreate = useCallback(async (): Promise<void> => {
@@ -122,13 +120,12 @@ export const RrApiKeysTab = ({
         },
         body: JSON.stringify({ name: newKeyName.trim() }),
       });
-
       if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || "Failed to create API key.");
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.message || "Failed to create API key.");
       }
+      const created = await res.json() as RevealedKey;
 
-      const created = await res.json();
       setNewKeyName("");
       setRevealedKey({ id: created.id, name: created.name, key: created.key });
       setKeyVisible(false);
@@ -150,17 +147,15 @@ export const RrApiKeysTab = ({
       setConfirmDeleteId(null);
 
       try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/api-key/${id}`,
-          {
-            method: "DELETE",
-            headers: { Authorization: `Bearer ${session.accessToken}` },
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api-key/${id}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
           },
-        );
-
+        });
         if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.message || "Failed to delete API key.");
+          const errJson = await res.json().catch(() => null);
+          throw new Error(errJson?.message || "Failed to delete API key.");
         }
 
         toast.success("API key deleted.");
@@ -191,13 +186,12 @@ export const RrApiKeysTab = ({
           },
           body: JSON.stringify({ id }),
         });
-
         if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.message || "Failed to regenerate API key.");
+          const errJson = await res.json().catch(() => null);
+          throw new Error(errJson?.message || "Failed to regenerate API key.");
         }
+        const regenerated = await res.json() as RevealedKey;
 
-        const regenerated = await res.json();
         setRevealedKey({
           id: regenerated.id,
           name,
@@ -235,7 +229,7 @@ export const RrApiKeysTab = ({
 
   return (
     <>
-      <div className="flex flex-col gap-6 p-2">
+      <div className="flex flex-col gap-6 p-2 text-left">
         {/* Header + Create */}
         <Card>
           <CardHeader>
@@ -266,7 +260,7 @@ export const RrApiKeysTab = ({
                 <Button
                   onClick={handleCreate}
                   disabled={!newKeyName.trim() || isCreating}
-                  className="shrink-0 h-9"
+                  className="shrink-0 h-9 cursor-pointer"
                 >
                   {isCreating ? (
                     <Spinner />
@@ -357,7 +351,7 @@ export const RrApiKeysTab = ({
                               className={cn(
                                 "flex items-center gap-1 text-[10px]",
                                 apiKey.lastUsedAt
-                                  ? "text-green-600 dark:text-green-400"
+                                  ? "text-success font-semibold"
                                   : "text-muted-foreground",
                               )}
                             >
@@ -375,6 +369,7 @@ export const RrApiKeysTab = ({
                           size="sm"
                           disabled={isBusy}
                           onClick={() => setConfirmRegenerateId(apiKey.id)}
+                          className="cursor-pointer"
                         >
                           {isRegenerating ? (
                             <Spinner />
@@ -390,7 +385,7 @@ export const RrApiKeysTab = ({
                           size="sm"
                           disabled={isBusy}
                           onClick={() => setConfirmDeleteId(apiKey.id)}
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10 hover:border-destructive/30"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10 hover:border-destructive/30 cursor-pointer"
                         >
                           {isDeleting ? (
                             <Spinner />
@@ -422,7 +417,7 @@ export const RrApiKeysTab = ({
           }
         }}
       >
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg text-left">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <KeyRound className="size-4 text-primary" />
@@ -461,7 +456,7 @@ export const RrApiKeysTab = ({
                   <button
                     type="button"
                     onClick={() => setKeyVisible((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                     aria-label={keyVisible ? "Hide key" : "Show key"}
                   >
                     {keyVisible ? (
@@ -476,7 +471,7 @@ export const RrApiKeysTab = ({
                   onClick={handleCopyKey}
                   variant={keyCopied ? "default" : "outline"}
                   size="sm"
-                  className="shrink-0"
+                  className="shrink-0 cursor-pointer"
                 >
                   {keyCopied ? (
                     <>
@@ -502,6 +497,7 @@ export const RrApiKeysTab = ({
                 setKeyCopied(false);
                 setKeyVisible(false);
               }}
+              className="cursor-pointer"
             >
               I&apos;ve saved it, close
             </Button>
@@ -514,7 +510,7 @@ export const RrApiKeysTab = ({
         open={!!confirmDeleteId}
         onOpenChange={(open) => !open && setConfirmDeleteId(null)}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="text-left">
           <AlertDialogHeader>
             <AlertDialogTitle>Delete API Key</AlertDialogTitle>
             <AlertDialogDescription>
@@ -525,10 +521,10 @@ export const RrApiKeysTab = ({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => confirmDeleteId && handleDelete(confirmDeleteId)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 cursor-pointer"
             >
               Delete Key
             </AlertDialogAction>
@@ -541,7 +537,7 @@ export const RrApiKeysTab = ({
         open={!!confirmRegenerateId}
         onOpenChange={(open) => !open && setConfirmRegenerateId(null)}
       >
-        <AlertDialogContent>
+        <AlertDialogContent className="text-left">
           <AlertDialogHeader>
             <AlertDialogTitle>Regenerate API Key</AlertDialogTitle>
             <AlertDialogDescription>
@@ -552,7 +548,7 @@ export const RrApiKeysTab = ({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={() =>
                 confirmRegenerateId &&
@@ -561,6 +557,7 @@ export const RrApiKeysTab = ({
                   confirmRegenerateKey?.name ?? "",
                 )
               }
+              className="cursor-pointer"
             >
               Regenerate Key
             </AlertDialogAction>

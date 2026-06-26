@@ -7,9 +7,9 @@ import { SidebarProvider as SidebarNavigationProvider } from "@/components/Provi
 import { ThemeProvider } from "next-themes";
 import RrSpotlightSearch from "@/components/rrComponents/rrSpotlightSearch";
 import { RrUnlockSecureStorageModal } from "@/components/rrComponents/rrUnlockSecureStorageModal";
-import { RrPwaManager } from "@/components/rrComponents/rrPwaManager";
+import { useEffect } from "react";
 
-import { rrE2eeProvider as RrE2eeProvider } from "@/components/Providers/rrE2eeProvider";
+import { RrE2eeProvider } from "@/components/Providers/rrE2eeProvider";
 import { RrThemeProvider } from "@/components/Providers/rrThemeProvider";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
@@ -29,7 +29,6 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                   {children}
                   <RrSpotlightSearch />
                   <RrUnlockSecureStorageModal />
-                  <RrPwaManager />
                 </SidebarNavigationProvider>
               </TooltipProvider>
             </SidebarProvider>

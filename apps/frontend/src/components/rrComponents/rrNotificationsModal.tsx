@@ -5,15 +5,14 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { io, Socket } from "socket.io-client";
 import { toast } from "sonner";
+import useSWR from "swr";
 import {
   Bell,
   CheckCircle,
   XCircle,
   Smartphone,
-  ShieldAlert,
   Loader2,
   Trash2,
-  Filter,
   Lock,
 } from "lucide-react";
 import {
@@ -38,7 +37,6 @@ import {
 import {
   Notification,
   NotificationStatus,
-  NotificationType,
 } from "@runa/notifications";
 import {
   deriveMasterKey,
@@ -47,6 +45,8 @@ import {
   generateKeyPair,
 } from "@runa/crypto/browser";
 import { useRRe2ee } from "@/components/Providers/rrE2eeProvider";
+import { fetcher } from "@/lib/fetcher";
+import { cn } from "@/lib/utils";
 
 interface NotificationsModalProps {
   open: boolean;
@@ -55,6 +55,63 @@ interface NotificationsModalProps {
 }
 
 const PAGE_SIZE = 10;
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+interface NotificationIconProps {
+  type: string;
+  decryptionFailed?: boolean;
+}
+
+function NotificationIcon({ type, decryptionFailed }: NotificationIconProps): React.JSX.Element {
+  const iconClass = cn(
+    "p-2 rounded-lg border shrink-0 mt-0.5",
+    decryptionFailed
+      ? "bg-destructive/10 border-destructive/20 text-destructive"
+      : type === "INTERACTIVE"
+        ? "bg-primary/10 border-primary/20 text-primary"
+        : type === "CONFIRMATION"
+          ? "bg-primary/10 border-primary/20 text-primary"
+          : "bg-muted text-muted-foreground",
+  );
+
+  return (
+    <div className={iconClass}>
+      {decryptionFailed ? (
+        <Lock className="size-4" />
+      ) : type === "INTERACTIVE" ? (
+        <Smartphone className="size-4" />
+      ) : (
+        <Bell className="size-4" />
+      )}
+    </div>
+  );
+}
+
+interface StatusBadgeProps {
+  status: string;
+}
+
+function StatusBadge({ status }: StatusBadgeProps): React.JSX.Element {
+  const badgeClass = cn(
+    "text-[9px] px-1.5 py-0.5 font-bold uppercase tracking-wider shrink-0",
+    status === "PENDING"
+      ? "bg-warning/10 text-warning border-warning/20"
+      : status === "APPROVED"
+        ? "bg-success/10 text-success border-success/20"
+        : status === "DENIED"
+          ? "bg-destructive/10 text-destructive border-destructive/20"
+          : "bg-muted text-muted-foreground",
+  );
+
+  return (
+    <Badge variant="outline" className={badgeClass}>
+      {status}
+    </Badge>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export function RrNotificationsModal({
   open,
@@ -166,11 +223,7 @@ export function RrNotificationsModal({
         if (res.ok) {
           const data = await res.json();
 
-          if (data.length < PAGE_SIZE) {
-            setHasMore(false);
-          } else {
-            setHasMore(true);
-          }
+          setHasMore(data.length >= PAGE_SIZE);
 
           let processedData = [];
           try {
@@ -332,7 +385,7 @@ export function RrNotificationsModal({
         );
         toast.success("Notification dismissed");
       }
-    } catch (err) {
+    } catch {
       toast.error("Failed to dismiss notification");
     }
   };
@@ -353,7 +406,7 @@ export function RrNotificationsModal({
       } else {
         throw new Error("Failed to delete");
       }
-    } catch (err) {
+    } catch {
       toast.error("Failed to delete notification");
     }
   };
@@ -374,7 +427,7 @@ export function RrNotificationsModal({
       } else {
         throw new Error("Failed to clear");
       }
-    } catch (err) {
+    } catch {
       toast.error("Failed to clear notifications");
     }
   };
@@ -407,7 +460,7 @@ export function RrNotificationsModal({
           status === "APPROVED" ? "Request Approved" : "Request Denied",
         );
       }
-    } catch (err) {
+    } catch {
       toast.error(`Failed to update request`);
     } finally {
       setProcessingId(null);
@@ -535,7 +588,7 @@ export function RrNotificationsModal({
                   variant="ghost"
                   size="sm"
                   onClick={handleClearAll}
-                  className="h-8 text-[10px] font-bold text-red-500 hover:text-red-600 hover:bg-red-500/10 transition-all cursor-pointer"
+                  className="h-8 text-[10px] font-bold text-destructive hover:text-destructive hover:bg-destructive/10 transition-all cursor-pointer"
                 >
                   Clear All
                 </Button>
@@ -565,7 +618,7 @@ export function RrNotificationsModal({
           </div>
         ) : (
           <ScrollArea className="max-h-[500px] pr-2 py-2">
-            <div className="space-y-3">
+            <div className="flex flex-col gap-3">
               {notifications.map((n) => {
                 const isPending = n.status === "PENDING";
                 const requiresInput =
@@ -579,49 +632,31 @@ export function RrNotificationsModal({
                   >
                     <div className="flex items-start justify-between gap-3 w-full min-w-0">
                       <div className="flex items-start gap-3 min-w-0 flex-1">
-                        <div
-                          className={`p-2 rounded-lg border shrink-0 mt-0.5 ${
-                            n._decryptionFailed
-                              ? "bg-red-500/10 border-red-500/20 text-red-500"
-                              : n.type === "INTERACTIVE"
-                                ? "bg-primary/10 border-primary/20 text-primary"
-                                : n.type === "CONFIRMATION"
-                                  ? "bg-blue-500/10 border-blue-500/20 text-blue-500"
-                                  : "bg-muted text-muted-foreground"
-                          }`}
-                        >
-                          {n._decryptionFailed ? (
-                            <Lock className="size-4" />
-                          ) : n.type === "INTERACTIVE" ? (
-                            <Smartphone className="size-4" />
-                          ) : (
-                            <Bell className="size-4" />
-                          )}
-                        </div>
-                        <div className="space-y-1 min-w-0 flex-1">
+                        <NotificationIcon
+                          type={n.type}
+                          decryptionFailed={n._decryptionFailed}
+                        />
+                        <div className="flex flex-col gap-1 min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap min-w-0">
                             <span
-                              className={`text-xs font-bold wrap-break-word max-w-full ${n._decryptionFailed ? "text-red-500" : "text-foreground"}`}
+                              className={cn(
+                                "text-xs font-bold wrap-break-word max-w-full",
+                                n._decryptionFailed
+                                  ? "text-destructive"
+                                  : "text-foreground",
+                              )}
                             >
                               {n.title}
                             </span>
-                            <Badge
-                              variant="outline"
-                              className={`text-[9px] px-1.5 py-0.5 font-bold uppercase tracking-wider shrink-0 ${
-                                n.status === "PENDING"
-                                  ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
-                                  : n.status === "APPROVED"
-                                    ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-                                    : n.status === "DENIED"
-                                      ? "bg-red-500/10 text-red-500 border-red-500/20"
-                                      : "bg-muted text-muted-foreground"
-                              }`}
-                            >
-                              {n.status}
-                            </Badge>
+                            <StatusBadge status={n.status} />
                           </div>
                           <p
-                            className={`text-[11px] leading-normal wrap-break-word ${n._decryptionFailed ? "text-red-400/80 italic" : "text-muted-foreground"}`}
+                            className={cn(
+                              "text-[11px] leading-normal wrap-break-word",
+                              n._decryptionFailed
+                                ? "text-destructive/80 italic"
+                                : "text-muted-foreground",
+                            )}
                           >
                             {n.message}
                           </p>
@@ -636,7 +671,7 @@ export function RrNotificationsModal({
                           size="icon"
                           variant="ghost"
                           onClick={() => handleDelete(n.id)}
-                          className="h-8 w-8 rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/10 cursor-pointer shrink-0 transition-colors"
+                          className="size-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer shrink-0 transition-colors"
                         >
                           <Trash2 className="size-4" />
                         </Button>
@@ -644,9 +679,9 @@ export function RrNotificationsModal({
                     </div>
 
                     {isActionable && !n._decryptionFailed && (
-                      <div className="mt-1 border-t pt-3 space-y-3.5">
+                      <div className="mt-1 border-t pt-3 flex flex-col gap-3.5">
                         {requiresInput && (
-                          <div className="space-y-1.5">
+                          <div className="flex flex-col gap-1.5">
                             <Label
                               htmlFor={`input-${n.id}`}
                               className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide"
@@ -683,7 +718,7 @@ export function RrNotificationsModal({
                             variant="ghost"
                             onClick={() => handleAction(n, "DENY")}
                             disabled={processingId === n.id}
-                            className="h-8 rounded-md px-3 text-red-500 hover:text-red-600 hover:bg-red-500/10 text-xs font-semibold"
+                            className="h-8 rounded-md px-3 text-destructive hover:text-destructive hover:bg-destructive/10 text-xs font-semibold"
                           >
                             <XCircle className="size-3.5 mr-1" /> Deny
                           </Button>

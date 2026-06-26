@@ -31,7 +31,8 @@ import { cn } from "@/lib/utils";
 import { useSidebar } from "../ui/sidebar";
 import Link from "next/link";
 import { io, Socket } from "socket.io-client";
-import { useFetch } from "@/hooks/useFetch";
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
 import { Badge } from "../ui/badge";
 import { RrConstellationBuilderModal } from "./rrConstellationBuilderModal";
 import { RrNotificationsModal } from "./rrNotificationsModal";
@@ -63,18 +64,13 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
   const { isE2eeUnlocked, isKeysExist, lockE2ee, setShowUnlockDialog } =
     useRRe2ee();
 
-  const { data: notificationsData, refetch: refetchNotifications } = useFetch<
+  const { data: notificationsData, mutate: refetchNotifications } = useSWR<
     any[]
   >(
     session?.accessToken
-      ? `${process.env.NEXT_PUBLIC_API_URL}/notifications`
-      : "",
-    {
-      headers: {
-        Authorization: `Bearer ${session?.accessToken}`,
-      },
-      enabled: !!session?.accessToken,
-    },
+      ? [`${process.env.NEXT_PUBLIC_API_URL}/notifications`, session.accessToken]
+      : null,
+    fetcher
   );
 
   useEffect(() => {

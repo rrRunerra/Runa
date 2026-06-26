@@ -14,11 +14,14 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { THEMES, type ThemeConfig } from "@/config/themes";
+import { cn } from "@/lib/utils";
 
-interface AppearanceDialogProps {
+export interface AppearanceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
+type ThemeMode = "light" | "dark" | "system";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -40,15 +43,69 @@ const itemVariants = {
   },
 };
 
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+interface ModeCardProps {
+  mode: ThemeMode;
+  activeMode: ThemeMode;
+  label: string;
+  description: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+}
+
+function ModeCard({
+  mode,
+  activeMode,
+  label,
+  description,
+  icon,
+  onClick,
+}: ModeCardProps): React.JSX.Element {
+  const isActive = activeMode === mode;
+
+  return (
+    <motion.button
+      type="button"
+      onClick={onClick}
+      whileHover={{ y: -2 }}
+      whileTap={{ scale: 0.98 }}
+      className={cn(
+        "group relative flex flex-col items-center gap-3.5 p-4 sm:p-5 rounded-xl border-2 text-center transition-colors duration-200 cursor-pointer",
+        isActive ? "border-transparent bg-primary/5" : "border-border hover:bg-muted/50",
+      )}
+    >
+      {isActive && (
+        <motion.div
+          layoutId="activeModeOutline"
+          className="absolute inset-0 border-2 border-primary rounded-xl shadow-[0_0_15px_rgba(var(--primary),0.05)]"
+          transition={{ type: "spring", stiffness: 380, damping: 30 }}
+          style={{ pointerEvents: "none" }}
+        />
+      )}
+      <div className="p-3 rounded-full bg-primary/10 text-primary border border-primary/20 group-hover:scale-110 transition-transform duration-200">
+        {icon}
+      </div>
+      <div>
+        <span className="text-xs font-bold block text-foreground">{label}</span>
+        <span className="text-[9px] text-muted-foreground mt-1 block">
+          {description}
+        </span>
+      </div>
+    </motion.button>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
 export function RrAppearanceModal({
   open,
   onOpenChange,
 }: AppearanceDialogProps): React.JSX.Element | null {
-  const { theme, setTheme, resolvedTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const { baseTheme, setBaseTheme } = useBaseTheme();
   const [mounted, setMounted] = useState(false);
-
-  const [themeMode, setThemeMode] = useState<"light" | "dark" | "system">("dark");
+  const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
 
   useEffect(() => {
     setMounted(true);
@@ -66,6 +123,12 @@ export function RrAppearanceModal({
     onOpenChange(false);
   };
 
+  const modes: Array<{ mode: ThemeMode; label: string; description: string; icon: React.ReactNode }> = [
+    { mode: "light", label: "Light", description: "High-contrast display", icon: <Sun className="size-5" /> },
+    { mode: "dark", label: "Dark", description: "Low-light display", icon: <Moon className="size-5" /> },
+    { mode: "system", label: "System", description: "Follows OS default", icon: <Laptop className="size-5" /> },
+  ];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] sm:max-w-md md:max-w-xl lg:max-w-2xl bg-card border shadow-xl p-0 gap-0 overflow-hidden rounded-xl flex flex-col">
@@ -74,7 +137,7 @@ export function RrAppearanceModal({
           <div className="p-2.5 rounded-lg bg-primary/10 text-primary border border-primary/20 hidden sm:block shrink-0">
             <Palette className="size-5" />
           </div>
-          <div className="space-y-0.5">
+          <div className="flex flex-col gap-0.5">
             <DialogTitle className="text-base sm:text-lg font-bold text-foreground">
               Appearance Settings
             </DialogTitle>
@@ -90,10 +153,10 @@ export function RrAppearanceModal({
             variants={containerVariants}
             initial="hidden"
             animate="show"
-            className="p-5 sm:p-6 space-y-6"
+            className="p-5 sm:p-6 flex flex-col gap-6"
           >
             {/* Theme Selector Section */}
-            <motion.div variants={itemVariants} className="space-y-3">
+            <motion.div variants={itemVariants} className="flex flex-col gap-3">
               <div>
                 <h3 className="text-xs sm:text-sm font-semibold text-foreground">
                   Interface Theme
@@ -112,9 +175,7 @@ export function RrAppearanceModal({
                       themeConfig={t}
                       colors={currentColors}
                       isSelected={baseTheme === t.id}
-                      onClick={() => {
-                        setBaseTheme(t.id);
-                      }}
+                      onClick={() => setBaseTheme(t.id)}
                     />
                   );
                 })}
@@ -124,7 +185,7 @@ export function RrAppearanceModal({
             <motion.hr variants={itemVariants} className="border-border" />
 
             {/* Segmented Light/Dark Selection Cards */}
-            <motion.div variants={itemVariants} className="space-y-3">
+            <motion.div variants={itemVariants} className="flex flex-col gap-3">
               <div>
                 <h3 className="text-xs sm:text-sm font-semibold text-foreground">
                   Theme Mode
@@ -135,104 +196,17 @@ export function RrAppearanceModal({
               </div>
 
               <div className="grid grid-cols-3 gap-4 mt-2">
-                {/* Light Mode Selector Card */}
-                <motion.button
-                  type="button"
-                  onClick={() => setThemeMode("light")}
-                  whileHover={{ y: -2 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`group relative flex flex-col items-center gap-3.5 p-4 sm:p-5 rounded-xl border-2 text-center transition-colors duration-200 cursor-pointer ${
-                    themeMode === "light"
-                      ? "border-transparent bg-primary/5"
-                      : "border-border hover:bg-muted/50"
-                  }`}
-                >
-                  {themeMode === "light" && (
-                    <motion.div
-                      layoutId="activeModeOutline"
-                      className="absolute inset-0 border-2 border-primary rounded-xl shadow-[0_0_15px_rgba(var(--primary),0.05)]"
-                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                      style={{ pointerEvents: "none" }}
-                    />
-                  )}
-                  <div className="p-3 rounded-full bg-orange-500/10 text-orange-500 border border-orange-500/20 group-hover:scale-110 transition-transform duration-200">
-                    <Sun className="size-5" />
-                  </div>
-                  <div>
-                    <span className="text-xs font-bold block text-foreground">
-                      Light
-                    </span>
-                    <span className="text-[9px] text-muted-foreground mt-1 block">
-                      High-contrast display
-                    </span>
-                  </div>
-                </motion.button>
-
-                {/* Dark Mode Selector Card */}
-                <motion.button
-                  type="button"
-                  onClick={() => setThemeMode("dark")}
-                  whileHover={{ y: -2 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`group relative flex flex-col items-center gap-3.5 p-4 sm:p-5 rounded-xl border-2 text-center transition-colors duration-200 cursor-pointer ${
-                    themeMode === "dark"
-                      ? "border-transparent bg-primary/5"
-                      : "border-border hover:bg-muted/50"
-                  }`}
-                >
-                  {themeMode === "dark" && (
-                    <motion.div
-                      layoutId="activeModeOutline"
-                      className="absolute inset-0 border-2 border-primary rounded-xl shadow-[0_0_15px_rgba(var(--primary),0.05)]"
-                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                      style={{ pointerEvents: "none" }}
-                    />
-                  )}
-                  <div className="p-3 rounded-full bg-purple-500/10 text-purple-500 border border-purple-500/20 group-hover:scale-110 transition-transform duration-200">
-                    <Moon className="size-5" />
-                  </div>
-                  <div>
-                    <span className="text-xs font-bold block text-foreground">
-                      Dark
-                    </span>
-                    <span className="text-[9px] text-muted-foreground mt-1 block">
-                      Low-light display
-                    </span>
-                  </div>
-                </motion.button>
-
-                {/* System Mode Selector Card */}
-                <motion.button
-                  type="button"
-                  onClick={() => setThemeMode("system")}
-                  whileHover={{ y: -2 }}
-                  whileTap={{ scale: 0.98 }}
-                  className={`group relative flex flex-col items-center gap-3.5 p-4 sm:p-5 rounded-xl border-2 text-center transition-colors duration-200 cursor-pointer ${
-                    themeMode === "system"
-                      ? "border-transparent bg-primary/5"
-                      : "border-border hover:bg-muted/50"
-                  }`}
-                >
-                  {themeMode === "system" && (
-                    <motion.div
-                      layoutId="activeModeOutline"
-                      className="absolute inset-0 border-2 border-primary rounded-xl shadow-[0_0_15px_rgba(var(--primary),0.05)]"
-                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                      style={{ pointerEvents: "none" }}
-                    />
-                  )}
-                  <div className="p-3 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20 group-hover:scale-110 transition-transform duration-200">
-                    <Laptop className="size-5" />
-                  </div>
-                  <div>
-                    <span className="text-xs font-bold block text-foreground">
-                      System
-                    </span>
-                    <span className="text-[9px] text-muted-foreground mt-1 block">
-                      Follows OS default
-                    </span>
-                  </div>
-                </motion.button>
+                {modes.map(({ mode, label, description, icon }) => (
+                  <ModeCard
+                    key={mode}
+                    mode={mode}
+                    activeMode={themeMode}
+                    label={label}
+                    description={description}
+                    icon={icon}
+                    onClick={() => setThemeMode(mode)}
+                  />
+                ))}
               </div>
             </motion.div>
           </motion.div>
@@ -263,26 +237,31 @@ export function RrAppearanceModal({
   );
 }
 
+// ─── ThemeButton ──────────────────────────────────────────────────────────────
+
+interface ThemeButtonProps {
+  themeConfig: ThemeConfig;
+  colors: ThemeConfig["colors"]["dark"];
+  isSelected: boolean;
+  onClick: () => void;
+}
+
 function ThemeButton({
   themeConfig,
   colors,
   isSelected,
   onClick,
-}: {
-  themeConfig: ThemeConfig;
-  colors: ThemeConfig["colors"]["dark"];
-  isSelected: boolean;
-  onClick: () => void;
-}): React.JSX.Element {
+}: ThemeButtonProps): React.JSX.Element {
   return (
     <motion.button
       type="button"
       onClick={onClick}
       whileHover={{ y: -3 }}
       whileTap={{ scale: 0.97 }}
-      className={`group relative rounded-xl border-2 p-2.5 sm:p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 flex flex-col items-center w-full transition-colors duration-200 cursor-pointer ${
-        isSelected ? "border-transparent bg-primary/5" : "border-border hover:bg-muted/50"
-      }`}
+      className={cn(
+        "group relative rounded-xl border-2 p-2.5 sm:p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 flex flex-col items-center w-full transition-colors duration-200 cursor-pointer",
+        isSelected ? "border-transparent bg-primary/5" : "border-border hover:bg-muted/50",
+      )}
     >
       {isSelected && (
         <motion.div
@@ -308,7 +287,7 @@ function ThemeButton({
             <div className="size-1 rounded-full bg-yellow-400/80" />
             <div className="size-1 rounded-full bg-green-400/80" />
           </div>
-          <div className="space-y-1">
+          <div className="flex flex-col gap-1">
             <div
               className="h-1 w-full rounded-xs"
               style={{ backgroundColor: colors.primary, opacity: 0.8 }}
@@ -339,32 +318,22 @@ function ThemeButton({
           </div>
           {/* Mockup Grid cards */}
           <div className="grid grid-cols-2 gap-1 flex-1 overflow-hidden">
-            <div
-              className="rounded-xs border p-1 flex flex-col gap-0.5 justify-center"
-              style={{ backgroundColor: colors.accent, opacity: 0.08 }}
-            >
+            {[0, 1].map((i) => (
               <div
-                className="h-0.5 w-2/3 rounded-xxs"
-                style={{ backgroundColor: colors.primary }}
-              />
-              <div
-                className="h-0.5 w-full rounded-xxs"
-                style={{ backgroundColor: colors.primary, opacity: 0.4 }}
-              />
-            </div>
-            <div
-              className="rounded-xs border p-1 flex flex-col gap-0.5 justify-center"
-              style={{ backgroundColor: colors.accent, opacity: 0.08 }}
-            >
-              <div
-                className="h-0.5 w-2/3 rounded-xxs"
-                style={{ backgroundColor: colors.primary }}
-              />
-              <div
-                className="h-0.5 w-full rounded-xxs"
-                style={{ backgroundColor: colors.primary, opacity: 0.4 }}
-              />
-            </div>
+                key={i}
+                className="rounded-xs border p-1 flex flex-col gap-0.5 justify-center"
+                style={{ backgroundColor: colors.accent, opacity: 0.08 }}
+              >
+                <div
+                  className="h-0.5 w-2/3 rounded-xxs"
+                  style={{ backgroundColor: colors.primary }}
+                />
+                <div
+                  className="h-0.5 w-full rounded-xxs"
+                  style={{ backgroundColor: colors.primary, opacity: 0.4 }}
+                />
+              </div>
+            ))}
           </div>
         </div>
       </div>

@@ -47,11 +47,11 @@ export function RrUnlockSecureStorageModal() {
     try {
       await unlockE2ee(password);
       setPassword("");
-    } catch (err: any) {
+    } catch {
       setError(
         isKeysExist
           ? "Incorrect password. Failed to unlock."
-          : "Failed to initialize keys."
+          : "Failed to initialize keys.",
       );
     } finally {
       setLoading(false);
@@ -60,10 +60,10 @@ export function RrUnlockSecureStorageModal() {
 
   return (
     <Dialog open={showUnlockDialog} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-md bg-zinc-950/95 backdrop-blur-xl border border-zinc-800/80 shadow-2xl p-6 rounded-2xl">
-        <DialogHeader className="pb-3 border-b border-zinc-800/40">
+      <DialogContent className="max-w-md bg-card border shadow-2xl p-6 rounded-2xl">
+        <DialogHeader className="pb-3 border-b">
           <DialogTitle className="flex items-center gap-2 text-md font-bold text-foreground">
-            <Shield className="size-5 text-amber-500" />
+            <Shield className="size-5 text-primary" />
             {isKeysExist ? "Unlock Encryption" : "Setup Encryption"}
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground mt-1 leading-relaxed">
@@ -73,12 +73,9 @@ export function RrUnlockSecureStorageModal() {
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-          <div className="space-y-2">
-            <Label
-              htmlFor="e2ee-password"
-              className="text-xs font-semibold text-zinc-400"
-            >
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4 pt-4">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="e2ee-password" className="text-xs font-semibold text-muted-foreground">
               Account Password
             </Label>
             <div className="relative">
@@ -89,19 +86,19 @@ export function RrUnlockSecureStorageModal() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
-                className="h-10 bg-zinc-900 border-zinc-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 rounded-lg text-xs pr-10 transition-all"
+                className="h-10 rounded-lg text-xs pr-10 transition-all"
                 required
               />
               <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">
-                <div className="w-5 h-5 flex items-center justify-center rounded bg-blue-500/10 border border-blue-500/25">
-                  <Shield className="size-3 text-blue-400" />
+                <div className="size-5 flex items-center justify-center rounded bg-primary/10 border border-primary/20">
+                  <Shield className="size-3 text-primary" />
                 </div>
               </div>
             </div>
           </div>
 
           {error && (
-            <p className="text-[11px] font-medium text-red-400 bg-red-500/10 border border-red-500/20 px-3 py-2 rounded-lg transition-all">
+            <p className="text-[11px] font-medium text-destructive bg-destructive/10 border border-destructive/20 px-3 py-2 rounded-lg transition-all">
               {error}
             </p>
           )}
@@ -110,7 +107,7 @@ export function RrUnlockSecureStorageModal() {
             <Button
               type="submit"
               disabled={loading || !password}
-              className="h-9 px-5 bg-amber-600/90 hover:bg-amber-600 text-white border border-amber-500/30 text-xs font-semibold rounded-lg shadow-lg shadow-amber-900/20 active:scale-95 transition-all"
+              className="h-9 px-5 text-xs font-semibold rounded-lg cursor-pointer"
             >
               {loading ? (
                 <>

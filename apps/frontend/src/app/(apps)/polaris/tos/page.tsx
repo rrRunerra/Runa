@@ -1,4 +1,3 @@
-import React from "react";
 import Link from "next/link";
 import { Scale, ArrowLeft } from "lucide-react";
 

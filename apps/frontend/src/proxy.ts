@@ -1,6 +1,6 @@
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
-import { BitField, hasPermission, LynxFlags, BitFieldResolvable } from "@runa/permissions";
+import { hasPermission, LynxFlags, BitFieldResolvable } from "@runa/permissions";
 import "dotenv/config";
 
 const PUBLIC_ROUTES: string[] = [
@@ -23,7 +23,8 @@ const PUBLIC_ROUTES: string[] = [
   "/api/auth/callback/credentials",
   "/aquila",
   "/lynx",
-  "/polaris/permissions"
+  "/polaris/tos",
+  "/polaris/privacy"
 ];
 
 interface RouteGuard {

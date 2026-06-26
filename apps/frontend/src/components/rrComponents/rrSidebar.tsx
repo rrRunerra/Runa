@@ -35,7 +35,6 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import RrBottomDock from "./rrBottomDock";
 import { rrApps } from "../../../config/rrApps";
-import path from "path";
 import { Badge } from "../ui/badge";
 import {
   Collapsible,
@@ -330,6 +329,6 @@ export default function RrSidebar({ sidebarConfig, ...props }: rrSidebarProps) {
 }
 
 
-interface rrSidebarProps extends React.ComponentProps<typeof Sidebar> {
+export interface rrSidebarProps extends React.ComponentProps<typeof Sidebar> {
   sidebarConfig: SidebarConfig;
 }

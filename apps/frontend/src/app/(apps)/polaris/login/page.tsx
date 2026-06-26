@@ -1,137 +1,15 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
-import Link from "next/link";
-import {
-  Eye,
-  EyeOff,
-  Mail,
-  Lock,
-  ShieldCheck,
-  Compass,
-  Fingerprint,
-  ArrowLeft,
-  Smartphone,
-  Key,
-} from "lucide-react";
+
 import { startAuthentication } from "@simplewebauthn/browser";
 import { useRouter } from "next/navigation";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
 import { useRrDevice } from "@/hooks/useRrDevice";
 import { useRrBrowser } from "@/hooks/useRrBrowser";
 import { RrLoginForm } from "@/components/rrComponents/polaris/rrLoginForm";
-
-const RESERVED_KEYWORDS = new Set([
-  "break",
-  "case",
-  "catch",
-  "class",
-  "const",
-  "continue",
-  "debugger",
-  "default",
-  "delete",
-  "do",
-  "else",
-  "export",
-  "extends",
-  "false",
-  "finally",
-  "for",
-  "function",
-  "if",
-  "import",
-  "in",
-  "instanceof",
-  "new",
-  "null",
-  "return",
-  "super",
-  "switch",
-  "this",
-  "throw",
-  "true",
-  "try",
-  "typeof",
-  "var",
-  "void",
-  "while",
-  "with",
-  "yield",
-  "let",
-  "package",
-  "private",
-  "protected",
-  "public",
-  "static",
-  "any",
-  "boolean",
-  "constructor",
-  "declare",
-  "get",
-  "module",
-  "require",
-  "number",
-  "set",
-  "string",
-  "symbol",
-  "type",
-  "undefined",
-  "unknown",
-  "never",
-  "readonly",
-  "keyof",
-  "infer",
-  "as",
-  "from",
-  "of",
-  "namespace",
-  "interface",
-  "implements",
-  "enum",
-  "await",
-  "select",
-  "insert",
-  "update",
-  "drop",
-  "truncate",
-  "alter",
-  "create",
-  "table",
-  "database",
-  "index",
-  "use",
-  "where",
-  "join",
-  "left",
-  "right",
-  "inner",
-  "outer",
-  "on",
-  "and",
-  "or",
-  "not",
-  "union",
-  "values",
-  "into",
-  "order",
-  "by",
-  "group",
-  "having",
-  "limit",
-  "offset",
-  "distinct",
-  "all",
-  "exists",
-  "like",
-  "between",
-  "is",
-]);
+import { toast } from "sonner";
+import { RESERVED_KEYWORDS } from "@/lib/rrReservedKeywords";
 
 export default function Page() {
   const deviceType = useRrDevice();
@@ -148,7 +26,9 @@ export default function Page() {
 
   // MFA Flow States
   const [mfaRequired, setMfaRequired] = useState(false);
-  const [mfaMethods, setMfaMethods] = useState<string[]>([]);
+  const [mfaMethods, setMfaMethods] = useState<
+    Array<"totp" | "email" | "passkey" | "backup" | "device_notification">
+  >([]);
   const [activeMfaMethod, setActiveMfaMethod] = useState<
     "totp" | "email" | "passkey" | "backup" | "device_notification" | null
   >(null);
@@ -156,7 +36,9 @@ export default function Page() {
   const [mfaCode, setMfaCode] = useState("");
   const [emailCodeSent, setEmailCodeSent] = useState(false);
   const [deviceCodeSent, setDeviceCodeSent] = useState(false);
-  const [devices, setDevices] = useState<{ id: string; deviceName: string }[]>([]);
+  const [devices, setDevices] = useState<{ id: string; deviceName: string }[]>(
+    [],
+  );
   const [selectedDeviceId, setSelectedDeviceId] = useState("");
 
   // Background stars animation
@@ -212,7 +94,8 @@ export default function Page() {
     if (existingDeviceId) return;
 
     try {
-      const { generateKeyPair, exportPublicKey } = await import("@runa/crypto/browser");
+      const { generateKeyPair, exportPublicKey } =
+        await import("@runa/crypto/browser");
       const { saveKey } = await import("@/lib/indexeddb");
 
       // Generate Identity Key
@@ -376,6 +259,18 @@ export default function Page() {
       }
 
       await saveKey(`private_key_${username}`, importedPrivateKey);
+      const publicKeyBase64 =
+        e2eKeys.userPublicKey ||
+        // For the new-key branch, userPublicKey was just uploaded — re-read from server
+        (await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/e2e-keys`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        })
+          .then((r) => r.json())
+          .then((d) => d.userPublicKey)
+          .catch(() => null));
+      if (publicKeyBase64) {
+        await saveKey(`public_key_string_${username}`, publicKeyBase64);
+      }
       window.dispatchEvent(new CustomEvent("runa-e2ee-unlocked"));
     } catch (err) {
       console.error("E2EE key initialization failed:", err);
@@ -423,18 +318,22 @@ export default function Page() {
       // 2. If MFA is active, transition UI inline
       if (loginCheckData.mfaRequired) {
         setTempToken(loginCheckData.tempToken);
-        
+
         const currentDeviceId = localStorage.getItem("runa_device_id");
         const availableDevices = (loginCheckData.devices || []).filter(
-          (d: any) => d.id !== currentDeviceId
+          (d: any) => d.id !== currentDeviceId,
         );
-        
+
         let methods = loginCheckData.allowedMethods;
         if (availableDevices.length === 0) {
           methods = methods.filter((m: string) => m !== "device_notification");
         }
-        
-        setMfaMethods(methods);
+
+        setMfaMethods(
+          methods as Array<
+            "totp" | "email" | "passkey" | "backup" | "device_notification"
+          >,
+        );
         setDevices(availableDevices);
         setMfaRequired(true);
 
@@ -442,7 +341,10 @@ export default function Page() {
         if (methods.includes("passkey")) {
           setActiveMfaMethod("passkey");
           triggerPasskeyMfa(loginCheckData.tempToken);
-        } else if (methods.includes("device_notification") && availableDevices.length > 0) {
+        } else if (
+          methods.includes("device_notification") &&
+          availableDevices.length > 0
+        ) {
           setActiveMfaMethod("device_notification");
           // Don't auto-send, let them pick a device first.
         } else if (methods.includes("totp")) {
@@ -474,7 +376,7 @@ export default function Page() {
             await registerDeviceOnLogin(sessionData.accessToken);
             await initializeE2eeKeysOnLogin(
               sessionData.accessToken,
-              lower,
+              sessionData.user?.username ?? lower,
               password,
             );
           }
@@ -586,11 +488,14 @@ export default function Page() {
       await completeLoginWithSuccessToken(verifyData.mfaSuccessToken);
     } catch (err: any) {
       console.error(err);
-      const isDenied = err.name === "NotAllowedError" || err.message?.includes("NotAllowedError") || err.message?.includes("not allowed");
+      const isDenied =
+        err.name === "NotAllowedError" ||
+        err.message?.includes("NotAllowedError") ||
+        err.message?.includes("not allowed");
       setMessage(
         isDenied
           ? "❌ Passkey request was cancelled or denied."
-          : `❌ Passkey verification failed: ${err.message || "Cancelled"}`
+          : `❌ Passkey verification failed: ${err.message || "Cancelled"}`,
       );
     } finally {
       setLoading(false);
@@ -647,13 +552,15 @@ export default function Page() {
         const sessionData = await sessionRes.json();
         if (sessionData?.accessToken) {
           await registerDeviceOnLogin(sessionData.accessToken);
+
           await initializeE2eeKeysOnLogin(
             sessionData.accessToken,
-            identifier.trim().toLowerCase(),
+            sessionData.user?.username ?? identifier.trim().toLowerCase(),
             password,
           );
         }
       }
+
       handleRedirect();
     }
   };
@@ -701,15 +608,23 @@ export default function Page() {
             await registerDeviceOnLogin(sessionData.accessToken);
           }
         }
+        toast.info("Encryption locked", {
+          description:
+            "Passkey can't unlock encryption by itself. Open user menu at the bottom left, then click on Encryption.",
+          duration: 8000,
+        });
         handleRedirect();
       }
     } catch (err: any) {
       console.error(err);
-      const isDenied = err.name === "NotAllowedError" || err.message?.includes("NotAllowedError") || err.message?.includes("not allowed");
+      const isDenied =
+        err.name === "NotAllowedError" ||
+        err.message?.includes("NotAllowedError") ||
+        err.message?.includes("not allowed");
       setMessage(
         isDenied
           ? "❌ Passkey request was cancelled or denied."
-          : `❌ Passkey login cancelled or failed.`
+          : `❌ Passkey login cancelled or failed.`,
       );
     } finally {
       setLoading(false);

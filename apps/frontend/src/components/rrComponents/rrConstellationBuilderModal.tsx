@@ -45,7 +45,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
-import { useFetch } from "@/hooks/useFetch";
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
 import { REFERENCE_CONSTELLATIONS } from "@/lib/constellations";
 import { StarMap } from "../stars/StarMap";
 
@@ -121,15 +122,12 @@ export function RrConstellationBuilderModal({
     null,
   );
 
-  // Sync bookmarks using useFetch hook
-  const { data: fetchedBookmarks, refetch: refetchBookmarks } = useFetch<Bookmark[]>(
-    `${process.env.NEXT_PUBLIC_API_URL}/polaris/bookmarks`,
-    {
-      enabled: !!(session?.accessToken && open),
-      headers: {
-        Authorization: `Bearer ${session?.accessToken}`,
-      },
-    }
+  // Sync bookmarks using useSWR
+  const { data: fetchedBookmarks, mutate: refetchBookmarks } = useSWR<Bookmark[]>(
+    session?.accessToken && open
+      ? [`${process.env.NEXT_PUBLIC_API_URL}/polaris/bookmarks`, session.accessToken]
+      : null,
+    fetcher
   );
 
   useEffect(() => {
@@ -149,96 +147,10 @@ export function RrConstellationBuilderModal({
     };
   }, [refetchBookmarks]);
 
-  // Mutation states for saving bookmark
-  const [saveTrigger, setSaveTrigger] = useState<number>(0);
-  const [saveData, setSaveData] = useState<{
-    name: string;
-    description: string;
-    redirect: string;
-    stars: StarBookmarkData[];
-    connections: number[][];
-    icon?: string;
-    connectionColor?: string;
-    starColor?: string;
-  } | null>(null);
-
-  const { data: saveResult, loading: isSaving, error: saveError } = useFetch<Bookmark>(
-    `${process.env.NEXT_PUBLIC_API_URL}/polaris/bookmarks`,
-    {
-      method: "POST",
-      enabled: !!(session?.accessToken && saveTrigger > 0 && saveData),
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session?.accessToken}`,
-      },
-      body: saveData ? JSON.stringify(saveData) : undefined,
-    }
-  );
-
-  const lastProcessedSaveTrigger = useRef<number>(0);
-
-  useEffect(() => {
-    if (saveTrigger > lastProcessedSaveTrigger.current) {
-      if (saveResult && !isSaving && !saveError) {
-        lastProcessedSaveTrigger.current = saveTrigger;
-        toast.success(`Successfully saved "${saveData?.name}" to database bookmarks!`);
-        window.dispatchEvent(new CustomEvent("runa-bookmarks-changed"));
-
-        // Update local bookmarks list
-        setBookmarks((prev) => {
-          const index = prev.findIndex((b) => b.name === saveData?.name);
-          if (index !== -1) {
-            const updated = [...prev];
-            updated[index] = saveResult;
-            return updated;
-          }
-          return [saveResult, ...prev];
-        });
-
-        // Reset state
-        setSaveData(null);
-      } else if (saveError && !isSaving) {
-        lastProcessedSaveTrigger.current = saveTrigger;
-        toast.error(saveError.message || "Failed to save constellation bookmark.");
-      }
-    }
-  }, [saveResult, saveError, isSaving, saveTrigger, saveData]);
-
-  // Mutation states for deleting bookmark
-  const [deleteTrigger, setDeleteTrigger] = useState<number>(0);
-  const [deleteId, setDeleteId] = useState<string>("");
-  const [deleteName, setDeleteName] = useState<string>("");
-
-  const { data: deleteResult, loading: isDeleting, error: deleteError } = useFetch<{ success: boolean }>(
-    deleteId ? `${process.env.NEXT_PUBLIC_API_URL}/polaris/bookmarks/${deleteId}` : "",
-    {
-      method: "DELETE",
-      enabled: !!(session?.accessToken && deleteTrigger > 0 && deleteId),
-      headers: {
-        Authorization: `Bearer ${session?.accessToken}`,
-      },
-    }
-  );
-
-  const lastProcessedDeleteTrigger = useRef<number>(0);
-
-  useEffect(() => {
-    if (deleteTrigger > lastProcessedDeleteTrigger.current) {
-      if (deleteResult && !isDeleting && !deleteError) {
-        lastProcessedDeleteTrigger.current = deleteTrigger;
-        toast.success(`Successfully deleted "${deleteName}" bookmark.`);
-        setBookmarks((prev) => prev.filter((b) => b.id !== deleteId));
-        window.dispatchEvent(new CustomEvent("runa-bookmarks-changed"));
-        
-        // Reset states
-        setDeleteId("");
-        setDeleteName("");
-      } else if (deleteError && !isDeleting) {
-        lastProcessedDeleteTrigger.current = deleteTrigger;
-        toast.error(deleteError.message || "Failed to delete bookmark.");
-      }
-    }
-  }, [deleteResult, deleteError, isDeleting, deleteTrigger, deleteId, deleteName]);
+  // Mutation states
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
 
   // ResizeObserver to handle canvas fitting screen
@@ -1063,7 +975,7 @@ export function RrConstellationBuilderModal({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleSaveToBookmarks = (): void => {
+  const handleSaveToBookmarks = async (): Promise<void> => {
     if (!session?.accessToken) {
       toast.error("You must be logged in to save constellations.");
       return;
@@ -1090,19 +1002,69 @@ export function RrConstellationBuilderModal({
       starColor: starColor || undefined,
     };
 
-    setSaveData(data);
-    setSaveTrigger((prev) => prev + 1);
+    setIsSaving(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/polaris/bookmarks`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.message || "Failed to save constellation bookmark.");
+      }
+      const savedBookmark = await res.json() as Bookmark;
+      toast.success(`Successfully saved "${name}" to database bookmarks!`);
+      window.dispatchEvent(new CustomEvent("runa-bookmarks-changed"));
+
+      // Update local bookmarks list
+      setBookmarks((prev) => {
+        const index = prev.findIndex((b) => b.name === name);
+        if (index !== -1) {
+          const updated = [...prev];
+          updated[index] = savedBookmark;
+          return updated;
+        }
+        return [savedBookmark, ...prev];
+      });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save constellation bookmark.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleDeleteBookmark = (id: string, bookmarkName: string): void => {
+  const handleDeleteBookmark = async (id: string, bookmarkName: string): Promise<void> => {
     if (!session?.accessToken) {
       toast.error("You must be logged in to delete bookmarks.");
       return;
     }
 
     setDeleteId(id);
-    setDeleteName(bookmarkName);
-    setDeleteTrigger((prev) => prev + 1);
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/polaris/bookmarks/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+      });
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.message || "Failed to delete bookmark.");
+      }
+      toast.success(`Successfully deleted "${bookmarkName}" bookmark.`);
+      setBookmarks((prev) => prev.filter((b) => b.id !== id));
+      window.dispatchEvent(new CustomEvent("runa-bookmarks-changed"));
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete bookmark.");
+    } finally {
+      setIsDeleting(false);
+      setDeleteId(null);
+    }
   };
 
   const handleLoadBookmark = (b: Bookmark) => {

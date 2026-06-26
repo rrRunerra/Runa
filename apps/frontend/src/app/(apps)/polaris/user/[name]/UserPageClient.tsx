@@ -12,7 +12,8 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SidebarMenu, SidebarMenuItem } from "@/components/ui/sidebar";
-import { useFetch } from "@/hooks/useFetch";
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
 
 // Shared Components
 import RrAppMenu from "@/components/rrComponents/rrAppMenu";
@@ -46,15 +47,17 @@ export default function UserPageClient(): React.ReactNode {
   const isOwner =
     session?.user?.username?.toLowerCase() === name?.toLowerCase();
 
-  // Fetch primary user profile
-  const { data: user, loading, error } = useFetch<UserProfileData>(
-    name ? `${process.env.NEXT_PUBLIC_API_URL}/user/${name}` : "",
-    {
-      headers: session?.accessToken
-        ? { Authorization: `Bearer ${session.accessToken}` }
-        : undefined,
-      enabled: !!name,
-    }
+  const profileUrl = name
+    ? `${process.env.NEXT_PUBLIC_API_URL}/user/${name}`
+    : null;
+
+  const {
+    data: user,
+    isLoading: loading,
+    error,
+  } = useSWR<UserProfileData>(
+    profileUrl ? [profileUrl, session?.accessToken] : null,
+    fetcher,
   );
 
   useEffect(() => {
@@ -108,7 +111,8 @@ export default function UserPageClient(): React.ReactNode {
             {error ? "Failed to load profile" : "User not found"}
           </h1>
           <p className="text-sm text-muted-foreground mb-6">
-            The profile page could not be loaded. Ensure the username spelling is correct.
+            The profile page could not be loaded. Ensure the username spelling
+            is correct.
           </p>
           <Link href="/polaris/dash">
             <Button variant="outline" className="flex items-center gap-2">
@@ -131,7 +135,8 @@ export default function UserPageClient(): React.ReactNode {
           </div>
           <h1 className="text-xl font-bold mb-2">This profile is private</h1>
           <p className="text-sm text-muted-foreground mb-6">
-            @{user.username} has chosen to keep their profile credentials private.
+            @{user.username} has chosen to keep their profile credentials
+            private.
           </p>
           <Link href="/polaris/dash">
             <Button variant="outline" className="flex items-center gap-2">
@@ -182,7 +187,7 @@ export default function UserPageClient(): React.ReactNode {
             ) : (
               <div className="w-full h-full bg-primary/5" />
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
+            <div className="absolute inset-0 bg-linear-to-t from-background/90 via-background/20 to-transparent" />
           </div>
 
           {/* User Info Container */}
@@ -207,16 +212,24 @@ export default function UserPageClient(): React.ReactNode {
                   <h2 className="text-xl sm:text-2xl font-bold tracking-tight">
                     {displayName}
                   </h2>
-                  <Badge variant="secondary" className="font-semibold text-xs py-0.5">
+                  <Badge
+                    variant="secondary"
+                    className="font-semibold text-xs py-0.5"
+                  >
                     Profile
                   </Badge>
                   {isOwner && (
-                    <Badge variant="outline" className="font-semibold text-xs py-0.5">
+                    <Badge
+                      variant="outline"
+                      className="font-semibold text-xs py-0.5"
+                    >
                       You
                     </Badge>
                   )}
                 </div>
-                <p className="text-sm text-muted-foreground">@{user.username}</p>
+                <p className="text-sm text-muted-foreground">
+                  @{user.username}
+                </p>
               </div>
             </div>
           </div>
@@ -228,28 +241,30 @@ export default function UserPageClient(): React.ReactNode {
           role="tablist"
           aria-label="User profile tabs"
         >
-          {(["overview", "favorites", "lists", "stats"] as TabType[]).map((tab) => {
-            const isActive = activeTab === tab;
-            return (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                role="tab"
-                aria-selected={isActive}
-                aria-controls={`tabpanel-${tab}`}
-                id={`tab-${tab}`}
-                className={cn(
-                  "relative px-4 py-2.5 text-sm font-medium transition-colors cursor-pointer",
-                  "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
-                  isActive
-                    ? "text-primary border-b-2 border-primary"
-                    : "text-muted-foreground hover:text-foreground hover:border-b-2 hover:border-muted-foreground/30 border-b-2 border-transparent"
-                )}
-              >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-              </button>
-            );
-          })}
+          {(["overview", "favorites", "lists", "stats"] as TabType[]).map(
+            (tab) => {
+              const isActive = activeTab === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  role="tab"
+                  aria-selected={isActive}
+                  aria-controls={`tabpanel-${tab}`}
+                  id={`tab-${tab}`}
+                  className={cn(
+                    "relative px-4 py-2.5 text-sm font-medium transition-colors cursor-pointer",
+                    "focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring",
+                    isActive
+                      ? "text-primary border-b-2 border-primary"
+                      : "text-muted-foreground hover:text-foreground hover:border-b-2 hover:border-muted-foreground/30 border-b-2 border-transparent",
+                  )}
+                >
+                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                </button>
+              );
+            },
+          )}
         </div>
 
         {/* Tab Content Panel */}

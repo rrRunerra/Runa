@@ -4,9 +4,14 @@ import type React from "react";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { LayoutGrid, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { SidebarConfig, SidebarItem, SidebarItemChild } from "@/types/SidebarConfig";
+import type {
+  SidebarConfig,
+  SidebarItem,
+  SidebarItemChild,
+} from "@/types/SidebarConfig";
 import { useSession } from "next-auth/react";
-import { useFetch } from "@/hooks/useFetch";
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
 import { apps } from "../../../../config/apps";
 import { getAquilaSidebarConfig } from "../../../../config/aquilaSidebarConfig";
 import { getLynxSidebarConfig } from "../../../../config/lynxSidebarConfig";
@@ -63,24 +68,18 @@ export function RrSidebarSettingsTab({
   const [connections, setConnections] = useState<Connection[]>([]);
   const [emails, setEmails] = useState<any[]>([]);
 
-  const { data: connectionsData } = useFetch<Connection[]>(
-    session?.accessToken ? `${process.env.NEXT_PUBLIC_API_URL}/connections` : "",
-    {
-      headers: {
-        Authorization: `Bearer ${session?.accessToken}`,
-      },
-      enabled: !!session?.accessToken,
-    }
+  const { data: connectionsData } = useSWR<Connection[]>(
+    session?.accessToken
+      ? [`${process.env.NEXT_PUBLIC_API_URL}/connections`, session.accessToken]
+      : null,
+    fetcher,
   );
 
-  const { data: emailsData } = useFetch<any[]>(
-    session?.accessToken ? `${process.env.NEXT_PUBLIC_API_URL}/emails` : "",
-    {
-      headers: {
-        Authorization: `Bearer ${session?.accessToken}`,
-      },
-      enabled: !!session?.accessToken,
-    }
+  const { data: emailsData } = useSWR<any[]>(
+    session?.accessToken
+      ? [`${process.env.NEXT_PUBLIC_API_URL}/emails`, session.accessToken]
+      : null,
+    fetcher,
   );
 
   useEffect(() => {
@@ -128,11 +127,14 @@ export function RrSidebarSettingsTab({
     if (!key) return undefined;
     for (const section of currentConfig) {
       for (const item of section.items) {
-        const itemKey = item.href || (item.component ? `label:${item.label}` : undefined);
+        const itemKey =
+          item.href || (item.component ? `label:${item.label}` : undefined);
         if (itemKey === key) return item;
         if (item.children) {
           for (const child of item.children) {
-            const childKey = child.href || (child.component ? `label:${child.label}` : undefined);
+            const childKey =
+              child.href ||
+              (child.component ? `label:${child.label}` : undefined);
             if (childKey === key) return child;
           }
         }
@@ -167,7 +169,8 @@ export function RrSidebarSettingsTab({
       if (phoneSection) {
         phoneSection.items.forEach((item) => {
           if (item.position) {
-            const itemKey = item.href || (item.component ? `label:${item.label}` : null);
+            const itemKey =
+              item.href || (item.component ? `label:${item.label}` : null);
             if (itemKey) {
               defaults[item.position.toString()] = itemKey;
             }
@@ -246,7 +249,8 @@ export function RrSidebarSettingsTab({
   const userPermissions = session?.user?.permissions;
   const groupedItems: Record<string, SidebarItem[]> = {};
   currentConfig.forEach((sec) => {
-    const secNameLower = sec.section?.toLowerCase().replace(/[^a-z]/g, "") || "";
+    const secNameLower =
+      sec.section?.toLowerCase().replace(/[^a-z]/g, "") || "";
     if (secNameLower === "phone") return;
 
     const canAccessSection =
@@ -261,13 +265,15 @@ export function RrSidebarSettingsTab({
       if (!canAccessItem) return;
 
       const secName = sec.section || "General";
-      const itemKey = item.href || (item.component ? `label:${item.label}` : undefined);
+      const itemKey =
+        item.href || (item.component ? `label:${item.label}` : undefined);
       const hasChildren = item.children && item.children.length > 0;
 
       if (itemKey || hasChildren) {
         if (!groupedItems[secName]) groupedItems[secName] = [];
         const isAlreadyAdded = groupedItems[secName].some((i) => {
-          const existingKey = i.href || (i.component ? `label:${i.label}` : undefined);
+          const existingKey =
+            i.href || (i.component ? `label:${i.label}` : undefined);
           if (existingKey === itemKey && itemKey !== undefined) return true;
           if (existingKey === undefined && i.label === item.label) return true;
           return false;
@@ -341,14 +347,15 @@ export function RrSidebarSettingsTab({
   };
 
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col gap-5 text-left">
       <Card>
-        <CardHeader className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center space-y-0">
-          <div className="space-y-0.5">
+        <CardHeader className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+          <div className="flex flex-col gap-0.5">
             <CardTitle>Customize Phone Sidebar / Dock</CardTitle>
             <CardDescription>
-              Customize your shortcuts for mobile. Select a position slot (1 to 4)
-              below, then click any item from the available list to assign it.
+              Customize your shortcuts for mobile. Select a position slot (1 to
+              4) below, then click any item from the available list to assign
+              it.
             </CardDescription>
           </div>
 
@@ -402,7 +409,7 @@ export function RrSidebarSettingsTab({
 
       {/* Available Items */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle>Available Navigation Shortcuts</CardTitle>
           <CardDescription>
             {!focusedSlot ? (
@@ -420,41 +427,61 @@ export function RrSidebarSettingsTab({
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="space-y-4 max-h-[300px] overflow-y-auto pr-1 no-scrollbar p-3">
+        <CardContent className="flex flex-col gap-4 max-h-[300px] overflow-y-auto pr-1 no-scrollbar p-3">
           {Object.entries(groupedItems).map(([secName, items]) => (
-            <div key={secName} className="space-y-1.5">
+            <div key={secName} className="flex flex-col gap-1.5">
               <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider px-1">
                 {secName}
               </div>
               <div className="grid grid-cols-2 gap-1.5">
                 {items.map((item) => {
-                  const itemKey = item.href || (item.component ? `label:${item.label}` : undefined);
+                  const itemKey =
+                    item.href ||
+                    (item.component ? `label:${item.label}` : undefined);
                   const hasChildren = item.children && item.children.length > 0;
-                  const visibleChildren = (item.children || []).filter((child) => {
-                    return !child.permissions || hasPermission(userPermissions, child.permissions, "any");
-                  });
+                  const visibleChildren = (item.children || []).filter(
+                    (child) => {
+                      return (
+                        !child.permissions ||
+                        hasPermission(userPermissions, child.permissions, "any")
+                      );
+                    },
+                  );
 
                   if (!itemKey && visibleChildren.length === 0) return null;
 
                   if (hasChildren && visibleChildren.length > 0) {
                     const parentAssignedPos = itemKey
-                      ? Object.keys(tempPositions).find((key) => tempPositions[key] === itemKey)
+                      ? Object.keys(tempPositions).find(
+                          (key) => tempPositions[key] === itemKey,
+                        )
                       : undefined;
 
                     const assignedChildrenPositions = visibleChildren
                       .map((child) => {
-                        const childKey = child.href || (child.component ? `label:${child.label}` : undefined);
+                        const childKey =
+                          child.href ||
+                          (child.component
+                            ? `label:${child.label}`
+                            : undefined);
                         const pos = childKey
-                          ? Object.keys(tempPositions).find((key) => tempPositions[key] === childKey)
+                          ? Object.keys(tempPositions).find(
+                              (key) => tempPositions[key] === childKey,
+                            )
                           : undefined;
                         return pos ? { label: child.label, pos } : null;
                       })
                       .filter((c): c is { label: string; pos: string } => !!c);
 
-                    const isAnyAssigned = !!parentAssignedPos || assignedChildrenPositions.length > 0;
+                    const isAnyAssigned =
+                      !!parentAssignedPos ||
+                      assignedChildrenPositions.length > 0;
 
                     let assignedPositionsText = "";
-                    if (parentAssignedPos && assignedChildrenPositions.length > 0) {
+                    if (
+                      parentAssignedPos &&
+                      assignedChildrenPositions.length > 0
+                    ) {
                       assignedPositionsText = `Pos ${parentAssignedPos}, ${assignedChildrenPositions.map((c) => c.pos).join(", ")}`;
                     } else if (parentAssignedPos) {
                       assignedPositionsText = `Pos ${parentAssignedPos}`;
@@ -479,7 +506,9 @@ export function RrSidebarSettingsTab({
                               <span className="scale-75 shrink-0 opacity-80">
                                 {item.icon}
                               </span>
-                              <span className="truncate flex-1">{item.label}</span>
+                              <span className="truncate flex-1">
+                                {item.label}
+                              </span>
                             </span>
 
                             <span className="flex items-center gap-1.5 shrink-0 ml-1">
@@ -492,7 +521,10 @@ export function RrSidebarSettingsTab({
                             </span>
                           </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-56 bg-card border border-border shadow-xl rounded-xl p-1 z-[200]">
+                        <DropdownMenuContent
+                          align="start"
+                          className="w-56 bg-card border border-border shadow-xl rounded-xl p-1 z-200"
+                        >
                           <DropdownMenuLabel className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-2 py-1.5">
                             Add to Position {focusedSlot}
                           </DropdownMenuLabel>
@@ -504,7 +536,9 @@ export function RrSidebarSettingsTab({
                               onClick={() => handleSelectItem(itemKey)}
                               className="text-xs flex items-center justify-between rounded-lg px-2 py-1.5 cursor-pointer hover:bg-muted"
                             >
-                              <span className="font-semibold">{item.label} (Main)</span>
+                              <span className="font-semibold">
+                                {item.label} (Main)
+                              </span>
                               {parentAssignedPos && (
                                 <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-bold uppercase">
                                   Pos {parentAssignedPos}
@@ -518,11 +552,15 @@ export function RrSidebarSettingsTab({
                           )}
 
                           {visibleChildren.map((child) => {
-                            const childKey = child.href || (child.component ? `label:${child.label}` : undefined);
+                            const childKey =
+                              child.href ||
+                              (child.component
+                                ? `label:${child.label}`
+                                : undefined);
                             if (!childKey) return null;
-                            const childAssignedPos = Object.keys(tempPositions).find(
-                              (key) => tempPositions[key] === childKey,
-                            );
+                            const childAssignedPos = Object.keys(
+                              tempPositions,
+                            ).find((key) => tempPositions[key] === childKey);
 
                             return (
                               <DropdownMenuItem
@@ -532,7 +570,9 @@ export function RrSidebarSettingsTab({
                                 className="text-xs flex items-center justify-between rounded-lg px-2 py-1.5 cursor-pointer hover:bg-muted"
                               >
                                 <span className="flex items-center gap-2">
-                                  <span className="scale-75 shrink-0 opacity-70">{child.icon}</span>
+                                  <span className="scale-75 shrink-0 opacity-70">
+                                    {child.icon}
+                                  </span>
                                   <span>{child.label}</span>
                                 </span>
                                 {childAssignedPos && (

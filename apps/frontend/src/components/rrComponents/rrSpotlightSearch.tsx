@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useTheme } from "next-themes";
@@ -13,7 +13,6 @@ import {
   CommandEmpty,
   CommandGroup,
   CommandItem,
-  CommandShortcut,
   CommandSeparator,
 } from "@/components/ui/command";
 import {
@@ -36,6 +35,7 @@ import {
 import React from "react";
 import { useRRSidebar } from "@/hooks/useRRSidebar";
 import { useRRe2ee } from "@/components/Providers/rrE2eeProvider";
+import { cn } from "@/lib/utils";
 
 interface SpotlightSearchItem {
   id: string;
@@ -46,6 +46,17 @@ interface SpotlightSearchItem {
   shortcut?: string;
   badge?: string;
 }
+
+type ActiveFilter = "all" | "apps" | "pages" | "actions";
+
+const FILTER_LABELS: Record<ActiveFilter, string> = {
+  all: "All",
+  apps: "Apps",
+  pages: "Pages",
+  actions: "Actions",
+};
+
+const FILTERS = ["all", "apps", "pages", "actions"] as const;
 
 export default function RrSpotlightSearch(): React.JSX.Element {
   const router = useRouter();
@@ -58,14 +69,17 @@ export default function RrSpotlightSearch(): React.JSX.Element {
 
   const [open, setOpen] = useState<boolean>(false);
   const [search, setSearch] = useState<string>("");
-  const [activeFilter, setActiveFilter] = useState<
-    "all" | "apps" | "pages" | "actions"
-  >("all");
+  const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all");
 
-  const openRef = useRef<boolean>(open);
-  useEffect(() => {
-    openRef.current = open;
-  }, [open]);
+  // Keep a ref in sync without a useEffect — set it directly alongside state
+  const openRef = useRef<boolean>(false);
+  const handleSetOpen = useCallback((value: boolean | ((prev: boolean) => boolean)) => {
+    setOpen((prev) => {
+      const next = typeof value === "function" ? value(prev) : value;
+      openRef.current = next;
+      return next;
+    });
+  }, []);
 
   // Double-Shift key detection
   useEffect(() => {
@@ -84,10 +98,9 @@ export default function RrSpotlightSearch(): React.JSX.Element {
       if (e.key === "Shift") {
         const now = Date.now();
         if (now - lastShiftTime < 300) {
-          const isOpen = openRef.current;
-          if (isOpen || !isInput) {
+          if (openRef.current || !isInput) {
             e.preventDefault();
-            setOpen((prev) => !prev);
+            handleSetOpen((prev) => !prev);
           }
         }
         lastShiftTime = now;
@@ -97,383 +110,331 @@ export default function RrSpotlightSearch(): React.JSX.Element {
     };
 
     window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, []);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleSetOpen]);
 
-  // Helper function to dispatch settings tab redirection custom events
-  const triggerSettingsTab = (category: string): void => {
-    setOpen(false);
+  // Memoized: helper to dispatch settings tab events
+  const triggerSettingsTab = useCallback((category: string): void => {
+    handleSetOpen(false);
     const url = new URL(window.location.href);
     url.searchParams.set("settings", category);
     window.history.replaceState(null, "", url.toString());
     window.dispatchEvent(new CustomEvent("runa-open-settings"));
-  };
+  }, [handleSetOpen]);
 
-  // Build the list of searchable items
-  const items: SpotlightSearchItem[] = [];
+  // Memoized: full item list — only rebuilt when nav config, session, or path changes
+  const items = useMemo<SpotlightSearchItem[]>(() => {
+    const result: SpotlightSearchItem[] = [];
 
-  // 1. Applications Category
-  apps.forEach((app) => {
-    items.push({
-      id: `app-${app.name.toLowerCase()}`,
-      label: app.name,
-      category: "Applications",
-      icon: (
-        <div className="flex size-6 items-center justify-center rounded-md border border-border/55 bg-background text-foreground shadow-xs group-data-selected/command-item:border-primary/40 group-data-selected/command-item:scale-105 transition-all">
-          {app.logo}
-        </div>
-      ),
-      badge: app.description,
-      action: () => {
-        setOpen(false);
-        router.push(app.href);
-      },
-    });
-  });
+    // 1. Applications
+    for (const app of apps) {
+      result.push({
+        id: `app-${app.name.toLowerCase()}`,
+        label: app.name,
+        category: "Applications",
+        icon: (
+          <div className="flex size-6 items-center justify-center rounded-md border border-border/55 bg-background text-foreground shadow-xs group-data-selected/command-item:border-primary/40 group-data-selected/command-item:scale-105 transition-all">
+            {app.logo}
+          </div>
+        ),
+        badge: app.description,
+        action: () => {
+          handleSetOpen(false);
+          router.push(app.href);
+        },
+      });
+    }
 
-  const activeApp = apps.find((app) => pathname?.startsWith(app.href));
+    // 2. Navigation — scoped to the active app
+    const activeApp = apps.find((app) => pathname?.startsWith(app.href));
+    if (activeApp && sidebarConfig && sidebarConfig.length > 0) {
+      for (let sectionIdx = 0; sectionIdx < sidebarConfig.length; sectionIdx++) {
+        const section = sidebarConfig[sectionIdx];
+        if (section.section?.toLowerCase() === "phone") continue;
 
-  // 2. Navigation Category (dynamically extracted from active Navigation Context)
-  if (activeApp && sidebarConfig && sidebarConfig.length > 0) {
-    sidebarConfig.forEach((section, sectionIdx) => {
-      if (section.section?.toLowerCase() === "phone") return;
+        const sectionKey = (section.section || `sec-${sectionIdx}`)
+          .toLowerCase()
+          .replace(/\s+/g, "-");
 
-      const sectionKey = (section.section || `sec-${sectionIdx}`)
-        .toLowerCase()
-        .replace(/\s+/g, "-");
+        for (const navItem of section.items) {
+          const isFromActiveApp = navItem.href?.startsWith(activeApp.href);
 
-      section.items.forEach((navItem) => {
-        const isFromActiveApp =
-          navItem.href && navItem.href.startsWith(activeApp.href);
-
-        if (navItem.href && isFromActiveApp) {
-          const href = navItem.href;
-          items.push({
-            id: `nav-${sectionKey}-${navItem.label.toLowerCase().replace(/\s+/g, "-")}`,
-            label: navItem.label,
-            category: "Navigation",
-            icon: navItem.icon ? (
-              <span className="opacity-70 group-data-selected/command-item:opacity-100 transition-opacity">
-                {navItem.icon}
-              </span>
-            ) : (
-              <Compass className="size-4 opacity-70" />
-            ),
-            badge: section.section,
-            action: () => {
-              setOpen(false);
-              router.push(href);
-            },
-          });
-        }
-
-        if (navItem.children && navItem.children.length > 0) {
-          navItem.children.forEach((childItem) => {
-            const isChildFromActiveApp =
-              childItem.href && childItem.href.startsWith(activeApp.href);
-            if (!isChildFromActiveApp) return;
-
-            const childHref = childItem.href;
-            if (!childHref) return;
-
-            items.push({
-              id: `nav-${sectionKey}-${navItem.label.toLowerCase().replace(/\s+/g, "-")}-${childItem.label.toLowerCase().replace(/\s+/g, "-")}`,
-              label: `${navItem.label} › ${childItem.label}`,
+          if (navItem.href && isFromActiveApp) {
+            const href = navItem.href;
+            result.push({
+              id: `nav-${sectionKey}-${navItem.label.toLowerCase().replace(/\s+/g, "-")}`,
+              label: navItem.label,
               category: "Navigation",
-              icon: childItem.icon ? (
+              icon: navItem.icon ? (
                 <span className="opacity-70 group-data-selected/command-item:opacity-100 transition-opacity">
-                  {childItem.icon}
+                  {navItem.icon}
                 </span>
               ) : (
-                <ChevronRight className="size-4 opacity-70" />
+                <Compass className="size-4 opacity-70" />
               ),
               badge: section.section,
               action: () => {
-                setOpen(false);
-                router.push(childHref);
+                handleSetOpen(false);
+                router.push(href);
               },
             });
-          });
+          }
+
+          if (navItem.children && navItem.children.length > 0) {
+            for (const childItem of navItem.children) {
+              const childHref = childItem.href;
+              if (!childHref?.startsWith(activeApp.href)) continue;
+
+              result.push({
+                id: `nav-${sectionKey}-${navItem.label.toLowerCase().replace(/\s+/g, "-")}-${childItem.label.toLowerCase().replace(/\s+/g, "-")}`,
+                label: `${navItem.label} › ${childItem.label}`,
+                category: "Navigation",
+                icon: childItem.icon ? (
+                  <span className="opacity-70 group-data-selected/command-item:opacity-100 transition-opacity">
+                    {childItem.icon}
+                  </span>
+                ) : (
+                  <ChevronRight className="size-4 opacity-70" />
+                ),
+                badge: section.section,
+                action: () => {
+                  handleSetOpen(false);
+                  router.push(childHref);
+                },
+              });
+            }
+          }
         }
+      }
+    }
+
+    // 3. System Actions
+    if (session?.user) {
+      result.push({
+        id: "action-profile",
+        label: "My Profile",
+        category: "Actions",
+        icon: <User className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        badge: "Account Details",
+        action: () => {
+          handleSetOpen(false);
+          router.push(`/polaris/user/${session.user.username}`);
+        },
       });
-    });
-  }
+    }
 
-  // 3. System Actions Category
-  // Profile Action
-  if (session?.user) {
-    items.push({
-      id: "action-profile",
-      label: "My Profile",
-      category: "Actions",
-      icon: (
-        <User className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
-      ),
-      badge: "Account Details",
-      action: () => {
-        setOpen(false);
-        router.push(`/polaris/user/${session.user.username}`);
+    result.push(
+      {
+        id: "action-settings",
+        label: "Open Settings",
+        category: "Actions",
+        icon: <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        badge: "System Settings",
+        action: () => {
+          handleSetOpen(false);
+          window.dispatchEvent(new CustomEvent("runa-open-settings"));
+        },
       },
-    });
-  }
-
-  // Settings Main Action
-  items.push({
-    id: "action-settings",
-    label: "Open Settings",
-    category: "Actions",
-    icon: (
-      <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
-    ),
-    badge: "System Settings",
-    action: () => {
-      setOpen(false);
-      window.dispatchEvent(new CustomEvent("runa-open-settings"));
-    },
-  });
-
-  // Notifications Action
-  items.push({
-    id: "action-notifications",
-    label: "Open Notifications Feed",
-    category: "Actions",
-    icon: (
-      <Bell className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
-    ),
-    badge: "System Alerts",
-    action: () => {
-      setOpen(false);
-      window.dispatchEvent(new CustomEvent("runa-open-notifications"));
-    },
-  });
-
-  // Unlock E2EE Action (only visible if not unlocked)
-  if (!isE2eeUnlocked) {
-    items.push({
-      id: "action-unlock-e2ee",
-      label: "Unlock Encryption",
-      category: "Actions",
-      icon: (
-        <Shield className="size-4 opacity-70 group-data-selected/command-item:opacity-100 text-amber-500" />
-      ),
-      badge: "Encryption",
-      action: () => {
-        setOpen(false);
-        setShowUnlockDialog(true);
+      {
+        id: "action-notifications",
+        label: "Open Notifications Feed",
+        category: "Actions",
+        icon: <Bell className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        badge: "System Alerts",
+        action: () => {
+          handleSetOpen(false);
+          window.dispatchEvent(new CustomEvent("runa-open-notifications"));
+        },
       },
-    });
-  }
+    );
 
-  // Direct Settings Tabs Actions
-  items.push({
-    id: "action-settings-account",
-    label: "Account Settings",
-    category: "Actions",
-    icon: (
-      <User className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
-    ),
-    badge: "Settings tab",
-    action: () => triggerSettingsTab("account"),
-  });
+    if (!isE2eeUnlocked) {
+      result.push({
+        id: "action-unlock-e2ee",
+        label: "Unlock Encryption",
+        category: "Actions",
+        icon: <Shield className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        badge: "Encryption",
+        action: () => {
+          handleSetOpen(false);
+          setShowUnlockDialog(true);
+        },
+      });
+    }
 
-  items.push({
-    id: "action-settings-security",
-    label: "Security Settings",
-    category: "Actions",
-    icon: (
-      <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
-    ),
-    badge: "Settings tab",
-    action: () => triggerSettingsTab("security"),
-  });
-
-  items.push({
-    id: "action-settings-privacy",
-    label: "Privacy Settings",
-    category: "Actions",
-    icon: (
-      <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
-    ),
-    badge: "Settings tab",
-    action: () => triggerSettingsTab("privacy"),
-  });
-
-  items.push({
-    id: "action-settings-connections",
-    label: "Connections Settings",
-    category: "Actions",
-    icon: (
-      <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
-    ),
-    badge: "Settings tab",
-    action: () => triggerSettingsTab("connections"),
-  });
-
-  items.push({
-    id: "action-settings-api-keys",
-    label: "API Keys",
-    category: "Actions",
-    icon: (
-      <KeyRound className="size-4 opacity-70 text-amber-500 group-data-selected/command-item:opacity-100" />
-    ),
-    badge: "Settings tab",
-    action: () => triggerSettingsTab("apiKeys"),
-  });
-
-  // Conditional Mail Settings tab if we're in Pegasus
-  const isPegasus = pathname?.startsWith("/pegasus");
-  if (isPegasus) {
-    items.push({
-      id: "action-settings-mail",
-      label: "Mail Settings",
-      category: "Actions",
-      icon: (
-        <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
-      ),
-      badge: "Settings tab",
-      action: () => triggerSettingsTab("mailAccounts"),
-    });
-  }
-
-  // Constellation Builder Action
-  items.push({
-    id: "action-constellation-builder",
-    label: "Constellation Builder Workspace",
-    category: "Actions",
-    icon: (
-      <Sparkles className="size-4 opacity-70 text-amber-500 group-data-selected/command-item:opacity-100" />
-    ),
-    badge: "Stars Editor",
-    action: () => {
-      setOpen(false);
-      window.dispatchEvent(new CustomEvent("runa-open-builder"));
-    },
-  });
-
-  // Toggle Sidebar Action
-  items.push({
-    id: "action-sidebar-toggle",
-    label: "Toggle Left Sidebar",
-    category: "Actions",
-    icon: (
-      <PanelLeft className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
-    ),
-    badge: "UI Shortcut",
-    action: () => {
-      setOpen(false);
-      toggleSidebar();
-    },
-  });
-
-  // Appearance Action
-  items.push({
-    id: "action-appearance",
-    label: "Open Appearance Customizer",
-    category: "Actions",
-    icon: (
-      <Palette className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
-    ),
-    badge: "Visual customizer",
-    action: () => {
-      setOpen(false);
-      window.dispatchEvent(new CustomEvent("runa-open-appearance"));
-    },
-  });
-
-  // Theme Actions
-  items.push({
-    id: "action-theme-dark",
-    label: "Switch Theme: Dark Mode",
-    category: "Actions",
-    icon: (
-      <Moon className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
-    ),
-    badge: "System UI Theme",
-    action: () => {
-      setTheme("dark");
-      setOpen(false);
-    },
-  });
-
-  items.push({
-    id: "action-theme-light",
-    label: "Switch Theme: Light Mode",
-    category: "Actions",
-    icon: (
-      <Sun className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
-    ),
-    badge: "System UI Theme",
-    action: () => {
-      setTheme("light");
-      setOpen(false);
-    },
-  });
-
-  items.push({
-    id: "action-theme-system",
-    label: "Switch Theme: System Settings",
-    category: "Actions",
-    icon: (
-      <Laptop className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
-    ),
-    badge: "System UI Theme",
-    action: () => {
-      setTheme("system");
-      setOpen(false);
-    },
-  });
-
-  // Logout Action
-  if (session) {
-    items.push({
-      id: "action-logout",
-      label: "Log Out",
-      category: "Actions",
-      icon: (
-        <LogOut className="size-4 text-destructive group-data-selected/command-item:text-destructive-foreground" />
-      ),
-      badge: "Session logout",
-      action: () => {
-        setOpen(false);
-        signOut({ redirect: false });
+    result.push(
+      {
+        id: "action-settings-account",
+        label: "Account Settings",
+        category: "Actions",
+        icon: <User className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        badge: "Settings tab",
+        action: () => triggerSettingsTab("account"),
       },
+      {
+        id: "action-settings-security",
+        label: "Security Settings",
+        category: "Actions",
+        icon: <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        badge: "Settings tab",
+        action: () => triggerSettingsTab("security"),
+      },
+      {
+        id: "action-settings-privacy",
+        label: "Privacy Settings",
+        category: "Actions",
+        icon: <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        badge: "Settings tab",
+        action: () => triggerSettingsTab("privacy"),
+      },
+      {
+        id: "action-settings-connections",
+        label: "Connections Settings",
+        category: "Actions",
+        icon: <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        badge: "Settings tab",
+        action: () => triggerSettingsTab("connections"),
+      },
+      {
+        id: "action-settings-api-keys",
+        label: "API Keys",
+        category: "Actions",
+        icon: <KeyRound className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        badge: "Settings tab",
+        action: () => triggerSettingsTab("apiKeys"),
+      },
+    );
+
+    if (pathname?.startsWith("/pegasus")) {
+      result.push({
+        id: "action-settings-mail",
+        label: "Mail Settings",
+        category: "Actions",
+        icon: <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        badge: "Settings tab",
+        action: () => triggerSettingsTab("mailAccounts"),
+      });
+    }
+
+    result.push(
+      {
+        id: "action-constellation-builder",
+        label: "Constellation Builder Workspace",
+        category: "Actions",
+        icon: <Sparkles className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        badge: "Stars Editor",
+        action: () => {
+          handleSetOpen(false);
+          window.dispatchEvent(new CustomEvent("runa-open-builder"));
+        },
+      },
+      {
+        id: "action-sidebar-toggle",
+        label: "Toggle Left Sidebar",
+        category: "Actions",
+        icon: <PanelLeft className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        badge: "UI Shortcut",
+        action: () => {
+          handleSetOpen(false);
+          toggleSidebar();
+        },
+      },
+      {
+        id: "action-appearance",
+        label: "Open Appearance Customizer",
+        category: "Actions",
+        icon: <Palette className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        badge: "Visual customizer",
+        action: () => {
+          handleSetOpen(false);
+          window.dispatchEvent(new CustomEvent("runa-open-appearance"));
+        },
+      },
+      {
+        id: "action-theme-dark",
+        label: "Switch Theme: Dark Mode",
+        category: "Actions",
+        icon: <Moon className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        badge: "System UI Theme",
+        action: () => { setTheme("dark"); handleSetOpen(false); },
+      },
+      {
+        id: "action-theme-light",
+        label: "Switch Theme: Light Mode",
+        category: "Actions",
+        icon: <Sun className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        badge: "System UI Theme",
+        action: () => { setTheme("light"); handleSetOpen(false); },
+      },
+      {
+        id: "action-theme-system",
+        label: "Switch Theme: System Settings",
+        category: "Actions",
+        icon: <Laptop className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        badge: "System UI Theme",
+        action: () => { setTheme("system"); handleSetOpen(false); },
+      },
+    );
+
+    if (session) {
+      result.push({
+        id: "action-logout",
+        label: "Log Out",
+        category: "Actions",
+        icon: <LogOut className="size-4 text-destructive group-data-selected/command-item:text-destructive-foreground" />,
+        badge: "Session logout",
+        action: () => {
+          handleSetOpen(false);
+          signOut({ redirect: false });
+        },
+      });
+    }
+
+    return result;
+  }, [
+    pathname,
+    sidebarConfig,
+    session,
+    isE2eeUnlocked,
+    router,
+    handleSetOpen,
+    setShowUnlockDialog,
+    toggleSidebar,
+    setTheme,
+    triggerSettingsTab,
+  ]);
+
+  // Memoized: filter + group split — only recomputes when items, search, or filter changes
+  const { applicationsGroup, navigationGroup, actionsGroup } = useMemo(() => {
+    const lowerSearch = search.toLowerCase();
+
+    const filtered = items.filter((item) => {
+      const searchMatch =
+        !lowerSearch ||
+        item.label.toLowerCase().includes(lowerSearch) ||
+        item.category.toLowerCase().includes(lowerSearch) ||
+        (item.badge && item.badge.toLowerCase().includes(lowerSearch));
+
+      if (!searchMatch) return false;
+
+      if (activeFilter === "apps") return item.category === "Applications";
+      if (activeFilter === "pages") return item.category === "Navigation";
+      if (activeFilter === "actions") return item.category === "Actions";
+
+      return true;
     });
-  }
 
-  // Filter items based on active category filter tab and search text
-  const filteredItems = items.filter((item) => {
-    // 1. Text Search Filter
-    const searchMatch =
-      item.label.toLowerCase().includes(search.toLowerCase()) ||
-      item.category.toLowerCase().includes(search.toLowerCase()) ||
-      (item.badge && item.badge.toLowerCase().includes(search.toLowerCase()));
-
-    if (!searchMatch) return false;
-
-    // 2. Category Tab Filter
-    if (activeFilter === "apps") return item.category === "Applications";
-    if (activeFilter === "pages") return item.category === "Navigation";
-    if (activeFilter === "actions") return item.category === "Actions";
-
-    return true; // "all"
-  });
-
-  // Split into structural groups for command sections
-
-  const applicationsGroup = filteredItems.filter(
-    (i) => i.category === "Applications",
-  );
-  const navigationGroup = filteredItems.filter(
-    (i) => i.category === "Navigation",
-  );
-  const actionsGroup = filteredItems.filter((i) => i.category === "Actions");
+    return {
+      applicationsGroup: filtered.filter((i) => i.category === "Applications"),
+      navigationGroup: filtered.filter((i) => i.category === "Navigation"),
+      actionsGroup: filtered.filter((i) => i.category === "Actions"),
+    };
+  }, [items, search, activeFilter]);
 
   return (
     <CommandDialog
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={handleSetOpen}
       title="Spotlight Search"
       description="Quickly switch apps, jump to navigation pages, or perform platform actions."
       className="sm:max-w-3xl bg-popover border border-border shadow-2xl p-0 overflow-hidden"
@@ -487,30 +448,22 @@ export default function RrSpotlightSearch(): React.JSX.Element {
         />
 
         {/* Category Quick Filter Tags */}
-        <div className="flex items-center gap-1.5 px-4 pb-3 overflow-x-auto select-none no-scrollbar">
-          {(["all", "apps", "pages", "actions"] as const).map((filter) => {
-            const isActive = activeFilter === filter;
-            return (
-              <button
-                key={filter}
-                type="button"
-                onClick={() => setActiveFilter(filter)}
-                className={`px-3 py-1 text-[10px] font-bold tracking-wider rounded-full uppercase border cursor-pointer transition-all duration-200 ${
-                  isActive
-                    ? "bg-primary border-primary text-primary-foreground shadow-xs scale-102"
-                    : "bg-muted/40 hover:bg-muted/70 text-muted-foreground hover:text-foreground border-border"
-                }`}
-              >
-                {filter === "all"
-                  ? "All"
-                  : filter === "apps"
-                    ? "Apps"
-                    : filter === "pages"
-                      ? "Pages"
-                      : "Actions"}
-              </button>
-            );
-          })}
+        <div className="flex items-center gap-1.5 px-4 pb-3 pt-2 overflow-x-auto select-none no-scrollbar">
+          {FILTERS.map((filter) => (
+            <button
+              key={filter}
+              type="button"
+              onClick={() => setActiveFilter(filter)}
+              className={cn(
+                "px-3 py-1 text-[10px] font-bold tracking-wider rounded-full uppercase border cursor-pointer transition-all duration-200",
+                activeFilter === filter
+                  ? "bg-primary border-primary text-primary-foreground shadow-xs scale-102"
+                  : "bg-muted/40 hover:bg-muted/70 text-muted-foreground hover:text-foreground border-border",
+              )}
+            >
+              {FILTER_LABELS[filter]}
+            </button>
+          ))}
         </div>
       </div>
 

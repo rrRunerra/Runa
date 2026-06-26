@@ -1,17 +1,24 @@
-import React from "react";
+import React, { ComponentPropsWithoutRef } from "react";
 import { User, ExternalLink } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getConnectionIcon, getConnectionProfileUrl } from "./rrConnectionHelpers";
 
-interface OverviewTabProps {
-  bio: string;
-  connections: any[];
+interface Connection {
+  id: string;
+  provider: string;
+  linkedUsername?: string;
+  metadata?: string | Record<string, unknown>;
 }
 
-export default function RrOverviewTab({ bio, connections }: OverviewTabProps): React.ReactNode {
-  const getMetadataText = (conn: any): string | null => {
+export interface rrOverviewTabProps {
+  bio: string;
+  connections: Connection[];
+}
+
+export default function RrOverviewTab({ bio, connections }: rrOverviewTabProps): React.ReactNode {
+  const getMetadataText = (conn: Connection): string | null => {
     if (!conn.metadata) return null;
     try {
       const meta = typeof conn.metadata === "string" ? JSON.parse(conn.metadata) : conn.metadata;
@@ -51,22 +58,24 @@ export default function RrOverviewTab({ bio, connections }: OverviewTabProps): R
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
-                  h1: ({node, ...props}) => <h1 className="text-base font-bold text-foreground mt-4 mb-2" {...props} />,
-                  h2: ({node, ...props}) => <h2 className="text-sm font-bold text-foreground mt-3 mb-1.5" {...props} />,
-                  h3: ({node, ...props}) => <h3 className="text-xs font-bold text-foreground mt-2 mb-1" {...props} />,
-                  p: ({node, ...props}) => <p className="mb-3 last:mb-0 text-muted-foreground leading-relaxed" {...props} />,
-                  ul: ({node, ...props}) => <ul className="list-disc pl-5 mb-3 space-y-1" {...props} />,
-                  ol: ({node, ...props}) => <ol className="list-decimal pl-5 mb-3 space-y-1" {...props} />,
-                  li: ({node, ...props}) => <li className="text-sm text-muted-foreground" {...props} />,
-                  strong: ({node, ...props}) => <strong className="font-semibold text-foreground" {...props} />,
-                  em: ({node, ...props}) => <em className="italic" {...props} />,
-                  code: ({node, inline, ...props}: any) => 
-                    inline ? (
-                      <code className="bg-muted px-1.5 py-0.5 rounded font-mono text-xs border" {...props} />
+                  h1: (props) => <h1 className="text-base font-bold text-foreground mt-4 mb-2" {...props} />,
+                  h2: (props) => <h2 className="text-sm font-bold text-foreground mt-3 mb-1.5" {...props} />,
+                  h3: (props) => <h3 className="text-xs font-bold text-foreground mt-2 mb-1" {...props} />,
+                  p: (props) => <p className="mb-3 last:mb-0 text-muted-foreground leading-relaxed" {...props} />,
+                  ul: (props) => <ul className="list-disc pl-5 mb-3 flex flex-col gap-1" {...props} />,
+                  ol: (props) => <ol className="list-decimal pl-5 mb-3 flex flex-col gap-1" {...props} />,
+                  li: (props) => <li className="text-sm text-muted-foreground" {...props} />,
+                  strong: (props) => <strong className="font-semibold text-foreground" {...props} />,
+                  em: (props) => <em className="italic" {...props} />,
+                  code: ({ children, className, ...props }: ComponentPropsWithoutRef<"code">) => {
+                    const isInline = !String(children).includes("\n");
+                    return isInline ? (
+                      <code className="bg-muted px-1.5 py-0.5 rounded font-mono text-xs border" {...props}>{children}</code>
                     ) : (
-                      <pre className="bg-muted border p-3 rounded-md overflow-x-auto my-3 font-mono text-xs text-foreground"><code {...props} /></pre>
-                    ),
-                  a: ({node, ...props}) => <a className="text-primary hover:underline font-medium" target="_blank" rel="noopener noreferrer" {...props} />
+                      <pre className="bg-muted border p-3 rounded-md overflow-x-auto my-3 font-mono text-xs text-foreground"><code className={className} {...props}>{children}</code></pre>
+                    );
+                  },
+                  a: (props) => <a className="text-primary hover:underline font-medium" target="_blank" rel="noopener noreferrer" {...props} />
                 }}
               >
                 {bio}

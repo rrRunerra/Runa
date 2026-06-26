@@ -20,15 +20,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Runa",
   description: "Runa — your unified app center",
-  manifest: "/site.webmanifest",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "black-translucent",
-    title: "Runa",
-  },
-  formatDetection: {
-    telephone: false,
-  },
 };
 
 export const viewport: Viewport = {

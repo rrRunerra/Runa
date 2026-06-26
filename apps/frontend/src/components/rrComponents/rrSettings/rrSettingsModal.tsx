@@ -50,7 +50,7 @@ import { RrSidebarSettingsTab } from "./rrSidebarSettingsTab";
 import { RrMailSettingsTab } from "./rrMailSettingsTab";
 import { RrApiKeysTab } from "./rrApiKeysTab";
 
-type Category =
+type rrCategory =
   | "account"
   | "connections"
   | "privacy"
@@ -59,17 +59,16 @@ type Category =
   | "mailAccounts"
   | "apiKeys";
 
-interface SettingsDialogProps {
+export interface rrSettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  navConfig?: any;
 }
 
 export function SettingsDialog({
   open,
   onOpenChange,
-}: SettingsDialogProps): React.JSX.Element {
-  const [activeCategory, setActiveCategory] = useState<Category>("account");
+}: rrSettingsDialogProps): React.JSX.Element {
+  const [activeCategory, setActiveCategory] = useState<rrCategory>("account");
   const isMobile = useIsMobile();
   const pathname = usePathname();
   const isPegasus = pathname.startsWith("/pegasus");
@@ -104,19 +103,19 @@ export function SettingsDialog({
     }
   }, [open, isPegasus]);
 
-  const navItems: { id: Category; name: string; icon: any }[] = [
+  const navItems: { id: rrCategory; name: string; icon: React.ElementType }[] = [
     { id: "account", name: "Account", icon: User },
     { id: "security", name: "Security", icon: ShieldCheck },
     { id: "apiKeys", name: "API Keys", icon: KeyRound },
     ...(isPegasus
-      ? [{ id: "mailAccounts" as Category, name: "Mail Accounts", icon: Mail }]
+      ? [{ id: "mailAccounts" as rrCategory, name: "Mail Accounts", icon: Mail }]
       : []),
     { id: "connections", name: "Connections", icon: LinkIcon },
     { id: "privacy", name: "Privacy", icon: Lock },
     ...(isMobile
       ? [
           {
-            id: "sidebar" as Category,
+            id: "sidebar" as rrCategory,
             name: "Sidebar Shortcuts",
             icon: Smartphone,
           },

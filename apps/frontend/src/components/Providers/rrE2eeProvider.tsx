@@ -10,7 +10,8 @@ import React, {
 } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { useFetch } from "@/hooks/useFetch";
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
 import { saveKey, loadKey, removeKey } from "@/lib/indexeddb";
 
 // --- Context & Types ---
@@ -38,7 +39,7 @@ export function useRRe2ee() {
 
 // --- Provider ---
 
-export function rrE2eeProvider({ children }: { children: React.ReactNode }) {
+export function RrE2eeProvider({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
 
   const [isE2eeUnlocked, setIsE2eeUnlocked] = useState<boolean>(false);
@@ -65,15 +66,18 @@ export function rrE2eeProvider({ children }: { children: React.ReactNode }) {
     }
   }, [status, session]);
 
-  // Fetch keys using useFetch hook
-  const { data: e2eKeysData, refetch: refetchE2eKeys } = useFetch<{ userPublicKey?: string; encryptedUserPrivateKey?: string }>(
-    `${process.env.NEXT_PUBLIC_API_URL}/user/e2e-keys`,
-    {
-      enabled: !!session?.accessToken && !!session?.user?.username,
-      headers: {
-        Authorization: `Bearer ${session?.accessToken}`,
-      },
-    }
+  // Fetch E2EE keys with SWR
+  const e2eKeysUrl =
+    session?.accessToken && session?.user?.username
+      ? `${process.env.NEXT_PUBLIC_API_URL}/user/e2e-keys`
+      : null;
+
+  const { data: e2eKeysData, mutate: refetchE2eKeys } = useSWR<{
+    userPublicKey?: string;
+    encryptedUserPrivateKey?: string;
+  }>(
+    e2eKeysUrl ? [e2eKeysUrl, session?.accessToken] : null,
+    fetcher
   );
 
   // Initial Check via useFetch data changes
@@ -134,6 +138,27 @@ export function rrE2eeProvider({ children }: { children: React.ReactNode }) {
 
     checkKeys();
   }, [e2eKeysData, session?.user?.username]);
+
+  // Listen for the login page firing runa-e2ee-unlocked after saving keys to IndexedDB
+  useEffect(() => {
+    const handleUnlocked = async () => {
+      if (!session?.user?.username) return;
+      try {
+        const storedKey = await loadKey(`private_key_${session.user.username}`);
+        const storedPubKeyStr = await loadKey(`public_key_string_${session.user.username}`);
+        if (storedKey && storedPubKeyStr) {
+          setPrivateKey(storedKey as CryptoKey);
+          setIsE2eeUnlocked(true);
+          setIsKeysExist(true);
+          setShowUnlockDialog(false);
+        }
+      } catch (err) {
+        console.error("Failed to auto-unlock E2EE after login:", err);
+      }
+    };
+    window.addEventListener("runa-e2ee-unlocked", handleUnlocked);
+    return () => window.removeEventListener("runa-e2ee-unlocked", handleUnlocked);
+  }, [session?.user?.username]);
 
   const unlockE2ee = async (passwordInput: string) => {
     if (!passwordInput || !session?.user?.username || !session?.accessToken) return;

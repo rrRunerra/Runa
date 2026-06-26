@@ -16,9 +16,7 @@ import {
   Mail,
   Key,
   ArrowLeft,
-  Image as ImageIcon,
 } from "lucide-react";
-import Image from "next/image";
 import RrLapplandWelcomeImage from "../rrImages/rrLapplandWelcomeImage";
 import RrLapplandBackupCode from "../rrImages/rrLapplandBackupCode";
 import RrLapplandBackupCodeError from "../rrImages/rrLapplandBackupCodeError";
@@ -30,8 +28,9 @@ import RrLapplandTOTP from "../rrImages/rrLapplandTOTP";
 import RrLapplandTOTPError from "../rrImages/rrLapplandTOTPError";
 import RrLapplandUserNotFound from "../rrImages/rrLapplandUserNotFound";
 import RrLapplandWrongPassword from "../rrImages/rrLapplandWrongPassword";
+import { RESERVED_KEYWORDS } from "@/lib/rrReservedKeywords";
 
-interface RrLoginFormProps {
+export interface rrLoginFormProps {
   identifier: string;
   setIdentifier: (val: string) => void;
   password: string;
@@ -42,20 +41,32 @@ interface RrLoginFormProps {
   message: string;
   setMessage: (val: string) => void;
   fieldErrors: { identifier?: string } | null;
-  setFieldErrors: (val: any) => void;
+  setFieldErrors: (val: { identifier?: string } | null) => void;
   onSubmit: (e: React.FormEvent) => void;
   onPasskeyLogin: () => void;
 
   // MFA
   mfaRequired: boolean;
   setMfaRequired: (val: boolean) => void;
-  activeMfaMethod: "totp" | "email" | "passkey" | "backup" | "device_notification" | null;
-  setActiveMfaMethod: (val: any) => void;
-  mfaMethods: string[];
+  activeMfaMethod:
+    | "totp"
+    | "email"
+    | "passkey"
+    | "backup"
+    | "device_notification"
+    | null;
+  setActiveMfaMethod: (
+    val: "totp" | "email" | "passkey" | "backup" | "device_notification" | null,
+  ) => void;
+  mfaMethods: Array<
+    "totp" | "email" | "passkey" | "backup" | "device_notification"
+  >;
   mfaCode: string;
   setMfaCode: (val: string) => void;
   onVerifyMfa: (e: React.FormEvent) => void;
-  onSelectMfaMethod: (method: any) => void;
+  onSelectMfaMethod: (
+    method: "totp" | "email" | "passkey" | "backup" | "device_notification",
+  ) => void;
   tempToken: string;
   sendEmailOtp: (token: string) => void;
   emailCodeSent: boolean;
@@ -99,7 +110,7 @@ export function RrLoginForm({
   sendDeviceNotification = () => {},
   deviceCodeSent = false,
   ...props
-}: RrLoginFormProps & React.ComponentProps<"div">) {
+}: rrLoginFormProps & React.ComponentProps<"div">) {
   const hasError = message?.includes("❌");
   const isPasswordError =
     hasError &&
@@ -156,113 +167,6 @@ export function RrLoginForm({
     setResendCooldown(60);
   };
 
-  const RESERVED_KEYWORDS = new Set([
-    "break",
-    "case",
-    "catch",
-    "class",
-    "const",
-    "continue",
-    "debugger",
-    "default",
-    "delete",
-    "do",
-    "else",
-    "export",
-    "extends",
-    "false",
-    "finally",
-    "for",
-    "function",
-    "if",
-    "import",
-    "in",
-    "instanceof",
-    "new",
-    "null",
-    "return",
-    "super",
-    "switch",
-    "this",
-    "throw",
-    "true",
-    "try",
-    "typeof",
-    "var",
-    "void",
-    "while",
-    "with",
-    "yield",
-    "let",
-    "package",
-    "private",
-    "protected",
-    "public",
-    "static",
-    "any",
-    "boolean",
-    "constructor",
-    "declare",
-    "get",
-    "module",
-    "require",
-    "number",
-    "set",
-    "string",
-    "symbol",
-    "type",
-    "undefined",
-    "unknown",
-    "never",
-    "readonly",
-    "keyof",
-    "infer",
-    "as",
-    "from",
-    "of",
-    "namespace",
-    "interface",
-    "implements",
-    "enum",
-    "await",
-    "select",
-    "insert",
-    "update",
-    "drop",
-    "truncate",
-    "alter",
-    "create",
-    "table",
-    "database",
-    "index",
-    "use",
-    "where",
-    "join",
-    "left",
-    "right",
-    "inner",
-    "outer",
-    "on",
-    "and",
-    "or",
-    "not",
-    "union",
-    "values",
-    "into",
-    "order",
-    "by",
-    "group",
-    "having",
-    "limit",
-    "offset",
-    "distinct",
-    "all",
-    "exists",
-    "like",
-    "between",
-    "is",
-  ]);
-
   return (
     <div className={cn("flex flex-col gap-6 w-full", className)} {...props}>
       <Card className="overflow-hidden p-0 bg-card border-border rounded-2xl shadow-2xl">
@@ -299,7 +203,8 @@ export function RrLoginForm({
                       </Label>
                       {(fieldErrors?.identifier || isIdentifierError) && (
                         <span className="text-[10px] font-semibold text-destructive">
-                          {fieldErrors?.identifier || message.replace("❌", "").trim()}
+                          {fieldErrors?.identifier ||
+                            message.replace("❌", "").trim()}
                         </span>
                       )}
                     </div>
@@ -314,7 +219,9 @@ export function RrLoginForm({
                         const val = e.target.value;
                         let sanitized = val;
                         if (!val.includes("@")) {
-                          sanitized = val.toLowerCase().replace(/[^a-z0-9_]/g, "");
+                          sanitized = val
+                            .toLowerCase()
+                            .replace(/[^a-z0-9_]/g, "");
                         }
                         setIdentifier(sanitized);
 
@@ -533,9 +440,9 @@ export function RrLoginForm({
                   {activeMfaMethod === "passkey" && (
                     <div className="flex flex-col items-center gap-4 py-3 text-center">
                       <div className="size-16 rounded-full bg-primary/10 border border-primary/20 text-primary flex items-center justify-center">
-                        <Fingerprint className="size-8 text-indigo-400" />
+                        <Fingerprint className="size-8 text-primary" />
                       </div>
-                      <div className="space-y-1">
+                      <div className="flex flex-col gap-1">
                         <h4 className="text-sm font-bold text-foreground">
                           Passkey Prompt Active
                         </h4>
@@ -569,31 +476,45 @@ export function RrLoginForm({
                       className="flex flex-col gap-4"
                     >
                       <div className="flex flex-col items-center gap-1.5 text-center">
-                        <Smartphone className="size-6 text-sky-400" />
+                        <Smartphone className="size-6 text-primary" />
                         <Label className="text-xs font-bold text-foreground">
                           Device Notification MFA
                         </Label>
                         <p className="text-[10px] text-muted-foreground">
-                          Send a push notification to one of your trusted devices.
+                          Send a push notification to one of your trusted
+                          devices.
                         </p>
                       </div>
 
                       {!deviceCodeSent ? (
                         <div className="flex flex-col gap-3">
-                          <Label className="text-xs font-bold text-muted-foreground">Select Device</Label>
+                          <Label className="text-xs font-bold text-muted-foreground">
+                            Select Device
+                          </Label>
                           <select
                             value={selectedDeviceId}
-                            onChange={(e) => setSelectedDeviceId(e.target.value)}
+                            onChange={(e) =>
+                              setSelectedDeviceId(e.target.value)
+                            }
                             className="h-10 px-3 bg-background border border-input rounded-lg text-sm focus-visible:ring-primary/20"
                           >
-                            <option value="" disabled>Select a device</option>
+                            <option value="" disabled>
+                              Select a device
+                            </option>
                             {devices.map((d) => (
-                              <option key={d.id} value={d.id}>{d.deviceName}</option>
+                              <option key={d.id} value={d.id}>
+                                {d.deviceName}
+                              </option>
                             ))}
                           </select>
                           <Button
                             type="button"
-                            onClick={() => sendDeviceNotification(tempToken, selectedDeviceId)}
+                            onClick={() =>
+                              sendDeviceNotification(
+                                tempToken,
+                                selectedDeviceId,
+                              )
+                            }
                             disabled={loading || !selectedDeviceId}
                             className="w-full h-10 shadow-md font-semibold mt-2"
                           >
@@ -602,8 +523,9 @@ export function RrLoginForm({
                         </div>
                       ) : (
                         <div className="flex flex-col gap-3">
-                          <p className="text-[10px] text-center text-emerald-400 font-medium">
-                            Notification sent! Enter the code shown on your device.
+                          <p className="text-[10px] text-center text-primary font-medium">
+                            Notification sent! Enter the code shown on your
+                            device.
                           </p>
                           <Input
                             id="mfa-device-code"
@@ -628,7 +550,7 @@ export function RrLoginForm({
                           </Button>
                         </div>
                       )}
-                      
+
                       {hasError && !message.includes("Notification sent") && (
                         <p className="text-xs text-destructive font-medium text-center">
                           {message.replace("❌", "").trim()}
@@ -717,7 +639,7 @@ export function RrLoginForm({
                         </Label>
                         {message &&
                         message.includes("Verification code sent") ? (
-                          <p className="text-[10px] text-emerald-400 font-medium">
+                          <p className="text-[10px] text-primary font-medium">
                             Verification code sent to your email.
                           </p>
                         ) : (
@@ -781,7 +703,7 @@ export function RrLoginForm({
                       className="flex flex-col gap-4"
                     >
                       <div className="flex flex-col items-center gap-1.5 text-center">
-                        <Key className="size-6 text-emerald-400" />
+                        <Key className="size-6 text-primary" />
                         <Label
                           htmlFor="mfa-backup-code"
                           className={cn(
@@ -838,7 +760,7 @@ export function RrLoginForm({
 
                   {/* Switch Methods list */}
                   {mfaMethods.length > 1 && (
-                    <div className="space-y-2 mt-2">
+                    <div className="flex flex-col gap-2 mt-2">
                       <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wide block text-center">
                         Try Another Method
                       </span>
@@ -853,7 +775,8 @@ export function RrLoginForm({
                               className="px-2.5 py-1.5 rounded-lg border border-border bg-background/40 text-[10px] font-semibold text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-all cursor-pointer"
                             >
                               {m === "passkey" && "Passkey"}
-                              {m === "device_notification" && "Device Notification"}
+                              {m === "device_notification" &&
+                                "Device Notification"}
                               {m === "totp" && "Authenticator Code"}
                               {m === "email" && "Email Code"}
                               {m === "backup" && "Backup Code"}

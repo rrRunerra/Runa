@@ -5,7 +5,8 @@ import Link from "next/link";
 import { Session } from "next-auth";
 import { ChevronsUpDown, Bookmark, Loader2 } from "lucide-react";
 
-import { useFetch } from "@/hooks/useFetch";
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -37,16 +38,13 @@ export default function RrAppMenu({
 
   const {
     data: bookmarks,
-    loading,
-    refetch,
-  } = useFetch<BookmarkItem[]>(
-    `${process.env.NEXT_PUBLIC_API_URL}/polaris/bookmarks`,
-    {
-      headers: {
-        Authorization: `Bearer ${session?.accessToken}`,
-      },
-      enabled: !!session && isMenuOpen,
-    },
+    isLoading: loading,
+    mutate: refetch,
+  } = useSWR<BookmarkItem[]>(
+    session && isMenuOpen
+      ? [`${process.env.NEXT_PUBLIC_API_URL}/polaris/bookmarks`, session.accessToken]
+      : null,
+    fetcher
   );
 
   useEffect(() => {

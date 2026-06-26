@@ -4,7 +4,8 @@ import { Tv, Book, Gamepad2, BookOpen, Film, Lock, ExternalLink } from "lucide-r
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useFetch } from "@/hooks/useFetch";
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface ListsTabProps {
@@ -33,16 +34,16 @@ function RrListCategoryCard({
   session: any;
 }): React.ReactElement {
   const Icon = category.icon;
-  const { data, loading, error } = useFetch<ListApiResponse>(
-    `${process.env.NEXT_PUBLIC_API_URL}/list/${category.id}/user/${username}?limit=1`,
-    {
-      headers: session?.accessToken
-        ? { Authorization: `Bearer ${session.accessToken}` }
-        : undefined,
-      enabled: !!username,
-      useCache: true,
-    }
+  const url = username
+    ? `${process.env.NEXT_PUBLIC_API_URL}/list/${category.id}/user/${username}?limit=1`
+    : null;
+
+  const { data, error, isLoading } = useSWR<ListApiResponse>(
+    url ? [url, session?.accessToken] : null,
+    fetcher
   );
+
+  const loading = isLoading;
 
   if (loading) {
     return (

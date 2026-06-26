@@ -43,7 +43,7 @@
     "dotenv": "^17.4.2",
     "imapflow": "^1.4.2",
     "jose": "^6.2.3",
-    "mailparser": "^3.9.11",
+    "mailparser": "^3.9.12",
     "nodemailer": "^9.0.1",
     "otplib": "^13.4.1",
     "reflect-metadata": "^0.2.2",

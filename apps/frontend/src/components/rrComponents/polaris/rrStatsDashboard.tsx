@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useFetch } from "@/hooks/useFetch";
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
 import {
   Tv,
   BookOpen,
@@ -87,19 +88,15 @@ export default function RrStatsDashboard({
     setMounted(true);
   }, []);
 
-  const {
-    data: stats,
-    loading,
-    error: fetchError,
-  } = useFetch<any>(
-    `${process.env.NEXT_PUBLIC_API_URL}/stats/${username}/${activeMedia}`,
-    { useCache: true },
+  const { data: stats, isLoading: loading, error: swrError } = useSWR<any>(
+    username ? `${process.env.NEXT_PUBLIC_API_URL}/stats/${username}/${activeMedia}` : null,
+    fetcher
   );
 
-  const error = fetchError
-    ? fetchError.message === "Request failed"
+  const error = swrError
+    ? swrError.message === "Request failed"
       ? "This statistics page is private or failed to load."
-      : fetchError.message
+      : swrError.message
     : null;
 
   const renderStatsOverview = () => {

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion, AnimatePresence } from "framer-motion";
 import { Eye, EyeOff, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { RESERVED_KEYWORDS } from "@/lib/rrReservedKeywords";
 import RrLapplandWelcomeImage from "../rrImages/rrLapplandWelcomeImage";
 import RrLapplandRegisterBothTaken from "../rrImages/rrLapplandRegisterBothTaken";
 import RrLapplandRegisterUsernameTaken from "../rrImages/rrLapplandRegisterUsernameTaken";
@@ -29,7 +30,7 @@ const passwordStrengthComponents = [
   RrLapplandPassword5,
 ];
 
-interface RrRegisterFormProps {
+export interface rrRegisterFormProps {
   email: string;
   setEmail: (val: string) => void;
   username: string;
@@ -44,7 +45,9 @@ interface RrRegisterFormProps {
   message: string;
   setMessage: (val: string) => void;
   fieldErrors: { email?: string; username?: string; password?: string } | null;
-  setFieldErrors: (val: any) => void;
+  setFieldErrors: (
+    val: { email?: string; username?: string; password?: string } | null,
+  ) => void;
   errors: {
     length: boolean;
     maxLength: boolean;
@@ -77,7 +80,7 @@ export function RrRegisterForm({
   validatePassword,
   onSubmit,
   ...props
-}: RrRegisterFormProps & React.ComponentProps<"div">) {
+}: rrRegisterFormProps & React.ComponentProps<"div">) {
   const isEmailError = !!fieldErrors?.email;
   const isUsernameError = !!fieldErrors?.username;
   const isPasswordError = !!fieldErrors?.password;
@@ -90,113 +93,6 @@ export function RrRegisterForm({
     errors.uppercase &&
     errors.number &&
     errors.special;
-
-  const RESERVED_KEYWORDS = new Set([
-    "break",
-    "case",
-    "catch",
-    "class",
-    "const",
-    "continue",
-    "debugger",
-    "default",
-    "delete",
-    "do",
-    "else",
-    "export",
-    "extends",
-    "false",
-    "finally",
-    "for",
-    "function",
-    "if",
-    "import",
-    "in",
-    "instanceof",
-    "new",
-    "null",
-    "return",
-    "super",
-    "switch",
-    "this",
-    "throw",
-    "true",
-    "try",
-    "typeof",
-    "var",
-    "void",
-    "while",
-    "with",
-    "yield",
-    "let",
-    "package",
-    "private",
-    "protected",
-    "public",
-    "static",
-    "any",
-    "boolean",
-    "constructor",
-    "declare",
-    "get",
-    "module",
-    "require",
-    "number",
-    "set",
-    "string",
-    "symbol",
-    "type",
-    "undefined",
-    "unknown",
-    "never",
-    "readonly",
-    "keyof",
-    "infer",
-    "as",
-    "from",
-    "of",
-    "namespace",
-    "interface",
-    "implements",
-    "enum",
-    "await",
-    "select",
-    "insert",
-    "update",
-    "drop",
-    "truncate",
-    "alter",
-    "create",
-    "table",
-    "database",
-    "index",
-    "use",
-    "where",
-    "join",
-    "left",
-    "right",
-    "inner",
-    "outer",
-    "on",
-    "and",
-    "or",
-    "not",
-    "union",
-    "values",
-    "into",
-    "order",
-    "by",
-    "group",
-    "having",
-    "limit",
-    "offset",
-    "distinct",
-    "all",
-    "exists",
-    "like",
-    "between",
-    "is",
-  ]);
 
   return (
     <div className={cn("flex flex-col gap-6 w-full", className)} {...props}>
@@ -246,7 +142,10 @@ export function RrRegisterForm({
                     maxLength={32}
                     onChange={(e) => {
                       const val = e.target.value;
-                      const sanitized = val.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 32);
+                      const sanitized = val
+                        .toLowerCase()
+                        .replace(/[^a-z0-9_]/g, "")
+                        .slice(0, 32);
                       setUsername(sanitized);
 
                       if (RESERVED_KEYWORDS.has(sanitized)) {
@@ -301,7 +200,10 @@ export function RrRegisterForm({
                       const val = e.target.value;
                       setEmail(val);
                       if (fieldErrors?.email) {
-                        if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val) || val === "") {
+                        if (
+                          /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val) ||
+                          val === ""
+                        ) {
                           setFieldErrors({ ...fieldErrors, email: "" });
                         }
                       }
@@ -408,14 +310,14 @@ export function RrRegisterForm({
                                 className={cn(
                                   "flex items-center gap-2 text-[10px] transition-all duration-300",
                                   isValid
-                                    ? "text-emerald-400 font-medium"
+                                    ? "text-primary font-medium"
                                     : "text-muted-foreground",
                                 )}
                               >
                                 {isValid ? (
-                                  <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
+                                  <CheckCircle2 className="size-3 text-primary shrink-0" />
                                 ) : (
-                                  <XCircle className="w-3 h-3 text-muted-foreground shrink-0" />
+                                  <XCircle className="size-3 text-muted-foreground shrink-0" />
                                 )}
                                 {item.label}
                               </li>
@@ -434,7 +336,7 @@ export function RrRegisterForm({
                       animate={{ opacity: 1, height: "auto", y: 0 }}
                       exit={{ opacity: 0, height: 0, y: -10 }}
                       transition={{ duration: 0.25 }}
-                      className="p-2.5 mt-1 rounded-lg text-center text-xs font-medium border bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                      className="p-2.5 mt-1 rounded-lg text-center text-xs font-medium border bg-primary/10 text-primary border-primary/20"
                     >
                       {message}
                     </motion.div>
@@ -449,7 +351,7 @@ export function RrRegisterForm({
                 >
                   {loading ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="mr-2 size-4 animate-spin" />
                       Creating account...
                     </>
                   ) : (

@@ -1,5 +1,6 @@
 import React, { useMemo } from "react";
-import { useFetch } from "@/hooks/useFetch";
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LayoutDashboard, Clock, Star, ListChecks } from "lucide-react";
@@ -12,12 +13,12 @@ interface StatsTabProps {
 export default function RrStatsTab({ name }: StatsTabProps): React.ReactNode {
   const baseUrl = `${process.env.NEXT_PUBLIC_API_URL}/stats/${name}`;
   
-  const { data: animeStats, loading: l1 } = useFetch<any>(`${baseUrl}/anime`, { useCache: true });
-  const { data: mangaStats, loading: l2 } = useFetch<any>(`${baseUrl}/manga`, { useCache: true });
-  const { data: tvStats, loading: l3 } = useFetch<any>(`${baseUrl}/tv`, { useCache: true });
-  const { data: movieStats, loading: l4 } = useFetch<any>(`${baseUrl}/movie`, { useCache: true });
-  const { data: gameStats, loading: l5 } = useFetch<any>(`${baseUrl}/game`, { useCache: true });
-  const { data: bookStats, loading: l6 } = useFetch<any>(`${baseUrl}/book`, { useCache: true });
+  const { data: animeStats, isLoading: l1 } = useSWR<any>(`${baseUrl}/anime`, fetcher);
+  const { data: mangaStats, isLoading: l2 } = useSWR<any>(`${baseUrl}/manga`, fetcher);
+  const { data: tvStats,    isLoading: l3 } = useSWR<any>(`${baseUrl}/tv`,    fetcher);
+  const { data: movieStats, isLoading: l4 } = useSWR<any>(`${baseUrl}/movie`, fetcher);
+  const { data: gameStats,  isLoading: l5 } = useSWR<any>(`${baseUrl}/game`,  fetcher);
+  const { data: bookStats,  isLoading: l6 } = useSWR<any>(`${baseUrl}/book`,  fetcher);
 
   const loading = l1 || l2 || l3 || l4 || l5 || l6;
 

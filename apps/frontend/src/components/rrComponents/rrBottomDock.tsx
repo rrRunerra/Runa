@@ -142,13 +142,16 @@ function RrDockItem({ item }: { item: DockItemData }): React.JSX.Element {
   );
 
   if (item.component && React.isValidElement(item.component)) {
-    return React.cloneElement(item.component, {
-      children: (
-        <button type="button" className={buttonClass}>
-          {content}
-        </button>
-      ),
-    } as any);
+    return React.cloneElement(
+      item.component as React.ReactElement<{ children?: React.ReactNode }>,
+      {
+        children: (
+          <button type="button" className={buttonClass}>
+            {content}
+          </button>
+        ),
+      },
+    );
   }
 
   if (item.onClick) {

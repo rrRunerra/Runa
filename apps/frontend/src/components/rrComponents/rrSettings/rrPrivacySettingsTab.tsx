@@ -3,7 +3,8 @@
 import type React from "react";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { useFetch } from "@/hooks/useFetch";
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -36,16 +37,15 @@ export const RrPrivacySettingsTab = ({
   const [loading, setLoading] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  const { data: privacyData, loading: privacyLoading } = useFetch<any>(
+  const {
+    data: privacyData,
+    isLoading: privacyLoading,
+    mutate: refetchPrivacy,
+  } = useSWR<any>(
     session?.accessToken
-      ? `${process.env.NEXT_PUBLIC_API_URL}/user/privacy`
-      : "",
-    {
-      headers: {
-        Authorization: `Bearer ${session?.accessToken}`,
-      },
-      enabled: !!session?.accessToken,
-    },
+      ? [`${process.env.NEXT_PUBLIC_API_URL}/user/privacy`, session.accessToken]
+      : null,
+    fetcher,
   );
 
   useEffect(() => {
@@ -89,11 +89,12 @@ export const RrPrivacySettingsTab = ({
           }),
         },
       );
-
       if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.message || "Failed to save privacy settings.");
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.message || "Failed to save privacy settings.");
       }
+      const updated = await res.json();
+      refetchPrivacy(updated);
 
       toast.success("Privacy settings saved successfully!");
       onOpenChange(false);
@@ -106,7 +107,7 @@ export const RrPrivacySettingsTab = ({
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 space-y-4">
+      <div className="items-center justify-center py-12 flex flex-col gap-4">
         <div className="size-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
         <p className="text-xs text-muted-foreground">
           Loading privacy settings...
@@ -124,10 +125,10 @@ export const RrPrivacySettingsTab = ({
             Manage who can view your profile and media lists.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-0 divide-y divide-border/40">
+        <CardContent className="flex flex-col gap-0 divide-y divide-border/40">
           {/* Profile Privacy Toggle */}
           <div className="flex items-center justify-between py-4">
-            <div className="space-y-0.5 pr-8">
+            <div className="flex flex-col gap-0.5 pr-8 text-left">
               <Label
                 className="text-sm font-medium text-foreground cursor-pointer"
                 htmlFor="profile-private"
@@ -149,7 +150,7 @@ export const RrPrivacySettingsTab = ({
 
           {/* Anime List Privacy Toggle */}
           <div className="flex items-center justify-between py-4">
-            <div className="space-y-0.5 pr-8">
+            <div className="flex flex-col gap-0.5 pr-8 text-left">
               <Label
                 className="text-sm font-medium text-foreground cursor-pointer"
                 htmlFor="anime-private"
@@ -171,7 +172,7 @@ export const RrPrivacySettingsTab = ({
 
           {/* Manga List Privacy Toggle */}
           <div className="flex items-center justify-between py-4">
-            <div className="space-y-0.5 pr-8">
+            <div className="flex flex-col gap-0.5 pr-8 text-left">
               <Label
                 className="text-sm font-medium text-foreground cursor-pointer"
                 htmlFor="manga-private"
@@ -193,7 +194,7 @@ export const RrPrivacySettingsTab = ({
 
           {/* TV List Privacy Toggle */}
           <div className="flex items-center justify-between py-4">
-            <div className="space-y-0.5 pr-8">
+            <div className="flex flex-col gap-0.5 pr-8 text-left">
               <Label
                 className="text-sm font-medium text-foreground cursor-pointer"
                 htmlFor="tv-private"
@@ -215,7 +216,7 @@ export const RrPrivacySettingsTab = ({
 
           {/* Movie List Privacy Toggle */}
           <div className="flex items-center justify-between py-4">
-            <div className="space-y-0.5 pr-8">
+            <div className="flex flex-col gap-0.5 pr-8 text-left">
               <Label
                 className="text-sm font-medium text-foreground cursor-pointer"
                 htmlFor="movie-private"
@@ -237,7 +238,7 @@ export const RrPrivacySettingsTab = ({
 
           {/* Connections Privacy Toggle */}
           <div className="flex items-center justify-between py-4">
-            <div className="space-y-0.5 pr-8">
+            <div className="flex flex-col gap-0.5 pr-8 text-left">
               <Label
                 className="text-sm font-medium text-foreground cursor-pointer"
                 htmlFor="connections-private"
@@ -258,7 +259,7 @@ export const RrPrivacySettingsTab = ({
           </div>
         </CardContent>
 
-        <CardFooter className="flex justify-end gap-3 pt-4 border-t border-border mt-6">
+        <CardFooter className="flex justify-end gap-3 pt-3 border-t border-border mt-6">
           <Button
             variant="ghost"
             onClick={() => onOpenChange(false)}

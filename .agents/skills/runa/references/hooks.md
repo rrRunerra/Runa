@@ -4,32 +4,28 @@ Always prioritize reusing these standard hooks instead of native fetches or cust
 
 ---
 
-## A. Data Fetching: `useFetch`
-
-Import `useFetch` from `@/hooks/useFetch` for all remote API communications.
+Import `useSWR` from `"swr"` and the centralized `fetcher` from `@/lib/fetcher` for all remote API queries.
 
 ```typescript
-import { useFetch } from "@/hooks/useFetch";
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
 
-// Query GET request
-const { data, loading, error, refetch } = useFetch<Notification[]>(
-  `${process.env.NEXT_PUBLIC_API_URL}/notifications`,
-  {
-    headers: { Authorization: `Bearer ${session?.accessToken}` },
-    enabled: !!session?.accessToken,
-  },
+// Query GET request with optional authorization token in SWR key tuple
+const { data, error, isLoading, mutate } = useSWR<Notification[]>(
+  session?.accessToken ? [`${process.env.NEXT_PUBLIC_API_URL}/notifications`, session.accessToken] : null,
+  fetcher
 );
 ```
 
 ### Mutations (POST / PUT / DELETE)
 
-**Always use `useFetch` — never the native `fetch` API directly.**
+**Use standard `fetch` API for all mutations, then call `mutate(key)` to refresh the SWR cache.**
 
-- If `useFetch` is missing functionality required for a mutation (e.g. streaming, file upload), **stop and notify the user** before proceeding. Let the user decide whether to extend `useFetch` or use an alternative approach.
-- After a successful mutation, trigger a re-sync by calling `refetch()` or dispatching a window event:
+- After a successful mutation, trigger a cache update by calling `mutate` (either the local one returned by `useSWR`, or the global `mutate` from `"swr"`):
 
 ```typescript
-window.dispatchEvent(new CustomEvent("runa-sidebar-changed"));
+// Refetch SWR cache
+mutate();
 ```
 
 ---
@@ -50,21 +46,46 @@ const { isE2eeUnlocked, isKeysExist, lockE2ee, setShowUnlockDialog } =
 
 ---
 
-## C. Navigation Sidebar: `useRRSidebar`
+## C. Navigation Sidebar hooks
 
-Import `useRRSidebar` from `@/hooks/useRRSidebar` (not the shadcn `useSidebar`) to control Runa's sidebar navigation config and react to sidebar state changes. Optionally pass a `SidebarConfig` to configure the sidebar for the current page.
+There are **two separate sidebar hooks** with distinct responsibilities. Never substitute one for the other.
+
+### `useRRSidebar` — navigation config only
+
+Import from `@/hooks/useRRSidebar` to **read or write the sidebar navigation config** (`sidebarConfig`, `setSidebarConfig`, `getSection`, etc.). Optionally pass a `SidebarConfig` to push a page-level config on mount.
 
 ```typescript
 import { useRRSidebar } from "@/hooks/useRRSidebar";
 import type { SidebarConfig } from "@/types/SidebarConfig";
 
-// Read sidebar context
-const context = useRRSidebar();
+// Read nav config from context
+const { sidebarConfig } = useRRSidebar();
 
-// Or push a page-level config on mount
+// Push a page-level config on mount
 const config: SidebarConfig = { /* ... */ };
 useRRSidebar(config);
 ```
 
 - Must be used inside a `SidebarProvider` (throws otherwise).
-- Pass a `config` object to `useRRSidebar()` when a page or tab needs to customise the sidebar navigation.
+- **Only** use this hook when you need to read/write navigation structure.
+
+### `useSidebar` — panel state only
+
+Import from `@/components/ui/sidebar` (shadcn) to **directly control the sidebar panel** — toggling open/closed, reading open state, etc.
+
+```typescript
+import { useSidebar } from "@/components/ui/sidebar";
+
+const { toggleSidebar, open, setOpen } = useSidebar();
+```
+
+- Use this when you need to programmatically open, close, or toggle the sidebar panel.
+- **Do not** use this for reading or writing navigation config — use `useRRSidebar` for that.
+
+### When to use which
+
+| Need | Hook |
+|---|---|
+| Read/set nav items or sections | `useRRSidebar` |
+| Toggle / open / close the sidebar panel | `useSidebar` |
+| Both | Use both hooks together |

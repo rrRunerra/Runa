@@ -1,4 +1,3 @@
-import React from "react";
 import Link from "next/link";
 import { Shield, ArrowLeft } from "lucide-react";
 
@@ -10,30 +9,47 @@ export default function Page() {
           <Shield className="size-6 text-indigo-400" />
           <h1 className="text-2xl font-bold tracking-tight">Privacy Policy</h1>
         </div>
-        
+
         <div className="flex flex-col gap-4 text-sm text-muted-foreground leading-relaxed">
           <p>
-            This Privacy Policy outlines how your information is handled within the Polaris application.
+            This Privacy Policy outlines how your information is handled within
+            the Polaris application.
           </p>
 
-          <h2 className="text-base font-semibold text-foreground mt-2">1. Encryption of Core Data</h2>
+          <h2 className="text-base font-semibold text-foreground mt-2">
+            1. Encryption of Core Data
+          </h2>
           <p>
-            Only standard account credentials (such as passwords, email addresses, and private keys) are encrypted.
+            Only standard account credentials (such as passwords, email
+            addresses, and private keys) are encrypted.
           </p>
 
-          <h2 className="text-base font-semibold text-foreground mt-2">2. Unencrypted Data Storage</h2>
+          <h2 className="text-base font-semibold text-foreground mt-2">
+            2. Unencrypted Data Storage
+          </h2>
           <p>
-            This app is not intended for commercial use. Any other data or content you enter inside this application is not encrypted and will be stored on remote servers.
+            This app is not intended for commercial use. Any other data or
+            content you enter inside this application is not encrypted and will
+            be stored on remote servers.
           </p>
 
-          <h2 className="text-base font-semibold text-foreground mt-2">3. Account &amp; Data Responsibility</h2>
+          <h2 className="text-base font-semibold text-foreground mt-2">
+            3. Account &amp; Data Responsibility
+          </h2>
           <p>
-            You are entirely responsible for securing your own personal information. This project is intended solely for personal use. If you choose to use it, please note that your data may be randomly deleted without prior notice.
+            You are entirely responsible for securing your own personal
+            information. This project is intended solely for personal use. If
+            you choose to use it, please note that your data may be randomly
+            deleted without prior notice.
           </p>
 
-          <h2 className="text-base font-semibold text-foreground mt-2">4. Disclaimer of Liability</h2>
+          <h2 className="text-base font-semibold text-foreground mt-2">
+            4. Disclaimer of Liability
+          </h2>
           <p>
-            I, as the developer and service provider, am not liable for any damages, loss of data, privacy breaches, security incidents, or any other issues that may arise from using this application.
+            I, as the developer and service provider, am not liable for any
+            damages, loss of data, privacy breaches, security incidents, or any
+            other issues that may arise from using this application.
           </p>
         </div>
 

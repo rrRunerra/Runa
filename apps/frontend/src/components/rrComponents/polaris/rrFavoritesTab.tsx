@@ -3,7 +3,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Heart } from "lucide-react";
 import { motion } from "framer-motion";
-import { useFetch } from "@/hooks/useFetch";
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
 import { getSafeImageUrl } from "@/lib/inputValidation";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -44,15 +45,13 @@ export default function RrFavoritesTab({
   username,
   session,
 }: FavoritesTabProps): React.ReactNode {
-  const { data: favorites, loading } = useFetch<FavoriteItem[]>(
-    username ? `${process.env.NEXT_PUBLIC_API_URL}/favorites/user/${username}` : "",
-    {
-      headers: session?.accessToken
-        ? { Authorization: `Bearer ${session.accessToken}` }
-        : undefined,
-      enabled: !!username,
-      useCache: true,
-    }
+  const url = username
+    ? `${process.env.NEXT_PUBLIC_API_URL}/favorites/user/${username}`
+    : null;
+
+  const { data: favorites, isLoading: loading } = useSWR<FavoriteItem[]>(
+    url ? [url, session?.accessToken] : null,
+    fetcher
   );
 
   const animeFavs = useMemo(
