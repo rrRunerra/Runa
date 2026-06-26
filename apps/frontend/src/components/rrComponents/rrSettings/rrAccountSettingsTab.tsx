@@ -1,12 +1,7 @@
 "use client";
 
 import type React from "react";
-import {
-  useState,
-  useEffect,
-  useRef,
-  forwardRef,
-} from "react";
+import { useState, useEffect, useRef, forwardRef } from "react";
 import { useSession } from "next-auth/react";
 import { useFetch } from "@/hooks/useFetch";
 import {
@@ -51,7 +46,9 @@ interface RrAccountSettingsTabProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export const RrAccountSettingsTab = ({ onOpenChange }: RrAccountSettingsTabProps): React.JSX.Element => {
+export const RrAccountSettingsTab = ({
+  onOpenChange,
+}: RrAccountSettingsTabProps): React.JSX.Element => {
   const { data: session, update } = useSession();
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
@@ -63,7 +60,8 @@ export const RrAccountSettingsTab = ({ onOpenChange }: RrAccountSettingsTabProps
   const [email, setEmail] = useState<string>("");
   const [avatarUrl, setAvatarUrl] = useState<string>("");
   const [bannerUrl, setBannerUrl] = useState<string>("");
-  const [sidebarCardBackgroundUrl, setSidebarCardBackgroundUrl] = useState<string>("");
+  const [sidebarCardBackgroundUrl, setSidebarCardBackgroundUrl] =
+    useState<string>("");
   const [profileSettings, setProfileSettings] = useState<any>({});
   const [bio, setBio] = useState<string>("");
   const [editorTab, setEditorTab] = useState<"write" | "preview">("write");
@@ -119,7 +117,8 @@ export const RrAccountSettingsTab = ({ onOpenChange }: RrAccountSettingsTabProps
 
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
-  const [sidebarCardBackgroundFile, setSidebarCardBackgroundFile] = useState<File | null>(null);
+  const [sidebarCardBackgroundFile, setSidebarCardBackgroundFile] =
+    useState<File | null>(null);
 
   const [emailError, setEmailError] = useState<string>("");
 
@@ -128,16 +127,20 @@ export const RrAccountSettingsTab = ({ onOpenChange }: RrAccountSettingsTabProps
 
   // Cropper states
   const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
-  const [cropType, setCropType] = useState<"avatar" | "banner" | "background" | null>(null);
+  const [cropType, setCropType] = useState<
+    "avatar" | "banner" | "background" | null
+  >(null);
   const [isCropperOpen, setIsCropperOpen] = useState<boolean>(false);
   const [isAvatarMenuOpen, setIsAvatarMenuOpen] = useState<boolean>(false);
   const [isBannerMenuOpen, setIsBannerMenuOpen] = useState<boolean>(false);
 
   const { data: profileData } = useFetch<any>(
-    session?.user?.username ? `${process.env.NEXT_PUBLIC_API_URL}/user/${session.user.username}` : "",
+    session?.user?.username
+      ? `${process.env.NEXT_PUBLIC_API_URL}/user/${session.user.username}`
+      : "",
     {
       enabled: !!session?.user?.username,
-    }
+    },
   );
 
   useEffect(() => {
@@ -223,7 +226,8 @@ export const RrAccountSettingsTab = ({ onOpenChange }: RrAccountSettingsTabProps
       return;
     }
 
-    const emailChanged = email.toLowerCase() !== session.user.email.toLowerCase();
+    const emailChanged =
+      email.toLowerCase() !== session.user.email.toLowerCase();
 
     if (emailChanged) {
       setIsConfirmOpen(true);
@@ -321,7 +325,9 @@ export const RrAccountSettingsTab = ({ onOpenChange }: RrAccountSettingsTabProps
         sidebarCardBackgroundUrl: finalBackgroundUrl || null,
       };
 
-      const emailChanged = session?.user?.email ? email.toLowerCase() !== session.user.email.toLowerCase() : true;
+      const emailChanged = session?.user?.email
+        ? email.toLowerCase() !== session.user.email.toLowerCase()
+        : true;
       if (emailChanged) {
         updatePayload.email = email.toLowerCase();
       }
@@ -399,77 +405,79 @@ export const RrAccountSettingsTab = ({ onOpenChange }: RrAccountSettingsTabProps
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-2">
       <Card className="overflow-visible">
         <CardHeader>
           <CardTitle>Profile Banner & Avatar</CardTitle>
           <CardDescription>
-            Customize your profile banner (recommended: 1200x400px) and avatar image (recommended: 512x512px).
+            Customize your profile banner (recommended: 1200x400px) and avatar
+            image (recommended: 512x512px).
           </CardDescription>
         </CardHeader>
         <CardContent className="relative pb-8">
-        {/* Banner */}
-        <button
-          type="button"
-          onClick={() =>
-            bannerUrl
-              ? setIsBannerMenuOpen(true)
-              : bannerInputRef.current?.click()
-          }
-          className="w-full aspect-[3/1] bg-gradient-to-r from-indigo-500/20 to-purple-500/20 rounded-xl relative overflow-hidden group/banner border border-border cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all duration-200 block text-left"
-        >
-          {bannerUrl ? (
-            <img
-              src={getSafeImageUrl(bannerUrl)}
-              alt="Banner"
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-              No banner uploaded
+          {/* Banner */}
+          <button
+            type="button"
+            onClick={() =>
+              bannerUrl
+                ? setIsBannerMenuOpen(true)
+                : bannerInputRef.current?.click()
+            }
+            className="w-full aspect-[3/1] bg-gradient-to-r from-indigo-500/20 to-purple-500/20 rounded-xl relative overflow-hidden group/banner border border-border cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all duration-200 block text-left"
+          >
+            {bannerUrl ? (
+              <img
+                src={getSafeImageUrl(bannerUrl)}
+                alt="Banner"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+                No banner uploaded
+              </div>
+            )}
+            <div className="absolute inset-0 bg-black/45 opacity-0 group-hover/banner:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+              <Camera className="size-6 text-white" />
             </div>
-          )}
-          <div className="absolute inset-0 bg-black/45 opacity-0 group-hover/banner:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-            <Camera className="size-6 text-white" />
-          </div>
-        </button>
+          </button>
 
-        {/* Avatar */}
-        <button
-          type="button"
-          onClick={() =>
-            avatarUrl
-              ? setIsAvatarMenuOpen(true)
-              : avatarInputRef.current?.click()
-          }
-          className="absolute -bottom-6 left-6 size-20 rounded-full border-4 border-card overflow-hidden group/avatar bg-muted shadow-md cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all duration-200 block text-left"
-        >
-          {avatarUrl ? (
-            <img
-              src={getSafeImageUrl(avatarUrl)}
-              alt="Avatar"
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xl uppercase">
-              {displayName
-                ? displayName.charAt(0)
-                : session?.user?.username?.charAt(0) || "U"}
+          {/* Avatar */}
+          <button
+            type="button"
+            onClick={() =>
+              avatarUrl
+                ? setIsAvatarMenuOpen(true)
+                : avatarInputRef.current?.click()
+            }
+            className="absolute -bottom-6 left-6 size-20 rounded-full border-4 border-card overflow-hidden group/avatar bg-muted shadow-md cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all duration-200 block text-left"
+          >
+            {avatarUrl ? (
+              <img
+                src={getSafeImageUrl(avatarUrl)}
+                alt="Avatar"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xl uppercase">
+                {displayName
+                  ? displayName.charAt(0)
+                  : session?.user?.username?.charAt(0) || "U"}
+              </div>
+            )}
+            <div className="absolute inset-0 bg-black/45 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+              <Camera className="size-5 text-white" />
             </div>
-          )}
-          <div className="absolute inset-0 bg-black/45 opacity-0 group-hover/avatar:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-            <Camera className="size-5 text-white" />
-          </div>
-        </button>
-      </CardContent>
-    </Card>
+          </button>
+        </CardContent>
+      </Card>
 
       {/* Custom Sidebar Card Background Section */}
-      <Card>
+      <Card className="pr-2 pb-2">
         <CardHeader>
           <CardTitle>Sidebar User Card Background</CardTitle>
           <CardDescription>
-            Upload a custom image to style the bottom user card in your sidebar (recommended: 480x96px).
+            Upload a custom image to style the bottom user card in your sidebar
+            (recommended: 480x96px).
           </CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -490,7 +498,9 @@ export const RrAccountSettingsTab = ({ onOpenChange }: RrAccountSettingsTabProps
                     type="button"
                     variant="outline"
                     onClick={() => {
-                      setCropImageSrc(getSafeImageUrl(sidebarCardBackgroundUrl));
+                      setCropImageSrc(
+                        getSafeImageUrl(sidebarCardBackgroundUrl),
+                      );
                       setCropType("background");
                       setIsCropperOpen(true);
                     }}
@@ -592,9 +602,11 @@ export const RrAccountSettingsTab = ({ onOpenChange }: RrAccountSettingsTabProps
       {/* Markdown Bio / Description Section */}
       <Card>
         <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 space-y-0">
-          <div className="space-y-0.5">
+          <div className="space-y-0.5 pt-2">
             <CardTitle>About Me (Markdown Bio)</CardTitle>
-            <CardDescription>Describe yourself using Markdown. Script/HTML tags are filtered.</CardDescription>
+            <CardDescription>
+              Describe yourself using Markdown. Script/HTML tags are filtered.
+            </CardDescription>
           </div>
           {/* Write/Preview Switcher */}
           <div className="flex border border-border rounded-lg p-0.5 bg-muted/45 shrink-0 self-start sm:self-auto">
@@ -747,14 +759,18 @@ export const RrAccountSettingsTab = ({ onOpenChange }: RrAccountSettingsTabProps
                       />
                     ),
                     li: ({ ...props }) => (
-                      <li className="text-xs text-muted-foreground" {...props} />
+                      <li
+                        className="text-xs text-muted-foreground"
+                        {...props}
+                      />
                     ),
                     strong: ({ ...props }) => (
-                      <strong className="font-extrabold text-foreground" {...props} />
+                      <strong
+                        className="font-extrabold text-foreground"
+                        {...props}
+                      />
                     ),
-                    em: ({ ...props }) => (
-                      <em className="italic" {...props} />
-                    ),
+                    em: ({ ...props }) => <em className="italic" {...props} />,
                     code: ({ inline, ...props }: any) =>
                       inline ? (
                         <code

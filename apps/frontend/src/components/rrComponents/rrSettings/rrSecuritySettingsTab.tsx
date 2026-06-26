@@ -50,7 +50,9 @@ interface RrSecuritySettingsTabProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabProps): React.JSX.Element => {
+export const RrSecuritySettingsTab = ({
+  onOpenChange,
+}: RrSecuritySettingsTabProps): React.JSX.Element => {
   const { data: session } = useSession();
 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -59,9 +61,11 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
   const [currentPassword, setCurrentPassword] = useState<string>("");
   const [newPassword, setNewPassword] = useState<string>("");
   const [confirmPassword, setConfirmPassword] = useState<string>("");
-  const [showCurrentPassword, setShowCurrentPassword] = useState<boolean>(false);
+  const [showCurrentPassword, setShowCurrentPassword] =
+    useState<boolean>(false);
   const [showNewPassword, setShowNewPassword] = useState<boolean>(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
+  const [showConfirmPassword, setShowConfirmPassword] =
+    useState<boolean>(false);
   const [passwordTouched, setPasswordTouched] = useState<boolean>(false);
   const [passwordCriteria, setPasswordCriteria] = useState({
     length: false,
@@ -85,35 +89,44 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
   const [totpSecret, setTotpSecret] = useState<string>("");
   const [totpQrUrl, setTotpQrUrl] = useState<string>("");
   const [totpCode, setTotpCode] = useState<string>("");
-  const qrCanvasRef = useCallback((node: HTMLCanvasElement | null) => {
-    if (node && totpQrUrl) {
-      QRCode.toCanvas(node, totpQrUrl, {
-        width: 180,
-        margin: 1,
-        color: {
-          dark: "#000000",
-          light: "#ffffff",
-        },
-      }).catch((err) => console.error("Error drawing QR canvas:", err));
-    }
-  }, [totpQrUrl]);
+  const qrCanvasRef = useCallback(
+    (node: HTMLCanvasElement | null) => {
+      if (node && totpQrUrl) {
+        QRCode.toCanvas(node, totpQrUrl, {
+          width: 180,
+          margin: 1,
+          color: {
+            dark: "#000000",
+            light: "#ffffff",
+          },
+        }).catch((err) => console.error("Error drawing QR canvas:", err));
+      }
+    },
+    [totpQrUrl],
+  );
 
   // Email Setup States
   const [isEmailSetupOpen, setIsEmailSetupOpen] = useState<boolean>(false);
   const [emailOtpCode, setEmailOtpCode] = useState<string>("");
 
   // Passkey setup states
-  const [isPasskeyRegisterOpen, setIsPasskeyRegisterOpen] = useState<boolean>(false);
+  const [isPasskeyRegisterOpen, setIsPasskeyRegisterOpen] =
+    useState<boolean>(false);
   const [passkeyNickname, setPasskeyNickname] = useState<string>("");
 
   // Backup Codes Dialog States
   const [showCodesDialog, setShowCodesDialog] = useState<boolean>(false);
-  const [displayedBackupCodes, setDisplayedBackupCodes] = useState<string[]>([]);
+  const [displayedBackupCodes, setDisplayedBackupCodes] = useState<string[]>(
+    [],
+  );
   const [copiedCodes, setCopiedCodes] = useState<boolean>(false);
 
   // General Confirm password for disabling MFA states
-  const [isConfirmDisableOpen, setIsConfirmDisableOpen] = useState<boolean>(false);
-  const [disableMethod, setDisableMethod] = useState<"totp" | "email" | "passkey" | null>(null);
+  const [isConfirmDisableOpen, setIsConfirmDisableOpen] =
+    useState<boolean>(false);
+  const [disableMethod, setDisableMethod] = useState<
+    "totp" | "email" | "passkey" | null
+  >(null);
   const [disablePasskeyId, setDisablePasskeyId] = useState<string | null>(null);
 
   // Password Criteria Validator
@@ -136,27 +149,33 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
       passwordCriteria.special);
 
   const { data: mfaStatusData, refetch: refetchMfaSettings } = useFetch<any>(
-    session?.accessToken ? `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/status` : "",
+    session?.accessToken
+      ? `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/status`
+      : "",
     {
       headers: { Authorization: `Bearer ${session?.accessToken}` },
       enabled: !!session?.accessToken,
-    }
+    },
   );
 
   const { data: passkeysData, refetch: refetchPasskeys } = useFetch<any[]>(
-    session?.accessToken ? `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/passkeys` : "",
+    session?.accessToken
+      ? `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/passkeys`
+      : "",
     {
       headers: { Authorization: `Bearer ${session?.accessToken}` },
       enabled: !!session?.accessToken,
-    }
+    },
   );
 
   const { data: devicesData, refetch: refetchDevices } = useFetch<any[]>(
-    session?.accessToken ? `${process.env.NEXT_PUBLIC_API_URL}/user/devices` : "",
+    session?.accessToken
+      ? `${process.env.NEXT_PUBLIC_API_URL}/user/devices`
+      : "",
     {
       headers: { Authorization: `Bearer ${session?.accessToken}` },
       enabled: !!session?.accessToken,
-    }
+    },
   );
 
   useEffect(() => {
@@ -190,12 +209,20 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
 
   const handleRevokeDevice = async (deviceId: string): Promise<void> => {
     if (!session?.accessToken) return;
-    if (!window.confirm("Are you sure you want to revoke trust for this device? It will lose access to decrypt E2EE files and chat messages.")) return;
+    if (
+      !window.confirm(
+        "Are you sure you want to revoke trust for this device? It will lose access to decrypt E2EE files and chat messages.",
+      )
+    )
+      return;
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/device/${deviceId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${session.accessToken}` },
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/user/device/${deviceId}`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${session.accessToken}` },
+        },
+      );
       if (res.ok) {
         toast.success("Device revoked successfully.");
         fetchDevices();
@@ -234,17 +261,20 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
   const executePasswordChange = async (): Promise<void> => {
     setIsSubmitting(true);
     try {
-      const updateRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/update`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session!.accessToken}`,
+      const updateRes = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/user/update`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session!.accessToken}`,
+          },
+          body: JSON.stringify({
+            currentPassword,
+            newPassword,
+          }),
         },
-        body: JSON.stringify({
-          currentPassword,
-          newPassword,
-        }),
-      });
+      );
 
       const updateData = await updateRes.json();
 
@@ -268,12 +298,15 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
   // TOTP functions
   const initiateTotpSetup = async (): Promise<void> => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/mfa/totp/setup`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session!.accessToken}`,
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/totp/setup`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session!.accessToken}`,
+          },
         },
-      });
+      );
       if (!res.ok) throw new Error("Failed to initialize TOTP setup");
       const data = await res.json();
       setTotpSecret(data.secret);
@@ -292,16 +325,20 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
     }
     setIsSubmitting(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/mfa/totp/enable`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session!.accessToken}`,
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/totp/enable`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session!.accessToken}`,
+          },
+          body: JSON.stringify({ code: totpCode }),
         },
-        body: JSON.stringify({ code: totpCode }),
-      });
+      );
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to verify TOTP code");
+      if (!res.ok)
+        throw new Error(data.message || "Failed to verify TOTP code");
 
       toast.success("Authenticator app enabled successfully!");
       setIsTotpSetupOpen(false);
@@ -321,12 +358,15 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
   // Email OTP setup functions
   const initiateEmailMfaSetup = async (): Promise<void> => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/mfa/email/send-setup-code`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session!.accessToken}`,
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/email/send-setup-code`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session!.accessToken}`,
+          },
         },
-      });
+      );
       if (!res.ok) throw new Error("Failed to send verification email");
       setIsEmailSetupOpen(true);
       setEmailOtpCode("");
@@ -343,16 +383,20 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
     }
     setIsSubmitting(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/mfa/email/enable`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session!.accessToken}`,
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/email/enable`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session!.accessToken}`,
+          },
+          body: JSON.stringify({ code: emailOtpCode }),
         },
-        body: JSON.stringify({ code: emailOtpCode }),
-      });
+      );
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Failed to verify email code");
+      if (!res.ok)
+        throw new Error(data.message || "Failed to verify email code");
 
       toast.success("Email verification enabled successfully!");
       setIsEmailSetupOpen(false);
@@ -377,32 +421,42 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
     }
     setIsSubmitting(true);
     try {
-      const optionsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/mfa/passkey/register-options`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session!.accessToken}`,
+      const optionsRes = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/passkey/register-options`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session!.accessToken}`,
+          },
         },
-      });
-      if (!optionsRes.ok) throw new Error("Failed to fetch registration options");
+      );
+      if (!optionsRes.ok)
+        throw new Error("Failed to fetch registration options");
       const options = await optionsRes.json();
 
       const attestationResponse = await startRegistration({
         optionsJSON: options,
       });
 
-      const verifyRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/mfa/passkey/register-verify`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session!.accessToken}`,
+      const verifyRes = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/passkey/register-verify`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session!.accessToken}`,
+          },
+          body: JSON.stringify({
+            response: attestationResponse,
+            name: passkeyNickname,
+          }),
         },
-        body: JSON.stringify({
-          response: attestationResponse,
-          name: passkeyNickname,
-        }),
-      });
+      );
       const verifyData = await verifyRes.json();
-      if (!verifyRes.ok) throw new Error(verifyData.message || "Failed to verify Passkey registration");
+      if (!verifyRes.ok)
+        throw new Error(
+          verifyData.message || "Failed to verify Passkey registration",
+        );
 
       toast.success("Passkey registered successfully!");
       setIsPasskeyRegisterOpen(false);
@@ -454,7 +508,9 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
         throw new Error(errData.message || "Failed to disable MFA method");
       }
 
-      toast.success(`${disableMethod === "passkey" ? "Passkey" : disableMethod?.toUpperCase()} disabled/removed successfully.`);
+      toast.success(
+        `${disableMethod === "passkey" ? "Passkey" : disableMethod?.toUpperCase()} disabled/removed successfully.`,
+      );
       setIsConfirmDisableOpen(false);
       setDisableMethod(null);
       setDisablePasskeyId(null);
@@ -468,15 +524,23 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
 
   // Backup Codes
   const regenerateBackupCodes = async (): Promise<void> => {
-    if (!window.confirm("Regenerating backup codes will invalidate your current ones. Continue?")) return;
+    if (
+      !window.confirm(
+        "Regenerating backup codes will invalidate your current ones. Continue?",
+      )
+    )
+      return;
     setIsSubmitting(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/mfa/backup-codes/regenerate`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${session!.accessToken}`,
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/backup-codes/regenerate`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session!.accessToken}`,
+          },
         },
-      });
+      );
       if (!res.ok) throw new Error("Failed to regenerate backup codes");
       const data = await res.json();
       setDisplayedBackupCodes(data);
@@ -510,7 +574,7 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-2">
       {/* Passwords change card */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
@@ -536,7 +600,11 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   onClick={() => setShowCurrentPassword((v) => !v)}
                 >
-                  {showCurrentPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                  {showCurrentPassword ? (
+                    <EyeOff className="size-3.5" />
+                  ) : (
+                    <Eye className="size-3.5" />
+                  )}
                 </button>
               </div>
             </div>
@@ -554,12 +622,17 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
                     validatePassword(e.target.value);
                     if (!passwordTouched) setPasswordTouched(true);
                   }}
-                  onFocus={() => { if (!passwordTouched && newPassword.length > 0) setPasswordTouched(true); }}
+                  onFocus={() => {
+                    if (!passwordTouched && newPassword.length > 0)
+                      setPasswordTouched(true);
+                  }}
                   onBlur={() => setPasswordTouched(false)}
                   placeholder="••••••••"
                   className={cn(
                     "h-9 px-3 pr-9",
-                    newPassword && !isPasswordValid && "border-destructive/50 bg-destructive/5 focus-visible:ring-destructive/30"
+                    newPassword &&
+                      !isPasswordValid &&
+                      "border-destructive/50 bg-destructive/5 focus-visible:ring-destructive/30",
                   )}
                 />
                 <button
@@ -568,11 +641,16 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   onClick={() => setShowNewPassword((v) => !v)}
                 >
-                  {showNewPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                  {showNewPassword ? (
+                    <EyeOff className="size-3.5" />
+                  ) : (
+                    <Eye className="size-3.5" />
+                  )}
                 </button>
               </div>
 
-              {(passwordTouched || (newPassword.length > 0 && !isPasswordValid)) && (
+              {(passwordTouched ||
+                (newPassword.length > 0 && !isPasswordValid)) && (
                 <div className="mt-1.5 p-3 rounded-xl bg-muted/35 border border-border/50 animate-in fade-in slide-in-from-top-1 duration-150">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
                     Password Criteria
@@ -589,7 +667,9 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
                         key={item.key}
                         className={cn(
                           "flex items-center gap-2 text-[11px] transition-all duration-200",
-                          passwordCriteria[item.key as keyof typeof passwordCriteria]
+                          passwordCriteria[
+                            item.key as keyof typeof passwordCriteria
+                          ]
                             ? "text-emerald-500 font-medium"
                             : "text-muted-foreground/60",
                         )}
@@ -597,7 +677,9 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
                         <div
                           className={cn(
                             "size-1.5 rounded-full transition-all",
-                            passwordCriteria[item.key as keyof typeof passwordCriteria]
+                            passwordCriteria[
+                              item.key as keyof typeof passwordCriteria
+                            ]
                               ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]"
                               : "bg-muted-foreground/30",
                           )}
@@ -621,7 +703,9 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
                   placeholder="••••••••"
                   className={cn(
                     "h-9 px-3 pr-9",
-                    confirmPassword && newPassword !== confirmPassword && "border-destructive/50 bg-destructive/5 focus-visible:ring-destructive/30"
+                    confirmPassword &&
+                      newPassword !== confirmPassword &&
+                      "border-destructive/50 bg-destructive/5 focus-visible:ring-destructive/30",
                   )}
                 />
                 <button
@@ -630,11 +714,17 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                   onClick={() => setShowConfirmPassword((v) => !v)}
                 >
-                  {showConfirmPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                  {showConfirmPassword ? (
+                    <EyeOff className="size-3.5" />
+                  ) : (
+                    <Eye className="size-3.5" />
+                  )}
                 </button>
               </div>
               {confirmPassword && newPassword !== confirmPassword && (
-                <p className="text-[11px] text-destructive mt-1">Passwords do not match.</p>
+                <p className="text-[11px] text-destructive mt-1">
+                  Passwords do not match.
+                </p>
               )}
             </div>
           </CardContent>
@@ -649,9 +739,14 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
                 Protection Active
               </span>
             </div>
-            <CardTitle className="text-lg font-bold">Multi-Factor Authentication (MFA)</CardTitle>
+            <CardTitle className="text-lg font-bold">
+              Multi-Factor Authentication (MFA)
+            </CardTitle>
             <CardDescription className="text-xs text-muted-foreground leading-relaxed mt-1">
-              Add an extra layer of security to your Runa account. By activating MFA, logins will require not only your password but also verification via passkeys, email codes, or authenticator app tokens.
+              Add an extra layer of security to your Runa account. By activating
+              MFA, logins will require not only your password but also
+              verification via passkeys, email codes, or authenticator app
+              tokens.
             </CardDescription>
           </CardHeader>
           {hasBackupCodes && (
@@ -662,7 +757,8 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
                     Recovery System Active
                   </span>
                   <p className="text-[10px] text-muted-foreground leading-snug">
-                    Generate backup codes in case you lose access to your primary authentication devices.
+                    Generate backup codes in case you lose access to your
+                    primary authentication devices.
                   </p>
                 </div>
                 <Button
@@ -696,7 +792,13 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
           </Button>
           <Button
             onClick={handleSave}
-            disabled={isSubmitting || !currentPassword || !newPassword || newPassword !== confirmPassword || !isPasswordValid}
+            disabled={
+              isSubmitting ||
+              !currentPassword ||
+              !newPassword ||
+              newPassword !== confirmPassword ||
+              !isPasswordValid
+            }
             className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl px-5 text-xs h-9 cursor-pointer"
           >
             {isSubmitting ? "Updating..." : "Update Password"}
@@ -724,20 +826,31 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
                     {totpEnabled ? "Active" : "Inactive"}
                   </UiBadge>
                 </div>
-                <CardTitle className="text-sm font-bold text-foreground">Authenticator App</CardTitle>
+                <CardTitle className="text-sm font-bold text-foreground">
+                  Authenticator App
+                </CardTitle>
               </CardHeader>
               <CardContent className="flex-1 pb-4">
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Use application tools like Google Authenticator or 1Password to generate 6-digit verification codes.
+                  Use application tools like Google Authenticator or 1Password
+                  to generate 6-digit verification codes.
                 </p>
               </CardContent>
               <CardFooter className="pt-0">
                 <Button
-                  onClick={totpEnabled ? () => { setDisableMethod("totp"); setIsConfirmDisableOpen(true); } : initiateTotpSetup}
+                  onClick={
+                    totpEnabled
+                      ? () => {
+                          setDisableMethod("totp");
+                          setIsConfirmDisableOpen(true);
+                        }
+                      : initiateTotpSetup
+                  }
                   variant={totpEnabled ? "outline" : "default"}
                   className={cn(
                     "w-full h-9 rounded-xl font-semibold text-xs transition-all cursor-pointer",
-                    totpEnabled && "hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                    totpEnabled &&
+                      "hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30",
                   )}
                 >
                   {totpEnabled ? "Disconnect" : "Setup TOTP"}
@@ -756,20 +869,31 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
                     {emailMfaEnabled ? "Active" : "Inactive"}
                   </UiBadge>
                 </div>
-                <CardTitle className="text-sm font-bold text-foreground">Email One-Time Code</CardTitle>
+                <CardTitle className="text-sm font-bold text-foreground">
+                  Email One-Time Code
+                </CardTitle>
               </CardHeader>
               <CardContent className="flex-1 pb-4">
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Receive temporary verification codes sent to your primary registered email address on login attempt.
+                  Receive temporary verification codes sent to your primary
+                  registered email address on login attempt.
                 </p>
               </CardContent>
               <CardFooter className="pt-0">
                 <Button
-                  onClick={emailMfaEnabled ? () => { setDisableMethod("email"); setIsConfirmDisableOpen(true); } : initiateEmailMfaSetup}
+                  onClick={
+                    emailMfaEnabled
+                      ? () => {
+                          setDisableMethod("email");
+                          setIsConfirmDisableOpen(true);
+                        }
+                      : initiateEmailMfaSetup
+                  }
                   variant={emailMfaEnabled ? "outline" : "default"}
                   className={cn(
                     "w-full h-9 rounded-xl font-semibold text-xs transition-all cursor-pointer",
-                    emailMfaEnabled && "hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                    emailMfaEnabled &&
+                      "hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30",
                   )}
                 >
                   {emailMfaEnabled ? "Disconnect" : "Setup Email OTP"}
@@ -787,15 +911,22 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
                   <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                     <Key className="size-4.5" />
                   </div>
-                  <UiBadge variant={passkeys.length > 0 ? "default" : "outline"}>
-                    {passkeys.length > 0 ? `${passkeys.length} Registered` : "Inactive"}
+                  <UiBadge
+                    variant={passkeys.length > 0 ? "default" : "outline"}
+                  >
+                    {passkeys.length > 0
+                      ? `${passkeys.length} Registered`
+                      : "Inactive"}
                   </UiBadge>
                 </div>
-                <CardTitle className="text-sm font-bold text-foreground">Passkeys / Biometrics</CardTitle>
+                <CardTitle className="text-sm font-bold text-foreground">
+                  Passkeys / Biometrics
+                </CardTitle>
               </CardHeader>
               <CardContent className="flex-1 pb-4">
                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Log in passwordlessly or complete 2FA securely using Face ID, Touch ID, Windows Hello, or hardware keys.
+                  Log in passwordlessly or complete 2FA securely using Face ID,
+                  Touch ID, Windows Hello, or hardware keys.
                 </p>
               </CardContent>
               <CardFooter className="pt-0">
@@ -820,15 +951,22 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
                     {passkeys.length > 0 ? `${passkeys.length} Saved` : "None"}
                   </UiBadge>
                 </div>
-                <CardTitle className="text-sm font-bold text-foreground">Registered Passkeys</CardTitle>
+                <CardTitle className="text-sm font-bold text-foreground">
+                  Registered Passkeys
+                </CardTitle>
               </CardHeader>
               <CardContent className="flex-1 pb-4">
                 {passkeys.length > 0 ? (
                   <div className="divide-y divide-border space-y-2.5 overflow-y-auto max-h-[120px] no-scrollbar">
                     {passkeys.map((pk) => (
-                      <div key={pk.id} className="flex items-center justify-between pt-2.5 first:pt-0">
+                      <div
+                        key={pk.id}
+                        className="flex items-center justify-between pt-2.5 first:pt-0"
+                      >
                         <div className="space-y-0.5 text-left min-w-0 flex-1">
-                          <span className="text-xs font-bold text-foreground block truncate">{pk.name || "Unnamed Passkey"}</span>
+                          <span className="text-xs font-bold text-foreground block truncate">
+                            {pk.name || "Unnamed Passkey"}
+                          </span>
                           <span className="text-[10px] text-muted-foreground block">
                             Added: {new Date(pk.createdAt).toLocaleDateString()}
                           </span>
@@ -846,7 +984,9 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full py-4 text-center text-muted-foreground/40">
                     <Key className="size-5 mb-1.5 opacity-30" />
-                    <span className="text-[10px]">No passkeys registered yet.</span>
+                    <span className="text-[10px]">
+                      No passkeys registered yet.
+                    </span>
                   </div>
                 )}
               </CardContent>
@@ -881,7 +1021,8 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
                     {device.userAgent || "Unknown User Agent"}
                   </span>
                   <span className="text-[9px] text-muted-foreground/60 block">
-                    Last Active: {new Date(device.lastActiveAt).toLocaleString()}
+                    Last Active:{" "}
+                    {new Date(device.lastActiveAt).toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -917,9 +1058,12 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
       <Dialog open={isTotpSetupOpen} onOpenChange={setIsTotpSetupOpen}>
         <DialogContent className="max-w-md bg-card border border-border shadow-2xl p-6 rounded-2xl flex flex-col items-center">
           <DialogHeader className="pb-2 text-center w-full">
-            <DialogTitle className="text-md font-bold text-center">Setup Authenticator App</DialogTitle>
+            <DialogTitle className="text-md font-bold text-center">
+              Setup Authenticator App
+            </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground text-center mt-1">
-              Scan the QR code below or enter the secret key manually into your TOTP application.
+              Scan the QR code below or enter the secret key manually into your
+              TOTP application.
             </DialogDescription>
           </DialogHeader>
 
@@ -929,12 +1073,21 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
 
           <div className="w-full space-y-3">
             <div className="p-3.5 rounded-xl bg-muted border border-border flex flex-col gap-1 text-center relative isolate">
-              <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wide">Manual Secret Key</span>
-              <span className="text-xs font-mono font-bold text-primary select-all break-all tracking-wider">{totpSecret}</span>
+              <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wide">
+                Manual Secret Key
+              </span>
+              <span className="text-xs font-mono font-bold text-primary select-all break-all tracking-wider">
+                {totpSecret}
+              </span>
             </div>
 
             <div className="space-y-1.5 pt-2 flex flex-col items-center">
-              <Label htmlFor="totp-ver-code" className="text-xs text-muted-foreground uppercase tracking-wide mb-1.5">Verification Code</Label>
+              <Label
+                htmlFor="totp-ver-code"
+                className="text-xs text-muted-foreground uppercase tracking-wide mb-1.5"
+              >
+                Verification Code
+              </Label>
               <InputOTP
                 maxLength={6}
                 value={totpCode}
@@ -976,15 +1129,20 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
       <Dialog open={isEmailSetupOpen} onOpenChange={setIsEmailSetupOpen}>
         <DialogContent className="max-w-md bg-card border border-border shadow-2xl p-6 rounded-2xl">
           <DialogHeader className="pb-2">
-            <DialogTitle className="text-md font-bold">Setup Email MFA</DialogTitle>
+            <DialogTitle className="text-md font-bold">
+              Setup Email MFA
+            </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground mt-1">
-              Enter the 6-digit verification code sent to your primary email address.
+              Enter the 6-digit verification code sent to your primary email
+              address.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-3 flex flex-col items-center">
             <div className="space-y-1.5 flex flex-col items-center">
-              <Label htmlFor="email-setup-code" className="mb-1.5">Verification Code</Label>
+              <Label htmlFor="email-setup-code" className="mb-1.5">
+                Verification Code
+              </Label>
               <InputOTP
                 maxLength={6}
                 value={emailOtpCode}
@@ -1023,10 +1181,15 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
       </Dialog>
 
       {/* ── Register Passkey Nickname Dialog ── */}
-      <Dialog open={isPasskeyRegisterOpen} onOpenChange={setIsPasskeyRegisterOpen}>
+      <Dialog
+        open={isPasskeyRegisterOpen}
+        onOpenChange={setIsPasskeyRegisterOpen}
+      >
         <DialogContent className="max-w-md bg-card border border-border shadow-2xl p-6 rounded-2xl">
           <DialogHeader className="pb-2">
-            <DialogTitle className="text-md font-bold">Register a Passkey</DialogTitle>
+            <DialogTitle className="text-md font-bold">
+              Register a Passkey
+            </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground mt-1">
               Assign a nickname for this device passkey to help manage it later.
             </DialogDescription>
@@ -1066,14 +1229,18 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
       </Dialog>
 
       {/* ── Confirm Disable Dialog ── */}
-      <Dialog open={isConfirmDisableOpen} onOpenChange={setIsConfirmDisableOpen}>
+      <Dialog
+        open={isConfirmDisableOpen}
+        onOpenChange={setIsConfirmDisableOpen}
+      >
         <DialogContent className="max-w-md bg-card border border-border shadow-2xl p-6 rounded-2xl">
           <DialogHeader className="pb-2">
             <DialogTitle className="text-md font-bold text-destructive">
               Confirm Disconnection
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground mt-1">
-              Are you sure you want to disable or remove this authentication method? This could weaken your account security.
+              Are you sure you want to disable or remove this authentication
+              method? This could weaken your account security.
             </DialogDescription>
           </DialogHeader>
 
@@ -1104,9 +1271,12 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
             <div className="mx-auto size-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mb-2">
               <ShieldCheck className="size-5 animate-pulse" />
             </div>
-            <DialogTitle className="text-md font-bold text-center">Save Your Backup Codes</DialogTitle>
+            <DialogTitle className="text-md font-bold text-center">
+              Save Your Backup Codes
+            </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground text-center mt-1">
-              Store these codes safely. They are your fallback recovery codes. Each code can be used exactly once.
+              Store these codes safely. They are your fallback recovery codes.
+              Each code can be used exactly once.
             </DialogDescription>
           </DialogHeader>
 
@@ -1122,7 +1292,8 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
           <div className="p-3 rounded-xl border border-amber-500/10 bg-amber-500/5 mb-3 flex items-start gap-2.5 text-left w-full text-[11px] text-amber-500/80 dark:text-amber-300">
             <AlertCircle className="size-4 shrink-0 mt-0.5 animate-bounce" />
             <p className="leading-relaxed">
-              Runa support cannot recover these codes for you. If you lose your auth devices and backup codes, you will be permanently locked out.
+              Runa support cannot recover these codes for you. If you lose your
+              auth devices and backup codes, you will be permanently locked out.
             </p>
           </div>
 
@@ -1132,7 +1303,11 @@ export const RrSecuritySettingsTab = ({ onOpenChange }: RrSecuritySettingsTabPro
               variant="outline"
               className="flex-1 h-9 rounded-xl border border-border hover:bg-muted text-xs font-semibold"
             >
-              {copiedCodes ? <Check className="size-3.5 mr-1.5 text-emerald-500" /> : <Copy className="size-3.5 mr-1.5" />}
+              {copiedCodes ? (
+                <Check className="size-3.5 mr-1.5 text-emerald-500" />
+              ) : (
+                <Copy className="size-3.5 mr-1.5" />
+              )}
               {copiedCodes ? "Copied" : "Copy Codes"}
             </Button>
             <Button

@@ -4,12 +4,7 @@ import type React from "react";
 import { useEffect, useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useFetch } from "@/hooks/useFetch";
-import {
-  LinkIcon,
-  Unlink,
-  ExternalLink,
-  RefreshCw,
-} from "lucide-react";
+import { LinkIcon, Unlink, ExternalLink, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
@@ -17,7 +12,12 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Card,
   CardHeader,
@@ -40,77 +40,109 @@ type Connection = {
 };
 
 import { apps as registeredApps } from "../../../../config/apps";
-import { PROVIDERS_METADATA, ConnectionCapability } from "@runa/connections/metadata";
+import {
+  PROVIDERS_METADATA,
+  ConnectionCapability,
+} from "@runa/connections/metadata";
 
 const PROVIDERS = PROVIDERS_METADATA;
 
-const IMPORTABLE_CAPABILITIES: Record<string, { label: string; key: string }> = {
-  [ConnectionCapability.ANIME]: { label: "Anime List", key: "anime" },
-  [ConnectionCapability.MANGA]: { label: "Manga List", key: "manga" },
-  [ConnectionCapability.MOVIES]: { label: "Movies List", key: "movie" },
-  [ConnectionCapability.TV_SHOWS]: { label: "TV Shows List", key: "tv" },
-};
+const IMPORTABLE_CAPABILITIES: Record<string, { label: string; key: string }> =
+  {
+    [ConnectionCapability.ANIME]: { label: "Anime List", key: "anime" },
+    [ConnectionCapability.MANGA]: { label: "Manga List", key: "manga" },
+    [ConnectionCapability.MOVIES]: { label: "Movies List", key: "movie" },
+    [ConnectionCapability.TV_SHOWS]: { label: "TV Shows List", key: "tv" },
+  };
 
 interface RrConnectionsTabProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function RrConnectionsTab({ onOpenChange }: RrConnectionsTabProps): React.JSX.Element {
+export function RrConnectionsTab({
+  onOpenChange,
+}: RrConnectionsTabProps): React.JSX.Element {
   const { data: session } = useSession();
   const [connections, setConnections] = useState<Connection[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isActionLoading, setIsActionLoading] = useState<string | null>(null);
-  const [expandedMetadata, setExpandedMetadata] = useState<Record<string, boolean>>({});
-  const [importStatus, setImportStatus] = useState<Record<string, { total: number; processed: number; status: 'processing' | 'completed' | 'failed'; error?: string; failedItems?: any[] }>>({});
+  const [expandedMetadata, setExpandedMetadata] = useState<
+    Record<string, boolean>
+  >({});
+  const [importStatus, setImportStatus] = useState<
+    Record<
+      string,
+      {
+        total: number;
+        processed: number;
+        status: "processing" | "completed" | "failed";
+        error?: string;
+        failedItems?: any[];
+      }
+    >
+  >({});
   const [showImportDialog, setShowImportDialog] = useState<string | null>(null);
   const [selectedMediaTypes, setSelectedMediaTypes] = useState<string[]>([]);
-  const [failedImports, setFailedImports] = useState<{ providerId: string; items: any[] } | null>(null);
+  const [failedImports, setFailedImports] = useState<{
+    providerId: string;
+    items: any[];
+  } | null>(null);
 
-  const pollImportStatus = useCallback(async (providerId: string): Promise<void> => {
-    if (!session?.accessToken) return;
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/connections/${providerId.toLowerCase()}/import/status`,
-        {
-          headers: {
-            Authorization: `Bearer ${session.accessToken}`,
+  const pollImportStatus = useCallback(
+    async (providerId: string): Promise<void> => {
+      if (!session?.accessToken) return;
+      try {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/connections/${providerId.toLowerCase()}/import/status`,
+          {
+            headers: {
+              Authorization: `Bearer ${session.accessToken}`,
+            },
           },
-        }
-      );
-      if (!res.ok) throw new Error("Failed to fetch import status");
-      const data = await res.json();
-      
-      setImportStatus((prev) => {
-        const old = prev[providerId.toLowerCase()];
-        if (old?.status === "processing") {
-          if (data.status === "completed") {
-            if (data.failedItems && data.failedItems.length > 0) {
-              setFailedImports({ providerId, items: data.failedItems });
-            } else {
-              toast.success(`Import from ${providerId.toUpperCase()} completed successfully!`);
-              setTimeout(() => {
-                window.location.reload();
-              }, 1500);
+        );
+        if (!res.ok) throw new Error("Failed to fetch import status");
+        const data = await res.json();
+
+        setImportStatus((prev) => {
+          const old = prev[providerId.toLowerCase()];
+          if (old?.status === "processing") {
+            if (data.status === "completed") {
+              if (data.failedItems && data.failedItems.length > 0) {
+                setFailedImports({ providerId, items: data.failedItems });
+              } else {
+                toast.success(
+                  `Import from ${providerId.toUpperCase()} completed successfully!`,
+                );
+                setTimeout(() => {
+                  window.location.reload();
+                }, 1500);
+              }
+            } else if (data.status === "failed") {
+              toast.error(
+                `Import from ${providerId.toUpperCase()} failed: ${data.error || "Unknown error"}`,
+              );
             }
-          } else if (data.status === "failed") {
-            toast.error(`Import from ${providerId.toUpperCase()} failed: ${data.error || "Unknown error"}`);
           }
+          return {
+            ...prev,
+            [providerId.toLowerCase()]: data,
+          };
+        });
+
+        if (data.status === "processing") {
+          setTimeout(() => pollImportStatus(providerId), 5000);
         }
-        return {
-          ...prev,
-          [providerId.toLowerCase()]: data,
-        };
-      });
-
-      if (data.status === "processing") {
-        setTimeout(() => pollImportStatus(providerId), 5000);
+      } catch (err) {
+        console.error(err);
       }
-    } catch (err) {
-      console.error(err);
-    }
-  }, [session, setFailedImports]);
+    },
+    [session, setFailedImports],
+  );
 
-  const handleImport = async (providerId: string, mediaTypes: string[]): Promise<void> => {
+  const handleImport = async (
+    providerId: string,
+    mediaTypes: string[],
+  ): Promise<void> => {
     if (!session?.accessToken) return;
     try {
       const res = await fetch(
@@ -122,7 +154,7 @@ export function RrConnectionsTab({ onOpenChange }: RrConnectionsTabProps): React
             Authorization: `Bearer ${session.accessToken}`,
           },
           body: JSON.stringify({ mediaTypes }),
-        }
+        },
       );
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
@@ -146,14 +178,20 @@ export function RrConnectionsTab({ onOpenChange }: RrConnectionsTabProps): React
     setShowImportDialog(providerId);
   };
 
-  const { data: connectionsData, loading: connectionsLoading, refetch: refetchConnections } = useFetch<Connection[]>(
-    session?.accessToken ? `${process.env.NEXT_PUBLIC_API_URL}/connections` : "",
+  const {
+    data: connectionsData,
+    loading: connectionsLoading,
+    refetch: refetchConnections,
+  } = useFetch<Connection[]>(
+    session?.accessToken
+      ? `${process.env.NEXT_PUBLIC_API_URL}/connections`
+      : "",
     {
       headers: {
         Authorization: `Bearer ${session?.accessToken}`,
       },
       enabled: !!session?.accessToken,
-    }
+    },
   );
 
   useEffect(() => {
@@ -181,7 +219,7 @@ export function RrConnectionsTab({ onOpenChange }: RrConnectionsTabProps): React
       toast.error(
         err === "oauth_failed"
           ? "Authentication with the third-party app failed."
-          : "An error occurred during authentication."
+          : "An error occurred during authentication.",
       );
       const newUrl = window.location.pathname + "?settings=connections";
       window.history.replaceState({}, document.title, newUrl);
@@ -211,7 +249,11 @@ export function RrConnectionsTab({ onOpenChange }: RrConnectionsTabProps): React
   };
 
   const handleDisconnect = async (providerId: string): Promise<void> => {
-    if (!confirm(`Are you sure you want to disconnect ${providerId.toUpperCase()}?`)) {
+    if (
+      !confirm(
+        `Are you sure you want to disconnect ${providerId.toUpperCase()}?`,
+      )
+    ) {
       return;
     }
 
@@ -224,12 +266,14 @@ export function RrConnectionsTab({ onOpenChange }: RrConnectionsTabProps): React
           headers: {
             Authorization: `Bearer ${session?.accessToken}`,
           },
-        }
+        },
       );
       if (!res.ok) throw new Error("Failed to disconnect");
 
       setConnections((prev) =>
-        prev.filter((c) => c.provider.toLowerCase() !== providerId.toLowerCase())
+        prev.filter(
+          (c) => c.provider.toLowerCase() !== providerId.toLowerCase(),
+        ),
       );
       toast.success(`${providerId.toUpperCase()} disconnected successfully.`);
     } catch (err) {
@@ -240,7 +284,10 @@ export function RrConnectionsTab({ onOpenChange }: RrConnectionsTabProps): React
     }
   };
 
-  const handleTogglePrivate = async (providerId: string, currentPrivate: boolean): Promise<void> => {
+  const handleTogglePrivate = async (
+    providerId: string,
+    currentPrivate: boolean,
+  ): Promise<void> => {
     if (!session?.accessToken) return;
     setIsActionLoading(providerId);
     try {
@@ -256,20 +303,20 @@ export function RrConnectionsTab({ onOpenChange }: RrConnectionsTabProps): React
             provider: providerId.toUpperCase(),
             private: !currentPrivate,
           }),
-        }
+        },
       );
       if (!res.ok) throw new Error("Failed to update privacy setting");
       const updated = await res.json();
-      
+
       setConnections((prev) =>
         prev.map((c) =>
           c.provider.toLowerCase() === providerId.toLowerCase()
             ? { ...c, private: updated.private }
-            : c
-        )
+            : c,
+        ),
       );
       toast.success(
-        `Connection is now ${updated.private ? "private" : "public"}.`
+        `Connection is now ${updated.private ? "private" : "public"}.`,
       );
     } catch (err) {
       console.error(err);
@@ -298,23 +345,26 @@ export function RrConnectionsTab({ onOpenChange }: RrConnectionsTabProps): React
   }
 
   const getConnection = (providerId: string): Connection | undefined =>
-    connections.find((c) => c.provider.toLowerCase() === providerId.toLowerCase());
+    connections.find(
+      (c) => c.provider.toLowerCase() === providerId.toLowerCase(),
+    );
 
   const uniqueAppKeys = Array.from(new Set(PROVIDERS.map((p) => p.primaryApp)));
 
   const apps = uniqueAppKeys.map((key) => {
     const configApp = registeredApps.find(
-      (a) => a.name.toLowerCase() === key.toLowerCase()
+      (a) => a.name.toLowerCase() === key.toLowerCase(),
     );
     return {
       name: configApp?.name || key.charAt(0).toUpperCase() + key.slice(1),
-      description: configApp?.connectionDescription || `Integrations for ${key}.`,
+      description:
+        configApp?.connectionDescription || `Integrations for ${key}.`,
       providers: PROVIDERS.filter((p) => p.primaryApp === key),
     };
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-1">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold text-foreground">
@@ -334,205 +384,245 @@ export function RrConnectionsTab({ onOpenChange }: RrConnectionsTabProps): React
         </Button>
       </div>
 
-      <div className="space-y-6">
-        {apps.map((app): React.JSX.Element => (
-          <Card key={app.name}>
-            <CardHeader className="border-b border-border/40 pb-3">
-              <CardTitle className="text-xs font-bold uppercase tracking-wider text-primary">
-                {app.name}
-              </CardTitle>
-              <CardDescription className="text-[11px] text-muted-foreground mt-0.5">
-                {app.description}
-              </CardDescription>
-            </CardHeader>
+      <div className="space-y-6 p-2">
+        {apps.map(
+          (app): React.JSX.Element => (
+            <Card key={app.name}>
+              <CardHeader className="border-b border-border/40 pb-3">
+                <CardTitle className="text-xs font-bold uppercase tracking-wider text-primary">
+                  {app.name}
+                </CardTitle>
+                <CardDescription className="text-[11px] text-muted-foreground mt-0.5">
+                  {app.description}
+                </CardDescription>
+              </CardHeader>
 
-            <CardContent className="space-y-4 pt-4">
-              {app.providers.map((provider): React.JSX.Element => {
-                const conn = getConnection(provider.id);
-                const isConnected = !!conn;
-                const loading = isActionLoading === provider.id;
+              <CardContent className="space-y-4 pt-4">
+                {app.providers.map((provider): React.JSX.Element => {
+                  const conn = getConnection(provider.id);
+                  const isConnected = !!conn;
+                  const loading = isActionLoading === provider.id;
 
-                return (
-                  <div
-                    key={provider.id}
-                    className={cn(
-                      "group relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl border transition-all duration-300 bg-card/30 backdrop-blur-xs",
-                      isConnected
-                        ? "border-emerald-500/20 hover:border-emerald-500/40"
-                        : "border-border hover:border-primary/30"
-                    )}
-                  >
-                    {/* Left Side: Logo & Info */}
-                    <div className="flex items-start gap-3.5">
-                      <div
-                        className={cn(
-                          "flex items-center justify-center size-11 rounded-xl overflow-hidden shadow-sm transition-transform duration-500 group-hover:scale-105 group-hover:rotate-2 shrink-0 bg-secondary/30 border border-border",
-                          provider.glowColor && `shadow-md ${provider.glowColor}`
-                        )}
-                      >
-                        <Image
-                          src={provider.icon}
-                          alt={provider.name}
-                          width={44}
-                          height={44}
-                          className="w-full h-full object-contain p-1"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-sm text-foreground">
-                            {provider.name}
-                          </span>
-                          {isConnected ? (
-                            <Badge className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-full font-semibold text-[10px] px-2 py-0">
-                              Active
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-muted-foreground/60 border-border/40 rounded-full font-medium text-[10px] px-2 py-0">
-                              Offline
-                            </Badge>
+                  return (
+                    <div
+                      key={provider.id}
+                      className={cn(
+                        "group relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl border transition-all duration-300 bg-card/30 backdrop-blur-xs",
+                        isConnected
+                          ? "border-emerald-500/20 hover:border-emerald-500/40"
+                          : "border-border hover:border-primary/30",
+                      )}
+                    >
+                      {/* Left Side: Logo & Info */}
+                      <div className="flex items-start gap-3.5">
+                        <div
+                          className={cn(
+                            "flex items-center justify-center size-11 rounded-xl overflow-hidden shadow-sm transition-transform duration-500 group-hover:scale-105 group-hover:rotate-2 shrink-0 bg-secondary/30 border border-border",
+                            provider.glowColor &&
+                              `shadow-md ${provider.glowColor}`,
                           )}
+                        >
+                          <Image
+                            src={provider.icon}
+                            alt={provider.name}
+                            width={44}
+                            height={44}
+                            className="w-full h-full object-contain p-1"
+                          />
                         </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed max-w-sm">
-                          {provider.description}
-                        </p>
-                        {isConnected && conn && conn.linkedUsername && (
-                          <div className="flex flex-col gap-1.5 pt-1">
-                            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/80 font-medium">
-                              <span className="text-[10px] uppercase tracking-wider text-muted-foreground/50">Username:</span>
-                              <span className="text-foreground">{conn.linkedUsername}</span>
-                            </div>
-                            {conn.metadata && typeof conn.metadata === 'object' && Object.keys(conn.metadata).length > 0 && (
-                              <div className="space-y-1 mt-1">
-                                <button
-                                  type="button"
-                                  onClick={() => toggleMetadata(provider.id)}
-                                  className="text-[10px] text-primary hover:underline font-semibold flex items-center gap-1 cursor-pointer"
-                                >
-                                  {expandedMetadata[provider.id] ? "Hide connection data" : "Show connection data"}
-                                </button>
-                                {expandedMetadata[provider.id] && (
-                                  <pre className="text-[9px] font-mono p-2 bg-muted/40 border border-border/40 rounded-lg max-w-xs overflow-x-auto max-h-[120px] text-muted-foreground">
-                                    {JSON.stringify(conn.metadata, null, 2)}
-                                  </pre>
-                                )}
-                              </div>
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-sm text-foreground">
+                              {provider.name}
+                            </span>
+                            {isConnected ? (
+                              <Badge className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-full font-semibold text-[10px] px-2 py-0">
+                                Active
+                              </Badge>
+                            ) : (
+                              <Badge
+                                variant="outline"
+                                className="text-muted-foreground/60 border-border/40 rounded-full font-medium text-[10px] px-2 py-0"
+                              >
+                                Offline
+                              </Badge>
                             )}
                           </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Right Side: Actions */}
-                    <div className="flex items-center justify-end gap-2 mt-4 md:mt-0 pt-3 md:pt-0 border-t md:border-t-0 border-border/20">
-                      {isConnected && conn && (
-                        <div className="flex items-center gap-1.5 mr-2">
-                          <Switch
-                            id={`private-switch-${provider.id}`}
-                            checked={conn.private}
-                            onCheckedChange={() => handleTogglePrivate(provider.id, conn.private)}
-                            disabled={loading}
-                            className="scale-75"
-                          />
-                          <label
-                            htmlFor={`private-switch-${provider.id}`}
-                            className="text-[11px] font-semibold text-muted-foreground cursor-pointer select-none"
-                          >
-                            Private
-                          </label>
-                        </div>
-                      )}
-                      {isConnected ? (
-                        <>
-                          {["anilist", "mal", "simkl"].includes(provider.id.toLowerCase()) && (
-                            <>
-                              {importStatus[provider.id.toLowerCase()]?.status === "processing" ? (
-                                <div className="flex flex-col gap-1 shrink-0 w-full md:w-auto md:min-w-[140px] mr-2">
-                                  <div className="flex items-center justify-between text-[10px] font-semibold text-muted-foreground">
-                                    <span className="flex items-center gap-1">
-                                      <Spinner className="h-2.5 w-2.5 text-primary animate-spin" />
-                                      Importing list...
-                                    </span>
-                                    <span>
-                                      {importStatus[provider.id.toLowerCase()]?.processed}/
-                                      {importStatus[provider.id.toLowerCase()]?.total}
-                                    </span>
+                          <p className="text-xs text-muted-foreground leading-relaxed max-w-sm">
+                            {provider.description}
+                          </p>
+                          {isConnected && conn && conn.linkedUsername && (
+                            <div className="flex flex-col gap-1.5 pt-1">
+                              <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/80 font-medium">
+                                <span className="text-[10px] uppercase tracking-wider text-muted-foreground/50">
+                                  Username:
+                                </span>
+                                <span className="text-foreground">
+                                  {conn.linkedUsername}
+                                </span>
+                              </div>
+                              {conn.metadata &&
+                                typeof conn.metadata === "object" &&
+                                Object.keys(conn.metadata).length > 0 && (
+                                  <div className="space-y-1 mt-1">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        toggleMetadata(provider.id)
+                                      }
+                                      className="text-[10px] text-primary hover:underline font-semibold flex items-center gap-1 cursor-pointer"
+                                    >
+                                      {expandedMetadata[provider.id]
+                                        ? "Hide connection data"
+                                        : "Show connection data"}
+                                    </button>
+                                    {expandedMetadata[provider.id] && (
+                                      <pre className="text-[9px] font-mono p-2 bg-muted/40 border border-border/40 rounded-lg max-w-xs overflow-x-auto max-h-[120px] text-muted-foreground">
+                                        {JSON.stringify(conn.metadata, null, 2)}
+                                      </pre>
+                                    )}
                                   </div>
-                                  <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
-                                    <div
-                                      className="h-full bg-primary transition-all duration-500 ease-out"
-                                      style={{
-                                        width: `${
-                                          (importStatus[provider.id.toLowerCase()]?.total || 0) > 0
-                                            ? ((importStatus[provider.id.toLowerCase()]?.processed || 0) /
-                                                (importStatus[provider.id.toLowerCase()]?.total || 1)) *
-                                              100
-                                            : 0
-                                        }%`,
-                                      }}
-                                    />
-                                  </div>
-                                </div>
-                              ) : (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="rounded-lg text-xs font-semibold h-8 border-primary/20 text-primary hover:bg-primary/10 hover:border-primary/40 shrink-0 mr-2 group/import-btn"
-                                  onClick={() => openImportDialog(provider.id)}
-                                >
-                                  <RefreshCw className="h-3.5 w-3.5 mr-1 transition-transform duration-500 ease-in-out group-hover/import-btn:rotate-180" />
-                                  Import List
-                                </Button>
-                              )}
-                            </>
+                                )}
+                            </div>
                           )}
+                        </div>
+                      </div>
+
+                      {/* Right Side: Actions */}
+                      <div className="flex items-center justify-end gap-2 mt-4 md:mt-0 pt-3 md:pt-0 border-t md:border-t-0 border-border/20">
+                        {isConnected && conn && (
+                          <div className="flex items-center gap-1.5 mr-2">
+                            <Switch
+                              id={`private-switch-${provider.id}`}
+                              checked={conn.private}
+                              onCheckedChange={() =>
+                                handleTogglePrivate(provider.id, conn.private)
+                              }
+                              disabled={loading}
+                              className="scale-75"
+                            />
+                            <label
+                              htmlFor={`private-switch-${provider.id}`}
+                              className="text-[11px] font-semibold text-muted-foreground cursor-pointer select-none"
+                            >
+                              Private
+                            </label>
+                          </div>
+                        )}
+                        {isConnected ? (
+                          <>
+                            {["anilist", "mal", "simkl"].includes(
+                              provider.id.toLowerCase(),
+                            ) && (
+                              <>
+                                {importStatus[provider.id.toLowerCase()]
+                                  ?.status === "processing" ? (
+                                  <div className="flex flex-col gap-1 shrink-0 w-full md:w-auto md:min-w-[140px] mr-2">
+                                    <div className="flex items-center justify-between text-[10px] font-semibold text-muted-foreground">
+                                      <span className="flex items-center gap-1">
+                                        <Spinner className="h-2.5 w-2.5 text-primary animate-spin" />
+                                        Importing list...
+                                      </span>
+                                      <span>
+                                        {
+                                          importStatus[
+                                            provider.id.toLowerCase()
+                                          ]?.processed
+                                        }
+                                        /
+                                        {
+                                          importStatus[
+                                            provider.id.toLowerCase()
+                                          ]?.total
+                                        }
+                                      </span>
+                                    </div>
+                                    <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
+                                      <div
+                                        className="h-full bg-primary transition-all duration-500 ease-out"
+                                        style={{
+                                          width: `${
+                                            (importStatus[
+                                              provider.id.toLowerCase()
+                                            ]?.total || 0) > 0
+                                              ? ((importStatus[
+                                                  provider.id.toLowerCase()
+                                                ]?.processed || 0) /
+                                                  (importStatus[
+                                                    provider.id.toLowerCase()
+                                                  ]?.total || 1)) *
+                                                100
+                                              : 0
+                                          }%`,
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="rounded-lg text-xs font-semibold h-8 border-primary/20 text-primary hover:bg-primary/10 hover:border-primary/40 shrink-0 mr-2 group/import-btn"
+                                    onClick={() =>
+                                      openImportDialog(provider.id)
+                                    }
+                                  >
+                                    <RefreshCw className="h-3.5 w-3.5 mr-1 transition-transform duration-500 ease-in-out group-hover/import-btn:rotate-180" />
+                                    Import List
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="rounded-lg text-xs font-semibold h-8 text-destructive hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                              disabled={loading}
+                              onClick={(): Promise<void> =>
+                                handleDisconnect(provider.id)
+                              }
+                            >
+                              {loading ? (
+                                <Spinner className="h-3.5 w-3.5 mr-1" />
+                              ) : (
+                                <Unlink className="h-3.5 w-3.5 mr-1" />
+                              )}
+                              Disconnect
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="rounded-lg"
+                              asChild
+                            >
+                              <a href={provider.url} target="_blank" rel="noopener noreferrer">
+                                <ExternalLink className="size-4" />
+                              </a>
+                            </Button>
+                          </>
+                        ) : (
                           <Button
-                            variant="outline"
                             size="sm"
-                            className="rounded-lg text-xs font-semibold h-8 text-destructive hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                            className="rounded-lg text-xs font-semibold h-8 bg-primary hover:bg-primary/95 text-primary-foreground shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
                             disabled={loading}
-                            onClick={(): Promise<void> => handleDisconnect(provider.id)}
+                            onClick={(): void => handleConnect(provider.id)}
                           >
                             {loading ? (
                               <Spinner className="h-3.5 w-3.5 mr-1" />
                             ) : (
-                              <Unlink className="h-3.5 w-3.5 mr-1" />
+                              <LinkIcon className="h-3.5 w-3.5 mr-1" />
                             )}
-                            Disconnect
+                            Connect Account
                           </Button>
-                          <Button
-                            variant="outline"
-                            size="icon-sm"
-                            className="size-8 rounded-lg shrink-0"
-                            asChild
-                          >
-                            <a href={provider.url} target="_blank" rel="noopener noreferrer">
-                              <ExternalLink className="size-3.5" />
-                            </a>
-                          </Button>
-                        </>
-                      ) : (
-                        <Button
-                          size="sm"
-                          className="rounded-lg text-xs font-semibold h-8 bg-primary hover:bg-primary/95 text-primary-foreground shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
-                          disabled={loading}
-                          onClick={(): void => handleConnect(provider.id)}
-                        >
-                          {loading ? (
-                            <Spinner className="h-3.5 w-3.5 mr-1" />
-                          ) : (
-                            <LinkIcon className="h-3.5 w-3.5 mr-1" />
-                          )}
-                          Connect Account
-                        </Button>
-                      )}
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-        ))}
+                  );
+                })}
+              </CardContent>
+            </Card>
+          ),
+        )}
       </div>
 
       {/* Done Closing button */}
@@ -546,31 +636,44 @@ export function RrConnectionsTab({ onOpenChange }: RrConnectionsTabProps): React
         </Button>
       </div>
 
-      <Dialog open={!!showImportDialog} onOpenChange={(open) => { if (!open) setShowImportDialog(null); }}>
+      <Dialog
+        open={!!showImportDialog}
+        onOpenChange={(open) => {
+          if (!open) setShowImportDialog(null);
+        }}
+      >
         <DialogContent className="max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl">
           <DialogHeader>
-            <DialogTitle className="text-base font-semibold text-foreground">Select Lists to Import</DialogTitle>
+            <DialogTitle className="text-base font-semibold text-foreground">
+              Select Lists to Import
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <p className="text-xs text-muted-foreground">
-              Choose which watchlists you would like to import from {showImportDialog?.toUpperCase()}.
+              Choose which watchlists you would like to import from{" "}
+              {showImportDialog?.toUpperCase()}.
             </p>
             <div className="space-y-3">
-              {PROVIDERS.find(p => p.id === showImportDialog)?.capabilities
-                .filter(cap => cap in IMPORTABLE_CAPABILITIES)
-                .map(cap => {
+              {PROVIDERS.find((p) => p.id === showImportDialog)
+                ?.capabilities.filter((cap) => cap in IMPORTABLE_CAPABILITIES)
+                .map((cap) => {
                   const { label, key } = IMPORTABLE_CAPABILITIES[cap];
                   const isChecked = selectedMediaTypes.includes(key);
                   return (
-                    <div key={key} className="flex items-center gap-3 p-3 rounded-xl border border-border bg-secondary/15 hover:bg-secondary/25 transition-all">
+                    <div
+                      key={key}
+                      className="flex items-center gap-3 p-3 rounded-xl border border-border bg-secondary/15 hover:bg-secondary/25 transition-all"
+                    >
                       <Checkbox
                         id={`media-type-${key}`}
                         checked={isChecked}
                         onCheckedChange={(checked) => {
                           if (checked) {
-                            setSelectedMediaTypes(prev => [...prev, key]);
+                            setSelectedMediaTypes((prev) => [...prev, key]);
                           } else {
-                            setSelectedMediaTypes(prev => prev.filter(k => k !== key));
+                            setSelectedMediaTypes((prev) =>
+                              prev.filter((k) => k !== key),
+                            );
                           }
                         }}
                       />
@@ -582,12 +685,16 @@ export function RrConnectionsTab({ onOpenChange }: RrConnectionsTabProps): React
                       </label>
                     </div>
                   );
-                })
-              }
+                })}
             </div>
           </div>
           <div className="flex items-center justify-end gap-2.5 pt-2">
-            <Button variant="outline" size="sm" onClick={() => setShowImportDialog(null)} className="rounded-lg h-9 text-xs">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowImportDialog(null)}
+              className="rounded-lg h-9 text-xs"
+            >
               Cancel
             </Button>
             <Button
@@ -607,7 +714,12 @@ export function RrConnectionsTab({ onOpenChange }: RrConnectionsTabProps): React
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!failedImports} onOpenChange={(open) => { if (!open) setFailedImports(null); }}>
+      <Dialog
+        open={!!failedImports}
+        onOpenChange={(open) => {
+          if (!open) setFailedImports(null);
+        }}
+      >
         <DialogContent className="max-w-3xl sm:max-w-3xl rounded-2xl border border-border bg-card p-6 shadow-xl max-h-[80vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="text-base font-semibold text-foreground flex items-center gap-2">
@@ -617,7 +729,10 @@ export function RrConnectionsTab({ onOpenChange }: RrConnectionsTabProps): React
           </DialogHeader>
           <div className="flex-1 overflow-y-auto py-4 space-y-3 pr-1">
             <p className="text-xs text-muted-foreground leading-relaxed">
-              The following items from <strong>{failedImports?.providerId.toUpperCase()}</strong> could not be imported automatically. You can manually search and link them using the Edit dialog for the respective media entry.
+              The following items from{" "}
+              <strong>{failedImports?.providerId.toUpperCase()}</strong> could
+              not be imported automatically. You can manually search and link
+              them using the Edit dialog for the respective media entry.
             </p>
             <div className="border border-border rounded-xl overflow-hidden bg-muted/10">
               <table className="w-full text-left border-collapse text-xs">
@@ -631,19 +746,31 @@ export function RrConnectionsTab({ onOpenChange }: RrConnectionsTabProps): React
                 </thead>
                 <tbody className="divide-y divide-border">
                   {failedImports?.items.map((item, idx) => (
-                    <tr key={idx} className="hover:bg-secondary/10 transition-colors">
-                      <td className="p-3 font-medium text-foreground max-w-[280px] truncate" title={item.title}>
+                    <tr
+                      key={idx}
+                      className="hover:bg-secondary/10 transition-colors"
+                    >
+                      <td
+                        className="p-3 font-medium text-foreground max-w-[280px] truncate"
+                        title={item.title}
+                      >
                         {item.title}
                       </td>
                       <td className="p-3">
-                        <Badge variant="outline" className="capitalize text-[10px] px-1.5 py-0 font-medium">
+                        <Badge
+                          variant="outline"
+                          className="capitalize text-[10px] px-1.5 py-0 font-medium"
+                        >
                           {item.mediaType}
                         </Badge>
                       </td>
                       <td className="p-3 font-mono text-[10px] text-muted-foreground">
                         {item.providerId}
                       </td>
-                      <td className="p-3 text-amber-500/90 font-medium max-w-[280px] truncate" title={item.reason}>
+                      <td
+                        className="p-3 text-amber-500/90 font-medium max-w-[280px] truncate"
+                        title={item.reason}
+                      >
                         {item.reason}
                       </td>
                     </tr>
@@ -653,7 +780,14 @@ export function RrConnectionsTab({ onOpenChange }: RrConnectionsTabProps): React
             </div>
           </div>
           <div className="flex items-center justify-end pt-3 border-t border-border">
-            <Button size="sm" onClick={() => { setFailedImports(null); window.location.reload(); }} className="rounded-lg h-9 text-xs font-semibold px-4">
+            <Button
+              size="sm"
+              onClick={() => {
+                setFailedImports(null);
+                window.location.reload();
+              }}
+              className="rounded-lg h-9 text-xs font-semibold px-4"
+            >
               Close
             </Button>
           </div>

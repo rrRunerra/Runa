@@ -9,6 +9,7 @@ import {
   LinkIcon,
   Lock,
   Smartphone,
+  KeyRound,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePathname } from "next/navigation";
@@ -47,8 +48,16 @@ import { RrPrivacySettingsTab } from "./rrPrivacySettingsTab";
 import { RrConnectionsTab } from "./rrConnectionsTab";
 import { RrSidebarSettingsTab } from "./rrSidebarSettingsTab";
 import { RrMailSettingsTab } from "./rrMailSettingsTab";
+import { RrApiKeysTab } from "./rrApiKeysTab";
 
-type Category = "account" | "connections" | "privacy" | "sidebar" | "security" | "mailAccounts";
+type Category =
+  | "account"
+  | "connections"
+  | "privacy"
+  | "sidebar"
+  | "security"
+  | "mailAccounts"
+  | "apiKeys";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -69,29 +78,50 @@ export function SettingsDialog({
     if (open) {
       const params = new URLSearchParams(window.location.search);
       const cat = params.get("category") || params.get("settings");
-      if (cat === "connections") {
-        setActiveCategory("connections");
-      } else if (cat === "privacy") {
-        setActiveCategory("privacy");
-      } else if (cat === "security") {
-        setActiveCategory("security");
-      } else if (cat === "sidebar") {
-        setActiveCategory("sidebar");
-      } else if (cat === "mailAccounts" && isPegasus) {
-        setActiveCategory("mailAccounts");
-      } else {
-        setActiveCategory("account");
+
+      switch (cat) {
+        case "connections":
+          setActiveCategory("connections");
+          break;
+        case "privacy":
+          setActiveCategory("privacy");
+          break;
+        case "security":
+          setActiveCategory("security");
+          break;
+        case "sidebar":
+          setActiveCategory("sidebar");
+          break;
+        case "mailAccounts":
+          setActiveCategory("mailAccounts");
+          break;
+        case "apiKeys":
+          setActiveCategory("apiKeys");
+          break;
+        default:
+          setActiveCategory("account");
       }
     }
   }, [open, isPegasus]);
 
-  const navItems = [
-    { id: "account" as Category, name: "Account", icon: User },
-    { id: "security" as Category, name: "Security", icon: ShieldCheck },
-    ...(isPegasus ? [{ id: "mailAccounts" as Category, name: "Mail Accounts", icon: Mail }] : []),
-    { id: "connections" as Category, name: "Connections", icon: LinkIcon },
-    { id: "privacy" as Category, name: "Privacy", icon: Lock },
-    ...(isMobile ? [{ id: "sidebar" as Category, name: "Sidebar Shortcuts", icon: Smartphone }] : []),
+  const navItems: { id: Category; name: string; icon: any }[] = [
+    { id: "account", name: "Account", icon: User },
+    { id: "security", name: "Security", icon: ShieldCheck },
+    { id: "apiKeys", name: "API Keys", icon: KeyRound },
+    ...(isPegasus
+      ? [{ id: "mailAccounts" as Category, name: "Mail Accounts", icon: Mail }]
+      : []),
+    { id: "connections", name: "Connections", icon: LinkIcon },
+    { id: "privacy", name: "Privacy", icon: Lock },
+    ...(isMobile
+      ? [
+          {
+            id: "sidebar" as Category,
+            name: "Sidebar Shortcuts",
+            icon: Smartphone,
+          },
+        ]
+      : []),
   ];
 
   const mobileDockItems = navItems.map((item) => ({
@@ -108,9 +138,15 @@ export function SettingsDialog({
         <DialogDescription className="sr-only">
           Customize your settings here.
         </DialogDescription>
-        <SidebarProvider className="items-start h-full w-full min-h-0" style={{ minHeight: "100%" }}>
+        <SidebarProvider
+          className="items-start h-full w-full min-h-0"
+          style={{ minHeight: "100%" }}
+        >
           {/* Desktop Left Sidebar */}
-          <Sidebar collapsible="none" className="hidden md:flex border-r h-full bg-card">
+          <Sidebar
+            collapsible="none"
+            className="hidden md:flex border-r h-full bg-card"
+          >
             <SidebarContent>
               <SidebarGroup>
                 <div className="px-3 py-2 mb-2 text-[10px] font-bold text-muted-foreground/75 uppercase tracking-wider">
@@ -126,7 +162,10 @@ export function SettingsDialog({
                           onClick={() => setActiveCategory(item.id)}
                           className="cursor-pointer"
                         >
-                          <button type="button" className="w-full flex items-center gap-2">
+                          <button
+                            type="button"
+                            className="w-full flex items-center gap-2"
+                          >
                             <item.icon className="size-4" />
                             <span>{item.name}</span>
                           </button>
@@ -151,7 +190,8 @@ export function SettingsDialog({
                     <BreadcrumbSeparator className="hidden md:block" />
                     <BreadcrumbItem>
                       <BreadcrumbPage>
-                        {navItems.find((n) => n.id === activeCategory)?.name || "Account"}
+                        {navItems.find((n) => n.id === activeCategory)?.name ||
+                          "Account"}
                       </BreadcrumbPage>
                     </BreadcrumbItem>
                   </BreadcrumbList>
@@ -160,7 +200,7 @@ export function SettingsDialog({
             </header>
 
             {/* Tab Panel Content */}
-            <div className="flex-1 overflow-y-auto no-scrollbar p-6 pb-24 md:pb-12">
+            <div className="flex-1 overflow-y-auto no-scrollbar p-6 pb-24 md:pb-16">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={activeCategory}
@@ -188,6 +228,9 @@ export function SettingsDialog({
                   {activeCategory === "mailAccounts" && isPegasus && (
                     <RrMailSettingsTab onOpenChange={onOpenChange} />
                   )}
+                  {activeCategory === "apiKeys" && (
+                    <RrApiKeysTab onOpenChange={onOpenChange} />
+                  )}
                 </motion.div>
               </AnimatePresence>
             </div>
@@ -196,10 +239,7 @@ export function SettingsDialog({
 
         {/* Mobile Bottom Dock Tabs Switcher */}
         <div className="md:hidden">
-          <RrBottomDock
-            pathname=""
-            items={mobileDockItems}
-          />
+          <RrBottomDock pathname="" items={mobileDockItems} />
         </div>
       </DialogContent>
     </Dialog>

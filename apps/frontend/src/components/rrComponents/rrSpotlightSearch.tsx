@@ -31,6 +31,7 @@ import {
   PanelLeft,
   Bell,
   Shield,
+  KeyRound,
 } from "lucide-react";
 import React from "react";
 import { useRRSidebar } from "@/hooks/useRRSidebar";
@@ -308,6 +309,17 @@ export default function RrSpotlightSearch(): React.JSX.Element {
     ),
     badge: "Settings tab",
     action: () => triggerSettingsTab("connections"),
+  });
+
+  items.push({
+    id: "action-settings-api-keys",
+    label: "API Keys",
+    category: "Actions",
+    icon: (
+      <KeyRound className="size-4 opacity-70 text-amber-500 group-data-selected/command-item:opacity-100" />
+    ),
+    badge: "Settings tab",
+    action: () => triggerSettingsTab("apiKeys"),
   });
 
   // Conditional Mail Settings tab if we're in Pegasus
