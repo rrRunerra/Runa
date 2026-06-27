@@ -10,7 +10,7 @@ import {
   ShieldAlert,
   Trash,
 } from "lucide-react";
-import { ComposeEmailModal } from "@/components/pegasus/ComposeEmailModal";
+import { RrComposeEmailModal } from "@/components/rrComponents/pegasus/rrComposeEmailModal";
 import { SidebarMenuButton } from "@/components/ui/sidebar";
 import { SidebarConfig } from "@/types/SidebarConfig";
 
@@ -29,7 +29,7 @@ export const getPegasusSidebarConfig = (
           subtitle: "Compose mail",
           position: 1,
           component: (
-            <ComposeEmailModal accountId={defaultAccountId}>
+            <RrComposeEmailModal accountId={defaultAccountId}>
               <SidebarMenuButton
                 tooltip="Compose"
                 className="relative transition-colors duration-200 rounded-xl h-9.5 px-3 text-muted-foreground hover:text-foreground hover:bg-white/5 cursor-pointer"
@@ -39,7 +39,7 @@ export const getPegasusSidebarConfig = (
                   <span className="truncate">Compose</span>
                 </span>
               </SidebarMenuButton>
-            </ComposeEmailModal>
+            </RrComposeEmailModal>
           ),
         },
       ],
@@ -53,7 +53,7 @@ export const getPegasusSidebarConfig = (
           subtitle: "Compose mail",
           position: 1,
           component: (
-            <ComposeEmailModal accountId={defaultAccountId}>
+            <RrComposeEmailModal accountId={defaultAccountId}>
               <SidebarMenuButton
                 tooltip="Compose"
                 className="relative transition-colors duration-200 rounded-xl h-9.5 px-3 text-muted-foreground hover:text-foreground hover:bg-white/5 cursor-pointer"
@@ -63,8 +63,27 @@ export const getPegasusSidebarConfig = (
                   <span className="truncate">Compose</span>
                 </span>
               </SidebarMenuButton>
-            </ComposeEmailModal>
+            </RrComposeEmailModal>
           ),
+        },
+      ],
+    },
+    {
+      section: "Unified",
+      items: [
+        {
+          label: "Unified Inbox",
+          href: "/pegasus/unified/inbox",
+          preventRedirect: true,
+          icon: <Inbox className="h-4 w-4" style={{ color: "#3b82f6" }} />,
+          subtitle: "All inboxes combined",
+        },
+        {
+          label: "Attachments",
+          href: "/pegasus/attachments",
+          preventRedirect: true,
+          icon: <FileText className="h-4 w-4" style={{ color: "#10b981" }} />,
+          subtitle: "All attachments",
         },
       ],
     },

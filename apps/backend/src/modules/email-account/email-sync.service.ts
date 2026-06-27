@@ -194,25 +194,37 @@ export class EmailSyncService {
             }
 
             // Cache metadata and body content locally in the database
-            const emailRecord = await this.prisma.client.emailMessage.create({
-              data: {
-                userEmailAccountId: account.id,
-                uid: msg.uid,
-                messageId: parsed.messageId || null,
-                subject,
-                from: fromStr,
-                to: toStr,
-                cc: ccStr || null,
-                bcc: bccStr || null,
-                date,
-                bodyText,
-                bodyHtml,
-                read: msg.flags ? msg.flags.has('\\Seen') : false,
-                flagged: msg.flags ? msg.flags.has('\\Flagged') : false,
-                folder: standardFolder,
-                encryptedKey: encryptedKey || undefined,
-              },
-            });
+            const emailRecord = await this.prisma.client.emailMessage.upsert({
+  where: {
+    userEmailAccountId_folder_uid: {
+      userEmailAccountId: account.id,
+      folder: standardFolder,
+      uid: msg.uid,
+    },
+  },
+  update: {
+    // Optionally update flags on re-sync
+    read: msg.flags ? msg.flags.has('\\Seen') : false,
+    flagged: msg.flags ? msg.flags.has('\\Flagged') : false,
+  },
+  create: {
+    userEmailAccountId: account.id,
+    uid: msg.uid,
+    messageId: parsed.messageId || null,
+    subject,
+    from: fromStr,
+    to: toStr,
+    cc: ccStr || null,
+    bcc: bccStr || null,
+    date,
+    bodyText,
+    bodyHtml,
+    read: msg.flags ? msg.flags.has('\\Seen') : false,
+    flagged: msg.flags ? msg.flags.has('\\Flagged') : false,
+    folder: standardFolder,
+    encryptedKey: encryptedKey || undefined,
+  },
+});
 
             try {
               const userRecord = await this.prisma.client.user.findUnique({

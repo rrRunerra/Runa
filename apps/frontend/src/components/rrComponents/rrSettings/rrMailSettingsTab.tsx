@@ -395,13 +395,25 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
                   <Label htmlFor="use-html" className="text-[10px] cursor-pointer">Use HTML formatting</Label>
                 </div>
               </div>
-              <textarea
-                id="email-signature"
-                value={emailSignature}
-                onChange={(e) => setEmailSignature(e.target.value)}
-                placeholder="Add your mail signature text..."
-                className="w-full min-h-[70px] p-3 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-foreground font-sans"
-              />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <textarea
+                  id="email-signature"
+                  value={emailSignature}
+                  onChange={(e) => setEmailSignature(e.target.value)}
+                  placeholder="Add your mail signature text... HTML or plain text supported."
+                  className="w-full min-h-[100px] p-3 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-foreground font-mono"
+                />
+                <div className="flex flex-col bg-background/50 border border-border rounded-xl p-3 min-h-[100px] text-left">
+                  <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mb-2 select-none">Live Signature Preview</span>
+                  <div className="text-xs text-foreground/90 overflow-y-auto max-h-[80px]">
+                    {emailUseHtmlSig ? (
+                      <div dangerouslySetInnerHTML={{ __html: emailSignature || "<i>No signature content</i>" }} />
+                    ) : (
+                      <pre className="font-sans whitespace-pre-wrap">{emailSignature || "No signature content"}</pre>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="flex items-center justify-between mt-1">

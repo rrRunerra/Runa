@@ -153,6 +153,12 @@ export class UserService {
     });
   }
 
+  async findByEmail(email: string): Promise<User | null> {
+    return await this.prisma.client.user.findUnique({
+      where: { email: email.toLowerCase().trim() },
+    });
+  }
+
   async update(userId: string, data: UpdateUserDto): Promise<User> {
     const user = await this.prisma.client.user.findUnique({
       where: { id: userId },

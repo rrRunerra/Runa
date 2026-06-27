@@ -161,6 +161,21 @@ export class UserController {
     return this.usersService.getE2eeKeys(req.user.id);
   }
 
+  @Get('by-email/:email')
+  async findByEmail(@Param('email') email: string) {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) {
+      throw new NotFoundException(`User with email ${email} not found`);
+    }
+    return {
+      id: user.id,
+      username: user.username,
+      displayName: user.displayName,
+      avatarUrl: user.avatarUrl,
+      bannerUrl: user.bannerUrl,
+    };
+  }
+
   @Public()
   @Get(':username')
   async findOne(@Param('username') username: string) {

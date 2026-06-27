@@ -341,15 +341,26 @@ export class EmailAccountService {
     };
   }
 
-  async getFolderMessages(username: string, accountId: string, folder: string): Promise<any[]> {
+  async getFolderMessages(
+    username: string,
+    accountId: string,
+    folder: string,
+    page?: number,
+    limit?: number,
+  ): Promise<any[]> {
     const account = await this.prisma.client.userEmailAccount.findFirst({
       where: { id: accountId, username },
     });
     if (!account) throw new NotFoundException('Email account not found');
 
+    const take = limit ? Number(limit) : 50;
+    const skip = page ? (Number(page) - 1) * take : 0;
+
     return this.prisma.client.emailMessage.findMany({
       where: { userEmailAccountId: accountId, folder: folder.toLowerCase().trim() },
       orderBy: { date: 'desc' },
+      take,
+      skip,
       select: {
         id: true,
         uid: true,
@@ -364,6 +375,7 @@ export class EmailAccountService {
         flagged: true,
         folder: true,
         encryptedKey: true,
+        labels: true,
         attachments: {
           select: {
             id: true,
@@ -404,7 +416,7 @@ export class EmailAccountService {
     username: string,
     accountId: string,
     messageId: string,
-    data: { read?: boolean; flagged?: boolean; folder?: string },
+    data: { read?: boolean; flagged?: boolean; folder?: string; labels?: string[] },
   ): Promise<any> {
     const account = await this.prisma.client.userEmailAccount.findFirst({
       where: { id: accountId, username },
@@ -440,6 +452,7 @@ export class EmailAccountService {
         read: data.read !== undefined ? data.read : message.read,
         flagged: data.flagged !== undefined ? data.flagged : message.flagged,
         folder: data.folder !== undefined ? data.folder : message.folder,
+        labels: data.labels !== undefined ? data.labels : message.labels,
       },
     });
   }
@@ -489,7 +502,7 @@ export class EmailAccountService {
     username: string,
     accountId: string,
     messageIds: string[],
-    data: { read?: boolean; flagged?: boolean; folder?: string },
+    data: { read?: boolean; flagged?: boolean; folder?: string; labels?: string[] },
   ): Promise<{ success: boolean }> {
     const account = await this.prisma.client.userEmailAccount.findFirst({
       where: { id: accountId, username },
@@ -547,6 +560,7 @@ export class EmailAccountService {
         ...(data.read !== undefined && { read: data.read }),
         ...(data.flagged !== undefined && { flagged: data.flagged }),
         ...(data.folder !== undefined && { folder: data.folder }),
+        ...(data.labels !== undefined && { labels: data.labels }),
       },
     });
 
@@ -879,6 +893,150 @@ export class EmailAccountService {
     }
 
     return savedMessage;
+  }
+
+  async getUnifiedFolderMessages(
+    username: string,
+    folder: string,
+    page?: number,
+    limit?: number,
+  ): Promise<any[]> {
+    const accounts = await this.prisma.client.userEmailAccount.findMany({
+      where: { username },
+      select: { id: true },
+    });
+    const accountIds = accounts.map((a) => a.id);
+
+    const take = limit ? Number(limit) : 50;
+    const skip = page ? (Number(page) - 1) * take : 0;
+
+    return this.prisma.client.emailMessage.findMany({
+      where: {
+        userEmailAccountId: { in: accountIds },
+        folder: folder.toLowerCase().trim(),
+      },
+      orderBy: { date: 'desc' },
+      take,
+      skip,
+      select: {
+        id: true,
+        uid: true,
+        messageId: true,
+        subject: true,
+        from: true,
+        to: true,
+        cc: true,
+        bcc: true,
+        date: true,
+        read: true,
+        flagged: true,
+        folder: true,
+        encryptedKey: true,
+        userEmailAccountId: true,
+        labels: true,
+        attachments: {
+          select: {
+            id: true,
+            filename: true,
+            contentType: true,
+            size: true,
+          },
+        },
+      },
+    });
+  }
+
+  async getCannedResponses(username: string, page?: number, limit?: number): Promise<any[]> {
+    const take = limit ? Number(limit) : 20;
+    const skip = page ? (Number(page) - 1) * take : 0;
+
+    return this.prisma.client.cannedResponse.findMany({
+      where: { username },
+      orderBy: { createdAt: 'desc' },
+      take,
+      skip,
+    });
+  }
+
+  async createCannedResponse(username: string, data: { name: string; subject?: string; bodyText: string }): Promise<any> {
+    const user = await this.prisma.client.user.findUnique({
+      where: { username },
+      select: { userPublicKey: true },
+    });
+
+    let subject = data.subject || '';
+    let bodyText = data.bodyText || '';
+    let encryptedKey = null;
+
+    if (user && user.userPublicKey) {
+      try {
+        const dataKey = generateDataKey();
+        if (subject) subject = encryptWithDataKey(subject, dataKey);
+        bodyText = encryptWithDataKey(bodyText, dataKey);
+        encryptedKey = encryptDataKeyForUser(user.userPublicKey, dataKey) as any;
+      } catch (encErr) {
+        this.logger.error(`Canned response encryption failed:`, encErr);
+      }
+    }
+
+    return this.prisma.client.cannedResponse.create({
+      data: {
+        username,
+        name: data.name,
+        subject,
+        bodyText,
+        encryptedKey: encryptedKey || undefined,
+      },
+    });
+  }
+
+  async updateCannedResponse(username: string, id: string, data: { name: string; subject?: string; bodyText: string }): Promise<any> {
+    const template = await this.prisma.client.cannedResponse.findFirst({
+      where: { id, username },
+    });
+    if (!template) throw new NotFoundException('Canned response not found');
+
+    const user = await this.prisma.client.user.findUnique({
+      where: { username },
+      select: { userPublicKey: true },
+    });
+
+    let subject = data.subject || '';
+    let bodyText = data.bodyText || '';
+    let encryptedKey = null;
+
+    if (user && user.userPublicKey) {
+      try {
+        const dataKey = generateDataKey();
+        if (subject) subject = encryptWithDataKey(subject, dataKey);
+        bodyText = encryptWithDataKey(bodyText, dataKey);
+        encryptedKey = encryptDataKeyForUser(user.userPublicKey, dataKey) as any;
+      } catch (encErr) {
+        this.logger.error(`Canned response update encryption failed:`, encErr);
+      }
+    }
+
+    return this.prisma.client.cannedResponse.update({
+      where: { id },
+      data: {
+        name: data.name,
+        subject,
+        bodyText,
+        encryptedKey: encryptedKey || undefined,
+      },
+    });
+  }
+
+  async deleteCannedResponse(username: string, id: string): Promise<{ success: boolean }> {
+    const template = await this.prisma.client.cannedResponse.findFirst({
+      where: { id, username },
+    });
+    if (!template) throw new NotFoundException('Canned response not found');
+
+    await this.prisma.client.cannedResponse.delete({
+      where: { id },
+    });
+    return { success: true };
   }
 
   async getAttachment(attachmentId: string): Promise<any> {

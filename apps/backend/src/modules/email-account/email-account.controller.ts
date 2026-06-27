@@ -10,6 +10,7 @@ import {
   Delete,
   Response,
   StreamableFile,
+  Query,
 } from '@nestjs/common';
 import type { Response as ExpressResponse } from 'express';
 import { DualAuthGuard } from '../../common/guards/auth.guard';
@@ -50,6 +51,42 @@ export class EmailAccountController {
     return this.emailAccountService.deleteEmailAccount(req.user.username, id);
   }
 
+  @Get('canned-responses')
+  async getCannedResponses(
+    @Req() req: any,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ): Promise<any[]> {
+    const pageNum = page ? parseInt(page, 10) : undefined;
+    const limitNum = limit ? parseInt(limit, 10) : undefined;
+    return this.emailAccountService.getCannedResponses(req.user.username, pageNum, limitNum);
+  }
+
+  @Post('canned-responses')
+  async createCannedResponse(
+    @Req() req: any,
+    @Body() body: { name: string; subject?: string; bodyText: string },
+  ): Promise<any> {
+    return this.emailAccountService.createCannedResponse(req.user.username, body);
+  }
+
+  @Put('canned-responses/:id')
+  async updateCannedResponse(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: { name: string; subject?: string; bodyText: string },
+  ): Promise<any> {
+    return this.emailAccountService.updateCannedResponse(req.user.username, id, body);
+  }
+
+  @Delete('canned-responses/:id')
+  async deleteCannedResponse(
+    @Req() req: any,
+    @Param('id') id: string,
+  ): Promise<{ success: boolean }> {
+    return this.emailAccountService.deleteCannedResponse(req.user.username, id);
+  }
+
   @Get('autoconfig/:domain')
   async fetchEmailAutoconfig(@Param('domain') domain: string): Promise<EmailAutoconfigResult> {
     return this.emailAccountService.fetchEmailAutoconfig(domain);
@@ -57,13 +94,29 @@ export class EmailAccountController {
 
   // --- Linked Folder & Message Queries ---
 
+  @Get('unified/folders/:folder/messages')
+  async getUnifiedFolderMessages(
+    @Req() req: any,
+    @Param('folder') folder: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ): Promise<any[]> {
+    const pageNum = page ? parseInt(page, 10) : undefined;
+    const limitNum = limit ? parseInt(limit, 10) : undefined;
+    return this.emailAccountService.getUnifiedFolderMessages(req.user.username, folder, pageNum, limitNum);
+  }
+
   @Get(':accountId/folders/:folder/messages')
   async getFolderMessages(
     @Req() req: any,
     @Param('accountId') accountId: string,
     @Param('folder') folder: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ): Promise<any[]> {
-    return this.emailAccountService.getFolderMessages(req.user.username, accountId, folder);
+    const pageNum = page ? parseInt(page, 10) : undefined;
+    const limitNum = limit ? parseInt(limit, 10) : undefined;
+    return this.emailAccountService.getFolderMessages(req.user.username, accountId, folder, pageNum, limitNum);
   }
 
   @Get(':accountId/messages/:messageId')

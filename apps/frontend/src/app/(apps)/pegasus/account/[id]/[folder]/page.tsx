@@ -1,5 +1,5 @@
 import React from "react";
-import EmailFolderView from "@/components/pegasus/EmailFolderView";
+import RrEmailFolderView from "@/components/rrComponents/pegasus/rrEmailFolderView";
 
 interface PageProps {
   params: Promise<{
@@ -10,5 +10,5 @@ interface PageProps {
 
 export default async function Page({ params }: PageProps) {
   const { id, folder } = await params;
-  return <EmailFolderView accountId={id} folder={folder} />;
+  return <RrEmailFolderView accountId={id} folder={folder} />;
 }
