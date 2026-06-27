@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Star, TrendingUp, Heart, BookOpen, User } from "lucide-react";
+import { Star, TrendingUp, Heart, BookOpen, User, Globe, ShoppingBag } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -70,6 +70,16 @@ export default function BookDetailsPage(): React.JSX.Element {
       : null,
     fetcher,
     { shouldRetryOnError: false },
+  );
+
+  const { data: relatedBooks } = useSWR<any[]>(
+    id ? `${process.env.NEXT_PUBLIC_API_URL}/book/details/${id}/related` : null,
+    fetcher
+  );
+
+  const { data: editions } = useSWR<any[]>(
+    id ? `${process.env.NEXT_PUBLIC_API_URL}/book/details/${id}/editions` : null,
+    fetcher
   );
 
   const hasListEntry = !!listEntry;
@@ -152,7 +162,7 @@ export default function BookDetailsPage(): React.JSX.Element {
           <div className="w-full h-full bg-muted/10" />
         )}
 
-        {/* Open Library Attribution */}
+        {/* Google Books Attribution */}
         <div className="absolute inset-x-0 top-0 z-20 pointer-events-none">
           <div className="mx-auto px-4 pt-4 flex justify-end items-start pointer-events-auto">
             <div className="flex flex-col gap-1 bg-card/85 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-white/10 shadow-md">
@@ -160,11 +170,11 @@ export default function BookDetailsPage(): React.JSX.Element {
                 Data Provided By
               </span>
               <Link
-                href="https://openlibrary.org"
+                href="https://books.google.com"
                 target="_blank"
                 className="text-xs font-bold text-muted-foreground hover:text-foreground transition-colors hover:underline"
               >
-                Open Library
+                Google Books
               </Link>
             </div>
           </div>
@@ -252,6 +262,45 @@ export default function BookDetailsPage(): React.JSX.Element {
                     />
                   </>
                 )}
+
+                {book.previewLink && (
+                  <Button
+                    variant="outline"
+                    className="w-full cursor-pointer rounded-xl flex items-center justify-center gap-2 mt-2"
+                    asChild
+                  >
+                    <a href={book.previewLink} target="_blank" rel="noopener noreferrer">
+                      <BookOpen className="size-4" />
+                      Preview Book
+                    </a>
+                  </Button>
+                )}
+
+                {book.infoLink && (
+                  <Button
+                    variant="outline"
+                    className="w-full cursor-pointer rounded-xl flex items-center justify-center gap-2"
+                    asChild
+                  >
+                    <a href={book.infoLink} target="_blank" rel="noopener noreferrer">
+                      <TrendingUp className="size-4" />
+                      Google Books
+                    </a>
+                  </Button>
+                )}
+
+                {book.buyLink && (
+                  <Button
+                    variant="outline"
+                    className="w-full cursor-pointer rounded-xl flex items-center justify-center gap-2"
+                    asChild
+                  >
+                    <a href={book.buyLink} target="_blank" rel="noopener noreferrer">
+                      <ShoppingBag className="size-4" />
+                      Buy Book
+                    </a>
+                  </Button>
+                )}
               </div>
             </div>
 
@@ -271,19 +320,43 @@ export default function BookDetailsPage(): React.JSX.Element {
                     {book.status?.toLowerCase()}
                   </span>
                 </div>
-                {book.startDate?.year && (
+                {book.publisher && (
                   <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
-                    <span className="text-muted-foreground">Publish Year</span>
-                    <span className="font-medium text-foreground">
-                      {book.startDate.year}
+                    <span className="text-muted-foreground">Publisher</span>
+                    <span className="font-medium text-foreground text-right text-xs max-w-[150px] truncate" title={book.publisher}>
+                      {book.publisher}
                     </span>
                   </div>
                 )}
-                {book.studios && book.studios.length > 0 && (
-                  <div className="flex flex-col gap-1 text-sm">
-                    <span className="text-muted-foreground">Author</span>
-                    <span className="font-medium text-foreground text-xs">
-                      {book.studios.map((s) => s.name).join(", ")}
+                {book.publishedDate && (
+                  <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
+                    <span className="text-muted-foreground">Published Date</span>
+                    <span className="font-medium text-foreground">
+                      {book.publishedDate}
+                    </span>
+                  </div>
+                )}
+                {book.retailPrice && (
+                  <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
+                    <span className="text-muted-foreground">Price</span>
+                    <span className="font-medium text-foreground">
+                      {book.retailPrice} {book.retailPriceCurrency}
+                    </span>
+                  </div>
+                )}
+                {book.isbn10 && (
+                  <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
+                    <span className="text-muted-foreground">ISBN-10</span>
+                    <span className="font-medium text-foreground font-mono text-xs">
+                      {book.isbn10}
+                    </span>
+                  </div>
+                )}
+                {book.isbn13 && (
+                  <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
+                    <span className="text-muted-foreground">ISBN-13</span>
+                    <span className="font-medium text-foreground font-mono text-xs">
+                      {book.isbn13}
                     </span>
                   </div>
                 )}
@@ -298,29 +371,41 @@ export default function BookDetailsPage(): React.JSX.Element {
               <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">
                 {book.title.english || book.title.romaji}
               </h1>
+              {book.subtitle && (
+                <p className="text-lg text-muted-foreground font-semibold">
+                  {book.subtitle}
+                </p>
+              )}
             </motion.div>
 
-            {/* Author Badge */}
-            {book.studios && book.studios.length > 0 && (
-              <motion.div
-                variants={itemVariants}
-                className="flex flex-wrap gap-4"
-              >
-                <div className="bg-card/55 border border-border/30 backdrop-blur-md p-4 rounded-xl flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20">
-                    <User className="size-5 text-primary" />
-                  </div>
-                  <div>
-                    <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider leading-none">
-                      Author
-                    </div>
-                    <div className="text-sm font-semibold text-foreground mt-0.5">
-                      {book.studios.map((s) => s.name).join(", ")}
-                    </div>
-                  </div>
+            {/* Quick Info Badges */}
+            <motion.div variants={itemVariants} className="flex flex-wrap gap-3">
+              {book.pages && (
+                <div className="bg-card/45 border border-border/30 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2">
+                  <BookOpen className="size-4 text-primary" />
+                  <span className="text-sm font-semibold text-foreground">{book.pages} pages</span>
                 </div>
-              </motion.div>
-            )}
+              )}
+              {book.averageRating && (
+                <div className="bg-card/45 border border-border/30 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2">
+                  <Star className="size-4 text-amber-500 fill-amber-500" />
+                  <span className="text-sm font-semibold text-foreground">
+                    {book.averageRating} ({book.ratingsCount || 0} reviews)
+                  </span>
+                </div>
+              )}
+              {book.language && (
+                <div className="bg-card/45 border border-border/30 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2">
+                  <Globe className="size-4 text-primary" />
+                  <span className="text-sm font-semibold text-foreground uppercase">{book.language}</span>
+                </div>
+              )}
+              {book.maturityRating && (
+                <Badge variant="outline" className="px-4 py-2 rounded-xl text-xs font-bold text-muted-foreground">
+                  {book.maturityRating.replace(/_/g, " ")}
+                </Badge>
+              )}
+            </motion.div>
 
             {/* Description */}
             <motion.div
@@ -356,6 +441,115 @@ export default function BookDetailsPage(): React.JSX.Element {
                     >
                       {genre}
                     </Badge>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Staff */}
+            {book.staff && book.staff.length > 0 && (
+              <motion.div variants={itemVariants} className="space-y-3">
+                <h3 className="text-base font-bold text-foreground">Staff</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {book.staff.map((person) => (
+                    <div
+                      key={person.id}
+                      className="flex items-center justify-between bg-card/45 border border-border/30 backdrop-blur-md p-3.5 rounded-xl hover:border-border/50 transition-all"
+                    >
+                      <p className="text-sm font-semibold text-foreground">
+                        {person.name}
+                      </p>
+                      <Badge
+                        variant="outline"
+                        className="text-[10px]"
+                      >
+                        {person.role}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Editions */}
+            {editions && editions.length > 0 && (
+              <motion.div variants={itemVariants} className="space-y-3">
+                <h3 className="text-base font-bold text-foreground">Other Editions</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {editions.slice(0, 5).map((edition) => (
+                    <Link
+                      key={edition.id}
+                      href={`/aquila/books/${edition.id}`}
+                      className="group flex flex-col gap-2 bg-card/25 border border-border/30 hover:border-border/50 p-2 rounded-xl transition-all"
+                    >
+                      <div className="relative aspect-2/3 w-full rounded-lg overflow-hidden bg-muted flex items-center justify-center border border-border/20">
+                        {edition.coverImage?.large ? (
+                          <Image
+                            src={edition.coverImage.large}
+                            alt={edition.title.english}
+                            fill
+                            sizes="(max-width: 640px) 100px, 150px"
+                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        ) : (
+                          <div className="size-full bg-muted/30 text-muted-foreground/60 overflow-hidden flex items-center justify-center">
+                            <RrLapplandImageNotFound className="size-full object-cover scale-150" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="px-1 min-w-0">
+                        <p className="text-xs font-semibold text-foreground truncate group-hover:text-primary transition-colors">
+                          {edition.title.english || edition.title.romaji}
+                        </p>
+                        {edition.publishYear && (
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            {edition.publishYear}
+                          </p>
+                        )}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {/* Similar Books */}
+            {relatedBooks && relatedBooks.length > 0 && (
+              <motion.div variants={itemVariants} className="space-y-3">
+                <h3 className="text-base font-bold text-foreground">Similar Books</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {relatedBooks.slice(0, 5).map((relBook) => (
+                    <Link
+                      key={relBook.id}
+                      href={`/aquila/books/${relBook.id}`}
+                      className="group flex flex-col gap-2 bg-card/25 border border-border/30 hover:border-border/50 p-2 rounded-xl transition-all"
+                    >
+                      <div className="relative aspect-2/3 w-full rounded-lg overflow-hidden bg-muted flex items-center justify-center border border-border/20">
+                        {relBook.coverImage?.large ? (
+                          <Image
+                            src={relBook.coverImage.large}
+                            alt={relBook.title.english}
+                            fill
+                            sizes="(max-width: 640px) 100px, 150px"
+                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        ) : (
+                          <div className="size-full bg-muted/30 text-muted-foreground/60 overflow-hidden flex items-center justify-center">
+                            <RrLapplandImageNotFound className="size-full object-cover scale-150" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="px-1 min-w-0">
+                        <p className="text-xs font-semibold text-foreground truncate group-hover:text-primary transition-colors">
+                          {relBook.title.english || relBook.title.romaji}
+                        </p>
+                        {relBook.publishYear && (
+                          <p className="text-[10px] text-muted-foreground mt-0.5">
+                            {relBook.publishYear}
+                          </p>
+                        )}
+                      </div>
+                    </Link>
                   ))}
                 </div>
               </motion.div>

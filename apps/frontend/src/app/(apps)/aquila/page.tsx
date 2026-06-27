@@ -244,7 +244,7 @@ export default function AquilaHome(): React.JSX.Element {
     return (
       <div className="relative w-full min-h-full flex flex-col flex-1 p-6 md:p-8">
         {/* Fixed SVG Background Wallpaper */}
-        <RrLapplandBook className="fixed right-0 top-0 h-screen w-auto opacity-[0.06] text-foreground pointer-events-none select-none z-0 object-contain -scale-x-100 transition-opacity duration-300" />
+        <RrLapplandBook className="fixed right-0 top-0 h-screen w-auto opacity-[0.06] text-foreground pointer-events-none select-none z-0 object-contain -scale-x-100 transition-opacity duration-300 " />
 
         <div className="relative z-10 flex-1 flex flex-col items-center justify-center min-h-[60vh] gap-6 text-center max-w-xl mx-auto">
           <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-foreground bg-clip-text bg-linear-to-r from-foreground via-foreground/95 to-primary">

@@ -152,4 +152,20 @@ export interface Media {
   } | null;
   countryOfOrigin?: string;
   locked?: boolean;
+  pages?: number | null;
+  subtitle?: string | null;
+  publishedDate?: string | null;
+  averageRating?: number | null;
+  ratingsCount?: number | null;
+  language?: string | null;
+  isbn10?: string | null;
+  isbn13?: string | null;
+  previewLink?: string | null;
+  infoLink?: string | null;
+  buyLink?: string | null;
+  retailPrice?: number | null;
+  retailPriceCurrency?: string | null;
+  maturityRating?: string | null;
+  publisher?: string | null;
+  artists?: string[] | null;
 }

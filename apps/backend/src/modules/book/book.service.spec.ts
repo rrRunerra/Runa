@@ -10,7 +10,7 @@ describe('BookService', () => {
   let queueService: BookQueueService;
 
   const mockBookRepository = {
-    findByOpenLibraryId: jest.fn(),
+    findByGoogleBookId: jest.fn(),
     toMedia: jest.fn(),
   };
 
@@ -36,13 +36,16 @@ describe('BookService', () => {
   });
 
   describe('search', () => {
-    it('should query Open Library and return mapped search results', async () => {
+    it('should query Google Books and return mapped search results', async () => {
       const mockApiResponse = {
-        docs: [
+        items: [
           {
-            key: '/works/OL123W',
-            title: 'Mock Book',
-            cover_i: 12345,
+            id: 'GB123',
+            volumeInfo: {
+              title: 'Mock Book',
+              imageLinks: { thumbnail: 'http://covers.google.com/12345.jpg' },
+              maturityRating: 'NOT_MATURE',
+            },
           },
         ],
       };
@@ -55,13 +58,13 @@ describe('BookService', () => {
       const result = await service.search('Mock');
 
       expect(global.fetch).toHaveBeenCalledWith(
-        'https://openlibrary.org/search.json?q=Mock&limit=20',
+        expect.stringContaining('https://www.googleapis.com/books/v1/volumes?q=Mock&maxResults=20'),
       );
       expect(result).toEqual([
         {
-          id: 'OL123W',
+          id: 'GB123',
           title: { romaji: 'Mock Book', english: 'Mock Book' },
-          coverImage: { large: 'https://covers.openlibrary.org/b/id/12345-L.jpg' },
+          coverImage: { large: 'https://covers.google.com/12345.jpg' },
           format: 'Book',
           status: 'Published',
           isAdult: false,
@@ -80,81 +83,91 @@ describe('BookService', () => {
 
   describe('getBook', () => {
     it('should return media from database on a fresh cache hit without calling fetch', async () => {
-      const dbBook = { openLibraryId: 'OL123W', updatedAt: new Date() };
-      mockBookRepository.findByOpenLibraryId.mockResolvedValue(dbBook);
+      const dbBook = { googleBookId: 'GB123', updatedAt: new Date() };
+      mockBookRepository.findByGoogleBookId.mockResolvedValue(dbBook);
       
-      const mappedMedia = { id: 'OL123W', title: { romaji: 'Cached Book' } };
+      const mappedMedia = { id: 'GB123', title: { romaji: 'Cached Book' } };
       mockBookRepository.toMedia.mockReturnValue(mappedMedia);
 
-      const result = await service.getBook('OL123W');
+      const result = await service.getBook('GB123');
 
-      expect(repository.findByOpenLibraryId).toHaveBeenCalledWith('OL123W');
+      expect(repository.findByGoogleBookId).toHaveBeenCalledWith('GB123');
       expect(repository.toMedia).toHaveBeenCalledWith(dbBook);
       expect(global.fetch).not.toHaveBeenCalled();
       expect(result).toBe(mappedMedia);
     });
 
-    it('should fetch from Open Library and queue job on cache miss', async () => {
-      mockBookRepository.findByOpenLibraryId.mockResolvedValue(null);
+    it('should fetch from Google Books and queue job on cache miss', async () => {
+      mockBookRepository.findByGoogleBookId.mockResolvedValue(null);
 
       const mockBookDetail = {
-        title: 'New Book',
-        description: 'This is a description',
-        covers: [111],
-        created: { value: '2026-01-01' },
-        authors: [{ author: { key: '/authors/OL99A' } }],
-        subjects: ['Fiction'],
+        volumeInfo: {
+          title: 'New Book',
+          description: 'This is a description',
+          imageLinks: { thumbnail: 'https://covers.google.com/111.jpg' },
+          publishedDate: '2026-01-01',
+          authors: ['Author Name'],
+          categories: ['Fiction'],
+          pageCount: 350,
+          averageRating: 4.5,
+          ratingsCount: 20,
+          language: 'en',
+          previewLink: 'https://preview.google.com',
+          infoLink: 'https://info.google.com',
+        },
+        saleInfo: {
+          buyLink: 'https://buy.google.com',
+          retailPrice: {
+            amount: 9.99,
+            currencyCode: 'USD',
+          },
+        },
       };
 
-      const mockAuthorDetail = {
-        name: 'Author Name',
-      };
+      (global.fetch as jest.Mock).mockResolvedValue({
+        ok: true,
+        json: jest.fn().mockResolvedValue(mockBookDetail),
+      });
 
-      (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({
-          ok: true,
-          json: jest.fn().mockResolvedValue(mockBookDetail),
-        })
-        .mockResolvedValueOnce({
-          ok: true,
-          json: jest.fn().mockResolvedValue(mockAuthorDetail),
-        });
+      const result = await service.getBook('GB123');
 
-      const result = await service.getBook('OL123W');
-
-      expect(global.fetch).toHaveBeenCalledTimes(2);
-      expect(queueService.addJob).toHaveBeenCalledWith('OL123W');
-      expect(result.id).toBe('OL123W');
+      expect(global.fetch).toHaveBeenCalledTimes(1);
+      expect(queueService.addJob).toHaveBeenCalledWith('GB123');
+      expect(result.id).toBe('GB123');
       expect(result.title.romaji).toBe('New Book');
       expect(result.description).toBe('This is a description');
-      expect(result.coverImage.large).toBe('https://covers.openlibrary.org/b/id/111-L.jpg');
+      expect(result.coverImage.large).toBe('https://covers.google.com/111.jpg');
       expect(result.genres).toEqual(['Fiction']);
-      expect(result.studios).toEqual([{ name: 'Author Name' }]);
+      expect(result.staff).toEqual([{ id: 'author-Author Name', name: 'Author Name', role: 'Author' }]);
+      expect(result.pages).toBe(350);
+      expect(result.averageRating).toBe(4.5);
+      expect(result.previewLink).toBe('https://preview.google.com');
+      expect(result.buyLink).toBe('https://buy.google.com');
     });
 
     it('should throw BadRequestException for invalid id format', async () => {
-      mockBookRepository.findByOpenLibraryId.mockResolvedValue(null);
+      mockBookRepository.findByGoogleBookId.mockResolvedValue(null);
 
       await expect(service.getBook('../passwd')).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException if fetch fails and no record is in database', async () => {
-      mockBookRepository.findByOpenLibraryId.mockResolvedValue(null);
+      mockBookRepository.findByGoogleBookId.mockResolvedValue(null);
       (global.fetch as jest.Mock).mockRejectedValue(new Error('Fetch failed'));
 
-      await expect(service.getBook('OL123W')).rejects.toThrow(NotFoundException);
+      await expect(service.getBook('GB123')).rejects.toThrow(NotFoundException);
     });
 
     it('should fallback to database stale record if fetch fails', async () => {
-      const staleBook = { openLibraryId: 'OL123W', updatedAt: new Date(0) }; // Epoch 1970
-      mockBookRepository.findByOpenLibraryId.mockResolvedValue(staleBook);
+      const staleBook = { googleBookId: 'GB123', updatedAt: new Date(0) }; // Epoch 1970
+      mockBookRepository.findByGoogleBookId.mockResolvedValue(staleBook);
 
       (global.fetch as jest.Mock).mockRejectedValue(new Error('Fetch failed'));
       
-      const mappedMedia = { id: 'OL123W', title: { romaji: 'Stale Book' } };
+      const mappedMedia = { id: 'GB123', title: { romaji: 'Stale Book' } };
       mockBookRepository.toMedia.mockReturnValue(mappedMedia);
 
-      const result = await service.getBook('OL123W');
+      const result = await service.getBook('GB123');
 
       expect(result).toBe(mappedMedia);
     });

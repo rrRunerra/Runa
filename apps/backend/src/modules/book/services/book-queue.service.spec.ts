@@ -41,14 +41,16 @@ describe('BookQueueService', () => {
   });
 
   describe('addJob and queue execution', () => {
-    it('should fetch book from Open Library and upsert to repository', async () => {
+    it('should fetch book from Google Books and upsert to repository', async () => {
       const mockBookDetail = {
-        title: 'Queue Book',
-        description: 'Sync desc',
-        covers: [222],
-        created: { value: '2026-01-01' },
-        authors: [],
-        subjects: ['Test'],
+        volumeInfo: {
+          title: 'Queue Book',
+          description: 'Sync desc',
+          imageLinks: { thumbnail: 'https://covers.google.com/222.jpg' },
+          publishedDate: '2026-01-01',
+          authors: [],
+          categories: ['Test'],
+        },
       };
 
       (global.fetch as jest.Mock).mockResolvedValue({
@@ -60,15 +62,17 @@ describe('BookQueueService', () => {
       mockBookRepository.upsert.mockResolvedValue({});
 
       service.onModuleInit();
-      service.addJob('OL_TEST_W');
+      service.addJob('GB_TEST');
 
       await new Promise((resolve) => process.nextTick(resolve));
 
-      expect(global.fetch).toHaveBeenCalledWith('https://openlibrary.org/works/OL_TEST_W.json');
-      expect(repository.upsert).toHaveBeenCalledWith('OL_TEST_W', expect.objectContaining({
-        openLibraryId: 'OL_TEST_W',
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('https://www.googleapis.com/books/v1/volumes/GB_TEST'),
+      );
+      expect(repository.upsert).toHaveBeenCalledWith('GB_TEST', expect.objectContaining({
+        googleBookId: 'GB_TEST',
         titleString: 'Queue Book',
-        coverImage: 'https://covers.openlibrary.org/b/id/222-L.jpg',
+        coverImage: 'https://covers.google.com/222.jpg',
       }));
     });
   });

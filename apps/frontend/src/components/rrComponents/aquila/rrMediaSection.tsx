@@ -63,13 +63,13 @@ export function RrMediaSection({
       className="flex flex-col gap-6"
       style={{ contentVisibility: "auto", containIntrinsicSize: "0 400px" }}
     >
-      <div className="flex items-center gap-3 pb-3 border-b border-border/10 group/header">
+      <div className="flex items-center gap-3 pb-3  group/header">
         <div
           {...(dragHandleProps || {})}
           className={cn(
             "p-2 bg-primary/10 rounded-lg text-primary select-none flex items-center gap-1",
             dragHandleProps &&
-              "cursor-grab active:cursor-grabbing hover:bg-primary/20 active:bg-primary/30 transition-all duration-200 pointer-events-auto"
+              "cursor-grab active:cursor-grabbing hover:bg-primary/20 active:bg-primary/30 transition-all duration-200 pointer-events-auto",
           )}
           title={dragHandleProps ? "Drag icon to reorder" : undefined}
         >
@@ -78,7 +78,9 @@ export function RrMediaSection({
           )}
           {icon}
         </div>
-        <h2 className="text-2xl font-bold tracking-tight text-foreground">{title}</h2>
+        <h2 className="text-2xl font-bold tracking-tight text-foreground">
+          {title}
+        </h2>
         <button onClick={toggleCollapse} className="cursor-pointer select-none">
           <Badge
             variant={isCollapsed ? "outline" : "secondary"}
@@ -86,7 +88,7 @@ export function RrMediaSection({
               "ml-2 transition-all duration-300 flex items-center gap-1.5 text-[10px] sm:text-xs font-semibold py-0.5 px-2.5 rounded-full select-none cursor-pointer border",
               isCollapsed
                 ? "bg-destructive/10 hover:bg-destructive/25 text-destructive border-destructive/20 shadow-xs"
-                : "bg-primary/5 hover:bg-primary/15 text-primary border-primary/10 shadow-inner"
+                : "bg-primary/5 hover:bg-primary/15 text-primary border-primary/10 shadow-inner",
             )}
           >
             {isCollapsed ? (
