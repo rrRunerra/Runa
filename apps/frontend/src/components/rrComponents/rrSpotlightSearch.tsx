@@ -4,7 +4,8 @@ import { useEffect, useState, useRef, useMemo, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useTheme } from "next-themes";
-import { apps } from "../../../config/apps";
+import { rrApp, rrApps } from "../../../config/rrApps";
+import { hasPermission } from "@runa/permissions";
 import { useSidebar } from "@/components/ui/sidebar";
 import {
   CommandDialog,
@@ -36,6 +37,7 @@ import React from "react";
 import { useRRSidebar } from "@/hooks/useRRSidebar";
 import { useRRe2ee } from "@/components/Providers/rrE2eeProvider";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 interface SpotlightSearchItem {
   id: string;
@@ -73,13 +75,16 @@ export default function RrSpotlightSearch(): React.JSX.Element {
 
   // Keep a ref in sync without a useEffect — set it directly alongside state
   const openRef = useRef<boolean>(false);
-  const handleSetOpen = useCallback((value: boolean | ((prev: boolean) => boolean)) => {
-    setOpen((prev) => {
-      const next = typeof value === "function" ? value(prev) : value;
-      openRef.current = next;
-      return next;
-    });
-  }, []);
+  const handleSetOpen = useCallback(
+    (value: boolean | ((prev: boolean) => boolean)) => {
+      setOpen((prev) => {
+        const next = typeof value === "function" ? value(prev) : value;
+        openRef.current = next;
+        return next;
+      });
+    },
+    [],
+  );
 
   // Double-Shift key detection
   useEffect(() => {
@@ -114,27 +119,39 @@ export default function RrSpotlightSearch(): React.JSX.Element {
   }, [handleSetOpen]);
 
   // Memoized: helper to dispatch settings tab events
-  const triggerSettingsTab = useCallback((category: string): void => {
-    handleSetOpen(false);
-    const url = new URL(window.location.href);
-    url.searchParams.set("settings", category);
-    window.history.replaceState(null, "", url.toString());
-    window.dispatchEvent(new CustomEvent("runa-open-settings"));
-  }, [handleSetOpen]);
+  const triggerSettingsTab = useCallback(
+    (category: string): void => {
+      handleSetOpen(false);
+      const url = new URL(window.location.href);
+      url.searchParams.set("settings", category);
+      window.history.replaceState(null, "", url.toString());
+      window.dispatchEvent(new CustomEvent("runa-open-settings"));
+    },
+    [handleSetOpen],
+  );
 
   // Memoized: full item list — only rebuilt when nav config, session, or path changes
   const items = useMemo<SpotlightSearchItem[]>(() => {
     const result: SpotlightSearchItem[] = [];
 
     // 1. Applications
-    for (const app of apps) {
+    const visibleApps = rrApps.filter((app: rrApp): boolean => {
+      if (!app.permissions || app.permissions.length === 0) return true;
+      return hasPermission(session?.user?.permissions, app.permissions, "any");
+    });
+
+    for (const app of visibleApps) {
       result.push({
         id: `app-${app.name.toLowerCase()}`,
         label: app.name,
         category: "Applications",
         icon: (
           <div className="flex size-6 items-center justify-center rounded-md border border-border/55 bg-background text-foreground shadow-xs group-data-selected/command-item:border-primary/40 group-data-selected/command-item:scale-105 transition-all">
-            {app.logo}
+            {typeof app.icon === "string" ? (
+              <Image src={app.icon} alt={app.name} width={20} height={20} />
+            ) : (
+              app.icon
+            )}
           </div>
         ),
         badge: app.description,
@@ -146,9 +163,13 @@ export default function RrSpotlightSearch(): React.JSX.Element {
     }
 
     // 2. Navigation — scoped to the active app
-    const activeApp = apps.find((app) => pathname?.startsWith(app.href));
+    const activeApp = rrApps.find((app) => pathname?.startsWith(app.href));
     if (activeApp && sidebarConfig && sidebarConfig.length > 0) {
-      for (let sectionIdx = 0; sectionIdx < sidebarConfig.length; sectionIdx++) {
+      for (
+        let sectionIdx = 0;
+        sectionIdx < sidebarConfig.length;
+        sectionIdx++
+      ) {
         const section = sidebarConfig[sectionIdx];
         if (section.section?.toLowerCase() === "phone") continue;
 
@@ -214,7 +235,9 @@ export default function RrSpotlightSearch(): React.JSX.Element {
         id: "action-profile",
         label: "My Profile",
         category: "Actions",
-        icon: <User className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        icon: (
+          <User className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
+        ),
         badge: "Account Details",
         action: () => {
           handleSetOpen(false);
@@ -228,7 +251,9 @@ export default function RrSpotlightSearch(): React.JSX.Element {
         id: "action-settings",
         label: "Open Settings",
         category: "Actions",
-        icon: <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        icon: (
+          <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
+        ),
         badge: "System Settings",
         action: () => {
           handleSetOpen(false);
@@ -239,7 +264,9 @@ export default function RrSpotlightSearch(): React.JSX.Element {
         id: "action-notifications",
         label: "Open Notifications Feed",
         category: "Actions",
-        icon: <Bell className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        icon: (
+          <Bell className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
+        ),
         badge: "System Alerts",
         action: () => {
           handleSetOpen(false);
@@ -253,7 +280,9 @@ export default function RrSpotlightSearch(): React.JSX.Element {
         id: "action-unlock-e2ee",
         label: "Unlock Encryption",
         category: "Actions",
-        icon: <Shield className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        icon: (
+          <Shield className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
+        ),
         badge: "Encryption",
         action: () => {
           handleSetOpen(false);
@@ -267,7 +296,9 @@ export default function RrSpotlightSearch(): React.JSX.Element {
         id: "action-settings-account",
         label: "Account Settings",
         category: "Actions",
-        icon: <User className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        icon: (
+          <User className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
+        ),
         badge: "Settings tab",
         action: () => triggerSettingsTab("account"),
       },
@@ -275,7 +306,9 @@ export default function RrSpotlightSearch(): React.JSX.Element {
         id: "action-settings-security",
         label: "Security Settings",
         category: "Actions",
-        icon: <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        icon: (
+          <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
+        ),
         badge: "Settings tab",
         action: () => triggerSettingsTab("security"),
       },
@@ -283,7 +316,9 @@ export default function RrSpotlightSearch(): React.JSX.Element {
         id: "action-settings-privacy",
         label: "Privacy Settings",
         category: "Actions",
-        icon: <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        icon: (
+          <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
+        ),
         badge: "Settings tab",
         action: () => triggerSettingsTab("privacy"),
       },
@@ -291,7 +326,9 @@ export default function RrSpotlightSearch(): React.JSX.Element {
         id: "action-settings-connections",
         label: "Connections Settings",
         category: "Actions",
-        icon: <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        icon: (
+          <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
+        ),
         badge: "Settings tab",
         action: () => triggerSettingsTab("connections"),
       },
@@ -299,7 +336,9 @@ export default function RrSpotlightSearch(): React.JSX.Element {
         id: "action-settings-api-keys",
         label: "API Keys",
         category: "Actions",
-        icon: <KeyRound className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        icon: (
+          <KeyRound className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
+        ),
         badge: "Settings tab",
         action: () => triggerSettingsTab("apiKeys"),
       },
@@ -310,7 +349,9 @@ export default function RrSpotlightSearch(): React.JSX.Element {
         id: "action-settings-mail",
         label: "Mail Settings",
         category: "Actions",
-        icon: <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        icon: (
+          <Settings className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
+        ),
         badge: "Settings tab",
         action: () => triggerSettingsTab("mailAccounts"),
       });
@@ -321,7 +362,9 @@ export default function RrSpotlightSearch(): React.JSX.Element {
         id: "action-constellation-builder",
         label: "Constellation Builder Workspace",
         category: "Actions",
-        icon: <Sparkles className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        icon: (
+          <Sparkles className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
+        ),
         badge: "Stars Editor",
         action: () => {
           handleSetOpen(false);
@@ -332,7 +375,9 @@ export default function RrSpotlightSearch(): React.JSX.Element {
         id: "action-sidebar-toggle",
         label: "Toggle Left Sidebar",
         category: "Actions",
-        icon: <PanelLeft className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        icon: (
+          <PanelLeft className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
+        ),
         badge: "UI Shortcut",
         action: () => {
           handleSetOpen(false);
@@ -343,7 +388,9 @@ export default function RrSpotlightSearch(): React.JSX.Element {
         id: "action-appearance",
         label: "Open Appearance Customizer",
         category: "Actions",
-        icon: <Palette className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        icon: (
+          <Palette className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
+        ),
         badge: "Visual customizer",
         action: () => {
           handleSetOpen(false);
@@ -354,25 +401,40 @@ export default function RrSpotlightSearch(): React.JSX.Element {
         id: "action-theme-dark",
         label: "Switch Theme: Dark Mode",
         category: "Actions",
-        icon: <Moon className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        icon: (
+          <Moon className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
+        ),
         badge: "System UI Theme",
-        action: () => { setTheme("dark"); handleSetOpen(false); },
+        action: () => {
+          setTheme("dark");
+          handleSetOpen(false);
+        },
       },
       {
         id: "action-theme-light",
         label: "Switch Theme: Light Mode",
         category: "Actions",
-        icon: <Sun className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        icon: (
+          <Sun className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
+        ),
         badge: "System UI Theme",
-        action: () => { setTheme("light"); handleSetOpen(false); },
+        action: () => {
+          setTheme("light");
+          handleSetOpen(false);
+        },
       },
       {
         id: "action-theme-system",
         label: "Switch Theme: System Settings",
         category: "Actions",
-        icon: <Laptop className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />,
+        icon: (
+          <Laptop className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
+        ),
         badge: "System UI Theme",
-        action: () => { setTheme("system"); handleSetOpen(false); },
+        action: () => {
+          setTheme("system");
+          handleSetOpen(false);
+        },
       },
     );
 
@@ -381,7 +443,9 @@ export default function RrSpotlightSearch(): React.JSX.Element {
         id: "action-logout",
         label: "Log Out",
         category: "Actions",
-        icon: <LogOut className="size-4 text-destructive group-data-selected/command-item:text-destructive-foreground" />,
+        icon: (
+          <LogOut className="size-4 text-destructive group-data-selected/command-item:text-destructive-foreground" />
+        ),
         badge: "Session logout",
         action: () => {
           handleSetOpen(false);

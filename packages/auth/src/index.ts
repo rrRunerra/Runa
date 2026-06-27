@@ -1,6 +1,7 @@
 /// <reference path="./next-auth.d.ts" />
 import { getServerSession, NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { prisma } from "@runa/database";
 const API_URL = process.env.NEST_API_URL || process.env.NEXT_PUBLIC_API_URL;
 
 if (!process.env.NEXTAUTH_URL) {
@@ -95,18 +96,41 @@ export const authOptions: NextAuthOptions = {
       return baseUrl;
     },
     async jwt({ token, user, trigger, session }) {
-      if (trigger === "update" && session) {
-        if (session.displayName) token.displayName = session.displayName;
-        if (session.avatarUrl || session.avatarUrl === null)
-          token.avatarUrl = session.avatarUrl;
-        if (session.sidebarCardBackgroundUrl || session.sidebarCardBackgroundUrl === null)
-          token.sidebarCardBackgroundUrl = session.sidebarCardBackgroundUrl;
-        if (session.username) token.username = session.username;
-        if (session.email) token.email = session.email;
-        if (session.permissions) token.permissions = session.permissions;
-        if (session.accessToken) token.accessToken = session.accessToken;
-        if (session.passwordChangedAt)
-          token.passwordChangedAt = session.passwordChangedAt;
+      if (trigger === "update") {
+        if (session) {
+          if (session.displayName) token.displayName = session.displayName;
+          if (session.avatarUrl || session.avatarUrl === null)
+            token.avatarUrl = session.avatarUrl;
+          if (session.sidebarCardBackgroundUrl || session.sidebarCardBackgroundUrl === null)
+            token.sidebarCardBackgroundUrl = session.sidebarCardBackgroundUrl;
+          if (session.username) token.username = session.username;
+          if (session.email) token.email = session.email;
+          if (session.permissions) token.permissions = session.permissions;
+          if (session.accessToken) token.accessToken = session.accessToken;
+          if (session.passwordChangedAt)
+            token.passwordChangedAt = session.passwordChangedAt;
+        }
+
+        // Always query the database to get the latest DB values
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id },
+            select: {
+              permissions: true,
+              displayName: true,
+              avatarUrl: true,
+              sidebarCardBackgroundUrl: true,
+            },
+          });
+          if (dbUser) {
+            token.permissions = dbUser.permissions;
+            token.displayName = dbUser.displayName;
+            token.avatarUrl = dbUser.avatarUrl;
+            token.sidebarCardBackgroundUrl = dbUser.sidebarCardBackgroundUrl;
+          }
+        } catch (error) {
+          console.error("[AUTH] Failed to fetch user on update:", error);
+        }
       }
 
       const u = user as any; // eslint-disable-line @typescript-eslint/no-explicit-any

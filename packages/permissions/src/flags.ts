@@ -12,14 +12,12 @@ export function defineFlags<T extends string>(keys: T[], startOffset: number = 0
 export const PolarisFlags = defineFlags([
   "VIEW",
   "MANAGE",
-  "LOGGED_IN",
 ], 0);
 
 // Lynx flags occupy bits 100-199 (supports 100 permissions)
 export const LynxFlags = defineFlags([
   "VIEW",
   "MANAGE",
-  "LOGGED_IN",
   "MANAGE_DATABASE",
   "GUILD_CHAT",
   "DM_CHAT",
@@ -31,7 +29,6 @@ export const LynxFlags = defineFlags([
 export const AquilaFlags = defineFlags([
   "VIEW",
   "MANAGE",
-  "LOGGED_IN",
   "EDIT_ANIME",
   "EDIT_MANGA",
   "EDIT_MOVIE",
@@ -40,3 +37,29 @@ export const AquilaFlags = defineFlags([
   "EDIT_BOOK",
   "IMPORT_LIST",
 ], 200);
+
+export const PegasusFlags = defineFlags([
+  "VIEW",
+], 300);
+
+export const LacertaFlags = defineFlags([
+  "VIEW",
+], 400);
+
+export const AquariusFlags = defineFlags([
+  "VIEW",
+], 500);
+
+export const LyraFlags = defineFlags([
+  "VIEW",
+], 600);
+
+export const MonocerosFlags = defineFlags([
+  "VIEW",
+], 700);
+
+
+export const RunaFlags = defineFlags([
+  "ADMINISTRATOR",
+  "LOGGED_IN"
+], 10000);

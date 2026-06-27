@@ -29,7 +29,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/",
-        destination: "/polaris/dash",
+        destination: "/polaris",
         permanent: true,
       },
     ];

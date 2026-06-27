@@ -3,17 +3,34 @@ import {
   EffectManagerHandle,
   CelestialEffectManager,
 } from "@/components/stars/CelestialEffectManager";
-import { StarIcon } from "@/components/icons/StarIcon";
 import { StarMap, StarMapHandle } from "@/components/stars/StarMap";
 import { REFERENCE_CONSTELLATIONS } from "@/lib/constellations";
 import { useSession } from "next-auth/react";
 import { useRef, useState, useEffect } from "react";
 import { RrConstellationBuilderModal } from "@/components/rrComponents/rrConstellationBuilderModal";
-import { Sparkles } from "lucide-react";
+import { rrApps } from "@/../config/rrApps";
+import { hasPermission } from "@runa/permissions";
+import type { Constellation } from "@/types/constellation";
+import { Sparkles, Star } from "lucide-react";
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
+import { Button } from "@/components/ui/button";
 
 const GREETINGS = ["Hey", "Hi", "Hello", "Greetings", "Hiya", "Welcome"];
 
 const constellations = REFERENCE_CONSTELLATIONS;
+
+interface Bookmark {
+  id: string;
+  name: string;
+  description?: string;
+  redirect: string;
+  stars: { ra: number; dec: number; magnitude: number }[];
+  connections: [number, number][];
+  icon?: string;
+  connectionColor?: string;
+  starColor?: string;
+}
 
 export default function Dash() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -21,35 +38,27 @@ export default function Dash() {
   const starMapRef = useRef<StarMapHandle>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const { data: session, status } = useSession();
-  const [greeting, setGreeting] = useState(GREETINGS[Math.floor(Math.random() * GREETINGS.length)]);
+  const [greeting] = useState(
+    GREETINGS[Math.floor(Math.random() * GREETINGS.length)],
+  );
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
-  const [bookmarks, setBookmarks] = useState<any[]>([]);
 
   useEffect(() => {
     document.title = "Polaris > Dashboard";
   }, []);
 
-  const fetchBookmarks = async () => {
-    if (session?.accessToken) {
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/polaris/bookmarks`, {
-          headers: {
-            Authorization: `Bearer ${session.accessToken}`,
-          },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setBookmarks(data);
-        }
-      } catch (err) {
-        console.error("Error fetching bookmarks:", err);
-      }
-    }
-  };
+  const { data: bookmarks = [], mutate } = useSWR<Bookmark[]>(
+    session?.accessToken
+      ? [`${process.env.NEXT_PUBLIC_API_URL}/polaris/bookmarks`, session.accessToken]
+      : null,
+    fetcher
+  );
 
   useEffect(() => {
-    fetchBookmarks();
-  }, [session, isBuilderOpen]);
+    if (!isBuilderOpen) {
+      mutate();
+    }
+  }, [isBuilderOpen, mutate]);
 
   useEffect(() => {
     let resizeObserver: ResizeObserver | null = null;
@@ -76,11 +85,22 @@ export default function Dash() {
       ? (session.user.displayName ?? session.user.username)
       : null;
 
+  const visibleReferenceConstellations = constellations.filter((constellation: Constellation): boolean => {
+    const app = rrApps.find(
+      (a) =>
+        a.name.toLowerCase() === constellation.id.toLowerCase() ||
+        a.href === constellation.redirect
+    );
+    if (!app) return true;
+    if (!app.permissions || app.permissions.length === 0) return true;
+    return hasPermission(session?.user?.permissions, app.permissions, "any");
+  });
+
   const allConstellations = [
-    ...constellations,
+    ...visibleReferenceConstellations,
     ...bookmarks.map((b) => ({
       name: b.name,
-      description: b.description,
+      description: b.description ?? "",
       redirect: b.redirect,
       id: b.id,
       stars: b.stars as any,
@@ -92,7 +112,7 @@ export default function Dash() {
   ];
 
   return (
-    <div ref={containerRef} className="w-full min-h-screen bg-black">
+    <div ref={containerRef} className="dark w-full min-h-screen bg-black">
       {dimensions.width > 0 && (
         <StarMap
           ref={starMapRef}
@@ -113,18 +133,19 @@ export default function Dash() {
           <div className="absolute top-0 left-0 w-0 h-0 overflow-visible pointer-events-none">
             {/* Hero Section - Centered */}
             <section className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center text-center w-[900px] z-10">
-              <h1 className="text-5xl md:text-7xl font-bold text-white tracking-widest opacity-90 mb-2 drop-shadow-lg select-none">
+              <h1 className="text-5xl md:text-7xl font-bold text-foreground tracking-widest opacity-90 mb-2 drop-shadow-lg select-none">
                 {greeting}
                 {", "}
                 {name}
               </h1>
-              <h2 className="text-xl md:text-2xl text-blue-300 font-light tracking-[0.2em] uppercase mb-4 drop-shadow-md select-none">
+              <h2 className="text-xl md:text-2xl text-muted-foreground font-light tracking-[0.2em] uppercase mb-4 drop-shadow-md select-none">
                 What would you like to explore today?
               </h2>
               <div className="flex flex-wrap justify-center gap-3 mt-4 pointer-events-auto">
                 {allConstellations.map((constellation) => (
-                  <button
+                  <Button
                     key={constellation.id}
+                    variant="outline"
                     onClick={(e) => {
                       if (e.ctrlKey || e.metaKey) {
                         window.location.href = constellation.redirect;
@@ -134,16 +155,12 @@ export default function Dash() {
                         );
                       }
                     }}
-                    className="group relative px-6 py-2.5 bg-white/5 backdrop-blur-md border border-white/10 rounded-xl text-white font-medium tracking-wide transition-all duration-300 hover:bg-white/10 hover:border-white/20 hover:scale-105 hover:shadow-lg hover:shadow-white/5 cursor-pointer"
+                    className="bg-background/20 text-foreground border-border hover:bg-background/40 hover:border-border/80 backdrop-blur-md rounded-xl font-medium tracking-wide transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-primary/5 cursor-pointer flex items-center gap-2 px-6 py-2.5"
                   >
-                    <span className="relative z-10 flex items-center gap-2">
-                      <StarIcon className="w-4 h-4 text-blue-300" />
-                      {constellation.name}
-                    </span>
-                    <div className="absolute inset-0 rounded-xl bg-linear-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  </button>
+                    <Star className="size-4 text-primary" />
+                    {constellation.name}
+                  </Button>
                 ))}
-
               </div>
             </section>
           </div>
@@ -151,13 +168,13 @@ export default function Dash() {
       )}
 
       {/* Floating Action Button (FAB) in the bottom-right corner to launch the Builder */}
-      <button
+      <Button
         onClick={() => setIsBuilderOpen(true)}
-        className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5 px-5 py-3 bg-zinc-950/75 hover:bg-zinc-900/80 backdrop-blur-xl border border-indigo-500/35 hover:border-indigo-500/65 rounded-full text-indigo-300 font-semibold text-sm tracking-wide transition-all duration-300 hover:scale-105 hover:shadow-[0_0_20px_rgba(99,102,241,0.25)] shadow-2xl cursor-pointer group"
+        className="fixed bottom-6 right-6 z-40 h-12 rounded-full px-6 bg-background/80 hover:bg-accent border border-border text-foreground backdrop-blur-md shadow-lg transition-all duration-300 hover:scale-105 group"
       >
-        <Sparkles className="w-4 h-4 text-indigo-400 group-hover:animate-pulse" />
-        Constellation Builder
-      </button>
+        <Sparkles className="size-4 mr-2 group-hover:animate-pulse" />
+        Constellation Workspace
+      </Button>
 
       {isBuilderOpen && (
         <RrConstellationBuilderModal
@@ -168,3 +185,4 @@ export default function Dash() {
     </div>
   );
 }
+

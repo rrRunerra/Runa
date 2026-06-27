@@ -1,23 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
-import { getAquilaSidebarConfig } from "../../../config/aquilaSidebarConfig";
-import RrSidebar from "../rrComponents/rrSidebar";
+import { getAquilaSidebarConfig } from "../../../../config/aquilaSidebarConfig";
+import RrSidebar from "../rrSidebar";
 import { filterSidebarConfig } from "@/lib/navigation";
 
-interface AquilaNavProviderProps {
+interface RrAquilaNavProviderProps {
   children: React.ReactNode;
 }
 
-/**
- * Aquila-specific wrapper around AppSideBar.
- * Fetches the user's connections and builds the nav config,
- * then passes everything into the generic sidebar.
- */
-export default function AquilaNavProvider({
+export default function RrAquilaNavProvider({
   children,
-}: AquilaNavProviderProps) {
+}: RrAquilaNavProviderProps): React.JSX.Element {
   const { data: session } = useSession();
   const [connections, setConnections] = useState<any[]>([]);
 

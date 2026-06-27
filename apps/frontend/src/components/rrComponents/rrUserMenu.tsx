@@ -68,9 +68,12 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
     any[]
   >(
     session?.accessToken
-      ? [`${process.env.NEXT_PUBLIC_API_URL}/notifications`, session.accessToken]
+      ? [
+          `${process.env.NEXT_PUBLIC_API_URL}/notifications`,
+          session.accessToken,
+        ]
       : null,
-    fetcher
+    fetcher,
   );
 
   useEffect(() => {
@@ -379,6 +382,7 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
                   <Settings />
                   Settings
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onSelect={(e) => {
                     e.preventDefault();

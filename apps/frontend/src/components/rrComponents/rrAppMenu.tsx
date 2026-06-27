@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { Session } from "next-auth";
 import { ChevronsUpDown, Bookmark, Loader2 } from "lucide-react";
@@ -19,6 +19,7 @@ import { rrApp, rrApps } from "../../../config/rrApps";
 import { SidebarMenuButton, useSidebar } from "../ui/sidebar";
 import Image from "next/image";
 import { getSafeImageUrl } from "@/lib/inputValidation";
+import { hasPermission } from "@runa/permissions";
 
 interface BookmarkItem {
   name: string;
@@ -33,6 +34,14 @@ export default function RrAppMenu({
   session: Session | null;
 }): React.ReactNode {
   const { isMobile } = useSidebar();
+
+  const visibleApps = useMemo((): rrApp[] => {
+    return rrApps.filter((app: rrApp): boolean => {
+      if (!app.permissions || app.permissions.length === 0) return true;
+      return hasPermission(session?.user?.permissions, app.permissions, "any");
+    });
+  }, [session]);
+
   const [activeApp, setActiveApp] = useState<rrApp>(rrApps[0]);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -48,7 +57,7 @@ export default function RrAppMenu({
   );
 
   useEffect(() => {
-    const handleChanged = () => {
+    const handleChanged = (): void => {
       if (isMenuOpen) {
         refetch();
       }
@@ -63,12 +72,14 @@ export default function RrAppMenu({
   useEffect(() => {
     if (typeof window !== "undefined") {
       const pathname = window.location.pathname;
-      const currentApp = rrApps.find((app) => pathname.startsWith(app.href));
-      if (currentApp) {
+      const currentApp = rrApps.find((app: rrApp): boolean => pathname.startsWith(app.href));
+      if (currentApp && visibleApps.some((app: rrApp): boolean => app.href === currentApp.href)) {
         setActiveApp(currentApp);
+      } else if (visibleApps.length > 0) {
+        setActiveApp(visibleApps[0]);
       }
     }
-  }, []);
+  }, [visibleApps, session]);
 
   return (
     <DropdownMenu onOpenChange={setIsMenuOpen}>
@@ -109,7 +120,7 @@ export default function RrAppMenu({
           Applications
         </DropdownMenuLabel>
         <div className="flex flex-col gap-1 max-h-[165px] overflow-y-auto no-scrollbar">
-          {rrApps.map((app) => (
+          {visibleApps.map((app: rrApp) => (
             <DropdownMenuItem
               key={app.name}
               onClick={() => setActiveApp(app)}

@@ -3,6 +3,7 @@ import {
   PolarisBitField,
   LynxBitField,
   DEFAULT_PERMISSIONS,
+  RunaFlags,
 } from "./index";
 
 function runDemo() {
@@ -49,13 +50,13 @@ function runDemo() {
   // 5. ADMINISTRATOR Bypass Demo
   console.log("5. Administrator Bypass:");
   const adminPerms = new PolarisBitField();
-  adminPerms.add(BitField.Flags.ADMINISTRATOR);
+  adminPerms.add(RunaFlags.ADMINISTRATOR);
   
   console.log("Admin serialized bitfield:", adminPerms.serialize()); 
-  console.log("Length of admin bitfield:", adminPerms.serialize().length); // should be 32 (index 31 holds 128)
+  console.log("Length of admin bitfield:", adminPerms.serialize().length); // should be 313 (index 312 holds 65536)
   console.log("Admin has VIEW?", adminPerms.has("VIEW")); // true (bypassed)
   console.log("Admin has MANAGE?", adminPerms.has("MANAGE")); // true (bypassed)
-  console.log("Admin has ADMINISTRATOR explicitly?", adminPerms.has(BitField.Flags.ADMINISTRATOR)); // true
+  console.log("Admin has ADMINISTRATOR explicitly?", adminPerms.has(RunaFlags.ADMINISTRATOR)); // true
   console.log("");
 
   console.log("=== Demo Completed Successfully ===");

@@ -9,10 +9,7 @@ interface LynxUnauthorizedProps {
   returnUrl?: string;
 }
 
-export default function LynxUnauthorized({
-  message = "You don't have permission to access the Lynx bot management panel.",
-  returnUrl = "/polaris/dash",
-}: LynxUnauthorizedProps): React.JSX.Element {
+export default function LynxUnauthorized({}: LynxUnauthorizedProps): React.JSX.Element {
   return (
     <div className="relative min-h-screen w-full  flex items-center justify-center p-4">
       <div className="w-full max-w-[650px] aspect-square ">

@@ -70,7 +70,7 @@ export default function Page() {
     const callbackUrl = new URLSearchParams(window.location.search).get(
       "callbackUrl",
     );
-    let safeRedirect = "/polaris/dash";
+    let safeRedirect = "/polaris";
     if (callbackUrl) {
       if (callbackUrl.startsWith("/")) {
         safeRedirect = callbackUrl;

@@ -9,10 +9,7 @@ interface AquilaUnauthorizedProps {
   returnUrl?: string;
 }
 
-export default function AquilaUnauthorized({
-  message = "You don't have permission to access the Aquila media tracker.",
-  returnUrl = "/polaris/dash",
-}: AquilaUnauthorizedProps): React.JSX.Element {
+export default function AquilaUnauthorized({}: AquilaUnauthorizedProps): React.JSX.Element {
   return (
     <div className="relative min-h-screen w-full  flex items-center justify-center p-4">
       <div className="w-full max-w-[650px] aspect-square ">

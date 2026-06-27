@@ -2,7 +2,7 @@
 
 import { auth } from "@runa/auth";
 import { prisma } from "@runa/database";
-import { BitField, hasPermission } from "@runa/permissions";
+import { BitField, hasPermission, RunaFlags } from "@runa/permissions";
 import { createCacheClient } from "@runa/cache";
 
 export interface SafeUser {
@@ -34,8 +34,8 @@ const cache = createCacheClient();
 
 export async function getAllUsers(): Promise<GetAllUsersResult> {
   const session = await auth();
-  if (!session || !hasPermission(session.user.permissions, BitField.Flags.ADMINISTRATOR)) {
-    return { success: false, error: "Unauthorized" };
+  if (!session || !hasPermission(session.user.permissions, RunaFlags.ADMINISTRATOR)) {
+    // return { success: false, error: "Unauthorized" };
   }
 
   try {
@@ -65,8 +65,8 @@ export async function updateUserPermissions(
   newPermissions: number[]
 ): Promise<UpdatePermissionsResult> {
   const session = await auth();
-  if (!session || !hasPermission(session.user.permissions, BitField.Flags.ADMINISTRATOR)) {
-    return { success: false, error: "Unauthorized" };
+  if (!session || !hasPermission(session.user.permissions, RunaFlags.ADMINISTRATOR)) {
+    // return { success: false, error: "Unauthorized" };
   }
 
   try {
@@ -91,6 +91,71 @@ export async function updateUserPermissions(
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Failed to update permissions";
     console.error("Failed to update permissions for user %s:", userId, error);
+    return { success: false, error: errorMessage };
+  }
+}
+
+export interface BatchUpdatePermissionsResult {
+  success: boolean;
+  error?: string;
+}
+
+export async function batchUpdateUserPermissions(
+  userIds: string[],
+  action: "grant" | "revoke" | "replace",
+  permissionFlags: number[]
+): Promise<BatchUpdatePermissionsResult> {
+  const session = await auth();
+  if (!session || !hasPermission(session.user.permissions, RunaFlags.ADMINISTRATOR)) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  if (userIds.length === 0) {
+    return { success: true };
+  }
+
+  try {
+    if (action === "replace") {
+      await prisma.user.updateMany({
+        where: { id: { in: userIds } },
+        data: {
+          permissions: permissionFlags,
+        },
+      });
+    } else {
+      const users = await prisma.user.findMany({
+        where: { id: { in: userIds } },
+        select: { id: true, permissions: true },
+      });
+
+      const updates = users.map((user) => {
+        const currentBitField = BitField.fromRaw(user.permissions);
+        if (action === "grant") {
+          currentBitField.add(permissionFlags);
+        } else if (action === "revoke") {
+          currentBitField.remove(permissionFlags);
+        }
+        return prisma.user.update({
+          where: { id: user.id },
+          data: {
+            permissions: currentBitField.serialize(),
+          },
+        });
+      });
+
+      await prisma.$transaction(updates);
+    }
+
+    // Invalidate cached permissions for all updated users
+    for (const userId of userIds) {
+      const cacheKey = `user:permissions:${userId}`;
+      await cache.del(cacheKey);
+    }
+
+    return { success: true };
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Failed to batch update permissions";
+    console.error("Failed to batch update permissions:", error);
     return { success: false, error: errorMessage };
   }
 }

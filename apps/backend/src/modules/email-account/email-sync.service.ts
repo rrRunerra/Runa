@@ -103,6 +103,10 @@ export class EmailSyncService {
       logger: false,
     });
 
+    client.on('error', (err: Error): void => {
+      this.logger.error(`IMAP client error for account ${account.emailAddress}:`, err);
+    });
+
     try {
       await client.connect();
 

@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 
 import type { NavbarConfig } from "@/types/NavbarConfig";
-import { AquilaFlags } from "@runa/permissions";
+import { AquilaFlags, RunaFlags } from "@runa/permissions";
 import { SidebarConfig } from "@/types/SidebarConfig";
 
 export const getAquilaSidebarConfig = (
@@ -63,7 +63,7 @@ export const getAquilaSidebarConfig = (
   },
   {
     section: "Library",
-    permissions: AquilaFlags.LOGGED_IN,
+    permissions: RunaFlags.LOGGED_IN,
     items: [
       {
         label: "Anime",
@@ -118,7 +118,7 @@ export const getAquilaSidebarConfig = (
   {
     // idk if it will stay like this or not |  either this or aniyomi style or even both idk
     section: "Connections",
-    permissions: AquilaFlags.LOGGED_IN,
+    permissions: RunaFlags.LOGGED_IN,
     items: (userConnections || []).map(
       (connection: { provider: string; linkedUsername: string }) => {
         return {

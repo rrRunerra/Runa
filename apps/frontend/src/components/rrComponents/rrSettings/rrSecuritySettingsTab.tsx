@@ -6,7 +6,15 @@ import { toast } from "sonner";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import { startRegistration } from "@simplewebauthn/browser";
-import { Key, ShieldCheck, Smartphone, Mail, Trash } from "lucide-react";
+import {
+  Key,
+  ShieldCheck,
+  Smartphone,
+  Mail,
+  Trash,
+  RefreshCw,
+  Loader2,
+} from "lucide-react";
 import { Badge as UiBadge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -28,6 +36,7 @@ import { RrEmailMfaSetupDialog } from "./rrSecuritySettingsTabComponents/rrEmail
 import { RrPasskeyRegisterDialog } from "./rrSecuritySettingsTabComponents/rrPasskeyRegisterDialog";
 import { RrConfirmDisableDialog } from "./rrSecuritySettingsTabComponents/rrConfirmDisableDialog";
 import { RrBackupCodesDialog } from "./rrSecuritySettingsTabComponents/rrBackupCodesDialog";
+import { hasPermission, PegasusFlags } from "@runa/permissions";
 
 interface RrSecuritySettingsTabProps {
   onOpenChange: (open: boolean) => void;
@@ -36,7 +45,7 @@ interface RrSecuritySettingsTabProps {
 export const RrSecuritySettingsTab = ({
   onOpenChange,
 }: RrSecuritySettingsTabProps): React.JSX.Element => {
-  const { data: session } = useSession();
+  const { data: session, update } = useSession();
 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
@@ -48,6 +57,56 @@ export const RrSecuritySettingsTab = ({
 
   // Devices States
   const [devices, setDevices] = useState<any[]>([]);
+
+  // Session Token Refresh States
+  const [refreshCountdown, setRefreshCountdown] = useState<number>(0);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [lastRefreshTime, setLastRefreshTime] = useState<number | null>(null);
+
+  useEffect(() => {
+    const lastRefresh = localStorage.getItem("runa-last-token-refresh");
+    if (lastRefresh) {
+      const parsedTime = parseInt(lastRefresh, 10);
+      setLastRefreshTime(parsedTime);
+      const elapsed = Date.now() - parsedTime;
+      const remaining = Math.max(0, 60 - Math.floor(elapsed / 1000));
+      if (remaining > 0) {
+        setRefreshCountdown(remaining);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (refreshCountdown <= 0) return;
+    const timer = setInterval((): void => {
+      setRefreshCountdown((prev: number): number => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return (): void => clearInterval(timer);
+  }, [refreshCountdown]);
+
+  const handleRefreshToken = async (): Promise<void> => {
+    setIsRefreshing(true);
+    try {
+      await update();
+      const now = Date.now();
+      localStorage.setItem("runa-last-token-refresh", now.toString());
+      setLastRefreshTime(now);
+      setRefreshCountdown(60);
+      toast.success("Session token refreshed successfully!");
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to refresh session token.";
+      toast.error(errorMessage);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // TOTP setup states
   const [isTotpSetupOpen, setIsTotpSetupOpen] = useState<boolean>(false);
@@ -79,28 +138,31 @@ export const RrSecuritySettingsTab = ({
   >(null);
   const [disablePasskeyId, setDisablePasskeyId] = useState<string | null>(null);
 
-  const {
-    data: mfaStatusData,
-    mutate: refetchMfaSettings,
-  } = useSWR<any>(
+  const { data: mfaStatusData, mutate: refetchMfaSettings } = useSWR<any>(
     session?.accessToken
-      ? [`${process.env.NEXT_PUBLIC_API_URL}/user/mfa/status`, session.accessToken]
+      ? [
+          `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/status`,
+          session.accessToken,
+        ]
       : null,
-    fetcher
+    fetcher,
   );
 
   const { data: passkeysData, mutate: refetchPasskeys } = useSWR<any[]>(
     session?.accessToken
-      ? [`${process.env.NEXT_PUBLIC_API_URL}/user/mfa/passkeys`, session.accessToken]
+      ? [
+          `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/passkeys`,
+          session.accessToken,
+        ]
       : null,
-    fetcher
+    fetcher,
   );
 
   const { data: devicesData, mutate: refetchDevices } = useSWR<any[]>(
     session?.accessToken
       ? [`${process.env.NEXT_PUBLIC_API_URL}/user/devices`, session.accessToken]
       : null,
-    fetcher
+    fetcher,
   );
 
   useEffect(() => {
@@ -123,7 +185,11 @@ export const RrSecuritySettingsTab = ({
     }
   }, [devicesData]);
 
-  const apiMutate = async (url: string, method: string = "POST", body?: any) => {
+  const apiMutate = async (
+    url: string,
+    method: string = "POST",
+    body?: any,
+  ) => {
     if (!session?.accessToken) throw new Error("No access token available");
     const res = await fetch(url, {
       method,
@@ -135,7 +201,9 @@ export const RrSecuritySettingsTab = ({
     });
     if (!res.ok) {
       const errJson = await res.json().catch(() => null);
-      throw new Error(errJson?.message || `Request failed with status ${res.status}`);
+      throw new Error(
+        errJson?.message || `Request failed with status ${res.status}`,
+      );
     }
     return res.json().catch(() => null);
   };
@@ -158,7 +226,10 @@ export const RrSecuritySettingsTab = ({
     )
       return;
     try {
-      await apiMutate(`${process.env.NEXT_PUBLIC_API_URL}/user/device/${deviceId}`, "DELETE");
+      await apiMutate(
+        `${process.env.NEXT_PUBLIC_API_URL}/user/device/${deviceId}`,
+        "DELETE",
+      );
       toast.success("Device revoked successfully.");
       fetchDevices();
     } catch (err: any) {
@@ -172,14 +243,10 @@ export const RrSecuritySettingsTab = ({
   ): Promise<void> => {
     setIsSubmitting(true);
     try {
-      await apiMutate(
-        `${process.env.NEXT_PUBLIC_API_URL}/user/update`,
-        "PUT",
-        {
-          currentPassword: current,
-          newPassword: newPass,
-        }
-      );
+      await apiMutate(`${process.env.NEXT_PUBLIC_API_URL}/user/update`, "PUT", {
+        currentPassword: current,
+        newPassword: newPass,
+      });
       toast.success("Password changed successfully!");
       onOpenChange(false);
     } catch (err: any) {
@@ -192,7 +259,10 @@ export const RrSecuritySettingsTab = ({
   // TOTP functions
   const initiateTotpSetup = async (): Promise<void> => {
     try {
-      const data = await apiMutate(`${process.env.NEXT_PUBLIC_API_URL}/user/mfa/totp/setup`, "POST");
+      const data = await apiMutate(
+        `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/totp/setup`,
+        "POST",
+      );
       setTotpSecret(data.secret);
       setTotpQrUrl(data.otpauthUrl);
       setIsTotpSetupOpen(true);
@@ -212,7 +282,7 @@ export const RrSecuritySettingsTab = ({
       const data = await apiMutate(
         `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/totp/enable`,
         "POST",
-        { code: totpCode }
+        { code: totpCode },
       );
 
       toast.success("Authenticator app enabled successfully!");
@@ -233,7 +303,10 @@ export const RrSecuritySettingsTab = ({
   // Email OTP setup functions
   const initiateEmailMfaSetup = async (): Promise<void> => {
     try {
-      await apiMutate(`${process.env.NEXT_PUBLIC_API_URL}/user/mfa/email/send-setup-code`, "POST");
+      await apiMutate(
+        `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/email/send-setup-code`,
+        "POST",
+      );
       setIsEmailSetupOpen(true);
       setEmailOtpCode("");
       toast.info("Verification code sent to your email.");
@@ -252,7 +325,7 @@ export const RrSecuritySettingsTab = ({
       const data = await apiMutate(
         `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/email/enable`,
         "POST",
-        { code: emailOtpCode }
+        { code: emailOtpCode },
       );
 
       toast.success("Email verification enabled successfully!");
@@ -278,7 +351,10 @@ export const RrSecuritySettingsTab = ({
     }
     setIsSubmitting(true);
     try {
-      const options = await apiMutate(`${process.env.NEXT_PUBLIC_API_URL}/user/mfa/passkey/register-options`, "POST");
+      const options = await apiMutate(
+        `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/passkey/register-options`,
+        "POST",
+      );
 
       const attestationResponse = await startRegistration({
         optionsJSON: options,
@@ -290,7 +366,7 @@ export const RrSecuritySettingsTab = ({
         {
           response: attestationResponse,
           name: passkeyNickname,
-        }
+        },
       );
 
       toast.success("Passkey registered successfully!");
@@ -358,7 +434,10 @@ export const RrSecuritySettingsTab = ({
       return;
     setIsSubmitting(true);
     try {
-      const data = await apiMutate(`${process.env.NEXT_PUBLIC_API_URL}/user/mfa/backup-codes/regenerate`, "POST");
+      const data = await apiMutate(
+        `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/backup-codes/regenerate`,
+        "POST",
+      );
       setDisplayedBackupCodes(data);
       setShowCodesDialog(true);
       toast.success("Backup codes regenerated!");
@@ -388,6 +467,8 @@ export const RrSecuritySettingsTab = ({
     link.click();
     document.body.removeChild(link);
   };
+
+  console.log(hasPermission(session?.user?.permissions, [PegasusFlags.VIEW]));
 
   return (
     <div className="flex flex-col gap-6 p-2">
@@ -561,6 +642,78 @@ export const RrSecuritySettingsTab = ({
               <CardFooter className="pt-0 h-9" />
             </Card>
           </div>
+        </div>
+      </div>
+
+      {/* Session Management Section */}
+      <div className="flex flex-col gap-4 pt-4 border-t border-border text-left">
+        <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+          Active Session
+        </h4>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Session Token Refresh Card */}
+          <Card className="flex flex-col justify-between relative overflow-hidden text-left">
+            <CardHeader>
+              <div className="flex items-center gap-2 text-primary mb-1">
+                <RefreshCw
+                  className={cn("size-5", isRefreshing && "animate-spin")}
+                />
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider">
+                  Session Token
+                </span>
+              </div>
+              <CardTitle className="text-lg font-bold">
+                Session Settings
+              </CardTitle>
+              <CardDescription className="text-xs text-muted-foreground leading-relaxed mt-1">
+                If your permissions got updated recently or you don't have
+                access to stuff you should have, try refreshing your active
+                session manually to apply changes immediately without logging
+                out.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="text-[10px] text-muted-foreground/85 bg-muted/20 border border-border/40 rounded-xl p-3 flex flex-col gap-1.5">
+                <div className="flex justify-between items-center">
+                  <span>Last Refresh:</span>
+                  <span className="font-mono text-foreground font-semibold">
+                    {lastRefreshTime
+                      ? new Date(lastRefreshTime).toLocaleTimeString()
+                      : "Never this session"}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span>Token Expiration:</span>
+                  <span className="font-mono text-foreground font-semibold">
+                    {session?.expires
+                      ? new Date(session.expires).toLocaleTimeString()
+                      : "Unknown"}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="pt-0">
+              <Button
+                onClick={handleRefreshToken}
+                disabled={isRefreshing || refreshCountdown > 0}
+                className="w-full h-9 rounded-xl font-semibold cursor-pointer relative"
+              >
+                {isRefreshing ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin mr-2" />
+                    Refreshing...
+                  </>
+                ) : refreshCountdown > 0 ? (
+                  `Refresh Token (${refreshCountdown}s)`
+                ) : (
+                  <>
+                    <RefreshCw className="size-4 mr-2" />
+                    Refresh Session
+                  </>
+                )}
+              </Button>
+            </CardFooter>
+          </Card>
         </div>
       </div>
 

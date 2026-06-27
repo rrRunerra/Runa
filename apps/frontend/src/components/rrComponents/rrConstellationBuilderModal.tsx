@@ -8,6 +8,7 @@ import React, {
   ChangeEvent,
 } from "react";
 import { useSession } from "next-auth/react";
+import Image from "next/image";
 import {
   Sparkles,
   Undo2,
@@ -209,6 +210,7 @@ export function RrConstellationBuilderModal({
   const [bgScale, setBgScale] = useState<number>(1);
   const [bgX, setBgX] = useState<number>(0);
   const [bgY, setBgY] = useState<number>(0);
+  const [bgRotation, setBgRotation] = useState<number>(0);
   const [bgLocked, setBgLocked] = useState<boolean>(true);
   const [isDraggingImage, setIsDraggingImage] = useState<boolean>(false);
   const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -266,13 +268,14 @@ export function RrConstellationBuilderModal({
   );
 
   // Canvas interaction
-  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>): void => {
     if (!bgLocked) return;
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
+    const canvas = canvasRef.current;
+    const rect = canvas?.getBoundingClientRect();
+    if (!canvas || !rect) return;
 
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (e.clientY - rect.top) * (canvas.height / rect.height);
 
     const clickedStarIndex = findStarIndexNear(x, y);
 
@@ -336,6 +339,25 @@ export function RrConstellationBuilderModal({
       }
 
       setActiveStarIndex(newStarIndex);
+    }
+  };
+
+  const handleContextMenu = (e: React.MouseEvent<HTMLCanvasElement>): void => {
+    e.preventDefault();
+    if (!bgLocked) return;
+    const canvas = canvasRef.current;
+    const rect = canvas?.getBoundingClientRect();
+    if (!canvas || !rect) return;
+
+    const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+    const clickedStarIndex = findStarIndexNear(x, y);
+    if (clickedStarIndex !== -1) {
+      setActiveStarIndex(clickedStarIndex);
+      toast.info(`Selected star [${clickedStarIndex}]`);
+    } else {
+      setActiveStarIndex(null);
     }
   };
 
@@ -409,12 +431,13 @@ export function RrConstellationBuilderModal({
     }
   }, [isDraggingImage]);
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect) return;
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>): void => {
+    const canvas = canvasRef.current;
+    const rect = canvas?.getBoundingClientRect();
+    if (!canvas || !rect) return;
     setHoverPos({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
+      x: (e.clientX - rect.left) * (canvas.width / rect.width),
+      y: (e.clientY - rect.top) * (canvas.height / rect.height),
     });
   };
 
@@ -759,6 +782,7 @@ export function RrConstellationBuilderModal({
     setEditingBookmarkId(null);
     setConnectionColor("");
     setStarColor("");
+    setBgRotation(0);
     setBgLocked(true);
     toast.success("Canvas cleared");
   };
@@ -1188,13 +1212,15 @@ export function RrConstellationBuilderModal({
                 className="h-[320px] sm:h-[420px] lg:h-auto lg:flex-1 min-h-0 relative border border-border rounded-2xl overflow-hidden shadow-2xl bg-[#020205] select-none w-full"
               >
                 {bgImage && (
-                  <img
+                  <Image
                     src={bgImage}
                     alt="Reference overlay"
+                    unoptimized
+                    fill
                     className="absolute pointer-events-none transform-gpu"
                     style={{
                       opacity: bgOpacity,
-                      transform: `translate(${bgX * zoom}px, ${bgY * zoom}px) scale(${bgScale * zoom})`,
+                      transform: `translate(${bgX * zoom}px, ${bgY * zoom}px) scale(${bgScale * zoom}) rotate(${bgRotation}deg)`,
                       transformOrigin: "center",
                       left: "50%",
                       top: "50%",
@@ -1209,6 +1235,7 @@ export function RrConstellationBuilderModal({
                   width={canvasWidth}
                   height={canvasHeight}
                   onClick={handleCanvasClick}
+                  onContextMenu={handleContextMenu}
                   onMouseMove={onMouseMoveWrapper}
                   onMouseLeave={handleMouseLeave}
                   onMouseDown={onMouseDown}
@@ -1391,7 +1418,7 @@ export function RrConstellationBuilderModal({
                 )}
 
                 {bgImage && (
-                  <div className="flex-1 w-full grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="flex-1 w-full grid grid-cols-2 md:grid-cols-5 gap-4">
                     {/* Opacity slider */}
                     <div className="flex flex-col gap-1.5">
                       <Label className="text-[10px] text-muted-foreground flex justify-between font-mono">
@@ -1455,6 +1482,23 @@ export function RrConstellationBuilderModal({
                         onValueChange={(val: number[]) => setBgY(val[0])}
                         className="my-1.5"
                         aria-label="Overlay image vertical offset"
+                      />
+                    </div>
+
+                    {/* Rotation Control */}
+                    <div className="flex flex-col gap-1.5">
+                      <Label className="text-[10px] text-muted-foreground flex justify-between font-mono">
+                        <span>Rotation</span>
+                        <span>{bgRotation}°</span>
+                      </Label>
+                      <Slider
+                        min={0}
+                        max={360}
+                        step={1}
+                        value={[bgRotation]}
+                        onValueChange={(val: number[]) => setBgRotation(val[0])}
+                        className="my-1.5"
+                        aria-label="Overlay image rotation"
                       />
                     </div>
                   </div>

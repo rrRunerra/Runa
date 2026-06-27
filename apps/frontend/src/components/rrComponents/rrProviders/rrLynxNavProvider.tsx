@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import AppSideBar from "@/components/AppSideBar";
-import { getLynxSidebarConfig } from "../../../config/lynxSidebarConfig";
+import { getLynxSidebarConfig } from "../../../../config/lynxSidebarConfig";
 import { useSession } from "next-auth/react";
 import { filterSidebarConfig } from "@/lib/navigation";
-import RrSidebar from "../rrComponents/rrSidebar";
+import RrSidebar from "../rrSidebar";
 
 async function safeFetch<T>(url: string, fallback: T): Promise<T> {
   try {
@@ -19,16 +18,11 @@ async function safeFetch<T>(url: string, fallback: T): Promise<T> {
   }
 }
 
-interface LynxNavProviderProps {
+interface RrLynxNavProviderProps {
   children: React.ReactNode;
 }
 
-/**
- * Lynx-specific wrapper around AppSideBar.
- * Fetches commands/events/crons/apis/databases from the Lynx bot API
- * and builds the nav config, then passes it into the generic sidebar.
- */
-export default function LynxNavProvider({ children }: LynxNavProviderProps) {
+export default function RrLynxNavProvider({ children }: RrLynxNavProviderProps): React.JSX.Element {
   const { data: session } = useSession();
   const [data, setData] = useState({
     commands: [] as { name: string }[],

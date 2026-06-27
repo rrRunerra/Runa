@@ -25,10 +25,18 @@ import { StarIcon } from "@/components/icons/StarIcon";
 import Link from "next/link";
 import { Card } from "../ui/card";
 import { Button } from "../ui/button";
-import { ChevronRight, ArrowUpRight, Bookmark } from "lucide-react";
+import { ChevronRight, ArrowUpRight, Bookmark, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getSafeImageUrl } from "@/lib/inputValidation";
 import React from "react";
+
+// Box-Muller transform for generating standard normally distributed values (mean 0, variance 1)
+function randomNormal(mean = 0, stdDev = 1): number {
+  const u1 = Math.random();
+  const u2 = Math.random();
+  const randStdNormal = Math.sqrt(-2.0 * Math.log(u1)) * Math.sin(2.0 * Math.PI * u2);
+  return mean + stdDev * randStdNormal;
+}
 
 export interface StarMapHandle {
   navigateToConstellation: (constellationName: string) => void;
@@ -145,19 +153,52 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
       isOnScreen: boolean;
     } | null>(null);
 
-    // Generate random background stars - adjusted for aesthetic balance
-    const backgroundStars = useRef(
-      Array.from({ length: numOfStars }, () => ({
+    // Generate random background stars with Spooklementary-style organic Gaussian clustering
+    const backgroundStars = useRef<Array<{ ra: number; dec: number; size: number; opacity: number; type: string }>>([]);
+    if (backgroundStars.current.length === 0) {
+      const numClusters = 40;
+      const clusters = Array.from({ length: numClusters }, () => ({
         ra: Math.random() * 60 - 18,
         dec: Math.random() * 360 - 180,
-        size:
-          Math.random() > 0.98
-            ? Math.random() * 2 + 2
-            : Math.random() * 1.5 + 0.5, // Mostly small stars, few large ones
-        opacity: Math.random() * 0.7 + 0.1, // More subtle opacity
-        type: Math.random() > 0.9 ? "cross" : "circle", // Mostly circles, some crosses
-      })),
-    );
+        radiusRa: Math.random() * 12 + 4,
+        radiusDec: Math.random() * 70 + 20,
+      }));
+
+      backgroundStars.current = Array.from({ length: numOfStars }, () => {
+        let ra, dec;
+        // 35% uniform background, 65% clustered around nebulae/dust bands
+        if (Math.random() > 0.65) {
+          ra = Math.random() * 60 - 18;
+          dec = Math.random() * 360 - 180;
+        } else {
+          const cluster = clusters[Math.floor(Math.random() * clusters.length)];
+          ra = randomNormal(cluster.ra, cluster.radiusRa * 0.4);
+          dec = randomNormal(cluster.dec, cluster.radiusDec * 0.4);
+
+          // Wrap dec to [-180, 180]
+          if (dec < -180) dec += 360;
+          if (dec > 180) dec -= 360;
+          // Clamp ra to [-18, 42]
+          if (ra < -18) ra = -18;
+          if (ra > 42) ra = 42;
+        }
+
+        // Spooklementary style: tiny, varying sizes, mostly circles
+        const size = Math.random() > 0.95
+          ? Math.random() * 1.2 + 0.8  // Few slightly larger stars
+          : Math.random() * 0.6 + 0.2; // Mostly very tiny stars
+
+        const opacity = Math.random() * 0.65 + 0.05;
+
+        return {
+          ra,
+          dec,
+          size,
+          opacity,
+          type: "circle",
+        };
+      });
+    }
 
     // Helper to draw a star shape
     const drawStar = (
@@ -255,8 +296,8 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
-      // Clear canvas with dark blue background
-      ctx.fillStyle = "#020205"; // Deep dark blue/black
+      // Clear canvas with pure black background
+      ctx.fillStyle = "#000000";
       ctx.fillRect(0, 0, width, height);
 
       // Draw background stars
@@ -984,17 +1025,17 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
               {/* Holographic Label */}
               <div className="relative flex flex-col items-center">
                 {/* Label container: StarCard Mini Style */}
-                <div className="relative bg-(--star-card-bg,rgba(0,0,0,0.4)) backdrop-blur-xl border border-(--star-card-border,var(--color-zinc-800)) rounded-xl px-4 py-2 shadow-xl">
+                <div className="relative bg-card/40 backdrop-blur-xl border border-border rounded-xl px-4 py-2 shadow-xl">
                   {/* Text */}
                   <div className="relative">
-                    <div className="text-white font-bold text-base tracking-wide text-center whitespace-nowrap">
+                    <div className="text-foreground font-bold text-base tracking-wide text-center whitespace-nowrap">
                       {nearestConstellation.name}
                     </div>
                   </div>
                 </div>
 
                 {/* Connecting line */}
-                <div className="w-px h-6 bg-linear-to-b from-white/20 to-transparent" />
+                <div className="w-px h-6 bg-linear-to-b from-border/20 to-transparent" />
               </div>
             </div>
           ) : (
@@ -1063,18 +1104,18 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
 
                 {/* Info Panel */}
                 <div className="absolute top-full mt-3 flex flex-col items-center">
-                  <div className="bg-(--star-card-bg,rgba(0,0,0,0.4)) backdrop-blur-xl border border-(--star-card-border,var(--color-zinc-800)) rounded-xl px-3 py-1.5 shadow-xl">
-                    <div className="text-white font-bold text-sm whitespace-nowrap tracking-wide">
+                  <div className="bg-card/40 backdrop-blur-xl border border-border rounded-xl px-3 py-1.5 shadow-xl">
+                    <div className="text-foreground font-bold text-sm whitespace-nowrap tracking-wide">
                       {nearestConstellation.name}
                     </div>
                     <div className="flex items-center justify-center gap-1.5 mt-0.5">
                       <StarIcon
                         size={20}
-                        className="text-white animate-pulse"
+                        className="text-foreground animate-pulse"
                         showFlare={false}
                         showGlow={false}
                       />
-                      <span className="text-white/60 text-xs font-mono">
+                      <span className="text-muted-foreground text-xs font-mono">
                         {Math.round(nearestConstellation.distance / 10)} units
                       </span>
                     </div>
@@ -1097,12 +1138,12 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
               className="absolute z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2.5rem)] max-w-sm sm:max-w-md cursor-default transition-all duration-300 animate-in fade-in zoom-in-95"
               onClick={(e) => e.stopPropagation()}
             >
-              <StarCard className="w-full border-zinc-800 bg-black/70 shadow-[0_0_50px_rgba(0,0,0,0.85),0_0_30px_rgba(139,92,246,0.15)] hover:border-zinc-700/80 transition-all duration-500 relative overflow-hidden group">
+              <StarCard className="w-full border-border bg-card/75 shadow-[0_0_50px_rgba(0,0,0,0.85),0_0_30px_rgba(139,92,246,0.15)] hover:border-border/80 transition-all duration-500 relative overflow-hidden group">
                 <CardHeader className="flex flex-row justify-between items-start pb-3 pt-5 z-10 relative">
                   <div className="flex items-center gap-3.5 min-w-0 flex-1">
                     {/* Glowing Accent Icon Card */}
                     <div
-                      className="w-12 h-12 rounded-xl border flex items-center justify-center relative shrink-0 overflow-hidden bg-zinc-950/80 transition-transform duration-500 group-hover:scale-105"
+                      className="size-12 rounded-xl border flex items-center justify-center relative shrink-0 overflow-hidden bg-background/80 transition-transform duration-500 group-hover:scale-105"
                       style={{
                         borderColor: `${accentColor}33`,
                         boxShadow: `0 0 20px ${accentColor}1a`,
@@ -1119,7 +1160,7 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
                         />
                       ) : (
                         <Bookmark
-                          className="w-5 h-5"
+                          className="size-5"
                           style={{
                             color: accentColor,
                             filter: `drop-shadow(0 0 4px ${accentColor}66)`,
@@ -1130,11 +1171,11 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
 
                     <div className="flex flex-col min-w-0 flex-1">
                       {breadcrumbPath.length > 0 && (
-                        <div className="flex items-center flex-wrap gap-1 text-[10px] font-bold text-zinc-500 uppercase tracking-widest leading-none mb-1.5">
+                        <div className="flex items-center flex-wrap gap-1 text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1.5">
                           {breadcrumbPath.map((part, idx) => (
                             <React.Fragment key={idx}>
                               {idx > 0 && (
-                                <ChevronRight className="w-2.5 h-2.5 text-zinc-700 shrink-0" />
+                                <ChevronRight className="size-2.5 text-muted-foreground/70 shrink-0" />
                               )}
                               <span className="truncate max-w-[80px]">
                                 {part}
@@ -1143,7 +1184,7 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
                           ))}
                         </div>
                       )}
-                      <CardTitle className="text-lg font-extrabold text-white tracking-wide flex items-center gap-1.5 leading-snug">
+                      <CardTitle className="text-lg font-extrabold text-foreground tracking-wide flex items-center gap-1.5 leading-snug">
                         <span className="truncate">{displayName}</span>
                         <StarIcon
                           size={14}
@@ -1156,29 +1197,18 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
                     </div>
                   </div>
 
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => setSelectedConstellation(null)}
-                    className="text-white/40 hover:text-white hover:bg-white/10 p-2 rounded-xl transition-all duration-300 hover:scale-105 shrink-0 cursor-pointer -mt-1 -mr-1"
+                    className="size-8 text-muted-foreground hover:text-foreground hover:bg-accent/50 rounded-xl transition-all duration-300 hover:scale-105 shrink-0 cursor-pointer -mt-1 -mr-1"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <line x1="18" y1="6" x2="6" y2="18"></line>
-                      <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                  </button>
+                    <X className="size-4" />
+                  </Button>
                 </CardHeader>
 
                 <CardContent className="pb-4 pt-1 z-10 relative">
-                  <CardDescription className="text-zinc-300 text-sm leading-relaxed font-normal">
+                  <CardDescription className="text-muted-foreground text-sm leading-relaxed font-normal">
                     {selectedConstellation.description ||
                       "No description provided for this constellation."}
                   </CardDescription>
@@ -1196,7 +1226,7 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
                       }}
                     >
                       <span>Visit</span>
-                      <ArrowUpRight className="w-4 h-4 transition-transform duration-300 group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
+                      <ArrowUpRight className="size-4 transition-transform duration-300 group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
                     </Button>
                   </Link>
                 </CardFooter>

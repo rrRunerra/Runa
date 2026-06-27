@@ -1,4 +1,4 @@
-import { PolarisFlags, LynxFlags, AquilaFlags } from "./flags";
+import { PolarisFlags, LynxFlags, AquilaFlags, RunaFlags } from "./flags";
 
 export type BitFieldResolvable =
   | bigint
@@ -10,8 +10,20 @@ export type BitFieldResolvable =
 
 export class BitField {
   public static readonly Flags: Record<string, bigint> = {
-    ADMINISTRATOR: 1n << 999n,
+    ADMINISTRATOR: RunaFlags.ADMINISTRATOR,
   };
+
+  private static _adminWordIndex: number = -1;
+  private static _adminMask: number = 0;
+
+  private static getAdminInfo() {
+    if (BitField._adminWordIndex === -1) {
+      const bits = BitField.flagToBits(RunaFlags.ADMINISTRATOR);
+      BitField._adminWordIndex = bits.findIndex((w) => w !== 0);
+      BitField._adminMask = bits[BitField._adminWordIndex] || 0;
+    }
+    return { wordIndex: BitField._adminWordIndex, mask: BitField._adminMask };
+  }
 
   protected bits: number[] = [];
 
@@ -26,7 +38,7 @@ export class BitField {
   }
 
   private static flagToBits(flag: bigint): number[] {
-    if (flag <= 0n) {
+    if (typeof flag !== "bigint" || flag <= 0n) {
       throw new Error(`Invalid flag: must be a positive bigint, got ${flag}`);
     }
 
@@ -98,20 +110,22 @@ export class BitField {
 
   private isAdministratorCheck(resolvable: BitFieldResolvable): boolean {
     try {
+      const { wordIndex, mask } = (this.constructor as typeof BitField).getAdminInfo();
       const otherBits = BitField.resolve(resolvable, this.flags);
-      if (otherBits.length !== 32) return false;
-      for (let i = 0; i < 31; i++) {
+      if (otherBits.length !== wordIndex + 1) return false;
+      for (let i = 0; i < wordIndex; i++) {
         if (otherBits[i] !== 0) return false;
       }
-      return otherBits[31] === 128; // 1 << 7 (999 % 32)
+      return otherBits[wordIndex] === mask;
     } catch {
       return false;
     }
   }
 
   public has(resolvable: BitFieldResolvable): boolean {
-    const adminWord = this.bits[31] || 0;
-    const hasAdmin = (adminWord & 128) !== 0;
+    const { wordIndex, mask } = (this.constructor as typeof BitField).getAdminInfo();
+    const adminWord = this.bits[wordIndex] || 0;
+    const hasAdmin = (adminWord & mask) !== 0;
 
     if (hasAdmin && !this.isAdministratorCheck(resolvable)) {
       return true;
@@ -129,8 +143,9 @@ export class BitField {
   }
 
   public any(resolvable: BitFieldResolvable): boolean {
-    const adminWord = this.bits[31] || 0;
-    const hasAdmin = (adminWord & 128) !== 0;
+    const { wordIndex, mask } = (this.constructor as typeof BitField).getAdminInfo();
+    const adminWord = this.bits[wordIndex] || 0;
+    const hasAdmin = (adminWord & mask) !== 0;
 
     if (hasAdmin) {
       return true;
@@ -175,9 +190,7 @@ export class BitField {
 
 export const DEFAULT_PERMISSIONS: readonly number[] = new BitField([
   PolarisFlags.VIEW,
-  PolarisFlags.LOGGED_IN,
-  LynxFlags.LOGGED_IN,
-  AquilaFlags.LOGGED_IN,
+  RunaFlags.LOGGED_IN
 ]).serialize();
 
 export function hasPermission(

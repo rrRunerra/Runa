@@ -1,65 +1,52 @@
 "use client";
 
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useSession } from "next-auth/react";
-import { useEffect, useState, useMemo, useRef, memo } from "react";
-import { Plus, Play, BookOpen, Tv, Film, Loader2, Menu, Gamepad2, Eye, EyeOff } from "lucide-react";
+import useSWR from "swr";
+import { Tv, BookOpen, Gamepad2, Film, Play, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { AnimeEditDialog } from "@/components/aquila/AnimeEditDialog";
-import { MangaEditDialog } from "@/components/aquila/MangaEditDialog";
-import { TvEditDialog } from "@/components/aquila/TvEditDialog";
-import { MovieEditDialog } from "@/components/aquila/MovieEditDialog";
-import { GameEditDialog } from "@/components/aquila/GameEditDialog";
-import { BookEditDialog } from "@/components/aquila/BookEditDialog";
-import { MediaItem, MediaSectionProps } from "@/types/aquila";
-import { AnimatePresence, motion } from "framer-motion";
-import React from "react";
+import { fetcher } from "@/lib/fetcher";
+import { MediaItem } from "@/types/aquila";
+import { RrMediaSection } from "@/components/rrComponents/aquila/rrMediaSection";
+import RrLapplandBook from "@/components/rrComponents/rrImages/rrLapplandBook";
 
-export type CategoryType = "anime" | "manga" | "tv" | "movie" | "game" | "book";
+type CategoryType = "anime" | "manga" | "tv" | "movie" | "game" | "book";
 
-const DEFAULT_ORDER: CategoryType[] = ["anime", "manga", "tv", "movie", "game", "book"];
-
-const getProgressIcon = (type: string) => {
-  switch (type) {
-    case "anime":
-    case "tv":
-      return <Tv className="w-3 h-3 sm:w-3.5 sm:h-3.5" />;
-    case "manga":
-    case "book":
-      return <BookOpen className="w-3 h-3 sm:w-3.5 sm:h-3.5" />;
-    case "game":
-      return <Gamepad2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />;
-    case "movie":
-      return <Film className="w-3 h-3 sm:w-3.5 sm:h-3.5" />;
-    default:
-      return <Play className="w-3 h-3 sm:w-3.5 sm:h-3.5" />;
-  }
-};
+const DEFAULT_ORDER: CategoryType[] = [
+  "anime",
+  "manga",
+  "tv",
+  "movie",
+  "game",
+  "book",
+];
 
 const CATEGORY_CONFIG: Record<
   CategoryType,
   { title: string; icon: React.JSX.Element }
 > = {
-  anime: { title: "Anime", icon: <Play className="w-5 h-5" /> },
-  manga: { title: "Manga", icon: <BookOpen className="w-5 h-5" /> },
-  tv: { title: "TV Shows", icon: <Tv className="w-5 h-5" /> },
-  movie: { title: "Movies", icon: <Film className="w-5 h-5" /> },
-  game: { title: "Games", icon: <Gamepad2 className="w-5 h-5" /> },
-  book: { title: "Books", icon: <BookOpen className="w-5 h-5" /> },
+  anime: { title: "Anime", icon: <Play className="size-4" /> },
+  manga: { title: "Manga", icon: <BookOpen className="size-4" /> },
+  tv: { title: "TV Shows", icon: <Tv className="size-4" /> },
+  movie: { title: "Movies", icon: <Film className="size-4" /> },
+  game: { title: "Games", icon: <Gamepad2 className="size-4" /> },
+  book: { title: "Books", icon: <BookOpen className="size-4" /> },
 };
 
 export default function AquilaHome(): React.JSX.Element {
   const { data: session, status } = useSession();
-  const [watching, setWatching] = useState<MediaItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  const [categoryOrder, setCategoryOrder] = useState<CategoryType[]>(DEFAULT_ORDER);
-  const [draggedCategory, setDraggedCategory] = useState<CategoryType | null>(null);
-  const [dragAllowedCategory, setDragAllowedCategory] = useState<CategoryType | null>(null);
+  const [categoryOrder, setCategoryOrder] =
+    useState<CategoryType[]>(DEFAULT_ORDER);
+  const [draggedCategory, setDraggedCategory] = useState<CategoryType | null>(
+    null,
+  );
+  const [dragAllowedCategory, setDragAllowedCategory] =
+    useState<CategoryType | null>(null);
 
   const handleDragStart = (e: React.DragEvent, category: CategoryType) => {
     e.dataTransfer.effectAllowed = "move";
@@ -67,7 +54,10 @@ export default function AquilaHome(): React.JSX.Element {
     setDraggedCategory(category);
   };
 
-  const handleDragEnter = (e: React.DragEvent, targetCategory: CategoryType) => {
+  const handleDragEnter = (
+    e: React.DragEvent,
+    targetCategory: CategoryType,
+  ) => {
     e.preventDefault();
     if (!draggedCategory || draggedCategory === targetCategory) return;
 
@@ -89,7 +79,10 @@ export default function AquilaHome(): React.JSX.Element {
 
   const handleDragEnd = () => {
     if (draggedCategory) {
-      localStorage.setItem("aquila_category_order", JSON.stringify(categoryOrder));
+      localStorage.setItem(
+        "aquila_category_order",
+        JSON.stringify(categoryOrder),
+      );
     }
     setDraggedCategory(null);
     setDragAllowedCategory(null);
@@ -106,38 +99,38 @@ export default function AquilaHome(): React.JSX.Element {
     >
   >({});
 
-  const fetchWatching = async () => {
-    if (status !== "authenticated") return;
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/list/watching`,
-        {
-          headers: {
-            Authorization: `Bearer ${session?.accessToken}`,
-          },
-        },
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setWatching(data);
-      }
-    } catch (e) {
-      console.error("Failed to fetch watching list", e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchWatching();
-  }, [status]);
+  // Fetch watching list using standard SWR hook
+  const {
+    data: watching = [],
+    isLoading: isSWRClassLoading,
+    mutate,
+  } = useSWR<MediaItem[]>(
+    status === "authenticated" && session?.accessToken
+      ? [
+          `${process.env.NEXT_PUBLIC_API_URL}/list/watching`,
+          session.accessToken,
+        ]
+      : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: true,
+    },
+  );
 
   useEffect(() => {
     const savedOrder = localStorage.getItem("aquila_category_order");
     if (savedOrder) {
       try {
         const parsed = JSON.parse(savedOrder) as CategoryType[];
-        const validCategories = ["anime", "manga", "tv", "movie", "game", "book"];
+        const validCategories = [
+          "anime",
+          "manga",
+          "tv",
+          "movie",
+          "game",
+          "book",
+        ];
         if (
           Array.isArray(parsed) &&
           parsed.every((cat) => validCategories.includes(cat))
@@ -166,22 +159,21 @@ export default function AquilaHome(): React.JSX.Element {
   }, []);
 
   const handleIncrement = async (item: MediaItem) => {
-    if (status !== "authenticated") return;
+    if (status !== "authenticated" || !session?.accessToken) return;
 
     const mediaType = item.type;
     const key = `${mediaType}-${item.id}`;
 
     if (updatingId === key) return;
 
-    // Optimistic Update
-    setWatching((prev) =>
-      prev.map((i) => {
-        if (i.id === item.id && i.format === item.format) {
-          return { ...i, progress: (i.progress || 0) + 1 };
-        }
-        return i;
-      }),
-    );
+    // Optimistic Update of local SWR cache
+    const updatedWatching = watching.map((i) => {
+      if (i.id === item.id && i.format === item.format) {
+        return { ...i, progress: (i.progress || 0) + 1 };
+      }
+      return i;
+    });
+    mutate(updatedWatching, false);
 
     if (!pendingIncrementsRef.current[key]) {
       pendingIncrementsRef.current[key] = {
@@ -210,7 +202,7 @@ export default function AquilaHome(): React.JSX.Element {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${session?.accessToken}`,
+              Authorization: `Bearer ${session.accessToken}`,
             },
             body: JSON.stringify({ mediaType, id: item.id, count }),
           },
@@ -220,43 +212,22 @@ export default function AquilaHome(): React.JSX.Element {
           const result = await res.json();
           if (result.success) {
             toast.success(`Progress updated for ${item.title}`);
-            fetchWatching();
+            mutate();
           } else {
             toast.error(result.message);
-            setWatching((prev) =>
-              prev.map((i) => {
-                if (i.id === item.id && i.format === item.format) {
-                  return { ...i, progress: originalProgress };
-                }
-                return i;
-              }),
-            );
+            mutate();
           }
         } else {
           toast.error("Failed to update progress");
-          setWatching((prev) =>
-            prev.map((i) => {
-              if (i.id === item.id && i.format === item.format) {
-                return { ...i, progress: originalProgress };
-              }
-              return i;
-            }),
-          );
+          mutate();
         }
       } catch (e) {
         toast.error("An error occurred");
-        setWatching((prev) =>
-          prev.map((i) => {
-            if (i.id === item.id && i.format === item.format) {
-              return { ...i, progress: originalProgress };
-            }
-            return i;
-          }),
-        );
+        mutate();
       } finally {
         setUpdatingId(null);
       }
-    }, 3000);
+    }, 1000);
   };
 
   const sections = useMemo<Record<CategoryType, MediaItem[]>>(() => {
@@ -271,54 +242,60 @@ export default function AquilaHome(): React.JSX.Element {
 
   if (status === "unauthenticated") {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
-        <h1 className="text-4xl font-bold tracking-tight">Welcome to Aquila</h1>
-        <p className="text-muted-foreground text-lg max-w-md text-center">
-          Track your favorite anime, manga, movies and more in one place.
-        </p>
-        <Button size="lg" asChild>
-          <Link href="/auth/login">Get Started</Link>
-        </Button>
+      <div className="relative w-full min-h-full flex flex-col flex-1 p-6 md:p-8">
+        {/* Fixed SVG Background Wallpaper */}
+        <RrLapplandBook className="fixed right-0 top-0 h-screen w-auto opacity-[0.06] text-foreground pointer-events-none select-none z-0 object-contain -scale-x-100 transition-opacity duration-300" />
+
+        <div className="relative z-10 flex-1 flex flex-col items-center justify-center min-h-[60vh] gap-6 text-center max-w-xl mx-auto">
+          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-foreground bg-clip-text bg-linear-to-r from-foreground via-foreground/95 to-primary">
+            Welcome to Aquila
+          </h1>
+          <p className="text-muted-foreground text-sm sm:text-base leading-relaxed">
+            Keep track of your active anime, manga series, movies, games, and
+            reading books in one highly responsive, centralized, and customized
+            dashboard.
+          </p>
+          <Button
+            size="lg"
+            className="rounded-xl px-8 font-semibold tracking-wide cursor-pointer"
+            asChild
+          >
+            <Link href="/auth/login">Get Started</Link>
+          </Button>
+        </div>
       </div>
     );
   }
 
-  if (loading) {
+  if (isSWRClassLoading || status === "loading") {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+        <Loader2 className="size-10 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="relative flex-1 w-full min-h-[calc(100vh-4rem)] flex flex-col overflow-x-hidden">
-      {/* Background Image Wallpaper */}
-      <img
-        src="/lappland3.png"
-        alt="Lappland Background Wallpaper"
-        className="fixed inset-0 w-full h-full object-cover object-right grayscale contrast-115 brightness-75 pointer-events-none z-0"
-      />
-
-      {/* Readability Overlay Gradient */}
-      <div className="fixed inset-0 bg-linear-to-r from-black/85 via-black/50 to-transparent sm:from-black/55 sm:via-transparent pointer-events-none z-0" />
+    <div className="relative w-full min-h-full flex flex-col flex-1 p-6 md:p-8">
+      {/* Fixed SVG Background Wallpaper */}
+      <RrLapplandBook className="fixed right-0 top-0 h-screen w-auto opacity-[0.06] text-foreground pointer-events-none select-none z-0 object-contain -scale-x-100 transition-opacity duration-300" />
 
       {/* Main Content Pane */}
-      <div className="relative z-10 flex-1 flex flex-col">
+      <div className="relative z-10 flex-1 flex flex-col gap-8">
         {watching.length === 0 ? (
-          <div className="flex-1 flex flex-col justify-center items-center sm:items-start text-center sm:text-left px-8 sm:px-16 md:px-24 lg:px-32 xl:px-40 py-12 select-none relative z-10">
-            <div className="space-y-1 drop-shadow-[0_4px_12px_rgba(0,0,0,0.85)]">
-              <h2 className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-widest text-zinc-400/40 sm:text-zinc-500/20 mix-blend-overlay uppercase select-none font-sans leading-none">
-                Nothing<br />Here
+          <div className="flex-1 flex flex-col justify-center items-center text-center py-16 px-4 select-none relative z-10">
+            <div className="space-y-4 max-w-sm">
+              <h2 className="text-4xl font-black tracking-wider text-muted-foreground/20 uppercase leading-none">
+                Nothing Here
               </h2>
-              <p className="text-zinc-300/60 sm:text-zinc-500/40 text-xs uppercase tracking-widest leading-relaxed max-w-xs select-none pt-4 sm:pt-6">
-                It looks like your watch list is empty. Start browsing to find and track your favorite media.
+              <p className="text-muted-foreground text-sm leading-relaxed">
+                It looks like your watch list is empty. Start browsing to find
+                and track your favorite media.
               </p>
-              
-              <div className="pt-6 sm:pt-8">
-                <Button 
-                  variant="outline" 
-                  className="px-6 py-5 text-[10px] tracking-widest uppercase font-bold rounded-xl border border-zinc-700/60 sm:border-zinc-800/40 bg-zinc-950/40 sm:bg-zinc-950/10 hover:bg-zinc-900/30 hover:border-zinc-700/50 hover:text-neutral-200 transition-all duration-300 w-fit shrink-0 cursor-pointer shadow-sm text-zinc-300 sm:text-zinc-500" 
+              <div className="pt-2">
+                <Button
+                  variant="outline"
+                  className="px-6 rounded-xl border border-border/80 bg-background/50 hover:bg-accent transition-all text-xs tracking-wider uppercase font-bold cursor-pointer"
                   asChild
                 >
                   <Link href="/aquila/browse">Browse Media</Link>
@@ -327,7 +304,7 @@ export default function AquilaHome(): React.JSX.Element {
             </div>
           </div>
         ) : (
-          <div className="space-y-12 pb-20 px-4 md:px-8 mt-4">
+          <div className="flex flex-col gap-10 pb-16">
             {categoryOrder.map((category) => {
               const items = sections[category];
               if (!items || items.length === 0) return null;
@@ -343,17 +320,18 @@ export default function AquilaHome(): React.JSX.Element {
                   onDragOver={handleDragOver}
                   onDragEnd={handleDragEnd}
                   className={cn(
-                    "transition-all duration-300 rounded-3xl p-3 -m-3 border border-transparent",
-                    draggedCategory === category && "opacity-30 border-2 border-dashed border-primary/40 bg-primary/2 scale-[0.98] shadow-lg backdrop-blur-xs",
+                    "transition-all duration-300 rounded-3xl p-4 border border-transparent",
+                    draggedCategory === category &&
+                      "opacity-30 border-2 border-dashed border-primary/45 bg-primary/5 scale-[0.99] shadow-lg",
                   )}
                 >
-                  <MediaSection
+                  <RrMediaSection
                     title={config.title}
                     icon={config.icon}
                     items={items}
                     onIncrement={handleIncrement}
                     updatingId={updatingId}
-                    onRefresh={fetchWatching}
+                    onRefresh={mutate}
                     dragHandleProps={{
                       onMouseDown: () => setDragAllowedCategory(category),
                       onMouseUp: () => setDragAllowedCategory(null),
@@ -368,315 +346,7 @@ export default function AquilaHome(): React.JSX.Element {
       </div>
 
       {/* Image source credit */}
-      <div className="relative self-end mt-auto pb-4 pr-6 z-20">
-        <a
-          href="https://www.wallpaperflare.com/arknights-lappland-arknights-meng-ziya-wallpaper-yttpm"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[10px] text-neutral-400/60 hover:text-neutral-200 transition-colors duration-200 underline underline-offset-2"
-        >
-          Artwork by Meng Ziya (Modified)
-        </a>
-      </div>
+      <div className="relative self-end mt-auto pt-8 pb-2 pr-2 z-20"></div>
     </div>
   );
 }
-
-
-
-function MediaSection({
-  title,
-  icon,
-  items,
-  onIncrement,
-  updatingId,
-  onRefresh,
-  dragHandleProps,
-}: MediaSectionProps): React.JSX.Element {
-  const localStorageKey = `aquila_collapsed_${title.toLowerCase()}`;
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem(localStorageKey) === "true";
-    }
-    return false;
-  });
-
-  const toggleCollapse = () => {
-    const nextState = !isCollapsed;
-    setIsCollapsed(nextState);
-    localStorage.setItem(localStorageKey, String(nextState));
-  };
-
-  return (
-    <section className="space-y-6" style={{ contentVisibility: "auto", containIntrinsicSize: "0 400px" }}>
-      <div className="flex items-center gap-3 pb-4 group/header">
-        <div
-          {...(dragHandleProps || {})}
-          className={cn(
-            "p-2 bg-primary/10 rounded-lg text-primary select-none",
-            dragHandleProps && "cursor-grab active:cursor-grabbing hover:bg-primary/20 active:bg-primary/30 transition-all duration-200 pointer-events-auto"
-          )}
-          title={dragHandleProps ? "Drag icon to reorder" : undefined}
-        >
-          {icon}
-        </div>
-        <h2 className="text-2xl font-bold">{title}</h2>
-        <button onClick={toggleCollapse} className="cursor-pointer select-none">
-          <Badge
-            variant={isCollapsed ? "outline" : "secondary"}
-            className={cn(
-              "ml-2 transition-all duration-300 flex items-center gap-1.5 text-[10px] sm:text-xs font-semibold py-0.5 px-2.5 rounded-full select-none cursor-pointer",
-              isCollapsed 
-                ? "bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-dashed border-red-500/40 shadow-xs" 
-                : "bg-primary/5 hover:bg-primary/15 text-primary border border-primary/10 shadow-inner"
-            )}
-          >
-            {isCollapsed ? (
-              <>
-                <EyeOff className="w-3.5 h-3.5 animate-pulse" />
-                <span>{items.length} hidden</span>
-              </>
-            ) : (
-              <>
-                <Eye className="w-3.5 h-3.5" />
-                <span>{items.length} items</span>
-              </>
-            )}
-          </Badge>
-        </button>
-      </div>
-
-      <AnimatePresence initial={false}>
-        {!isCollapsed && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-            className="overflow-hidden"
-          >
-            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-[repeat(auto-fill,minmax(140px,1fr))] pb-1">
-              {items.map((item: MediaItem) => (
-                <MediaCard
-                  key={`${item.type}-${item.id}`}
-                  item={item}
-                  onIncrement={() => onIncrement(item)}
-                  isUpdating={updatingId === `${item.type}-${item.id}`}
-                  onRefresh={onRefresh}
-                />
-              ))}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </section>
-  );
-}
-
-const MediaCardComponent = ({
-  item,
-  onIncrement,
-  isUpdating,
-  onRefresh,
-}: {
-  item: MediaItem;
-  onIncrement: () => void;
-  isUpdating: boolean;
-  onRefresh: () => void;
-}): React.JSX.Element => {
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const mediaType = item.type;
-  const href = `/aquila/${mediaType === "manga"
-      ? "manga"
-      : mediaType === "tv"
-        ? "tv"
-        : mediaType === "movie"
-          ? "movies"
-          : mediaType === "game"
-            ? "games"
-            : mediaType === "book"
-              ? "books"
-              : "anime"
-    }/${item.id}`;
-
-  // Shared media shape for all dialogs
-  const dialogMedia = {
-    id: item.id.toString(),
-    title: { romaji: item.title },
-    coverImage: { large: item.image },
-  };
-
-  return (
-    <>
-      <Link
-        href={href}
-        className="group relative aspect-2/3 rounded-xl overflow-hidden border border-white/5 bg-card shadow-md transition-all duration-300 ease-out hover:-translate-y-1 lg:hover:scale-[1.03] lg:hover:shadow-xl lg:hover:shadow-purple-500/5 hover:border-white/10 cursor-pointer block"
-      >
-        <div className="absolute inset-0 z-0">
-          <img
-            src={item.image}
-            alt={item.title}
-            loading="lazy"
-            className="w-full h-full object-cover transition-transform duration-500 ease-out lg:group-hover:scale-108"
-          />
-          <div className="absolute inset-0 bg-linear-to-t from-black/95 via-black/45 to-transparent z-15 opacity-90 transition-opacity duration-300 group-hover:opacity-100" />
-        </div>
-
-        {/* Edit Button */}
-        <div className="absolute top-2 right-2 z-30 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all duration-300 lg:group-hover:scale-100 scale-95">
-          <Button
-            size="icon"
-            variant="ghost"
-            className="h-7 w-7 sm:h-8 sm:w-8 rounded-lg bg-black/45 hover:bg-black/60 border border-white/10 hover:border-primary/30 text-white/90 hover:text-white backdrop-blur-md transition-all cursor-pointer pointer-events-auto flex items-center justify-center p-0"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setIsEditDialogOpen(true);
-            }}
-          >
-            <Menu className="w-4 h-4" />
-          </Button>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted/20 z-10 overflow-hidden">
-          <div
-            className="bg-primary h-full transition-all duration-700 shadow-[0_0_8px_rgba(var(--primary),0.5)]"
-            style={{
-              width: `${item.episodes ? (item.progress / item.episodes) * 100 : 50}%`,
-            }}
-          />
-        </div>
-
-        {/* Bottom Content Area */}
-        <div className="absolute bottom-0 left-0 right-0 p-2.5 sm:p-3.5 pb-3 pt-6 sm:pt-8 flex flex-col gap-2 z-20 transition-transform duration-300 ease-out translate-y-1 group-hover:translate-y-0">
-          <div className="flex items-center gap-1.5 order-1 transition-all duration-300 ease-out peer-hover:opacity-0 peer-hover:-translate-y-1 peer-hover:pointer-events-none">
-            {item.progress !== undefined && item.progress !== null && item.progress > 0 && mediaType !== "movie" && (
-              <span className="inline-flex items-center gap-1 sm:gap-1.5 rounded-full px-2 py-0.5 bg-primary/10 text-[color-mix(in_srgb,var(--primary)_60%,white)] border border-primary/20 text-[10px] sm:text-xs font-semibold backdrop-blur-md">
-                {getProgressIcon(mediaType)}
-                <span>
-                  {mediaType === "tv"
-                    ? item.meta?.season
-                      ? `S${item.meta.season} E${item.meta.episode}`
-                      : `Ep ${item.progress}`
-                    : mediaType === "game"
-                      ? `${item.progress}h`
-                      : mediaType === "book"
-                        ? `Ch ${item.progress}`
-                        : `${mediaType === "manga" ? "Ch" : "Ep"} ${item.progress}`}
-                  {item.episodes ? ` / ${item.episodes}` : ""}
-                </span>
-              </span>
-            )}
-          </div>
-
-          <div className="flex items-end justify-between gap-1.5 w-full order-2">
-            <h4 
-              title={item.title}
-              className="peer font-semibold text-xs sm:text-sm text-white/95 line-clamp-2 hover:line-clamp-none leading-snug group-hover:text-primary transition-colors duration-300 tracking-wide wrap-break-word flex-1 cursor-pointer"
-            >
-              {item.title}
-            </h4>
-
-            <Button
-              size="icon"
-              className={cn(
-                "h-7 w-7 sm:h-8 sm:w-8 rounded-full p-0 shadow-md shrink-0 pointer-events-auto cursor-pointer hover:scale-105 transition-all duration-300 z-30 backdrop-blur-md bg-primary/10 border border-primary/25 text-[color-mix(in_srgb,var(--primary)_60%,white)] hover:text-white hover:bg-primary/20 hover:border-primary/40",
-                isUpdating ? "opacity-50 cursor-not-allowed" : "hover:scale-110",
-              )}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onIncrement();
-              }}
-              disabled={isUpdating}
-            >
-              {isUpdating ? (
-                <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" />
-              ) : (
-                <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-              )}
-            </Button>
-          </div>
-        </div>
-      </Link>
-
-      {/* Type-specific edit dialog opened by the hamburger icon */}
-      {isEditDialogOpen && item.type === "anime" && (
-        <AnimeEditDialog
-          media={dialogMedia}
-          hasListEntry={true}
-          open={isEditDialogOpen}
-          onOpenChange={setIsEditDialogOpen}
-          onSaved={onRefresh}
-          onDeleted={onRefresh}
-        />
-      )}
-      {isEditDialogOpen && item.type === "manga" && (
-        <MangaEditDialog
-          media={dialogMedia}
-          hasListEntry={true}
-          open={isEditDialogOpen}
-          onOpenChange={setIsEditDialogOpen}
-          onSaved={onRefresh}
-          onDeleted={onRefresh}
-        />
-      )}
-      {isEditDialogOpen && item.type === "tv" && (
-        <TvEditDialog
-          media={{ ...dialogMedia, seasons: [] }}
-          hasListEntry={true}
-          open={isEditDialogOpen}
-          onOpenChange={setIsEditDialogOpen}
-          onSaved={onRefresh}
-          onDeleted={onRefresh}
-        />
-      )}
-      {isEditDialogOpen && item.type === "movie" && (
-        <MovieEditDialog
-          media={dialogMedia}
-          hasListEntry={true}
-          open={isEditDialogOpen}
-          onOpenChange={setIsEditDialogOpen}
-          onSaved={onRefresh}
-          onDeleted={onRefresh}
-        />
-      )}
-      {isEditDialogOpen && item.type === "game" && (
-        <GameEditDialog
-          media={dialogMedia}
-          hasListEntry={true}
-          open={isEditDialogOpen}
-          onOpenChange={setIsEditDialogOpen}
-          onSaved={onRefresh}
-          onDeleted={onRefresh}
-        />
-      )}
-      {isEditDialogOpen && item.type === "book" && (
-        <BookEditDialog
-          media={dialogMedia}
-          hasListEntry={true}
-          open={isEditDialogOpen}
-          onOpenChange={setIsEditDialogOpen}
-          onSaved={onRefresh}
-          onDeleted={onRefresh}
-        />
-      )}
-    </>
-  );
-};
-
-const MediaCard = memo(
-  MediaCardComponent,
-  (prevProps, nextProps) => {
-    return (
-      prevProps.isUpdating === nextProps.isUpdating &&
-      prevProps.item.id === nextProps.item.id &&
-      prevProps.item.progress === nextProps.item.progress &&
-      prevProps.item.image === nextProps.item.image &&
-      prevProps.item.title === nextProps.item.title &&
-      prevProps.item.episodes === nextProps.item.episodes &&
-      prevProps.item.type === nextProps.item.type
-    );
-  }
-);

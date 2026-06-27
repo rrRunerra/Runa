@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "@/app/globals.css";
 
 import { SidebarInset } from "@/components/ui/sidebar";
-import AquilaNavProvider from "@/components/aquila/AquilaNavProvider";
+import RrAquilaNavProvider from "@/components/rrComponents/rrProviders/rrAquilaNavProvider";
 
 export const metadata: Metadata = {
   title: "Aquila",
@@ -16,11 +16,11 @@ export default function AquilaLayout({
 }>) {
   return (
     <div className="flex h-screen w-full overflow-hidden">
-      <AquilaNavProvider>
+      <RrAquilaNavProvider>
         <SidebarInset className="bg-background pt-2 overflow-y-auto no-scrollbar flex flex-col">
           {children}
         </SidebarInset>
-      </AquilaNavProvider>
+      </RrAquilaNavProvider>
     </div>
   );
 }

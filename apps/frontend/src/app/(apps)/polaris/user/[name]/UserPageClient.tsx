@@ -114,7 +114,7 @@ export default function UserPageClient(): React.ReactNode {
             The profile page could not be loaded. Ensure the username spelling
             is correct.
           </p>
-          <Link href="/polaris/dash">
+          <Link href="/polaris">
             <Button variant="outline" className="flex items-center gap-2">
               <ArrowLeft className="size-4" aria-hidden="true" />
               Back to Dashboard
@@ -138,7 +138,7 @@ export default function UserPageClient(): React.ReactNode {
             @{user.username} has chosen to keep their profile credentials
             private.
           </p>
-          <Link href="/polaris/dash">
+          <Link href="/polaris">
             <Button variant="outline" className="flex items-center gap-2">
               <ArrowLeft className="size-4" aria-hidden="true" />
               Back to Dashboard

@@ -12,7 +12,7 @@ import type {
 import { useSession } from "next-auth/react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
-import { apps } from "../../../../config/apps";
+import { rrApps } from "../../../../config/rrApps";
 import { getAquilaSidebarConfig } from "../../../../config/aquilaSidebarConfig";
 import { getLynxSidebarConfig } from "../../../../config/lynxSidebarConfig";
 import { getPegasusSidebarConfig } from "../../../../config/pegasusSidebarConfig";
@@ -97,7 +97,7 @@ export function RrSidebarSettingsTab({
   const getActiveAppHref = (): string => {
     if (typeof window === "undefined") return "/aquila";
     const pathname = window.location.pathname;
-    const app = apps.find((a) => pathname.startsWith(a.href));
+    const app = rrApps.find((a) => pathname.startsWith(a.href));
     if (app && app.name.toLowerCase() !== "polaris") {
       return app.href;
     }
@@ -373,7 +373,7 @@ export function RrSidebarSettingsTab({
               onChange={(e) => setSelectedAppHref(e.target.value)}
               className="px-3 py-1.5 bg-background border border-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground cursor-pointer font-medium min-w-[140px]"
             >
-              {apps
+              {rrApps
                 .filter((app) => app.name.toLowerCase() !== "polaris")
                 .map((app) => (
                   <option key={app.href} value={app.href}>

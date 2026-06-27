@@ -2,18 +2,17 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
-import AppSideBar from "@/components/AppSideBar";
-import { getPegasusSidebarConfig } from "../../../config/pegasusSidebarConfig";
-import RrSidebar from "../rrComponents/rrSidebar";
+import { getPegasusSidebarConfig } from "../../../../config/pegasusSidebarConfig";
+import RrSidebar from "../rrSidebar";
 import { filterSidebarConfig } from "@/lib/navigation";
 
-interface PegasusNavProviderProps {
+interface RrPegasusNavProviderProps {
   children: React.ReactNode;
 }
 
-export default function PegasusNavProvider({
+export default function RrPegasusNavProvider({
   children,
-}: PegasusNavProviderProps): React.JSX.Element {
+}: RrPegasusNavProviderProps): React.JSX.Element {
   const { data: session } = useSession();
   const [emailAccounts, setEmailAccounts] = useState<any[]>([]);
 
@@ -48,13 +47,10 @@ export default function PegasusNavProvider({
     };
   }, [session?.accessToken]);
 
-  const sidebarConfig = useMemo(
-    () => {
-      const rawConfig = getPegasusSidebarConfig(emailAccounts);
-      return filterSidebarConfig(rawConfig, session?.user?.permissions);
-    },
-    [emailAccounts, session?.user?.permissions],
-  );
+  const sidebarConfig = useMemo(() => {
+    const rawConfig = getPegasusSidebarConfig(emailAccounts);
+    return filterSidebarConfig(rawConfig, session?.user?.permissions);
+  }, [emailAccounts, session?.user?.permissions]);
 
   return (
     <>
@@ -63,4 +59,3 @@ export default function PegasusNavProvider({
     </>
   );
 }
-

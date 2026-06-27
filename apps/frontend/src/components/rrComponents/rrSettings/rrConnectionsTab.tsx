@@ -40,7 +40,7 @@ type Connection = {
   metadata?: any;
 };
 
-import { apps as registeredApps } from "../../../../config/apps";
+import { rrApps } from "../../../../config/rrApps";
 import {
   PROVIDERS_METADATA,
   ConnectionCapability,
@@ -77,7 +77,9 @@ export function RrConnectionsTab({
   const [expandedMetadata, setExpandedMetadata] = useState<
     Record<string, boolean>
   >({});
-  const [importStatus, setImportStatus] = useState<Record<string, ImportStatus>>({});
+  const [importStatus, setImportStatus] = useState<
+    Record<string, ImportStatus>
+  >({});
   const [showImportDialog, setShowImportDialog] = useState<string | null>(null);
   const [selectedMediaTypes, setSelectedMediaTypes] = useState<string[]>([]);
   const [failedImports, setFailedImports] = useState<{
@@ -93,17 +95,17 @@ export function RrConnectionsTab({
     session?.accessToken
       ? [`${process.env.NEXT_PUBLIC_API_URL}/connections`, session.accessToken]
       : null,
-    fetcher
+    fetcher,
   );
 
   const pollImportStatus = useCallback(
     async (providerId: string): Promise<void> => {
       if (!session?.accessToken) return;
       try {
-        const data = await fetcher([
+        const data = (await fetcher([
           `${process.env.NEXT_PUBLIC_API_URL}/connections/${providerId.toLowerCase()}/import/status`,
           session.accessToken,
-        ]) as ImportStatus;
+        ])) as ImportStatus;
 
         setImportStatus((prev) => {
           const old = prev[providerId.toLowerCase()];
@@ -147,14 +149,17 @@ export function RrConnectionsTab({
   ): Promise<void> => {
     if (!session?.accessToken) return;
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/connections/${providerId.toLowerCase()}/import`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.accessToken}`,
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/connections/${providerId.toLowerCase()}/import`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+          body: JSON.stringify({ mediaTypes }),
         },
-        body: JSON.stringify({ mediaTypes }),
-      });
+      );
       if (!res.ok) {
         const errJson = await res.json().catch(() => null);
         throw new Error(errJson?.message || "Failed to start list import.");
@@ -177,7 +182,9 @@ export function RrConnectionsTab({
     setShowImportDialog(providerId);
   };
 
-  const connections: Connection[] = Array.isArray(connectionsData) ? connectionsData : [];
+  const connections: Connection[] = Array.isArray(connectionsData)
+    ? connectionsData
+    : [];
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -198,7 +205,8 @@ export function RrConnectionsTab({
   }, []);
 
   useEffect(() => {
-    if (!session?.accessToken || connectionsLoading || connections.length === 0) return;
+    if (!session?.accessToken || connectionsLoading || connections.length === 0)
+      return;
 
     const importableProviders = ["anilist", "mal", "simkl"];
     for (const conn of connections) {
@@ -234,12 +242,15 @@ export function RrConnectionsTab({
 
     setIsActionLoading(providerId);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/connections/remove/${providerId.toLowerCase()}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/connections/remove/${providerId.toLowerCase()}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${session?.accessToken}`,
+          },
         },
-      });
+      );
       if (!res.ok) {
         throw new Error("Failed to disconnect service.");
       }
@@ -261,21 +272,24 @@ export function RrConnectionsTab({
     if (!session?.accessToken) return;
     setIsActionLoading(providerId);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/connections/save`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.accessToken}`,
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/connections/save`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+          body: JSON.stringify({
+            provider: providerId.toUpperCase(),
+            private: !currentPrivate,
+          }),
         },
-        body: JSON.stringify({
-          provider: providerId.toUpperCase(),
-          private: !currentPrivate,
-        }),
-      });
+      );
       if (!res.ok) {
         throw new Error("Failed to update privacy setting.");
       }
-      const updated = await res.json() as Connection;
+      const updated = (await res.json()) as Connection;
 
       refetchConnections();
       toast.success(
@@ -315,13 +329,12 @@ export function RrConnectionsTab({
   const uniqueAppKeys = Array.from(new Set(PROVIDERS.map((p) => p.primaryApp)));
 
   const apps = uniqueAppKeys.map((key) => {
-    const configApp = registeredApps.find(
+    const configApp = rrApps.find(
       (a) => a.name.toLowerCase() === key.toLowerCase(),
     );
     return {
       name: configApp?.name || key.charAt(0).toUpperCase() + key.slice(1),
-      description:
-        configApp?.connectionDescription || `Integrations for ${key}.`,
+      description: `Integrations for ${key}.`,
       providers: PROVIDERS.filter((p) => p.primaryApp === key),
     };
   });
@@ -372,7 +385,9 @@ export function RrConnectionsTab({
                       importStatus={importStatus[provider.id.toLowerCase()]}
                       expandedMetadata={!!expandedMetadata[provider.id]}
                       toggleMetadata={() => toggleMetadata(provider.id)}
-                      handleTogglePrivate={() => handleTogglePrivate(provider.id, conn?.private ?? false)}
+                      handleTogglePrivate={() =>
+                        handleTogglePrivate(provider.id, conn?.private ?? false)
+                      }
                       openImportDialog={() => openImportDialog(provider.id)}
                       handleDisconnect={() => handleDisconnect(provider.id)}
                       handleConnect={() => handleConnect(provider.id)}

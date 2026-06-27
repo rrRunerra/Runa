@@ -21,6 +21,7 @@ This is the master skill for all frontend work in the Runa app. **Read the relev
 | Styling, theming (light/dark), shadcn preset                            | [references/styling.md](./references/styling.md)         | Always                                                                  |
 | DRY principle, reusability, extensibility                               | [references/principles.md](./references/principles.md)   | Always                                                                  |
 | Next.js & React best practices (RSC, data fetching, bundle, re-renders) | [references/nextjs.md](./references/nextjs.md)           | When working on pages, Server Components, data fetching, or performance |
+| Permissions checking, BitFields, and sync state                        | [references/permissions.md](./references/permissions.md) | When designing or editing permissions, role checks, or bulk edit tools |
 
 ---
 
@@ -63,6 +64,14 @@ These skills provide deeper guidance for specific domains. Consult them when the
 - **Always** follow DRY — extract repeated JSX into sub-components, repeated logic into hooks/utilities.
 - **Always** make components reusable: export props interfaces, accept overrides via props, prefer composition over monolithic config objects.
 - **Always** split pages/tabs larger than ~150–200 lines of JSX into focused child components.
+
+### TypeScript Types
+
+- **Always** use explicit types for function parameters and return types — never rely on implicit inference for signatures.
+- **Never** use `any` — prefer `unknown` when the type is uncertain, then narrow with type guards.
+- If `any` is truly unavoidable (e.g. third-party lib with no types), **ask the user for permission** before using it.
+- **Always** prefer `interface` for object shapes and `type` for unions/aliases.
+- **Avoid** `as` casts — use proper type narrowing instead.
 
 ### Next.js & React
 
