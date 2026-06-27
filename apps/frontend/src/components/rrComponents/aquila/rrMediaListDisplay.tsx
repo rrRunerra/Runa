@@ -1,10 +1,43 @@
 "use client";
 
 import React, { useMemo, useRef, useCallback } from "react";
-import { MediaEntry, MediaListDisplayProps } from "./types";
-import { MediaListGroup } from "./MediaListGroup";
+import { RrMediaListGroup } from "./rrMediaListGroup";
 
-export const MediaListDisplay: React.FC<MediaListDisplayProps> = ({
+export type UserListDisplayType = "grid" | "list" | "compact";
+
+export interface RrMediaEntry {
+  id: string;
+  title: string;
+  score?: number;
+  progress?: number;
+  image: string;
+  type: string;
+  format?: string;
+  status: string;
+  last_updated: string;
+  last_added: string;
+}
+
+export interface RrMediaListFiltersState {
+  format?: string;
+  status?: string;
+  genres?: string[];
+  country?: string;
+  year?: number;
+}
+
+export interface RrMediaListDisplayProps {
+  lists: string[];
+  data: RrMediaEntry[];
+  displayType: UserListDisplayType;
+  filters: RrMediaListFiltersState;
+  sort: "title" | "score" | "progress" | "last_updated" | "last_added";
+  baseUrl: string;
+  isOwner?: boolean;
+  onRefresh?: () => void;
+}
+
+export function RrMediaListDisplay({
   lists,
   data,
   displayType,
@@ -13,7 +46,7 @@ export const MediaListDisplay: React.FC<MediaListDisplayProps> = ({
   baseUrl,
   isOwner,
   onRefresh,
-}) => {
+}: RrMediaListDisplayProps): React.JSX.Element {
   // Stabilize onRefresh callback to prevent breaking child component memoization
   const onRefreshRef = useRef(onRefresh);
   onRefreshRef.current = onRefresh;
@@ -26,15 +59,12 @@ export const MediaListDisplay: React.FC<MediaListDisplayProps> = ({
     return data.filter((entry) => {
       if (filters.format && entry.format !== filters.format) return false;
       if (filters.status && entry.status !== filters.status) return false;
-      // Add other filters as needed...
       return true;
     });
   }, [data, filters]);
 
   // Memoize sorting
   const sortedData = useMemo(() => {
-    // We use toSorted() or [].sort() natively if supported, but to match the 'vercel-react-best-practices' immutability,
-    // we map a shallow copy and sort it:
     const copy = [...filteredData];
     copy.sort((a, b) => {
       switch (sort) {
@@ -62,7 +92,7 @@ export const MediaListDisplay: React.FC<MediaListDisplayProps> = ({
 
   // Derive grouped data for multiple lists efficiently
   const groupedData = useMemo(() => {
-    const groups: Record<string, MediaEntry[]> = {};
+    const groups: Record<string, RrMediaEntry[]> = {};
 
     // Initialize groups in the requested order
     lists.forEach((listName) => {
@@ -83,9 +113,8 @@ export const MediaListDisplay: React.FC<MediaListDisplayProps> = ({
 
   return (
     <div className="flex w-full flex-col gap-8">
-      {/* Planning doesnt work without this */}
       {lists.map((listName) => (
-        <MediaListGroup
+        <RrMediaListGroup
           key={listName}
           title={listName}
           entries={groupedData[listName] || []}
@@ -100,7 +129,7 @@ export const MediaListDisplay: React.FC<MediaListDisplayProps> = ({
       {Object.keys(groupedData)
         .filter((k) => !lists.includes(k))
         .map((listName) => (
-          <MediaListGroup
+          <RrMediaListGroup
             key={listName}
             title={listName}
             entries={groupedData[listName]}
@@ -112,4 +141,4 @@ export const MediaListDisplay: React.FC<MediaListDisplayProps> = ({
         ))}
     </div>
   );
-};
+}

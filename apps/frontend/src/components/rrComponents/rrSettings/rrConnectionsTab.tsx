@@ -495,7 +495,7 @@ export function RrConnectionsTab({
           if (!open) setFailedImports(null);
         }}
       >
-        <DialogContent className="max-w-3xl sm:max-w-3xl rounded-2xl border border-border bg-card p-6 shadow-xl max-h-[80vh] flex flex-col text-left">
+        <DialogContent className="max-w-3xl sm:max-w-3xl rounded-2xl border border-border bg-card p-6 shadow-xl max-h-[80vh] flex! flex-col text-left">
           <DialogHeader>
             <DialogTitle className="text-base font-semibold text-foreground flex items-center gap-2">
               <span className="inline-block size-2.5 rounded-full bg-warning animate-pulse" />

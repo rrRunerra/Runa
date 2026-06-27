@@ -11,6 +11,7 @@ import { AnimeService } from '../anime/anime.service';
 import { MangaService } from '../manga/manga.service';
 import { MovieService } from '../movie/movie.service';
 import { TvService } from '../tv/tv.service';
+import { StatsService } from '../stats/stats.service';
 
 @Injectable()
 export class ConnectionService implements OnModuleInit {
@@ -32,6 +33,7 @@ export class ConnectionService implements OnModuleInit {
     private readonly mangaService: MangaService,
     private readonly movieService: MovieService,
     private readonly tvService: TvService,
+    private readonly statsService: StatsService,
   ) {}
 
   async onModuleInit() {
@@ -585,6 +587,24 @@ export class ConnectionService implements OnModuleInit {
       }
 
       this.activeImports.set(key, { total: filteredItems.length, processed, status: 'completed', failedItems });
+
+      try {
+        const user = await this.prisma.client.user.findFirst({
+          where: { username: { equals: username, mode: 'insensitive' } },
+        });
+        if (user) {
+          const importedTypes = Array.from(new Set(filteredItems.map((item) => item.mediaType)));
+          for (const mediaType of importedTypes) {
+            try {
+              await this.statsService.recalculate(user.id, mediaType);
+            } catch (err: any) {
+              console.error(`Failed to trigger stats recalculation for ${mediaType}:`, err.message);
+            }
+          }
+        }
+      } catch (err: any) {
+        console.error('Failed to resolve user for stats recalculation:', err.message);
+      }
     } catch (error: any) {
       console.error(`Background import failed:`, error);
       this.activeImports.set(key, { total: 0, processed: 0, status: 'failed', error: error.message, failedItems });

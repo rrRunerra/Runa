@@ -1,0 +1,245 @@
+"use client";
+
+import React from "react";
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
+import * as Lucide from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+
+export interface RrUserListFilterState {
+  format?: string;
+  genres?: string[];
+  year?: string;
+  mediaStatus?: string;
+}
+
+export type UserListSortType =
+  | "title"
+  | "score"
+  | "progress"
+  | "last_updated"
+  | "last_added";
+
+export interface RrUserListFiltersProps {
+  username: string;
+  mediaType: string;
+  searchVal: string;
+  setSearchVal: (val: string) => void;
+  sort: UserListSortType;
+  setSort: (val: UserListSortType) => void;
+  sortOptions: { label: string; value: string }[];
+  filters: RrUserListFilterState;
+  setFilters: React.Dispatch<React.SetStateAction<RrUserListFilterState>>;
+  searchPlaceholder?: string;
+}
+
+export function RrUserListFilters({
+  username,
+  mediaType,
+  searchVal,
+  setSearchVal,
+  sort,
+  setSort,
+  sortOptions,
+  filters,
+  setFilters,
+  searchPlaceholder = "Search...",
+}: RrUserListFiltersProps): React.JSX.Element {
+  // Query dynamic filter options from backend
+  const { data: filterOptions } = useSWR<{
+    genres: string[];
+    years: (number | string)[];
+    formats: string[];
+    statuses: string[];
+  }>(
+    username
+      ? `${process.env.NEXT_PUBLIC_API_URL}/list/${mediaType}/user/${username}/filters`
+      : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+    }
+  );
+
+  const availableGenres = filterOptions?.genres || [];
+  const availableYears = filterOptions?.years || [];
+  const availableFormats = filterOptions?.formats || [];
+  const availableStatuses = filterOptions?.statuses || [];
+
+  const handleFilterChange = (key: keyof RrUserListFilterState, value: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      [key]: value === "all" ? "" : key === "genres" ? (value ? [value] : []) : value,
+    }));
+  };
+
+  const hasActiveFilters =
+    searchVal !== "" ||
+    filters.format ||
+    filters.genres?.length ||
+    filters.year ||
+    filters.mediaStatus ||
+    sort !== "last_updated";
+
+  const handleReset = () => {
+    setSearchVal("");
+    setSort("last_updated");
+    setFilters({
+      format: "",
+      genres: [],
+      year: "",
+      mediaStatus: "",
+    });
+  };
+
+  const activeGenre = filters.genres?.[0] || "";
+
+  return (
+    <div className="flex flex-col gap-4 w-full bg-card/20 backdrop-blur-xl border border-border/40 p-4 rounded-2xl shadow-xl select-none">
+      <div className="flex flex-col xl:flex-row gap-3 items-stretch xl:items-center justify-between">
+        {/* Left Side: Search bar */}
+        <div className="relative flex-1 max-w-full xl:max-w-xs">
+          <Lucide.Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60" />
+          <Input
+            placeholder={searchPlaceholder}
+            className="pl-9 h-9.5 bg-background/40 border border-border/40 focus-visible:ring-1 focus-visible:ring-primary/30 rounded-xl placeholder:text-muted-foreground/40 text-xs"
+            value={searchVal}
+            onChange={(e) => setSearchVal(e.target.value)}
+          />
+        </div>
+
+        {/* Right Side: Row of Select Dropdowns */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Format/Type Filter */}
+          {availableFormats.length > 0 && (
+            <div className="flex items-center gap-1.5">
+              <Select
+                value={filters.format || "all"}
+                onValueChange={(v) => handleFilterChange("format", v)}
+              >
+                <SelectTrigger className="h-9.5 min-w-[100px] bg-background/40 border border-border/40 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
+                  <SelectValue placeholder="Format" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover/95 backdrop-blur-md border border-border/40 rounded-xl">
+                  <SelectItem value="all">All Formats</SelectItem>
+                  {availableFormats.map((f) => (
+                    <SelectItem key={f} value={f}>
+                      {f}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Media Release Status Filter */}
+          {availableStatuses.length > 0 && (
+            <div className="flex items-center gap-1.5">
+              <Select
+                value={filters.mediaStatus || "all"}
+                onValueChange={(v) => handleFilterChange("mediaStatus", v)}
+              >
+                <SelectTrigger className="h-9.5 min-w-[100px] bg-background/40 border border-border/40 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover/95 backdrop-blur-md border border-border/40 rounded-xl">
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  {availableStatuses.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s.replace(/_/g, " ")}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Genres Filter */}
+          {availableGenres.length > 0 && (
+            <div className="flex items-center gap-1.5">
+              <Select
+                value={activeGenre || "all"}
+                onValueChange={(v) => handleFilterChange("genres", v)}
+              >
+                <SelectTrigger className="h-9.5 min-w-[110px] bg-background/40 border border-border/40 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
+                  <SelectValue placeholder="Genre" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover/95 backdrop-blur-md border border-border/40 rounded-xl max-h-60">
+                  <SelectItem value="all">All Genres</SelectItem>
+                  {availableGenres.map((g) => (
+                    <SelectItem key={g} value={g}>
+                      {g}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Year Filter */}
+          {availableYears.length > 0 && (
+            <div className="flex items-center gap-1.5">
+              <Select
+                value={filters.year || "all"}
+                onValueChange={(v) => handleFilterChange("year", v)}
+              >
+                <SelectTrigger className="h-9.5 min-w-[90px] bg-background/40 border border-border/40 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
+                  <SelectValue placeholder="Year" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover/95 backdrop-blur-md border border-border/40 rounded-xl max-h-60">
+                  <SelectItem value="all">All Years</SelectItem>
+                  {availableYears.map((y) => (
+                    <SelectItem key={y} value={y.toString()}>
+                      {y}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Sort Dropdown */}
+          <div className="flex items-center gap-1.5 border-l border-border/40 pl-2 ml-1">
+            <span className="text-[10px] font-semibold text-muted-foreground/80 hidden sm:inline uppercase tracking-wider">
+              Sort
+            </span>
+            <Select value={sort} onValueChange={(v) => setSort(v as UserListSortType)}>
+              <SelectTrigger className="h-9.5 min-w-[115px] bg-background/40 border border-border/40 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
+                <SelectValue placeholder="Sort By" />
+              </SelectTrigger>
+              <SelectContent className="bg-popover/95 backdrop-blur-md border border-border/40 rounded-xl">
+                {sortOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Reset Filters Button */}
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleReset}
+              className="size-9.5 rounded-xl hover:bg-muted/30 text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+              title="Reset all filters"
+            >
+              <Lucide.RotateCcw className="size-4" />
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

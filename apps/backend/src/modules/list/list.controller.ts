@@ -33,6 +33,9 @@ export class ListController {
     @Query('search') search?: string,
     @Query('format') format?: string,
     @Query('sort') sort?: string,
+    @Query('genres') genres?: string,
+    @Query('year') year?: string,
+    @Query('mediaStatus') mediaStatus?: string,
   ) {
     return this.listService.getAnimeList(username, req.user?.username, {
       limit: limit ? Number(limit) : undefined,
@@ -41,6 +44,9 @@ export class ListController {
       search,
       format,
       sort,
+      genres,
+      year,
+      mediaStatus,
     });
   }
 
@@ -99,6 +105,9 @@ export class ListController {
     @Query('search') search?: string,
     @Query('format') format?: string,
     @Query('sort') sort?: string,
+    @Query('genres') genres?: string,
+    @Query('year') year?: string,
+    @Query('mediaStatus') mediaStatus?: string,
   ) {
     return this.listService.getMangaList(username, req.user?.username, {
       limit: limit ? Number(limit) : undefined,
@@ -107,6 +116,9 @@ export class ListController {
       search,
       format,
       sort,
+      genres,
+      year,
+      mediaStatus,
     });
   }
 
@@ -166,6 +178,9 @@ export class ListController {
     @Query('search') search?: string,
     @Query('format') format?: string,
     @Query('sort') sort?: string,
+    @Query('genres') genres?: string,
+    @Query('year') year?: string,
+    @Query('mediaStatus') mediaStatus?: string,
   ) {
     return this.listService.getMovieList(username, req.user?.username, {
       limit: limit ? Number(limit) : undefined,
@@ -174,6 +189,9 @@ export class ListController {
       search,
       format,
       sort,
+      genres,
+      year,
+      mediaStatus,
     });
   }
 
@@ -229,6 +247,9 @@ export class ListController {
     @Query('search') search?: string,
     @Query('format') format?: string,
     @Query('sort') sort?: string,
+    @Query('genres') genres?: string,
+    @Query('year') year?: string,
+    @Query('mediaStatus') mediaStatus?: string,
   ) {
     return this.listService.getTvList(username, req.user?.username, {
       limit: limit ? Number(limit) : undefined,
@@ -237,6 +258,9 @@ export class ListController {
       search,
       format,
       sort,
+      genres,
+      year,
+      mediaStatus,
     });
   }
 
@@ -286,6 +310,9 @@ export class ListController {
     @Query('search') search?: string,
     @Query('format') format?: string,
     @Query('sort') sort?: string,
+    @Query('genres') genres?: string,
+    @Query('year') year?: string,
+    @Query('mediaStatus') mediaStatus?: string,
   ) {
     return this.listService.getGameList(username, req.user?.username, {
       limit: limit ? Number(limit) : undefined,
@@ -294,6 +321,9 @@ export class ListController {
       search,
       format,
       sort,
+      genres,
+      year,
+      mediaStatus,
     });
   }
 
@@ -346,6 +376,9 @@ export class ListController {
     @Query('search') search?: string,
     @Query('format') format?: string,
     @Query('sort') sort?: string,
+    @Query('genres') genres?: string,
+    @Query('year') year?: string,
+    @Query('mediaStatus') mediaStatus?: string,
   ) {
     return this.listService.getBookList(username, req.user?.username, {
       limit: limit ? Number(limit) : undefined,
@@ -354,6 +387,9 @@ export class ListController {
       search,
       format,
       sort,
+      genres,
+      year,
+      mediaStatus,
     });
   }
 
@@ -444,5 +480,14 @@ export class ListController {
       body.episodes,
       body.watched,
     );
+  }
+
+  @Public()
+  @Get('/:mediaType/user/:username/filters')
+  public async getUserListFilters(
+    @Param('mediaType') mediaType: string,
+    @Param('username') username: string,
+  ) {
+    return this.listService.getUserListFilters(username, mediaType);
   }
 }
