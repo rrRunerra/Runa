@@ -17,7 +17,7 @@ export default function AquilaLayout({
   return (
     <div className="flex h-screen w-full overflow-hidden">
       <RrAquilaNavProvider>
-        <SidebarInset className="bg-background pt-2 overflow-y-auto no-scrollbar flex flex-col">
+        <SidebarInset className="bg-background pt-0 overflow-y-auto no-scrollbar flex flex-col">
           {children}
         </SidebarInset>
       </RrAquilaNavProvider>

@@ -1,10 +1,15 @@
 "use client";
 
+import React, { useEffect, useState, useMemo } from "react";
 import { Play, Check, Globe, Clock, Tv2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState, useMemo } from "react";
+import useSWR from "swr";
+import { motion } from "framer-motion";
+import { toast } from "sonner";
+import Image from "next/image";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -13,23 +18,32 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import Image from "next/image";
-import { cn } from "@/lib/utils";
-import { toast } from "sonner";
-import { TvEditDialog } from "@/components/aquila/TvEditDialog";
-import { motion } from "framer-motion";
 
-import { Episode, Season, MediaCharacter, MediaStudio, MediaTrailer, Media } from "@/types/aquila";
+import { cn } from "@/lib/utils";
+import { fetcher } from "@/lib/fetcher";
+import { Season, Media } from "@/types/aquila";
+import { RrMediaEditDialog } from "@/components/rrComponents/aquila/rrMediaEditDialog";
+import RrLapplandImageNotFound from "@/components/rrComponents/rrImages/rrLapplandImageNotFound";
 
 interface TvMedia extends Media {
   seasons: Season[];
+}
+
+interface ListEntry {
+  id: number | string;
+  status: string;
+  score?: number;
+  progress?: number;
+  watchedEpisodes?: Array<{ seasonNum: number; episodeNum: number }>;
 }
 
 const containerVariants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
-    transition: { staggerChildren: 0.05 },
+    transition: {
+      staggerChildren: 0.05,
+    },
   },
 };
 
@@ -38,86 +52,42 @@ const itemVariants = {
   show: {
     opacity: 1,
     y: 0,
-    transition: { type: ("spring" as any), stiffness: 100, damping: 15 },
+    transition: { type: "spring" as const, stiffness: 100, damping: 15 },
   },
 };
 
-export default function TvDetailsPage() {
+export default function TvDetailsPage(): React.JSX.Element {
   const params = useParams();
   const id = params?.id as string;
-
-  const [tv, setTv] = useState<TvMedia | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-
   const session = useSession();
 
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [hasListEntry, setHasListEntry] = useState(false);
-  const [watchedEpisodes, setWatchedEpisodes] = useState<
-    { seasonNum: number; episodeNum: number }[]
-  >([]);
+  const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
 
-  useEffect(() => {
-    async function fetchTv() {
-      if (!id) return;
-      try {
-        const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/tv/details/${id}`,
-        );
-        if (!res.ok) {
-          setError(true);
-          setLoading(false);
-          return;
-        }
-        const data = await res.json();
-        setTv(data);
-      } catch {
-        setError(true);
-      } finally {
-        setLoading(false);
-      }
-    }
+  // SWR queries replacing sequential imperative fetching
+  const { data: tv, error: tvError, isLoading: tvLoading } = useSWR<TvMedia>(
+    id ? `${process.env.NEXT_PUBLIC_API_URL}/tv/details/${id}` : null,
+    fetcher
+  );
 
-    fetchTv();
-  }, [id]);
+  const { data: listEntry, mutate: mutateListEntry } = useSWR<ListEntry>(
+    id && session.status === "authenticated" && session.data?.accessToken
+      ? [`${process.env.NEXT_PUBLIC_API_URL}/list/tv/entry/${id}`, session.data.accessToken]
+      : null,
+    fetcher,
+    { shouldRetryOnError: false }
+  );
 
-  const fetchListEntry = async () => {
-    if (!tv?.id || session.status !== "authenticated") return;
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/list/tv/entry/${tv.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${session.data.accessToken}`,
-          },
-        },
-      );
+  const hasListEntry = !!listEntry;
+  const watchedEpisodes = listEntry?.watchedEpisodes || [];
+  const watchedCount = watchedEpisodes.length;
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data) {
-          setWatchedEpisodes(data.watchedEpisodes || []);
-          setHasListEntry(true);
-        }
-      } else {
-        setHasListEntry(false);
-      }
-    } catch (e) {
-      console.error("Failed to fetch TV list entry", e);
-    }
-  };
-
-  useEffect(() => {
-    fetchListEntry();
-  }, [session.status, tv?.id]);
-
-  useEffect(() => {
-    document.title = `Aquila > TV > ${tv?.title.english ?? tv?.title.romaji ?? ""}`;
-  }, [tv?.title]);
-
-  const toggleEpisode = async (seasonNum: number, episodeNum: number) => {
+  useEffect((): void => {
     if (!tv) return;
+    document.title = `Aquila > TV > ${tv.title.english ?? tv.title.romaji ?? ""}`;
+  }, [tv]);
+
+  const toggleEpisode = async (seasonNum: number, episodeNum: number): Promise<void> => {
+    if (!tv || session.status !== "authenticated" || !session.data?.accessToken) return;
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/list/tv/entry/${tv.id}/episode`,
@@ -125,31 +95,21 @@ export default function TvDetailsPage() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${session.data?.accessToken}`,
+            Authorization: `Bearer ${session.data.accessToken}`,
           },
           body: JSON.stringify({ seasonNum, episodeNum }),
         },
       );
       if (res.ok) {
-        const data = await res.json();
-        if (data.watched) {
-          setWatchedEpisodes((prev) => [...prev, { seasonNum, episodeNum }]);
-        } else {
-          setWatchedEpisodes((prev) =>
-            prev.filter(
-              (ep) =>
-                !(ep.seasonNum === seasonNum && ep.episodeNum === episodeNum),
-            ),
-          );
-        }
+        mutateListEntry();
       }
     } catch {
       toast.error("Failed to update episode progress");
     }
   };
 
-  const toggleSeason = async (seasonNum: number, watched: boolean) => {
-    if (!tv) return;
+  const toggleSeason = async (seasonNum: number, watched: boolean): Promise<void> => {
+    if (!tv || session.status !== "authenticated" || !session.data?.accessToken) return;
     const season = tv.seasons.find((s) => s.number === seasonNum);
     if (!season) return;
 
@@ -160,7 +120,7 @@ export default function TvDetailsPage() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${session.data?.accessToken}`,
+            Authorization: `Bearer ${session.data.accessToken}`,
           },
           body: JSON.stringify({
             seasonNum,
@@ -170,20 +130,7 @@ export default function TvDetailsPage() {
         },
       );
       if (res.ok) {
-        if (watched) {
-          setWatchedEpisodes((prev) => {
-            const others = prev.filter((ep) => ep.seasonNum !== seasonNum);
-            const seasonEps = season.episodes.map((ep) => ({
-              seasonNum,
-              episodeNum: ep.number,
-            }));
-            return [...others, ...seasonEps];
-          });
-        } else {
-          setWatchedEpisodes((prev) =>
-            prev.filter((ep) => ep.seasonNum !== seasonNum),
-          );
-        }
+        mutateListEntry();
         toast.success(
           watched ? "Season marked as watched" : "Season marked as unwatched",
         );
@@ -193,61 +140,90 @@ export default function TvDetailsPage() {
     }
   };
 
-  const totalEpisodes = useMemo(() => {
+  const totalEpisodes = useMemo((): number => {
     if (!tv) return 0;
     return tv.seasons.reduce((acc, s) => acc + s.episodeCount, 0);
   }, [tv]);
 
-  const watchedCount = watchedEpisodes.length;
   const progressPercent =
     totalEpisodes > 0 ? Math.round((watchedCount / totalEpisodes) * 100) : 0;
 
-  if (loading) {
+  if (tvLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center relative overflow-x-hidden">
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-sky-900/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="w-12 h-12 rounded-full border-2 border-dashed border-primary animate-spin" />
+      <div className="flex flex-col flex-1 min-h-screen bg-background relative overflow-hidden items-center justify-center">
+        <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-primary/2 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-primary/2 rounded-full blur-3xl pointer-events-none" />
+        <div className="w-12 h-12 rounded-full border-2 border-dashed border-primary animate-spin z-10" />
       </div>
     );
   }
 
-  if (error || !tv) {
+  if (tvError || !tv) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4 relative overflow-x-hidden">
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-3xl pointer-events-none" />
-        <h2 className="text-2xl font-bold text-foreground">TV show not found</h2>
-        <Button asChild className="bg-primary hover:bg-primary/90">
+      <div className="flex flex-col flex-1 min-h-screen bg-background relative overflow-hidden items-center justify-center gap-4">
+        <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-primary/2 rounded-full blur-3xl pointer-events-none" />
+        <h2 className="text-2xl font-bold text-foreground z-10">TV show not found</h2>
+        <Button asChild variant="default" className="z-10 rounded-xl">
           <Link href="/aquila/browse">Back to Browse</Link>
         </Button>
       </div>
     );
   }
 
+  const handleQuickAdd = async (): Promise<void> => {
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/list/tv/entry/save`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.data?.accessToken}`,
+          },
+          body: JSON.stringify({
+            tvdbId: parseInt(tv.id),
+            status: "PLANNING",
+          }),
+        },
+      );
+      if (res.ok) {
+        toast.success("Added to list!");
+        mutateListEntry();
+      } else {
+        toast.error("Failed to add to list");
+      }
+    } catch {
+      toast.error("Failed to add to list");
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-background text-foreground pb-32 relative overflow-x-hidden">
+    <div className="flex flex-col flex-1 min-h-screen bg-background text-foreground relative overflow-x-hidden p-0">
       {/* Background Radial Glowing Auras */}
-      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-[20%] left-[-100px] w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-primary/2 rounded-full blur-3xl pointer-events-none z-0" />
+      <div className="absolute top-[20%] left-[-100px] w-[300px] h-[300px] bg-primary/2 rounded-full blur-3xl pointer-events-none z-0" />
 
       {/* Banner Section */}
-      <div className="relative h-[250px] md:h-[380px] w-full overflow-hidden">
-        <div className="absolute inset-0 bg-linear-to-t from-zinc-950 via-zinc-950/40 to-transparent z-10" />
+      <div className="relative h-[240px] md:h-[360px] w-full overflow-hidden shrink-0 z-10">
+        <div className="absolute inset-x-0 bottom-0 h-48 bg-linear-to-t from-background to-transparent z-10" />
         {tv.bannerImage ? (
-          <img
+          <Image
             src={tv.bannerImage}
-            alt={tv.title?.romaji}
-            className="w-full h-full object-cover scale-105 filter blur-[1px] brightness-75"
+            alt={tv.title?.romaji ?? "Banner"}
+            fill
+            sizes="100vw"
+            className="object-cover scale-105 filter blur-[1px] brightness-75"
+            priority
           />
         ) : (
-          <div className="w-full h-full bg-card" />
+          <div className="w-full h-full bg-muted/10" />
         )}
 
         {/* TheTVDB Attribution */}
         <div className="absolute inset-x-0 top-0 z-20 pointer-events-none">
-          <div className="container mx-auto px-4 pt-4 flex justify-end items-start pointer-events-auto">
-            <div className="flex flex-col gap-1 bg-black/50 backdrop-blur-sm p-2 rounded-xl border border-white/10 shadow-md">
-              <span className="text-[8px] text-foreground/60 uppercase font-bold tracking-widest leading-none">
+          <div className="mx-auto px-4 pt-4 flex justify-end items-start pointer-events-auto">
+            <div className="flex flex-col gap-1 bg-card/85 backdrop-blur-sm p-2 rounded-xl border border-border/40 shadow-md">
+              <span className="text-[8px] text-muted-foreground uppercase font-bold tracking-widest leading-none">
                 Data Provided By
               </span>
               <Link
@@ -268,92 +244,84 @@ export default function TvDetailsPage() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 -mt-24 md:-mt-36 relative z-20">
+      {/* Details layout container */}
+      <div className="px-4 md:px-8 pb-16 -mt-16 md:-mt-24 relative z-20 w-full">
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="show"
-          className="flex flex-col lg:flex-row gap-8"
+          className="flex flex-col lg:flex-row gap-8 w-full"
         >
           {/* Left Column - Poster & Actions */}
           <motion.div
             variants={itemVariants}
-            className="shrink-0 w-full lg:w-[280px] flex flex-col gap-4"
+            className="shrink-0 w-full lg:w-[260px] flex flex-col gap-4"
           >
-            <div className="bg-card/70 border border-border/60 backdrop-blur-xl shadow-2xl rounded-2xl p-4 flex flex-col sm:flex-row lg:flex-col gap-4 items-center sm:items-start lg:items-stretch">
-              <div className="aspect-2/3 w-40 sm:w-44 lg:w-full rounded-xl overflow-hidden shadow-lg border border-border/30 shrink-0">
-                <img
-                  src={tv.coverImage.large}
-                  alt={tv.title?.romaji}
-                  className="w-full h-full object-cover"
-                />
+            <div className="bg-card/75 border border-border/40 backdrop-blur-xl shadow-2xl rounded-2xl p-4 flex flex-col sm:flex-row lg:flex-col gap-4 items-center sm:items-start lg:items-stretch">
+              <div className="relative aspect-2/3 w-36 sm:w-40 lg:w-full rounded-xl overflow-hidden shadow-lg border border-border/30 shrink-0 bg-muted flex items-center justify-center">
+                {tv.coverImage.large ? (
+                  <Image
+                    src={tv.coverImage.large}
+                    alt={tv.title?.romaji ?? "Cover"}
+                    fill
+                    sizes="(max-width: 640px) 150px, 260px"
+                    className="object-cover"
+                    priority
+                  />
+                ) : (
+                  <div className="size-full bg-muted/30 text-muted-foreground/60 overflow-hidden flex items-center justify-center">
+                    <RrLapplandImageNotFound className="size-full object-cover scale-150" />
+                  </div>
+                )}
               </div>
 
               <div className="flex-1 flex flex-col gap-3 w-full justify-center">
-                {session.data?.user && (
+                {session.status === "authenticated" && session.data?.user && (
                   <>
                     {!hasListEntry ? (
                       <>
                         <Button
-                          className="w-full cursor-pointer bg-primary hover:bg-primary/90 text-foreground font-medium rounded-xl transition-all shadow-lg shadow-primary/20"
+                          className="w-full cursor-pointer rounded-xl transition-all shadow-md"
                           size="lg"
-                          onClick={async () => {
-                            try {
-                              const res = await fetch(
-                                `${process.env.NEXT_PUBLIC_API_URL}/list/tv/entry/save`,
-                                {
-                                  method: "POST",
-                                  headers: {
-                                    "Content-Type": "application/json",
-                                    Authorization: `Bearer ${session.data?.accessToken}`,
-                                  },
-                                  body: JSON.stringify({
-                                    tvdbId: parseInt(tv.id),
-                                    status: "PLANNING",
-                                  }),
-                                },
-                              );
-                              if (res.ok) {
-                                toast.success("Added to list!");
-                                setHasListEntry(true);
-                                fetchListEntry();
-                              } else {
-                                toast.error("Failed to add to list");
-                              }
-                            } catch {
-                              toast.error("Failed to add to list");
-                            }
-                          }}
+                          onClick={handleQuickAdd}
                         >
                           Quick Add
                         </Button>
                         <Button
                           variant="outline"
-                          className="w-full cursor-pointer border-border/60 hover:bg-muted text-foreground hover:text-foreground rounded-xl"
+                          className="w-full cursor-pointer rounded-xl"
                           size="lg"
-                          onClick={() => setIsDialogOpen(true)}
+                          onClick={(): void => setIsDialogOpen(true)}
                         >
                           Add to List
                         </Button>
                       </>
                     ) : (
                       <Button
-                        className="w-full cursor-pointer bg-muted hover:bg-zinc-700 border border-border/60 text-foreground rounded-xl"
+                        variant="secondary"
+                        className="w-full cursor-pointer rounded-xl"
                         size="lg"
-                        onClick={() => setIsDialogOpen(true)}
+                        onClick={(): void => setIsDialogOpen(true)}
                       >
                         Edit Entry
                       </Button>
                     )}
-                    <TvEditDialog
-                      media={tv}
+                    <RrMediaEditDialog
+                      media={{
+                        id: tv.id.toString(),
+                        type: "tv",
+                        title: tv.title,
+                        coverImage: { large: tv.coverImage.large },
+                        seasons: tv.seasons,
+                      }}
                       hasListEntry={hasListEntry}
                       open={isDialogOpen}
                       onOpenChange={setIsDialogOpen}
-                      onSaved={() => fetchListEntry()}
-                      onDeleted={() => {
-                        setHasListEntry(false);
-                        setWatchedEpisodes([]);
+                      onSaved={(): void => {
+                        mutateListEntry();
+                      }}
+                      onDeleted={(): void => {
+                        mutateListEntry();
                       }}
                     />
                   </>
@@ -361,7 +329,7 @@ export default function TvDetailsPage() {
                 {tv.trailers && tv.trailers.length > 0 && (
                   <Button
                     variant="outline"
-                    className="w-full border-border/60 hover:bg-muted text-foreground hover:text-foreground rounded-xl"
+                    className="w-full rounded-xl"
                     asChild
                   >
                     <a
@@ -370,7 +338,7 @@ export default function TvDetailsPage() {
                       rel="noreferrer"
                       className="flex items-center justify-center gap-2"
                     >
-                      <Play className="h-4 w-4 fill-current" />
+                      <Play className="size-4 fill-current" />
                       Watch Trailer
                     </a>
                   </Button>
@@ -379,8 +347,8 @@ export default function TvDetailsPage() {
             </div>
 
             {/* Info Sidebar */}
-            <div className="bg-card/60 border border-border/40 backdrop-blur-xl rounded-2xl p-5 space-y-4">
-              <h3 className="text-sm font-semibold tracking-wide text-muted-foreground uppercase">
+            <div className="bg-card/65 border border-border/40 backdrop-blur-xl rounded-2xl p-5 space-y-4">
+              <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Information
               </h3>
               <div className="space-y-3">
@@ -423,7 +391,7 @@ export default function TvDetailsPage() {
                 {tv.contentRating && (
                   <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
                     <span className="text-muted-foreground">Rating</span>
-                    <Badge className="bg-blue-500/15 border border-primary/30 text-primary text-xs px-2 py-0.5">
+                    <Badge variant="outline" className="text-xs px-2 py-0.5">
                       {tv.contentRating}
                     </Badge>
                   </div>
@@ -433,15 +401,15 @@ export default function TvDetailsPage() {
 
             {/* Networks */}
             {tv.studios && tv.studios.length > 0 && (
-              <div className="bg-card/60 border border-border/40 backdrop-blur-xl rounded-2xl p-5">
-                <h4 className="font-semibold text-sm tracking-wide text-muted-foreground uppercase mb-3">
+              <div className="bg-card/65 border border-border/40 backdrop-blur-xl rounded-2xl p-5">
+                <h4 className="font-semibold text-xs tracking-wide text-muted-foreground uppercase mb-3">
                   Networks
                 </h4>
                 <div className="flex flex-wrap gap-2">
                   {tv.studios.map((studio) => (
                     <span
                       key={studio.name}
-                      className="text-xs bg-muted text-foreground/90 border border-border/40 px-3 py-1.5 rounded-xl"
+                      className="text-xs bg-secondary text-secondary-foreground border border-border/40 px-3 py-1.5 rounded-xl"
                     >
                       {studio.name}
                     </span>
@@ -452,8 +420,8 @@ export default function TvDetailsPage() {
 
             {/* Additional Trailers */}
             {tv.trailers && tv.trailers.length > 1 && (
-              <div className="bg-card/60 border border-border/40 backdrop-blur-xl rounded-2xl p-5">
-                <h4 className="font-semibold text-sm tracking-wide text-muted-foreground uppercase mb-3">
+              <div className="bg-card/65 border border-border/40 backdrop-blur-xl rounded-2xl p-5">
+                <h4 className="font-semibold text-xs tracking-wide text-muted-foreground uppercase mb-3">
                   Trailers
                 </h4>
                 <div className="flex flex-col gap-2">
@@ -463,9 +431,9 @@ export default function TvDetailsPage() {
                       href={trailer.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex items-center gap-2 text-xs bg-muted hover:bg-zinc-700 text-foreground/90 border border-border/40 px-3 py-2 rounded-xl transition-all"
+                      className="flex items-center gap-2 text-xs bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border/40 px-3 py-2 rounded-xl transition-all"
                     >
-                      <Play className="w-3 h-3 fill-current" />
+                      <Play className="size-3 fill-current" />
                       {trailer.name || `Trailer ${idx + 2}`}
                     </a>
                   ))}
@@ -475,14 +443,14 @@ export default function TvDetailsPage() {
           </motion.div>
 
           {/* Right Column - Info */}
-          <div className="flex-1 space-y-8 lg:pt-8 mb-32">
+          <div className="flex-1 space-y-6 lg:pt-8 min-w-0">
             {/* Header */}
             <motion.div variants={itemVariants} className="space-y-2">
-              <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-foreground">
+              <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">
                 {tv.title.english || tv.title.romaji}
               </h1>
               {tv.title.romaji && tv.title.romaji !== tv.title.english && (
-                <p className="text-sm text-muted-foreground italic">
+                <p className="text-xs text-muted-foreground italic">
                   Also known as: {tv.title.romaji}
                 </p>
               )}
@@ -490,26 +458,26 @@ export default function TvDetailsPage() {
 
             {/* Quick Info Badges */}
             <motion.div variants={itemVariants} className="flex flex-wrap gap-3">
-              <div className="bg-card/55 border border-border/40 backdrop-blur-md px-4 py-2.5 rounded-xl flex items-center gap-2">
-                <Tv2 className="w-4 h-4 text-primary" />
+              <div className="bg-card/45 border border-border/30 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2">
+                <Tv2 className="size-4 text-primary" />
                 <span className="text-sm font-semibold text-foreground capitalize">
                   {tv.status?.replace(/_/g, " ").toLowerCase()}
                 </span>
               </div>
               {tv.averageRuntime && (
-                <div className="bg-card/55 border border-border/40 backdrop-blur-md px-4 py-2.5 rounded-xl flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-primary" />
+                <div className="bg-card/45 border border-border/30 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2">
+                  <Clock className="size-4 text-primary" />
                   <span className="text-sm font-semibold text-foreground">{tv.averageRuntime} min/ep</span>
                 </div>
               )}
               {tv.originalCountry && (
-                <div className="bg-card/55 border border-border/40 backdrop-blur-md px-4 py-2.5 rounded-xl flex items-center gap-2">
-                  <Globe className="w-4 h-4 text-primary" />
+                <div className="bg-card/45 border border-border/30 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2">
+                  <Globe className="size-4 text-primary" />
                   <span className="text-sm font-semibold text-foreground">{tv.originalCountry}</span>
                 </div>
               )}
               {tv.contentRating && (
-                <Badge className="bg-primary/10 border border-primary/30 text-primary px-4 py-2.5 rounded-xl text-sm font-bold">
+                <Badge variant="outline" className="px-4 py-2 rounded-xl text-xs font-bold text-muted-foreground">
                   {tv.contentRating}
                 </Badge>
               )}
@@ -519,7 +487,7 @@ export default function TvDetailsPage() {
             {hasListEntry && totalEpisodes > 0 && (
               <motion.div
                 variants={itemVariants}
-                className="bg-card/40 border border-border/30 backdrop-blur-sm p-5 rounded-2xl"
+                className="bg-card/30 border border-border/20 backdrop-blur-sm p-5 rounded-2xl"
               >
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-sm font-semibold text-foreground/90">Watch Progress</span>
@@ -527,9 +495,9 @@ export default function TvDetailsPage() {
                     {watchedCount} / {totalEpisodes} ({progressPercent}%)
                   </span>
                 </div>
-                <div className="w-full bg-muted/60 h-2 rounded-full overflow-hidden">
+                <div className="w-full bg-muted/40 h-2 rounded-full overflow-hidden">
                   <div
-                    className="bg-blue-500 h-full rounded-full transition-all duration-700"
+                    className="bg-primary h-full rounded-full transition-all duration-700"
                     style={{ width: `${progressPercent}%` }}
                   />
                 </div>
@@ -539,25 +507,22 @@ export default function TvDetailsPage() {
             {/* Description */}
             <motion.div
               variants={itemVariants}
-              className="bg-card/40 border border-border/30 backdrop-blur-sm p-6 rounded-2xl"
+              className="bg-card/30 border border-border/20 backdrop-blur-sm p-6 rounded-2xl"
             >
-              <h3 className="text-lg font-bold text-foreground mb-3">Synopsis</h3>
+              <h3 className="text-base font-bold text-foreground mb-3">Synopsis</h3>
               <div
-                className="prose prose-neutral dark:prose-invert dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-sm md:text-base prose-p:my-2 prose-a:text-primary hover:prose-a:text-primary transition-colors"
+                className="prose prose-neutral dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-sm prose-p:my-2 prose-a:text-primary hover:prose-a:text-primary transition-colors"
                 dangerouslySetInnerHTML={{ __html: tv.description }}
               />
             </motion.div>
 
             {/* Genres */}
             {tv.genres && tv.genres.length > 0 && (
-              <motion.div variants={itemVariants} className="space-y-4">
-                <h3 className="text-lg font-bold text-foreground">Genres</h3>
+              <motion.div variants={itemVariants} className="space-y-3">
+                <h3 className="text-base font-bold text-foreground">Genres</h3>
                 <div className="flex flex-wrap gap-2">
                   {tv.genres.map((genre) => (
-                    <Badge
-                      key={genre}
-                      className="bg-primary/10 border border-primary/30 hover:bg-primary/15 text-primary px-3 py-1 rounded-xl text-xs font-medium"
-                    >
+                    <Badge key={genre} variant="secondary" className="rounded-xl px-3 py-1 text-xs">
                       {genre}
                     </Badge>
                   ))}
@@ -567,25 +532,27 @@ export default function TvDetailsPage() {
 
             {/* Cast */}
             {tv.characters && tv.characters.length > 0 && (
-              <motion.div variants={itemVariants} className="space-y-4">
-                <h3 className="text-lg font-bold text-foreground">Cast</h3>
+              <motion.div variants={itemVariants} className="space-y-3">
+                <h3 className="text-base font-bold text-foreground">Cast</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {tv.characters.slice(0, 12).map((char, idx) => (
                     <div
                       key={idx}
-                      className="flex items-center justify-between bg-card/50 border border-border/40 backdrop-blur-md p-3 rounded-xl overflow-hidden hover:border-border/60 transition-all group"
+                      className="flex items-center justify-between bg-card/45 border border-border/30 backdrop-blur-md p-3 rounded-xl overflow-hidden hover:border-border/50 transition-all group"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         {char.image && char.image.length > 0 ? (
-                          <div className="relative w-12 h-12 rounded-lg overflow-hidden shrink-0">
-                            <img
+                          <div className="relative size-12 rounded-lg overflow-hidden shrink-0 bg-muted">
+                            <Image
                               src={char.image}
                               alt={char.name}
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              fill
+                              sizes="48px"
+                              className="object-cover group-hover:scale-105 transition-transform duration-300"
                             />
                           </div>
                         ) : (
-                          <div className="w-12 h-12 rounded-lg bg-muted shrink-0 flex items-center justify-center text-muted-foreground text-xs">
+                          <div className="size-12 rounded-lg bg-muted shrink-0 flex items-center justify-center text-muted-foreground text-xs">
                             ?
                           </div>
                         )}
@@ -611,12 +578,12 @@ export default function TvDetailsPage() {
 
             {/* Seasons Accordion */}
             {tv.seasons && tv.seasons.length > 0 && (
-              <motion.div variants={itemVariants} className="space-y-4">
-                <h3 className="text-xl font-bold text-foreground">Seasons</h3>
+              <motion.div variants={itemVariants} className="space-y-3">
+                <h3 className="text-lg font-bold text-foreground">Seasons</h3>
                 <Accordion type="multiple" className="w-full space-y-3">
                   {tv.seasons.map((season) => {
                     const watchedInSeason = watchedEpisodes.filter(
-                      (ep) => ep.seasonNum === season.number,
+                      (ep: any) => ep.seasonNum === season.number,
                     ).length;
                     const seasonProgress =
                       season.episodeCount > 0
@@ -629,16 +596,24 @@ export default function TvDetailsPage() {
                       <AccordionItem
                         key={season.id}
                         value={season.id}
-                        className="border border-border/40 rounded-2xl overflow-hidden bg-card/40 backdrop-blur-md shadow-none"
+                        className="border border-border/30 rounded-2xl overflow-hidden bg-card/25 backdrop-blur-md shadow-none"
                       >
                         <AccordionTrigger className="hover:no-underline px-4 py-3 transition-colors hover:bg-muted/30">
                           <div className="flex items-center gap-6 w-full pr-8">
-                            <div className="shrink-0 w-12 aspect-2/3 rounded-lg overflow-hidden border border-border/50 bg-muted">
-                              <img
-                                src={season.image || tv.coverImage.large}
-                                alt={season.name}
-                                className="w-full h-full object-cover"
-                              />
+                            <div className="shrink-0 w-12 aspect-2/3 rounded-lg overflow-hidden border border-border/50 bg-muted relative flex items-center justify-center">
+                              {(season.image || tv.coverImage.large) ? (
+                                <Image
+                                  src={season.image || tv.coverImage.large}
+                                  alt={season.name || `Season ${season.number}`}
+                                  fill
+                                  sizes="48px"
+                                  className="object-cover"
+                                />
+                              ) : (
+                                <div className="size-full bg-muted/30 text-muted-foreground/60 overflow-hidden flex items-center justify-center">
+                                  <RrLapplandImageNotFound className="size-full object-cover scale-150" />
+                                </div>
+                              )}
                             </div>
                             <div className="flex-1 flex items-center gap-8 text-left min-w-0">
                               <div className="flex flex-col">
@@ -654,7 +629,7 @@ export default function TvDetailsPage() {
                                 <div className="flex-1 flex items-center gap-4 max-w-[300px]">
                                   <div className="flex-1 bg-muted/60 h-1 rounded-full overflow-hidden">
                                     <div
-                                      className="bg-blue-500 h-full transition-all duration-700 rounded-full"
+                                      className="bg-primary h-full transition-all duration-700 rounded-full"
                                       style={{
                                         width: `${seasonProgress}%`,
                                       }}
@@ -668,11 +643,11 @@ export default function TvDetailsPage() {
                             </div>
                           </div>
                         </AccordionTrigger>
-                        <AccordionContent className="p-0 border-t border-border/30">
-                          <div className="divide-y divide-zinc-800/20">
+                        <AccordionContent className="p-0 border-t border-border/20">
+                          <div className="divide-y divide-border/20">
                             {season.episodes.map((episode) => {
                               const watched = watchedEpisodes.some(
-                                (ep) =>
+                                (ep: any) =>
                                   ep.seasonNum === season.number &&
                                   ep.episodeNum === episode.number,
                               );
@@ -681,9 +656,9 @@ export default function TvDetailsPage() {
                                   key={episode.id}
                                   className={cn(
                                     "flex items-center gap-4 p-3 hover:bg-muted/20 transition-colors group cursor-pointer",
-                                    watched && "bg-blue-500/5",
+                                    watched && "bg-primary/5",
                                   )}
-                                  onClick={() =>
+                                  onClick={(): Promise<void> =>
                                     toggleEpisode(season.number, episode.number)
                                   }
                                 >
@@ -691,12 +666,12 @@ export default function TvDetailsPage() {
                                     className={cn(
                                       "shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
                                       watched
-                                        ? "bg-blue-500 border-primary text-foreground"
-                                        : "border-zinc-600",
+                                        ? "bg-primary border-primary text-primary-foreground"
+                                        : "border-border",
                                     )}
                                   >
                                     {watched && (
-                                      <Check className="w-3.5 h-3.5" />
+                                      <Check className="size-3.5" />
                                     )}
                                   </div>
                                   <div className="flex-1 min-w-0">

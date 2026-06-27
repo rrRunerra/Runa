@@ -259,6 +259,7 @@ export class ListController {
       rewatched?: number;
       updateConnection?: boolean;
       connections?: any;
+      episodes?: { seasonNum: number; episodeNum: number }[];
     },
   ): Promise<{ success: boolean; message: string; error?: any }> {
     return this.listService.upsertTvList(req.user.username, body);

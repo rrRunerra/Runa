@@ -17,12 +17,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { MediaItem } from "@/types/aquila";
-import { AnimeEditDialog } from "@/components/aquila/AnimeEditDialog";
-import { MangaEditDialog } from "@/components/aquila/MangaEditDialog";
-import { TvEditDialog } from "@/components/aquila/TvEditDialog";
-import { MovieEditDialog } from "@/components/aquila/MovieEditDialog";
-import { GameEditDialog } from "@/components/aquila/GameEditDialog";
-import { BookEditDialog } from "@/components/aquila/BookEditDialog";
+import { RrMediaEditDialog } from "./rrMediaEditDialog";
+import RrLapplandImageNotFound from "../rrImages/rrLapplandImageNotFound";
 
 export interface RrMediaCardProps {
   item: MediaItem;
@@ -67,12 +63,6 @@ const RrMediaCardComponent = ({
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const mediaType = item.type;
 
-  // Shared media shape for all dialogs
-  const dialogMedia = {
-    id: item.id.toString(),
-    title: { romaji: item.title },
-    coverImage: { large: item.image },
-  };
 
   const progressPercentage = item.episodes
     ? Math.min((item.progress / item.episodes) * 100, 100)
@@ -87,7 +77,7 @@ const RrMediaCardComponent = ({
             href={href}
             className="absolute inset-0 block cursor-pointer z-10"
           >
-            {item.image && (
+            {item.image ? (
               <Image
                 src={item.image}
                 alt={item.title}
@@ -96,6 +86,10 @@ const RrMediaCardComponent = ({
                 className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
                 priority={false}
               />
+            ) : (
+              <div className="size-full bg-muted/30 text-muted-foreground/60 overflow-hidden flex items-center justify-center">
+                <RrLapplandImageNotFound className="size-full object-cover scale-150" />
+              </div>
             )}
           </Link>
 
@@ -179,13 +173,14 @@ const RrMediaCardComponent = ({
                     {mediaType === "tv"
                       ? item.meta?.season
                         ? `S${item.meta.season} E${item.meta.episode}`
-                        : `Ep ${item.progress}`
-                      : mediaType === "game"
-                        ? `${item.progress}h`
-                        : mediaType === "book"
-                          ? `Ch ${item.progress}`
-                          : `${mediaType === "manga" ? "Ch" : "Ep"} ${item.progress}`}
-                    {item.episodes ? `/${item.episodes}` : ""}
+                        : `Ep ${item.progress}${item.episodes ? `/${item.episodes}` : ""}`
+                      : `${
+                          mediaType === "game"
+                            ? `${item.progress}h`
+                            : mediaType === "book"
+                              ? `Ch ${item.progress}`
+                              : `${mediaType === "manga" ? "Ch" : "Ep"} ${item.progress}`
+                        }${item.episodes ? `/${item.episodes}` : ""}`}
                   </span>
                 </span>
               )}
@@ -200,70 +195,21 @@ const RrMediaCardComponent = ({
         </div>
       </div>
 
-      {/* Edit Dialogs */}
+      {/* Edit Dialog */}
       {isOwner && isEditDialogOpen && (
-        <>
-          {item.type === "anime" && (
-            <AnimeEditDialog
-              media={dialogMedia}
-              hasListEntry={true}
-              open={isEditDialogOpen}
-              onOpenChange={setIsEditDialogOpen}
-              onSaved={onRefresh}
-              onDeleted={onRefresh}
-            />
-          )}
-          {item.type === "manga" && (
-            <MangaEditDialog
-              media={dialogMedia}
-              hasListEntry={true}
-              open={isEditDialogOpen}
-              onOpenChange={setIsEditDialogOpen}
-              onSaved={onRefresh}
-              onDeleted={onRefresh}
-            />
-          )}
-          {item.type === "tv" && (
-            <TvEditDialog
-              media={{ ...dialogMedia, seasons: [] }}
-              hasListEntry={true}
-              open={isEditDialogOpen}
-              onOpenChange={setIsEditDialogOpen}
-              onSaved={onRefresh}
-              onDeleted={onRefresh}
-            />
-          )}
-          {item.type === "movie" && (
-            <MovieEditDialog
-              media={dialogMedia}
-              hasListEntry={true}
-              open={isEditDialogOpen}
-              onOpenChange={setIsEditDialogOpen}
-              onSaved={onRefresh}
-              onDeleted={onRefresh}
-            />
-          )}
-          {item.type === "game" && (
-            <GameEditDialog
-              media={dialogMedia}
-              hasListEntry={true}
-              open={isEditDialogOpen}
-              onOpenChange={setIsEditDialogOpen}
-              onSaved={onRefresh}
-              onDeleted={onRefresh}
-            />
-          )}
-          {item.type === "book" && (
-            <BookEditDialog
-              media={dialogMedia}
-              hasListEntry={true}
-              open={isEditDialogOpen}
-              onOpenChange={setIsEditDialogOpen}
-              onSaved={onRefresh}
-              onDeleted={onRefresh}
-            />
-          )}
-        </>
+        <RrMediaEditDialog
+          media={{
+            id: item.id.toString(),
+            type: item.type,
+            title: { romaji: item.title },
+            coverImage: { large: item.image },
+          }}
+          hasListEntry={true}
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          onSaved={onRefresh}
+          onDeleted={onRefresh}
+        />
       )}
     </>
   );

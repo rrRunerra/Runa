@@ -1280,6 +1280,7 @@ export class ListService {
       rewatched?: number;
       updateConnection?: boolean;
       connections?: any;
+      episodes?: { seasonNum: number; episodeNum: number }[];
     },
   ): Promise<{ success: boolean; message: string; error?: any }> {
     try {
@@ -1290,7 +1291,7 @@ export class ListService {
       const privacy = parsePrivacy(user?.privacy);
       const isPrivate = !!(privacy.profile || privacy.tvList);
 
-      await this.prisma.client.aquilaTvUserList.upsert({
+      const listEntry = await this.prisma.client.aquilaTvUserList.upsert({
         where: {
           username_tvdbId: {
             username: username.toLowerCase(),
@@ -1319,6 +1320,21 @@ export class ListService {
           private: isPrivate,
         },
       });
+
+      if (body.episodes) {
+        await this.prisma.client.aquilaTvWatchedEpisode.deleteMany({
+          where: { listId: listEntry.id },
+        });
+        if (body.episodes.length > 0) {
+          await this.prisma.client.aquilaTvWatchedEpisode.createMany({
+            data: body.episodes.map((ep) => ({
+              listId: listEntry.id,
+              seasonNum: ep.seasonNum,
+              episodeNum: ep.episodeNum,
+            })),
+          });
+        }
+      }
 
       if (body.updateConnection) {
         await this.updateTvConnections(

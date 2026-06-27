@@ -412,99 +412,114 @@ export class ConnectionService implements OnModuleInit {
 
             const finalItemId = providerKey === ConnectionProvider.SIMKL ? (item.simklId || item.tvdbId) : item.tvdbId;
 
-            if (existing) {
-              const connections = this.mergeConnections(existing.connections, providerId, finalItemId);
-              await this.prisma.client.aquilaTvUserList.update({
-                where: { id: existing.id },
-                data: {
-                  connections,
-                  ...(item.startDate !== undefined && { startDate: item.startDate || null }),
-                  ...(item.endDate !== undefined && { endDate: item.endDate || null }),
-                },
-              });
-            } else {
-              let tvStatus = 'PLANNING';
-              if (item.status === 'WATCHING') tvStatus = 'WATCHING';
-              else if (item.status === 'COMPLETED') tvStatus = 'COMPLETED';
-              else if (item.status === 'DROPPED') tvStatus = 'DROPPED';
+             let listEntryId: number;
 
-              const listEntry = await this.prisma.client.aquilaTvUserList.create({
-                data: {
-                  username,
-                  tvdbId: item.tvdbId,
-                  status: tvStatus as any,
-                  score: item.score || 0,
-                  notes: item.notes || '',
-                  connections: { [providerId.toLowerCase()]: { id: finalItemId, sync: true } },
-                  startDate: item.startDate || null,
-                  endDate: item.endDate || null,
-                },
-              });
+             if (existing) {
+               const connections = this.mergeConnections(existing.connections, providerId, finalItemId);
+               await this.prisma.client.aquilaTvUserList.update({
+                 where: { id: existing.id },
+                 data: {
+                   connections,
+                   ...(item.startDate !== undefined && { startDate: item.startDate || null }),
+                   ...(item.endDate !== undefined && { endDate: item.endDate || null }),
+                 },
+               });
+               listEntryId = existing.id;
+             } else {
+               let tvStatus = 'PLANNING';
+               if (item.status === 'WATCHING') tvStatus = 'WATCHING';
+               else if (item.status === 'COMPLETED') tvStatus = 'COMPLETED';
+               else if (item.status === 'DROPPED') tvStatus = 'DROPPED';
 
-              if (item.progress > 0) {
-                const dbTv = await this.prisma.client.aquilaTv.findUnique({
-                  where: { tvdbId: item.tvdbId },
-                  select: { seasons: true },
-                });
+               const listEntry = await this.prisma.client.aquilaTvUserList.create({
+                 data: {
+                   username,
+                   tvdbId: item.tvdbId,
+                   status: tvStatus as any,
+                   score: item.score || 0,
+                   notes: item.notes || '',
+                   connections: { [providerId.toLowerCase()]: { id: finalItemId, sync: true } },
+                   startDate: item.startDate || null,
+                   endDate: item.endDate || null,
+                 },
+               });
+               listEntryId = listEntry.id;
+             }
 
-                const seasons = dbTv?.seasons as any[];
-                if (seasons && Array.isArray(seasons) && seasons.length > 0) {
-                  const episodesData: { listId: number; seasonNum: number; episodeNum: number }[] = [];
-                  let remaining = item.progress;
+             // Sync watched episodes if there is progress or a list of episodes
+             if (item.watchedEpisodes && Array.isArray(item.watchedEpisodes) && item.watchedEpisodes.length > 0) {
+               const episodesData = item.watchedEpisodes.map((ep: any) => ({
+                 listId: listEntryId,
+                 seasonNum: ep.seasonNum,
+                 episodeNum: ep.episodeNum,
+               }));
+               await this.prisma.client.aquilaTvWatchedEpisode.createMany({
+                 data: episodesData,
+                 skipDuplicates: true,
+               });
+             } else if (item.progress > 0) {
+               const dbTv = await this.prisma.client.aquilaTv.findUnique({
+                 where: { tvdbId: item.tvdbId },
+                 select: { seasons: true },
+               });
 
-                  // Sort seasons by number (excluding specials / season 0 if any)
-                  const sortedSeasons = [...seasons]
-                    .filter((s) => s.number > 0)
-                    .sort((a, b) => a.number - b.number);
+               const seasons = dbTv?.seasons as any[];
+               if (seasons && Array.isArray(seasons) && seasons.length > 0) {
+                 const episodesData: { listId: number; seasonNum: number; episodeNum: number }[] = [];
+                 let remaining = item.progress;
 
-                  for (const season of sortedSeasons) {
-                    if (remaining <= 0) break;
-                    const count = season.episodeCount || (season.episodes ? season.episodes.length : 0) || 0;
-                    const take = Math.min(remaining, count);
+                 // Sort seasons by number (excluding specials / season 0 if any)
+                 const sortedSeasons = [...seasons]
+                   .filter((s) => s.number > 0)
+                   .sort((a, b) => a.number - b.number);
 
-                    for (let i = 0; i < take; i++) {
-                      const epNum = season.episodes?.[i]?.number || (i + 1);
-                      episodesData.push({
-                        listId: listEntry.id,
-                        seasonNum: season.number,
-                        episodeNum: epNum,
-                      });
-                    }
-                    remaining -= take;
-                  }
+                 for (const season of sortedSeasons) {
+                   if (remaining <= 0) break;
+                   const count = season.episodeCount || (season.episodes ? season.episodes.length : 0) || 0;
+                   const take = Math.min(remaining, count);
 
-                  // Fallback: if there is still remaining progress, or we had no matched seasons
-                  if (remaining > 0) {
-                    const offset = episodesData.length;
-                    for (let i = 0; i < remaining; i++) {
-                      episodesData.push({
-                        listId: listEntry.id,
-                        seasonNum: 1,
-                        episodeNum: offset + i + 1,
-                      });
-                    }
-                  }
+                   for (let i = 0; i < take; i++) {
+                     const epNum = season.episodes?.[i]?.number || (i + 1);
+                     episodesData.push({
+                       listId: listEntryId,
+                       seasonNum: season.number,
+                       episodeNum: epNum,
+                     });
+                   }
+                   remaining -= take;
+                 }
 
-                  if (episodesData.length > 0) {
-                    await this.prisma.client.aquilaTvWatchedEpisode.createMany({
-                      data: episodesData,
-                      skipDuplicates: true,
-                    });
-                  }
-                } else {
-                  // Fallback: mark everything as season 1
-                  const episodesData = Array.from({ length: item.progress }, (_, i) => ({
-                    listId: listEntry.id,
-                    seasonNum: 1,
-                    episodeNum: i + 1,
-                  }));
-                  await this.prisma.client.aquilaTvWatchedEpisode.createMany({
-                    data: episodesData,
-                    skipDuplicates: true,
-                  });
-                }
-              }
-            }
+                 // Fallback: if there is still remaining progress, or we had no matched seasons
+                 if (remaining > 0) {
+                   const offset = episodesData.length;
+                   for (let i = 0; i < remaining; i++) {
+                     episodesData.push({
+                       listId: listEntryId,
+                       seasonNum: 1,
+                       episodeNum: offset + i + 1,
+                     });
+                   }
+                 }
+
+                 if (episodesData.length > 0) {
+                   await this.prisma.client.aquilaTvWatchedEpisode.createMany({
+                     data: episodesData,
+                     skipDuplicates: true,
+                   });
+                 }
+               } else {
+                 // Fallback: mark everything as season 1
+                 const episodesData = Array.from({ length: item.progress }, (_, i) => ({
+                   listId: listEntryId,
+                   seasonNum: 1,
+                   episodeNum: i + 1,
+                 }));
+                 await this.prisma.client.aquilaTvWatchedEpisode.createMany({
+                   data: episodesData,
+                   skipDuplicates: true,
+                 });
+               }
+             }
           } else if (item.mediaType === 'movie') {
             if (!item.tvdbId) {
               const errMsg = `Skipping movie "${item.title}" as it lacks TVDB ID`;

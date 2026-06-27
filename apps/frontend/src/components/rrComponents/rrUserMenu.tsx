@@ -194,6 +194,15 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has("settings") || params.has("category")) {
+        setIsSettingsOpen(true);
+      }
+    }
+  }, []);
+
   return (
     <>
       {session ? (
@@ -446,7 +455,17 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
       {isSettingsOpen && (
         <SettingsDialog
           open={isSettingsOpen}
-          onOpenChange={setIsSettingsOpen}
+          onOpenChange={(open) => {
+            setIsSettingsOpen(open);
+            if (!open) {
+              const url = new URL(window.location.href);
+              url.searchParams.delete("settings");
+              url.searchParams.delete("category");
+              url.searchParams.delete("success");
+              url.searchParams.delete("error");
+              window.history.replaceState(null, "", url.toString());
+            }
+          }}
         />
       )}
 
