@@ -20,4 +20,8 @@ export class SendEmailDto {
   @IsString()
   @IsNotEmpty()
   body: string;
+
+  @IsString()
+  @IsOptional()
+  html?: string;
 }

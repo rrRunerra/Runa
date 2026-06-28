@@ -16,10 +16,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { motion, AnimatePresence } from "framer-motion";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useRRe2ee } from "@/components/Providers/rrE2eeProvider";
+import { marked } from "marked";
 
 interface RrComposeEmailModalProps {
   children?: React.ReactNode;
@@ -94,6 +94,8 @@ export function RrComposeEmailModal({
   // Undo Send Timer State
   const undoTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [undoTimerToastId, setUndoTimerToastId] = useState<string | number | null>(null);
+
+  const [useMarkdown, setUseMarkdown] = useState<boolean>(false);
 
   const isValidEmail = (email: string): boolean => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -305,6 +307,7 @@ export function RrComposeEmailModal({
             bcc: showBcc && finalBcc ? finalBcc : undefined,
             subject,
             body,
+            html: await marked.parse(body),
           }),
         }
       );
@@ -455,27 +458,41 @@ export function RrComposeEmailModal({
         <DialogHeader className="border-b border-zinc-800/50 pb-3 flex flex-row items-center justify-between shrink-0">
           <DialogTitle className="text-base font-semibold flex items-center gap-2 text-zinc-100">
             <Edit className="size-4 text-emerald-500" />
-            Markdown Email Composer
+            Email Composer
           </DialogTitle>
-          {templates.length > 0 && (
-            <Select onValueChange={(val) => {
-              const matched = templates.find(t => t.id === val);
-              if (matched) insertTemplate(matched);
-            }}>
-              <SelectTrigger className="w-44 h-8 bg-zinc-900 border border-zinc-800 rounded-xl text-[11px] font-medium text-zinc-300">
-                <SelectValue placeholder="Canned Responses" />
-              </SelectTrigger>
-              <SelectContent className="bg-zinc-950 border-zinc-800">
-                <SelectGroup>
-                  {templates.map(t => (
-                    <SelectItem key={t.id} value={t.id} className="text-xs cursor-pointer focus:bg-zinc-900 text-zinc-300">
-                      {t.name}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          )}
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 border border-zinc-800 rounded-xl px-2.5 py-1 bg-zinc-900/40">
+              <input
+                id="use-markdown-compose"
+                type="checkbox"
+                checked={useMarkdown}
+                onChange={(e) => setUseMarkdown(e.target.checked)}
+                className="size-3.5 bg-background border-border text-primary rounded-xs cursor-pointer"
+              />
+              <label htmlFor="use-markdown-compose" className="text-[10px] font-bold text-zinc-400 select-none cursor-pointer">
+                Markdown Mode
+              </label>
+            </div>
+            {templates.length > 0 && (
+              <Select onValueChange={(val) => {
+                const matched = templates.find(t => t.id === val);
+                if (matched) insertTemplate(matched);
+              }}>
+                <SelectTrigger className="w-44 h-8 bg-zinc-900 border border-zinc-800 rounded-xl text-[11px] font-medium text-zinc-300">
+                  <SelectValue placeholder="Canned Responses" />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-950 border-zinc-800">
+                  <SelectGroup>
+                    {templates.map(t => (
+                      <SelectItem key={t.id} value={t.id} className="text-xs cursor-pointer focus:bg-zinc-900 text-zinc-300">
+                        {t.name}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            )}
+          </div>
         </DialogHeader>
 
         {/* Inputs */}
@@ -549,6 +566,17 @@ export function RrComposeEmailModal({
                     className="bg-transparent border-0 border-transparent shadow-none h-7 text-xs text-zinc-200 focus-visible:ring-0 px-1 py-0 flex-1 min-w-[120px]"
                   />
                 </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCc(false);
+                    setCcEmails([]);
+                    setCcInput("");
+                  }}
+                  className="text-zinc-500 hover:text-red-400 p-1 rounded-md hover:bg-zinc-900 cursor-pointer"
+                >
+                  <X className="size-3.5" />
+                </button>
               </div>
             )}
 
@@ -573,6 +601,17 @@ export function RrComposeEmailModal({
                     className="bg-transparent border-0 border-transparent shadow-none h-7 text-xs text-zinc-200 focus-visible:ring-0 px-1 py-0 flex-1 min-w-[120px]"
                   />
                 </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowBcc(false);
+                    setBccEmails([]);
+                    setBccInput("");
+                  }}
+                  className="text-zinc-500 hover:text-red-400 p-1 rounded-md hover:bg-zinc-900 cursor-pointer"
+                >
+                  <X className="size-3.5" />
+                </button>
               </div>
             )}
 
@@ -589,36 +628,52 @@ export function RrComposeEmailModal({
           </FieldGroup>
         </div>
 
-        {/* Dual-Pane Editor Panels */}
-        <div className="flex-1 flex gap-4 min-h-0 py-4">
-          {/* Editor Pane (Left) */}
-          <div className="flex-1 flex flex-col space-y-1.5 min-h-0">
-            <div className="flex items-center justify-between text-[10px] font-bold text-zinc-500 uppercase tracking-wider px-1">
-              <span>Markdown Input</span>
-              <span className="text-zinc-600 font-normal">Supports GFM, headers, lists</span>
-            </div>
-            <textarea
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              placeholder="Write your email here in Markdown... (e.g. # Hello, **bold**, *italic*)"
-              className="flex-1 w-full bg-zinc-950 border border-zinc-900 rounded-2xl resize-none p-4 text-xs/relaxed text-zinc-200 placeholder-zinc-700 outline-none focus:border-zinc-800 transition-colors font-mono"
-            />
-          </div>
+        {/* Editor Panel */}
+        <div className="flex-1 flex flex-col min-h-0 py-4">
+          {useMarkdown ? (
+            <div className="flex-1 flex gap-4 min-h-0">
+              {/* Editor Pane (Left) */}
+              <div className="flex-1 flex flex-col space-y-1.5 min-h-0">
+                <div className="flex items-center justify-between text-[10px] font-bold text-zinc-500 uppercase tracking-wider px-1">
+                  <span>Markdown Input</span>
+                  <span className="text-zinc-600 font-normal">Supports GFM, headers, lists</span>
+                </div>
+                <textarea
+                  value={body}
+                  onChange={(e) => setBody(e.target.value)}
+                  placeholder="Write your email here in Markdown... (e.g. # Hello, **bold**, *italic*)"
+                  className="flex-1 w-full bg-zinc-950 border border-zinc-900 rounded-2xl resize-none p-4 text-xs/relaxed text-zinc-200 placeholder-zinc-700 outline-none focus:border-zinc-800 transition-colors font-mono"
+                />
+              </div>
 
-          {/* HTML Preview Pane (Right) */}
-          <div className="flex-1 flex flex-col space-y-1.5 min-h-0 border-l border-zinc-900 pl-4">
-            <div className="flex items-center justify-between text-[10px] font-bold text-zinc-500 uppercase tracking-wider px-1">
-              <span className="flex items-center gap-1">
-                <Eye className="size-3" />
-                Live HTML Preview
-              </span>
+              {/* HTML Preview Pane (Right) */}
+              <div className="flex-1 flex flex-col space-y-1.5 min-h-0 border-l border-zinc-900 pl-4">
+                <div className="flex items-center justify-between text-[10px] font-bold text-zinc-500 uppercase tracking-wider px-1">
+                  <span className="flex items-center gap-1">
+                    <Eye className="size-3" />
+                    Live HTML Preview
+                  </span>
+                </div>
+                <div className="flex-1 w-full bg-zinc-950 border border-zinc-900 rounded-2xl p-4 overflow-y-auto no-scrollbar prose prose-invert max-w-none text-xs leading-relaxed text-zinc-300">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {body || "*No text written yet. Live preview will appear here.*"}
+                  </ReactMarkdown>
+                </div>
+              </div>
             </div>
-            <div className="flex-1 w-full bg-zinc-950 border border-zinc-900 rounded-2xl p-4 overflow-y-auto no-scrollbar prose prose-invert max-w-none text-xs leading-relaxed text-zinc-300">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {body || "*No text written yet. Live preview will appear here.*"}
-              </ReactMarkdown>
+          ) : (
+            <div className="flex-1 flex flex-col min-h-0 space-y-1.5">
+              <div className="flex items-center justify-between text-[10px] font-bold text-zinc-500 uppercase tracking-wider px-1">
+                <span>Message Body</span>
+              </div>
+              <textarea
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                placeholder="Write your email here..."
+                className="flex-1 w-full bg-zinc-950 border border-zinc-900 rounded-2xl resize-none p-4 text-xs/relaxed text-zinc-200 placeholder-zinc-700 outline-none focus:border-zinc-800 transition-colors font-sans"
+              />
             </div>
-          </div>
+          )}
         </div>
 
         {/* Footer Actions */}

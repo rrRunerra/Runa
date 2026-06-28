@@ -42,6 +42,22 @@ export const getPegasusSidebarConfig = (
             </RrComposeEmailModal>
           ),
         },
+        {
+          label: "All Inboxes",
+          icon: <Inbox className="h-4 w-4" />,
+          subtitle: "All inboxes combined",
+          position: 3,
+          href: "/pegasus/unified/inbox",
+          preventRedirect: false,
+        },
+        {
+          label: "Attachments",
+          icon: <FileText className="h-4 w-4" />,
+          subtitle: "All attachments",
+          position: 4,
+          href: "/pegasus/attachments",
+          preventRedirect: false,
+        },
       ],
     },
     {

@@ -798,7 +798,7 @@ export class EmailAccountService {
       ? `"${account.senderName}" <${account.emailAddress}>`
       : account.emailAddress;
 
-    const escapedBodyHtml = escapeHtml(data.body).replace(/\n/g, '<br />');
+    const escapedBodyHtml = data.html || escapeHtml(data.body).replace(/\n/g, '<br />');
 
     const mailOptions: nodemailer.SendMailOptions = {
       from,

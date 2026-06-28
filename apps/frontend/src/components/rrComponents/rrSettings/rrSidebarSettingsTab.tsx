@@ -13,8 +13,12 @@ import { useSession } from "next-auth/react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import { rrApps } from "../../../../config/rrApps";
+import { getAquariusSidebarConfig } from "../../../../config/aquariusSidebarConfig";
 import { getAquilaSidebarConfig } from "../../../../config/aquilaSidebarConfig";
+import { getLacertaSidebarConfig } from "../../../../config/lacertaSidebarConfig";
 import { getLynxSidebarConfig } from "../../../../config/lynxSidebarConfig";
+import { getLyraSidebarConfig } from "../../../../config/lyraSidebarConfig";
+import { getMonocerosSidebarConfig } from "../../../../config/monocerosSidebarConfig";
 import { getPegasusSidebarConfig } from "../../../../config/pegasusSidebarConfig";
 import { toast } from "sonner";
 import { hasPermission } from "@runa/permissions";
@@ -117,6 +121,18 @@ export function RrSidebarSettingsTab({
     }
     if (selectedAppHref === "/pegasus") {
       return getPegasusSidebarConfig(emails);
+    }
+    if (selectedAppHref === "/aquarius") {
+      return getAquariusSidebarConfig();
+    }
+    if (selectedAppHref === "/lacerta") {
+      return getLacertaSidebarConfig();
+    }
+    if (selectedAppHref === "/lyra") {
+      return getLyraSidebarConfig();
+    }
+    if (selectedAppHref === "/monoceros") {
+      return getMonocerosSidebarConfig();
     }
     return [];
   }, [selectedAppHref, session, connections, emails]);
