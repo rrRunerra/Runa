@@ -11,29 +11,32 @@ import { useEffect } from "react";
 
 import { RrE2eeProvider } from "@/components/Providers/rrE2eeProvider";
 import { RrThemeProvider } from "@/components/Providers/rrThemeProvider";
+import { RrSpotlightProvider } from "@/components/Providers/rrSpotlightProvider";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
       <RrE2eeProvider>
-        <RrThemeProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            themes={["light", "dark"]}
-          >
-            <SidebarProvider>
-              <TooltipProvider>
-                <SidebarNavigationProvider>
-                  {children}
-                  <RrSpotlightSearch />
-                  <RrUnlockSecureStorageModal />
-                </SidebarNavigationProvider>
-              </TooltipProvider>
-            </SidebarProvider>
-          </ThemeProvider>
-        </RrThemeProvider>
+        <RrSpotlightProvider>
+          <RrThemeProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              themes={["light", "dark"]}
+            >
+              <SidebarProvider>
+                <TooltipProvider>
+                  <SidebarNavigationProvider>
+                    {children}
+                    <RrSpotlightSearch />
+                    <RrUnlockSecureStorageModal />
+                  </SidebarNavigationProvider>
+                </TooltipProvider>
+              </SidebarProvider>
+            </ThemeProvider>
+          </RrThemeProvider>
+        </RrSpotlightProvider>
       </RrE2eeProvider>
     </SessionProvider>
   );

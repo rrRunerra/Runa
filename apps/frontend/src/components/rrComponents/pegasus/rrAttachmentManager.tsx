@@ -56,7 +56,11 @@ export default function RrAttachmentManager(): React.JSX.Element {
     if (contentType.startsWith("image/")) {
       return <ImageIcon className="size-5 text-indigo-400" />;
     }
-    if (contentType.includes("pdf") || contentType.includes("word") || contentType.includes("text")) {
+    if (
+      contentType.includes("pdf") ||
+      contentType.includes("word") ||
+      contentType.includes("text")
+    ) {
       return <FileText className="size-5 text-blue-400" />;
     }
     return <FileIcon className="size-5 text-zinc-400" />;
@@ -67,16 +71,21 @@ export default function RrAttachmentManager(): React.JSX.Element {
     setLoading(true);
     try {
       // 1. Fetch all accounts
-      const accountsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/emails`, {
-        headers: { Authorization: `Bearer ${session.accessToken}` },
-      });
+      const accountsRes = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/emails`,
+        {
+          headers: { Authorization: `Bearer ${session.accessToken}` },
+        },
+      );
       if (!accountsRes.ok) throw new Error("Failed to load accounts");
       const accountsList = await accountsRes.json();
       setAccounts(accountsList);
 
       const allFetched: AttachmentItem[] = [];
       const privateKey = await getPrivateKey();
-      const cryptoBrowser = privateKey ? await import("@runa/crypto/browser") : null;
+      const cryptoBrowser = privateKey
+        ? await import("@runa/crypto/browser")
+        : null;
 
       // 2. Fetch inbox, sent, and archive messages for each account
       const folders = ["inbox", "sent", "archive"];
@@ -86,7 +95,7 @@ export default function RrAttachmentManager(): React.JSX.Element {
             `${process.env.NEXT_PUBLIC_API_URL}/emails/${account.id}/folders/${folder}/messages?limit=100`,
             {
               headers: { Authorization: `Bearer ${session.accessToken}` },
-            }
+            },
           );
           if (!res.ok) continue;
           const messages = await res.json();
@@ -100,15 +109,27 @@ export default function RrAttachmentManager(): React.JSX.Element {
 
               if (msg.encryptedKey && cryptoBrowser && privateKey) {
                 try {
-                  dataKey = await cryptoBrowser.decryptEmailDataKey(msg.encryptedKey, privateKey);
+                  dataKey = await cryptoBrowser.decryptEmailDataKey(
+                    msg.encryptedKey,
+                    privateKey,
+                  );
                   try {
-                    subject = await cryptoBrowser.decryptEmailString(msg.subject, dataKey);
+                    subject = await cryptoBrowser.decryptEmailString(
+                      msg.subject,
+                      dataKey,
+                    );
                   } catch {}
                   try {
-                    fromSender = await cryptoBrowser.decryptEmailString(msg.from, dataKey);
+                    fromSender = await cryptoBrowser.decryptEmailString(
+                      msg.from,
+                      dataKey,
+                    );
                   } catch {}
                 } catch (e) {
-                  console.error("Failed to decrypt email metadata for attachments:", e);
+                  console.error(
+                    "Failed to decrypt email metadata for attachments:",
+                    e,
+                  );
                 }
               }
 
@@ -116,7 +137,10 @@ export default function RrAttachmentManager(): React.JSX.Element {
                 let filename = att.filename;
                 if (msg.encryptedKey && cryptoBrowser && dataKey) {
                   try {
-                    filename = await cryptoBrowser.decryptEmailString(att.filename, dataKey);
+                    filename = await cryptoBrowser.decryptEmailString(
+                      att.filename,
+                      dataKey,
+                    );
                   } catch {}
                 }
 
@@ -139,7 +163,10 @@ export default function RrAttachmentManager(): React.JSX.Element {
       }
 
       // Sort by date descending
-      allFetched.sort((a, b) => new Date(b.messageDate).getTime() - new Date(a.messageDate).getTime());
+      allFetched.sort(
+        (a, b) =>
+          new Date(b.messageDate).getTime() - new Date(a.messageDate).getTime(),
+      );
       setAttachments(allFetched);
     } catch (err) {
       console.error(err);
@@ -161,7 +188,7 @@ export default function RrAttachmentManager(): React.JSX.Element {
         `${process.env.NEXT_PUBLIC_API_URL}/emails/attachments/${item.id}`,
         {
           headers: { Authorization: `Bearer ${session.accessToken}` },
-        }
+        },
       );
       if (!res.ok) throw new Error("Download failed");
 
@@ -171,12 +198,19 @@ export default function RrAttachmentManager(): React.JSX.Element {
         try {
           const privKey = await getPrivateKey();
           if (privKey) {
-            const { decryptEmailDataKey, decryptEmailBuffer } = await import("@runa/crypto/browser");
-            const dataKey = await decryptEmailDataKey(item.encryptedKey, privKey);
+            const { decryptEmailDataKey, decryptEmailBuffer } =
+              await import("@runa/crypto/browser");
+            const dataKey = await decryptEmailDataKey(
+              item.encryptedKey,
+              privKey,
+            );
             finalBuffer = await decryptEmailBuffer(finalBuffer, dataKey);
           }
         } catch (decErr) {
-          console.error("Failed to decrypt attachment content on download:", decErr);
+          console.error(
+            "Failed to decrypt attachment content on download:",
+            decErr,
+          );
         }
       }
 
@@ -204,8 +238,10 @@ export default function RrAttachmentManager(): React.JSX.Element {
         item.messageFrom.toLowerCase().includes(searchQuery.toLowerCase());
 
       if (selectedType === "all") return matchesSearch;
-      if (selectedType === "image") return matchesSearch && item.contentType.startsWith("image/");
-      if (selectedType === "pdf") return matchesSearch && item.contentType.includes("pdf");
+      if (selectedType === "image")
+        return matchesSearch && item.contentType.startsWith("image/");
+      if (selectedType === "pdf")
+        return matchesSearch && item.contentType.includes("pdf");
       if (selectedType === "document") {
         return (
           matchesSearch &&
@@ -233,7 +269,9 @@ export default function RrAttachmentManager(): React.JSX.Element {
             <ChevronLeft className="size-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-zinc-100 tracking-tight">Attachment Manager</h1>
+            <h1 className="text-2xl font-bold text-zinc-100 tracking-tight">
+              Attachment Manager
+            </h1>
             <p className="text-xs text-zinc-500">
               Browse and download attachments across all user email folders.
             </p>
@@ -274,7 +312,9 @@ export default function RrAttachmentManager(): React.JSX.Element {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-32 space-y-3">
             <Loader2 className="size-8 text-primary animate-spin" />
-            <span className="text-sm text-zinc-500">Extracting E2EE attachment files...</span>
+            <span className="text-sm text-zinc-500">
+              Extracting E2EE attachment files...
+            </span>
           </div>
         ) : filteredAttachments.length === 0 ? (
           <div className="text-center py-32 border border-dashed border-zinc-800 rounded-3xl text-zinc-600">
@@ -307,7 +347,8 @@ export default function RrAttachmentManager(): React.JSX.Element {
                       {item.filename}
                     </h3>
                     <p className="text-[10px] text-zinc-500 font-light mt-0.5">
-                      {formatBytes(item.size)} • {item.contentType.split("/")[1]?.toUpperCase() || "BIN"}
+                      {formatBytes(item.size)} •{" "}
+                      {item.contentType.split("/")[1]?.toUpperCase() || "BIN"}
                     </p>
                   </div>
                 </div>
@@ -315,9 +356,15 @@ export default function RrAttachmentManager(): React.JSX.Element {
                 <div className="pt-2 border-t border-zinc-900/60 space-y-1.5">
                   <div className="flex items-center justify-between text-[11px] text-zinc-500">
                     <span className="font-medium text-zinc-400 truncate max-w-[120px]">
-                      From: {item.messageFrom.replace(/<.*>/, "").replace(/"/g, "")}
+                      From:{" "}
+                      {item.messageFrom.replace(/<.*>/, "").replace(/"/g, "")}
                     </span>
-                    <span>{new Date(item.messageDate).toLocaleDateString([], { month: "short", day: "numeric" })}</span>
+                    <span>
+                      {new Date(item.messageDate).toLocaleDateString([], {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </span>
                   </div>
                   <div className="text-[10px] text-zinc-600 truncate max-w-[280px]">
                     Subject: {item.messageSubject}
@@ -336,7 +383,11 @@ export default function RrAttachmentManager(): React.JSX.Element {
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => router.push(`/pegasus/unified/inbox?messageId=${item.messageId}`)}
+                    onClick={() =>
+                      router.push(
+                        `/pegasus/unified/inbox?messageId=${item.messageId}`,
+                      )
+                    }
                     className="rounded-xl border border-transparent hover:border-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer px-2"
                     title="View Email"
                   >

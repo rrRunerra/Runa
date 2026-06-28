@@ -154,7 +154,7 @@ export const THEMES: ThemeConfig[] = [
   },
   {
     id: "apotheosis",
-    name: "Apotheosis Mint Midnight",
+    name: "Apotheosis",
     sourceUrl: "https://tweakcn.com/themes/cmoguqhhi000304k1cbe80jix",
     colors: {
       dark: {

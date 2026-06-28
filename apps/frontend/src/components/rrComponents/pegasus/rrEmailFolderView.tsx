@@ -117,7 +117,9 @@ export default function RrEmailFolderView({
 
       // 1. Update the account's Inbox child badge
       const childItem = getChild("Accounts", accountName, "Inbox");
-      const currentChildBadge = childItem?.badge ? parseInt(childItem.badge, 10) : 0;
+      const currentChildBadge = childItem?.badge
+        ? parseInt(childItem.badge, 10)
+        : 0;
       const newChildBadge = Math.max(0, currentChildBadge + change);
       updateChildBadge(
         "Accounts",
@@ -128,7 +130,9 @@ export default function RrEmailFolderView({
 
       // 2. Update the Unified Inbox badge
       const unifiedItem = getItem("Unified", "Unified Inbox");
-      const currentUnifiedBadge = unifiedItem?.badge ? parseInt(unifiedItem.badge, 10) : 0;
+      const currentUnifiedBadge = unifiedItem?.badge
+        ? parseInt(unifiedItem.badge, 10)
+        : 0;
       const newUnifiedBadge = Math.max(0, currentUnifiedBadge + change);
       updateBadge(
         "Unified",
@@ -640,9 +644,17 @@ export default function RrEmailFolderView({
       if (updates.folder) {
         const oldFolderLower = msgObj.folder.toLowerCase();
         const newFolderLower = updates.folder.toLowerCase();
-        if (oldFolderLower === "inbox" && newFolderLower !== "inbox" && !msgObj.read) {
+        if (
+          oldFolderLower === "inbox" &&
+          newFolderLower !== "inbox" &&
+          !msgObj.read
+        ) {
           adjustUnreadBadge(targetAccount, -1);
-        } else if (oldFolderLower !== "inbox" && newFolderLower === "inbox" && !msgObj.read) {
+        } else if (
+          oldFolderLower !== "inbox" &&
+          newFolderLower === "inbox" &&
+          !msgObj.read
+        ) {
           adjustUnreadBadge(targetAccount, 1);
         }
       }
@@ -694,7 +706,8 @@ export default function RrEmailFolderView({
 
     try {
       const msgObj = messages.find((m) => m.id === messageId);
-      const wasUnreadInbox = msgObj && !msgObj.read && msgObj.folder.toLowerCase() === "inbox";
+      const wasUnreadInbox =
+        msgObj && !msgObj.read && msgObj.folder.toLowerCase() === "inbox";
 
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/emails/${targetAccount}/messages/${messageId}`,

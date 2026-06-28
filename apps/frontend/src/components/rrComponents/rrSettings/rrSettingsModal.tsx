@@ -2,17 +2,9 @@
 
 import * as React from "react";
 import { useState, useEffect } from "react";
-import {
-  User,
-  ShieldCheck,
-  Mail,
-  LinkIcon,
-  Lock,
-  Smartphone,
-  KeyRound,
-} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePathname } from "next/navigation";
+import { settingsNavConfig } from "../../../config/settings";
 
 import {
   Breadcrumb,
@@ -103,25 +95,17 @@ export function SettingsDialog({
     }
   }, [open, isPegasus]);
 
-  const navItems: { id: rrCategory; name: string; icon: React.ElementType }[] = [
-    { id: "account", name: "Account", icon: User },
-    { id: "security", name: "Security", icon: ShieldCheck },
-    { id: "apiKeys", name: "API Keys", icon: KeyRound },
-    ...(isPegasus
-      ? [{ id: "mailAccounts" as rrCategory, name: "Mail Accounts", icon: Mail }]
-      : []),
-    { id: "connections", name: "Connections", icon: LinkIcon },
-    { id: "privacy", name: "Privacy", icon: Lock },
-    ...(isMobile
-      ? [
-          {
-            id: "sidebar" as rrCategory,
-            name: "Sidebar Shortcuts",
-            icon: Smartphone,
-          },
-        ]
-      : []),
-  ];
+  const navItems: { id: rrCategory; name: string; icon: React.ElementType }[] = settingsNavConfig
+    .filter((item) => {
+      if (item.id === "mailAccounts" && !isPegasus) return false;
+      if (item.id === "sidebar" && !isMobile) return false;
+      return true;
+    })
+    .map((item) => ({
+      id: item.id as rrCategory,
+      name: item.label,
+      icon: item.icon,
+    }));
 
   const mobileDockItems = navItems.map((item) => ({
     label: item.name,
