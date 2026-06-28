@@ -53,17 +53,24 @@ export default function AnimeDetailsPage(): React.JSX.Element {
   const [timeLeft, setTimeLeft] = useState<string | null>(null);
 
   // SWR queries replacing sequential imperative fetching
-  const { data: anime, error: animeError, isLoading: animeLoading } = useSWR<Media>(
+  const {
+    data: anime,
+    error: animeError,
+    isLoading: animeLoading,
+  } = useSWR<Media>(
     id ? `${process.env.NEXT_PUBLIC_API_URL}/anime/details/${id}` : null,
-    fetcher
+    fetcher,
   );
 
   const { data: listEntry, mutate: mutateListEntry } = useSWR<ListEntry>(
     id && session.status === "authenticated" && session.data?.accessToken
-      ? [`${process.env.NEXT_PUBLIC_API_URL}/list/anime/entry/${id}`, session.data.accessToken]
+      ? [
+          `${process.env.NEXT_PUBLIC_API_URL}/list/anime/entry/${id}`,
+          session.data.accessToken,
+        ]
       : null,
     fetcher,
-    { shouldRetryOnError: false }
+    { shouldRetryOnError: false },
   );
 
   const hasListEntry = !!listEntry;
@@ -91,9 +98,7 @@ export default function AnimeDetailsPage(): React.JSX.Element {
       const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       const secs = Math.floor((diff % (1000 * 60)) / 1000);
 
-      setTimeLeft(
-        `${days > 0 ? days + "d " : ""}${hours}h ${mins}m ${secs}s`,
-      );
+      setTimeLeft(`${days > 0 ? days + "d " : ""}${hours}h ${mins}m ${secs}s`);
     };
 
     updateTimer();
@@ -104,8 +109,8 @@ export default function AnimeDetailsPage(): React.JSX.Element {
   if (animeLoading) {
     return (
       <div className="flex flex-col flex-1 min-h-screen bg-background relative overflow-hidden items-center justify-center">
-        <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-primary/2 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-primary/2 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-75 h-75 bg-primary/2 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-75 h-75 bg-primary/2 rounded-full blur-3xl pointer-events-none" />
         <div className="w-12 h-12 rounded-full border-2 border-dashed border-primary animate-spin z-10" />
       </div>
     );
@@ -114,8 +119,10 @@ export default function AnimeDetailsPage(): React.JSX.Element {
   if (animeError || !anime) {
     return (
       <div className="flex flex-col flex-1 min-h-screen bg-background relative overflow-hidden items-center justify-center gap-4">
-        <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-primary/2 rounded-full blur-3xl pointer-events-none" />
-        <h2 className="text-2xl font-bold text-foreground z-10">Anime not found</h2>
+        <div className="absolute top-0 right-0 w-75 h-75 bg-primary/2 rounded-full blur-3xl pointer-events-none" />
+        <h2 className="text-2xl font-bold text-foreground z-10">
+          Anime not found
+        </h2>
         <Button asChild variant="default" className="z-10 rounded-xl">
           <Link href="/aquila/browse">Back to Browse</Link>
         </Button>
@@ -153,11 +160,11 @@ export default function AnimeDetailsPage(): React.JSX.Element {
   return (
     <div className="flex flex-col flex-1 min-h-screen bg-background text-foreground relative overflow-x-hidden">
       {/* Background Radial Glowing Auras */}
-      <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-primary/2 rounded-full blur-3xl pointer-events-none z-0" />
-      <div className="absolute top-[20%] left-[-100px] w-[300px] h-[300px] bg-primary/2 rounded-full blur-3xl pointer-events-none z-0" />
+      <div className="absolute top-0 right-0 w-75 h-75 bg-primary/2 rounded-full blur-3xl pointer-events-none z-0" />
+      <div className="absolute top-[20%] -left-25 w-75 h-75 bg-primary/2 rounded-full blur-3xl pointer-events-none z-0" />
 
       {/* Banner Section */}
-      <div className="relative h-[240px] md:h-[360px] w-full overflow-hidden shrink-0 z-10">
+      <div className="relative h-60 md:h-90 w-full overflow-hidden shrink-0 z-10">
         <div className="absolute inset-x-0 bottom-0 h-48 bg-linear-to-t from-background to-transparent z-10" />
         {anime.bannerImage ? (
           <Image
@@ -202,11 +209,11 @@ export default function AnimeDetailsPage(): React.JSX.Element {
           {/* Left Column - Cover & Main Actions */}
           <motion.div
             variants={itemVariants}
-            className="shrink-0 w-full lg:w-[260px] flex flex-col gap-4"
+            className="shrink-0 w-full lg:w-65 flex flex-col gap-4"
           >
             <div className="bg-card/75 border border-border/40 backdrop-blur-xl shadow-2xl rounded-2xl p-4 flex flex-col sm:flex-row lg:flex-col gap-4 items-center sm:items-start lg:items-stretch">
               <div className="relative aspect-2/3 w-36 sm:w-40 lg:w-full rounded-xl overflow-hidden shadow-lg border border-border/30 shrink-0 bg-muted flex items-center justify-center">
-                {(anime.coverImage.extraLarge || anime.coverImage.large) ? (
+                {anime.coverImage.extraLarge || anime.coverImage.large ? (
                   <Image
                     src={anime.coverImage.extraLarge || anime.coverImage.large}
                     alt={anime.title?.romaji ?? "Cover"}
@@ -301,7 +308,9 @@ export default function AnimeDetailsPage(): React.JSX.Element {
               <div className="space-y-3">
                 <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
                   <span className="text-muted-foreground">Format</span>
-                  <span className="font-medium text-foreground">{anime.format}</span>
+                  <span className="font-medium text-foreground">
+                    {anime.format}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
                   <span className="text-muted-foreground">Episodes</span>
@@ -336,7 +345,9 @@ export default function AnimeDetailsPage(): React.JSX.Element {
                 {anime.hashtag && (
                   <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
                     <span className="text-muted-foreground">Hashtag</span>
-                    <span className="font-medium text-primary">{anime.hashtag}</span>
+                    <span className="font-medium text-primary">
+                      {anime.hashtag}
+                    </span>
                   </div>
                 )}
                 {anime.synonyms && anime.synonyms.length > 0 && (
@@ -344,7 +355,11 @@ export default function AnimeDetailsPage(): React.JSX.Element {
                     <span className="text-muted-foreground">Synonyms</span>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {anime.synonyms.slice(0, 4).map((syn, idx) => (
-                        <Badge key={idx} variant="outline" className="text-[10px]">
+                        <Badge
+                          key={idx}
+                          variant="outline"
+                          className="text-[10px]"
+                        >
                           {syn}
                         </Badge>
                       ))}
@@ -465,7 +480,9 @@ export default function AnimeDetailsPage(): React.JSX.Element {
               variants={itemVariants}
               className="bg-card/30 border border-border/20 backdrop-blur-sm p-6 rounded-2xl"
             >
-              <h3 className="text-base font-bold text-foreground mb-3">Synopsis</h3>
+              <h3 className="text-base font-bold text-foreground mb-3">
+                Synopsis
+              </h3>
               <div
                 className="prose prose-neutral dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-sm prose-p:my-2 prose-a:text-primary hover:prose-a:text-primary transition-colors"
                 dangerouslySetInnerHTML={{ __html: anime.description }}
@@ -474,15 +491,25 @@ export default function AnimeDetailsPage(): React.JSX.Element {
 
             {/* Genres & Tags */}
             <motion.div variants={itemVariants} className="space-y-3">
-              <h3 className="text-base font-bold text-foreground">Genres & Tags</h3>
+              <h3 className="text-base font-bold text-foreground">
+                Genres & Tags
+              </h3>
               <div className="flex flex-wrap gap-2">
                 {anime.genres?.map((genre, qid) => (
-                  <Badge key={qid} variant="secondary" className="rounded-xl px-3 py-1 text-xs">
+                  <Badge
+                    key={qid}
+                    variant="secondary"
+                    className="rounded-xl px-3 py-1 text-xs"
+                  >
                     {genre}
                   </Badge>
                 ))}
                 {anime.tags?.slice(0, 8).map((tag, qid) => (
-                  <Badge key={qid} variant="outline" className="rounded-xl px-3 py-1 text-xs text-muted-foreground">
+                  <Badge
+                    key={qid}
+                    variant="outline"
+                    className="rounded-xl px-3 py-1 text-xs text-muted-foreground"
+                  >
                     {tag.name}
                     {tag.rank && (
                       <span className="ml-1 text-[10px] text-muted-foreground">
@@ -497,7 +524,9 @@ export default function AnimeDetailsPage(): React.JSX.Element {
             {/* Characters with Japanese Voice Actor dual-cards */}
             {anime.characters && anime.characters.length > 0 && (
               <motion.div variants={itemVariants} className="space-y-3">
-                <h3 className="text-base font-bold text-foreground">Characters & Voice Actors</h3>
+                <h3 className="text-base font-bold text-foreground">
+                  Characters & Voice Actors
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {anime.characters.slice(0, 10).map((char, qid) => (
                     <div
@@ -532,7 +561,9 @@ export default function AnimeDetailsPage(): React.JSX.Element {
                             <p className="text-xs font-semibold truncate text-foreground/90">
                               {char.voiceActor.name}
                             </p>
-                            <p className="text-[10px] text-muted-foreground">JA Voice</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              JA Voice
+                            </p>
                           </div>
                           <div className="relative size-10 rounded-lg overflow-hidden shrink-0 bg-muted">
                             <Image
@@ -554,7 +585,9 @@ export default function AnimeDetailsPage(): React.JSX.Element {
             {/* Relations */}
             {anime.relations && anime.relations.length > 0 && (
               <motion.div variants={itemVariants} className="space-y-3">
-                <h3 className="text-base font-bold text-foreground">Relations</h3>
+                <h3 className="text-base font-bold text-foreground">
+                  Relations
+                </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {anime.relations.map((relation, qid) => {
                     let href: string;
@@ -587,7 +620,9 @@ export default function AnimeDetailsPage(): React.JSX.Element {
                           variant="outline"
                           className="text-[10px] capitalize shrink-0"
                         >
-                          {relation.relationType.replace(/_/g, " ").toLowerCase()}
+                          {relation.relationType
+                            .replace(/_/g, " ")
+                            .toLowerCase()}
                         </Badge>
                       </Link>
                     );
