@@ -32,8 +32,10 @@ import {
   Bell,
   Shield,
   KeyRound,
+  Shuffle,
 } from "lucide-react";
 import React from "react";
+import { RrMediaRoulette } from "@/components/rrComponents/aquila/rrMediaRoulette";
 import { useRRSidebar } from "@/hooks/useRRSidebar";
 import { useRRe2ee } from "@/components/Providers/rrE2eeProvider";
 import { cn } from "@/lib/utils";
@@ -72,6 +74,9 @@ export default function RrSpotlightSearch(): React.JSX.Element {
   const [open, setOpen] = useState<boolean>(false);
   const [search, setSearch] = useState<string>("");
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all");
+  const [activeRoulette, setActiveRoulette] = useState<
+    "anime" | "manga" | "tv" | "movie" | "game" | "book" | null
+  >(null);
 
   // Keep a ref in sync without a useEffect — set it directly alongside state
   const openRef = useRef<boolean>(false);
@@ -397,48 +402,123 @@ export default function RrSpotlightSearch(): React.JSX.Element {
           window.dispatchEvent(new CustomEvent("runa-open-appearance"));
         },
       },
-      {
-        id: "action-theme-dark",
-        label: "Switch Theme: Dark Mode",
-        category: "Actions",
-        icon: (
-          <Moon className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
-        ),
-        badge: "System UI Theme",
-        action: () => {
-          setTheme("dark");
-          handleSetOpen(false);
-        },
-      },
-      {
-        id: "action-theme-light",
-        label: "Switch Theme: Light Mode",
-        category: "Actions",
-        icon: (
-          <Sun className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
-        ),
-        badge: "System UI Theme",
-        action: () => {
-          setTheme("light");
-          handleSetOpen(false);
-        },
-      },
-      {
-        id: "action-theme-system",
-        label: "Switch Theme: System Settings",
-        category: "Actions",
-        icon: (
-          <Laptop className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
-        ),
-        badge: "System UI Theme",
-        action: () => {
-          setTheme("system");
-          handleSetOpen(false);
-        },
-      },
     );
 
+    const isThemeMode =
+      search.toLowerCase().startsWith("theme:") ||
+      search.toLowerCase().startsWith("theme ") ||
+      search.toLowerCase().startsWith("switch theme:") ||
+      search.toLowerCase().startsWith("switch theme ");
+
+    if (isThemeMode) {
+      result.push(
+        {
+          id: "action-theme-dark",
+          label: "Theme: Dark Mode",
+          category: "Actions",
+          icon: (
+            <Moon className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
+          ),
+          badge: "System UI Theme",
+          action: () => {
+            setTheme("dark");
+            handleSetOpen(false);
+            setSearch("");
+          },
+        },
+        {
+          id: "action-theme-light",
+          label: "Theme: Light Mode",
+          category: "Actions",
+          icon: (
+            <Sun className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
+          ),
+          badge: "System UI Theme",
+          action: () => {
+            setTheme("light");
+            handleSetOpen(false);
+            setSearch("");
+          },
+        },
+        {
+          id: "action-theme-system",
+          label: "Theme: System Settings",
+          category: "Actions",
+          icon: (
+            <Laptop className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
+          ),
+          badge: "System UI Theme",
+          action: () => {
+            setTheme("system");
+            handleSetOpen(false);
+            setSearch("");
+          },
+        },
+      );
+    } else {
+      result.push({
+        id: "action-theme-main",
+        label: "Switch Theme",
+        category: "Actions",
+        icon: (
+          <Palette className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
+        ),
+        badge: "Select dark, light, system...",
+        action: () => {
+          setSearch("theme: ");
+        },
+      });
+    }
+
     if (session) {
+      const username = session.user.username;
+      if (username) {
+        const isRouletteMode =
+          search.toLowerCase().startsWith("roulette:") ||
+          search.toLowerCase().startsWith("roulette ");
+
+        if (isRouletteMode) {
+          const mediaTypes = [
+            { type: "anime", label: "Anime" },
+            { type: "manga", label: "Manga" },
+            { type: "tv", label: "TV" },
+            { type: "movie", label: "Movies" },
+            { type: "game", label: "Games" },
+            { type: "book", label: "Books" },
+          ] as const;
+
+          for (const media of mediaTypes) {
+            result.push({
+              id: `action-roulette-${media.type}`,
+              label: `Roulette: ${media.label}`,
+              category: "Actions",
+              icon: (
+                <Shuffle className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
+              ),
+              badge: `Spin planned ${media.type}`,
+              action: () => {
+                handleSetOpen(false);
+                setActiveRoulette(media.type);
+                setSearch("");
+              },
+            });
+          }
+        } else {
+          result.push({
+            id: "action-roulette-main",
+            label: "Roulette",
+            category: "Actions",
+            icon: (
+              <Shuffle className="size-4 opacity-70 group-data-selected/command-item:opacity-100" />
+            ),
+            badge: "Select media type...",
+            action: () => {
+              setSearch("roulette: ");
+            },
+          });
+        }
+      }
+
       result.push({
         id: "action-logout",
         label: "Log Out",
@@ -466,6 +546,7 @@ export default function RrSpotlightSearch(): React.JSX.Element {
     toggleSidebar,
     setTheme,
     triggerSettingsTab,
+    search,
   ]);
 
   // Memoized: filter + group split — only recomputes when items, search, or filter changes
@@ -496,156 +577,171 @@ export default function RrSpotlightSearch(): React.JSX.Element {
   }, [items, search, activeFilter]);
 
   return (
-    <CommandDialog
-      open={open}
-      onOpenChange={handleSetOpen}
-      title="Spotlight Search"
-      description="Quickly switch apps, jump to navigation pages, or perform platform actions."
-      className="sm:max-w-3xl bg-popover border border-border shadow-2xl p-0 overflow-hidden"
-    >
-      <div className="flex flex-col relative border-b border-border w-full bg-popover shrink-0">
-        <CommandInput
-          placeholder="Search apps, pages, actions... (Double Shift to close)"
-          value={search}
-          onValueChange={setSearch}
-          className="border-none bg-transparent focus:ring-0 focus:outline-hidden py-4 px-3 w-full text-base placeholder:text-muted-foreground/60"
-        />
+    <>
+      <CommandDialog
+        open={open}
+        onOpenChange={handleSetOpen}
+        shouldFilter={false}
+        title="Spotlight Search"
+        description="Quickly switch apps, jump to navigation pages, or perform platform actions."
+        className="sm:max-w-3xl bg-popover border border-border shadow-2xl p-0 overflow-hidden"
+      >
+        <div className="flex flex-col relative border-b border-border w-full bg-popover shrink-0">
+          <CommandInput
+            placeholder="Search apps, pages, actions... (Double Shift to close)"
+            value={search}
+            onValueChange={setSearch}
+            className="border-none bg-transparent focus:ring-0 focus:outline-hidden py-4 px-3 w-full text-base placeholder:text-muted-foreground/60"
+          />
 
-        {/* Category Quick Filter Tags */}
-        <div className="flex items-center gap-1.5 px-4 pb-3 pt-2 overflow-x-auto select-none no-scrollbar">
-          {FILTERS.map((filter) => (
-            <button
-              key={filter}
-              type="button"
-              onClick={() => setActiveFilter(filter)}
-              className={cn(
-                "px-3 py-1 text-[10px] font-bold tracking-wider rounded-full uppercase border cursor-pointer transition-all duration-200",
-                activeFilter === filter
-                  ? "bg-primary border-primary text-primary-foreground shadow-xs scale-102"
-                  : "bg-muted/40 hover:bg-muted/70 text-muted-foreground hover:text-foreground border-border",
-              )}
-            >
-              {FILTER_LABELS[filter]}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <CommandList className="max-h-[480px] overflow-y-auto p-3 no-scrollbar bg-popover">
-        <CommandEmpty className="py-8 text-center text-sm text-muted-foreground">
-          No matches found for &ldquo;{search}&rdquo;
-        </CommandEmpty>
-
-        {/* Applications Section */}
-        {applicationsGroup.length > 0 && (
-          <CommandGroup heading="Applications" className="px-2">
-            {applicationsGroup.map((item) => (
-              <CommandItem
-                key={item.id}
-                onSelect={item.action}
-                className="flex items-center gap-4 p-3.5 rounded-xl hover:bg-sidebar-accent cursor-pointer transition-all duration-200 group/item"
+          {/* Category Quick Filter Tags */}
+          <div className="flex items-center gap-1.5 px-4 pb-3 pt-2 overflow-x-auto select-none no-scrollbar">
+            {FILTERS.map((filter) => (
+              <button
+                key={filter}
+                type="button"
+                onClick={() => setActiveFilter(filter)}
+                className={cn(
+                  "px-3 py-1 text-[10px] font-bold tracking-wider rounded-full uppercase border cursor-pointer transition-all duration-200",
+                  activeFilter === filter
+                    ? "bg-primary border-primary text-primary-foreground shadow-xs scale-102"
+                    : "bg-muted/40 hover:bg-muted/70 text-muted-foreground hover:text-foreground border-border",
+                )}
               >
-                <div className="flex size-7 items-center justify-center rounded-lg border border-border/50 bg-background text-foreground shadow-sm group-data-selected/command-item:border-primary/30 group-data-selected/command-item:scale-105 transition-all">
-                  {item.icon}
-                </div>
-                <div className="flex flex-col flex-1">
-                  <span className="font-bold text-sm text-foreground group-data-selected/command-item:text-primary">
+                {FILTER_LABELS[filter]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <CommandList className="max-h-[480px] overflow-y-auto p-3 no-scrollbar bg-popover">
+          <CommandEmpty className="py-8 text-center text-sm text-muted-foreground">
+            No matches found for &ldquo;{search}&rdquo;
+          </CommandEmpty>
+
+          {/* Applications Section */}
+          {applicationsGroup.length > 0 && (
+            <CommandGroup heading="Applications" className="px-2">
+              {applicationsGroup.map((item) => (
+                <CommandItem
+                  key={item.id}
+                  onSelect={item.action}
+                  className="flex items-center gap-4 p-3.5 rounded-xl hover:bg-sidebar-accent cursor-pointer transition-all duration-200 group/item"
+                >
+                  <div className="flex size-7 items-center justify-center rounded-lg border border-border/50 bg-background text-foreground shadow-sm group-data-selected/command-item:border-primary/30 group-data-selected/command-item:scale-105 transition-all">
+                    {item.icon}
+                  </div>
+                  <div className="flex flex-col flex-1">
+                    <span className="font-bold text-sm text-foreground group-data-selected/command-item:text-primary">
+                      {item.label}
+                    </span>
+                    {item.badge && (
+                      <span className="text-xs text-muted-foreground group-data-selected/command-item:text-muted-foreground/80">
+                        {item.badge}
+                      </span>
+                    )}
+                  </div>
+                  <ArrowRight className="size-4 opacity-0 group-data-selected/command-item:opacity-100 transition-opacity text-primary" />
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+
+          {applicationsGroup.length > 0 &&
+            (navigationGroup.length > 0 || actionsGroup.length > 0) && (
+              <CommandSeparator className="my-2.5 bg-border/40" />
+            )}
+
+          {/* Navigation Section */}
+          {navigationGroup.length > 0 && (
+            <CommandGroup heading="Navigation" className="px-2">
+              {navigationGroup.map((item) => (
+                <CommandItem
+                  key={item.id}
+                  onSelect={item.action}
+                  className="flex items-center gap-4 p-3 rounded-xl hover:bg-sidebar-accent cursor-pointer transition-all duration-200 group/item"
+                >
+                  <div className="flex size-7 items-center justify-center rounded-lg border border-border/30 bg-background/50 text-muted-foreground group-data-selected/command-item:bg-primary group-data-selected/command-item:text-primary-foreground group-data-selected/command-item:border-transparent transition-colors shadow-2xs">
+                    {item.icon}
+                  </div>
+                  <span className="font-semibold text-sm text-foreground flex-1">
                     {item.label}
                   </span>
                   {item.badge && (
-                    <span className="text-xs text-muted-foreground group-data-selected/command-item:text-muted-foreground/80">
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted border border-border/30 text-muted-foreground font-semibold">
                       {item.badge}
                     </span>
                   )}
-                </div>
-                <ArrowRight className="size-4 opacity-0 group-data-selected/command-item:opacity-100 transition-opacity text-primary" />
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        )}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
 
-        {applicationsGroup.length > 0 &&
-          (navigationGroup.length > 0 || actionsGroup.length > 0) && (
+          {navigationGroup.length > 0 && actionsGroup.length > 0 && (
             <CommandSeparator className="my-2.5 bg-border/40" />
           )}
 
-        {/* Navigation Section */}
-        {navigationGroup.length > 0 && (
-          <CommandGroup heading="Navigation" className="px-2">
-            {navigationGroup.map((item) => (
-              <CommandItem
-                key={item.id}
-                onSelect={item.action}
-                className="flex items-center gap-4 p-3 rounded-xl hover:bg-sidebar-accent cursor-pointer transition-all duration-200 group/item"
-              >
-                <div className="flex size-7 items-center justify-center rounded-lg border border-border/30 bg-background/50 text-muted-foreground group-data-selected/command-item:bg-primary group-data-selected/command-item:text-primary-foreground group-data-selected/command-item:border-transparent transition-colors shadow-2xs">
-                  {item.icon}
-                </div>
-                <span className="font-semibold text-sm text-foreground flex-1">
-                  {item.label}
-                </span>
-                {item.badge && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted border border-border/30 text-muted-foreground font-semibold">
-                    {item.badge}
+          {/* Actions Section */}
+          {actionsGroup.length > 0 && (
+            <CommandGroup heading="System Actions" className="px-2">
+              {actionsGroup.map((item) => (
+                <CommandItem
+                  key={item.id}
+                  onSelect={item.action}
+                  className="flex items-center gap-4 p-3 rounded-xl hover:bg-sidebar-accent cursor-pointer transition-all duration-200 group/item"
+                >
+                  <div className="flex size-7 items-center justify-center rounded-lg border border-border/30 bg-background/50 text-muted-foreground group-data-selected/command-item:bg-accent group-data-selected/command-item:text-accent-foreground group-data-selected/command-item:border-transparent transition-colors shadow-2xs">
+                    {item.icon}
+                  </div>
+                  <span className="font-semibold text-sm text-foreground flex-1">
+                    {item.label}
                   </span>
-                )}
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        )}
+                  {item.badge && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted/60 border border-border/20 text-muted-foreground font-medium">
+                      {item.badge}
+                    </span>
+                  )}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+        </CommandList>
 
-        {navigationGroup.length > 0 && actionsGroup.length > 0 && (
-          <CommandSeparator className="my-2.5 bg-border/40" />
-        )}
-
-        {/* Actions Section */}
-        {actionsGroup.length > 0 && (
-          <CommandGroup heading="System Actions" className="px-2">
-            {actionsGroup.map((item) => (
-              <CommandItem
-                key={item.id}
-                onSelect={item.action}
-                className="flex items-center gap-4 p-3 rounded-xl hover:bg-sidebar-accent cursor-pointer transition-all duration-200 group/item"
-              >
-                <div className="flex size-7 items-center justify-center rounded-lg border border-border/30 bg-background/50 text-muted-foreground group-data-selected/command-item:bg-accent group-data-selected/command-item:text-accent-foreground group-data-selected/command-item:border-transparent transition-colors shadow-2xs">
-                  {item.icon}
-                </div>
-                <span className="font-semibold text-sm text-foreground flex-1">
-                  {item.label}
-                </span>
-                {item.badge && (
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-muted/60 border border-border/20 text-muted-foreground font-medium">
-                    {item.badge}
-                  </span>
-                )}
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        )}
-      </CommandList>
-
-      <div className="border-t border-border bg-muted/30 px-5 py-3 flex items-center justify-between text-xs text-muted-foreground select-none shrink-0">
-        <div className="flex items-center gap-2">
-          <span>Navigate:</span>
-          <kbd className="px-1.5 py-0.5 rounded-sm bg-muted border border-border/50 font-mono text-[10px]">
-            ↑
-          </kbd>
-          <kbd className="px-1.5 py-0.5 rounded-sm bg-muted border border-border/50 font-mono text-[10px]">
-            ↓
-          </kbd>
-          <span className="ml-1.5">Select:</span>
-          <kbd className="px-1.5 py-0.5 rounded-sm bg-muted border border-border/50 font-mono text-[10px]">
-            ⏎
-          </kbd>
+        <div className="border-t border-border bg-muted/30 px-5 py-3 flex items-center justify-between text-xs text-muted-foreground select-none shrink-0">
+          <div className="flex items-center gap-2">
+            <span>Navigate:</span>
+            <kbd className="px-1.5 py-0.5 rounded-sm bg-muted border border-border/50 font-mono text-[10px]">
+              ↑
+            </kbd>
+            <kbd className="px-1.5 py-0.5 rounded-sm bg-muted border border-border/50 font-mono text-[10px]">
+              ↓
+            </kbd>
+            <span className="ml-1.5">Select:</span>
+            <kbd className="px-1.5 py-0.5 rounded-sm bg-muted border border-border/50 font-mono text-[10px]">
+              ⏎
+            </kbd>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span>Double-tap</span>
+            <kbd className="px-1.5 py-0.5 rounded-sm bg-primary/10 border border-primary/20 font-sans font-semibold text-[10px] text-primary animate-pulse">
+              Shift
+            </kbd>
+            <span>to close</span>
+          </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span>Double-tap</span>
-          <kbd className="px-1.5 py-0.5 rounded-sm bg-primary/10 border border-primary/20 font-sans font-semibold text-[10px] text-primary animate-pulse">
-            Shift
-          </kbd>
-          <span>to close</span>
-        </div>
-      </div>
-    </CommandDialog>
+      </CommandDialog>
+      {activeRoulette && session?.user && (
+        <RrMediaRoulette
+          username={session.user.username || ""}
+          mediaType={activeRoulette}
+          baseUrl={`/aquila/user/${session.user.username || ""}/${activeRoulette === "tv" ? "tv" : activeRoulette === "movie" ? "movies" : activeRoulette === "game" ? "games" : activeRoulette === "book" ? "books" : activeRoulette}`}
+          open={activeRoulette !== null}
+          onOpenChange={(open) => {
+            if (!open) setActiveRoulette(null);
+          }}
+          triggerButton={false}
+        />
+      )}
+    </>
   );
 }

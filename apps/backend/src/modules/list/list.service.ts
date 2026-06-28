@@ -250,6 +250,7 @@ export class ListService {
               coverImageLarge: true,
               episodes: true,
               format: true,
+              status: true,
             },
           },
         },
@@ -274,6 +275,7 @@ export class ListService {
         last_updated: item.updatedAt,
         last_added: item.createdAt,
         type: 'anime',
+        mediaStatus: item.anime.status,
       };
     });
 
@@ -575,6 +577,7 @@ export class ListService {
               coverImageLarge: true,
               chapters: true,
               format: true,
+              status: true,
             },
           },
         },
@@ -598,6 +601,7 @@ export class ListService {
       last_updated: item.updatedAt,
       last_added: item.createdAt,
       type: 'manga',
+      mediaStatus: item.manga.status,
     }));
 
     return { entries: mappedList, counts };
@@ -1017,6 +1021,7 @@ export class ListService {
               titleEnglish: true,
               titleRomaji: true,
               coverImage: true,
+              status: true,
             },
           },
         },
@@ -1036,6 +1041,7 @@ export class ListService {
       last_added: item.createdAt,
       type: 'movie',
       format: 'Movie',
+      mediaStatus: item.movie.status || undefined,
     }));
 
     return { entries: mappedList, counts };
@@ -1264,6 +1270,7 @@ export class ListService {
               titleRomaji: true,
               coverImage: true,
               seasons: true,
+              status: true,
             },
           },
           _count: {
@@ -1298,6 +1305,7 @@ export class ListService {
         last_updated: item.updatedAt,
         last_added: item.createdAt,
         type: 'tv',
+        mediaStatus: item.tv.status || undefined,
       };
     });
 
@@ -1675,6 +1683,9 @@ export class ListService {
             select: {
               titleString: true,
               coverImage: true,
+              releasedYear: true,
+              releasedMonth: true,
+              releasedDay: true,
             },
           },
         },
@@ -1694,6 +1705,15 @@ export class ListService {
       last_updated: item.updatedAt,
       last_added: item.createdAt,
       type: 'game',
+      mediaStatus: (() => {
+        if (!item.game.releasedYear) return undefined;
+        const releaseDate = new Date(
+          item.game.releasedYear,
+          (item.game.releasedMonth || 1) - 1,
+          item.game.releasedDay || 1,
+        );
+        return releaseDate > new Date() ? 'NOT_YET_RELEASED' : 'RELEASED';
+      })(),
     }));
 
     return { entries: mappedList, counts };
@@ -1876,6 +1896,7 @@ export class ListService {
             select: {
               titleString: true,
               coverImage: true,
+              publishYear: true,
             },
           },
         },
@@ -1895,6 +1916,10 @@ export class ListService {
       last_updated: item.updatedAt,
       last_added: item.createdAt,
       type: 'book',
+      mediaStatus: (() => {
+        if (!item.book.publishYear) return undefined;
+        return item.book.publishYear > new Date().getFullYear() ? 'NOT_YET_RELEASED' : 'RELEASED';
+      })(),
     }));
 
     return { entries: mappedList, counts };

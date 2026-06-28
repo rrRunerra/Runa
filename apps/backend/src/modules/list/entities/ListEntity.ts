@@ -10,6 +10,7 @@ export default class ListEntity {
   last_updated: Date;
   last_added: Date;
   type: 'anime' | 'manga' | 'tv' | 'movie' | 'game' | 'book';
+  mediaStatus?: string;
   meta?: {
     season: number;
     episode: number;

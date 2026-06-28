@@ -13,6 +13,7 @@ import * as Lucide from "lucide-react";
 import { motion } from "framer-motion";
 import { RrUserListHeader } from "@/components/rrComponents/aquila/rrUserListHeader";
 import { RrUserListTabs } from "@/components/rrComponents/aquila/rrUserListTabs";
+import { RrMediaRoulette } from "@/components/rrComponents/aquila/rrMediaRoulette";
 import {
   RrUserListFilters,
   UserListSortType,
@@ -281,22 +282,29 @@ export default function UserMoviesPage() {
                   moviesList.length}
                 )
               </h3>
-              <div className="flex items-center gap-1.5 bg-muted/20 p-1 rounded-xl border border-border/30 shadow-inner ml-auto">
-                {[
-                  { type: "list", icon: <Lucide.List size={16} /> },
-                  { type: "compact", icon: <Lucide.LayoutList size={16} /> },
-                  { type: "grid", icon: <Lucide.LayoutGrid size={16} /> },
-                ].map((view) => (
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    key={view.type}
-                    onClick={() => setDisplayType(view.type as DisplayType)}
-                    className={`flex items-center justify-center size-8 rounded-lg transition-all cursor-pointer ${displayType === view.type ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:bg-muted/30 hover:text-foreground"}`}
-                  >
-                    {view.icon}
-                  </motion.button>
-                ))}
+              <div className="flex items-center gap-2 ml-auto">
+                <RrMediaRoulette
+                  username={username}
+                  mediaType="movie"
+                  baseUrl="/aquila/movies"
+                />
+                <div className="flex items-center gap-1.5 bg-muted/20 p-1 rounded-xl border border-border/30 shadow-inner">
+                  {[
+                    { type: "list", icon: <Lucide.List size={16} /> },
+                    { type: "compact", icon: <Lucide.LayoutList size={16} /> },
+                    { type: "grid", icon: <Lucide.LayoutGrid size={16} /> },
+                  ].map((view) => (
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      key={view.type}
+                      onClick={() => setDisplayType(view.type as DisplayType)}
+                      className={`flex items-center justify-center size-8 rounded-lg transition-all cursor-pointer ${displayType === view.type ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:bg-muted/30 hover:text-foreground"}`}
+                    >
+                      {view.icon}
+                    </motion.button>
+                  ))}
+                </div>
               </div>
             </header>
 
