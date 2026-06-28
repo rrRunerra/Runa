@@ -130,12 +130,19 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
       refetchNotifications();
     };
 
+    const handleEmailNew = (data: any) => {
+      window.dispatchEvent(new CustomEvent("runa-email-new", { detail: data }));
+      window.dispatchEvent(new Event("runa-sidebar-changed"));
+    };
+
     socket.on("notification:created", handleCreated);
     socket.on("notification:updated", handleUpdated);
     socket.on("notification:deleted", handleDelete);
     socket.on("notifications:cleared", handleCleared);
+    socket.on("email:new", handleEmailNew);
 
     return () => {
+      socket.off("email:new", handleEmailNew);
       socket.disconnect();
     };
   }, [session?.accessToken, refetchNotifications]);

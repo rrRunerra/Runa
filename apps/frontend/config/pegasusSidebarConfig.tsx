@@ -18,6 +18,10 @@ export const getPegasusSidebarConfig = (
   emailAccounts: any[] = [],
 ): SidebarConfig => {
   const defaultAccountId = emailAccounts[0]?.id;
+  const totalUnread = emailAccounts.reduce(
+    (sum, acc) => sum + (acc.unreadCount || 0),
+    0,
+  );
 
   return [
     {
@@ -93,6 +97,7 @@ export const getPegasusSidebarConfig = (
           preventRedirect: true,
           icon: <Inbox className="h-4 w-4" style={{ color: "#3b82f6" }} />,
           subtitle: "All inboxes combined",
+          badge: totalUnread > 0 ? totalUnread.toString() : undefined,
         },
         {
           label: "Attachments",
@@ -121,6 +126,7 @@ export const getPegasusSidebarConfig = (
                 <Inbox className="h-4 w-4" style={{ color: account.color }} />
               ),
               subtitle: "Incoming mail",
+              badge: account.unreadCount > 0 ? account.unreadCount.toString() : undefined,
             },
             {
               label: "Drafts",

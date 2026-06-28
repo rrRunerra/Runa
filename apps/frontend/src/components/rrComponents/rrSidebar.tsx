@@ -26,7 +26,7 @@ import {
 import { useSession } from "next-auth/react";
 import { useRRSidebar } from "@/hooks/useRRSidebar";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { ChevronRight, Command, LayoutGrid } from "lucide-react";
 import RrAppMenu from "./rrAppMenu";
 import RrUserMenu from "./rrUserMenu";
@@ -42,16 +42,25 @@ import {
   CollapsibleTrigger,
 } from "../ui/collapsible";
 
-export default function RrSidebar({ sidebarConfig, ...props }: rrSidebarProps) {
+export default function RrSidebar({ sidebarConfig: initialSidebarConfig, ...props }: rrSidebarProps) {
   const { data: session } = useSession();
   const pathname = usePathname();
   const { isMobile, setOpenMobile } = useSidebar();
 
-  const { setSidebarConfig } = useRRSidebar(sidebarConfig);
-  const [resolvedSidebarConfig, setResolvedSidebarConfig] =
-    useState<SidebarConfig>(sidebarConfig);
+  const { sidebarConfig, setSidebarConfig } = useRRSidebar(initialSidebarConfig);
+  const [dockTrigger, setDockTrigger] = useState(0);
 
   useEffect(() => {
+    const handleChanged = () => {
+      setDockTrigger((prev) => prev + 1);
+    };
+    window.addEventListener("runa-sidebar-changed", handleChanged);
+    return () => {
+      window.removeEventListener("runa-sidebar-changed", handleChanged);
+    };
+  }, []);
+
+  const resolvedSidebarConfig = useMemo(() => {
     const getActiveAppHref = () => {
       if (typeof window !== "undefined") {
         const pathname = window.location.pathname;
@@ -63,83 +72,70 @@ export default function RrSidebar({ sidebarConfig, ...props }: rrSidebarProps) {
       return "";
     };
 
-    const loadAndInjectCustomDock = () => {
-      const storageKey = `runa-phone-dock-items-${getActiveAppHref()}`;
-      const stored = localStorage.getItem(storageKey);
+    const storageKey = `runa-phone-dock-items-${getActiveAppHref()}`;
+    const stored = typeof window !== "undefined" ? localStorage.getItem(storageKey) : null;
 
-      let customDockMap: Record<string, string | null> | null = null;
-      if (stored) {
-        try {
-          customDockMap = JSON.parse(stored);
-        } catch (e) {
-          console.error(e);
-        }
+    let customDockMap: Record<string, string | null> | null = null;
+    if (stored) {
+      try {
+        customDockMap = JSON.parse(stored);
+      } catch (e) {
+        console.error(e);
       }
+    }
 
-      if (customDockMap) {
-        const phoneSectionIdx = sidebarConfig.findIndex(
-          (s) => s.section?.toLowerCase().replace(/[^a-z]/g, "") === "phone",
-        );
+    if (customDockMap) {
+      const phoneSectionIdx = sidebarConfig.findIndex(
+        (s) => s.section?.toLowerCase().replace(/[^a-z]/g, "") === "phone",
+      );
 
-        if (phoneSectionIdx !== -1) {
-          const findItemByHref = (
-            key: string | null | undefined,
-          ): SidebarItem | undefined => {
-            if (!key) return undefined;
-            for (const section of sidebarConfig) {
-              for (const item of section.items) {
-                const itemKey = item.href || (item.component ? `label:${item.label}` : undefined);
-                if (itemKey === key) return item;
-                if (item.children) {
-                  for (const child of item.children) {
-                    const childKey = child.href || (child.component ? `label:${child.label}` : undefined);
-                    if (childKey === key) return child;
-                  }
+      if (phoneSectionIdx !== -1) {
+        const findItemByHref = (
+          key: string | null | undefined,
+        ): SidebarItem | undefined => {
+          if (!key) return undefined;
+          for (const section of sidebarConfig) {
+            for (const item of section.items) {
+              const itemKey = item.href || (item.component ? `label:${item.label}` : undefined);
+              if (itemKey === key) return item;
+              if (item.children) {
+                for (const child of item.children) {
+                  const childKey = child.href || (child.component ? `label:${child.label}` : undefined);
+                  if (childKey === key) return child;
                 }
               }
             }
-            return undefined;
-          };
+          }
+          return undefined;
+        };
 
-          const newItems: SidebarItem[] = [];
-          for (const pos of ["1", "2", "3", "4"]) {
-            const key = customDockMap[pos];
-            if (key) {
-              const matchedItem = findItemByHref(key);
-              if (matchedItem) {
-                newItems.push({
-                  ...matchedItem,
-                  position: parseInt(pos, 10),
-                });
-              }
+        const newItems: SidebarItem[] = [];
+        for (const pos of ["1", "2", "3", "4"]) {
+          const key = customDockMap[pos];
+          if (key) {
+            const matchedItem = findItemByHref(key);
+            if (matchedItem) {
+              newItems.push({
+                ...matchedItem,
+                position: parseInt(pos, 10),
+              });
             }
           }
-
-          const updatedSidebarConfig = sidebarConfig.map((section, idx) => {
-            if (idx === phoneSectionIdx) {
-              return {
-                ...section,
-                items: newItems,
-              };
-            }
-            return section;
-          });
-
-          setResolvedSidebarConfig(updatedSidebarConfig);
-        } else {
-          setResolvedSidebarConfig(sidebarConfig);
         }
-      } else {
-        setResolvedSidebarConfig(sidebarConfig);
+
+        return sidebarConfig.map((section, idx) => {
+          if (idx === phoneSectionIdx) {
+            return {
+              ...section,
+              items: newItems,
+            };
+          }
+          return section;
+        });
       }
-    };
-
-    loadAndInjectCustomDock();
-  }, [sidebarConfig]);
-
-  useEffect(() => {
-    setSidebarConfig(() => resolvedSidebarConfig);
-  }, [resolvedSidebarConfig, setSidebarConfig]);
+    }
+    return sidebarConfig;
+  }, [sidebarConfig, dockTrigger]);
 
   return (
     <>

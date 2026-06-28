@@ -48,6 +48,17 @@ export class EmailAccountService {
   async getEmailAccounts(username: string): Promise<any[]> {
     const list = await this.prisma.client.userEmailAccount.findMany({
       where: { username },
+      include: {
+        emailMessages: {
+          where: {
+            read: false,
+            folder: 'inbox',
+          },
+          select: {
+            id: true,
+          },
+        },
+      },
       orderBy: { createdAt: 'asc' },
     });
 
@@ -77,6 +88,7 @@ export class EmailAccountService {
         smtpPort: account.smtpPort,
         smtpSecure: account.smtpSecure,
         password: decryptedPassword,
+        unreadCount: (account as any).emailMessages?.length || 0,
       };
     });
   }

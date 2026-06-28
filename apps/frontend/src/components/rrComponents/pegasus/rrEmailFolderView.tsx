@@ -11,6 +11,7 @@ import { useSession } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useRRe2ee } from "@/components/Providers/rrE2eeProvider";
+import { useRRSidebar } from "@/hooks/useRRSidebar";
 import { marked } from "marked";
 
 // Sub-components imports
@@ -69,6 +70,7 @@ export default function RrEmailFolderView({
   const searchParams = useSearchParams();
   const router = useRouter();
   const queryMessageId = searchParams.get("messageId");
+  const { getChild, updateChildBadge, getItem, updateBadge } = useRRSidebar();
 
   const [syncingEmails, setSyncingEmails] = useState<boolean>(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -105,6 +107,37 @@ export default function RrEmailFolderView({
 
   const { getPrivateKey } = useRRe2ee();
   const [accounts, setAccounts] = useState<any[]>([]);
+
+  const adjustUnreadBadge = useCallback(
+    (targetAccountId: string, change: number) => {
+      const accountObj = accounts.find((a) => a.id === targetAccountId);
+      if (!accountObj) return;
+
+      const accountName = accountObj.accountName;
+
+      // 1. Update the account's Inbox child badge
+      const childItem = getChild("Accounts", accountName, "Inbox");
+      const currentChildBadge = childItem?.badge ? parseInt(childItem.badge, 10) : 0;
+      const newChildBadge = Math.max(0, currentChildBadge + change);
+      updateChildBadge(
+        "Accounts",
+        accountName,
+        "Inbox",
+        newChildBadge > 0 ? newChildBadge.toString() : "",
+      );
+
+      // 2. Update the Unified Inbox badge
+      const unifiedItem = getItem("Unified", "Unified Inbox");
+      const currentUnifiedBadge = unifiedItem?.badge ? parseInt(unifiedItem.badge, 10) : 0;
+      const newUnifiedBadge = Math.max(0, currentUnifiedBadge + change);
+      updateBadge(
+        "Unified",
+        "Unified Inbox",
+        newUnifiedBadge > 0 ? newUnifiedBadge.toString() : "",
+      );
+    },
+    [accounts, getChild, updateChildBadge, getItem, updateBadge],
+  );
 
   const getSenderEmail = (from: string): string => {
     const match = from.match(/<([^>]+)>/);
@@ -598,6 +631,23 @@ export default function RrEmailFolderView({
       }
     }
 
+    const msgObj = messages.find((m) => m.id === messageId);
+    if (msgObj) {
+      if (updates.read !== undefined && msgObj.read !== updates.read) {
+        const change = updates.read ? -1 : 1;
+        adjustUnreadBadge(targetAccount, change);
+      }
+      if (updates.folder) {
+        const oldFolderLower = msgObj.folder.toLowerCase();
+        const newFolderLower = updates.folder.toLowerCase();
+        if (oldFolderLower === "inbox" && newFolderLower !== "inbox" && !msgObj.read) {
+          adjustUnreadBadge(targetAccount, -1);
+        } else if (oldFolderLower !== "inbox" && newFolderLower === "inbox" && !msgObj.read) {
+          adjustUnreadBadge(targetAccount, 1);
+        }
+      }
+    }
+
     setMessages((prev) =>
       prev.map((msg) => (msg.id === messageId ? { ...msg, ...updates } : msg)),
     );
@@ -629,6 +679,7 @@ export default function RrEmailFolderView({
       },
     );
     if (!res.ok) throw new Error("Status update failed");
+    window.dispatchEvent(new Event("runa-sidebar-changed"));
   };
 
   const deleteMessage = async (messageId: string): Promise<void> => {
@@ -642,6 +693,9 @@ export default function RrEmailFolderView({
     }
 
     try {
+      const msgObj = messages.find((m) => m.id === messageId);
+      const wasUnreadInbox = msgObj && !msgObj.read && msgObj.folder.toLowerCase() === "inbox";
+
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/emails/${targetAccount}/messages/${messageId}`,
         {
@@ -650,6 +704,9 @@ export default function RrEmailFolderView({
         },
       );
       if (res.ok) {
+        if (wasUnreadInbox) {
+          adjustUnreadBadge(targetAccount, -1);
+        }
         setMessages((prev) => prev.filter((m) => m.id !== messageId));
         if (selectedMessageId === messageId) {
           setSelectedMessageId(null);
@@ -657,6 +714,7 @@ export default function RrEmailFolderView({
           setShowDetailOnMobile(false);
         }
         toast.success("Email moved to Trash");
+        window.dispatchEvent(new Event("runa-sidebar-changed"));
       }
     } catch (e) {
       toast.error("Failed to delete email.");
@@ -684,6 +742,7 @@ export default function RrEmailFolderView({
         );
         if (!res.ok) throw new Error("Sync failed.");
         await fetchMessages(true);
+        window.dispatchEvent(new Event("runa-sidebar-changed"));
       })(),
       {
         loading: "Syncing with mail server...",
@@ -817,6 +876,7 @@ export default function RrEmailFolderView({
         }
         // Force refresh list
         await fetchMessages(true);
+        window.dispatchEvent(new Event("runa-sidebar-changed"));
       })(),
       {
         loading: `Executing bulk action...`,
