@@ -273,6 +273,29 @@ export function RrNotificationsModal({
   }, [open, session, filterType, fetchNotifications]);
 
   useEffect(() => {
+    const el = observerTarget.current;
+    if (!el) return;
+
+    const getScrollParent = (node: HTMLElement | null): HTMLElement | null => {
+      if (!node) return null;
+      let parent = node.parentElement;
+      while (parent) {
+        const style = window.getComputedStyle(parent);
+        const overflowY = style.overflowY;
+        const isScrollable =
+          (overflowY === "auto" || overflowY === "scroll") &&
+          parent.scrollHeight > parent.clientHeight;
+
+        if (isScrollable) {
+          return parent;
+        }
+        parent = parent.parentElement;
+      }
+      return null;
+    };
+
+    const scrollParent = getScrollParent(el);
+
     const observer = new IntersectionObserver(
       (entries) => {
         if (
@@ -284,15 +307,17 @@ export function RrNotificationsModal({
           fetchNotifications(notifications.length, true);
         }
       },
-      { threshold: 1.0 },
+      {
+        root: scrollParent,
+        threshold: 0.1,
+        rootMargin: "100px",
+      },
     );
 
-    if (observerTarget.current) {
-      observer.observe(observerTarget.current);
-    }
+    observer.observe(el);
 
     return () => {
-      if (observerTarget.current) observer.unobserve(observerTarget.current);
+      observer.unobserve(el);
     };
   }, [
     hasMore,
@@ -560,6 +585,21 @@ export function RrNotificationsModal({
     }
   };
 
+  const handleNotificationClick = async (
+    n: Notification & { _decryptionFailed?: boolean },
+  ) => {
+    const meta = n.metadata as any;
+    if (meta && meta.type === "email" && meta.emailMessageId) {
+      if (n.status === "PENDING") {
+        handleDismiss(n.id);
+      }
+      onOpenChange(false);
+      const accountId = meta.emailAccountId || "unified";
+      const folder = meta.emailFolder || "inbox";
+      router.push(`/pegasus/account/${accountId}/${folder}?messageId=${meta.emailMessageId}`);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl bg-card border shadow-xl p-6 rounded-xl">
@@ -624,11 +664,23 @@ export function RrNotificationsModal({
                 const requiresInput =
                   n.type === "INTERACTIVE" || n.type === "PROMPT";
                 const isActionable = n.type !== "INFO" && isPending;
+                const isEmailNotif =
+                  n.metadata &&
+                  (n.metadata as any).type === "email" &&
+                  (n.metadata as any).emailMessageId;
 
                 return (
                   <div
                     key={n.id}
-                    className="p-4 rounded-xl border bg-card shadow-sm hover:shadow-md transition-all duration-200 flex flex-col gap-3 relative"
+                    className={cn(
+                      "p-4 rounded-xl border bg-card shadow-sm hover:shadow-md transition-all duration-200 flex flex-col gap-3 relative",
+                      isEmailNotif && "cursor-pointer hover:bg-muted/50 transition-colors"
+                    )}
+                    onClick={() => {
+                      if (isEmailNotif) {
+                        handleNotificationClick(n);
+                      }
+                    }}
                   >
                     <div className="flex items-start justify-between gap-3 w-full min-w-0">
                       <div className="flex items-start gap-3 min-w-0 flex-1">
@@ -670,7 +722,10 @@ export function RrNotificationsModal({
                         <Button
                           size="icon"
                           variant="ghost"
-                          onClick={() => handleDelete(n.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(n.id);
+                          }}
                           className="size-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer shrink-0 transition-colors"
                         >
                           <Trash2 className="size-4" />
