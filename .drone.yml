@@ -53,6 +53,10 @@ steps:
         from_secret: ANILIST_CLIENT_ID
       ANILIST_CLIENT_SECRET:
         from_secret: ANILIST_CLIENT_SECRET
+      DISCORD_CLIENT_ID:
+        from_secret: DISCORD_CLIENT_ID
+      DISCORD_CLIENT_SECRET:
+        from_secret: DISCORD_CLIENT_SECRET
       MAL_CLIENT_ID:
         from_secret: MAL_CLIENT_ID
       MAL_CLIENT_SECRET:
@@ -107,6 +111,8 @@ steps:
       - printf "LYNX_TOKEN=%s\n" "$LYNX_TOKEN" >> .env
       - printf "ANILIST_CLIENT_ID=%s\n" "$ANILIST_CLIENT_ID" >> .env
       - printf "ANILIST_CLIENT_SECRET=%s\n" "$ANILIST_CLIENT_SECRET" >> .env
+      - printf "DISCORD_CLIENT_ID=%s\n" "$DISCORD_CLIENT_ID" >> .env
+      - printf "DISCORD_CLIENT_SECRET=%s\n" "$DISCORD_CLIENT_SECRET" >> .env
       - printf "MAL_CLIENT_ID=%s\n" "$MAL_CLIENT_ID" >> .env
       - printf "MAL_CLIENT_SECRET=%s\n" "$MAL_CLIENT_SECRET" >> .env
       - printf "MAL_CODE_CHALLANGE_STRING=%s\n" "$MAL_CODE_CHALLANGE_STRING" >> .env
