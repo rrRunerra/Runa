@@ -1,5 +1,10 @@
+networks:
+  Runerra:
+    external: true
+
+
 services:
-  frontend:
+  runa-frontend:
     build:
       context: .
       dockerfile: apps/frontend/Dockerfile
@@ -12,6 +17,9 @@ services:
         - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
         - NEXT_PUBLIC_SIMKL_CLIENT_ID=${SIMKL_CLIENT_ID}
     container_name: runa-frontend
+    networks:
+      Runerra:
+        ipv4_address: 172.20.0.100
     ports:
       - "3000:3000"
     env_file:
@@ -20,16 +28,18 @@ services:
       - NEST_API_URL=http://backend:${NEST_PORT:-4000}
       - NEXTAUTH_URL_INTERNAL=http://localhost:3000 # DevSkim: ignore DS137138, DS162092
       - LYNX_API_URL=http://lynx-bot:4444
-    depends_on:
-      - redis
-    restart: always
 
-  backend:
+    restart: unless-stopped
+
+  runa-backend:
     build:
       context: .
       dockerfile: apps/backend/Dockerfile
     container_name: runa-backend
     user: "0:0"
+    networks:
+      Runerra:
+        ipv4_address: 172.20.0.101
     ports:
       - "${NEST_PORT}:${NEST_PORT}"
     env_file:
@@ -37,28 +47,20 @@ services:
     environment:
       - UPLOAD_DIR=/app/uploads
     volumes:
-      - runa-backend-uploads:/app/uploads
-    depends_on:
-      - redis
-    restart: always
+      - ~/app-data/runa/uploads:/app/uploads
+    restart: unless-stopped
 
-  lynx-bot:
+  runa-lynx:
     build:
       context: .
       dockerfile: apps/lynx-bot/Dockerfile
     container_name: runa-lynx-bot
+    networks:
+      Runerra:
+        ipv4_address: 172.20.0.102
     ports:
       - "${LYNX_PORT}:${LYNX_PORT}"
+
     env_file:
       - .env
-    restart: always
-
-  redis:
-    image: redis:7-alpine
-    container_name: runa-redis
-    ports:
-      - "6379:6379"
-    restart: always
-
-volumes:
-  runa-backend-uploads:
+    restart: unless-stopped
