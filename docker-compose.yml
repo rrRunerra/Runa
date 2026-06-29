@@ -14,6 +14,13 @@ services:
     container_name: runa-frontend
     ports:
       - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - NEST_API_URL=http://backend:${NEST_PORT:-4000}
+      - NEXTAUTH_URL_INTERNAL=http://localhost:3000 # DevSkim: ignore DS137138, DS162092
+      - LYNX_API_URL=http://lynx-bot:4444
+
     restart: unless-stopped
 
   runa-backend:
@@ -24,6 +31,8 @@ services:
     user: "0:0"
     ports:
       - "${NEST_PORT}:${NEST_PORT}"
+    env_file:
+      - .env
     environment:
       - UPLOAD_DIR=/app/uploads
     volumes:
@@ -37,4 +46,7 @@ services:
     container_name: runa-lynx-bot
     ports:
       - "${LYNX_PORT}:${LYNX_PORT}"
+
+    env_file:
+      - .env
     restart: unless-stopped
