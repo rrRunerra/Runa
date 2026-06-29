@@ -67,6 +67,7 @@ export const authOptions: NextAuthOptions = {
         const data = await res.json();
 
         if (!res.ok) {
+          console.error("[AUTH] NextAuth authorize failed. Status:", res.status, "Response:", data);
           throw new Error(data.message || "Authentication failed");
         }
 

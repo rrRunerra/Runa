@@ -28,6 +28,7 @@ services:
       - NEST_API_URL=http://backend:${NEST_PORT:-4000}
       - NEXTAUTH_URL_INTERNAL=http://localhost:3000 # DevSkim: ignore DS137138, DS162092
       - LYNX_API_URL=http://lynx-bot:4444
+      - TZ=Europe/Bratislava
 
     restart: unless-stopped
 
@@ -46,6 +47,7 @@ services:
       - .env
     environment:
       - UPLOAD_DIR=/app/uploads
+      - TZ=Europe/Bratislava
     volumes:
       - ~/app-data/runa/uploads:/app/uploads
     restart: unless-stopped
@@ -63,4 +65,6 @@ services:
 
     env_file:
       - .env
+    environment:
+      - TZ=Europe/Bratislava
     restart: unless-stopped

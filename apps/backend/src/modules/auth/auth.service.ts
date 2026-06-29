@@ -1,4 +1,4 @@
-import { UnauthorizedException, BadRequestException, NotFoundException, Injectable } from '@nestjs/common';
+import { UnauthorizedException, BadRequestException, NotFoundException, Injectable, Logger } from '@nestjs/common';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { SignJWT, jwtVerify } from 'jose';
 import { PrismaService } from '../../providers/database/prisma.service';
@@ -16,6 +16,8 @@ import {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly cacheService: CacheService,
@@ -60,6 +62,7 @@ export class AuthService {
           token,
         };
       } catch (err: any) {
+        this.logger.error(`MFA success token verification failed: ${err.message}`, err.stack);
         throw new UnauthorizedException(err.message || 'MFA verification expired or invalid');
       }
     }
@@ -385,7 +388,7 @@ export class AuthService {
     })
       .setProtectedHeader({ alg: 'HS256' })
       .setIssuedAt()
-      .setExpirationTime('1m')
+      .setExpirationTime('5m')
       .sign(this.secret);
 
     return { success: true, mfaSuccessToken };

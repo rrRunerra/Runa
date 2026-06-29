@@ -367,7 +367,8 @@ export default function Page() {
       });
 
       if (res?.error) {
-        throw new Error("Credentials login failed. Please try again.");
+        console.error("[Login] direct signIn credentials error:", res.error);
+        throw new Error(`Credentials login failed: ${res.error}`);
       } else if (res?.ok) {
         const sessionRes = await fetch("/api/auth/session");
         if (sessionRes.ok) {
@@ -544,7 +545,8 @@ export default function Page() {
     });
 
     if (res?.error) {
-      setMessage("❌ Session establishment failed.");
+      console.error("[Login] MFA completeLoginWithSuccessToken signIn credentials error:", res.error);
+      setMessage(`❌ Session establishment failed: ${res.error}`);
       setLoading(false);
     } else if (res?.ok) {
       const sessionRes = await fetch("/api/auth/session");
@@ -599,7 +601,8 @@ export default function Page() {
       });
 
       if (res?.error) {
-        setMessage("❌ Passkey login failed. Check credentials.");
+        console.error("[Login] Passkey signIn credentials error:", res.error);
+        setMessage(`❌ Passkey login failed: ${res.error}`);
       } else if (res?.ok) {
         const sessionRes = await fetch("/api/auth/session");
         if (sessionRes.ok) {
