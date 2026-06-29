@@ -37,7 +37,10 @@ export class DualAuthGuard implements CanActivate {
 
     try {
       // API Key (Highest priority)
-      const apiKey = request.headers['x-api-key'];
+      let apiKey = request.headers['x-api-key'] || request.query['apikey'] || request.query['apiKey'];
+      if (Array.isArray(apiKey)) {
+        apiKey = apiKey[0];
+      }
       if (apiKey) {
         const keyPrefix = apiKey.slice(0, 16);
         const record = await prisma.apiKey.findFirst({

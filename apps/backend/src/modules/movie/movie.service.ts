@@ -238,4 +238,35 @@ export class MovieService {
     }
     return movie;
   }
+
+  public async getRemoteIds(tvdbId: number): Promise<{ tmdbId?: number; imdbId?: string } | null> {
+    try {
+      if (!this.token) {
+        await this.setTheTvDbToken();
+      }
+      const res = await fetch(`https://api4.thetvdb.com/v4/movies/${tvdbId}/extended`, {
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${this.token}`,
+        },
+      });
+      const data = await res.json();
+      if (data.message === 'Unauthorized' || (data.status === 'error' && data.message?.includes('token'))) {
+        await this.setTheTvDbToken();
+        return this.getRemoteIds(tvdbId);
+      }
+      const remoteIds = data.data?.remoteIds || [];
+      const tmdbVal = remoteIds.find((r: any) => r.type === 3)?.id;
+      const imdbVal = remoteIds.find((r: any) => r.type === 2)?.id;
+      return {
+        tmdbId: tmdbVal ? parseInt(tmdbVal) : undefined,
+        imdbId: imdbVal || undefined,
+      };
+    } catch (err) {
+      this.logger.error(`Failed to fetch remote IDs for tvdbId ${tvdbId}:`, err);
+      return null;
+    }
+  }
 }
+
