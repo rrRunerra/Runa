@@ -37,7 +37,13 @@ export class DualAuthGuard implements CanActivate {
 
     try {
       // API Key (Highest priority)
-      let apiKey = request.headers['x-api-key'] || request.query['apikey'] || request.query['apiKey'];
+      let apiKey =
+        request.headers['x-api-key'] ||
+        request.headers['x-api'] ||
+        request.headers['api-key'] ||
+        request.query['apikey'] ||
+        request.query['apiKey'] ||
+        request.query['api_key'];
       if (Array.isArray(apiKey)) {
         apiKey = apiKey[0];
       }

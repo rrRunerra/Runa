@@ -257,7 +257,7 @@ export class MovieService {
         return this.getRemoteIds(tvdbId);
       }
       const remoteIds = data.data?.remoteIds || [];
-      const tmdbVal = remoteIds.find((r: any) => r.type === 3)?.id;
+      const tmdbVal = remoteIds.find((r: any) => r.type === 10)?.id;
       const imdbVal = remoteIds.find((r: any) => r.type === 2)?.id;
       return {
         tmdbId: tmdbVal ? parseInt(tmdbVal) : undefined,

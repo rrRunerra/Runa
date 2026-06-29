@@ -30,8 +30,8 @@ class AnimeMappingCache {
         const list = await res.json();
         const newMap = new Map<number, number>();
         for (const item of list) {
-          if (item.anilist_id && item.thetvdb_id) {
-            newMap.set(item.anilist_id, item.thetvdb_id);
+          if (item.anilist_id && item.tvdb_id) {
+            newMap.set(item.anilist_id, item.tvdb_id);
           }
         }
         this.mappings = newMap;
@@ -67,10 +67,18 @@ export class RadarrSonarrController {
     const movieEntries = await this.prisma.client.aquilaMovieUserList.findMany({
       where: {
         username: username.toLowerCase(),
-        status: { not: 'DROPPED' },
+        status: 'PLANNING',
       },
-      include: {
-        movie: true,
+      select: {
+        id: true,
+        tvdbId: true,
+        connections: true,
+        movie: {
+          select: {
+            titleEnglish: true,
+            titleRomaji: true,
+          },
+        },
       },
     });
 
@@ -139,6 +147,8 @@ export class RadarrSonarrController {
     ];
   }
 
+
+
   // ─────────────────────────── SONARR (TV & ANIME) ───────────────────────────
 
   @Get(['sonarr/api/v3/series', 'api/v3/series'])
@@ -150,21 +160,35 @@ export class RadarrSonarrController {
     const tvEntries = await this.prisma.client.aquilaTvUserList.findMany({
       where: {
         username: username.toLowerCase(),
-        status: { not: 'DROPPED' },
+        status: 'PLANNING',
       },
-      include: {
-        tv: true,
+      select: {
+        tvdbId: true,
+        tv: {
+          select: {
+            titleEnglish: true,
+            titleRomaji: true,
+          },
+        },
       },
     });
 
-    // Fetch Anime entries (which store anilistId)
     const animeEntries = await this.prisma.client.aquilaAnimeUserList.findMany({
       where: {
         username: username.toLowerCase(),
-        status: { not: 'DROPPED' },
+        status: 'PLANNING',
       },
-      include: {
-        anime: true,
+      select: {
+        id: true,
+        animeId: true,
+        connections: true,
+        anime: {
+          select: {
+            titleEnglish: true,
+            titleRomaji: true,
+            seasonYear: true,
+          },
+        },
       },
     });
 
@@ -184,7 +208,7 @@ export class RadarrSonarrController {
 
     // Process Anime
     for (const entry of animeEntries) {
-      if (!entry.anilistId) continue;
+      if (!entry.animeId) continue;
 
       let tvdbId: number | null = null;
       const connectionsObj = (entry.connections as Record<string, any>) || {};
@@ -193,7 +217,7 @@ export class RadarrSonarrController {
         tvdbId = connectionsObj.tvdbId;
       } else {
         // Resolve using Fribb's mapping
-        const resolvedId = await AnimeMappingCache.getTvdbId(entry.anilistId);
+        const resolvedId = await AnimeMappingCache.getTvdbId(entry.animeId);
         if (resolvedId) {
           tvdbId = resolvedId;
 
