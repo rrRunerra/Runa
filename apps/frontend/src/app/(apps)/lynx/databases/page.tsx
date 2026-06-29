@@ -5,15 +5,18 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { hasPermission, BitField, LynxFlags } from "@runa/permissions";
 import AccessDenied from "@/components/lynx/AccessDenied";
-import { useNavigation } from "@/hooks/useNavigation";
 import { motion } from "framer-motion";
+import { useRRSidebar } from "@/hooks/useRRSidebar";
 
 export default function DatabasesPage() {
-  const { getItem } = useNavigation();
+  const { getItem } = useRRSidebar();
   const databasesItem = getItem("Administration", "Databases");
 
   const { data: session, status } = useSession();
-  if (status === "unauthenticated" || !hasPermission(session?.user?.permissions, LynxFlags.MANAGE_DATABASE)) {
+  if (
+    status === "unauthenticated" ||
+    !hasPermission(session?.user?.permissions, LynxFlags.MANAGE_DATABASE)
+  ) {
     return <AccessDenied />;
   }
 
@@ -21,17 +24,17 @@ export default function DatabasesPage() {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
-      transition: { staggerChildren: 0.04 }
-    }
+      transition: { staggerChildren: 0.04 },
+    },
   };
 
   const cardVariants = {
     hidden: { opacity: 0, y: 12 },
-    show: { 
-      opacity: 1, 
+    show: {
+      opacity: 1,
       y: 0,
-      transition: { type: "spring", stiffness: 350, damping: 26 }
-    }
+      transition: { type: "spring", stiffness: 350, damping: 26 },
+    },
   } as const;
 
   return (
@@ -42,7 +45,8 @@ export default function DatabasesPage() {
           Databases
         </h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Inspect, explore, and manage system database instances, schemas, and live tables.
+          Inspect, explore, and manage system database instances, schemas, and
+          live tables.
         </p>
       </div>
 
@@ -54,7 +58,11 @@ export default function DatabasesPage() {
       >
         {databasesItem?.children && databasesItem.children.length > 0 ? (
           databasesItem.children.map((category) => (
-            <Link key={category.href || category.label} href={category.href || "#"} className="block h-full">
+            <Link
+              key={category.href || category.label}
+              href={category.href || "#"}
+              className="block h-full"
+            >
               <motion.div
                 variants={cardVariants}
                 whileHover={{ scale: 1.02, y: -2 }}

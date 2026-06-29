@@ -1,0 +1,230 @@
+"use client";
+
+import * as React from "react";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { usePathname } from "next/navigation";
+import { settingsNavConfig } from "../../../config/settings";
+
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+} from "@/components/ui/sidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
+import RrBottomDock from "../rrBottomDock";
+
+// New modular settings tab components
+import { RrAccountSettingsTab } from "./rrAccountSettingsTab";
+import { RrSecuritySettingsTab } from "./rrSecuritySettingsTab";
+import { RrPrivacySettingsTab } from "./rrPrivacySettingsTab";
+import { RrConnectionsTab } from "./rrConnectionsTab";
+import { RrSidebarSettingsTab } from "./rrSidebarSettingsTab";
+import { RrMailSettingsTab } from "./rrMailSettingsTab";
+import { RrApiKeysTab } from "./rrApiKeysTab";
+
+type rrCategory =
+  | "account"
+  | "connections"
+  | "privacy"
+  | "sidebar"
+  | "security"
+  | "mailAccounts"
+  | "apiKeys";
+
+export interface rrSettingsDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export function SettingsDialog({
+  open,
+  onOpenChange,
+}: rrSettingsDialogProps): React.JSX.Element {
+  const [activeCategory, setActiveCategory] = useState<rrCategory>("account");
+  const isMobile = useIsMobile();
+  const pathname = usePathname();
+  const isPegasus = pathname.startsWith("/pegasus");
+
+  useEffect(() => {
+    if (open) {
+      const params = new URLSearchParams(window.location.search);
+      const cat = params.get("category") || params.get("settings");
+
+      switch (cat) {
+        case "connections":
+          setActiveCategory("connections");
+          break;
+        case "privacy":
+          setActiveCategory("privacy");
+          break;
+        case "security":
+          setActiveCategory("security");
+          break;
+        case "sidebar":
+          setActiveCategory("sidebar");
+          break;
+        case "mailAccounts":
+          setActiveCategory("mailAccounts");
+          break;
+        case "apiKeys":
+          setActiveCategory("apiKeys");
+          break;
+        default:
+          setActiveCategory("account");
+      }
+    }
+  }, [open, isPegasus]);
+
+  const navItems: { id: rrCategory; name: string; icon: React.ElementType }[] = settingsNavConfig
+    .filter((item) => {
+      if (item.id === "mailAccounts" && !isPegasus) return false;
+      if (item.id === "sidebar" && !isMobile) return false;
+      return true;
+    })
+    .map((item) => ({
+      id: item.id as rrCategory,
+      name: item.label,
+      icon: item.icon,
+    }));
+
+  const mobileDockItems = navItems.map((item) => ({
+    label: item.name,
+    icon: <item.icon className="size-4" />,
+    isActive: activeCategory === item.id,
+    onClick: () => setActiveCategory(item.id),
+  }));
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-[95vw] md:max-w-5xl lg:max-w-6xl p-0 gap-0 overflow-hidden rounded-2xl flex flex-col md:flex-row h-[92vh] md:h-[720px]">
+        <DialogTitle className="sr-only">Settings</DialogTitle>
+        <DialogDescription className="sr-only">
+          Customize your settings here.
+        </DialogDescription>
+        <SidebarProvider
+          className="items-start h-full w-full min-h-0"
+          style={{ minHeight: "100%" }}
+        >
+          {/* Desktop Left Sidebar */}
+          <Sidebar
+            collapsible="none"
+            className="hidden md:flex border-r h-full bg-card"
+          >
+            <SidebarContent>
+              <SidebarGroup>
+                <div className="px-3 py-2 mb-2 text-[10px] font-bold text-muted-foreground/75 uppercase tracking-wider">
+                  Settings Dashboard
+                </div>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {navItems.map((item) => (
+                      <SidebarMenuItem key={item.id}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={activeCategory === item.id}
+                          onClick={() => setActiveCategory(item.id)}
+                          className="cursor-pointer"
+                        >
+                          <button
+                            type="button"
+                            className="w-full flex items-center gap-2"
+                          >
+                            <item.icon className="size-4" />
+                            <span>{item.name}</span>
+                          </button>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            </SidebarContent>
+          </Sidebar>
+
+          {/* Right Content Area */}
+          <main className="flex flex-1 flex-col h-full overflow-hidden bg-background">
+            <header className="flex h-16 shrink-0 items-center justify-between gap-2 px-6 border-b border-border">
+              <div className="flex items-center gap-2">
+                <Breadcrumb>
+                  <BreadcrumbList>
+                    <BreadcrumbItem className="hidden md:block">
+                      <BreadcrumbLink href="#">Settings</BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator className="hidden md:block" />
+                    <BreadcrumbItem>
+                      <BreadcrumbPage>
+                        {navItems.find((n) => n.id === activeCategory)?.name ||
+                          "Account"}
+                      </BreadcrumbPage>
+                    </BreadcrumbItem>
+                  </BreadcrumbList>
+                </Breadcrumb>
+              </div>
+            </header>
+
+            {/* Tab Panel Content */}
+            <div className="flex-1 overflow-y-auto no-scrollbar p-6 pb-24 md:pb-16">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={activeCategory}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  transition={{ duration: 0.2 }}
+                  className="min-h-full"
+                >
+                  {activeCategory === "account" && (
+                    <RrAccountSettingsTab onOpenChange={onOpenChange} />
+                  )}
+                  {activeCategory === "security" && (
+                    <RrSecuritySettingsTab onOpenChange={onOpenChange} />
+                  )}
+                  {activeCategory === "privacy" && (
+                    <RrPrivacySettingsTab onOpenChange={onOpenChange} />
+                  )}
+                  {activeCategory === "connections" && (
+                    <RrConnectionsTab onOpenChange={onOpenChange} />
+                  )}
+                  {activeCategory === "sidebar" && (
+                    <RrSidebarSettingsTab onOpenChange={onOpenChange} />
+                  )}
+                  {activeCategory === "mailAccounts" && isPegasus && (
+                    <RrMailSettingsTab onOpenChange={onOpenChange} />
+                  )}
+                  {activeCategory === "apiKeys" && (
+                    <RrApiKeysTab onOpenChange={onOpenChange} />
+                  )}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </main>
+        </SidebarProvider>
+
+        {/* Mobile Bottom Dock Tabs Switcher */}
+        <div className="md:hidden">
+          <RrBottomDock pathname="" items={mobileDockItems} />
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

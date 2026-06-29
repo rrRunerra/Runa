@@ -13,10 +13,10 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrivacySettingsDto } from './dto/privacy-settings.dto';
 import { MediaService } from '../media/media.service';
-import { BitField, DEFAULT_PERMISSIONS } from '@runa/permissions';
+import { BitField, DEFAULT_PERMISSIONS, RunaFlags } from '@runa/permissions';
 import bcrypt from 'bcrypt';
 import { generateSecret, generateURI, verify } from 'otplib';
-import { encrypt, decrypt } from '../../common/utils/crypto';
+import { encrypt, decrypt } from '@runa/crypto/server';
 import * as crypto from 'crypto';
 import {
   generateRegistrationOptions,
@@ -124,7 +124,7 @@ export class UserService {
     const permissions = new BitField([...DEFAULT_PERMISSIONS]);
 
     if (!this.hasAdmin) {
-      permissions.add(BitField.Flags.ADMINISTRATOR);
+      permissions.add(RunaFlags.ADMINISTRATOR);
     }
 
     const initialPermissions = permissions.serialize();
@@ -150,6 +150,12 @@ export class UserService {
       include: {
         connections: true,
       },
+    });
+  }
+
+  async findByEmail(email: string): Promise<User | null> {
+    return await this.prisma.client.user.findUnique({
+      where: { email: email.toLowerCase().trim() },
     });
   }
 

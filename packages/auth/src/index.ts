@@ -1,6 +1,7 @@
 /// <reference path="./next-auth.d.ts" />
 import { getServerSession, NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { prisma } from "@runa/database";
 const API_URL = process.env.NEST_API_URL || process.env.NEXT_PUBLIC_API_URL;
 
 if (!process.env.NEXTAUTH_URL) {
@@ -78,7 +79,7 @@ export const authOptions: NextAuthOptions = {
   ],
 
   pages: {
-    signIn: `${process.env.NEXTAUTH_URL}/polaris/login`,
+    signIn: "/polaris/login",
   },
 
   session: {
@@ -95,62 +96,88 @@ export const authOptions: NextAuthOptions = {
       return baseUrl;
     },
     async jwt({ token, user, trigger, session }) {
-      if (trigger === "update" && session) {
-        if (session.displayName) token.displayName = session.displayName;
-        if (session.avatarUrl || session.avatarUrl === null)
-          token.avatarUrl = session.avatarUrl;
-        if (session.sidebarCardBackgroundUrl || session.sidebarCardBackgroundUrl === null)
-          token.sidebarCardBackgroundUrl = session.sidebarCardBackgroundUrl;
-        if (session.username) token.username = session.username;
-        if (session.email) token.email = session.email;
-        if (session.permissions) token.permissions = session.permissions;
-        if (session.accessToken) token.accessToken = session.accessToken;
-        if (session.passwordChangedAt)
-          token.passwordChangedAt = session.passwordChangedAt;
+  if (trigger === "update" && session) {
+    if (session.displayName) token.displayName = session.displayName;
+    if (session.avatarUrl || session.avatarUrl === null) token.avatarUrl = session.avatarUrl;
+    if (session.sidebarCardBackgroundUrl || session.sidebarCardBackgroundUrl === null) {
+      token.sidebarCardBackgroundUrl = session.sidebarCardBackgroundUrl;
+    }
+    if (session.username) token.username = session.username;
+    if (session.email) token.email = session.email;
+    if (session.permissions) token.permissions = session.permissions;
+    if (session.accessToken) token.accessToken = session.accessToken;
+    if (session.passwordChangedAt) token.passwordChangedAt = session.passwordChangedAt;
+
+    try {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: token.id as string },
+        select: {
+          permissions: true,
+          displayName: true,
+          avatarUrl: true,
+          sidebarCardBackgroundUrl: true,
+        },
+      });
+
+      if (dbUser) {
+        token.permissions = dbUser.permissions;
+        token.displayName = dbUser.displayName;
+        token.avatarUrl = dbUser.avatarUrl;
+        token.sidebarCardBackgroundUrl = dbUser.sidebarCardBackgroundUrl;
       }
+    } catch (error) {
+      console.error("[AUTH] Failed to fetch user on update:", error);
+    }
+  }
 
-      const u = user as any; // eslint-disable-line @typescript-eslint/no-explicit-any
-      if (u) {
-        token.id = u.id;
-        token.email = u.email;
-        token.username = u.username;
-        token.displayName = u.displayName;
-        token.avatarUrl = u.avatarUrl;
-        token.sidebarCardBackgroundUrl = u.sidebarCardBackgroundUrl;
-        token.permissions = u.permissions;
-        token.accessToken = u.accessToken;
-        token.iat = u.iat;
+  if (user) {
+    const u = user as {
+      id: string;
+      email: string;
+      username: string;
+      displayName: string | null;
+      avatarUrl: string | null;
+      sidebarCardBackgroundUrl: string | null;
+      permissions: number[];
+      accessToken: string;
+      iat?: number;
+      passwordChangedAt?: string | Date | null;
+    };
 
-        // Store passwordChangedAt timestamp
-        token.passwordChangedAt = u.passwordChangedAt
-          ? Math.floor(new Date(u.passwordChangedAt).getTime() / 1000)
-          : null;
-      }
+    token.id = u.id;
+    token.email = u.email;
+    token.username = u.username;
+    token.displayName = u.displayName;
+    token.avatarUrl = u.avatarUrl;
+    token.sidebarCardBackgroundUrl = u.sidebarCardBackgroundUrl;
+    token.permissions = u.permissions;
+    token.accessToken = u.accessToken;
+    token.iat = u.iat
+    token.passwordChangedAt = u.passwordChangedAt
+      ? Math.floor(new Date(u.passwordChangedAt).getTime() / 1000)
+      : null;
+  }
 
-      // Check if password has changed since token issue
-      if (
-        typeof token.passwordChangedAt === "number" &&
-        typeof token.iat === "number"
-      ) {
-        // Allow for a small clock drift or processing delay (e.g. 1 second)
-        // If token issued BEFORE password change, it's invalid
-        if (token.iat < token.passwordChangedAt) {
-          return Promise.reject(
-            new Error("Token expired due to password change"),
-          );
-        }
-      }
+  if (
+    typeof token.passwordChangedAt === "number" &&
+    typeof token.iat === "number" &&
+    token.iat < token.passwordChangedAt
+  ) {
+    throw new Error("Token expired due to password change");
+  }
 
-      // Check if NestJS access token has expired
-      if (token.accessToken) {
-        const expiry = getJwtExpiry(token.accessToken);
-        if (expiry && Date.now() >= expiry) {
-          return Promise.reject(new Error("Access token expired"));
-        }
-      }
+  if (token.accessToken) {
+    const expiry = getJwtExpiry(token.accessToken as string);
+    if (!expiry) {
+      throw new Error("Invalid access token");
+    }
+    if (Date.now() >= expiry) {
+      throw new Error("Access token expired");
+    }
+  }
 
-      return token;
-    },
+  return token;
+},
     async session({ session, token }) {
       if (token) {
         session.user = {

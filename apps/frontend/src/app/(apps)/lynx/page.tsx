@@ -1,5 +1,5 @@
 import { auth } from "@runa/auth";
-import { hasPermission, BitField, LynxFlags } from "@runa/permissions";
+import { hasPermission, BitField, LynxFlags, RunaFlags } from "@runa/permissions";
 import { prisma } from "@runa/database";
 import AccessDenied from "@/components/lynx/AccessDenied";
 import LynxDashboardClient from "@/components/lynx/LynxDashboardClient";
@@ -22,7 +22,7 @@ async function getStats() {
 
 export default async function LynxHome() {
   const session = await auth();
-  // if (!session || !hasPermission(session.user.permissions, LynxFlags.LOGGED_IN)) {
+  // if (!session || !hasPermission(session.user.permissions, RunaFlags.LOGGED_IN)) {
   //   return <AccessDenied />;
   // }
 

@@ -7,26 +7,38 @@ import type { Media } from '../../../common/types/types';
 export class BookRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findByOpenLibraryId(openLibraryId: string) {
+  async findByGoogleBookId(googleBookId: string) {
     return this.prisma.client.aquilaBook.findUnique({
-      where: { openLibraryId },
+      where: { googleBookId },
     });
   }
 
   async upsert(
-    openLibraryId: string,
+    googleBookId: string,
     data: Prisma.AquilaBookCreateInput | Prisma.AquilaBookUpdateInput,
   ) {
     return this.prisma.client.aquilaBook.upsert({
-      where: { openLibraryId },
+      where: { googleBookId },
       update: data,
       create: data as Prisma.AquilaBookCreateInput,
     });
   }
 
   toMedia(dbBook: any): Media {
+    const staff: any[] = [];
+    if (dbBook.authors) {
+      for (const author of dbBook.authors) {
+        staff.push({ id: `author-${author}`, name: author, role: 'Author' });
+      }
+    }
+    if (dbBook.artists) {
+      for (const artist of dbBook.artists) {
+        staff.push({ id: `artist-${artist}`, name: artist, role: 'Visual Artist' });
+      }
+    }
+
     return {
-      id: dbBook.openLibraryId,
+      id: dbBook.googleBookId,
       title: {
         romaji: dbBook.titleString,
         english: dbBook.titleString,
@@ -49,10 +61,27 @@ export class BookRepository {
         : undefined,
       genres: dbBook.subjects || [],
       studios: dbBook.authors?.map((name: string) => ({ name })) || [],
-      averageScore: null,
-      popularity: null,
+      staff,
+      averageScore: dbBook.averageRating ? Math.round(dbBook.averageRating * 20) : null,
+      popularity: dbBook.ratingsCount || null,
       chapters: dbBook.chapters,
       volumes: null,
+      pages: dbBook.pages || null,
+      subtitle: dbBook.subtitle,
+      publishedDate: dbBook.publishedDate,
+      averageRating: dbBook.averageRating,
+      ratingsCount: dbBook.ratingsCount,
+      language: dbBook.language,
+      isbn10: dbBook.isbn10,
+      isbn13: dbBook.isbn13,
+      previewLink: dbBook.previewLink,
+      infoLink: dbBook.infoLink,
+      buyLink: dbBook.buyLink,
+      retailPrice: dbBook.retailPrice,
+      retailPriceCurrency: dbBook.retailPriceCurrency,
+      maturityRating: dbBook.maturityRating,
+      publisher: dbBook.publishers?.[0] || null,
+      artists: dbBook.artists || [],
     };
   }
 }

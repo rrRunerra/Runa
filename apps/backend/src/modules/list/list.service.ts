@@ -17,6 +17,9 @@ export interface ListQueryOptions {
   search?: string;
   format?: string;
   sort?: string;
+  genres?: string;
+  year?: string;
+  mediaStatus?: string;
 }
 
 @Injectable()
@@ -193,13 +196,16 @@ export class ListService {
     );
     const search = query?.search?.trim();
     const format = query?.format?.trim();
+    const genres = query?.genres?.trim();
+    const year = query?.year?.trim();
+    const mediaStatus = query?.mediaStatus?.trim();
 
     const whereClause: any = {
       username: username.toLowerCase(),
       ...(statusEnum ? { status: statusEnum } : {}),
     };
 
-    if (format || search) {
+    if (format || search || genres || year || mediaStatus) {
       whereClause.anime = {};
       if (format) {
         whereClause.anime.format = format;
@@ -210,6 +216,16 @@ export class ListService {
           { titleRomaji: { contains: search, mode: 'insensitive' } },
           { titleNative: { contains: search, mode: 'insensitive' } },
         ];
+      }
+      if (genres) {
+        const genreList = genres.split(',').map((g) => g.trim());
+        whereClause.anime.genres = { hasEvery: genreList };
+      }
+      if (year) {
+        whereClause.anime.startDateYear = Number(year);
+      }
+      if (mediaStatus) {
+        whereClause.anime.status = mediaStatus;
       }
     }
 
@@ -234,6 +250,7 @@ export class ListService {
               coverImageLarge: true,
               episodes: true,
               format: true,
+              status: true,
             },
           },
         },
@@ -258,6 +275,7 @@ export class ListService {
         last_updated: item.updatedAt,
         last_added: item.createdAt,
         type: 'anime',
+        mediaStatus: item.anime.status,
       };
     });
 
@@ -504,13 +522,16 @@ export class ListService {
     );
     const search = query?.search?.trim();
     const format = query?.format?.trim();
+    const genres = query?.genres?.trim();
+    const year = query?.year?.trim();
+    const mediaStatus = query?.mediaStatus?.trim();
 
     const whereClause: any = {
       username: username.toLowerCase(),
       ...(statusEnum ? { status: statusEnum } : {}),
     };
 
-    if (format || search) {
+    if (format || search || genres || year || mediaStatus) {
       whereClause.manga = {};
       if (format) {
         whereClause.manga.format = format;
@@ -521,6 +542,16 @@ export class ListService {
           { titleRomaji: { contains: search, mode: 'insensitive' } },
           { titleNative: { contains: search, mode: 'insensitive' } },
         ];
+      }
+      if (genres) {
+        const genreList = genres.split(',').map((g) => g.trim());
+        whereClause.manga.genres = { hasEvery: genreList };
+      }
+      if (year) {
+        whereClause.manga.startDateYear = Number(year);
+      }
+      if (mediaStatus) {
+        whereClause.manga.status = mediaStatus;
       }
     }
 
@@ -546,6 +577,7 @@ export class ListService {
               coverImageLarge: true,
               chapters: true,
               format: true,
+              status: true,
             },
           },
         },
@@ -569,6 +601,7 @@ export class ListService {
       last_updated: item.updatedAt,
       last_added: item.createdAt,
       type: 'manga',
+      mediaStatus: item.manga.status,
     }));
 
     return { entries: mappedList, counts };
@@ -946,19 +979,29 @@ export class ListService {
       $Enums.MovieListStatus,
     );
     const search = query?.search?.trim();
+    const genres = query?.genres?.trim();
+    const mediaStatus = query?.mediaStatus?.trim();
 
     const whereClause: any = {
       username: username.toLowerCase(),
       ...(statusEnum ? { status: statusEnum } : {}),
     };
 
-    if (search) {
-      whereClause.movie = {
-        OR: [
+    if (search || genres || mediaStatus) {
+      whereClause.movie = {};
+      if (search) {
+        whereClause.movie.OR = [
           { titleEnglish: { contains: search, mode: 'insensitive' } },
           { titleRomaji: { contains: search, mode: 'insensitive' } },
-        ],
-      };
+        ];
+      }
+      if (genres) {
+        const genreList = genres.split(',').map((g) => g.trim());
+        whereClause.movie.genres = { hasEvery: genreList };
+      }
+      if (mediaStatus) {
+        whereClause.movie.status = mediaStatus;
+      }
     }
 
     const [list, counts] = await Promise.all([
@@ -978,6 +1021,7 @@ export class ListService {
               titleEnglish: true,
               titleRomaji: true,
               coverImage: true,
+              status: true,
             },
           },
         },
@@ -997,6 +1041,7 @@ export class ListService {
       last_added: item.createdAt,
       type: 'movie',
       format: 'Movie',
+      mediaStatus: item.movie.status || undefined,
     }));
 
     return { entries: mappedList, counts };
@@ -1178,19 +1223,33 @@ export class ListService {
       $Enums.TvListStatus,
     );
     const search = query?.search?.trim();
+    const format = query?.format?.trim(); // tvType
+    const genres = query?.genres?.trim();
+    const mediaStatus = query?.mediaStatus?.trim();
 
     const whereClause: any = {
       username: username.toLowerCase(),
       ...(statusEnum ? { status: statusEnum } : {}),
     };
 
-    if (search) {
-      whereClause.tv = {
-        OR: [
+    if (search || format || genres || mediaStatus) {
+      whereClause.tv = {};
+      if (search) {
+        whereClause.tv.OR = [
           { titleEnglish: { contains: search, mode: 'insensitive' } },
           { titleRomaji: { contains: search, mode: 'insensitive' } },
-        ],
-      };
+        ];
+      }
+      if (format) {
+        whereClause.tv.tvType = format;
+      }
+      if (genres) {
+        const genreList = genres.split(',').map((g) => g.trim());
+        whereClause.tv.genres = { hasEvery: genreList };
+      }
+      if (mediaStatus) {
+        whereClause.tv.status = mediaStatus;
+      }
     }
 
     const [list, counts] = await Promise.all([
@@ -1211,6 +1270,7 @@ export class ListService {
               titleRomaji: true,
               coverImage: true,
               seasons: true,
+              status: true,
             },
           },
           _count: {
@@ -1245,6 +1305,7 @@ export class ListService {
         last_updated: item.updatedAt,
         last_added: item.createdAt,
         type: 'tv',
+        mediaStatus: item.tv.status || undefined,
       };
     });
 
@@ -1280,6 +1341,7 @@ export class ListService {
       rewatched?: number;
       updateConnection?: boolean;
       connections?: any;
+      episodes?: { seasonNum: number; episodeNum: number }[];
     },
   ): Promise<{ success: boolean; message: string; error?: any }> {
     try {
@@ -1290,7 +1352,7 @@ export class ListService {
       const privacy = parsePrivacy(user?.privacy);
       const isPrivate = !!(privacy.profile || privacy.tvList);
 
-      await this.prisma.client.aquilaTvUserList.upsert({
+      const listEntry = await this.prisma.client.aquilaTvUserList.upsert({
         where: {
           username_tvdbId: {
             username: username.toLowerCase(),
@@ -1319,6 +1381,21 @@ export class ListService {
           private: isPrivate,
         },
       });
+
+      if (body.episodes) {
+        await this.prisma.client.aquilaTvWatchedEpisode.deleteMany({
+          where: { listId: listEntry.id },
+        });
+        if (body.episodes.length > 0) {
+          await this.prisma.client.aquilaTvWatchedEpisode.createMany({
+            data: body.episodes.map((ep) => ({
+              listId: listEntry.id,
+              seasonNum: ep.seasonNum,
+              episodeNum: ep.episodeNum,
+            })),
+          });
+        }
+      }
 
       if (body.updateConnection) {
         await this.updateTvConnections(
@@ -1563,16 +1640,30 @@ export class ListService {
       $Enums.GameListStatus,
     );
     const search = query?.search?.trim();
+    const format = query?.format?.trim(); // platforms
+    const genres = query?.genres?.trim();
+    const year = query?.year?.trim();
 
     const whereClause: any = {
       username: username.toLowerCase(),
       ...(statusEnum ? { status: statusEnum } : {}),
     };
 
-    if (search) {
-      whereClause.game = {
-        titleString: { contains: search, mode: 'insensitive' },
-      };
+    if (search || format || genres || year) {
+      whereClause.game = {};
+      if (search) {
+        whereClause.game.titleString = { contains: search, mode: 'insensitive' };
+      }
+      if (format) {
+        whereClause.game.platforms = { has: format };
+      }
+      if (genres) {
+        const genreList = genres.split(',').map((g) => g.trim());
+        whereClause.game.genres = { hasEvery: genreList };
+      }
+      if (year) {
+        whereClause.game.releasedYear = Number(year);
+      }
     }
 
     const [list, counts] = await Promise.all([
@@ -1592,6 +1683,9 @@ export class ListService {
             select: {
               titleString: true,
               coverImage: true,
+              releasedYear: true,
+              releasedMonth: true,
+              releasedDay: true,
             },
           },
         },
@@ -1611,6 +1705,15 @@ export class ListService {
       last_updated: item.updatedAt,
       last_added: item.createdAt,
       type: 'game',
+      mediaStatus: (() => {
+        if (!item.game.releasedYear) return undefined;
+        const releaseDate = new Date(
+          item.game.releasedYear,
+          (item.game.releasedMonth || 1) - 1,
+          item.game.releasedDay || 1,
+        );
+        return releaseDate > new Date() ? 'NOT_YET_RELEASED' : 'RELEASED';
+      })(),
     }));
 
     return { entries: mappedList, counts };
@@ -1753,16 +1856,26 @@ export class ListService {
       $Enums.BookListStatus,
     );
     const search = query?.search?.trim();
+    const genres = query?.genres?.trim();
+    const year = query?.year?.trim();
 
     const whereClause: any = {
       username: username.toLowerCase(),
       ...(statusEnum ? { status: statusEnum } : {}),
     };
 
-    if (search) {
-      whereClause.book = {
-        titleString: { contains: search, mode: 'insensitive' },
-      };
+    if (search || genres || year) {
+      whereClause.book = {};
+      if (search) {
+        whereClause.book.titleString = { contains: search, mode: 'insensitive' };
+      }
+      if (genres) {
+        const genreList = genres.split(',').map((g) => g.trim());
+        whereClause.book.subjects = { hasEvery: genreList };
+      }
+      if (year) {
+        whereClause.book.publishYear = Number(year);
+      }
     }
 
     const [list, counts] = await Promise.all([
@@ -1783,6 +1896,7 @@ export class ListService {
             select: {
               titleString: true,
               coverImage: true,
+              publishYear: true,
             },
           },
         },
@@ -1802,6 +1916,10 @@ export class ListService {
       last_updated: item.updatedAt,
       last_added: item.createdAt,
       type: 'book',
+      mediaStatus: (() => {
+        if (!item.book.publishYear) return undefined;
+        return item.book.publishYear > new Date().getFullYear() ? 'NOT_YET_RELEASED' : 'RELEASED';
+      })(),
     }));
 
     return { entries: mappedList, counts };
@@ -2344,5 +2462,169 @@ export class ListService {
     }
 
     return { success: false, message: 'Invalid media type' };
+  }
+
+  public async getUserListFilters(username: string, mediaType: string) {
+    username = username.toLowerCase();
+    switch (mediaType) {
+      case 'anime': {
+        const list = await this.prisma.client.aquilaAnimeUserList.findMany({
+          where: { username },
+          select: {
+            anime: {
+              select: { genres: true, startDateYear: true, format: true, status: true },
+            },
+          },
+        });
+        const genres = new Set<string>();
+        const years = new Set<number>();
+        const formats = new Set<string>();
+        const statuses = new Set<string>();
+        list.forEach((item) => {
+          if (item.anime) {
+            item.anime.genres?.forEach((g) => genres.add(g));
+            if (item.anime.startDateYear) years.add(item.anime.startDateYear);
+            if (item.anime.format) formats.add(item.anime.format);
+            if (item.anime.status) statuses.add(item.anime.status);
+          }
+        });
+        return {
+          genres: Array.from(genres).sort(),
+          years: Array.from(years).sort((a, b) => b - a),
+          formats: Array.from(formats).sort(),
+          statuses: Array.from(statuses).sort(),
+        };
+      }
+      case 'manga': {
+        const list = await this.prisma.client.aquilaMangaUserList.findMany({
+          where: { username },
+          select: {
+            manga: {
+              select: { genres: true, startDateYear: true, format: true, status: true },
+            },
+          },
+        });
+        const genres = new Set<string>();
+        const years = new Set<number>();
+        const formats = new Set<string>();
+        const statuses = new Set<string>();
+        list.forEach((item) => {
+          if (item.manga) {
+            item.manga.genres?.forEach((g) => genres.add(g));
+            if (item.manga.startDateYear) years.add(item.manga.startDateYear);
+            if (item.manga.format) formats.add(item.manga.format);
+            if (item.manga.status) statuses.add(item.manga.status);
+          }
+        });
+        return {
+          genres: Array.from(genres).sort(),
+          years: Array.from(years).sort((a, b) => b - a),
+          formats: Array.from(formats).sort(),
+          statuses: Array.from(statuses).sort(),
+        };
+      }
+      case 'movie': {
+        const list = await this.prisma.client.aquilaMovieUserList.findMany({
+          where: { username },
+          select: {
+            movie: {
+              select: { genres: true, status: true },
+            },
+          },
+        });
+        const genres = new Set<string>();
+        const statuses = new Set<string>();
+        list.forEach((item) => {
+          if (item.movie) {
+            item.movie.genres?.forEach((g) => genres.add(g));
+            if (item.movie.status) statuses.add(item.movie.status);
+          }
+        });
+        return {
+          genres: Array.from(genres).sort(),
+          years: [],
+          formats: [],
+          statuses: Array.from(statuses).sort(),
+        };
+      }
+      case 'tv': {
+        const list = await this.prisma.client.aquilaTvUserList.findMany({
+          where: { username },
+          select: {
+            tv: {
+              select: { genres: true, status: true, tvType: true },
+            },
+          },
+        });
+        const genres = new Set<string>();
+        const formats = new Set<string>();
+        const statuses = new Set<string>();
+        list.forEach((item) => {
+          if (item.tv) {
+            item.tv.genres?.forEach((g) => genres.add(g));
+            if (item.tv.status) statuses.add(item.tv.status);
+            if (item.tv.tvType) formats.add(item.tv.tvType);
+          }
+        });
+        return {
+          genres: Array.from(genres).sort(),
+          years: [],
+          formats: Array.from(formats).sort(),
+          statuses: Array.from(statuses).sort(),
+        };
+      }
+      case 'game': {
+        const list = await this.prisma.client.aquilaGameUserList.findMany({
+          where: { username },
+          select: {
+            game: {
+              select: { genres: true, releasedYear: true, platforms: true },
+            },
+          },
+        });
+        const genres = new Set<string>();
+        const years = new Set<number>();
+        const formats = new Set<string>();
+        list.forEach((item) => {
+          if (item.game) {
+            item.game.genres?.forEach((g) => genres.add(g));
+            if (item.game.releasedYear) years.add(item.game.releasedYear);
+            item.game.platforms?.forEach((p) => formats.add(p));
+          }
+        });
+        return {
+          genres: Array.from(genres).sort(),
+          years: Array.from(years).sort((a, b) => b - a),
+          formats: Array.from(formats).sort(),
+          statuses: [],
+        };
+      }
+      case 'book': {
+        const list = await this.prisma.client.aquilaBookUserList.findMany({
+          where: { username },
+          select: {
+            book: {
+              select: { subjects: true, publishYear: true },
+            },
+          },
+        });
+        const genres = new Set<string>();
+        const years = new Set<number>();
+        list.forEach((item) => {
+          if (item.book) {
+            item.book.subjects?.forEach((s) => genres.add(s));
+            if (item.book.publishYear) years.add(item.book.publishYear);
+          }
+        });
+        return {
+          genres: Array.from(genres).sort(),
+          years: Array.from(years).sort((a, b) => b - a),
+          formats: [],
+          statuses: [],
+        };
+      }
+      default:
+        throw new NotFoundException(`Unsupported media type: ${mediaType}`);
+    }
   }
 }

@@ -9,6 +9,6 @@
     "ioredis": "^5.11.1"
   },
   "devDependencies": {
-    "@types/node": "^22.19.21"
+    "@types/node": "^22.20.0"
   }
 }

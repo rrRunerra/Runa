@@ -1,10 +1,56 @@
 "use client";
 
-import React from "react";
-import { Mail, Shield, Zap } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Mail, Shield, Zap, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export default function Page(): React.JSX.Element {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [checkingAccounts, setCheckingAccounts] = useState<boolean>(true);
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      setCheckingAccounts(false);
+      return;
+    }
+
+    if (status === "authenticated" && session?.accessToken) {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/emails`, {
+        headers: {
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to fetch");
+          return res.json();
+        })
+        .then((data) => {
+          if (Array.isArray(data) && data.length > 0) {
+            router.replace("/pegasus/unified/inbox");
+          } else {
+            setCheckingAccounts(false);
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to check accounts on landing", err);
+          setCheckingAccounts(false);
+        });
+    } else if (status !== "loading") {
+      setCheckingAccounts(false);
+    }
+  }, [status, session?.accessToken, router]);
+
+  if (status === "loading" || checkingAccounts) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center min-h-screen bg-zinc-950 text-zinc-400 gap-3">
+        <Loader2 className="size-6 animate-spin text-primary" />
+        <span className="text-xs font-medium">Entering Pegasus...</span>
+      </div>
+    );
+  }
   return (
     <div className="flex-1 flex flex-col items-center justify-center min-h-screen bg-zinc-950 p-6 relative overflow-hidden">
       {/* Background Orbs */}

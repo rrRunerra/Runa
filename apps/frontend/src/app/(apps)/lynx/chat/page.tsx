@@ -5,15 +5,22 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { hasPermission, BitField, LynxFlags } from "@runa/permissions";
 import AccessDenied from "@/components/lynx/AccessDenied";
-import { useNavigation } from "@/hooks/useNavigation";
 import { motion } from "framer-motion";
+import { useRRSidebar } from "@/hooks/useRRSidebar";
 
 export default function ChatPage() {
-  const { getItem } = useNavigation();
+  const { getItem } = useRRSidebar();
   const chatItem = getItem("General", "Chat");
 
   const { data: session, status } = useSession();
-  if (status === "unauthenticated" || !hasPermission(session?.user?.permissions, [LynxFlags.DM_CHAT, LynxFlags.GUILD_CHAT], "any")) {
+  if (
+    status === "unauthenticated" ||
+    !hasPermission(
+      session?.user?.permissions,
+      [LynxFlags.DM_CHAT, LynxFlags.GUILD_CHAT],
+      "any",
+    )
+  ) {
     return <AccessDenied />;
   }
 
@@ -21,17 +28,17 @@ export default function ChatPage() {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
-      transition: { staggerChildren: 0.05 }
-    }
+      transition: { staggerChildren: 0.05 },
+    },
   };
 
   const cardVariants = {
     hidden: { opacity: 0, y: 15 },
-    show: { 
-      opacity: 1, 
+    show: {
+      opacity: 1,
       y: 0,
-      transition: { type: "spring", stiffness: 350, damping: 25 }
-    }
+      transition: { type: "spring", stiffness: 350, damping: 25 },
+    },
   } as const;
 
   return (
@@ -42,7 +49,8 @@ export default function ChatPage() {
           Discord Channels
         </h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Broadcast and interact in real-time with your Discord servers and direct messages.
+          Broadcast and interact in real-time with your Discord servers and
+          direct messages.
         </p>
       </div>
 
@@ -53,18 +61,12 @@ export default function ChatPage() {
         className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
       >
         {chatItem?.children && chatItem.children.length > 0 ? (
-          chatItem.children
-            .filter((category) =>
-              !category.permission || hasPermission(session?.user?.permissions, category.permission, category.permissionOperator || "all")
-            )
-            .map((category) => (
-           
+          chatItem.children.map((category) => (
             <Link
-               key={category.href || category.label}
-               href={category.href || "#"}
-               className="block h-full"
-             >
-
+              key={category.href || category.label}
+              href={category.href || "#"}
+              className="block h-full"
+            >
               <motion.div
                 variants={cardVariants}
                 whileHover={{ scale: 1.02, y: -2 }}
@@ -87,7 +89,8 @@ export default function ChatPage() {
                     <ChevronRight className="size-4 text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition-all" />
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed pl-1">
-                    {category.subtitle || "Access live server channels and start sending messages."}
+                    {category.subtitle ||
+                      "Access live server channels and start sending messages."}
                   </p>
                 </div>
               </motion.div>

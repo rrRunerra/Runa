@@ -1,6 +1,6 @@
 import { getToken } from "next-auth/jwt";
 import { NextRequest, NextResponse } from "next/server";
-import { BitField, hasPermission, LynxFlags, BitFieldResolvable } from "@runa/permissions";
+import { hasPermission, LynxFlags, BitFieldResolvable, PolarisFlags, MonocerosFlags, BitField, RunaFlags } from "@runa/permissions";
 import "dotenv/config";
 
 const PUBLIC_ROUTES: string[] = [
@@ -23,7 +23,8 @@ const PUBLIC_ROUTES: string[] = [
   "/api/auth/callback/credentials",
   "/aquila",
   "/lynx",
-  "/polaris/permissions"
+  "/polaris/tos",
+  "/polaris/privacy",
 ];
 
 interface RouteGuard {
@@ -57,6 +58,12 @@ const ROUTE_GUARDS: RouteGuard[] = [
     operator: "any",
     redirect: "/lynx/unauthorized",
   },
+  {
+    path: "/monoceros",
+    permission: [RunaFlags.ADMINISTRATOR],
+    operator: "any",
+    redirect: "/monoceros/unauthorized",
+  }
 ];
 
 function getJwtExpiry(tokenString: string): number | null {
@@ -101,7 +108,7 @@ export default async function proxy(req: NextRequest) {
 
   // Route protection by permission
   for (const guard of ROUTE_GUARDS) {
-    if (pathname.startsWith(guard.path)) {
+    if (pathname.startsWith(guard.path) && pathname !== guard.redirect) {
       if (!hasPermission(token.permissions, guard.permission, guard.operator || "all")) {
         url.pathname = guard.redirect;
         return NextResponse.redirect(url);
@@ -113,5 +120,5 @@ export default async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)"],
 };

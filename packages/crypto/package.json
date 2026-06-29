@@ -1,0 +1,17 @@
+{
+  "name": "@runa/crypto",
+  "version": "1.0.0",
+  "description": "Shared cryptographic utilities for Node and Browser",
+  "exports": {
+    "./browser": "./src/browser.ts",
+    "./node": "./src/node.ts",
+    "./server": "./src/node-crypto.ts"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "typescript": "^5.9.3"
+  }
+}

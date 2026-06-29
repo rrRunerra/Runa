@@ -42,6 +42,7 @@ enum ConnectionProvider {
 ```
 
 3. Run the following command from the root directory to regenerate the Prisma Client types:
+
 ```bash
 pnpm --filter @runa/database db:generate
 ```
@@ -65,7 +66,10 @@ export default class MyNewProviderConnection extends BaseConnection {
   public readonly providerKey = ConnectionProvider.MY_NEW_PROVIDER;
 
   // 2. Client credentials required in process.env to enable this provider
-  public readonly requiredEnvKeys = ["MY_NEW_PROVIDER_CLIENT_ID", "MY_NEW_PROVIDER_CLIENT_SECRET"];
+  public readonly requiredEnvKeys = [
+    "MY_NEW_PROVIDER_CLIENT_ID",
+    "MY_NEW_PROVIDER_CLIENT_SECRET",
+  ];
 
   // 3. Declare capabilities supported by this provider
   public readonly capabilities = [
@@ -88,7 +92,10 @@ export default class MyNewProviderConnection extends BaseConnection {
   }
 
   // 5. Handle authorization callback, token exchange, profile retrieval, and upsert to database
-  public async handleCallback(code: string, username: string): Promise<{ success: boolean }> {
+  public async handleCallback(
+    code: string,
+    username: string,
+  ): Promise<{ success: boolean }> {
     const clientId = this.deps.env.MY_NEW_PROVIDER_CLIENT_ID;
     const clientSecret = this.deps.env.MY_NEW_PROVIDER_CLIENT_SECRET;
     const redirectUri = `${this.deps.apiUrl}/connections/my-new-provider/callback`;
@@ -119,7 +126,10 @@ export default class MyNewProviderConnection extends BaseConnection {
     // Upsert into connection table
     await this.deps.prisma.client.connections.upsert({
       where: {
-        username_provider: { username, provider: ConnectionProvider.MY_NEW_PROVIDER },
+        username_provider: {
+          username,
+          provider: ConnectionProvider.MY_NEW_PROVIDER,
+        },
       },
       update: {
         linkedUsername: profile.username,
@@ -141,7 +151,11 @@ export default class MyNewProviderConnection extends BaseConnection {
   }
 
   // 6. Optional: Implement capability syncing/delete handlers if applicable (e.g. Anime/Manga)
-  public async updateAnimeEntry(username: string, providerId: number, data: AnimeUpdateData): Promise<void> {
+  public async updateAnimeEntry(
+    username: string,
+    providerId: number,
+    data: AnimeUpdateData,
+  ): Promise<void> {
     // Custom sync logic here
   }
 }
@@ -166,7 +180,7 @@ Next, register your new provider's display metadata in `packages/connections/src
     accentColor: "bg-[#00bcd4]/10 border-[#00bcd4]/20 text-[#00bcd4] hover:bg-[#00bcd4]/20",
     glowColor: "shadow-[#00bcd4]/10",
     capabilities: [ConnectionCapability.AUTH, ConnectionCapability.SHOWCASE],
-    
+
     // Optional: If supporting media search capabilities
     async search(query: string, type: "ANIME" | "MANGA"): Promise<ConnectionSearchResult[]> {
       const res = await fetch(`https://example.com/api/search?q=${encodeURIComponent(query)}`);
@@ -188,6 +202,7 @@ Ensure that your provider is correctly detected and loaded:
 
 1. Open `packages/connections/src/__tests__/connection-loader.spec.ts`
 2. Mock your provider's credentials under `mockDeps.env`:
+
 ```typescript
       env: {
         // ... existing credentials
@@ -195,78 +210,12 @@ Ensure that your provider is correctly detected and loaded:
         MY_NEW_PROVIDER_CLIENT_SECRET: "mock-secret",
       }
 ```
+
 3. Update expectations to assert that the loader dynamically detects the new class and matches the correct size:
+
 ```typescript
-    expect(loaded.size).toBe(6); // Incremented size
-    expect(loaded.has(ConnectionProvider.MY_NEW_PROVIDER)).toBe(true);
+expect(loaded.size).toBe(6); // Incremented size
+expect(loaded.has(ConnectionProvider.MY_NEW_PROVIDER)).toBe(true);
 ```
 
 ---
-
-## Showcase: Kitsu Integration Walkthrough
-
-The **Kitsu** integration provides a solid showcase of a complete media-syncing connection implementing `SHOWCASE`, `ANIME`, and `MANGA` capabilities:
-
-### 1. Kitsu Connection Class (`kitsu.connection.ts`)
-See how Kitsu checks for existing library entries (`getLibraryEntry`) and decides to create a new entry with `POST` or update an existing one with `PATCH` matching the **JSON:API** standard:
-
-```typescript
-const existing = await this.getLibraryEntry(conn.accessToken, conn.connectionId, "anime", providerId);
-
-if (existing) {
-  // Update with PATCH
-  await fetch(`https://kitsu.io/api/edge/library-entries/${existing.id}`, {
-    method: "PATCH",
-    headers,
-    body: JSON.stringify({
-      data: { id: existing.id, type: "libraryEntries", attributes }
-    })
-  });
-} else {
-  // Create with POST using relationships
-  await fetch("https://kitsu.io/api/edge/library-entries", {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      data: {
-        type: "libraryEntries",
-        attributes: { status: status || "planned", ...attributes },
-        relationships: {
-          user: { data: { type: "users", id: conn.connectionId } },
-          media: { data: { type: "anime", id: String(providerId) } }
-        }
-      }
-    })
-  });
-}
-```
-
-### 2. Kitsu Search implementation (`metadata.ts`)
-Using Kitsu's public JSON:API endpoint, search converts the raw data to the standard `ConnectionSearchResult` format:
-
-```typescript
-    async search(query: string, type: "ANIME" | "MANGA"): Promise<ConnectionSearchResult[]> {
-      const path = type.toLowerCase();
-      const res = await fetch(
-        `https://kitsu.io/api/edge/${path}?filter[text]=${encodeURIComponent(query)}&page[limit]=10`,
-        {
-          headers: {
-            "Accept": "application/vnd.api+json",
-            "Content-Type": "application/vnd.api+json",
-          }
-        }
-      );
-      const json = await res.json();
-      return (json.data || []).map((item: any) => {
-        const attr = item.attributes || {};
-        return {
-          id: item.id.toString(),
-          title: attr.canonicalTitle || attr.english || attr.romaji,
-          image: attr.posterImage?.tiny || attr.posterImage?.small,
-          format: attr.subtype || attr.showType,
-          episodes: attr.episodeCount,
-          chapters: attr.chapterCount,
-        };
-      });
-    }
-```

@@ -672,6 +672,21 @@ export default class SimklConnection extends BaseConnection {
                 }
               }
 
+              const watchedEpisodes: { seasonNum: number; episodeNum: number }[] = [];
+              if (entry.seasons && Array.isArray(entry.seasons)) {
+                for (const s of entry.seasons) {
+                  const seasonNum = s.number;
+                  if (s.episodes && Array.isArray(s.episodes)) {
+                    for (const ep of s.episodes) {
+                      watchedEpisodes.push({
+                        seasonNum,
+                        episodeNum: ep.number,
+                      });
+                    }
+                  }
+                }
+              }
+
               if (tvdbId) {
                 items.push({
                   mediaType: "tv",
@@ -683,6 +698,7 @@ export default class SimklConnection extends BaseConnection {
                   progress,
                   score,
                   notes,
+                  watchedEpisodes,
                 });
               }
             } else if (type === "movies") {

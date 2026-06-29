@@ -109,7 +109,7 @@ export const PROVIDERS_METADATA: ConnectionMetadata[] = [
     capabilities: [ConnectionCapability.ANIME, ConnectionCapability.MOVIES, ConnectionCapability.TV_SHOWS, ConnectionCapability.SHOWCASE],
     primaryApp: "aquila",
     async search(query: string, type: "ANIME" | "MANGA" | "MOVIES" | "TV_SHOWS"): Promise<ConnectionSearchResult[]> {
-      const clientId = typeof process !== "undefined" ? process.env.NEXT_PUBLIC_SIMKL_CLIENT_ID || "" : "";
+      const clientId = typeof process !== "undefined" ? process.env.NEXT_PUBLIC_SIMKL_CLIENT_ID || process.env.SIMKL_CLIENT_ID || "" : "";
       let path = "anime";
       if (type === "MOVIES") {
         path = "movie";
@@ -128,7 +128,14 @@ export const PROVIDERS_METADATA: ConnectionMetadata[] = [
         }
       );
       if (!res.ok) {
-        throw new Error(`Simkl search failed: ${res.statusText}`);
+        let details = res.statusText || `Status ${res.status}`;
+        try {
+          const errData = await res.json();
+          if (errData && typeof errData === "object") {
+            details = errData.error_description || errData.error || errData.message || details;
+          }
+        } catch {}
+        throw new Error(`Simkl search failed: ${details}`);
       }
       const data = await res.json();
       return (data || []).map((item: any) => ({

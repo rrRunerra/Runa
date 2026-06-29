@@ -135,7 +135,7 @@ export class FavoriteService {
           });
         } else if (fav.type === FavoriteType.BOOK) {
           mediaDetails = await this.prisma.client.aquilaBook.findUnique({
-            where: { openLibraryId: fav.mediaId },
+            where: { googleBookId: fav.mediaId },
           });
         }
       } catch (err) {

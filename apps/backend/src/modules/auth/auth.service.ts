@@ -4,7 +4,8 @@ import { SignJWT, jwtVerify } from 'jose';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { CacheService } from '../../providers/cache/cache.service';
 import { MailService } from '../../providers/mail/mail.service';
-import { decrypt } from '../../common/utils/crypto';
+import { encrypt, decrypt } from '@runa/crypto/server';
+import { generateDataKey, encryptWithDataKey, encryptDataKeyForUser } from '@runa/crypto/node';
 import { verify } from 'otplib';
 import bcrypt from 'bcrypt';
 import type { User, Passkey } from '@runa/database';
@@ -85,6 +86,7 @@ export class AuthService {
       },
       include: {
         passkeys: true,
+        devices: true,
       },
     });
 
@@ -105,7 +107,8 @@ export class AuthService {
 
     // 5. Check if MFA is active for this user
     const hasPasskeys = user.passkeys.length > 0;
-    const isMfaActive = user.totpEnabled || user.emailMfaEnabled || hasPasskeys;
+    const hasDevices = user.devices.length > 0;
+    const isMfaActive = user.totpEnabled || user.emailMfaEnabled || hasPasskeys || hasDevices;
 
     if (isMfaActive) {
       // Generate a short-lived JWT pending MFA token (5 minutes)
@@ -123,11 +126,13 @@ export class AuthService {
       if (user.emailMfaEnabled) allowedMethods.push('email');
       if (hasPasskeys) allowedMethods.push('passkey');
       if (user.backupCodes.length > 0) allowedMethods.push('backup');
+      if (hasDevices) allowedMethods.push('device_notification');
 
       return {
         mfaRequired: true,
         allowedMethods,
         tempToken,
+        devices: user.devices.map(d => ({ id: d.id, deviceName: d.deviceName })),
       } as any; // Cast to bypass compiler return warnings
     }
 
@@ -192,6 +197,55 @@ export class AuthService {
     return { success: true };
   }
 
+  public async sendDeviceMfaCode(tempToken: string, deviceId: string) {
+    let payload;
+    try {
+      const result = await jwtVerify(tempToken, this.secret, {
+        algorithms: ['HS256'],
+      });
+      payload = result.payload;
+    } catch {
+      throw new UnauthorizedException('Invalid or expired MFA token');
+    }
+
+    if (payload.type !== 'mfa_pending' || !payload.sub) {
+      throw new UnauthorizedException('Invalid MFA token');
+    }
+
+    const userId = payload.sub as string;
+    const device = await this.prisma.client.device.findFirst({
+      where: { id: deviceId, userId },
+    });
+
+    if (!device || !device.identityKey) {
+      throw new UnauthorizedException('Device not found or not capable of receiving encrypted notifications');
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    await this.cacheService.set(`mfa-device-code:${userId}`, code, 300); // 5 min TTL
+
+    const dataKey = generateDataKey();
+    const encryptedMessage = encryptWithDataKey(`Your login verification code is: ${code}`, dataKey);
+    const encryptedTitle = encryptWithDataKey('Device Login Request', dataKey);
+    const encryptedKeyPayload = encryptDataKeyForUser(device.identityKey, dataKey);
+
+    await this.prisma.client.notification.create({
+      data: {
+        userId,
+        title: encryptedTitle,
+        message: encryptedMessage,
+        type: 'INFO',
+        status: 'PENDING',
+        metadata: {
+          encryptedKey: encryptedKeyPayload,
+          targetDeviceId: device.id,
+        } as any,
+      },
+    });
+
+    return { success: true };
+  }
+
   public async verifyMfa(
     tempToken: string,
     method: string,
@@ -240,6 +294,13 @@ export class AuthService {
       isVerified = cachedCode === code;
       if (isVerified) {
         await this.cacheService.del(`mfa-email-code:${userId}`);
+      }
+    } else if (method === 'device_notification') {
+      if (!code) throw new BadRequestException('Verification code is required');
+      const cachedCode = await this.cacheService.get<string>(`mfa-device-code:${userId}`);
+      isVerified = cachedCode === code;
+      if (isVerified) {
+        await this.cacheService.del(`mfa-device-code:${userId}`);
       }
     } else if (method === 'backup') {
       if (user.backupCodes.length === 0) {

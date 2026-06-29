@@ -3,32 +3,41 @@
 import { SessionProvider } from "next-auth/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider } from "@/components/ui/sidebar";
-import { NavigationProvider } from "@/components/Providers/NavigationProvider";
+import { SidebarProvider as SidebarNavigationProvider } from "@/components/Providers/rrSidebarProvider";
 import { ThemeProvider } from "next-themes";
-import { THEMES } from "@/config/themes";
-import SpotlightSearch from "@/components/SpotlightSearch";
+import RrSpotlightSearch from "@/components/rrComponents/rrSpotlightSearch";
+import { RrUnlockSecureStorageModal } from "@/components/rrComponents/rrUnlockSecureStorageModal";
+import { useEffect } from "react";
+
+import { RrE2eeProvider } from "@/components/Providers/rrE2eeProvider";
+import { RrThemeProvider } from "@/components/Providers/rrThemeProvider";
+import { RrSpotlightProvider } from "@/components/Providers/rrSpotlightProvider";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
-  const allThemes = [
-    "light",
-    "dark",
-    "system",
-    ...THEMES.flatMap((t) => [`${t.id}-light`, `${t.id}-dark`]),
-  ];
-
   return (
     <SessionProvider>
-      <ThemeProvider attribute="class" defaultTheme="dark" themes={allThemes}>
-        <SidebarProvider>
-          <TooltipProvider>
-            <NavigationProvider>
-              {children}
-              <SpotlightSearch />
-            </NavigationProvider>
-          </TooltipProvider>
-        </SidebarProvider>
-      </ThemeProvider>
+      <RrE2eeProvider>
+        <RrSpotlightProvider>
+          <RrThemeProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              themes={["light", "dark"]}
+            >
+              <SidebarProvider>
+                <TooltipProvider>
+                  <SidebarNavigationProvider>
+                    {children}
+                    <RrSpotlightSearch />
+                    <RrUnlockSecureStorageModal />
+                  </SidebarNavigationProvider>
+                </TooltipProvider>
+              </SidebarProvider>
+            </ThemeProvider>
+          </RrThemeProvider>
+        </RrSpotlightProvider>
+      </RrE2eeProvider>
     </SessionProvider>
   );
 }
-

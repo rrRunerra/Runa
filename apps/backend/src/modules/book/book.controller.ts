@@ -19,4 +19,16 @@ export class BookController {
   async getBook(@Param('id') id: string) {
     return this.bookService.getBook(id);
   }
+
+  @Public()
+  @Get('details/:id/related')
+  async getRelatedBooks(@Param('id') id: string) {
+    return this.bookService.getRelatedBooks(id);
+  }
+
+  @Public()
+  @Get('details/:id/editions')
+  async getBookEditions(@Param('id') id: string) {
+    return this.bookService.getBookEditions(id);
+  }
 }

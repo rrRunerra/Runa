@@ -10,28 +10,30 @@ import {
   ShieldAlert,
   Trash,
 } from "lucide-react";
-import type { NavbarConfig } from "@/components/Providers/NavigationProvider";
-import { ComposeEmailModal } from "@/components/pegasus/ComposeEmailModal";
+import { RrComposeEmailModal } from "@/components/rrComponents/pegasus/rrComposeEmailModal";
 import { SidebarMenuButton } from "@/components/ui/sidebar";
+import { SidebarConfig } from "@/types/SidebarConfig";
 
 export const getPegasusSidebarConfig = (
-  session: any,
   emailAccounts: any[] = [],
-): NavbarConfig => {
+): SidebarConfig => {
   const defaultAccountId = emailAccounts[0]?.id;
+  const totalUnread = emailAccounts.reduce(
+    (sum, acc) => sum + (acc.unreadCount || 0),
+    0,
+  );
 
-  const configs: NavbarConfig = [
+  return [
     {
-      section: "Phone",
+      section: "#$Phone",
       items: [
         {
           label: "Compose",
           icon: <Edit className="h-4 w-4" />,
           subtitle: "Compose mail",
           position: 1,
-          preventRedirect: true,
           component: (
-            <ComposeEmailModal accountId={defaultAccountId}>
+            <RrComposeEmailModal accountId={defaultAccountId}>
               <SidebarMenuButton
                 tooltip="Compose"
                 className="relative transition-colors duration-200 rounded-xl h-9.5 px-3 text-muted-foreground hover:text-foreground hover:bg-white/5 cursor-pointer"
@@ -41,8 +43,24 @@ export const getPegasusSidebarConfig = (
                   <span className="truncate">Compose</span>
                 </span>
               </SidebarMenuButton>
-            </ComposeEmailModal>
+            </RrComposeEmailModal>
           ),
+        },
+        {
+          label: "All Inboxes",
+          icon: <Inbox className="h-4 w-4" />,
+          subtitle: "All inboxes combined",
+          position: 3,
+          href: "/pegasus/unified/inbox",
+          preventRedirect: false,
+        },
+        {
+          label: "Attachments",
+          icon: <FileText className="h-4 w-4" />,
+          subtitle: "All attachments",
+          position: 4,
+          href: "/pegasus/attachments",
+          preventRedirect: false,
         },
       ],
     },
@@ -54,9 +72,8 @@ export const getPegasusSidebarConfig = (
           icon: <Edit className="h-4 w-4" />,
           subtitle: "Compose mail",
           position: 1,
-          preventRedirect: true,
           component: (
-            <ComposeEmailModal accountId={defaultAccountId}>
+            <RrComposeEmailModal accountId={defaultAccountId}>
               <SidebarMenuButton
                 tooltip="Compose"
                 className="relative transition-colors duration-200 rounded-xl h-9.5 px-3 text-muted-foreground hover:text-foreground hover:bg-white/5 cursor-pointer"
@@ -66,8 +83,28 @@ export const getPegasusSidebarConfig = (
                   <span className="truncate">Compose</span>
                 </span>
               </SidebarMenuButton>
-            </ComposeEmailModal>
+            </RrComposeEmailModal>
           ),
+        },
+      ],
+    },
+    {
+      section: "Unified",
+      items: [
+        {
+          label: "Unified Inbox",
+          href: "/pegasus/unified/inbox",
+          preventRedirect: true,
+          icon: <Inbox className="h-4 w-4" style={{ color: "#3b82f6" }} />,
+          subtitle: "All inboxes combined",
+          badge: totalUnread > 0 ? totalUnread.toString() : undefined,
+        },
+        {
+          label: "Attachments",
+          href: "/pegasus/attachments",
+          preventRedirect: true,
+          icon: <FileText className="h-4 w-4" style={{ color: "#10b981" }} />,
+          subtitle: "All attachments",
         },
       ],
     },
@@ -77,20 +114,24 @@ export const getPegasusSidebarConfig = (
         return {
           label: account.accountName,
           href: `/pegasus/account/${account.id}`,
+          preventRedirect: true,
           icon: <Mail className="h-4 w-4" style={{ color: account.color }} />,
           subtitle: account.emailAddress,
           children: [
             {
               label: "Inbox",
               href: `/pegasus/account/${account.id}/inbox`,
+              preventRedirect: true,
               icon: (
                 <Inbox className="h-4 w-4" style={{ color: account.color }} />
               ),
               subtitle: "Incoming mail",
+              badge: account.unreadCount > 0 ? account.unreadCount.toString() : undefined,
             },
             {
               label: "Drafts",
               href: `/pegasus/account/${account.id}/drafts`,
+              preventRedirect: true,
               icon: (
                 <FileText
                   className="h-4 w-4"
@@ -102,6 +143,7 @@ export const getPegasusSidebarConfig = (
             {
               label: "Sent",
               href: `/pegasus/account/${account.id}/sent`,
+              preventRedirect: true,
               icon: (
                 <Send className="h-4 w-4" style={{ color: account.color }} />
               ),
@@ -110,6 +152,7 @@ export const getPegasusSidebarConfig = (
             {
               label: "Outbox",
               href: `/pegasus/account/${account.id}/outbox`,
+              preventRedirect: true,
               icon: (
                 <Send className="h-4 w-4" style={{ color: account.color }} />
               ),
@@ -118,6 +161,7 @@ export const getPegasusSidebarConfig = (
             {
               label: "Archive",
               href: `/pegasus/account/${account.id}/archive`,
+              preventRedirect: true,
               icon: (
                 <Archive className="h-4 w-4" style={{ color: account.color }} />
               ),
@@ -126,6 +170,7 @@ export const getPegasusSidebarConfig = (
             {
               label: "Junk",
               href: `/pegasus/account/${account.id}/junk`,
+              preventRedirect: true,
               icon: (
                 <ShieldAlert
                   className="h-4 w-4"
@@ -137,6 +182,7 @@ export const getPegasusSidebarConfig = (
             {
               label: "Trash",
               href: `/pegasus/account/${account.id}/trash`,
+              preventRedirect: true,
               icon: (
                 <Trash className="h-4 w-4" style={{ color: account.color }} />
               ),
@@ -147,6 +193,4 @@ export const getPegasusSidebarConfig = (
       }),
     },
   ];
-
-  return configs;
 };

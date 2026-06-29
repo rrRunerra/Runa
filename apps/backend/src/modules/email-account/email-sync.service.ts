@@ -3,13 +3,13 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 import { PrismaService } from '../../providers/database/prisma.service';
-import { decrypt } from '../../common/utils/crypto';
+import { decrypt } from '@runa/crypto/server';
 import {
   generateDataKey,
   encryptWithDataKey,
   encryptBufferWithDataKey,
   encryptDataKeyForUser,
-} from '../../common/utils/e2e-crypto';
+} from '@runa/crypto/node';
 import { NotificationGateway } from '../notification/notification.gateway';
 
 interface SyncState {
@@ -103,6 +103,10 @@ export class EmailSyncService {
       logger: false,
     });
 
+    client.on('error', (err: Error): void => {
+      this.logger.error(`IMAP client error for account ${account.emailAddress}:`, err);
+    });
+
     try {
       await client.connect();
 
@@ -190,25 +194,37 @@ export class EmailSyncService {
             }
 
             // Cache metadata and body content locally in the database
-            const emailRecord = await this.prisma.client.emailMessage.create({
-              data: {
-                userEmailAccountId: account.id,
-                uid: msg.uid,
-                messageId: parsed.messageId || null,
-                subject,
-                from: fromStr,
-                to: toStr,
-                cc: ccStr || null,
-                bcc: bccStr || null,
-                date,
-                bodyText,
-                bodyHtml,
-                read: msg.flags ? msg.flags.has('\\Seen') : false,
-                flagged: msg.flags ? msg.flags.has('\\Flagged') : false,
-                folder: standardFolder,
-                encryptedKey: encryptedKey || undefined,
-              },
-            });
+            const emailRecord = await this.prisma.client.emailMessage.upsert({
+  where: {
+    userEmailAccountId_folder_uid: {
+      userEmailAccountId: account.id,
+      folder: standardFolder,
+      uid: msg.uid,
+    },
+  },
+  update: {
+    // Optionally update flags on re-sync
+    read: msg.flags ? msg.flags.has('\\Seen') : false,
+    flagged: msg.flags ? msg.flags.has('\\Flagged') : false,
+  },
+  create: {
+    userEmailAccountId: account.id,
+    uid: msg.uid,
+    messageId: parsed.messageId || null,
+    subject,
+    from: fromStr,
+    to: toStr,
+    cc: ccStr || null,
+    bcc: bccStr || null,
+    date,
+    bodyText,
+    bodyHtml,
+    read: msg.flags ? msg.flags.has('\\Seen') : false,
+    flagged: msg.flags ? msg.flags.has('\\Flagged') : false,
+    folder: standardFolder,
+    encryptedKey: encryptedKey || undefined,
+  },
+});
 
             try {
               const userRecord = await this.prisma.client.user.findUnique({
