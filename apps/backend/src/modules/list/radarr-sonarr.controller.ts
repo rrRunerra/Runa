@@ -152,111 +152,128 @@ export class RadarrSonarrController {
   // ─────────────────────────── SONARR (TV & ANIME) ───────────────────────────
 
   @Get(['sonarr/api/v3/series', 'api/v3/series'])
-  public async getSonarrSeriesList(@Req() req: any) {
-    const username = req.user.username;
-    this.logger.log(`Fetching Sonarr TV/Anime list for user ${username}`);
+  public async getSonarrSeriesListCombined(@Req() req: any) {
+    return this.fetchSonarrSeries(req.user.username, true, true);
+  }
 
-    // Fetch TV show entries (which natively store tvdbId)
-    const tvEntries = await this.prisma.client.aquilaTvUserList.findMany({
-      where: {
-        username: username.toLowerCase(),
-        status: 'PLANNING',
-      },
-      select: {
-        tvdbId: true,
-        tv: {
-          select: {
-            titleEnglish: true,
-            titleRomaji: true,
-          },
-        },
-      },
-    });
+  @Get('sonarr/tv/api/v3/series')
+  public async getSonarrTvList(@Req() req: any) {
+    return this.fetchSonarrSeries(req.user.username, true, false);
+  }
 
-    const animeEntries = await this.prisma.client.aquilaAnimeUserList.findMany({
-      where: {
-        username: username.toLowerCase(),
-        status: 'PLANNING',
-      },
-      select: {
-        id: true,
-        animeId: true,
-        connections: true,
-        anime: {
-          select: {
-            titleEnglish: true,
-            titleRomaji: true,
-            seasonYear: true,
-          },
-        },
-      },
-    });
+  @Get('sonarr/anime/api/v3/series')
+  public async getSonarrAnimeList(@Req() req: any) {
+    return this.fetchSonarrSeries(req.user.username, false, true);
+  }
 
+  private async fetchSonarrSeries(username: string, includeTv: boolean, includeAnime: boolean) {
     const resultList: any[] = [];
 
-    // Process TV Shows
-    for (const entry of tvEntries) {
-      const title = entry.tv.titleEnglish || entry.tv.titleRomaji || 'Unknown TV Show';
-      resultList.push({
-        title,
-        tvdbId: entry.tvdbId,
-        year: 0,
-        monitored: true,
-        seasons: [],
+    if (includeTv) {
+      const tvEntries = await this.prisma.client.aquilaTvUserList.findMany({
+        where: {
+          username: username.toLowerCase(),
+          status: 'PLANNING',
+        },
+        select: {
+          tvdbId: true,
+          tv: {
+            select: {
+              titleEnglish: true,
+              titleRomaji: true,
+            },
+          },
+        },
       });
-    }
 
-    // Process Anime
-    for (const entry of animeEntries) {
-      if (!entry.animeId) continue;
-
-      let tvdbId: number | null = null;
-      const connectionsObj = (entry.connections as Record<string, any>) || {};
-
-      if (connectionsObj.tvdbId) {
-        tvdbId = connectionsObj.tvdbId;
-      } else {
-        // Resolve using Fribb's mapping
-        const resolvedId = await AnimeMappingCache.getTvdbId(entry.animeId);
-        if (resolvedId) {
-          tvdbId = resolvedId;
-
-          // Cache in database
-          try {
-            await this.prisma.client.aquilaAnimeUserList.update({
-              where: { id: entry.id },
-              data: {
-                connections: {
-                  ...connectionsObj,
-                  tvdbId,
-                },
-              },
-            });
-          } catch (dbErr) {
-            this.logger.error(
-              `Failed to save resolved anime TVDB ID for entry ${entry.id}:`,
-              dbErr,
-            );
-          }
-        }
-      }
-
-      if (tvdbId) {
-        const title = entry.anime.titleEnglish || entry.anime.titleRomaji || 'Unknown Anime';
+      for (const entry of tvEntries) {
+        const title = entry.tv.titleEnglish || entry.tv.titleRomaji || 'Unknown TV Show';
         resultList.push({
           title,
-          tvdbId,
-          year: entry.anime.seasonYear || 0,
+          tvdbId: entry.tvdbId,
+          year: 0,
           monitored: true,
           seasons: [],
         });
       }
     }
 
+    if (includeAnime) {
+      const animeEntries = await this.prisma.client.aquilaAnimeUserList.findMany({
+        where: {
+          username: username.toLowerCase(),
+          status: 'PLANNING',
+        },
+        select: {
+          id: true,
+          animeId: true,
+          connections: true,
+          anime: {
+            select: {
+              titleEnglish: true,
+              titleRomaji: true,
+              seasonYear: true,
+            },
+          },
+        },
+      });
+
+      for (const entry of animeEntries) {
+        if (!entry.animeId) continue;
+
+        let tvdbId: number | null = null;
+        const connectionsObj = (entry.connections as Record<string, any>) || {};
+
+        if (connectionsObj.tvdbId) {
+          tvdbId = connectionsObj.tvdbId;
+        } else {
+          // Resolve using Fribb's mapping
+          const resolvedId = await AnimeMappingCache.getTvdbId(entry.animeId);
+          if (resolvedId) {
+            tvdbId = resolvedId;
+
+            // Cache in database
+            try {
+              await this.prisma.client.aquilaAnimeUserList.update({
+                where: { id: entry.id },
+                data: {
+                  connections: {
+                    ...connectionsObj,
+                    tvdbId,
+                  },
+                },
+              });
+            } catch (dbErr) {
+              this.logger.error(
+                `Failed to save resolved anime TVDB ID for entry ${entry.id}:`,
+                dbErr,
+              );
+            }
+          }
+        }
+
+        if (tvdbId) {
+          const title = entry.anime.titleEnglish || entry.anime.titleRomaji || 'Unknown Anime';
+          resultList.push({
+            title,
+            tvdbId,
+            year: entry.anime.seasonYear || 0,
+            monitored: true,
+            seasons: [],
+          });
+        }
+      }
+    }
+
     return resultList;
   }
 
-  @Get(['sonarr/api/v3/qualityprofile', 'api/v3/qualityprofile'])
+  @Get([
+    'sonarr/api/v3/qualityprofile',
+    'api/v3/qualityprofile',
+    'sonarr/tv/api/v3/qualityprofile',
+    'sonarr/anime/api/v3/qualityprofile',
+  ])
   public getSonarrQualityProfiles() {
     return [
       {
