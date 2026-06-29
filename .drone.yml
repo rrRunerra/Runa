@@ -1,183 +1,134 @@
 kind: pipeline
 type: docker
 name: default
+
 steps:
-  - name: build-containers
+  - name: deploy
     image: docker:latest
     volumes:
       - name: docker_sock
         path: /var/run/docker.sock
+    environment:
+      INTERNAL_API_KEY:
+        from_secret: INTERNAL_API_KEY
+      NEXTAUTH_SECRET:
+        from_secret: NEXTAUTH_SECRET
+      NEXTAUTH_URL:
+        from_secret: NEXTAUTH_URL
+      ENABLE_REGISTRATION:
+        from_secret: ENABLE_REGISTRATION
+      NODE_ENV:
+        from_secret: NODE_ENV
+      NEST_PORT:
+        from_secret: NEST_PORT
+      NEXT_PUBLIC_API_URL:
+        from_secret: NEXT_PUBLIC_API_URL
+      NEXT_PUBLIC_URL:
+        from_secret: NEXT_PUBLIC_URL
+      NEST_API_URL:
+        from_secret: NEST_API_URL
+      NEXTAUTH_URL_INTERNAL:
+        from_secret: NEXTAUTH_URL_INTERNAL
+      CACHE_DRIVER:
+        from_secret: CACHE_DRIVER
+      REDIS_URL:
+        from_secret: REDIS_URL
+      SMTP_HOST:
+        from_secret: SMTP_HOST
+      SMTP_PORT:
+        from_secret: SMTP_PORT
+      SMTP_USER:
+        from_secret: SMTP_USER
+      SMTP_PASS:
+        from_secret: SMTP_PASS
+      SMTP_FROM:
+        from_secret: SMTP_FROM
+      THETVDB_KEY:
+        from_secret: THETVDB_KEY
+      DATABASE_URL:
+        from_secret: DATABASE_URL
+      LYNX_TOKEN:
+        from_secret: LYNX_TOKEN
+      ANILIST_CLIENT_ID:
+        from_secret: ANILIST_CLIENT_ID
+      ANILIST_CLIENT_SECRET:
+        from_secret: ANILIST_CLIENT_SECRET
+      MAL_CLIENT_ID:
+        from_secret: MAL_CLIENT_ID
+      MAL_CLIENT_SECRET:
+        from_secret: MAL_CLIENT_SECRET
+      MAL_CODE_CHALLANGE_STRING:
+        from_secret: MAL_CODE_CHALLANGE_STRING
+      SIMKL_CLIENT_ID:
+        from_secret: SIMKL_CLIENT_ID
+      SIMKL_CLIENT_SECRET:
+        from_secret: SIMKL_CLIENT_SECRET
+      NEXT_PUBLIC_SIMKL_CLIENT_ID:
+        from_secret: NEXT_PUBLIC_SIMKL_CLIENT_ID
+      GOOGLE_BOOKS_API_KEY:
+        from_secret: GOOGLE_BOOKS_API_KEY
+      RAWG_API_KEY:
+        from_secret: RAWG_API_KEY
+      PROD_LYNX_TOKEN:
+        from_secret: PROD_LYNX_TOKEN
+      DEV_LYNX_TOKEN:
+        from_secret: DEV_LYNX_TOKEN
+      DEV_SERVER:
+        from_secret: DEV_SERVER
+      LYNX_OWNER:
+        from_secret: LYNX_OWNER
+      LYNX_PORT:
+        from_secret: LYNX_PORT
+      LYNX_API_URL:
+        from_secret: LYNX_API_URL
+      rrLynxKey:
+        from_secret: rrLynxKey
     commands:
-      # Build all containers defined in docker-compose.yml
+      - rm -f .env
+      - printf "INTERNAL_API_KEY=%s\n" "$INTERNAL_API_KEY" >> .env
+      - printf "NEXTAUTH_SECRET=%s\n" "$NEXTAUTH_SECRET" >> .env
+      - printf "NEXTAUTH_URL=%s\n" "$NEXTAUTH_URL" >> .env
+      - printf "ENABLE_REGISTRATION=%s\n" "$ENABLE_REGISTRATION" >> .env
+      - printf "NODE_ENV=%s\n" "$NODE_ENV" >> .env
+      - printf "NEST_PORT=%s\n" "$NEST_PORT" >> .env
+      - printf "NEXT_PUBLIC_API_URL=%s\n" "$NEXT_PUBLIC_API_URL" >> .env
+      - printf "NEXT_PUBLIC_URL=%s\n" "$NEXT_PUBLIC_URL" >> .env
+      - printf "NEST_API_URL=%s\n" "$NEST_API_URL" >> .env
+      - printf "NEXTAUTH_URL_INTERNAL=%s\n" "$NEXTAUTH_URL_INTERNAL" >> .env
+      - printf "CACHE_DRIVER=%s\n" "$CACHE_DRIVER" >> .env
+      - printf "REDIS_URL=%s\n" "$REDIS_URL" >> .env
+      - printf "SMTP_HOST=%s\n" "$SMTP_HOST" >> .env
+      - printf "SMTP_PORT=%s\n" "$SMTP_PORT" >> .env
+      - printf "SMTP_USER=%s\n" "$SMTP_USER" >> .env
+      - printf "SMTP_PASS=%s\n" "$SMTP_PASS" >> .env
+      - printf "SMTP_FROM=%s\n" "$SMTP_FROM" >> .env
+      - printf "THETVDB_KEY=%s\n" "$THETVDB_KEY" >> .env
+      - printf "DATABASE_URL=%s\n" "$DATABASE_URL" >> .env
+      - printf "LYNX_TOKEN=%s\n" "$LYNX_TOKEN" >> .env
+      - printf "ANILIST_CLIENT_ID=%s\n" "$ANILIST_CLIENT_ID" >> .env
+      - printf "ANILIST_CLIENT_SECRET=%s\n" "$ANILIST_CLIENT_SECRET" >> .env
+      - printf "MAL_CLIENT_ID=%s\n" "$MAL_CLIENT_ID" >> .env
+      - printf "MAL_CLIENT_SECRET=%s\n" "$MAL_CLIENT_SECRET" >> .env
+      - printf "MAL_CODE_CHALLANGE_STRING=%s\n" "$MAL_CODE_CHALLANGE_STRING" >> .env
+      - printf "SIMKL_CLIENT_ID=%s\n" "$SIMKL_CLIENT_ID" >> .env
+      - printf "SIMKL_CLIENT_SECRET=%s\n" "$SIMKL_CLIENT_SECRET" >> .env
+      - printf "NEXT_PUBLIC_SIMKL_CLIENT_ID=%s\n" "$NEXT_PUBLIC_SIMKL_CLIENT_ID" >> .env
+      - printf "GOOGLE_BOOKS_API_KEY=%s\n" "$GOOGLE_BOOKS_API_KEY" >> .env
+      - printf "RAWG_API_KEY=%s\n" "$RAWG_API_KEY" >> .env
+      - printf "PROD_LYNX_TOKEN=%s\n" "$PROD_LYNX_TOKEN" >> .env
+      - printf "DEV_LYNX_TOKEN=%s\n" "$DEV_LYNX_TOKEN" >> .env
+      - printf "DEV_SERVER=%s\n" "$DEV_SERVER" >> .env
+      - printf "LYNX_OWNER=%s\n" "$LYNX_OWNER" >> .env
+      - printf "LYNX_PORT=%s\n" "$LYNX_PORT" >> .env
+      - printf "LYNX_API_URL=%s\n" "$LYNX_API_URL" >> .env
+      - printf "rrLynxKey=%s\n" "$rrLynxKey" >> .env
       - docker compose build
-
-    environment:
-      INTERNAL_API_KEY:
-        from_secret: INTERNAL_API_KEY
-      NEXTAUTH_SECRET:
-        from_secret: NEXTAUTH_SECRET
-      NEXTAUTH_URL:
-        from_secret: NEXTAUTH_URL
-      ENABLE_REGISTRATION:
-        from_secret: ENABLE_REGISTRATION
-      NODE_ENV:
-        from_secret: NODE_ENV
-      NEST_PORT:
-        from_secret: NEST_PORT
-      NEXT_PUBLIC_API_URL:
-        from_secret: NEXT_PUBLIC_API_URL
-      NEXT_PUBLIC_URL:
-        from_secret: NEXT_PUBLIC_URL
-      NEST_API_URL:
-        from_secret: NEST_API_URL
-      NEXTAUTH_URL_INTERNAL:
-        from_secret: NEXTAUTH_URL_INTERNAL
-      CACHE_DRIVER:
-        from_secret: CACHE_DRIVER
-      REDIS_URL:
-        from_secret: REDIS_URL
-      SMTP_HOST:
-        from_secret: SMTP_HOST
-      SMTP_PORT:
-        from_secret: SMTP_PORT
-      SMTP_USER:
-        from_secret: SMTP_USER
-      SMTP_PASS:
-        from_secret: SMTP_PASS
-      SMTP_FROM:
-        from_secret: SMTP_FROM
-      THETVDB_KEY:
-        from_secret: THETVDB_KEY
-      DATABASE_URL:
-        from_secret: DATABASE_URL
-      LYNX_TOKEN:
-        from_secret: LYNX_TOKEN
-      ANILIST_CLIENT_ID:
-        from_secret: ANILIST_CLIENT_ID
-      ANILIST_CLIENT_SECRET:
-        from_secret: ANILIST_CLIENT_SECRET
-      MAL_CLIENT_ID:
-        from_secret: MAL_CLIENT_ID
-      MAL_CLIENT_SECRET:
-        from_secret: MAL_CLIENT_SECRET
-      MAL_CODE_CHALLANGE_STRING:
-        from_secret: MAL_CODE_CHALLANGE_STRING
-      SIMKL_CLIENT_ID:
-        from_secret: SIMKL_CLIENT_ID
-      SIMKL_CLIENT_SECRET:
-        from_secret: SIMKL_CLIENT_SECRET
-      NEXT_PUBLIC_SIMKL_CLIENT_ID:
-        from_secret: NEXT_PUBLIC_SIMKL_CLIENT_ID
-      GOOGLE_BOOKS_API_KEY:
-        from_secret: GOOGLE_BOOKS_API_KEY
-      RAWG_API_KEY:
-        from_secret: RAWG_API_KEY
-      PROD_LYNX_TOKEN:
-        from_secret: PROD_LYNX_TOKEN
-      DEV_LYNX_TOKEN:
-        from_secret: DEV_LYNX_TOKEN
-      DEV_SERVER:
-        from_secret: DEV_SERVER
-      LYNX_OWNER:
-        from_secret: LYNX_OWNER
-      LYNX_PORT:
-        from_secret: LYNX_PORT
-      LYNX_API_URL:
-        from_secret: LYNX_API_URL
-      rrLynxKey:
-        from_secret: rrLynxKey
-
-  - name: start-containers
-    image: docker:latest
-    volumes:
-      - name: docker_sock
-        path: /var/run/docker.sock
-    commands:
-      # Start all containers in detached mode
       - docker compose up -d
-      # Wait a brief moment to allow container initialization
       - sleep 5
-      # Check container status
       - docker compose ps
-      # Output backend and frontend logs to verify successful startup
-      - docker compose logs backend --tail=50
-      - docker compose logs frontend --tail=50
-
-    environment:
-      INTERNAL_API_KEY:
-        from_secret: INTERNAL_API_KEY
-      NEXTAUTH_SECRET:
-        from_secret: NEXTAUTH_SECRET
-      NEXTAUTH_URL:
-        from_secret: NEXTAUTH_URL
-      ENABLE_REGISTRATION:
-        from_secret: ENABLE_REGISTRATION
-      NODE_ENV:
-        from_secret: NODE_ENV
-      NEST_PORT:
-        from_secret: NEST_PORT
-      NEXT_PUBLIC_API_URL:
-        from_secret: NEXT_PUBLIC_API_URL
-      NEXT_PUBLIC_URL:
-        from_secret: NEXT_PUBLIC_URL
-      NEST_API_URL:
-        from_secret: NEST_API_URL
-      NEXTAUTH_URL_INTERNAL:
-        from_secret: NEXTAUTH_URL_INTERNAL
-      CACHE_DRIVER:
-        from_secret: CACHE_DRIVER
-      REDIS_URL:
-        from_secret: REDIS_URL
-      SMTP_HOST:
-        from_secret: SMTP_HOST
-      SMTP_PORT:
-        from_secret: SMTP_PORT
-      SMTP_USER:
-        from_secret: SMTP_USER
-      SMTP_PASS:
-        from_secret: SMTP_PASS
-      SMTP_FROM:
-        from_secret: SMTP_FROM
-      THETVDB_KEY:
-        from_secret: THETVDB_KEY
-      DATABASE_URL:
-        from_secret: DATABASE_URL
-      LYNX_TOKEN:
-        from_secret: LYNX_TOKEN
-      ANILIST_CLIENT_ID:
-        from_secret: ANILIST_CLIENT_ID
-      ANILIST_CLIENT_SECRET:
-        from_secret: ANILIST_CLIENT_SECRET
-      MAL_CLIENT_ID:
-        from_secret: MAL_CLIENT_ID
-      MAL_CLIENT_SECRET:
-        from_secret: MAL_CLIENT_SECRET
-      MAL_CODE_CHALLANGE_STRING:
-        from_secret: MAL_CODE_CHALLANGE_STRING
-      SIMKL_CLIENT_ID:
-        from_secret: SIMKL_CLIENT_ID
-      SIMKL_CLIENT_SECRET:
-        from_secret: SIMKL_CLIENT_SECRET
-      NEXT_PUBLIC_SIMKL_CLIENT_ID:
-        from_secret: NEXT_PUBLIC_SIMKL_CLIENT_ID
-      GOOGLE_BOOKS_API_KEY:
-        from_secret: GOOGLE_BOOKS_API_KEY
-      RAWG_API_KEY:
-        from_secret: RAWG_API_KEY
-      PROD_LYNX_TOKEN:
-        from_secret: PROD_LYNX_TOKEN
-      DEV_LYNX_TOKEN:
-        from_secret: DEV_LYNX_TOKEN
-      DEV_SERVER:
-        from_secret: DEV_SERVER
-      LYNX_OWNER:
-        from_secret: LYNX_OWNER
-      LYNX_PORT:
-        from_secret: LYNX_PORT
-      LYNX_API_URL:
-        from_secret: LYNX_API_URL
-      rrLynxKey:
-        from_secret: rrLynxKey
+      - docker compose logs runa-backend --tail=50
+      - docker compose logs runa-frontend --tail=50
+      - docker compose logs runa-lynx --tail=50
 
 volumes:
   - name: docker_sock
