@@ -1,0 +1,40 @@
+kind: pipeline
+type: docker
+name: default
+
+steps:
+  - name: build-containers
+    image: docker:latest
+    volumes:
+      - name: docker_sock
+        path: /var/run/docker.sock
+    commands:
+      # Build all containers defined in docker-compose.yml
+      - docker compose build
+
+  - name: start-containers
+    image: docker:latest
+    volumes:
+      - name: docker_sock
+        path: /var/run/docker.sock
+    commands:
+      # Start all containers in detached mode
+      - docker compose up -d
+      # Wait a brief moment to allow container initialization
+      - sleep 5
+      # Check container status
+      - docker compose ps
+      # Output backend and frontend logs to verify successful startup
+      - docker compose logs backend --tail=50
+      - docker compose logs frontend --tail=50
+
+volumes:
+  - name: docker_sock
+    host:
+      path: /var/run/docker.sock
+
+trigger:
+  branch:
+    - main
+  event:
+    - push
