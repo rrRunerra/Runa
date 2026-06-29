@@ -4,7 +4,8 @@ import type { Media, SearchMedia } from '../../common/types/types';
 import { AnimeRepository } from './repositories/anime.repository';
 import { AnimeQueueService } from './services/anime-queue.service';
 
-const CACHE_DURATION_MS = 24 * 60 * 60 * 1000;
+const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
+const CACHE_DURATION_MS = isDev ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class AnimeService {
@@ -72,14 +73,14 @@ export class AnimeService {
     }));
   }
 
-  public async getAnime(id: number): Promise<Media> {
+  public async getAnime(id: number, forceRefresh = false): Promise<Media> {
     if (isNaN(id)) {
       throw new Error(`Invalid anime ID: ${id}`);
     }
 
     const dbAnime = await this.animeRepository.findByAnilistId(id);
 
-    if (dbAnime) {
+    if (dbAnime && !forceRefresh) {
       const now = new Date();
       const updatedAt = new Date(dbAnime.updatedAt);
       const timeSinceUpdate = now.getTime() - updatedAt.getTime();

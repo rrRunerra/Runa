@@ -36,6 +36,7 @@ export const AquilaFlags = defineFlags([
   "EDIT_GAME",
   "EDIT_BOOK",
   "IMPORT_LIST",
+  "MEDIA_REFRESH",
 ], 200);
 
 export const PegasusFlags = defineFlags([

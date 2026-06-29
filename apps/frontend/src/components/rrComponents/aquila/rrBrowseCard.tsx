@@ -72,6 +72,7 @@ const RrBrowseCardComponent = ({
 
       <Link
         href={`/aquila/${safeType}/${safeId}`}
+        prefetch={false}
         onClick={onClick}
         className="flex flex-col gap-2 h-full"
       >

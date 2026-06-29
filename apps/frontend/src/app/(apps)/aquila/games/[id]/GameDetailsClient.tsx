@@ -17,6 +17,7 @@ import { fetcher } from "@/lib/fetcher";
 import { Media } from "@/types/aquila";
 import { RrMediaEditDialog } from "@/components/rrComponents/aquila/rrMediaEditDialog";
 import RrLapplandImageNotFound from "@/components/rrComponents/rrImages/rrLapplandImageNotFound";
+import { RrMediaRefreshButton } from "@/components/rrComponents/aquila/rrMediaRefreshButton";
 
 interface ListEntry {
   id: number | string;
@@ -52,7 +53,7 @@ export default function GameDetailsPage(): React.JSX.Element {
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
 
   // SWR queries replacing sequential imperative fetching
-  const { data: game, error: gameError, isLoading: gameLoading } = useSWR<Media>(
+  const { data: game, error: gameError, isLoading: gameLoading, mutate: mutateGame } = useSWR<Media>(
     id ? `${process.env.NEXT_PUBLIC_API_URL}/game/details/${id}` : null,
     fetcher
   );
@@ -247,6 +248,13 @@ export default function GameDetailsPage(): React.JSX.Element {
                       }}
                       onDeleted={(): void => {
                         mutateListEntry();
+                      }}
+                    />
+                    <RrMediaRefreshButton
+                      mediaType="game"
+                      mediaId={game.id.toString()}
+                      onRefreshed={(): void => {
+                        void mutateGame();
                       }}
                     />
                   </>

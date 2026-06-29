@@ -17,6 +17,7 @@ import { fetcher } from "@/lib/fetcher";
 import { Media } from "@/types/aquila";
 import { RrMediaEditDialog } from "@/components/rrComponents/aquila/rrMediaEditDialog";
 import RrLapplandImageNotFound from "@/components/rrComponents/rrImages/rrLapplandImageNotFound";
+import { RrMediaRefreshButton } from "@/components/rrComponents/aquila/rrMediaRefreshButton";
 
 interface ListEntry {
   id: number | string;
@@ -52,7 +53,7 @@ export default function MangaDetailsPage(): React.JSX.Element {
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
 
   // SWR queries replacing sequential imperative fetching
-  const { data: manga, error: mangaError, isLoading: mangaLoading } = useSWR<Media>(
+  const { data: manga, error: mangaError, isLoading: mangaLoading, mutate: mutateManga } = useSWR<Media>(
     id ? `${process.env.NEXT_PUBLIC_API_URL}/manga/details/${id}` : null,
     fetcher
   );
@@ -241,6 +242,13 @@ export default function MangaDetailsPage(): React.JSX.Element {
                       }}
                       onDeleted={(): void => {
                         mutateListEntry();
+                      }}
+                    />
+                    <RrMediaRefreshButton
+                      mediaType="manga"
+                      mediaId={manga.id.toString()}
+                      onRefreshed={(): void => {
+                        void mutateManga();
                       }}
                     />
                   </>
@@ -509,6 +517,7 @@ export default function MangaDetailsPage(): React.JSX.Element {
                       <Link
                         key={qid}
                         href={href}
+                        prefetch={false}
                         className="flex items-center justify-between bg-card/35 border border-border/30 p-4 rounded-xl hover:bg-accent/50 hover:border-border/50 transition-all group"
                       >
                         <div className="min-w-0 pr-2">

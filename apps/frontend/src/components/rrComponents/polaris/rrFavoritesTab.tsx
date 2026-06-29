@@ -133,6 +133,7 @@ export default function RrFavoritesTab({
                     <Link
                       key={fav.id}
                       href={getMediaUrl(fav.type, fav.mediaId)}
+                      prefetch={false}
                       className="block focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 rounded-xl transition-all"
                     >
                       <motion.div

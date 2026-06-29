@@ -148,7 +148,7 @@ export default function Page() {
       length: value.length >= 16,
       maxLength: value.length > 0 && value.length <= 64,
       uppercase: /[A-Z]/.test(value),
-      number: /[0-9]{2,}/.test(value),
+      number: /(?:.*[0-9]){2}/.test(value),
       special: /[!@#$%^&*(),.?":{}|<>~'_\-+=/\\\[\]\x60]/.test(value),
     };
 

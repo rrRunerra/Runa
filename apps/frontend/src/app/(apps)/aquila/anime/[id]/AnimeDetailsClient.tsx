@@ -17,6 +17,7 @@ import { fetcher } from "@/lib/fetcher";
 import { Media } from "@/types/aquila";
 import { RrMediaEditDialog } from "@/components/rrComponents/aquila/rrMediaEditDialog";
 import RrLapplandImageNotFound from "@/components/rrComponents/rrImages/rrLapplandImageNotFound";
+import { RrMediaRefreshButton } from "@/components/rrComponents/aquila/rrMediaRefreshButton";
 
 interface ListEntry {
   id: number | string;
@@ -57,6 +58,7 @@ export default function AnimeDetailsPage(): React.JSX.Element {
     data: anime,
     error: animeError,
     isLoading: animeLoading,
+    mutate: mutateAnime,
   } = useSWR<Media>(
     id ? `${process.env.NEXT_PUBLIC_API_URL}/anime/details/${id}` : null,
     fetcher,
@@ -276,6 +278,13 @@ export default function AnimeDetailsPage(): React.JSX.Element {
                       }}
                       onDeleted={(): void => {
                         mutateListEntry();
+                      }}
+                    />
+                    <RrMediaRefreshButton
+                      mediaType="anime"
+                      mediaId={anime.id.toString()}
+                      onRefreshed={(): void => {
+                        void mutateAnime();
                       }}
                     />
                   </>
@@ -606,6 +615,7 @@ export default function AnimeDetailsPage(): React.JSX.Element {
                       <Link
                         key={qid}
                         href={href}
+                        prefetch={false}
                         className="flex items-center justify-between bg-card/35 border border-border/30 p-4 rounded-xl hover:bg-accent/50 hover:border-border/50 transition-all group"
                       >
                         <div className="min-w-0 pr-2">

@@ -17,6 +17,7 @@ import { fetcher } from "@/lib/fetcher";
 import { Media } from "@/types/aquila";
 import { RrMediaEditDialog } from "@/components/rrComponents/aquila/rrMediaEditDialog";
 import RrLapplandImageNotFound from "@/components/rrComponents/rrImages/rrLapplandImageNotFound";
+import { RrMediaRefreshButton } from "@/components/rrComponents/aquila/rrMediaRefreshButton";
 
 interface ListEntry {
   id: number | string;
@@ -56,6 +57,7 @@ export default function BookDetailsPage(): React.JSX.Element {
     data: book,
     error: bookError,
     isLoading: bookLoading,
+    mutate: mutateBook,
   } = useSWR<Media>(
     id ? `${process.env.NEXT_PUBLIC_API_URL}/book/details/${id}` : null,
     fetcher,
@@ -258,6 +260,13 @@ export default function BookDetailsPage(): React.JSX.Element {
                       }}
                       onDeleted={(): void => {
                         mutateListEntry();
+                      }}
+                    />
+                    <RrMediaRefreshButton
+                      mediaType="book"
+                      mediaId={book.id.toString()}
+                      onRefreshed={(): void => {
+                        void mutateBook();
                       }}
                     />
                   </>
@@ -480,6 +489,7 @@ export default function BookDetailsPage(): React.JSX.Element {
                     <Link
                       key={edition.id}
                       href={`/aquila/books/${edition.id}`}
+                      prefetch={false}
                       className="group flex flex-col gap-2 bg-card/25 border border-border/30 hover:border-border/50 p-2 rounded-xl transition-all"
                     >
                       <div className="relative aspect-2/3 w-full rounded-lg overflow-hidden bg-muted flex items-center justify-center border border-border/20">
@@ -522,6 +532,7 @@ export default function BookDetailsPage(): React.JSX.Element {
                     <Link
                       key={relBook.id}
                       href={`/aquila/books/${relBook.id}`}
+                      prefetch={false}
                       className="group flex flex-col gap-2 bg-card/25 border border-border/30 hover:border-border/50 p-2 rounded-xl transition-all"
                     >
                       <div className="relative aspect-2/3 w-full rounded-lg overflow-hidden bg-muted flex items-center justify-center border border-border/20">

@@ -17,6 +17,7 @@ import { fetcher } from "@/lib/fetcher";
 import { Media } from "@/types/aquila";
 import { RrMediaEditDialog } from "@/components/rrComponents/aquila/rrMediaEditDialog";
 import RrLapplandImageNotFound from "@/components/rrComponents/rrImages/rrLapplandImageNotFound";
+import { RrMediaRefreshButton } from "@/components/rrComponents/aquila/rrMediaRefreshButton";
 
 interface ListEntry {
   id: number | string;
@@ -52,7 +53,7 @@ export default function MovieDetailsPage(): React.JSX.Element {
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
 
   // SWR queries replacing sequential imperative fetching
-  const { data: movie, error: movieError, isLoading: movieLoading } = useSWR<Media>(
+  const { data: movie, error: movieError, isLoading: movieLoading, mutate: mutateMovie } = useSWR<Media>(
     id ? `${process.env.NEXT_PUBLIC_API_URL}/movie/details/${id}` : null,
     fetcher
   );
@@ -245,6 +246,13 @@ export default function MovieDetailsPage(): React.JSX.Element {
                       }}
                       onDeleted={(): void => {
                         mutateListEntry();
+                      }}
+                    />
+                    <RrMediaRefreshButton
+                      mediaType="movie"
+                      mediaId={movie.id.toString()}
+                      onRefreshed={(): void => {
+                        void mutateMovie();
                       }}
                     />
                   </>

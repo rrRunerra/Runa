@@ -9,7 +9,8 @@ import type {
 import { MovieRepository } from './repositories/movie.repository';
 import { MovieQueueService } from './services/movie-queue.service';
 
-const CACHE_DURATION_MS = 24 * 60 * 60 * 1000;
+const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
+const CACHE_DURATION_MS = isDev ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class MovieService {
@@ -78,7 +79,7 @@ export class MovieService {
     return result;
   }
 
-  public async getMovie(id: string): Promise<Media> {
+  public async getMovie(id: string, forceRefresh = false): Promise<Media> {
     const tvdbId = parseInt(id);
     if (isNaN(tvdbId)) {
       throw new Error('Invalid id format');
@@ -86,7 +87,7 @@ export class MovieService {
 
     const dbMovie = await this.movieRepository.findByTvdbId(tvdbId);
 
-    if (dbMovie) {
+    if (dbMovie && !forceRefresh) {
       const now = new Date();
       const updatedAt = new Date(dbMovie.updatedAt);
       const timeSinceUpdate = now.getTime() - updatedAt.getTime();

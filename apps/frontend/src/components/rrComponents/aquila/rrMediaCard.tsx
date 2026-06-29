@@ -75,6 +75,7 @@ const RrMediaCardComponent = ({
         <div className="relative aspect-2/3 w-full rounded-t-2xl overflow-hidden bg-muted">
           <Link
             href={href}
+            prefetch={false}
             className="absolute inset-0 block cursor-pointer z-10"
           >
             {item.image ? (
@@ -152,7 +153,7 @@ const RrMediaCardComponent = ({
 
         {/* Metadata Details Area */}
         <div className="p-3 flex flex-col flex-1 gap-2.5">
-          <Link href={href} className="block flex-1 group/title cursor-pointer">
+          <Link href={href} prefetch={false} className="block flex-1 group/title cursor-pointer">
             <h4
               title={item.title}
               className="font-semibold text-xs sm:text-sm text-foreground line-clamp-2 leading-tight group-hover/title:text-primary transition-colors duration-200 tracking-wide wrap-break-word"

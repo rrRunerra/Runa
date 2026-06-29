@@ -3,7 +3,8 @@ import type { Media, SearchMedia } from '../../common/types/types';
 import { BookRepository } from './repositories/book.repository';
 import { BookQueueService } from './services/book-queue.service';
 
-const CACHE_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
+const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
+const CACHE_DURATION_MS = isDev ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
 
 @Injectable()
 export class BookService {
@@ -58,10 +59,10 @@ export class BookService {
     }
   }
 
-  public async getBook(id: string): Promise<Media> {
+  public async getBook(id: string, forceRefresh = false): Promise<Media> {
     const dbBook = await this.bookRepository.findByGoogleBookId(id);
 
-    if (dbBook) {
+    if (dbBook && !forceRefresh) {
       const now = new Date();
       const updatedAt = new Date(dbBook.updatedAt);
       const timeSinceUpdate = now.getTime() - updatedAt.getTime();

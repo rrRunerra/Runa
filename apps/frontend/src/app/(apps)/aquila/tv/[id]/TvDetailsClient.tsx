@@ -24,6 +24,7 @@ import { fetcher } from "@/lib/fetcher";
 import { Season, Media } from "@/types/aquila";
 import { RrMediaEditDialog } from "@/components/rrComponents/aquila/rrMediaEditDialog";
 import RrLapplandImageNotFound from "@/components/rrComponents/rrImages/rrLapplandImageNotFound";
+import { RrMediaRefreshButton } from "@/components/rrComponents/aquila/rrMediaRefreshButton";
 
 interface TvMedia extends Media {
   seasons: Season[];
@@ -64,7 +65,7 @@ export default function TvDetailsPage(): React.JSX.Element {
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
 
   // SWR queries replacing sequential imperative fetching
-  const { data: tv, error: tvError, isLoading: tvLoading } = useSWR<TvMedia>(
+  const { data: tv, error: tvError, isLoading: tvLoading, mutate: mutateTv } = useSWR<TvMedia>(
     id ? `${process.env.NEXT_PUBLIC_API_URL}/tv/details/${id}` : null,
     fetcher
   );
@@ -322,6 +323,13 @@ export default function TvDetailsPage(): React.JSX.Element {
                       }}
                       onDeleted={(): void => {
                         mutateListEntry();
+                      }}
+                    />
+                    <RrMediaRefreshButton
+                      mediaType="tv"
+                      mediaId={tv.id.toString()}
+                      onRefreshed={(): void => {
+                        void mutateTv();
                       }}
                     />
                   </>
