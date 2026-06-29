@@ -1,3 +1,8 @@
+networks:
+  Runerra:
+    external: true
+
+
 services:
   runa-frontend:
     build:
@@ -12,6 +17,9 @@ services:
         - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
         - NEXT_PUBLIC_SIMKL_CLIENT_ID=${SIMKL_CLIENT_ID}
     container_name: runa-frontend
+    networks:
+      Runerra:
+        ipv4_address: 172.20.0.100
     ports:
       - "3000:3000"
     env_file:
@@ -29,6 +37,9 @@ services:
       dockerfile: apps/backend/Dockerfile
     container_name: runa-backend
     user: "0:0"
+    networks:
+      Runerra:
+        ipv4_address: 172.20.0.101
     ports:
       - "${NEST_PORT}:${NEST_PORT}"
     env_file:
@@ -44,6 +55,9 @@ services:
       context: .
       dockerfile: apps/lynx-bot/Dockerfile
     container_name: runa-lynx-bot
+    networks:
+      Runerra:
+        ipv4_address: 172.20.0.102
     ports:
       - "${LYNX_PORT}:${LYNX_PORT}"
 
