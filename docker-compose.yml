@@ -25,7 +25,7 @@ services:
     env_file:
       - .env
     environment:
-      - NEST_API_URL=http://backend:${NEST_PORT:-4000}
+      - NEST_API_URL=http://runa-backend:${NEST_PORT:-4000}
       - NEXTAUTH_URL_INTERNAL=http://localhost:3000 # DevSkim: ignore DS137138, DS162092
       - LYNX_API_URL=http://lynx-bot:4444
       - TZ=Europe/Bratislava
