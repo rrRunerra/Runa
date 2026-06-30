@@ -1,0 +1,502 @@
+{
+  "type": "controller",
+  "controllerName": "UserController",
+  "controllerCode": "UsCtr-",
+
+  "dependedOn": "usersService",
+
+  "privateVars": [
+    {
+      "name": "moduleCode",
+      "type": "string",
+      "description": "Prefix for rrCodes",
+      "readOnly": true
+    },
+    {
+      "name": "usersService",
+      "type": "UserService",
+      "description": "Service for user CRUD, MFA, device, and E2EE operations",
+      "readOnly": true
+    }
+  ],
+
+  "routes": [
+    {
+      "method": "POST",
+      "endpoint": "/user/create",
+      "handlerName": "create",
+      "params": [
+        {
+          "name": "data",
+          "source": "body",
+          "type": "CreateUserDto"
+        }
+      ],
+      "request": null,
+      "public": true
+    },
+    {
+      "method": "GET",
+      "endpoint": "/user/privacy",
+      "handlerName": "getPrivacy",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "any"
+        }
+      ],
+      "request": {
+        "name": "req",
+        "type": "any"
+      },
+      "public": false
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/user/privacy",
+      "handlerName": "updatePrivacy",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "any"
+        },
+        {
+          "name": "data",
+          "source": "body",
+          "type": "PrivacySettingsDto"
+        }
+      ],
+      "request": {
+        "name": "req",
+        "type": "any"
+      },
+      "public": false
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/user/settings",
+      "handlerName": "updateSettings",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "any"
+        },
+        {
+          "name": "data",
+          "source": "body",
+          "type": "{ profileSettings: any }"
+        }
+      ],
+      "request": {
+        "name": "req",
+        "type": "any"
+      },
+      "public": false
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/user/update",
+      "handlerName": "update",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "any"
+        },
+        {
+          "name": "data",
+          "source": "body",
+          "type": "UpdateUserDto"
+        }
+      ],
+      "request": {
+        "name": "req",
+        "type": "any"
+      },
+      "public": false
+    },
+    {
+      "method": "POST",
+      "endpoint": "/user/mfa/totp/setup",
+      "handlerName": "setupTotp",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "any"
+        }
+      ],
+      "request": {
+        "name": "req",
+        "type": "any"
+      },
+      "public": false
+    },
+    {
+      "method": "POST",
+      "endpoint": "/user/mfa/totp/enable",
+      "handlerName": "enableTotp",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "any"
+        },
+        {
+          "name": "code",
+          "source": "body",
+          "type": "string"
+        }
+      ],
+      "request": {
+        "name": "req",
+        "type": "any"
+      },
+      "public": false
+    },
+    {
+      "method": "POST",
+      "endpoint": "/user/mfa/totp/disable",
+      "handlerName": "disableTotp",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "any"
+        }
+      ],
+      "request": {
+        "name": "req",
+        "type": "any"
+      },
+      "public": false
+    },
+    {
+      "method": "POST",
+      "endpoint": "/user/mfa/email/send-setup-code",
+      "handlerName": "sendEmailMfaSetupCode",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "any"
+        }
+      ],
+      "request": {
+        "name": "req",
+        "type": "any"
+      },
+      "public": false
+    },
+    {
+      "method": "POST",
+      "endpoint": "/user/mfa/email/enable",
+      "handlerName": "enableEmailMfa",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "any"
+        },
+        {
+          "name": "code",
+          "source": "body",
+          "type": "string"
+        }
+      ],
+      "request": {
+        "name": "req",
+        "type": "any"
+      },
+      "public": false
+    },
+    {
+      "method": "POST",
+      "endpoint": "/user/mfa/email/disable",
+      "handlerName": "disableEmailMfa",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "any"
+        }
+      ],
+      "request": {
+        "name": "req",
+        "type": "any"
+      },
+      "public": false
+    },
+    {
+      "method": "POST",
+      "endpoint": "/user/mfa/backup-codes/regenerate",
+      "handlerName": "regenerateBackupCodes",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "any"
+        }
+      ],
+      "request": {
+        "name": "req",
+        "type": "any"
+      },
+      "public": false
+    },
+    {
+      "method": "POST",
+      "endpoint": "/user/mfa/passkey/register-options",
+      "handlerName": "generatePasskeyRegisterOptions",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "any"
+        }
+      ],
+      "request": {
+        "name": "req",
+        "type": "any"
+      },
+      "public": false
+    },
+    {
+      "method": "POST",
+      "endpoint": "/user/mfa/passkey/register-verify",
+      "handlerName": "verifyPasskeyRegister",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "any"
+        },
+        {
+          "name": "response",
+          "source": "body",
+          "type": "any"
+        },
+        {
+          "name": "name",
+          "source": "body",
+          "type": "string",
+          "optional": true
+        }
+      ],
+      "request": {
+        "name": "req",
+        "type": "any"
+      },
+      "public": false
+    },
+    {
+      "method": "GET",
+      "endpoint": "/user/mfa/passkeys",
+      "handlerName": "getPasskeys",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "any"
+        }
+      ],
+      "request": {
+        "name": "req",
+        "type": "any"
+      },
+      "public": false
+    },
+    {
+      "method": "GET",
+      "endpoint": "/user/mfa/status",
+      "handlerName": "getMfaStatus",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "any"
+        }
+      ],
+      "request": {
+        "name": "req",
+        "type": "any"
+      },
+      "public": false
+    },
+    {
+      "method": "DELETE",
+      "endpoint": "/user/mfa/passkey/:id",
+      "handlerName": "deletePasskey",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "any"
+        },
+        {
+          "name": "id",
+          "source": "param",
+          "type": "string"
+        }
+      ],
+      "request": {
+        "name": "req",
+        "type": "any"
+      },
+      "public": false
+    },
+    {
+      "method": "GET",
+      "endpoint": "/user/devices",
+      "handlerName": "getDevices",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "any"
+        }
+      ],
+      "request": {
+        "name": "req",
+        "type": "any"
+      },
+      "public": false
+    },
+    {
+      "method": "DELETE",
+      "endpoint": "/user/device/:id",
+      "handlerName": "deleteDevice",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "any"
+        },
+        {
+          "name": "id",
+          "source": "param",
+          "type": "string"
+        }
+      ],
+      "request": {
+        "name": "req",
+        "type": "any"
+      },
+      "public": false
+    },
+    {
+      "method": "POST",
+      "endpoint": "/user/device/register",
+      "handlerName": "registerDevice",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "any"
+        },
+        {
+          "name": "body",
+          "source": "body",
+          "type": "any"
+        }
+      ],
+      "request": {
+        "name": "req",
+        "type": "any"
+      },
+      "public": false
+    },
+    {
+      "method": "GET",
+      "endpoint": "/user/device/status/:id",
+      "handlerName": "getDeviceStatus",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "any"
+        },
+        {
+          "name": "id",
+          "source": "param",
+          "type": "string"
+        }
+      ],
+      "request": {
+        "name": "req",
+        "type": "any"
+      },
+      "public": false
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/user/e2ee-keys",
+      "handlerName": "updateE2eeKeys",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "any"
+        },
+        {
+          "name": "body",
+          "source": "body",
+          "type": "{ userPublicKey: string, encryptedUserPrivateKey: string }"
+        }
+      ],
+      "request": {
+        "name": "req",
+        "type": "any"
+      },
+      "public": false
+    },
+    {
+      "method": "GET",
+      "endpoint": "/user/e2ee-keys",
+      "handlerName": "getE2eeKeys",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "any"
+        }
+      ],
+      "request": {
+        "name": "req",
+        "type": "any"
+      },
+      "public": false
+    },
+    {
+      "method": "GET",
+      "endpoint": "/user/by-email/:email",
+      "handlerName": "findByEmail",
+      "params": [
+        {
+          "name": "email",
+          "source": "param",
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "public": false
+    },
+    {
+      "method": "GET",
+      "endpoint": "/user/:username",
+      "handlerName": "findOne",
+      "params": [
+        {
+          "name": "username",
+          "source": "param",
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "public": true
+    }
+  ]
+}

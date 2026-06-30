@@ -11,14 +11,16 @@ import {
   Query,
 } from '@nestjs/common';
 import { NotificationService } from './notification.service';
-import { DualAuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth.guard';
 import { UpdateNotificationStatusDto } from './dto/update-status.dto';
 import { ApproveDeviceDto } from './dto/approve-device.dto';
 import { Notification } from '@runa/notifications';
 
 @Controller('notifications')
-@UseGuards(DualAuthGuard)
+@UseGuards(AuthGuard)
 export class NotificationController {
+  private readonly moduleCode = 'NoCtr-';
+
   constructor(private readonly notificationService: NotificationService) {}
 
   @Get()
@@ -30,7 +32,13 @@ export class NotificationController {
     @Query('status') status?: string,
   ): Promise<Notification[]> {
     const userId = req.user.id;
-    return this.notificationService.findAll(userId, skip, take, type as any, status as any);
+    return this.notificationService.findAll(
+      userId,
+      skip,
+      take,
+      type as any,
+      status as any,
+    );
   }
 
   @Put(':id/status')

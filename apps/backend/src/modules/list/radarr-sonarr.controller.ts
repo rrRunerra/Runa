@@ -1,11 +1,5 @@
-import {
-  Controller,
-  Get,
-  UseGuards,
-  Req,
-  Logger,
-} from '@nestjs/common';
-import { DualAuthGuard } from '../../common/guards/auth.guard';
+import { Controller, Get, UseGuards, Req, Logger } from '@nestjs/common';
+import { AuthGuard } from '../../common/guards/auth.guard';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { MovieService } from '../movie/movie.service';
 import { TvService } from '../tv/tv.service';
@@ -47,7 +41,7 @@ class AnimeMappingCache {
 }
 
 @Controller()
-@UseGuards(DualAuthGuard)
+@UseGuards(AuthGuard)
 export class RadarrSonarrController {
   constructor(
     private readonly prisma: PrismaService,
@@ -60,7 +54,7 @@ export class RadarrSonarrController {
   // ─────────────────────────── RADARR (MOVIES) ───────────────────────────
 
   @Get(['radarr/api/v3/movie', 'api/v3/movie'])
-  public async getRadarrMovieList(@Req() req: any) {
+  public async getRadarrMovieList(@Req() req: any): Promise<any[]> {
     const username = req.user.username;
     this.logger.log(`Fetching Radarr movie list for user ${username}`);
 
@@ -122,7 +116,10 @@ export class RadarrSonarrController {
       }
 
       if (tmdbId) {
-        const title = entry.movie.titleEnglish || entry.movie.titleRomaji || 'Unknown Movie';
+        const title =
+          entry.movie.titleEnglish ||
+          entry.movie.titleRomaji ||
+          'Unknown Movie';
         resultList.push({
           title,
           tmdbId,
@@ -138,7 +135,7 @@ export class RadarrSonarrController {
   }
 
   @Get(['radarr/api/v3/qualityprofile', 'api/v3/qualityprofile'])
-  public getRadarrQualityProfiles() {
+  public getRadarrQualityProfiles(): any[] {
     return [
       {
         id: 1,
@@ -147,26 +144,28 @@ export class RadarrSonarrController {
     ];
   }
 
-
-
   // ─────────────────────────── SONARR (TV & ANIME) ───────────────────────────
 
   @Get(['sonarr/api/v3/series', 'api/v3/series'])
-  public async getSonarrSeriesListCombined(@Req() req: any) {
+  public async getSonarrSeriesListCombined(@Req() req: any): Promise<any[]> {
     return this.fetchSonarrSeries(req.user.username, true, true);
   }
 
   @Get('sonarr/tv/api/v3/series')
-  public async getSonarrTvList(@Req() req: any) {
+  public async getSonarrTvList(@Req() req: any): Promise<any[]> {
     return this.fetchSonarrSeries(req.user.username, true, false);
   }
 
   @Get('sonarr/anime/api/v3/series')
-  public async getSonarrAnimeList(@Req() req: any) {
+  public async getSonarrAnimeList(@Req() req: any): Promise<any[]> {
     return this.fetchSonarrSeries(req.user.username, false, true);
   }
 
-  private async fetchSonarrSeries(username: string, includeTv: boolean, includeAnime: boolean) {
+  private async fetchSonarrSeries(
+    username: string,
+    includeTv: boolean,
+    includeAnime: boolean,
+  ): Promise<any[]> {
     const resultList: any[] = [];
 
     if (includeTv) {
@@ -187,7 +186,8 @@ export class RadarrSonarrController {
       });
 
       for (const entry of tvEntries) {
-        const title = entry.tv.titleEnglish || entry.tv.titleRomaji || 'Unknown TV Show';
+        const title =
+          entry.tv.titleEnglish || entry.tv.titleRomaji || 'Unknown TV Show';
         resultList.push({
           title,
           tvdbId: entry.tvdbId,
@@ -199,24 +199,25 @@ export class RadarrSonarrController {
     }
 
     if (includeAnime) {
-      const animeEntries = await this.prisma.client.aquilaAnimeUserList.findMany({
-        where: {
-          username: username.toLowerCase(),
-          status: 'PLANNING',
-        },
-        select: {
-          id: true,
-          animeId: true,
-          connections: true,
-          anime: {
-            select: {
-              titleEnglish: true,
-              titleRomaji: true,
-              seasonYear: true,
+      const animeEntries =
+        await this.prisma.client.aquilaAnimeUserList.findMany({
+          where: {
+            username: username.toLowerCase(),
+            status: 'PLANNING',
+          },
+          select: {
+            id: true,
+            animeId: true,
+            connections: true,
+            anime: {
+              select: {
+                titleEnglish: true,
+                titleRomaji: true,
+                seasonYear: true,
+              },
             },
           },
-        },
-      });
+        });
 
       for (const entry of animeEntries) {
         if (!entry.animeId) continue;
@@ -253,7 +254,10 @@ export class RadarrSonarrController {
         }
 
         if (tvdbId) {
-          const title = entry.anime.titleEnglish || entry.anime.titleRomaji || 'Unknown Anime';
+          const title =
+            entry.anime.titleEnglish ||
+            entry.anime.titleRomaji ||
+            'Unknown Anime';
           resultList.push({
             title,
             tvdbId,
@@ -274,7 +278,7 @@ export class RadarrSonarrController {
     'sonarr/tv/api/v3/qualityprofile',
     'sonarr/anime/api/v3/qualityprofile',
   ])
-  public getSonarrQualityProfiles() {
+  public getSonarrQualityProfiles(): any[] {
     return [
       {
         id: 1,

@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import {
+  rrBadRequestException,
+  rrNotFoundException,
+  rrInternalServerErrorException,
+} from 'src/providers/error';
 import { resolveMx } from 'dns/promises';
 import * as nodemailer from 'nodemailer';
 import { ImapFlow } from 'imapflow';
@@ -38,6 +43,7 @@ function escapeHtml(text: string): string {
 
 @Injectable()
 export class EmailAccountService {
+  private readonly moduleCode = 'ElSve-';
   private readonly logger = new Logger(EmailAccountService.name);
 
   constructor(
@@ -62,7 +68,7 @@ export class EmailAccountService {
       orderBy: { createdAt: 'asc' },
     });
 
-    return list.map(account => {
+    return list.map((account) => {
       let decryptedPassword = '';
       try {
         decryptedPassword = decrypt(account.encryptedPassword);
@@ -111,10 +117,16 @@ export class EmailAccountService {
         signatureText: data.signatureText || null,
         useHtmlSignature: data.useHtmlSignature === true,
         imapHost: data.imapHost,
-        imapPort: typeof data.imapPort === 'string' ? parseInt(data.imapPort, 10) : data.imapPort,
+        imapPort:
+          typeof data.imapPort === 'string'
+            ? parseInt(data.imapPort, 10)
+            : data.imapPort,
         imapSecure: data.imapSecure === true,
         smtpHost: data.smtpHost,
-        smtpPort: typeof data.smtpPort === 'string' ? parseInt(data.smtpPort, 10) : data.smtpPort,
+        smtpPort:
+          typeof data.smtpPort === 'string'
+            ? parseInt(data.smtpPort, 10)
+            : data.smtpPort,
         smtpSecure: data.smtpSecure === true,
         encryptedPassword,
         encryptionIv: iv,
@@ -122,11 +134,18 @@ export class EmailAccountService {
     });
   }
 
-  async updateEmailAccount(username: string, accountId: string, data: EmailAccountDto): Promise<any> {
+  async updateEmailAccount(
+    username: string,
+    accountId: string,
+    data: EmailAccountDto,
+  ): Promise<any> {
     const account = await this.prisma.client.userEmailAccount.findFirst({
       where: { id: accountId, username },
     });
-    if (!account) throw new NotFoundException('Email account not found');
+    if (!account)
+      throw new rrNotFoundException(`${this.moduleCode}EANF001`, {
+        message: 'Email account not found',
+      });
 
     const updateData: any = {
       accountName: data.accountName,
@@ -139,10 +158,16 @@ export class EmailAccountService {
       signatureText: data.signatureText || null,
       useHtmlSignature: data.useHtmlSignature === true,
       imapHost: data.imapHost,
-      imapPort: typeof data.imapPort === 'string' ? parseInt(data.imapPort, 10) : data.imapPort,
+      imapPort:
+        typeof data.imapPort === 'string'
+          ? parseInt(data.imapPort, 10)
+          : data.imapPort,
       imapSecure: data.imapSecure === true,
       smtpHost: data.smtpHost,
-      smtpPort: typeof data.smtpPort === 'string' ? parseInt(data.smtpPort, 10) : data.smtpPort,
+      smtpPort:
+        typeof data.smtpPort === 'string'
+          ? parseInt(data.smtpPort, 10)
+          : data.smtpPort,
       smtpSecure: data.smtpSecure === true,
     };
 
@@ -158,11 +183,17 @@ export class EmailAccountService {
     });
   }
 
-  async deleteEmailAccount(username: string, accountId: string): Promise<{ success: boolean }> {
+  async deleteEmailAccount(
+    username: string,
+    accountId: string,
+  ): Promise<{ success: boolean }> {
     const account = await this.prisma.client.userEmailAccount.findFirst({
       where: { id: accountId, username },
     });
-    if (!account) throw new NotFoundException('Email account not found');
+    if (!account)
+      throw new rrNotFoundException(`${this.moduleCode}EANF001`, {
+        message: 'Email account not found',
+      });
 
     await this.prisma.client.userEmailAccount.delete({
       where: { id: accountId },
@@ -175,9 +206,16 @@ export class EmailAccountService {
     const normalizedDomain = domain.toLowerCase().trim();
 
     // Validate domain to prevent SSRF and invalid resolveMx calls
-    const domainRegex = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/;
-    if (!normalizedDomain || normalizedDomain.length > 253 || !domainRegex.test(normalizedDomain)) {
-      throw new BadRequestException('Invalid domain name');
+    const domainRegex =
+      /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/;
+    if (
+      !normalizedDomain ||
+      normalizedDomain.length > 253 ||
+      !domainRegex.test(normalizedDomain)
+    ) {
+      throw new rrBadRequestException(`${this.moduleCode}IDN001`, {
+        message: 'Invalid domain name',
+      });
     }
 
     // 1. Thunderbird ISPDB lookup
@@ -187,12 +225,18 @@ export class EmailAccountService {
       if (response.ok) {
         const xmlText = await response.text();
 
-        const imapMatch = xmlText.match(/<incomingServer\s+type="imap"[^>]*>([\s\S]*?)<\/incomingServer>/i);
-        const smtpMatch = xmlText.match(/<outgoingServer\s+type="smtp"[^>]*>([\s\S]*?)<\/outgoingServer>/i);
+        const imapMatch = xmlText.match(
+          /<incomingServer\s+type="imap"[^>]*>([\s\S]*?)<\/incomingServer>/i,
+        );
+        const smtpMatch = xmlText.match(
+          /<outgoingServer\s+type="smtp"[^>]*>([\s\S]*?)<\/outgoingServer>/i,
+        );
 
         if (imapMatch && smtpMatch) {
           const extractTag = (block: string, tag: string): string => {
-            const match = block.match(new RegExp(`<${tag}>([\\s\\S]*?)<\/${tag}>`, 'i'));
+            const match = block.match(
+              new RegExp(`<${tag}>([\\s\\S]*?)<\/${tag}>`, 'i'),
+            );
             return match ? match[1].trim() : '';
           };
 
@@ -301,7 +345,11 @@ export class EmailAccountService {
         smtpSecure: true,
       };
     }
-    if (normalizedDomain === 'outlook.com' || normalizedDomain === 'hotmail.com' || normalizedDomain.endsWith('.live.com')) {
+    if (
+      normalizedDomain === 'outlook.com' ||
+      normalizedDomain === 'hotmail.com' ||
+      normalizedDomain.endsWith('.live.com')
+    ) {
       return {
         imapHost: 'outlook.office365.com',
         imapPort: 993,
@@ -363,13 +411,19 @@ export class EmailAccountService {
     const account = await this.prisma.client.userEmailAccount.findFirst({
       where: { id: accountId, username },
     });
-    if (!account) throw new NotFoundException('Email account not found');
+    if (!account)
+      throw new rrNotFoundException(`${this.moduleCode}EANF001`, {
+        message: 'Email account not found',
+      });
 
     const take = limit ? Number(limit) : 50;
     const skip = page ? (Number(page) - 1) * take : 0;
 
     return this.prisma.client.emailMessage.findMany({
-      where: { userEmailAccountId: accountId, folder: folder.toLowerCase().trim() },
+      where: {
+        userEmailAccountId: accountId,
+        folder: folder.toLowerCase().trim(),
+      },
       orderBy: { date: 'desc' },
       take,
       skip,
@@ -400,11 +454,18 @@ export class EmailAccountService {
     });
   }
 
-  async getMessageDetail(username: string, accountId: string, messageId: string): Promise<any> {
+  async getMessageDetail(
+    username: string,
+    accountId: string,
+    messageId: string,
+  ): Promise<any> {
     const account = await this.prisma.client.userEmailAccount.findFirst({
       where: { id: accountId, username },
     });
-    if (!account) throw new NotFoundException('Email account not found');
+    if (!account)
+      throw new rrNotFoundException(`${this.moduleCode}EANF001`, {
+        message: 'Email account not found',
+      });
 
     const message = await this.prisma.client.emailMessage.findFirst({
       where: { id: messageId, userEmailAccountId: accountId },
@@ -420,7 +481,10 @@ export class EmailAccountService {
       },
     });
 
-    if (!message) throw new NotFoundException('Message not found');
+    if (!message)
+      throw new rrNotFoundException(`${this.moduleCode}MNF001`, {
+        message: 'Message not found',
+      });
     return message;
   }
 
@@ -428,17 +492,28 @@ export class EmailAccountService {
     username: string,
     accountId: string,
     messageId: string,
-    data: { read?: boolean; flagged?: boolean; folder?: string; labels?: string[] },
+    data: {
+      read?: boolean;
+      flagged?: boolean;
+      folder?: string;
+      labels?: string[];
+    },
   ): Promise<any> {
     const account = await this.prisma.client.userEmailAccount.findFirst({
       where: { id: accountId, username },
     });
-    if (!account) throw new NotFoundException('Email account not found');
+    if (!account)
+      throw new rrNotFoundException(`${this.moduleCode}EANF001`, {
+        message: 'Email account not found',
+      });
 
     const message = await this.prisma.client.emailMessage.findFirst({
       where: { id: messageId, userEmailAccountId: accountId },
     });
-    if (!message) throw new NotFoundException('Message not found');
+    if (!message)
+      throw new rrNotFoundException(`${this.moduleCode}MNF001`, {
+        message: 'Message not found',
+      });
 
     if (data.folder && message.folder !== data.folder) {
       // Avoid unique constraint violation by deleting any pre-existing cached messages in destination folder with the same UID
@@ -452,9 +527,15 @@ export class EmailAccountService {
 
       // Move remote messages on the IMAP server in the background
       this.moveRemoteMessages(account, [
-        { sourceFolder: message.folder, destFolder: data.folder, uids: [message.uid] },
+        {
+          sourceFolder: message.folder,
+          destFolder: data.folder,
+          uids: [message.uid],
+        },
       ]).catch((err) => {
-        this.logger.error(`Background remote sync move failed: ${err instanceof Error ? err.message : String(err)}`);
+        this.logger.error(
+          `Background remote sync move failed: ${err instanceof Error ? err.message : String(err)}`,
+        );
       });
     }
 
@@ -469,22 +550,34 @@ export class EmailAccountService {
     });
   }
 
-  async deleteMessage(username: string, accountId: string, messageId: string): Promise<{ success: boolean }> {
+  async deleteMessage(
+    username: string,
+    accountId: string,
+    messageId: string,
+  ): Promise<{ success: boolean }> {
     const account = await this.prisma.client.userEmailAccount.findFirst({
       where: { id: accountId, username },
     });
-    if (!account) throw new NotFoundException('Email account not found');
+    if (!account)
+      throw new rrNotFoundException(`${this.moduleCode}EANF001`, {
+        message: 'Email account not found',
+      });
 
     const message = await this.prisma.client.emailMessage.findFirst({
       where: { id: messageId, userEmailAccountId: accountId },
     });
-    if (!message) throw new NotFoundException('Message not found');
+    if (!message)
+      throw new rrNotFoundException(`${this.moduleCode}MNF001`, {
+        message: 'Message not found',
+      });
 
     // Sync remote deletion to IMAP server in the background
     this.deleteRemoteMessages(account, [
       { folder: message.folder, uids: [message.uid] },
     ]).catch((remoteErr) => {
-      this.logger.error(`Background remote sync delete failed: ${remoteErr instanceof Error ? remoteErr.message : String(remoteErr)}`);
+      this.logger.error(
+        `Background remote sync delete failed: ${remoteErr instanceof Error ? remoteErr.message : String(remoteErr)}`,
+      );
     });
 
     if (message.folder === 'trash') {
@@ -514,12 +607,20 @@ export class EmailAccountService {
     username: string,
     accountId: string,
     messageIds: string[],
-    data: { read?: boolean; flagged?: boolean; folder?: string; labels?: string[] },
+    data: {
+      read?: boolean;
+      flagged?: boolean;
+      folder?: string;
+      labels?: string[];
+    },
   ): Promise<{ success: boolean }> {
     const account = await this.prisma.client.userEmailAccount.findFirst({
       where: { id: accountId, username },
     });
-    if (!account) throw new NotFoundException('Email account not found');
+    if (!account)
+      throw new rrNotFoundException(`${this.moduleCode}EANF001`, {
+        message: 'Email account not found',
+      });
 
     if (data.folder) {
       const messages = await this.prisma.client.emailMessage.findMany({
@@ -550,15 +651,19 @@ export class EmailAccountService {
           groupMap.set(m.folder, uids);
         }
 
-        const moves = Array.from(groupMap.entries()).map(([sourceFolder, uids]) => ({
-          sourceFolder,
-          destFolder: data.folder!,
-          uids,
-        }));
+        const moves = Array.from(groupMap.entries()).map(
+          ([sourceFolder, uids]) => ({
+            sourceFolder,
+            destFolder: data.folder!,
+            uids,
+          }),
+        );
 
         // Move remote messages on the IMAP server in the background
         this.moveRemoteMessages(account, moves).catch((err) => {
-          this.logger.error(`Background remote sync bulk move failed: ${err instanceof Error ? err.message : String(err)}`);
+          this.logger.error(
+            `Background remote sync bulk move failed: ${err instanceof Error ? err.message : String(err)}`,
+          );
         });
       }
     }
@@ -587,7 +692,10 @@ export class EmailAccountService {
     const account = await this.prisma.client.userEmailAccount.findFirst({
       where: { id: accountId, username },
     });
-    if (!account) throw new NotFoundException('Email account not found');
+    if (!account)
+      throw new rrNotFoundException(`${this.moduleCode}EANF001`, {
+        message: 'Email account not found',
+      });
 
     const messages = await this.prisma.client.emailMessage.findMany({
       where: {
@@ -611,7 +719,9 @@ export class EmailAccountService {
 
     // Sync remote deletion to IMAP server in the background
     this.deleteRemoteMessages(account, folderMessages).catch((remoteErr) => {
-      this.logger.error(`Background remote sync bulk delete failed: ${remoteErr instanceof Error ? remoteErr.message : String(remoteErr)}`);
+      this.logger.error(
+        `Background remote sync bulk delete failed: ${remoteErr instanceof Error ? remoteErr.message : String(remoteErr)}`,
+      );
     });
 
     const trashMessages = messages.filter((m) => m.folder === 'trash');
@@ -689,21 +799,31 @@ export class EmailAccountService {
 
           if (folder === 'trash') {
             // Permanently delete on remote
-            this.logger.log(`Permanently deleting UIDs [${uidRange}] in remote folder: ${remotePath}`);
+            this.logger.log(
+              `Permanently deleting UIDs [${uidRange}] in remote folder: ${remotePath}`,
+            );
             await client.messageDelete(uidRange, { uid: true });
           } else {
             // Move to remote trash folder
-            this.logger.log(`Moving UIDs [${uidRange}] from remote folder: ${remotePath} to trash folder: ${trashPath}`);
+            this.logger.log(
+              `Moving UIDs [${uidRange}] from remote folder: ${remotePath} to trash folder: ${trashPath}`,
+            );
             await client.messageMove(uidRange, trashPath, { uid: true });
           }
         } catch (opErr) {
-          this.logger.error(`Error deleting/moving remote UIDs for folder ${remotePath}:`, opErr);
+          this.logger.error(
+            `Error deleting/moving remote UIDs for folder ${remotePath}:`,
+            opErr,
+          );
         } finally {
           lock.release();
         }
       }
     } catch (connErr) {
-      this.logger.error(`Failed to connect to IMAP for remote deletion sync on account ${account.emailAddress}:`, connErr);
+      this.logger.error(
+        `Failed to connect to IMAP for remote deletion sync on account ${account.emailAddress}:`,
+        connErr,
+      );
     } finally {
       try {
         await client.logout();
@@ -719,9 +839,20 @@ export class EmailAccountService {
 
     if (special === '\\inbox' || path === 'inbox') return 'inbox';
     if (special === '\\sent' || path.includes('sent')) return 'sent';
-    if (special === '\\drafts' || path.includes('draft') || path.includes('drafts')) return 'drafts';
-    if (special === '\\trash' || path.includes('trash') || path.includes('deleted')) return 'trash';
-    if (special === '\\junk' || path.includes('junk') || path.includes('spam')) return 'junk';
+    if (
+      special === '\\drafts' ||
+      path.includes('draft') ||
+      path.includes('drafts')
+    )
+      return 'drafts';
+    if (
+      special === '\\trash' ||
+      path.includes('trash') ||
+      path.includes('deleted')
+    )
+      return 'trash';
+    if (special === '\\junk' || path.includes('junk') || path.includes('spam'))
+      return 'junk';
     if (special === '\\archive' || path.includes('archive')) return 'archive';
 
     return path;
@@ -759,23 +890,33 @@ export class EmailAccountService {
         const remoteDestPath = remoteFolderMap.get(destFolder) || 'INBOX';
 
         if (!remoteSourcePath) {
-          this.logger.warn(`Remote source path not found for local folder: ${sourceFolder}`);
+          this.logger.warn(
+            `Remote source path not found for local folder: ${sourceFolder}`,
+          );
           continue;
         }
 
         const lock = await client.getMailboxLock(remoteSourcePath);
         try {
           const uidRange = uids.join(',');
-          this.logger.log(`Moving remote UIDs [${uidRange}] from ${remoteSourcePath} to ${remoteDestPath}`);
+          this.logger.log(
+            `Moving remote UIDs [${uidRange}] from ${remoteSourcePath} to ${remoteDestPath}`,
+          );
           await client.messageMove(uidRange, remoteDestPath, { uid: true });
         } catch (opErr) {
-          this.logger.error(`Error moving remote UIDs from ${remoteSourcePath} to ${remoteDestPath}:`, opErr);
+          this.logger.error(
+            `Error moving remote UIDs from ${remoteSourcePath} to ${remoteDestPath}:`,
+            opErr,
+          );
         } finally {
           lock.release();
         }
       }
     } catch (connErr) {
-      this.logger.error(`Failed to connect to IMAP for remote move sync on account ${account.emailAddress}:`, connErr);
+      this.logger.error(
+        `Failed to connect to IMAP for remote move sync on account ${account.emailAddress}:`,
+        connErr,
+      );
     } finally {
       try {
         await client.logout();
@@ -785,12 +926,18 @@ export class EmailAccountService {
     }
   }
 
-  async sendEmail(username: string, accountId: string, data: SendEmailDto): Promise<any> {
+  async sendEmail(
+    username: string,
+    accountId: string,
+    data: SendEmailDto,
+  ): Promise<any> {
     const account = await this.prisma.client.userEmailAccount.findFirst({
       where: { id: accountId, username },
     });
     if (!account) {
-      throw new NotFoundException('Email account not found');
+      throw new rrNotFoundException(`${this.moduleCode}EANF001`, {
+        message: 'Email account not found',
+      });
     }
 
     const decryptedPassword = decrypt(account.encryptedPassword);
@@ -810,7 +957,8 @@ export class EmailAccountService {
       ? `"${account.senderName}" <${account.emailAddress}>`
       : account.emailAddress;
 
-    const escapedBodyHtml = data.html || escapeHtml(data.body).replace(/\n/g, '<br />');
+    const escapedBodyHtml =
+      data.html || escapeHtml(data.body).replace(/\n/g, '<br />');
 
     const mailOptions: nodemailer.SendMailOptions = {
       from,
@@ -827,7 +975,9 @@ export class EmailAccountService {
       info = await transporter.sendMail(mailOptions);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
-      throw new Error(`Failed to send email via SMTP: ${message}`);
+      throw new rrInternalServerErrorException(`${this.moduleCode}FTSEVS001`, {
+        message: `Failed to send email via SMTP: ${message}`,
+      });
     }
 
     // Determine the next local UID for the sent folder
@@ -860,13 +1010,16 @@ export class EmailAccountService {
         subject = encryptWithDataKey(subject, dataKey);
         bodyText = encryptWithDataKey(bodyText, dataKey);
         bodyHtml = encryptWithDataKey(bodyHtml, dataKey);
-        
+
         if (toVal) toVal = encryptWithDataKey(toVal, dataKey);
         if (fromVal) fromVal = encryptWithDataKey(fromVal, dataKey);
         if (ccVal) ccVal = encryptWithDataKey(ccVal, dataKey);
         if (bccVal) bccVal = encryptWithDataKey(bccVal, dataKey);
 
-        encryptedKey = encryptDataKeyForUser(userRecord.userPublicKey, dataKey) as any;
+        encryptedKey = encryptDataKeyForUser(
+          userRecord.userPublicKey,
+          dataKey,
+        ) as any;
       } catch (encErr) {
         this.logger.error(`E2EE encryption failed for sent email:`, encErr);
       }
@@ -958,7 +1111,11 @@ export class EmailAccountService {
     });
   }
 
-  async getCannedResponses(username: string, page?: number, limit?: number): Promise<any[]> {
+  async getCannedResponses(
+    username: string,
+    page?: number,
+    limit?: number,
+  ): Promise<any[]> {
     const take = limit ? Number(limit) : 20;
     const skip = page ? (Number(page) - 1) * take : 0;
 
@@ -970,7 +1127,10 @@ export class EmailAccountService {
     });
   }
 
-  async createCannedResponse(username: string, data: { name: string; subject?: string; bodyText: string }): Promise<any> {
+  async createCannedResponse(
+    username: string,
+    data: { name: string; subject?: string; bodyText: string },
+  ): Promise<any> {
     const user = await this.prisma.client.user.findUnique({
       where: { username },
       select: { userPublicKey: true },
@@ -985,7 +1145,10 @@ export class EmailAccountService {
         const dataKey = generateDataKey();
         if (subject) subject = encryptWithDataKey(subject, dataKey);
         bodyText = encryptWithDataKey(bodyText, dataKey);
-        encryptedKey = encryptDataKeyForUser(user.userPublicKey, dataKey) as any;
+        encryptedKey = encryptDataKeyForUser(
+          user.userPublicKey,
+          dataKey,
+        ) as any;
       } catch (encErr) {
         this.logger.error(`Canned response encryption failed:`, encErr);
       }
@@ -1002,11 +1165,18 @@ export class EmailAccountService {
     });
   }
 
-  async updateCannedResponse(username: string, id: string, data: { name: string; subject?: string; bodyText: string }): Promise<any> {
+  async updateCannedResponse(
+    username: string,
+    id: string,
+    data: { name: string; subject?: string; bodyText: string },
+  ): Promise<any> {
     const template = await this.prisma.client.cannedResponse.findFirst({
       where: { id, username },
     });
-    if (!template) throw new NotFoundException('Canned response not found');
+    if (!template)
+      throw new rrNotFoundException(`${this.moduleCode}CRNF001`, {
+        message: 'Canned response not found',
+      });
 
     const user = await this.prisma.client.user.findUnique({
       where: { username },
@@ -1022,7 +1192,10 @@ export class EmailAccountService {
         const dataKey = generateDataKey();
         if (subject) subject = encryptWithDataKey(subject, dataKey);
         bodyText = encryptWithDataKey(bodyText, dataKey);
-        encryptedKey = encryptDataKeyForUser(user.userPublicKey, dataKey) as any;
+        encryptedKey = encryptDataKeyForUser(
+          user.userPublicKey,
+          dataKey,
+        ) as any;
       } catch (encErr) {
         this.logger.error(`Canned response update encryption failed:`, encErr);
       }
@@ -1039,11 +1212,17 @@ export class EmailAccountService {
     });
   }
 
-  async deleteCannedResponse(username: string, id: string): Promise<{ success: boolean }> {
+  async deleteCannedResponse(
+    username: string,
+    id: string,
+  ): Promise<{ success: boolean }> {
     const template = await this.prisma.client.cannedResponse.findFirst({
       where: { id, username },
     });
-    if (!template) throw new NotFoundException('Canned response not found');
+    if (!template)
+      throw new rrNotFoundException(`${this.moduleCode}CRNF001`, {
+        message: 'Canned response not found',
+      });
 
     await this.prisma.client.cannedResponse.delete({
       where: { id },
@@ -1055,7 +1234,10 @@ export class EmailAccountService {
     const attachment = await this.prisma.client.emailAttachment.findUnique({
       where: { id: attachmentId },
     });
-    if (!attachment) throw new NotFoundException('Attachment not found');
+    if (!attachment)
+      throw new rrNotFoundException(`${this.moduleCode}ANF001`, {
+        message: 'Attachment not found',
+      });
     return attachment;
   }
 }

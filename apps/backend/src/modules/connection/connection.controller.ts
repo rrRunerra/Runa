@@ -9,24 +9,27 @@ import {
   Req,
   Query,
   Res,
-  ForbiddenException,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { jwtVerify } from 'jose';
 
 import { ConnectionLinkedTo } from '@runa/database';
-import { AquilaBitField } from '@runa/permissions';
+import { AquilaFlags } from '@runa/permissions';
 
-import { DualAuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Public } from 'src/common/decorators/public.decorator';
+import { Permissions } from 'src/common/decorators/permissions.decorator';
 import { ConnectionService } from './connection.service';
 import { UpsertConnectionDto } from './dto/upsert-connection.dto';
 import { RemoveConnectionDto } from './dto/remove-connection.dto';
 import { ConnectionEntity } from './entities/connection.entity';
 
 @Controller('connections')
-@UseGuards(DualAuthGuard)
+@UseGuards(AuthGuard, PermissionsGuard)
 export class ConnectionController {
+  private readonly moduleCode = 'CnCtr-';
+
   constructor(private readonly connectionService: ConnectionService) {}
 
   @Get()
@@ -75,8 +78,12 @@ export class ConnectionController {
     @Query('token') token: string,
     @Query('redirectUrl') redirectUrl: string,
     @Res() res: Response,
-  ) {
-    const authUrl = await this.connectionService.getAuthUrl(provider, token, redirectUrl);
+  ): Promise<void> {
+    const authUrl = await this.connectionService.getAuthUrl(
+      provider,
+      token,
+      redirectUrl,
+    );
     return res.redirect(authUrl);
   }
 
@@ -87,7 +94,7 @@ export class ConnectionController {
     @Query('code') code: string,
     @Query('state') state: string,
     @Res() res: Response,
-  ) {
+  ): Promise<void> {
     const [token, redirectUrl] = (state || '').split(':::');
     const targetUrl = this.getSafeRedirectUrl(redirectUrl);
     const separator = targetUrl.includes('?') ? '&' : '?';
@@ -110,34 +117,33 @@ export class ConnectionController {
   }
 
   @Post(':provider/import')
+  @Permissions([AquilaFlags.IMPORT_LIST])
   async importList(
     @Req() req: any,
     @Param('provider') provider: string,
     @Body() body?: { mediaTypes?: string[] },
-  ) {
-    const bitfield = AquilaBitField.fromRaw(req.user.permissions);
-    if (!bitfield.has('IMPORT_LIST')) {
-      throw new ForbiddenException('You do not have permission to import lists');
-    }
+  ): Promise<{ status: string }> {
     const username = req.user.username;
-    return this.connectionService.startImport(username, provider, body?.mediaTypes);
+    return this.connectionService.startImport(
+      username,
+      provider,
+      body?.mediaTypes,
+    );
   }
 
   @Get(':provider/import/status')
+  @Permissions([AquilaFlags.IMPORT_LIST])
   async importStatus(
     @Req() req: any,
     @Param('provider') provider: string,
-  ) {
-    const bitfield = AquilaBitField.fromRaw(req.user.permissions);
-    if (!bitfield.has('IMPORT_LIST')) {
-      throw new ForbiddenException('You do not have permission to import lists');
-    }
+  ): Promise<{ total: number; processed: number; status: string }> {
     const username = req.user.username;
     return this.connectionService.getImportStatus(username, provider);
   }
 
   private getSafeRedirectUrl(url: string): string {
-    const allowedOrigin = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'; // DevSkim: ignore DS137138, DS162092
+    const allowedOrigin =
+      process.env.NEXT_PUBLIC_URL || 'http://localhost:3000'; // DevSkim: ignore DS137138, DS162092
     const defaultUrl = `${allowedOrigin}/polaris/connections`;
     if (!url) return defaultUrl;
 
@@ -146,7 +152,11 @@ export class ConnectionController {
       const allowedUrl = new URL(allowedOrigin);
 
       // Check if it's a relative URL to prevent protocol-relative redirects
-      if (url.startsWith('/') && !url.startsWith('//') && !url.startsWith('\\')) {
+      if (
+        url.startsWith('/') &&
+        !url.startsWith('//') &&
+        !url.startsWith('\\')
+      ) {
         return `${allowedOrigin}${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
       }
 
@@ -164,7 +174,7 @@ export class ConnectionController {
     return defaultUrl;
   }
 
-  private async decodeToken(token: string) {
+  private async decodeToken(token: string): Promise<{ username: string }> {
     const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET);
     const { payload } = await jwtVerify(token, secret, {
       algorithms: ['HS256'],

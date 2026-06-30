@@ -1,6 +1,6 @@
 import { Controller, Req, UseGuards, Get } from '@nestjs/common';
 import { Public } from '../../common/decorators/public.decorator';
-import { DualAuthGuard } from 'src/common/guards/auth.guard';
+import { AuthGuard } from 'src/common/guards/auth.guard';
 import {
   NoAuthResponseEntity,
   SessionResponseEntity,
@@ -8,8 +8,10 @@ import {
 } from './entities/test-response.entity';
 
 @Controller('test')
-@UseGuards(DualAuthGuard)
+@UseGuards(AuthGuard)
 export class TestController {
+  private readonly moduleCode = 'TeCtr-';
+
   @Public()
   @Get('noauth')
   async noAuth(): Promise<NoAuthResponseEntity> {

@@ -11,7 +11,7 @@ export default class ListTeachersCommand extends SubCommand {
   constructor() {
     super(client, {
       name: "edu.list-teachers",
-      enabled: true,
+      enabled: false,
       docs: `### Summary
 List all teachers registered on Edupage.
 

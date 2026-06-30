@@ -1,19 +1,24 @@
-import { Controller, Param, UseGuards, Get, Query, Post, Req, ForbiddenException, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Param, UseGuards, Get, Query, Post } from '@nestjs/common';
 import { AnimeService } from './anime.service';
-import { DualAuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth.guard';
 import { Public } from 'src/common/decorators/public.decorator';
 import { AnimeSearchEntity } from './entities/anime-search.entity';
 import { AnimeEntity } from './entities/anime.entity';
-import { AquilaBitField } from '@runa/permissions';
+import { AquilaFlags } from '@runa/permissions';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { CacheService } from '../../providers/cache/cache.service';
+import { rrTooManyRequestsException } from 'src/providers/error';
+import { Permissions } from 'src/common/decorators/permissions.decorator';
 
 @Controller('anime')
-@UseGuards(DualAuthGuard)
+@UseGuards(AuthGuard, PermissionsGuard)
 export class AnimeController {
   constructor(
     private readonly animeService: AnimeService,
     private readonly cacheService: CacheService,
   ) {}
+
+  private readonly moduleCode: string = 'AeCtr-';
 
   @Public()
   @Get('search')
@@ -28,19 +33,14 @@ export class AnimeController {
   }
 
   @Post('refresh/:id')
-  async refreshAnime(@Param('id') id: string, @Req() req: any): Promise<AnimeEntity> {
-    const bitfield = AquilaBitField.fromRaw(req.user.permissions);
-    if (!bitfield.has('MEDIA_REFRESH')) {
-      throw new ForbiddenException('You do not have permission to refresh media');
-    }
-
+  @Permissions([AquilaFlags.MEDIA_REFRESH])
+  async refreshAnime(@Param('id') id: string): Promise<AnimeEntity> {
     const cooldownKey = `cooldown:refresh:anime:${id}`;
     const onCooldown = await this.cacheService.get(cooldownKey);
     if (onCooldown) {
-      throw new HttpException(
-        'This media was refreshed recently. Please wait before refreshing again.',
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
+      throw new rrTooManyRequestsException(`${this.moduleCode}TMWRR001`, {
+        message: 'This media was refreshed recently.',
+      });
     }
 
     const result = await this.animeService.getAnime(parseInt(id), true);

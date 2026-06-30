@@ -1,8 +1,12 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../providers/database/prisma.service';
 import type { Media, SearchMedia } from '../../common/types/types';
 import { MangaRepository } from './repositories/manga.repository';
 import { MangaQueueService } from './services/manga-queue.service';
+import {
+  rrNotFoundException,
+  rrInternalServerErrorException,
+} from 'src/providers/error';
 
 const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
 const CACHE_DURATION_MS = isDev ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
@@ -10,6 +14,7 @@ const CACHE_DURATION_MS = isDev ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
 @Injectable()
 export class MangaService {
   private readonly logger = new Logger(MangaService.name);
+  private readonly moduleCode = 'MaSve-';
 
   constructor(
     private readonly prisma: PrismaService,
@@ -75,7 +80,9 @@ export class MangaService {
 
   public async getManga(id: number, forceRefresh = false): Promise<Media> {
     if (isNaN(id)) {
-      throw new Error(`Invalid manga ID: ${id}`);
+      throw new rrInternalServerErrorException(`${this.moduleCode}IMID001`, {
+        message: `Invalid manga ID: ${id}`,
+      });
     }
 
     const dbManga = await this.mangaRepository.findByAnilistId(id);
@@ -100,7 +107,9 @@ export class MangaService {
       if (dbManga) {
         return this.mangaRepository.toMedia(dbManga);
       }
-      throw new NotFoundException('Manga not found');
+      throw new rrNotFoundException(`${this.moduleCode}MNF001`, {
+        message: 'Manga not found',
+      });
     }
   }
 
@@ -206,7 +215,12 @@ export class MangaService {
     const media = data.data?.Media;
 
     if (!media) {
-      throw new Error(`Manga with ID ${id} not found on AniList`);
+      throw new rrInternalServerErrorException(
+        `${this.moduleCode}MWIDNFOA001`,
+        {
+          message: `Manga with ID ${id} not found on AniList`,
+        },
+      );
     }
 
     return {
@@ -259,7 +273,12 @@ export class MangaService {
     };
   }
 
-  public async ensureManga(anilistId: number, malId?: number | null, title?: string, coverImage?: string) {
+  public async ensureManga(
+    anilistId: number,
+    malId?: number | null,
+    title?: string,
+    coverImage?: string,
+  ): Promise<any> {
     let manga = await this.mangaRepository.findByAnilistId(anilistId);
     if (!manga) {
       manga = await this.mangaRepository.upsert(anilistId, {

@@ -1,10 +1,4 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { CacheService } from '../../providers/cache/cache.service';
 import { MailService } from '../../providers/mail/mail.service';
@@ -22,23 +16,117 @@ import {
   generateRegistrationOptions,
   verifyRegistrationResponse,
 } from '@simplewebauthn/server';
+import {
+  rrBadRequestException,
+  rrConflictException,
+  rrNotFoundException,
+} from 'src/providers/error';
 
 const RESERVED_KEYWORDS = new Set([
-  "break", "case", "catch", "class", "const", "continue", "debugger",
-  "default", "delete", "do", "else", "export", "extends", "false",
-  "finally", "for", "function", "if", "import", "in", "instanceof",
-  "new", "null", "return", "super", "switch", "this", "throw",
-  "true", "try", "typeof", "var", "void", "while", "with", "yield",
-  "let", "package", "private", "protected", "public", "static",
-  "any", "boolean", "constructor", "declare", "get", "module",
-  "require", "number", "set", "string", "symbol", "type", "undefined",
-  "unknown", "never", "readonly", "keyof", "infer", "as", "from",
-  "of", "namespace", "interface", "implements", "enum", "await",
-  "select", "insert", "update", "drop", "truncate", "alter",
-  "create", "table", "database", "index", "use", "where", "join",
-  "left", "right", "inner", "outer", "on", "and", "or", "not",
-  "union", "values", "into", "order", "by", "group", "having",
-  "limit", "offset", "distinct", "all", "exists", "like", "between", "is"
+  'break',
+  'case',
+  'catch',
+  'class',
+  'const',
+  'continue',
+  'debugger',
+  'default',
+  'delete',
+  'do',
+  'else',
+  'export',
+  'extends',
+  'false',
+  'finally',
+  'for',
+  'function',
+  'if',
+  'import',
+  'in',
+  'instanceof',
+  'new',
+  'null',
+  'return',
+  'super',
+  'switch',
+  'this',
+  'throw',
+  'true',
+  'try',
+  'typeof',
+  'var',
+  'void',
+  'while',
+  'with',
+  'yield',
+  'let',
+  'package',
+  'private',
+  'protected',
+  'public',
+  'static',
+  'any',
+  'boolean',
+  'constructor',
+  'declare',
+  'get',
+  'module',
+  'require',
+  'number',
+  'set',
+  'string',
+  'symbol',
+  'type',
+  'undefined',
+  'unknown',
+  'never',
+  'readonly',
+  'keyof',
+  'infer',
+  'as',
+  'from',
+  'of',
+  'namespace',
+  'interface',
+  'implements',
+  'enum',
+  'await',
+  'select',
+  'insert',
+  'update',
+  'drop',
+  'truncate',
+  'alter',
+  'create',
+  'table',
+  'database',
+  'index',
+  'use',
+  'where',
+  'join',
+  'left',
+  'right',
+  'inner',
+  'outer',
+  'on',
+  'and',
+  'or',
+  'not',
+  'union',
+  'values',
+  'into',
+  'order',
+  'by',
+  'group',
+  'having',
+  'limit',
+  'offset',
+  'distinct',
+  'all',
+  'exists',
+  'like',
+  'between',
+  'is',
 ]);
 
 export interface PrivacySettings {
@@ -75,6 +163,8 @@ export function parsePrivacy(privacy: unknown): PrivacySettings {
 
 @Injectable()
 export class UserService {
+  private readonly moduleCode = 'UsSve-';
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly mediaService: MediaService,
@@ -94,7 +184,7 @@ export class UserService {
 
   async create(data: CreateUserDto): Promise<User> {
     const errors: string[] = [];
-    const sanitizedUsername = data.username.replace(/[^a-zA-Z0-9_]/g, "");
+    const sanitizedUsername = data.username.replace(/[^a-zA-Z0-9_]/g, '');
     const lowerUsername = sanitizedUsername.toLowerCase();
 
     if (RESERVED_KEYWORDS.has(lowerUsername)) {
@@ -116,7 +206,9 @@ export class UserService {
     }
 
     if (errors.length > 0) {
-      throw new ConflictException(errors);
+      throw new rrConflictException(`${this.moduleCode}C001`, {
+        message: errors.join('. '),
+      });
     }
 
     const passHash = await bcrypt.hash(data.password, 10);
@@ -140,7 +232,9 @@ export class UserService {
       })
       .catch((err) => {
         this.logger.error(err);
-        throw new BadRequestException('Failed to create user');
+        throw new rrBadRequestException(`${this.moduleCode}FTCU001`, {
+          message: 'Failed to create user',
+        });
       });
   }
 
@@ -165,7 +259,9 @@ export class UserService {
     });
 
     if (!user) {
-      throw new NotFoundException(`User with ID ${userId} not found`);
+      throw new rrNotFoundException(`${this.moduleCode}UWIDNF001`, {
+        message: `User with ID ${userId} not found`,
+      });
     }
 
     const updateData: any = {};
@@ -180,7 +276,9 @@ export class UserService {
         where: { email: data.email.toLowerCase() },
       });
       if (existingEmail && existingEmail.id !== userId) {
-        throw new ConflictException('Email is already taken.');
+        throw new rrConflictException(`${this.moduleCode}EIAT001`, {
+          message: 'Email is already taken.',
+        });
       }
       updateData.email = data.email.toLowerCase();
     }
@@ -193,16 +291,18 @@ export class UserService {
     // Enforce password confirmation for password or email changes
     if (passwordOrEmailChanged) {
       if (!data.currentPassword) {
-        throw new BadRequestException(
-          'Current password is required to change email or password.',
-        );
+        throw new rrBadRequestException(`${this.moduleCode}CPRTCEROP001`, {
+          message: 'Current password is required to change email or password.',
+        });
       }
       const isCurrentPasswordValid = await bcrypt.compare(
         data.currentPassword,
         user.passwordHash,
       );
       if (!isCurrentPasswordValid) {
-        throw new BadRequestException('Invalid current password.');
+        throw new rrBadRequestException(`${this.moduleCode}ICP001`, {
+          message: 'Invalid current password.',
+        });
       }
 
       if (data.newPassword !== undefined) {
@@ -246,7 +346,10 @@ export class UserService {
       this.mediaService.deleteFileByUrl(oldBannerUrl);
     }
 
-    if (data.sidebarCardBackgroundUrl !== undefined && data.sidebarCardBackgroundUrl !== oldSidebarCardBackgroundUrl) {
+    if (
+      data.sidebarCardBackgroundUrl !== undefined &&
+      data.sidebarCardBackgroundUrl !== oldSidebarCardBackgroundUrl
+    ) {
       this.mediaService.deleteFileByUrl(oldSidebarCardBackgroundUrl);
     }
 
@@ -262,13 +365,18 @@ export class UserService {
     });
 
     if (!user) {
-      throw new NotFoundException(`User ${username} not found`);
+      throw new rrNotFoundException(`${this.moduleCode}UUNF001`, {
+        message: `User ${username} not found`,
+      });
     }
 
     return parsePrivacy(user.privacy);
   }
 
-  async updatePrivacySettings(userId: string, dto: PrivacySettingsDto): Promise<{ success: boolean }> {
+  async updatePrivacySettings(
+    userId: string,
+    dto: PrivacySettingsDto,
+  ): Promise<{ success: boolean }> {
     const user = await this.prisma.client.user.findUnique({
       where: { id: userId },
       select: {
@@ -278,17 +386,25 @@ export class UserService {
     });
 
     if (!user) {
-      throw new NotFoundException(`User with ID ${userId} not found`);
+      throw new rrNotFoundException(`${this.moduleCode}UWIDNF002`, {
+        message: `User with ID ${userId} not found`,
+      });
     }
 
     const currentPrivacy = parsePrivacy(user.privacy);
     const updatedPrivacy: PrivacySettings = {
       profile: dto.profile !== undefined ? dto.profile : currentPrivacy.profile,
-      animeList: dto.animeList !== undefined ? dto.animeList : currentPrivacy.animeList,
-      mangaList: dto.mangaList !== undefined ? dto.mangaList : currentPrivacy.mangaList,
+      animeList:
+        dto.animeList !== undefined ? dto.animeList : currentPrivacy.animeList,
+      mangaList:
+        dto.mangaList !== undefined ? dto.mangaList : currentPrivacy.mangaList,
       tvList: dto.tvList !== undefined ? dto.tvList : currentPrivacy.tvList,
-      movieList: dto.movieList !== undefined ? dto.movieList : currentPrivacy.movieList,
-      connections: dto.connections !== undefined ? dto.connections : currentPrivacy.connections,
+      movieList:
+        dto.movieList !== undefined ? dto.movieList : currentPrivacy.movieList,
+      connections:
+        dto.connections !== undefined
+          ? dto.connections
+          : currentPrivacy.connections,
     };
 
     await this.prisma.client.$transaction([
@@ -341,7 +457,6 @@ export class UserService {
     return { success: true };
   }
 
-
   async updateSettings(userId: string, settings: any) {
     return await this.prisma.client.user.update({
       where: { id: userId },
@@ -355,7 +470,10 @@ export class UserService {
     const user = await this.prisma.client.user.findUnique({
       where: { id: userId },
     });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user)
+      throw new rrNotFoundException(`${this.moduleCode}UNF001`, {
+        message: 'User not found',
+      });
 
     const secret = generateSecret();
     const otpauthUrl = generateURI({
@@ -375,23 +493,33 @@ export class UserService {
       where: { id: userId },
       include: { passkeys: true },
     });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user)
+      throw new rrNotFoundException(`${this.moduleCode}UNF002`, {
+        message: 'User not found',
+      });
 
-    const pendingSecret = await this.cacheService.get<string>(`pending-totp:${userId}`);
+    const pendingSecret = await this.cacheService.get<string>(
+      `pending-totp:${userId}`,
+    );
     if (!pendingSecret) {
-      throw new BadRequestException('TOTP setup has expired or was not initiated');
+      throw new rrBadRequestException(`${this.moduleCode}TSHEOWNI001`, {
+        message: 'TOTP setup has expired or was not initiated',
+      });
     }
 
     const verifyResult = await verify({ token: code, secret: pendingSecret });
     if (!verifyResult.valid) {
-      throw new BadRequestException('Invalid verification code');
+      throw new rrBadRequestException(`${this.moduleCode}IVC001`, {
+        message: 'Invalid verification code',
+      });
     }
 
     // Encrypt the TOTP secret
     const encryptedSecret = encrypt(pendingSecret);
 
     // Check if we need to generate backup codes (only if no other MFA was active)
-    const isMfaActive = user.totpEnabled || user.emailMfaEnabled || user.passkeys.length > 0;
+    const isMfaActive =
+      user.totpEnabled || user.emailMfaEnabled || user.passkeys.length > 0;
     let backupCodes: string[] = [];
     let hashedBackupCodes: string[] = [];
 
@@ -406,7 +534,9 @@ export class UserService {
       data: {
         totpSecret: encryptedSecret,
         totpEnabled: true,
-        ...(hashedBackupCodes.length > 0 ? { backupCodes: hashedBackupCodes } : {}),
+        ...(hashedBackupCodes.length > 0
+          ? { backupCodes: hashedBackupCodes }
+          : {}),
       },
     });
 
@@ -420,7 +550,10 @@ export class UserService {
       where: { id: userId },
       include: { passkeys: true },
     });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user)
+      throw new rrNotFoundException(`${this.moduleCode}UNF003`, {
+        message: 'User not found',
+      });
 
     const remainingMfa = user.emailMfaEnabled || user.passkeys.length > 0;
 
@@ -440,7 +573,10 @@ export class UserService {
     const user = await this.prisma.client.user.findUnique({
       where: { id: userId },
     });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user)
+      throw new rrNotFoundException(`${this.moduleCode}UNF004`, {
+        message: 'User not found',
+      });
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     await this.cacheService.set(`pending-email-mfa:${userId}`, code, 300); // 5 min expiry
@@ -459,14 +595,22 @@ export class UserService {
       where: { id: userId },
       include: { passkeys: true },
     });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user)
+      throw new rrNotFoundException(`${this.moduleCode}UNF005`, {
+        message: 'User not found',
+      });
 
-    const cachedCode = await this.cacheService.get<string>(`pending-email-mfa:${userId}`);
+    const cachedCode = await this.cacheService.get<string>(
+      `pending-email-mfa:${userId}`,
+    );
     if (!cachedCode || cachedCode !== code) {
-      throw new BadRequestException('Invalid or expired verification code');
+      throw new rrBadRequestException(`${this.moduleCode}IOEVC001`, {
+        message: 'Invalid or expired verification code',
+      });
     }
 
-    const isMfaActive = user.totpEnabled || user.emailMfaEnabled || user.passkeys.length > 0;
+    const isMfaActive =
+      user.totpEnabled || user.emailMfaEnabled || user.passkeys.length > 0;
     let backupCodes: string[] = [];
     let hashedBackupCodes: string[] = [];
 
@@ -480,7 +624,9 @@ export class UserService {
       where: { id: userId },
       data: {
         emailMfaEnabled: true,
-        ...(hashedBackupCodes.length > 0 ? { backupCodes: hashedBackupCodes } : {}),
+        ...(hashedBackupCodes.length > 0
+          ? { backupCodes: hashedBackupCodes }
+          : {}),
       },
     });
 
@@ -494,7 +640,10 @@ export class UserService {
       where: { id: userId },
       include: { passkeys: true },
     });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user)
+      throw new rrNotFoundException(`${this.moduleCode}UNF006`, {
+        message: 'User not found',
+      });
 
     const remainingMfa = user.totpEnabled || user.passkeys.length > 0;
 
@@ -509,7 +658,10 @@ export class UserService {
     return { success: true };
   }
 
-  private async generateBackupCodesRaw(): Promise<{ plain: string[]; hashed: string[] }> {
+  private async generateBackupCodesRaw(): Promise<{
+    plain: string[];
+    hashed: string[];
+  }> {
     const plain: string[] = [];
     const hashed: string[] = [];
 
@@ -527,11 +679,17 @@ export class UserService {
       where: { id: userId },
       include: { passkeys: true },
     });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user)
+      throw new rrNotFoundException(`${this.moduleCode}UNF007`, {
+        message: 'User not found',
+      });
 
-    const isMfaActive = user.totpEnabled || user.emailMfaEnabled || user.passkeys.length > 0;
+    const isMfaActive =
+      user.totpEnabled || user.emailMfaEnabled || user.passkeys.length > 0;
     if (!isMfaActive) {
-      throw new BadRequestException('MFA must be active to generate backup codes');
+      throw new rrBadRequestException(`${this.moduleCode}MMBATGBC001`, {
+        message: 'MFA must be active to generate backup codes',
+      });
     }
 
     const { plain, hashed } = await this.generateBackupCodesRaw();
@@ -553,9 +711,14 @@ export class UserService {
       where: { id: userId },
       include: { passkeys: true },
     });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user)
+      throw new rrNotFoundException(`${this.moduleCode}UNF008`, {
+        message: 'User not found',
+      });
 
-    const rpID = process.env.RP_ID || new URL(process.env.NEXT_PUBLIC_URL || 'http://localhost:3000').hostname;
+    const rpID =
+      process.env.RP_ID ||
+      new URL(process.env.NEXT_PUBLIC_URL || 'http://localhost:3000').hostname;
 
     const options = await generateRegistrationOptions({
       rpName: 'Runa',
@@ -573,25 +736,43 @@ export class UserService {
       },
     });
 
-    await this.cacheService.set(`passkey-reg-challenge:${userId}`, options.challenge, 300);
+    await this.cacheService.set(
+      `passkey-reg-challenge:${userId}`,
+      options.challenge,
+      300,
+    );
 
     return options;
   }
 
-  async verifyPasskeyRegister(userId: string, body: any, name?: string): Promise<string[]> {
+  async verifyPasskeyRegister(
+    userId: string,
+    body: any,
+    name?: string,
+  ): Promise<string[]> {
     const user = await this.prisma.client.user.findUnique({
       where: { id: userId },
       include: { passkeys: true },
     });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user)
+      throw new rrNotFoundException(`${this.moduleCode}UNF009`, {
+        message: 'User not found',
+      });
 
-    const expectedChallenge = await this.cacheService.get<string>(`passkey-reg-challenge:${userId}`);
+    const expectedChallenge = await this.cacheService.get<string>(
+      `passkey-reg-challenge:${userId}`,
+    );
     if (!expectedChallenge) {
-      throw new BadRequestException('Passkey registration challenge expired');
+      throw new rrBadRequestException(`${this.moduleCode}PRCE001`, {
+        message: 'Passkey registration challenge expired',
+      });
     }
 
-    const rpID = process.env.RP_ID || new URL(process.env.NEXT_PUBLIC_URL || 'http://localhost:3000').hostname;
-    const expectedOrigin = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000';
+    const rpID =
+      process.env.RP_ID ||
+      new URL(process.env.NEXT_PUBLIC_URL || 'http://localhost:3000').hostname;
+    const expectedOrigin =
+      process.env.NEXT_PUBLIC_URL || 'http://localhost:3000';
 
     let verification;
     try {
@@ -602,16 +783,26 @@ export class UserService {
         expectedRPID: rpID,
       });
     } catch (err: any) {
-      throw new BadRequestException(err.message || 'Passkey verification failed');
+      throw new rrBadRequestException(`${this.moduleCode}PVF001`, {
+        message: err.message || 'Passkey verification failed',
+      });
     }
 
     if (!verification.verified || !verification.registrationInfo) {
-      throw new BadRequestException('Passkey verification failed');
+      throw new rrBadRequestException(`${this.moduleCode}PVF002`, {
+        message: 'Passkey verification failed',
+      });
     }
 
-    const { id: credentialID, publicKey: credentialPublicKey, counter, transports } = verification.registrationInfo.credential;
+    const {
+      id: credentialID,
+      publicKey: credentialPublicKey,
+      counter,
+      transports,
+    } = verification.registrationInfo.credential;
 
-    const isMfaActive = user.totpEnabled || user.emailMfaEnabled || user.passkeys.length > 0;
+    const isMfaActive =
+      user.totpEnabled || user.emailMfaEnabled || user.passkeys.length > 0;
     let backupCodes: string[] = [];
     let hashedBackupCodes: string[] = [];
 
@@ -627,7 +818,8 @@ export class UserService {
           id: credentialID,
           publicKey: Buffer.from(credentialPublicKey).toString('base64url'),
           counter: counter,
-          transports: (transports as string[]) || body.response.transports || [],
+          transports:
+            (transports as string[]) || body.response.transports || [],
           name: name || 'Passkey',
           userId: user.id,
         },
@@ -635,7 +827,9 @@ export class UserService {
       this.prisma.client.user.update({
         where: { id: userId },
         data: {
-          ...(hashedBackupCodes.length > 0 ? { backupCodes: hashedBackupCodes } : {}),
+          ...(hashedBackupCodes.length > 0
+            ? { backupCodes: hashedBackupCodes }
+            : {}),
         },
       }),
     ]);
@@ -650,17 +844,26 @@ export class UserService {
       where: { id: userId },
       include: { passkeys: true },
     });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user)
+      throw new rrNotFoundException(`${this.moduleCode}UNF010`, {
+        message: 'User not found',
+      });
 
     const passkey = user.passkeys.find((pk) => pk.id === passkeyId);
-    if (!passkey) throw new NotFoundException('Passkey not found');
+    if (!passkey)
+      throw new rrNotFoundException(`${this.moduleCode}PNF001`, {
+        message: 'Passkey not found',
+      });
 
     await this.prisma.client.passkey.delete({
       where: { id: passkeyId },
     });
 
-    const remainingPasskeys = user.passkeys.filter((pk) => pk.id !== passkeyId).length;
-    const remainingMfa = user.totpEnabled || user.emailMfaEnabled || remainingPasskeys > 0;
+    const remainingPasskeys = user.passkeys.filter(
+      (pk) => pk.id !== passkeyId,
+    ).length;
+    const remainingMfa =
+      user.totpEnabled || user.emailMfaEnabled || remainingPasskeys > 0;
 
     if (!remainingMfa) {
       await this.prisma.client.user.update({
@@ -691,7 +894,9 @@ export class UserService {
       include: { passkeys: true },
     });
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new rrNotFoundException(`${this.moduleCode}UNF011`, {
+        message: 'User not found',
+      });
     }
     return {
       totpEnabled: user.totpEnabled,
@@ -722,7 +927,10 @@ export class UserService {
     const device = await this.prisma.client.device.findFirst({
       where: { id: deviceId, userId },
     });
-    if (!device) throw new NotFoundException('Device not found');
+    if (!device)
+      throw new rrNotFoundException(`${this.moduleCode}DNF001`, {
+        message: 'Device not found',
+      });
 
     await this.prisma.client.device.delete({
       where: { id: deviceId },
@@ -731,7 +939,16 @@ export class UserService {
     return { success: true };
   }
 
-  async registerDevice(userId: string, data: { deviceName: string; userAgent?: string; identityKey: string; signedPreKey: string; preKeys?: string[] }) {
+  async registerDevice(
+    userId: string,
+    data: {
+      deviceName: string;
+      userAgent?: string;
+      identityKey: string;
+      signedPreKey: string;
+      preKeys?: string[];
+    },
+  ) {
     const existing = await this.prisma.client.device.findFirst({
       where: { identityKey: data.identityKey, userId },
     });
@@ -761,7 +978,7 @@ export class UserService {
 
     if (data.preKeys && data.preKeys.length > 0) {
       await this.prisma.client.preKey.createMany({
-        data: data.preKeys.map(key => ({
+        data: data.preKeys.map((key) => ({
           deviceId: device.id,
           key,
         })),
@@ -800,7 +1017,10 @@ export class UserService {
         encryptedMasterKey: true,
       },
     });
-    if (!device) throw new NotFoundException('Device not found');
+    if (!device)
+      throw new rrNotFoundException(`${this.moduleCode}DNF002`, {
+        message: 'Device not found',
+      });
     return {
       id: device.id,
       approved: device.encryptedMasterKey !== null,
@@ -808,11 +1028,18 @@ export class UserService {
     };
   }
 
-  async updateE2eeKeys(userId: string, userPublicKey: string, encryptedUserPrivateKey: string) {
+  async updateE2eeKeys(
+    userId: string,
+    userPublicKey: string,
+    encryptedUserPrivateKey: string,
+  ) {
     const user = await this.prisma.client.user.findUnique({
       where: { id: userId },
     });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user)
+      throw new rrNotFoundException(`${this.moduleCode}UNF012`, {
+        message: 'User not found',
+      });
 
     return await this.prisma.client.user.update({
       where: { id: userId },
@@ -831,7 +1058,10 @@ export class UserService {
         encryptedUserPrivateKey: true,
       },
     });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user)
+      throw new rrNotFoundException(`${this.moduleCode}UNF013`, {
+        message: 'User not found',
+      });
     return user;
   }
 }

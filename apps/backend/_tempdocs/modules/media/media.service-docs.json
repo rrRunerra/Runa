@@ -1,0 +1,135 @@
+{
+  "type": "service",
+  "serviceName": "MediaService",
+  "serviceCode": "MeSve-",
+
+  "dependedOn": "none",
+
+  "privateVars": [
+    {
+      "name": "logger",
+      "type": "Logger",
+      "description": "Logger instance scoped to MediaService",
+      "readOnly": true
+    },
+    {
+      "name": "moduleCode",
+      "type": "string",
+      "description": "Prefix for rrCodes",
+      "readOnly": true
+    },
+    {
+      "name": "uploadDir",
+      "type": "string",
+      "description": "Resolved path to the upload directory, created on construction",
+      "readOnly": true
+    }
+  ],
+
+  "functions": [
+    {
+      "name": "saveFile",
+      "type": "async",
+      "access": "public",
+      "params": [
+        {
+          "name": "file",
+          "type": "Express.Multer.File",
+          "typeLib": "typescript"
+        },
+        {
+          "name": "username",
+          "type": "string",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Saves an uploaded file to disk with a sanitized UUID filename, validating extension (jpg, jpeg, png, gif)",
+      "returnValues": ["Promise<{ id: string; filename: string; url: string }>"],
+      "exceptions": [
+        {
+          "name": "rrBadRequestException",
+          "rrCode": "MeSve-NFU001",
+          "message": "No file uploaded",
+          "statusCode": 400
+        },
+        {
+          "name": "rrBadRequestException",
+          "rrCode": "MeSve-IFE001",
+          "message": "Invalid file extension. Only jpg, png, and gif are allowed.",
+          "statusCode": 400
+        },
+        {
+          "name": "rrBadRequestException",
+          "rrCode": "MeSve-FTWFTD001",
+          "message": "Failed to write file to disk",
+          "statusCode": 400
+        }
+      ]
+    },
+    {
+      "name": "getFileStream",
+      "type": "synch",
+      "access": "public",
+      "params": [
+        {
+          "name": "filename",
+          "type": "string",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Returns a readable stream for a saved file with proper content-type, preventing directory traversal",
+      "returnValues": ["{ stream: StreamableFile; contentType: string }"],
+      "exceptions": [
+        {
+          "name": "rrBadRequestException",
+          "rrCode": "MeSve-IFP001",
+          "message": "Invalid file path",
+          "statusCode": 400
+        },
+        {
+          "name": "rrNotFoundException",
+          "rrCode": "MeSve-FNF001",
+          "message": "File not found",
+          "statusCode": 404
+        }
+      ]
+    },
+    {
+      "name": "deleteFile",
+      "type": "synch",
+      "access": "public",
+      "params": [
+        {
+          "name": "filename",
+          "type": "string",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Deletes a saved file from disk by filename with directory traversal prevention",
+      "returnValues": ["void"],
+      "exceptions": [
+        {
+          "name": "rrBadRequestException",
+          "rrCode": "MeSve-IFP002",
+          "message": "Invalid file path",
+          "statusCode": 400
+        }
+      ]
+    },
+    {
+      "name": "deleteFileByUrl",
+      "type": "synch",
+      "access": "public",
+      "params": [
+        {
+          "name": "url",
+          "type": "string | null | undefined",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Deletes a file by its /media/image/ URL, no-op for null/undefined or invalid URLs",
+      "returnValues": ["void"],
+      "exceptions": null
+    }
+  ]
+}

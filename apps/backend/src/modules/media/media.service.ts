@@ -1,12 +1,23 @@
-import { Injectable, BadRequestException, NotFoundException, StreamableFile, Logger } from '@nestjs/common';
-import { existsSync, createReadStream, writeFileSync, mkdirSync, unlinkSync } from 'fs';
+import { Injectable, StreamableFile, Logger } from '@nestjs/common';
+import {
+  existsSync,
+  createReadStream,
+  writeFileSync,
+  mkdirSync,
+  unlinkSync,
+} from 'fs';
 import { join, resolve } from 'path';
 import { randomUUID } from 'crypto';
+import {
+  rrBadRequestException,
+  rrNotFoundException,
+} from 'src/providers/error';
 
 @Injectable()
 export class MediaService {
   private readonly uploadDir: string;
   private readonly logger = new Logger(MediaService.name);
+  private readonly moduleCode = 'MeSve-';
 
   constructor() {
     this.uploadDir = process.env.UPLOAD_DIR
@@ -19,15 +30,22 @@ export class MediaService {
     }
   }
 
-  async saveFile(file: Express.Multer.File, username: string): Promise<{ id: string; filename: string; url: string }> {
+  async saveFile(
+    file: Express.Multer.File,
+    username: string,
+  ): Promise<{ id: string; filename: string; url: string }> {
     if (!file) {
-      throw new BadRequestException('No file uploaded');
+      throw new rrBadRequestException(`${this.moduleCode}NFU001`, {
+        message: 'No file uploaded',
+      });
     }
 
     const originalExt = file.originalname.split('.').pop()?.toLowerCase();
     const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif'];
     if (!originalExt || !allowedExtensions.includes(originalExt)) {
-      throw new BadRequestException('Invalid file extension. Only jpg, png, and gif are allowed.');
+      throw new rrBadRequestException(`${this.moduleCode}IFE001`, {
+        message: 'Invalid file extension. Only jpg, png, and gif are allowed.',
+      });
     }
 
     // Sanitize username for filename safety (allow only alphanumeric, dashes, underscores)
@@ -39,7 +57,9 @@ export class MediaService {
     try {
       writeFileSync(filePath, file.buffer);
     } catch (error) {
-      throw new BadRequestException('Failed to write file to disk');
+      throw new rrBadRequestException(`${this.moduleCode}FTWFTD001`, {
+        message: 'Failed to write file to disk',
+      });
     }
 
     const url = `/media/image/${filename}`;
@@ -51,16 +71,23 @@ export class MediaService {
     };
   }
 
-  getFileStream(filename: string): { stream: StreamableFile; contentType: string } {
+  getFileStream(filename: string): {
+    stream: StreamableFile;
+    contentType: string;
+  } {
     const filePath = resolve(this.uploadDir, filename);
 
     // Prevent directory traversal attacks
     if (!filePath.startsWith(this.uploadDir)) {
-      throw new BadRequestException('Invalid file path');
+      throw new rrBadRequestException(`${this.moduleCode}IFP001`, {
+        message: 'Invalid file path',
+      });
     }
 
     if (!existsSync(filePath)) {
-      throw new NotFoundException('File not found');
+      throw new rrNotFoundException(`${this.moduleCode}FNF001`, {
+        message: 'File not found',
+      });
     }
 
     const ext = filename.split('.').pop()?.toLowerCase();
@@ -81,7 +108,9 @@ export class MediaService {
 
     // Prevent directory traversal attacks
     if (!filePath.startsWith(this.uploadDir)) {
-      throw new BadRequestException('Invalid file path');
+      throw new rrBadRequestException(`${this.moduleCode}IFP002`, {
+        message: 'Invalid file path',
+      });
     }
 
     if (existsSync(filePath)) {

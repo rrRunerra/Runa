@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TvController } from './tv.controller';
 import { TvService } from './tv.service';
-import { DualAuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth.guard';
 import { Reflector } from '@nestjs/core';
 
 describe('TvController', () => {
@@ -14,7 +14,7 @@ describe('TvController', () => {
     getTv: jest.fn(),
   };
 
-  const mockDualAuthGuard = {
+  const mockAuthGuard = {
     canActivate: jest.fn().mockReturnValue(true),
   };
 
@@ -23,13 +23,10 @@ describe('TvController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [TvController],
-      providers: [
-        { provide: TvService, useValue: mockTvService },
-        Reflector,
-      ],
+      providers: [{ provide: TvService, useValue: mockTvService }, Reflector],
     })
-      .overrideGuard(DualAuthGuard)
-      .useValue(mockDualAuthGuard)
+      .overrideGuard(AuthGuard)
+      .useValue(mockAuthGuard)
       .compile();
 
     controller = module.get<TvController>(TvController);
@@ -54,7 +51,9 @@ describe('TvController', () => {
   });
 
   describe('search', () => {
-    const mockResult = [{ id: '123', title: { romaji: 'TV Show', english: 'TV Show' } } as any];
+    const mockResult = [
+      { id: '123', title: { romaji: 'TV Show', english: 'TV Show' } } as any,
+    ];
 
     it('should search series under session authenticated context', async () => {
       mockTvService.search.mockResolvedValue(mockResult);

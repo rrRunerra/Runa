@@ -208,7 +208,6 @@ export default function UserGamesPage() {
     }
   }, [
     username,
-    session?.accessToken,
     debouncedSearch,
     activeList,
     filters.format,

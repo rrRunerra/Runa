@@ -1,0 +1,61 @@
+{
+  "type": "controller",
+  "controllerName": "TestController",
+  "controllerCode": "TeCtr-",
+
+  "dependedOn": null,
+
+  "privateVars": [
+    {
+      "name": "moduleCode",
+      "type": "string",
+      "description": "Prefix for rrCodes",
+      "readOnly": true
+    }
+  ],
+
+  "routes": [
+    {
+      "method": "GET",
+      "endpoint": "/test/noauth",
+      "handlerName": "noAuth",
+      "params": [],
+      "request": null,
+      "public": true
+    },
+    {
+      "method": "GET",
+      "endpoint": "/test/session",
+      "handlerName": "session",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "any"
+        }
+      ],
+      "request": {
+        "name": "req",
+        "type": "any"
+      },
+      "public": false
+    },
+    {
+      "method": "GET",
+      "endpoint": "/test/apikey",
+      "handlerName": "apiKey",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "any"
+        }
+      ],
+      "request": {
+        "name": "req",
+        "type": "any"
+      },
+      "public": false
+    }
+  ]
+}

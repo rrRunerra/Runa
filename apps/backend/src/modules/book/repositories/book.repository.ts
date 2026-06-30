@@ -7,7 +7,7 @@ import type { Media } from '../../../common/types/types';
 export class BookRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findByGoogleBookId(googleBookId: string) {
+  async findByGoogleBookId(googleBookId: string): Promise<any> {
     return this.prisma.client.aquilaBook.findUnique({
       where: { googleBookId },
     });
@@ -16,7 +16,7 @@ export class BookRepository {
   async upsert(
     googleBookId: string,
     data: Prisma.AquilaBookCreateInput | Prisma.AquilaBookUpdateInput,
-  ) {
+  ): Promise<any> {
     return this.prisma.client.aquilaBook.upsert({
       where: { googleBookId },
       update: data,
@@ -33,7 +33,11 @@ export class BookRepository {
     }
     if (dbBook.artists) {
       for (const artist of dbBook.artists) {
-        staff.push({ id: `artist-${artist}`, name: artist, role: 'Visual Artist' });
+        staff.push({
+          id: `artist-${artist}`,
+          name: artist,
+          role: 'Visual Artist',
+        });
       }
     }
 
@@ -62,7 +66,9 @@ export class BookRepository {
       genres: dbBook.subjects || [],
       studios: dbBook.authors?.map((name: string) => ({ name })) || [],
       staff,
-      averageScore: dbBook.averageRating ? Math.round(dbBook.averageRating * 20) : null,
+      averageScore: dbBook.averageRating
+        ? Math.round(dbBook.averageRating * 20)
+        : null,
       popularity: dbBook.ratingsCount || null,
       chapters: dbBook.chapters,
       volumes: null,

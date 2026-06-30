@@ -1,0 +1,137 @@
+{
+  "type": "service",
+  "serviceName": "NotificationService",
+  "serviceCode": "NoSve-",
+
+  "dependedOn": "prisma, gateway",
+
+  "privateVars": [
+    {
+      "name": "moduleCode",
+      "type": "string",
+      "description": "Prefix for rrCodes",
+      "readOnly": true
+    },
+    {
+      "name": "prisma",
+      "type": "PrismaService",
+      "description": "Prisma database service for notification CRUD operations",
+      "readOnly": true
+    },
+    {
+      "name": "gateway",
+      "type": "NotificationGateway",
+      "description": "WebSocket gateway used to push real-time notifications to users",
+      "readOnly": true
+    }
+  ],
+
+  "functions": [
+    {
+      "name": "findAll",
+      "type": "async",
+      "access": "public",
+      "params": [
+        { "name": "userId", "type": "string", "typeLib": "typescript" },
+        { "name": "skip", "type": "number", "typeLib": "typescript", "optional": true },
+        { "name": "take", "type": "number", "typeLib": "typescript", "optional": true },
+        { "name": "type", "type": "NotificationType", "typeLib": "@runa/notifications", "optional": true },
+        { "name": "status", "type": "NotificationStatus", "typeLib": "@runa/notifications", "optional": true }
+      ],
+      "description": "Finds all notifications for a user with optional pagination, type, and status filtering",
+      "returnValues": ["Promise<Notification[]>"],
+      "exceptions": null
+    },
+    {
+      "name": "create",
+      "type": "async",
+      "access": "public",
+      "params": [
+        { "name": "userId", "type": "string", "typeLib": "typescript" },
+        { "name": "data", "type": "{ title: string; message: string; type: NotificationType; metadata?: DeviceApprovalMetadata }", "typeLib": "typescript" }
+      ],
+      "description": "Creates a new PENDING notification, persists it, and pushes it to the user via WebSocket",
+      "returnValues": ["Promise<Notification>"],
+      "exceptions": null
+    },
+    {
+      "name": "updateStatus",
+      "type": "async",
+      "access": "public",
+      "params": [
+        { "name": "userId", "type": "string", "typeLib": "typescript" },
+        { "name": "notificationId", "type": "string", "typeLib": "typescript" },
+        { "name": "status", "type": "NotificationStatus", "typeLib": "@runa/notifications" }
+      ],
+      "description": "Updates the status of a notification and pushes the update to the user via WebSocket",
+      "returnValues": ["Promise<Notification>"],
+      "exceptions": [
+        { "name": "rrNotFoundException", "rrCode": "NoSve-NWIDNF001", "message": "Notification with ID ${notificationId} not found", "statusCode": 404 }
+      ]
+    },
+    {
+      "name": "approveDeviceRequest",
+      "type": "async",
+      "access": "public",
+      "params": [
+        { "name": "userId", "type": "string", "typeLib": "typescript" },
+        { "name": "notificationId", "type": "string", "typeLib": "typescript" },
+        { "name": "encryptedMasterKey", "type": "string", "typeLib": "typescript" }
+      ],
+      "description": "Approves a device linking request: validates notification, updates device with encrypted master key, marks notification as APPROVED",
+      "returnValues": ["Promise<Notification>"],
+      "exceptions": [
+        { "name": "rrNotFoundException", "rrCode": "NoSve-NWIDNF002", "message": "Notification with ID ${notificationId} not found", "statusCode": 404 },
+        { "name": "rrBadRequestException", "rrCode": "NoSve-OINCBA001", "message": "Only interactive notifications can be approved", "statusCode": 400 },
+        { "name": "rrBadRequestException", "rrCode": "NoSve-NIWS001", "message": "Notification is already in status: ${existing.status}", "statusCode": 400 },
+        { "name": "rrBadRequestException", "rrCode": "NoSve-NMMDLD001", "message": "Notification metadata is missing device linking details", "statusCode": 400 },
+        { "name": "rrNotFoundException", "rrCode": "NoSve-DWIDNF001", "message": "Device with ID ${metadata.deviceId} not found", "statusCode": 404 }
+      ]
+    },
+    {
+      "name": "delete",
+      "type": "async",
+      "access": "public",
+      "params": [
+        { "name": "userId", "type": "string", "typeLib": "typescript" },
+        { "name": "id", "type": "string", "typeLib": "typescript" }
+      ],
+      "description": "Deletes a single notification by ID for a user and pushes the deletion event via WebSocket",
+      "returnValues": ["Promise<void>"],
+      "exceptions": [
+        { "name": "rrNotFoundException", "rrCode": "NoSve-NWIDNF003", "message": "Notification with ID ${id} not found", "statusCode": 404 }
+      ]
+    },
+    {
+      "name": "deleteAll",
+      "type": "async",
+      "access": "public",
+      "params": [
+        { "name": "userId", "type": "string", "typeLib": "typescript" }
+      ],
+      "description": "Deletes all notifications for a user and pushes the cleared event via WebSocket",
+      "returnValues": ["Promise<void>"],
+      "exceptions": null
+    },
+    {
+      "name": "deleteOldNotifications",
+      "type": "async",
+      "access": "public",
+      "params": [],
+      "description": "Cron job that runs daily at midnight to delete notifications older than one week",
+      "returnValues": ["Promise<void>"],
+      "exceptions": null
+    },
+    {
+      "name": "mapToDto",
+      "type": "synch",
+      "access": "private",
+      "params": [
+        { "name": "record", "type": "any", "typeLib": "typescript" }
+      ],
+      "description": "Maps a raw database notification record to a Notification DTO with proper type casting",
+      "returnValues": ["Notification"],
+      "exceptions": null
+    }
+  ]
+}

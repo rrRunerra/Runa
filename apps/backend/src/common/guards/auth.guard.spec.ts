@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Reflector } from '@nestjs/core';
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
-import { DualAuthGuard } from './auth.guard';
+import { AuthGuard } from './auth.guard';
 import { CacheService } from '../../providers/cache/cache.service';
 import { prisma } from '@runa/database';
 import { jwtVerify } from 'jose';
@@ -27,8 +27,8 @@ jest.mock('bcrypt', () => ({
   compare: jest.fn(),
 }));
 
-describe('DualAuthGuard', () => {
-  let guard: DualAuthGuard;
+describe('AuthGuard', () => {
+  let guard: AuthGuard;
   let reflector: Reflector;
   let cacheService: CacheService;
 
@@ -46,18 +46,22 @@ describe('DualAuthGuard', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        DualAuthGuard,
+        AuthGuard,
         { provide: Reflector, useValue: mockReflector },
         { provide: CacheService, useValue: mockCacheService },
       ],
     }).compile();
 
-    guard = module.get<DualAuthGuard>(DualAuthGuard);
+    guard = module.get<AuthGuard>(AuthGuard);
     reflector = module.get<Reflector>(Reflector);
     cacheService = module.get<CacheService>(CacheService);
   });
 
-  const createMockContext = (headers: Record<string, string>, url = 'http://127.0.0.1/', isPublic = false) => {
+  const createMockContext = (
+    headers: Record<string, string>,
+    url = 'http://127.0.0.1/',
+    isPublic = false,
+  ) => {
     reflector.getAllAndOverride = jest.fn().mockReturnValue(isPublic);
 
     const req = {
@@ -121,7 +125,9 @@ describe('DualAuthGuard', () => {
 
         (prisma.apiKey.findFirst as jest.Mock).mockResolvedValue(null);
 
-        await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);
+        await expect(guard.canActivate(context)).rejects.toThrow(
+          UnauthorizedException,
+        );
       });
 
       it('should throw UnauthorizedException if API key fails bcrypt compare', async () => {
@@ -137,7 +143,9 @@ describe('DualAuthGuard', () => {
         (prisma.apiKey.findFirst as jest.Mock).mockResolvedValue(mockRecord);
         (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
-        await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);
+        await expect(guard.canActivate(context)).rejects.toThrow(
+          UnauthorizedException,
+        );
       });
     });
 
@@ -154,7 +162,10 @@ describe('DualAuthGuard', () => {
         };
 
         (jwtVerify as jest.Mock).mockResolvedValue({ payload: mockPayload });
-        (prisma.user.findUnique as jest.Mock).mockResolvedValue({ passwordChangedAt: null, permissions: [3, 4] });
+        (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+          passwordChangedAt: null,
+          permissions: [3, 4],
+        });
         (cacheService.get as jest.Mock).mockResolvedValue(null);
         (cacheService.set as jest.Mock).mockResolvedValue({});
 
@@ -175,7 +186,10 @@ describe('DualAuthGuard', () => {
 
       it('should authenticate successfully with a token in query parameter', async () => {
         const token = 'valid-query-token';
-        const context = createMockContext({}, `http://127.0.0.1/route?token=${token}`);
+        const context = createMockContext(
+          {},
+          `http://127.0.0.1/route?token=${token}`,
+        );
 
         const mockPayload = {
           sub: 'user-id',
@@ -185,7 +199,10 @@ describe('DualAuthGuard', () => {
         };
 
         (jwtVerify as jest.Mock).mockResolvedValue({ payload: mockPayload });
-        (prisma.user.findUnique as jest.Mock).mockResolvedValue({ passwordChangedAt: null, permissions: [3, 4] });
+        (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+          passwordChangedAt: null,
+          permissions: [3, 4],
+        });
         (cacheService.get as jest.Mock).mockResolvedValue([3, 4]); // cache hit
 
         const result = await guard.canActivate(context);
@@ -218,7 +235,9 @@ describe('DualAuthGuard', () => {
           permissions: [],
         });
 
-        await expect(guard.canActivate(context)).rejects.toThrow(new UnauthorizedException('Token expired due to password change'));
+        await expect(guard.canActivate(context)).rejects.toThrow(
+          new UnauthorizedException('Token expired due to password change'),
+        );
       });
     });
 
@@ -235,7 +254,11 @@ describe('DualAuthGuard', () => {
 
       it('should populate req.user if valid credentials are provided on public route', async () => {
         const token = 'valid-jwt-token';
-        const context = createMockContext({ authorization: `Bearer ${token}` }, 'http://127.0.0.1/', true);
+        const context = createMockContext(
+          { authorization: `Bearer ${token}` },
+          'http://127.0.0.1/',
+          true,
+        );
 
         const mockPayload = {
           sub: 'user-id',
@@ -245,7 +268,10 @@ describe('DualAuthGuard', () => {
         };
 
         (jwtVerify as jest.Mock).mockResolvedValue({ payload: mockPayload });
-        (prisma.user.findUnique as jest.Mock).mockResolvedValue({ passwordChangedAt: null, permissions: [5] });
+        (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+          passwordChangedAt: null,
+          permissions: [5],
+        });
         (cacheService.get as jest.Mock).mockResolvedValue([5]);
 
         const result = await guard.canActivate(context);
@@ -262,9 +288,15 @@ describe('DualAuthGuard', () => {
 
       it('should succeed even if credentials are invalid on public route (errors suppressed)', async () => {
         const token = 'invalid-jwt-token';
-        const context = createMockContext({ authorization: `Bearer ${token}` }, 'http://127.0.0.1/', true);
+        const context = createMockContext(
+          { authorization: `Bearer ${token}` },
+          'http://127.0.0.1/',
+          true,
+        );
 
-        (jwtVerify as jest.Mock).mockRejectedValue(new Error('Invalid token signature'));
+        (jwtVerify as jest.Mock).mockRejectedValue(
+          new Error('Invalid token signature'),
+        );
 
         const result = await guard.canActivate(context);
 
@@ -278,7 +310,9 @@ describe('DualAuthGuard', () => {
       it('should throw UnauthorizedException if route is private and no credentials are provided', async () => {
         const context = createMockContext({}, 'http://127.0.0.1/', false);
 
-        await expect(guard.canActivate(context)).rejects.toThrow(new UnauthorizedException('No authentication token found'));
+        await expect(guard.canActivate(context)).rejects.toThrow(
+          new UnauthorizedException('No authentication token found'),
+        );
       });
     });
   });

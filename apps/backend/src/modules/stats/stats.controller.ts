@@ -1,20 +1,15 @@
-import {
-  Controller,
-  Param,
-  UseGuards,
-  Get,
-  Req,
-  NotFoundException,
-  ForbiddenException,
-} from '@nestjs/common';
-import { DualAuthGuard } from '../../common/guards/auth.guard';
+import { Controller, Param, UseGuards, Get, Req } from '@nestjs/common';
+import { AuthGuard } from '../../common/guards/auth.guard';
 import { Public } from '../../common/decorators/public.decorator';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { parsePrivacy } from '../user/user.service';
+import { rrNotFoundException, rrForbiddenException } from 'src/providers/error';
 
 @Controller('stats')
-@UseGuards(DualAuthGuard)
+@UseGuards(AuthGuard)
 export class StatsController {
+  private readonly moduleCode = 'StCtr-';
+
   constructor(private readonly prisma: PrismaService) {}
 
   @Public()
@@ -23,17 +18,20 @@ export class StatsController {
     @Param('username') username: string,
     @Param('mediaType') mediaType: string,
     @Req() req: any,
-  ) {
+  ): Promise<any> {
     const owner = await this.prisma.client.user.findUnique({
       where: { username: username.toLowerCase() },
       select: { id: true, privacy: true },
     });
 
     if (!owner) {
-      throw new NotFoundException(`User ${username} not found`);
+      throw new rrNotFoundException(`${this.moduleCode}UUNF001`, {
+        message: `User ${username} not found`,
+      });
     }
 
-    const isOwner = req.user?.username?.toLowerCase() === username.toLowerCase();
+    const isOwner =
+      req.user?.username?.toLowerCase() === username.toLowerCase();
     const privacy = parsePrivacy(owner.privacy);
 
     let isPrivate = false;
@@ -60,7 +58,9 @@ export class StatsController {
     }
 
     if (isPrivate && !isOwner) {
-      throw new ForbiddenException('This statistics page is private');
+      throw new rrForbiddenException(`${this.moduleCode}TSPIP001`, {
+        message: 'This statistics page is private',
+      });
     }
 
     const record = await this.prisma.client.userStats.findUnique({

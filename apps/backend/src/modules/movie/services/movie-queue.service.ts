@@ -2,26 +2,28 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Subject, EMPTY } from 'rxjs';
 import { mergeMap, catchError } from 'rxjs/operators';
 import { MovieRepository } from '../repositories/movie.repository';
+import { rrInternalServerErrorException } from 'src/providers/error';
 
 @Injectable()
 export class MovieQueueService implements OnModuleInit {
   private readonly logger = new Logger(MovieQueueService.name);
+  private readonly moduleCode = 'MoQeSve-';
   private readonly jobQueue = new Subject<number>();
   private readonly processing = new Set<number>();
 
   constructor(private readonly movieRepository: MovieRepository) {}
 
-  onModuleInit() {
+  onModuleInit(): void {
     this.processQueue();
   }
 
-  addJob(tvdbId: number) {
+  addJob(tvdbId: number): void {
     if (!this.processing.has(tvdbId)) {
       this.jobQueue.next(tvdbId);
     }
   }
 
-  private processQueue() {
+  private processQueue(): void {
     this.jobQueue
       .pipe(
         mergeMap(async (tvdbId) => {
@@ -51,7 +53,7 @@ export class MovieQueueService implements OnModuleInit {
       .subscribe();
   }
 
-  private async syncMovieFromTvdb(tvdbId: number) {
+  private async syncMovieFromTvdb(tvdbId: number): Promise<void> {
     const movie = await this.fetchFromTvdb(tvdbId);
     if (movie) {
       await this.movieRepository.upsert(tvdbId, movie);
@@ -72,7 +74,9 @@ export class MovieQueueService implements OnModuleInit {
     if (loginData.data) {
       token = loginData.data.token;
     } else {
-      throw new Error(loginData.message);
+      throw new rrInternalServerErrorException(`${this.moduleCode}AEI001`, {
+        message: loginData.message,
+      });
     }
 
     const [movieRes, transRes] = await Promise.all([
@@ -96,7 +100,9 @@ export class MovieQueueService implements OnModuleInit {
     ]);
 
     if (movieData.message === 'Unauthorized' || !movieData.data) {
-      throw new Error('TVdb API error');
+      throw new rrInternalServerErrorException(`${this.moduleCode}TAE001`, {
+        message: 'TVdb API error',
+      });
     }
 
     const movie = movieData.data;
@@ -106,10 +112,13 @@ export class MovieQueueService implements OnModuleInit {
     const englishOverview = translation?.overview || movie.overview || '';
 
     const artworks = movie.artworks || [];
-    const movieBanners = artworks.filter((a: any) => a.type === 16 || a.type === 15);
-    const randomBanner = movieBanners.length > 0
-      ? movieBanners[Math.floor(Math.random() * movieBanners.length)].image
-      : movie.bannerImage || null;
+    const movieBanners = artworks.filter(
+      (a: any) => a.type === 16 || a.type === 15,
+    );
+    const randomBanner =
+      movieBanners.length > 0
+        ? movieBanners[Math.floor(Math.random() * movieBanners.length)].image
+        : movie.bannerImage || null;
 
     return {
       tvdbId: movie.id,

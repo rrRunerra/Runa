@@ -1,9 +1,15 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Prisma } from '@runa/database';
 import { PrismaService } from '../../providers/database/prisma.service';
+import {
+  rrInternalServerErrorException,
+  rrNotFoundException,
+} from 'src/providers/error';
 
 @Injectable()
 export class StatsService {
+  private readonly moduleCode = 'StSve-';
+
   constructor(private readonly prisma: PrismaService) {}
 
   private readonly logger = new Logger(StatsService.name);
@@ -18,7 +24,10 @@ export class StatsService {
       (uid: string, type: string, k: string) => {
         this.debounceTimeouts.delete(k);
         this.doRecalculate(uid, type).catch((err: Error) => {
-          this.logger.error(`Error recalculating stats for ${k}: ${err.message}`, err.stack);
+          this.logger.error(
+            `Error recalculating stats for ${k}: ${err.message}`,
+            err.stack,
+          );
         });
       },
       5000,
@@ -36,7 +45,9 @@ export class StatsService {
     });
 
     if (!user) {
-      throw new NotFoundException(`User with ID ${userId} not found`);
+      throw new rrNotFoundException(`${this.moduleCode}UWIDNF001`, {
+        message: `User with ID ${userId} not found`,
+      });
     }
 
     const username = user.username.toLowerCase();
@@ -62,7 +73,9 @@ export class StatsService {
         statsData = await this.calculateBookStats(username);
         break;
       default:
-        throw new Error(`Unsupported media type: ${mediaType}`);
+        throw new rrInternalServerErrorException(`${this.moduleCode}UMT001`, {
+          message: `Unsupported media type: ${mediaType}`,
+        });
     }
 
     await this.prisma.client.userStats.upsert({
@@ -82,32 +95,45 @@ export class StatsService {
       },
     });
 
-    this.logger.log(`Successfully updated ${mediaType} stats cache for user ${user.username}`);
+    this.logger.log(
+      `Successfully updated ${mediaType} stats cache for user ${user.username}`,
+    );
   }
 
-  private calculateScoreStats(scores: number[]): { meanScore: number; standardDeviation: number; scoreDistribution: Record<string, number> } {
+  private calculateScoreStats(scores: number[]): {
+    meanScore: number;
+    standardDeviation: number;
+    scoreDistribution: Record<string, number>;
+  } {
     const scoreDistribution: Record<string, number> = {};
     for (let i = 1; i <= 10; i++) {
       scoreDistribution[i.toString()] = 0;
     }
 
     scores.forEach((s) => {
-      scoreDistribution[s.toString()] = (scoreDistribution[s.toString()] || 0) + 1;
+      scoreDistribution[s.toString()] =
+        (scoreDistribution[s.toString()] || 0) + 1;
     });
 
     let meanScore = 0;
     let standardDeviation = 0;
 
     if (scores.length > 0) {
-      meanScore = parseFloat((scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2));
-      const variance = scores.reduce((a, b) => a + Math.pow(b - meanScore, 2), 0) / scores.length;
+      meanScore = parseFloat(
+        (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2),
+      );
+      const variance =
+        scores.reduce((a, b) => a + Math.pow(b - meanScore, 2), 0) /
+        scores.length;
       standardDeviation = parseFloat(Math.sqrt(variance).toFixed(2));
     }
 
     return { meanScore, standardDeviation, scoreDistribution };
   }
 
-  private async calculateAnimeStats(username: string): Promise<Prisma.InputJsonValue> {
+  private async calculateAnimeStats(
+    username: string,
+  ): Promise<Prisma.InputJsonValue> {
     const entries = await this.prisma.client.aquilaAnimeUserList.findMany({
       where: { username },
       select: {
@@ -126,7 +152,10 @@ export class StatsService {
     });
 
     const count = entries.length;
-    const episodesWatched = entries.reduce((acc, curr) => acc + (curr.progress || 0), 0);
+    const episodesWatched = entries.reduce(
+      (acc, curr) => acc + (curr.progress || 0),
+      0,
+    );
 
     // Calculate days watched
     const totalMinutes = entries.reduce((acc, curr) => {
@@ -149,7 +178,8 @@ export class StatsService {
     const scores = entries
       .map((e) => e.score)
       .filter((s): s is number => s !== null && s > 0);
-    const { meanScore, standardDeviation, scoreDistribution } = this.calculateScoreStats(scores);
+    const { meanScore, standardDeviation, scoreDistribution } =
+      this.calculateScoreStats(scores);
 
     // Episode count distribution
     // Buckets: "1", "2-6", "7-16", "17-28", "29-55", "56-100", "101+", "Unknown"
@@ -216,7 +246,9 @@ export class StatsService {
     };
   }
 
-  private async calculateMangaStats(username: string): Promise<Prisma.InputJsonValue> {
+  private async calculateMangaStats(
+    username: string,
+  ): Promise<Prisma.InputJsonValue> {
     const entries = await this.prisma.client.aquilaMangaUserList.findMany({
       where: { username },
       select: {
@@ -236,8 +268,14 @@ export class StatsService {
     });
 
     const count = entries.length;
-    const chaptersRead = entries.reduce((acc, curr) => acc + (curr.chapters || 0), 0);
-    const volumesRead = entries.reduce((acc, curr) => acc + (curr.volumes || 0), 0);
+    const chaptersRead = entries.reduce(
+      (acc, curr) => acc + (curr.chapters || 0),
+      0,
+    );
+    const volumesRead = entries.reduce(
+      (acc, curr) => acc + (curr.volumes || 0),
+      0,
+    );
 
     const chaptersPlanned = entries
       .filter((e) => e.status === 'PLANNING')
@@ -247,7 +285,8 @@ export class StatsService {
     const scores = entries
       .map((e) => e.score)
       .filter((s): s is number => s !== null && s > 0);
-    const { meanScore, standardDeviation, scoreDistribution } = this.calculateScoreStats(scores);
+    const { meanScore, standardDeviation, scoreDistribution } =
+      this.calculateScoreStats(scores);
 
     // Chapter count distribution
     // Buckets: "1-10", "11-50", "51-100", "101-200", "201+", "Unknown"
@@ -308,7 +347,9 @@ export class StatsService {
     };
   }
 
-  private async calculateTvStats(username: string): Promise<Prisma.InputJsonValue> {
+  private async calculateTvStats(
+    username: string,
+  ): Promise<Prisma.InputJsonValue> {
     const entries = await this.prisma.client.aquilaTvUserList.findMany({
       where: { username },
       select: {
@@ -329,7 +370,10 @@ export class StatsService {
     });
 
     const count = entries.length;
-    const episodesWatched = entries.reduce((acc, curr) => acc + (curr.watchedEpisodes?.length || 0), 0);
+    const episodesWatched = entries.reduce(
+      (acc, curr) => acc + (curr.watchedEpisodes?.length || 0),
+      0,
+    );
 
     const totalMinutes = entries.reduce((acc, curr) => {
       const runtime = curr.tv?.averageRuntime || 45;
@@ -341,7 +385,8 @@ export class StatsService {
     const scores = entries
       .map((e) => e.score)
       .filter((s): s is number => s !== null && s > 0);
-    const { meanScore, standardDeviation, scoreDistribution } = this.calculateScoreStats(scores);
+    const { meanScore, standardDeviation, scoreDistribution } =
+      this.calculateScoreStats(scores);
 
     // Distributions
     const statusDistribution: Record<string, number> = {};
@@ -367,7 +412,9 @@ export class StatsService {
     };
   }
 
-  private async calculateMovieStats(username: string): Promise<Prisma.InputJsonValue> {
+  private async calculateMovieStats(
+    username: string,
+  ): Promise<Prisma.InputJsonValue> {
     const entries = await this.prisma.client.aquilaMovieUserList.findMany({
       where: { username },
       select: {
@@ -397,7 +444,8 @@ export class StatsService {
     const scores = entries
       .map((e) => e.score)
       .filter((s): s is number => s !== null && s > 0);
-    const { meanScore, standardDeviation, scoreDistribution } = this.calculateScoreStats(scores);
+    const { meanScore, standardDeviation, scoreDistribution } =
+      this.calculateScoreStats(scores);
 
     // Distributions
     const statusDistribution: Record<string, number> = {};
@@ -423,7 +471,9 @@ export class StatsService {
     };
   }
 
-  private async calculateGameStats(username: string): Promise<Prisma.InputJsonValue> {
+  private async calculateGameStats(
+    username: string,
+  ): Promise<Prisma.InputJsonValue> {
     const entries = await this.prisma.client.aquilaGameUserList.findMany({
       where: { username },
       select: {
@@ -440,13 +490,17 @@ export class StatsService {
     });
 
     const count = entries.length;
-    const hoursPlayed = entries.reduce((acc, curr) => acc + (curr.progress || 0), 0);
+    const hoursPlayed = entries.reduce(
+      (acc, curr) => acc + (curr.progress || 0),
+      0,
+    );
 
     // Score stats
     const scores = entries
       .map((e) => e.score)
       .filter((s): s is number => s !== null && s > 0);
-    const { meanScore, standardDeviation, scoreDistribution } = this.calculateScoreStats(scores);
+    const { meanScore, standardDeviation, scoreDistribution } =
+      this.calculateScoreStats(scores);
 
     // Distributions
     const statusDistribution: Record<string, number> = {};
@@ -480,7 +534,9 @@ export class StatsService {
     };
   }
 
-  private async calculateBookStats(username: string): Promise<Prisma.InputJsonValue> {
+  private async calculateBookStats(
+    username: string,
+  ): Promise<Prisma.InputJsonValue> {
     const entries = await this.prisma.client.aquilaBookUserList.findMany({
       where: { username },
       select: {
@@ -497,8 +553,14 @@ export class StatsService {
     });
 
     const count = entries.length;
-    const chaptersRead = entries.reduce((acc, curr) => acc + (curr.chapters || 0), 0);
-    const volumesRead = entries.reduce((acc, curr) => acc + (curr.volumes || 0), 0);
+    const chaptersRead = entries.reduce(
+      (acc, curr) => acc + (curr.chapters || 0),
+      0,
+    );
+    const volumesRead = entries.reduce(
+      (acc, curr) => acc + (curr.volumes || 0),
+      0,
+    );
 
     const pagesRead = entries
       .filter((e) => e.status === 'COMPLETED')
@@ -508,7 +570,8 @@ export class StatsService {
     const scores = entries
       .map((e) => e.score)
       .filter((s): s is number => s !== null && s > 0);
-    const { meanScore, standardDeviation, scoreDistribution } = this.calculateScoreStats(scores);
+    const { meanScore, standardDeviation, scoreDistribution } =
+      this.calculateScoreStats(scores);
 
     // Distributions
     const statusDistribution: Record<string, number> = {};

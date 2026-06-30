@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PolarisController } from './polaris.controller';
 import { PolarisService } from './polaris.service';
-import { DualAuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth.guard';
 import { Reflector } from '@nestjs/core';
 
 describe('PolarisController', () => {
@@ -14,7 +14,7 @@ describe('PolarisController', () => {
     deleteBookmark: jest.fn(),
   };
 
-  const mockDualAuthGuard = {
+  const mockAuthGuard = {
     canActivate: jest.fn().mockReturnValue(true),
   };
 
@@ -28,8 +28,8 @@ describe('PolarisController', () => {
         Reflector,
       ],
     })
-      .overrideGuard(DualAuthGuard)
-      .useValue(mockDualAuthGuard)
+      .overrideGuard(AuthGuard)
+      .useValue(mockAuthGuard)
       .compile();
 
     controller = module.get<PolarisController>(PolarisController);
@@ -51,27 +51,41 @@ describe('PolarisController', () => {
 
     it('should create or update bookmark with session authenticated user', async () => {
       const mockReq = { user: { id: 'user-123', authType: 'session' } };
-      mockPolarisService.createOrUpdateBookmark.mockResolvedValue({ id: 'b-1', ...dto });
+      mockPolarisService.createOrUpdateBookmark.mockResolvedValue({
+        id: 'b-1',
+        ...dto,
+      });
 
       const result = await controller.createOrUpdateBookmark(mockReq, dto);
 
-      expect(service.createOrUpdateBookmark).toHaveBeenCalledWith('user-123', dto);
+      expect(service.createOrUpdateBookmark).toHaveBeenCalledWith(
+        'user-123',
+        dto,
+      );
       expect(result.id).toBe('b-1');
     });
 
     it('should create or update bookmark with API key authenticated user', async () => {
       const mockReq = { user: { id: 'user-123', authType: 'api-key' } };
-      mockPolarisService.createOrUpdateBookmark.mockResolvedValue({ id: 'b-1', ...dto });
+      mockPolarisService.createOrUpdateBookmark.mockResolvedValue({
+        id: 'b-1',
+        ...dto,
+      });
 
       const result = await controller.createOrUpdateBookmark(mockReq, dto);
 
-      expect(service.createOrUpdateBookmark).toHaveBeenCalledWith('user-123', dto);
+      expect(service.createOrUpdateBookmark).toHaveBeenCalledWith(
+        'user-123',
+        dto,
+      );
       expect(result.id).toBe('b-1');
     });
 
     it('should fail (throw TypeError) if req.user is undefined (unauthenticated)', async () => {
       const mockReq = {} as any;
-      await expect(controller.createOrUpdateBookmark(mockReq, dto)).rejects.toThrow(TypeError);
+      await expect(
+        controller.createOrUpdateBookmark(mockReq, dto),
+      ).rejects.toThrow(TypeError);
     });
   });
 
@@ -125,7 +139,9 @@ describe('PolarisController', () => {
 
     it('should fail (throw TypeError) if req.user is undefined', async () => {
       const mockReq = {} as any;
-      await expect(controller.deleteBookmark(mockReq, 'b-1')).rejects.toThrow(TypeError);
+      await expect(controller.deleteBookmark(mockReq, 'b-1')).rejects.toThrow(
+        TypeError,
+      );
     });
   });
 });

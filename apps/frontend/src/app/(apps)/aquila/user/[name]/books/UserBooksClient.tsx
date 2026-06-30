@@ -208,7 +208,6 @@ export default function UserBooksPage() {
     }
   }, [
     username,
-    session?.accessToken,
     debouncedSearch,
     activeList,
     filters.format,

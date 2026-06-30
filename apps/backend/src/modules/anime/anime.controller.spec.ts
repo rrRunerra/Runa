@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AnimeController } from './anime.controller';
 import { AnimeService } from './anime.service';
-import { DualAuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth.guard';
 import { Reflector } from '@nestjs/core';
 
 describe('AnimeController', () => {
@@ -14,7 +14,7 @@ describe('AnimeController', () => {
       getAnime: jest.fn(),
     };
 
-    const mockDualAuthGuard = {
+    const mockAuthGuard = {
       canActivate: jest.fn().mockReturnValue(true),
     };
 
@@ -28,8 +28,8 @@ describe('AnimeController', () => {
         Reflector,
       ],
     })
-      .overrideGuard(DualAuthGuard)
-      .useValue(mockDualAuthGuard)
+      .overrideGuard(AuthGuard)
+      .useValue(mockAuthGuard)
       .compile();
 
     controller = module.get<AnimeController>(AnimeController);
@@ -42,7 +42,9 @@ describe('AnimeController', () => {
 
   describe('search', () => {
     it('should call animeService.search with the query name', async () => {
-      const mockResult = [{ id: '1', title: { romaji: 'Test Anime', english: '' } } as any];
+      const mockResult = [
+        { id: '1', title: { romaji: 'Test Anime', english: '' } } as any,
+      ];
       jest.spyOn(service, 'search').mockResolvedValue(mockResult);
 
       const result = await controller.search({ name: 'Test' });

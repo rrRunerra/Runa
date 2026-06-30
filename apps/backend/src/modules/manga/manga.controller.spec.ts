@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { MangaController } from './manga.controller';
 import { MangaService } from './manga.service';
-import { DualAuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth.guard';
 import { Reflector } from '@nestjs/core';
 
 describe('MangaController', () => {
@@ -14,7 +14,7 @@ describe('MangaController', () => {
     getManga: jest.fn(),
   };
 
-  const mockDualAuthGuard = {
+  const mockAuthGuard = {
     canActivate: jest.fn().mockReturnValue(true),
   };
 
@@ -28,8 +28,8 @@ describe('MangaController', () => {
         Reflector,
       ],
     })
-      .overrideGuard(DualAuthGuard)
-      .useValue(mockDualAuthGuard)
+      .overrideGuard(AuthGuard)
+      .useValue(mockAuthGuard)
       .compile();
 
     controller = module.get<MangaController>(MangaController);
@@ -54,7 +54,12 @@ describe('MangaController', () => {
   });
 
   describe('search', () => {
-    const mockResult = [{ id: '1', title: { romaji: 'Test Manga', english: 'Test Manga' } } as any];
+    const mockResult = [
+      {
+        id: '1',
+        title: { romaji: 'Test Manga', english: 'Test Manga' },
+      } as any,
+    ];
 
     it('should search manga when request has session authentication', async () => {
       mockMangaService.search.mockResolvedValue(mockResult);
@@ -80,7 +85,10 @@ describe('MangaController', () => {
   });
 
   describe('getManga', () => {
-    const mockResult = { id: '123', title: { romaji: 'Test Manga Detail' } } as any;
+    const mockResult = {
+      id: '123',
+      title: { romaji: 'Test Manga Detail' },
+    } as any;
 
     it('should get manga details when request has session authentication', async () => {
       mockMangaService.getManga.mockResolvedValue(mockResult);

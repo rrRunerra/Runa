@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../providers/database/prisma.service';
 import type {
   Media,
@@ -8,6 +8,10 @@ import type {
 } from '../../common/types/types';
 import { TvRepository } from './repositories/tv.repository';
 import { TvQueueService } from './services/tv-queue.service';
+import {
+  rrNotFoundException,
+  rrInternalServerErrorException,
+} from 'src/providers/error';
 
 const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
 const CACHE_DURATION_MS = isDev ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
@@ -21,6 +25,7 @@ export class TvService {
   ) {}
 
   private readonly logger = new Logger(TvService.name);
+  private readonly moduleCode = 'TvSve-';
   private token: string | null = null;
 
   private async setTheTvDbToken(): Promise<void> {
@@ -36,7 +41,9 @@ export class TvService {
     if (data.data) {
       this.token = data.data.token;
     } else {
-      throw new Error(data.message);
+      throw new rrInternalServerErrorException(`${this.moduleCode}AEI001`, {
+        message: data.message,
+      });
     }
   }
 
@@ -81,7 +88,9 @@ export class TvService {
 
   public async getTv(id: string, forceRefresh = false): Promise<Media> {
     if (!/^\d+$/.test(id)) {
-      throw new Error('Invalid id format');
+      throw new rrInternalServerErrorException(`${this.moduleCode}IIF001`, {
+        message: 'Invalid id format',
+      });
     }
 
     const tvdbId = parseInt(id);
@@ -107,7 +116,9 @@ export class TvService {
       if (dbTv) {
         return this.tvRepository.toMedia(dbTv);
       }
-      throw new NotFoundException('TV show not found');
+      throw new rrNotFoundException(`${this.moduleCode}TSNF001`, {
+        message: 'TV show not found',
+      });
     }
   }
 
@@ -169,10 +180,13 @@ export class TvService {
     const allEpisodes = episodesData.data?.episodes || [];
 
     const artworks = series.artworks || [];
-    const seriesBanners = artworks.filter((a: any) => a.type === 1 || a.type === 3);
-    const randomBanner = seriesBanners.length > 0
-      ? seriesBanners[Math.floor(Math.random() * seriesBanners.length)].image
-      : series.bannerImage || null;
+    const seriesBanners = artworks.filter(
+      (a: any) => a.type === 1 || a.type === 3,
+    );
+    const randomBanner =
+      seriesBanners.length > 0
+        ? seriesBanners[Math.floor(Math.random() * seriesBanners.length)].image
+        : series.bannerImage || null;
 
     return {
       id: series.id.toString(),
@@ -290,7 +304,9 @@ export class TvService {
         tv = await this.tvRepository.upsert(tvdbId, dbData);
       } catch (err) {
         if (!tv) {
-          this.logger.warn(`Failed to fetch TV series ${tvdbId} details from TVDB synchronously, creating skeleton: ${err.message}`);
+          this.logger.warn(
+            `Failed to fetch TV series ${tvdbId} details from TVDB synchronously, creating skeleton: ${err.message}`,
+          );
           tv = await this.tvRepository.upsert(tvdbId, {
             tvdbId,
             titleRomaji: title || 'Unknown',

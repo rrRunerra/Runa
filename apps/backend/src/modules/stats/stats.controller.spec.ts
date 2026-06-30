@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { StatsController } from './stats.controller';
 import { PrismaService } from '../../providers/database/prisma.service';
-import { DualAuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth.guard';
 import { Reflector } from '@nestjs/core';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
 
@@ -21,7 +21,7 @@ describe('StatsController', () => {
     client: mockPrismaClient,
   };
 
-  const mockDualAuthGuard = {
+  const mockAuthGuard = {
     canActivate: jest.fn().mockReturnValue(true),
   };
 
@@ -30,13 +30,10 @@ describe('StatsController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [StatsController],
-      providers: [
-        { provide: PrismaService, useValue: mockPrisma },
-        Reflector,
-      ],
+      providers: [{ provide: PrismaService, useValue: mockPrisma }, Reflector],
     })
-      .overrideGuard(DualAuthGuard)
-      .useValue(mockDualAuthGuard)
+      .overrideGuard(AuthGuard)
+      .useValue(mockAuthGuard)
       .compile();
 
     controller = module.get<StatsController>(StatsController);
@@ -51,9 +48,9 @@ describe('StatsController', () => {
       mockPrismaClient.user.findUnique.mockResolvedValue(null);
       const mockReq = { user: undefined };
 
-      await expect(controller.getStats('nonexistent', 'anime', mockReq)).rejects.toThrow(
-        new NotFoundException('User nonexistent not found'),
-      );
+      await expect(
+        controller.getStats('nonexistent', 'anime', mockReq),
+      ).rejects.toThrow(new NotFoundException('User nonexistent not found'));
     });
 
     it('should throw ForbiddenException if profile is private and viewer is anonymous', async () => {
@@ -63,9 +60,9 @@ describe('StatsController', () => {
       });
       const mockReq = { user: undefined };
 
-      await expect(controller.getStats('testuser', 'anime', mockReq)).rejects.toThrow(
-        ForbiddenException,
-      );
+      await expect(
+        controller.getStats('testuser', 'anime', mockReq),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should throw ForbiddenException if anime stats are private and viewer is another user (session)', async () => {
@@ -75,9 +72,9 @@ describe('StatsController', () => {
       });
       const mockReq = { user: { username: 'otheruser', authType: 'session' } };
 
-      await expect(controller.getStats('testuser', 'anime', mockReq)).rejects.toThrow(
-        ForbiddenException,
-      );
+      await expect(
+        controller.getStats('testuser', 'anime', mockReq),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should throw ForbiddenException if manga stats are private and viewer is another user (api key)', async () => {
@@ -87,9 +84,9 @@ describe('StatsController', () => {
       });
       const mockReq = { user: { username: 'otheruser', authType: 'api-key' } };
 
-      await expect(controller.getStats('testuser', 'manga', mockReq)).rejects.toThrow(
-        ForbiddenException,
-      );
+      await expect(
+        controller.getStats('testuser', 'manga', mockReq),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should retrieve stats for owner (session auth matching username)', async () => {
@@ -98,7 +95,9 @@ describe('StatsController', () => {
         privacy: { profile: true },
       });
       const mockStats = { count: 10, meanScore: 8.5 };
-      mockPrismaClient.userStats.findUnique.mockResolvedValue({ statsData: mockStats });
+      mockPrismaClient.userStats.findUnique.mockResolvedValue({
+        statsData: mockStats,
+      });
       const mockReq = { user: { username: 'testuser', authType: 'session' } };
 
       const result = await controller.getStats('testuser', 'anime', mockReq);
@@ -120,7 +119,9 @@ describe('StatsController', () => {
         privacy: { profile: true },
       });
       const mockStats = { count: 15, meanScore: 7.8 };
-      mockPrismaClient.userStats.findUnique.mockResolvedValue({ statsData: mockStats });
+      mockPrismaClient.userStats.findUnique.mockResolvedValue({
+        statsData: mockStats,
+      });
       const mockReq = { user: { username: 'TestUser', authType: 'api-key' } };
 
       const result = await controller.getStats('testuser', 'manga', mockReq);
@@ -133,7 +134,9 @@ describe('StatsController', () => {
         privacy: { profile: false, animeList: false },
       });
       const mockStats = { count: 5, meanScore: 9.0 };
-      mockPrismaClient.userStats.findUnique.mockResolvedValue({ statsData: mockStats });
+      mockPrismaClient.userStats.findUnique.mockResolvedValue({
+        statsData: mockStats,
+      });
       const mockReq = { user: undefined };
 
       const result = await controller.getStats('testuser', 'anime', mockReq);

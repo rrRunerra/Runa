@@ -4,6 +4,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { EmailAccountModule } from './modules/email-account/email-account.module';
 import { PrismaModule } from './providers/database/prisma.module';
 import { CacheModule } from './providers/cache/cache.module';
+import { rrErrorModule } from './providers/error';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { AnimeModule } from './modules/anime/anime.module';
@@ -26,13 +27,13 @@ import { NotificationModule } from './modules/notification/notification.module';
 @Module({
   providers: [
     {
-       provide: APP_GUARD,
-       useClass: ThrottlerGuard
-     },
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
     {
-       provide: APP_INTERCEPTOR,
-       useClass: LoggingInterceptor
-    }
+      provide: APP_INTERCEPTOR,
+      useClass: LoggingInterceptor,
+    },
   ],
   imports: [
     UserModule,
@@ -40,6 +41,7 @@ import { NotificationModule } from './modules/notification/notification.module';
     EmailAccountModule,
     PrismaModule,
     CacheModule,
+    rrErrorModule,
     AnimeModule,
     GameModule,
     BookModule,
@@ -58,8 +60,8 @@ import { NotificationModule } from './modules/notification/notification.module';
     ThrottlerModule.forRoot({
       throttlers: [
         {
-          ttl: 60000,  // 1 min
-          limit: 100, 
+          ttl: 60000, // 1 min
+          limit: 100,
         },
       ],
     }),

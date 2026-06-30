@@ -1,0 +1,457 @@
+{
+  "type": "controller",
+  "controllerName": "EmailAccountController",
+  "controllerCode": "ElCtr-",
+
+  "dependedOn": "emailAccountService, emailSyncService",
+
+  "privateVars": [
+    {
+      "name": "emailAccountService",
+      "type": "EmailAccountService",
+      "description": "Service used for email account CRUD, message queries, and sending",
+      "readOnly": true
+    },
+    {
+      "name": "emailSyncService",
+      "type": "EmailSyncService",
+      "description": "Service used for on-demand IMAP email sync",
+      "readOnly": true
+    }
+  ],
+
+  "routes": [
+    {
+      "method": "GET",
+      "endpoint": "/emails",
+      "handlerName": "getEmailAccounts",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "Request & { user: { username: string } }"
+        }
+      ],
+      "request": null,
+      "public": false
+    },
+    {
+      "method": "POST",
+      "endpoint": "/emails",
+      "handlerName": "addEmailAccount",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "Request & { user: { username: string } }"
+        },
+        {
+          "name": "body",
+          "source": "body",
+          "type": "EmailAccountDto"
+        }
+      ],
+      "request": null,
+      "public": false
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/emails/:id",
+      "handlerName": "updateEmailAccount",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "Request & { user: { username: string } }"
+        },
+        {
+          "name": "id",
+          "source": "param",
+          "type": "string"
+        },
+        {
+          "name": "body",
+          "source": "body",
+          "type": "EmailAccountDto"
+        }
+      ],
+      "request": null,
+      "public": false
+    },
+    {
+      "method": "DELETE",
+      "endpoint": "/emails/:id",
+      "handlerName": "deleteEmailAccount",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "Request & { user: { username: string } }"
+        },
+        {
+          "name": "id",
+          "source": "param",
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "public": false
+    },
+    {
+      "method": "GET",
+      "endpoint": "/emails/canned-responses",
+      "handlerName": "getCannedResponses",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "Request & { user: { username: string } }"
+        },
+        {
+          "name": "page",
+          "source": "query",
+          "type": "string",
+          "optional": true
+        },
+        {
+          "name": "limit",
+          "source": "query",
+          "type": "string",
+          "optional": true
+        }
+      ],
+      "request": null,
+      "public": false
+    },
+    {
+      "method": "POST",
+      "endpoint": "/emails/canned-responses",
+      "handlerName": "createCannedResponse",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "Request & { user: { username: string } }"
+        },
+        {
+          "name": "body",
+          "source": "body",
+          "type": "{ name: string; subject?: string; bodyText: string }"
+        }
+      ],
+      "request": null,
+      "public": false
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/emails/canned-responses/:id",
+      "handlerName": "updateCannedResponse",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "Request & { user: { username: string } }"
+        },
+        {
+          "name": "id",
+          "source": "param",
+          "type": "string"
+        },
+        {
+          "name": "body",
+          "source": "body",
+          "type": "{ name: string; subject?: string; bodyText: string }"
+        }
+      ],
+      "request": null,
+      "public": false
+    },
+    {
+      "method": "DELETE",
+      "endpoint": "/emails/canned-responses/:id",
+      "handlerName": "deleteCannedResponse",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "Request & { user: { username: string } }"
+        },
+        {
+          "name": "id",
+          "source": "param",
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "public": false
+    },
+    {
+      "method": "GET",
+      "endpoint": "/emails/autoconfig/:domain",
+      "handlerName": "fetchEmailAutoconfig",
+      "params": [
+        {
+          "name": "domain",
+          "source": "param",
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "public": false
+    },
+    {
+      "method": "GET",
+      "endpoint": "/emails/unified/folders/:folder/messages",
+      "handlerName": "getUnifiedFolderMessages",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "Request & { user: { username: string } }"
+        },
+        {
+          "name": "folder",
+          "source": "param",
+          "type": "string"
+        },
+        {
+          "name": "page",
+          "source": "query",
+          "type": "string",
+          "optional": true
+        },
+        {
+          "name": "limit",
+          "source": "query",
+          "type": "string",
+          "optional": true
+        }
+      ],
+      "request": null,
+      "public": false
+    },
+    {
+      "method": "GET",
+      "endpoint": "/emails/:accountId/folders/:folder/messages",
+      "handlerName": "getFolderMessages",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "Request & { user: { username: string } }"
+        },
+        {
+          "name": "accountId",
+          "source": "param",
+          "type": "string"
+        },
+        {
+          "name": "folder",
+          "source": "param",
+          "type": "string"
+        },
+        {
+          "name": "page",
+          "source": "query",
+          "type": "string",
+          "optional": true
+        },
+        {
+          "name": "limit",
+          "source": "query",
+          "type": "string",
+          "optional": true
+        }
+      ],
+      "request": null,
+      "public": false
+    },
+    {
+      "method": "GET",
+      "endpoint": "/emails/:accountId/messages/:messageId",
+      "handlerName": "getMessageDetail",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "Request & { user: { username: string } }"
+        },
+        {
+          "name": "accountId",
+          "source": "param",
+          "type": "string"
+        },
+        {
+          "name": "messageId",
+          "source": "param",
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "public": false
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/emails/:accountId/messages/:messageId",
+      "handlerName": "updateMessageStatus",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "Request & { user: { username: string } }"
+        },
+        {
+          "name": "accountId",
+          "source": "param",
+          "type": "string"
+        },
+        {
+          "name": "messageId",
+          "source": "param",
+          "type": "string"
+        },
+        {
+          "name": "body",
+          "source": "body",
+          "type": "{ read?: boolean; flagged?: boolean; folder?: string }"
+        }
+      ],
+      "request": null,
+      "public": false
+    },
+    {
+      "method": "DELETE",
+      "endpoint": "/emails/:accountId/messages/:messageId",
+      "handlerName": "deleteMessage",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "Request & { user: { username: string } }"
+        },
+        {
+          "name": "accountId",
+          "source": "param",
+          "type": "string"
+        },
+        {
+          "name": "messageId",
+          "source": "param",
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "public": false
+    },
+    {
+      "method": "PUT",
+      "endpoint": "/emails/:accountId/messages/bulk",
+      "handlerName": "bulkUpdateMessageStatus",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "Request & { user: { username: string } }"
+        },
+        {
+          "name": "accountId",
+          "source": "param",
+          "type": "string"
+        },
+        {
+          "name": "body",
+          "source": "body",
+          "type": "{ messageIds: string[]; read?: boolean; flagged?: boolean; folder?: string }"
+        }
+      ],
+      "request": null,
+      "public": false
+    },
+    {
+      "method": "POST",
+      "endpoint": "/emails/:accountId/messages/bulk-delete",
+      "handlerName": "bulkDeleteMessages",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "Request & { user: { username: string } }"
+        },
+        {
+          "name": "accountId",
+          "source": "param",
+          "type": "string"
+        },
+        {
+          "name": "body",
+          "source": "body",
+          "type": "{ messageIds: string[] }"
+        }
+      ],
+      "request": null,
+      "public": false
+    },
+    {
+      "method": "POST",
+      "endpoint": "/emails/:accountId/send",
+      "handlerName": "sendEmail",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "Request & { user: { username: string } }"
+        },
+        {
+          "name": "accountId",
+          "source": "param",
+          "type": "string"
+        },
+        {
+          "name": "body",
+          "source": "body",
+          "type": "SendEmailDto"
+        }
+      ],
+      "request": null,
+      "public": false
+    },
+    {
+      "method": "POST",
+      "endpoint": "/emails/:accountId/sync",
+      "handlerName": "syncEmail",
+      "params": [
+        {
+          "name": "req",
+          "source": "body",
+          "type": "Request & { user: { username: string } }"
+        },
+        {
+          "name": "accountId",
+          "source": "param",
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "public": false
+    },
+    {
+      "method": "GET",
+      "endpoint": "/emails/attachments/:attachmentId",
+      "handlerName": "downloadAttachment",
+      "params": [
+        {
+          "name": "attachmentId",
+          "source": "param",
+          "type": "string"
+        },
+        {
+          "name": "res",
+          "source": "body",
+          "type": "Response"
+        }
+      ],
+      "request": null,
+      "public": false
+    }
+  ]
+}

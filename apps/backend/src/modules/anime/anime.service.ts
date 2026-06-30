@@ -1,8 +1,13 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../providers/database/prisma.service';
-import type { Media, SearchMedia } from '../../common/types/types';
+import { Injectable, Logger } from '@nestjs/common';
+import type {
+  Media,
+  SearchMedia,
+  AniListGetResponse,
+  AniListSearchResponse,
+} from '../../common/types/types';
 import { AnimeRepository } from './repositories/anime.repository';
 import { AnimeQueueService } from './services/anime-queue.service';
+import { rrError, rrNotFoundException } from 'src/providers/error';
 
 const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
 const CACHE_DURATION_MS = isDev ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
@@ -10,9 +15,9 @@ const CACHE_DURATION_MS = isDev ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
 @Injectable()
 export class AnimeService {
   private readonly logger = new Logger(AnimeService.name);
+  private readonly moduleCode = 'AeSve-';
 
   constructor(
-    private readonly prisma: PrismaService,
     private readonly animeRepository: AnimeRepository,
     private readonly animeQueueService: AnimeQueueService,
   ) {}
@@ -57,7 +62,7 @@ export class AnimeService {
       }),
     });
 
-    const data: AniListSearchResponse = await aniListRes.json();
+    const data = (await aniListRes.json()) as AniListSearchResponse;
     return data.data.Page.media.map((item) => ({
       id: item.id.toString(),
       title: {
@@ -75,7 +80,9 @@ export class AnimeService {
 
   public async getAnime(id: number, forceRefresh = false): Promise<Media> {
     if (isNaN(id)) {
-      throw new Error(`Invalid anime ID: ${id}`);
+      throw new rrError(`${this.moduleCode}IMBAN001`, {
+        message: 'ID must be a number',
+      });
     }
 
     const dbAnime = await this.animeRepository.findByAnilistId(id);
@@ -96,11 +103,13 @@ export class AnimeService {
       this.animeQueueService.addJob(id);
 
       return media;
-    } catch (error) {
+    } catch {
       if (dbAnime) {
         return this.animeRepository.toMedia(dbAnime);
       }
-      throw new NotFoundException('Anime not found');
+      throw new rrNotFoundException(`${this.moduleCode}ANF001`, {
+        message: 'Anime not found',
+      });
     }
   }
 
@@ -222,11 +231,13 @@ export class AnimeService {
       }),
     });
 
-    const data: AniListGetResponse = await aniListRes.json();
+    const data = (await aniListRes.json()) as AniListGetResponse;
     const media = data.data?.Media;
 
     if (!media) {
-      throw new Error(`Anime with ID ${id} not found on AniList`);
+      throw new rrError(`${this.moduleCode}AWINFOA001`, {
+        message: `Anime with ID ${id} not found on AniList`,
+      });
     }
 
     const trailers = media.trailer
@@ -300,7 +311,12 @@ export class AnimeService {
     };
   }
 
-  public async ensureAnime(anilistId: number, malId?: number | null, title?: string, coverImage?: string) {
+  public async ensureAnime(
+    anilistId: number,
+    malId?: number | null,
+    title?: string,
+    coverImage?: string,
+  ): Promise<any> {
     let anime = await this.animeRepository.findByAnilistId(anilistId);
     if (!anime) {
       anime = await this.animeRepository.upsert(anilistId, {
@@ -317,147 +333,4 @@ export class AnimeService {
     }
     return anime;
   }
-}
-
-interface AniListSearchResponse {
-  data: {
-    Page: {
-      pageInfo: {
-        total: number;
-        currentPage: number;
-        lastPage: number;
-        hasNextPage: boolean;
-        perPage: number;
-      };
-      media: {
-        id: number;
-        title: {
-          romaji: string;
-          english: string;
-        };
-        coverImage: {
-          large: string;
-        };
-        averageScore: number;
-        format: string;
-        status: string;
-        isAdult: boolean;
-      }[];
-    };
-  };
-}
-
-interface AniListGetResponse {
-  data: {
-    Media: {
-      id: number;
-      idMal: number;
-      title: {
-        romaji: string;
-        english: string;
-        native: string;
-      };
-      coverImage: {
-        extraLarge: string;
-        large: string;
-        color: string;
-      };
-      bannerImage: string;
-      format: string;
-      status: string;
-      description: string;
-      startDate: {
-        year: number;
-        month: number;
-        day: number;
-      };
-      endDate: {
-        year: number;
-        month: number;
-        day: number;
-      };
-      season: string;
-      seasonYear: number;
-      episodes: number;
-      duration: number;
-      chapters: number;
-      volumes: number;
-      countryOfOrigin: string;
-      source: string;
-      hashtag: string;
-      averageScore: number;
-      meanScore: number;
-      popularity: number;
-      trending: number;
-      favourites: number;
-      genres: string[];
-      synonyms: string[];
-      tags: {
-        id: number;
-        name: string;
-        description: string;
-        rank: number;
-        isGeneralSpoiler: boolean;
-      }[];
-      relations: {
-        edges: {
-          id: string;
-          relationType: string;
-          node: {
-            id: number;
-            title: {
-              romaji: string;
-            };
-            format: string;
-            type: string;
-          };
-        }[];
-      };
-      characters: {
-        edges: {
-          id: string;
-          role: string;
-          node: {
-            id: number;
-            name: {
-              full: string;
-            };
-            image: {
-              medium: string;
-            };
-          };
-          voiceActors: {
-            name: {
-              full: string;
-            };
-            image: {
-              medium: string;
-            };
-          }[];
-        }[];
-      };
-      externalLinks: {
-        id: string;
-        url: string;
-        site: string;
-      }[];
-      trailer: {
-        id: string;
-        site: string;
-        thumbnail: string;
-      };
-      nextAiringEpisode: {
-        airingAt: number;
-        timeUntilAiring: number;
-        episode: number;
-      };
-      studios: {
-        nodes: {
-          id: number;
-          name: string;
-          isAnimationStudio: boolean;
-        }[];
-      };
-    };
-  };
 }

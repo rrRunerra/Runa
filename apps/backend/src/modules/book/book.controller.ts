@@ -1,13 +1,18 @@
-import { Controller, Param, UseGuards, Get, Query, Post, Req, ForbiddenException, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Param, UseGuards, Get, Query, Post } from '@nestjs/common';
+import { rrTooManyRequestsException } from 'src/providers/error';
 import { BookService } from './book.service';
-import { DualAuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Public } from '../../common/decorators/public.decorator';
-import { AquilaBitField } from '@runa/permissions';
+import { AquilaFlags } from '@runa/permissions';
 import { CacheService } from '../../providers/cache/cache.service';
+import { Permissions } from 'src/common/decorators/permissions.decorator';
 
 @Controller('book')
-@UseGuards(DualAuthGuard)
+@UseGuards(AuthGuard, PermissionsGuard)
 export class BookController {
+  private readonly moduleCode = 'BkCtr-';
+
   constructor(
     private readonly bookService: BookService,
     private readonly cacheService: CacheService,
@@ -15,42 +20,38 @@ export class BookController {
 
   @Public()
   @Get('search')
-  async search(@Query() query: { name: string }) {
+  async search(@Query() query: { name: string }): Promise<any> {
     return this.bookService.search(query.name);
   }
 
   @Public()
   @Get('details/:id')
-  async getBook(@Param('id') id: string) {
+  async getBook(@Param('id') id: string): Promise<any> {
     return this.bookService.getBook(id);
   }
 
   @Public()
   @Get('details/:id/related')
-  async getRelatedBooks(@Param('id') id: string) {
+  async getRelatedBooks(@Param('id') id: string): Promise<any> {
     return this.bookService.getRelatedBooks(id);
   }
 
   @Public()
   @Get('details/:id/editions')
-  async getBookEditions(@Param('id') id: string) {
+  async getBookEditions(@Param('id') id: string): Promise<any> {
     return this.bookService.getBookEditions(id);
   }
 
   @Post('refresh/:id')
-  async refreshBook(@Param('id') id: string, @Req() req: any) {
-    const bitfield = AquilaBitField.fromRaw(req.user.permissions);
-    if (!bitfield.has('MEDIA_REFRESH')) {
-      throw new ForbiddenException('You do not have permission to refresh media');
-    }
-
+  @Permissions([AquilaFlags.MEDIA_REFRESH])
+  async refreshBook(@Param('id') id: string): Promise<any> {
     const cooldownKey = `cooldown:refresh:book:${id}`;
     const onCooldown = await this.cacheService.get(cooldownKey);
     if (onCooldown) {
-      throw new HttpException(
-        'This media was refreshed recently. Please wait before refreshing again.',
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
+      throw new rrTooManyRequestsException(`${this.moduleCode}TMWRR001`, {
+        message:
+          'This media was refreshed recently. Please wait before refreshing again.',
+      });
     }
 
     const result = await this.bookService.getBook(id, true);

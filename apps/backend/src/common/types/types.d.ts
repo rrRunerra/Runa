@@ -182,3 +182,106 @@ export interface SearchApiResponse {
   status: 'success' | 'error';
   data: SearchMediaItem[];
 }
+
+export interface AniListSearchResponse {
+  data: {
+    Page: {
+      pageInfo: {
+        total: number;
+        currentPage: number;
+        lastPage: number;
+        hasNextPage: boolean;
+        perPage: number;
+      };
+      media: {
+        id: number;
+        title: {
+          romaji: string;
+          english: string;
+        };
+        coverImage: {
+          large: string;
+        };
+        averageScore: number;
+        format: string;
+        status: string;
+        isAdult: boolean;
+      }[];
+    };
+  };
+}
+
+export interface AniListGetResponse {
+  data: {
+    Media: {
+      id: number;
+      idMal: number;
+      title: { romaji: string; english: string; native: string };
+      coverImage: { extraLarge: string; large: string; color?: string };
+      bannerImage: string;
+      format: string;
+      status: string;
+      description: string;
+      startDate: { year: number; month: number; day: number };
+      endDate: { year: number; month: number; day: number };
+      season: string;
+      seasonYear: number;
+      episodes: number;
+      duration: number;
+      chapters?: number;
+      volumes?: number;
+      countryOfOrigin: string;
+      source: string;
+      hashtag: string;
+      averageScore: number;
+      meanScore: number;
+      popularity: number;
+      trending: number;
+      favourites: number;
+      genres: string[];
+      synonyms: string[];
+      tags: {
+        id?: number;
+        name: string;
+        description?: string;
+        rank: number;
+        isGeneralSpoiler?: boolean;
+      }[];
+      isAdult?: boolean;
+      relations: {
+        edges: {
+          id: string;
+          relationType: string;
+          node: {
+            id: number;
+            title: { romaji: string };
+            format: string;
+            type: string;
+          };
+        }[];
+      };
+      characters: {
+        edges: {
+          id: string;
+          role: string;
+          node: {
+            id: number;
+            name: { full: string };
+            image: { medium: string };
+          };
+          voiceActors: { name: { full: string }; image: { medium: string } }[];
+        }[];
+      };
+      externalLinks?: { id: string; url: string; site: string }[];
+      trailer: { id: string; site: string; thumbnail: string };
+      nextAiringEpisode: {
+        airingAt: number;
+        timeUntilAiring: number;
+        episode: number;
+      };
+      studios: {
+        nodes: { id?: number; name: string; isAnimationStudio?: boolean }[];
+      };
+    };
+  };
+}

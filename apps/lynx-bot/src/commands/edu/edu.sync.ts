@@ -17,7 +17,7 @@ export default class EduSyncCommand extends SubCommand {
   constructor() {
     super(client, {
       name: "edu.sync",
-      enabled: true,
+      enabled: false,
       docs: `Sync homework from Edupage to Discord. Posts new assignments to configured forums.`,
     });
   }

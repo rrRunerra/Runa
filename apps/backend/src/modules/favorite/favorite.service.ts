@@ -1,10 +1,13 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { rrNotFoundException } from 'src/providers/error';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { CreateFavoriteDto } from './dto/create-favorite.dto';
 import { Favorite, FavoriteType } from '@runa/database';
 
 @Injectable()
 export class FavoriteService {
+  private readonly moduleCode = 'FeSve-';
+
   constructor(private readonly prisma: PrismaService) {}
 
   async addFavorite(userId: string, dto: CreateFavoriteDto): Promise<Favorite> {
@@ -48,7 +51,9 @@ export class FavoriteService {
       });
       return { success: true };
     } catch {
-      throw new NotFoundException('Favorite not found');
+      throw new rrNotFoundException(`${this.moduleCode}FNF001`, {
+        message: 'Favorite not found',
+      });
     }
   }
 
@@ -82,12 +87,27 @@ export class FavoriteService {
     return { favorited: !!favorite };
   }
 
-  async getFavoritesByUsername(username: string, type?: FavoriteType) {
+  async getFavoritesByUsername(
+    username: string,
+    type?: FavoriteType,
+  ): Promise<
+    {
+      id: string;
+      userId: string;
+      type: FavoriteType;
+      mediaId: string;
+      createdAt: Date;
+      title: string;
+      image: string;
+    }[]
+  > {
     const user = await this.prisma.client.user.findUnique({
       where: { username: username.toLowerCase() },
     });
     if (!user) {
-      throw new NotFoundException(`User ${username} not found`);
+      throw new rrNotFoundException(`${this.moduleCode}UNF001`, {
+        message: `User ${username} not found`,
+      });
     }
     const favorites = await this.prisma.client.favorite.findMany({
       where: {
@@ -146,8 +166,15 @@ export class FavoriteService {
       let image = '';
 
       if (mediaDetails) {
-        if (fav.type === FavoriteType.ANIME || fav.type === FavoriteType.MANGA) {
-          title = mediaDetails.titleEnglish ?? mediaDetails.titleRomaji ?? mediaDetails.titleNative ?? '';
+        if (
+          fav.type === FavoriteType.ANIME ||
+          fav.type === FavoriteType.MANGA
+        ) {
+          title =
+            mediaDetails.titleEnglish ??
+            mediaDetails.titleRomaji ??
+            mediaDetails.titleNative ??
+            '';
           image = mediaDetails.coverImageLarge ?? '';
         } else if (fav.type === FavoriteType.TV) {
           title = mediaDetails.titleEnglish ?? mediaDetails.titleRomaji ?? '';

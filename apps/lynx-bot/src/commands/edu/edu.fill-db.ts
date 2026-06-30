@@ -11,7 +11,7 @@ export default class EduFillDbCommand extends SubCommand {
   constructor() {
     super(client, {
       name: "edu.fill-db",
-      enabled: true,
+      enabled: false,
       docs: `### Summary
 Populate the database with existing Edupage assignments without posting.
 

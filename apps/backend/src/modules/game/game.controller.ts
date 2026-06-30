@@ -1,13 +1,18 @@
-import { Controller, Param, UseGuards, Get, Query, Post, Req, ForbiddenException, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Param, UseGuards, Get, Query, Post } from '@nestjs/common';
 import { GameService } from './game.service';
-import { DualAuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Public } from '../../common/decorators/public.decorator';
-import { AquilaBitField } from '@runa/permissions';
+import { AquilaFlags } from '@runa/permissions';
 import { CacheService } from '../../providers/cache/cache.service';
+import { rrTooManyRequestsException } from 'src/providers/error';
+import { Permissions } from 'src/common/decorators/permissions.decorator';
 
 @Controller('game')
-@UseGuards(DualAuthGuard)
+@UseGuards(AuthGuard, PermissionsGuard)
 export class GameController {
+  private readonly moduleCode = 'GeCtr-';
+
   constructor(
     private readonly gameService: GameService,
     private readonly cacheService: CacheService,
@@ -15,30 +20,26 @@ export class GameController {
 
   @Public()
   @Get('search')
-  async search(@Query() query: { name: string }) {
+  async search(@Query() query: { name: string }): Promise<any> {
     return this.gameService.search(query.name);
   }
 
   @Public()
   @Get('details/:id')
-  async getGame(@Param('id') id: string) {
+  async getGame(@Param('id') id: string): Promise<any> {
     return this.gameService.getGame(parseInt(id));
   }
 
   @Post('refresh/:id')
-  async refreshGame(@Param('id') id: string, @Req() req: any) {
-    const bitfield = AquilaBitField.fromRaw(req.user.permissions);
-    if (!bitfield.has('MEDIA_REFRESH')) {
-      throw new ForbiddenException('You do not have permission to refresh media');
-    }
-
+  @Permissions([AquilaFlags.MEDIA_REFRESH])
+  async refreshGame(@Param('id') id: string): Promise<any> {
     const cooldownKey = `cooldown:refresh:game:${id}`;
     const onCooldown = await this.cacheService.get(cooldownKey);
     if (onCooldown) {
-      throw new HttpException(
-        'This media was refreshed recently. Please wait before refreshing again.',
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
+      throw new rrTooManyRequestsException(`${this.moduleCode}TMRR001`, {
+        message:
+          'This media was refreshed recently. Please wait before refreshing again.',
+      });
     }
 
     const result = await this.gameService.getGame(parseInt(id), true);

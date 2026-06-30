@@ -7,7 +7,7 @@ import type { Media } from '../../../common/types/types';
 export class AnimeRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findByAnilistId(anilistId: number) {
+  async findByAnilistId(anilistId: number): Promise<any> {
     return this.prisma.client.aquilaAnime.findUnique({
       where: { anilistId },
     });
@@ -16,7 +16,7 @@ export class AnimeRepository {
   async upsert(
     anilistId: number,
     data: Prisma.AquilaAnimeCreateInput | Prisma.AquilaAnimeUpdateInput,
-  ) {
+  ): Promise<any> {
     return this.prisma.client.aquilaAnime.upsert({
       where: { anilistId },
       update: data,

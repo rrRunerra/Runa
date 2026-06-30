@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { BookController } from './book.controller';
 import { BookService } from './book.service';
-import { DualAuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth.guard';
 import { Reflector } from '@nestjs/core';
 
 describe('BookController', () => {
@@ -13,7 +13,7 @@ describe('BookController', () => {
     getBook: jest.fn(),
   };
 
-  const mockDualAuthGuard = {
+  const mockAuthGuard = {
     canActivate: jest.fn().mockReturnValue(true),
   };
 
@@ -27,8 +27,8 @@ describe('BookController', () => {
         Reflector,
       ],
     })
-      .overrideGuard(DualAuthGuard)
-      .useValue(mockDualAuthGuard)
+      .overrideGuard(AuthGuard)
+      .useValue(mockAuthGuard)
       .compile();
 
     controller = module.get<BookController>(BookController);
@@ -53,7 +53,10 @@ describe('BookController', () => {
 
   describe('getBook', () => {
     it('should call bookService.getBook with work ID string', async () => {
-      const mockResult = { id: 'OL12345W', title: { romaji: 'Detail Book' } } as any;
+      const mockResult = {
+        id: 'OL12345W',
+        title: { romaji: 'Detail Book' },
+      } as any;
       mockBookService.getBook.mockResolvedValue(mockResult);
 
       const result = await controller.getBook('OL12345W');

@@ -13,14 +13,17 @@ import {
   Query,
 } from '@nestjs/common';
 import type { Response as ExpressResponse } from 'express';
-import { DualAuthGuard } from '../../common/guards/auth.guard';
-import { EmailAccountService, EmailAutoconfigResult } from './email-account.service';
+import { AuthGuard } from '../../common/guards/auth.guard';
+import {
+  EmailAccountService,
+  EmailAutoconfigResult,
+} from './email-account.service';
 import { EmailSyncService } from './email-sync.service';
 import { EmailAccountDto } from './dto/email-account.dto';
 import { SendEmailDto } from './dto/send-email.dto';
 
 @Controller('/emails')
-@UseGuards(DualAuthGuard)
+@UseGuards(AuthGuard)
 export class EmailAccountController {
   constructor(
     private readonly emailAccountService: EmailAccountService,
@@ -33,7 +36,10 @@ export class EmailAccountController {
   }
 
   @Post()
-  async addEmailAccount(@Req() req: any, @Body() body: EmailAccountDto): Promise<any> {
+  async addEmailAccount(
+    @Req() req: any,
+    @Body() body: EmailAccountDto,
+  ): Promise<any> {
     return this.emailAccountService.addEmailAccount(req.user.username, body);
   }
 
@@ -43,11 +49,18 @@ export class EmailAccountController {
     @Param('id') id: string,
     @Body() body: EmailAccountDto,
   ): Promise<any> {
-    return this.emailAccountService.updateEmailAccount(req.user.username, id, body);
+    return this.emailAccountService.updateEmailAccount(
+      req.user.username,
+      id,
+      body,
+    );
   }
 
   @Delete(':id')
-  async deleteEmailAccount(@Req() req: any, @Param('id') id: string): Promise<{ success: boolean }> {
+  async deleteEmailAccount(
+    @Req() req: any,
+    @Param('id') id: string,
+  ): Promise<{ success: boolean }> {
     return this.emailAccountService.deleteEmailAccount(req.user.username, id);
   }
 
@@ -59,7 +72,11 @@ export class EmailAccountController {
   ): Promise<any[]> {
     const pageNum = page ? parseInt(page, 10) : undefined;
     const limitNum = limit ? parseInt(limit, 10) : undefined;
-    return this.emailAccountService.getCannedResponses(req.user.username, pageNum, limitNum);
+    return this.emailAccountService.getCannedResponses(
+      req.user.username,
+      pageNum,
+      limitNum,
+    );
   }
 
   @Post('canned-responses')
@@ -67,7 +84,10 @@ export class EmailAccountController {
     @Req() req: any,
     @Body() body: { name: string; subject?: string; bodyText: string },
   ): Promise<any> {
-    return this.emailAccountService.createCannedResponse(req.user.username, body);
+    return this.emailAccountService.createCannedResponse(
+      req.user.username,
+      body,
+    );
   }
 
   @Put('canned-responses/:id')
@@ -76,7 +96,11 @@ export class EmailAccountController {
     @Param('id') id: string,
     @Body() body: { name: string; subject?: string; bodyText: string },
   ): Promise<any> {
-    return this.emailAccountService.updateCannedResponse(req.user.username, id, body);
+    return this.emailAccountService.updateCannedResponse(
+      req.user.username,
+      id,
+      body,
+    );
   }
 
   @Delete('canned-responses/:id')
@@ -88,7 +112,9 @@ export class EmailAccountController {
   }
 
   @Get('autoconfig/:domain')
-  async fetchEmailAutoconfig(@Param('domain') domain: string): Promise<EmailAutoconfigResult> {
+  async fetchEmailAutoconfig(
+    @Param('domain') domain: string,
+  ): Promise<EmailAutoconfigResult> {
     return this.emailAccountService.fetchEmailAutoconfig(domain);
   }
 
@@ -103,7 +129,12 @@ export class EmailAccountController {
   ): Promise<any[]> {
     const pageNum = page ? parseInt(page, 10) : undefined;
     const limitNum = limit ? parseInt(limit, 10) : undefined;
-    return this.emailAccountService.getUnifiedFolderMessages(req.user.username, folder, pageNum, limitNum);
+    return this.emailAccountService.getUnifiedFolderMessages(
+      req.user.username,
+      folder,
+      pageNum,
+      limitNum,
+    );
   }
 
   @Get(':accountId/folders/:folder/messages')
@@ -116,7 +147,13 @@ export class EmailAccountController {
   ): Promise<any[]> {
     const pageNum = page ? parseInt(page, 10) : undefined;
     const limitNum = limit ? parseInt(limit, 10) : undefined;
-    return this.emailAccountService.getFolderMessages(req.user.username, accountId, folder, pageNum, limitNum);
+    return this.emailAccountService.getFolderMessages(
+      req.user.username,
+      accountId,
+      folder,
+      pageNum,
+      limitNum,
+    );
   }
 
   @Get(':accountId/messages/:messageId')
@@ -125,7 +162,11 @@ export class EmailAccountController {
     @Param('accountId') accountId: string,
     @Param('messageId') messageId: string,
   ): Promise<any> {
-    return this.emailAccountService.getMessageDetail(req.user.username, accountId, messageId);
+    return this.emailAccountService.getMessageDetail(
+      req.user.username,
+      accountId,
+      messageId,
+    );
   }
 
   @Put(':accountId/messages/:messageId')
@@ -149,14 +190,24 @@ export class EmailAccountController {
     @Param('accountId') accountId: string,
     @Param('messageId') messageId: string,
   ): Promise<{ success: boolean }> {
-    return this.emailAccountService.deleteMessage(req.user.username, accountId, messageId);
+    return this.emailAccountService.deleteMessage(
+      req.user.username,
+      accountId,
+      messageId,
+    );
   }
 
   @Put(':accountId/messages/bulk')
   async bulkUpdateMessageStatus(
     @Req() req: any,
     @Param('accountId') accountId: string,
-    @Body() body: { messageIds: string[]; read?: boolean; flagged?: boolean; folder?: string },
+    @Body()
+    body: {
+      messageIds: string[];
+      read?: boolean;
+      flagged?: boolean;
+      folder?: string;
+    },
   ): Promise<{ success: boolean }> {
     return this.emailAccountService.bulkUpdateMessageStatus(
       req.user.username,
@@ -185,7 +236,11 @@ export class EmailAccountController {
     @Param('accountId') accountId: string,
     @Body() body: SendEmailDto,
   ): Promise<any> {
-    return this.emailAccountService.sendEmail(req.user.username, accountId, body);
+    return this.emailAccountService.sendEmail(
+      req.user.username,
+      accountId,
+      body,
+    );
   }
 
   @Post(':accountId/sync')

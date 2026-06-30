@@ -1,31 +1,49 @@
-import {
-  Injectable,
-  CanActivate,
-  ExecutionContext,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { jwtVerify } from 'jose';
-import bcrypt from 'bcrypt';
+import { jwtVerify, JWTPayload } from 'jose';
+import * as bcrypt from 'bcrypt';
 
 import { prisma } from '@runa/database';
 
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 import { CacheService } from '../../providers/cache/cache.service';
+import {
+  rrNotFoundException,
+  rrUnauthorizedException,
+} from 'src/providers/error';
+import { Request } from 'express';
+
+interface AuthPayload extends JWTPayload {
+  sub: string;
+  email: string;
+  name: string;
+  permissions: string[];
+  avatarUrl: string | null;
+  displayName: string | null;
+  passwordChangedAt: string | null;
+}
 
 @Injectable()
-export class DualAuthGuard implements CanActivate {
+export class AuthGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly cacheService: CacheService,
   ) {}
 
+  private readonly guardCode: string = 'AhGd-';
+
   private readonly secret = new TextEncoder().encode(
     process.env.NEXTAUTH_SECRET,
   );
 
+  private readonly isRedis =
+    process.env.CACHE_DRIVER === 'redis' && process.env.REDIS_URL;
+
   private readonly internalApiKey = process.env.INTERNAL_API_KEY;
-  private readonly pwdChangeCache = new Map<string, { timestamp: number; lastChecked: number }>();
+  private readonly passwordChangeCache = new Map<
+    string,
+    { timestamp: number; lastChecked: number }
+  >();
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
@@ -33,18 +51,24 @@ export class DualAuthGuard implements CanActivate {
       context.getClass(),
     ]);
 
-    const request = context.switchToHttp().getRequest();
+    if (isPublic) return true;
+
+    const request = context.switchToHttp().getRequest<
+      Request & {
+        user?: {
+          id: string;
+          username: string;
+          email?: string;
+          permissions: number[];
+        };
+      }
+    >();
 
     try {
       // API Key (Highest priority)
-      let apiKey =
-        request.headers['x-api-key'] ||
-        request.headers['x-api'] ||
-        request.headers['api-key'] ||
-        request.query['apikey'] ||
-        request.query['apiKey'] ||
-        request.query['api_key'];
-      if (Array.isArray(apiKey)) {
+      let apiKey: string | string[] | undefined = request.headers['x-api-key'];
+
+      if (Array.isArray(apiKey) && apiKey) {
         apiKey = apiKey[0];
       }
       if (apiKey) {
@@ -53,17 +77,24 @@ export class DualAuthGuard implements CanActivate {
           where: {
             keyPrefix,
           },
-          include: {
+          select: {
+            keyHash: true,
+            id: true,
             user: true,
           },
         });
         if (!record) {
-          throw new UnauthorizedException('API Key not found');
+          throw new rrUnauthorizedException(`${this.guardCode}AKNF001`, {
+            message: 'Api key not found',
+          });
         }
 
-        const valid = await bcrypt.compare(apiKey, record.keyHash);
+        const valid: boolean = await bcrypt.compare(apiKey, record.keyHash);
+
         if (!valid) {
-          throw new UnauthorizedException('Invalid API Key');
+          throw new rrUnauthorizedException(`${this.guardCode}IAK001`, {
+            message: 'Invalid API Key',
+          });
         }
 
         void prisma.apiKey.update({
@@ -72,9 +103,9 @@ export class DualAuthGuard implements CanActivate {
         });
 
         request.user = {
-          id: record.user?.id,
-          username: record.user?.username,
-          permissions: record.user?.permissions,
+          id: record.user.id,
+          username: record.user.username,
+          permissions: record.user.permissions,
         };
         return true;
       }
@@ -82,14 +113,14 @@ export class DualAuthGuard implements CanActivate {
       const token = this.extractToken(request);
 
       if (token) {
-        const { payload } = await jwtVerify(token, this.secret, {
+        const { payload } = await jwtVerify<AuthPayload>(token, this.secret, {
           algorithms: ['HS256'],
         });
 
         // Verify if password has changed since token issuance (throttled to 5 minutes)
-        const userId = payload.sub as string;
+        const userId = payload.sub;
         const now = Date.now();
-        const cached = this.pwdChangeCache.get(userId);
+        const cached = this.passwordChangeCache.get(userId);
 
         let changedAt: number | null = null;
 
@@ -104,7 +135,7 @@ export class DualAuthGuard implements CanActivate {
             ? Math.floor(user.passwordChangedAt.getTime() / 1000)
             : null;
 
-          this.pwdChangeCache.set(userId, {
+          this.passwordChangeCache.set(userId, {
             timestamp: timestamp || 0,
             lastChecked: now,
           });
@@ -112,7 +143,9 @@ export class DualAuthGuard implements CanActivate {
         }
 
         if (changedAt && payload.iat && payload.iat < changedAt) {
-          throw new UnauthorizedException('Token expired due to password change');
+          throw new rrUnauthorizedException(`${this.guardCode}TEDTPC001`, {
+            message: 'Token expired due to a password change',
+          });
         }
 
         const cacheKey = `user:permissions:${userId}`;
@@ -123,9 +156,16 @@ export class DualAuthGuard implements CanActivate {
             where: { id: userId },
             select: { permissions: true },
           });
-          permissions = user?.permissions ?? [];
-          const isRedis = process.env.CACHE_DRIVER === 'redis' && process.env.REDIS_URL;
-          const ttl = isRedis ? 86400 : 2; // 2s TTL for in-memory cache to allow quick updates, 24h for Redis
+
+          if (!user) {
+            throw new rrNotFoundException(`${this.guardCode}UNF001`, {
+              message: 'User not found',
+            });
+          }
+
+          permissions = user.permissions ?? [];
+
+          const ttl = this.isRedis ? 86400 : 2; // 2s TTL for in-memory cache to allow quick updates, 24h for Redis
           await this.cacheService.set(cacheKey, permissions, ttl);
         }
 
@@ -137,7 +177,9 @@ export class DualAuthGuard implements CanActivate {
         };
         return true;
       } else if (!isPublic) {
-        throw new UnauthorizedException('No authentication token found');
+        throw new rrUnauthorizedException(`${this.guardCode}NATF001`, {
+          message: 'No authentication token found',
+        });
       }
     } catch (error) {
       if (!isPublic) {
@@ -145,20 +187,17 @@ export class DualAuthGuard implements CanActivate {
       }
     }
 
-    if (isPublic) {
-      return true;
-    }
-
     return false;
   }
 
-  private extractToken(request: any): string | null {
-    const authHeader = request.headers.authorization;
+  private extractToken(request: Request): string | null {
+    const authHeader = request.headers['authorization'];
+
     if (authHeader && authHeader.startsWith('Bearer ')) {
       return authHeader.split(' ')[1];
     }
 
-    const url = new URL(request.url, `https://${request.headers.host}`);
+    const url = new URL(request.url, `https://${request.headers['host']}`);
     const queryToken = url.searchParams.get('token');
     if (queryToken) {
       return queryToken;

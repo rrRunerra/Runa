@@ -2,26 +2,29 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Subject, EMPTY } from 'rxjs';
 import { mergeMap, catchError } from 'rxjs/operators';
 import { AnimeRepository } from '../repositories/anime.repository';
+import { rrInternalServerErrorException } from 'src/providers/error';
+import type { AniListGetResponse } from '../../../common/types/types';
 
 @Injectable()
 export class AnimeQueueService implements OnModuleInit {
   private readonly logger = new Logger(AnimeQueueService.name);
+  private readonly moduleCode = 'AeQeSve-';
   private readonly jobQueue = new Subject<number>();
   private readonly processing = new Set<number>();
 
   constructor(private readonly animeRepository: AnimeRepository) {}
 
-  onModuleInit() {
+  onModuleInit(): void {
     this.processQueue();
   }
 
-  addJob(anilistId: number) {
+  addJob(anilistId: number): void {
     if (!this.processing.has(anilistId)) {
       this.jobQueue.next(anilistId);
     }
   }
 
-  private processQueue() {
+  private processQueue(): void {
     this.jobQueue
       .pipe(
         mergeMap(async (anilistId) => {
@@ -51,7 +54,7 @@ export class AnimeQueueService implements OnModuleInit {
       .subscribe();
   }
 
-  private async syncAnimeFromAniList(anilistId: number) {
+  private async syncAnimeFromAniList(anilistId: number): Promise<void> {
     const anime = await this.fetchFromAniList(anilistId);
     if (anime) {
       await this.animeRepository.upsert(anilistId, anime);
@@ -183,7 +186,9 @@ export class AnimeQueueService implements OnModuleInit {
           const waitTime = retryAfter
             ? parseInt(retryAfter, 10) * 1000 + 1000
             : baseDelay * Math.pow(2, i);
-          this.logger.warn(`AniList rate limit hit (429) for anime ${anilistId}. Waiting ${waitTime}ms before retry ${i + 1}/${maxRetries}...`);
+          this.logger.warn(
+            `AniList rate limit hit (429) for anime ${anilistId}. Waiting ${waitTime}ms before retry ${i + 1}/${maxRetries}...`,
+          );
           await new Promise((resolve) => setTimeout(resolve, waitTime));
           continue;
         }
@@ -192,17 +197,23 @@ export class AnimeQueueService implements OnModuleInit {
       } catch (err) {
         if (i === maxRetries - 1) throw err;
         const waitTime = baseDelay * Math.pow(2, i);
-        this.logger.warn(`Network error fetching anime ${anilistId}: ${err}. Retrying in ${waitTime}ms...`);
+        this.logger.warn(
+          `Network error fetching anime ${anilistId}: ${err}. Retrying in ${waitTime}ms...`,
+        );
         await new Promise((resolve) => setTimeout(resolve, waitTime));
       }
     }
 
     if (!aniListRes) {
-      throw new Error('Failed to fetch from AniList: No response received');
+      throw new rrInternalServerErrorException(`${this.moduleCode}FFANLRR001`, {
+        message: 'Failed to fetch from AniList: No response received',
+      });
     }
 
     if (!aniListRes.ok) {
-      throw new Error(`AniList API error: ${aniListRes.status}`);
+      throw new rrInternalServerErrorException(`${this.moduleCode}AAE002`, {
+        message: `AniList API error: ${aniListRes.status}`,
+      });
     }
 
     const data: AniListGetResponse = await aniListRes.json();
@@ -284,79 +295,4 @@ export class AnimeQueueService implements OnModuleInit {
       trailers: trailers,
     };
   }
-}
-
-interface AniListGetResponse {
-  data: {
-    Media: {
-      id: number;
-      idMal: number;
-      title: { romaji: string; english: string; native: string };
-      coverImage: { extraLarge: string; large: string };
-      bannerImage: string;
-      format: string;
-      status: string;
-      description: string;
-      startDate: { year: number; month: number; day: number };
-      endDate: { year: number; month: number; day: number };
-      season: string;
-      seasonYear: number;
-      episodes: number;
-      duration: number;
-      source: string;
-      genres: string[];
-      synonyms: string[];
-      hashtag: string;
-      countryOfOrigin: string;
-      averageScore: number;
-      meanScore: number;
-      popularity: number;
-      trending: number;
-      favourites: number;
-      tags: { name: string; rank: number }[];
-      isAdult: boolean;
-      relations: {
-        edges: {
-          id: string;
-          relationType: string;
-          node: {
-            id: number;
-            title: { romaji: string };
-            format: string;
-            type: string;
-          };
-        }[];
-      };
-      characters: {
-        edges: {
-          id: string;
-          role: string;
-          node: {
-            id: number;
-            name: { full: string };
-            image: { medium: string };
-          };
-          voiceActors: {
-            name: {
-              full: string;
-            };
-            image: {
-              medium: string;
-            };
-          }[];
-        }[];
-      };
-      studios: { nodes: { name: string }[] };
-      trailer: {
-        id: string;
-        site: string;
-        thumbnail: string;
-      };
-      nextAiringEpisode: {
-        airingAt: number;
-        timeUntilAiring: number;
-        episode: number;
-      };
-    };
-  };
 }

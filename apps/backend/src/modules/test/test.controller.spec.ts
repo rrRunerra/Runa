@@ -1,13 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TestController } from './test.controller';
-import { DualAuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth.guard';
 import { Reflector } from '@nestjs/core';
 
 describe('TestController', () => {
   let controller: TestController;
   let reflector: Reflector;
 
-  const mockDualAuthGuard = {
+  const mockAuthGuard = {
     canActivate: jest.fn().mockReturnValue(true),
   };
 
@@ -18,8 +18,8 @@ describe('TestController', () => {
       controllers: [TestController],
       providers: [Reflector],
     })
-      .overrideGuard(DualAuthGuard)
-      .useValue(mockDualAuthGuard)
+      .overrideGuard(AuthGuard)
+      .useValue(mockAuthGuard)
       .compile();
 
     controller = module.get<TestController>(TestController);
@@ -40,19 +40,27 @@ describe('TestController', () => {
   describe('noAuth', () => {
     it('should return a public response regardless of authentication', async () => {
       const result = await controller.noAuth();
-      expect(result.message).toContain('public endpoint. No authentication required.');
+      expect(result.message).toContain(
+        'public endpoint. No authentication required.',
+      );
       expect(result.timestamp).toBeDefined();
     });
   });
 
   describe('session', () => {
     it('should return user info when authenticated via session', async () => {
-      const mockUser = { id: 'user-session-1', username: 'session_user', type: 'session' };
+      const mockUser = {
+        id: 'user-session-1',
+        username: 'session_user',
+        type: 'session',
+      };
       const mockReq = { user: mockUser };
 
       const result = await controller.session(mockReq);
 
-      expect(result.message).toContain('protected by session/cookie authentication.');
+      expect(result.message).toContain(
+        'protected by session/cookie authentication.',
+      );
       expect(result.user).toEqual(mockUser);
     });
 
@@ -65,7 +73,11 @@ describe('TestController', () => {
 
   describe('apiKey', () => {
     it('should return user info when authenticated via API Key', async () => {
-      const mockUser = { id: 'user-apikey-1', username: 'apikey_user', type: 'api-key' };
+      const mockUser = {
+        id: 'user-apikey-1',
+        username: 'apikey_user',
+        type: 'api-key',
+      };
       const mockReq = { user: mockUser };
 
       const result = await controller.apiKey(mockReq);

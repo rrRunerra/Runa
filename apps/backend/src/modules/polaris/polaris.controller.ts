@@ -9,16 +9,21 @@ import {
   Req,
 } from '@nestjs/common';
 import { PolarisService } from './polaris.service';
-import { DualAuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth.guard';
 import { CreateBookmarkDto } from './dto/create-bookmark.dto';
 
 @Controller('polaris/bookmarks')
-@UseGuards(DualAuthGuard)
+@UseGuards(AuthGuard)
 export class PolarisController {
+  private readonly moduleCode = 'PoCtr-';
+
   constructor(private readonly polarisService: PolarisService) {}
 
   @Post()
-  async createOrUpdateBookmark(@Req() req: any, @Body() dto: CreateBookmarkDto) {
+  async createOrUpdateBookmark(
+    @Req() req: any,
+    @Body() dto: CreateBookmarkDto,
+  ) {
     return this.polarisService.createOrUpdateBookmark(req.user.id, dto);
   }
 

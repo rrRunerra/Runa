@@ -2,26 +2,28 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Subject, EMPTY } from 'rxjs';
 import { mergeMap, catchError } from 'rxjs/operators';
 import { MangaRepository } from '../repositories/manga.repository';
+import { rrInternalServerErrorException } from 'src/providers/error';
 
 @Injectable()
 export class MangaQueueService implements OnModuleInit {
   private readonly logger = new Logger(MangaQueueService.name);
+  private readonly moduleCode = 'MaQeSve-';
   private readonly jobQueue = new Subject<number>();
   private readonly processing = new Set<number>();
 
   constructor(private readonly mangaRepository: MangaRepository) {}
 
-  onModuleInit() {
+  onModuleInit(): void {
     this.processQueue();
   }
 
-  addJob(anilistId: number) {
+  addJob(anilistId: number): void {
     if (!this.processing.has(anilistId)) {
       this.jobQueue.next(anilistId);
     }
   }
 
-  private processQueue() {
+  private processQueue(): void {
     this.jobQueue
       .pipe(
         mergeMap(async (anilistId) => {
@@ -51,7 +53,7 @@ export class MangaQueueService implements OnModuleInit {
       .subscribe();
   }
 
-  private async syncMangaFromAniList(anilistId: number) {
+  private async syncMangaFromAniList(anilistId: number): Promise<void> {
     const manga = await this.fetchFromAniList(anilistId);
     if (manga) {
       await this.mangaRepository.upsert(anilistId, manga);
@@ -163,7 +165,9 @@ export class MangaQueueService implements OnModuleInit {
           const waitTime = retryAfter
             ? parseInt(retryAfter, 10) * 1000 + 1000
             : baseDelay * Math.pow(2, i);
-          this.logger.warn(`AniList rate limit hit (429) for manga ${anilistId}. Waiting ${waitTime}ms before retry ${i + 1}/${maxRetries}...`);
+          this.logger.warn(
+            `AniList rate limit hit (429) for manga ${anilistId}. Waiting ${waitTime}ms before retry ${i + 1}/${maxRetries}...`,
+          );
           await new Promise((resolve) => setTimeout(resolve, waitTime));
           continue;
         }
@@ -172,17 +176,23 @@ export class MangaQueueService implements OnModuleInit {
       } catch (err) {
         if (i === maxRetries - 1) throw err;
         const waitTime = baseDelay * Math.pow(2, i);
-        this.logger.warn(`Network error fetching manga ${anilistId}: ${err}. Retrying in ${waitTime}ms...`);
+        this.logger.warn(
+          `Network error fetching manga ${anilistId}: ${err}. Retrying in ${waitTime}ms...`,
+        );
         await new Promise((resolve) => setTimeout(resolve, waitTime));
       }
     }
 
     if (!aniListRes) {
-      throw new Error('Failed to fetch from AniList: No response received');
+      throw new rrInternalServerErrorException(`${this.moduleCode}FFTANRR001`, {
+        message: 'Failed to fetch from AniList: No response received',
+      });
     }
 
     if (!aniListRes.ok) {
-      throw new Error(`AniList API error: ${aniListRes.status}`);
+      throw new rrInternalServerErrorException(`${this.moduleCode}AAE001`, {
+        message: `AniList API error: ${aniListRes.status}`,
+      });
     }
 
     const data: AniListGetResponse = await aniListRes.json();

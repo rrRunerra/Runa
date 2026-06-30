@@ -18,6 +18,8 @@ import { Public } from '../../common/decorators/public.decorator';
 
 @Controller('media')
 export class MediaController {
+  private readonly moduleCode = 'MeCtr-';
+
   constructor(private readonly mediaService: MediaService) {}
 
   @Post('upload')

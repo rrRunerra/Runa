@@ -1,0 +1,63 @@
+{
+  "type": "controller",
+  "controllerName": "MediaController",
+  "controllerCode": "MeCtr-",
+
+  "dependedOn": "mediaService",
+
+  "privateVars": [
+    {
+      "name": "mediaService",
+      "type": "MediaService",
+      "description": "Service used for file upload, retrieval, and deletion operations",
+      "readOnly": true
+    },
+    {
+      "name": "moduleCode",
+      "type": "string",
+      "description": "Prefix for rrCodes",
+      "readOnly": true
+    }
+  ],
+
+  "routes": [
+    {
+      "method": "POST",
+      "endpoint": "/media/upload",
+      "handlerName": "uploadFile",
+      "params": [
+        {
+          "name": "file",
+          "source": "body",
+          "type": "Express.Multer.File"
+        },
+        {
+          "name": "req",
+          "source": "body",
+          "type": "Request & { user?: { username?: string } }"
+        }
+      ],
+      "request": null,
+      "public": false
+    },
+    {
+      "method": "GET",
+      "endpoint": "/media/image/:filename",
+      "handlerName": "getFile",
+      "params": [
+        {
+          "name": "filename",
+          "source": "param",
+          "type": "string"
+        },
+        {
+          "name": "res",
+          "source": "body",
+          "type": "Response"
+        }
+      ],
+      "request": null,
+      "public": true
+    }
+  ]
+}

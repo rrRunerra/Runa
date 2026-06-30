@@ -202,7 +202,6 @@ export default function UserTvPage() {
     }
   }, [
     username,
-    session?.accessToken,
     debouncedSearch,
     activeList,
     filters.format,
@@ -310,9 +309,7 @@ export default function UserTvPage() {
 
             <RrMediaListDisplay
               lists={
-                activeList === "All"
-                  ? ["Watching", "Completed"]
-                  : [activeList]
+                activeList === "All" ? ["Watching", "Completed"] : [activeList]
               }
               data={tvList}
               displayType={displayType}

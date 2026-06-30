@@ -1,0 +1,511 @@
+{
+  "type": "service",
+  "serviceName": "AuthService",
+  "serviceCode": "AhSve-",
+
+  "dependedOn": "prisma, cacheService, mailService",
+
+  "privateVars": [
+    {
+      "name": "logger",
+      "type": "Logger",
+      "description": "Logger instance scoped to AuthService",
+      "readOnly": true
+    },
+    {
+      "name": "moduleCode",
+      "type": "string",
+      "description": "Prefix for rrCodes",
+      "readOnly": true
+    },
+    {
+      "name": "prisma",
+      "type": "PrismaService",
+      "description": "Prisma database service for user, passkey, and device queries",
+      "readOnly": true
+    },
+    {
+      "name": "cacheService",
+      "type": "CacheService",
+      "description": "Cache service for MFA codes, login codes, and passkey challenges",
+      "readOnly": true
+    },
+    {
+      "name": "mailService",
+      "type": "MailService",
+      "description": "Mail service for sending MFA email codes",
+      "readOnly": true
+    },
+    {
+      "name": "secret",
+      "type": "Uint8Array",
+      "description": "Encoded NEXTAUTH_SECRET for JWT signing and verification",
+      "readOnly": true
+    }
+  ],
+
+  "functions": [
+    {
+      "name": "login",
+      "type": "async",
+      "access": "public",
+      "params": [
+        {
+          "name": "data",
+          "type": "LoginAuthDto",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Authenticates a user via password, MFA success token, passkey, or login code. Returns user data + JWT or MFA challenge.",
+      "returnValues": ["Promise<any>"],
+      "exceptions": [
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhSve-IMST001",
+          "message": "Invalid MFA success token",
+          "statusCode": 401
+        },
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhSve-UNF001",
+          "message": "User not found",
+          "statusCode": 401
+        },
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhSve-MVEOI001",
+          "message": "MFA verification expired or invalid",
+          "statusCode": 401
+        },
+        {
+          "name": "rrBadRequestException",
+          "rrCode": "AhSve-IPARF001",
+          "message": "Invalid passkey assertion response format",
+          "statusCode": 400
+        },
+        {
+          "name": "rrBadRequestException",
+          "rrCode": "AhSve-IIR001",
+          "message": "Identifier is required",
+          "statusCode": 400
+        },
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhSve-UNF002",
+          "message": "User not found",
+          "statusCode": 401
+        },
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhSve-PIR001",
+          "message": "Password is required",
+          "statusCode": 401
+        },
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhSve-IP001",
+          "message": "Invalid password",
+          "statusCode": 401
+        }
+      ]
+    },
+    {
+      "name": "verifyToken",
+      "type": "async",
+      "access": "public",
+      "params": [
+        {
+          "name": "token",
+          "type": "string",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Verifies a JWT token and returns its payload",
+      "returnValues": ["Promise<any>"],
+      "exceptions": [
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhSve-IT001",
+          "message": "Invalid token",
+          "statusCode": 401
+        }
+      ]
+    },
+    {
+      "name": "sendMfaEmailCode",
+      "type": "async",
+      "access": "public",
+      "params": [
+        {
+          "name": "tempToken",
+          "type": "string",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Sends a 6-digit MFA verification code to the user's email",
+      "returnValues": ["Promise<any>"],
+      "exceptions": [
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhSve-IOEMT001",
+          "message": "Invalid or expired MFA token",
+          "statusCode": 401
+        },
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhSve-IMT001",
+          "message": "Invalid MFA token",
+          "statusCode": 401
+        },
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhSve-MNAONA001",
+          "message": "MFA not authorized or not active",
+          "statusCode": 401
+        }
+      ]
+    },
+    {
+      "name": "sendDeviceMfaCode",
+      "type": "async",
+      "access": "public",
+      "params": [
+        {
+          "name": "tempToken",
+          "type": "string",
+          "typeLib": "typescript"
+        },
+        {
+          "name": "deviceId",
+          "type": "string",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Sends an encrypted MFA verification code to the user's registered device via notification",
+      "returnValues": ["Promise<any>"],
+      "exceptions": [
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhSve-IOEMT002",
+          "message": "Invalid or expired MFA token",
+          "statusCode": 401
+        },
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhSve-IMT002",
+          "message": "Invalid MFA token",
+          "statusCode": 401
+        },
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhSve-DNFOOCOREN001",
+          "message": "Device not found or not capable of receiving encrypted notifications",
+          "statusCode": 401
+        }
+      ]
+    },
+    {
+      "name": "verifyMfa",
+      "type": "async",
+      "access": "public",
+      "params": [
+        {
+          "name": "tempToken",
+          "type": "string",
+          "typeLib": "typescript"
+        },
+        {
+          "name": "method",
+          "type": "string",
+          "typeLib": "typescript"
+        },
+        {
+          "name": "code",
+          "type": "string",
+          "typeLib": "typescript",
+          "optional": true
+        },
+        {
+          "name": "passkeyResponse",
+          "type": "any",
+          "typeLib": "typescript",
+          "optional": true
+        }
+      ],
+      "description": "Verifies MFA via TOTP, email code, device notification, backup code, or passkey. Returns a MFA success token on verification.",
+      "returnValues": ["Promise<any>"],
+      "exceptions": [
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhSve-IOEMT003",
+          "message": "Invalid or expired MFA token",
+          "statusCode": 401
+        },
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhSve-IMT003",
+          "message": "Invalid MFA token",
+          "statusCode": 401
+        },
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhSve-UNF003",
+          "message": "User not found",
+          "statusCode": 401
+        },
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhSve-TINE001",
+          "message": "TOTP is not enabled",
+          "statusCode": 401
+        },
+        {
+          "name": "rrBadRequestException",
+          "rrCode": "AhSve-VCIR001",
+          "message": "Verification code is required",
+          "statusCode": 400
+        },
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhSve-FTDAS001",
+          "message": "Failed to decrypt authentication secret. The server encryption key may have changed.",
+          "statusCode": 401
+        },
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhSve-EMINE001",
+          "message": "Email MFA is not enabled",
+          "statusCode": 401
+        },
+        {
+          "name": "rrBadRequestException",
+          "rrCode": "AhSve-VCIR002",
+          "message": "Verification code is required",
+          "statusCode": 400
+        },
+        {
+          "name": "rrBadRequestException",
+          "rrCode": "AhSve-VCIR003",
+          "message": "Verification code is required",
+          "statusCode": 400
+        },
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhSve-BCANE001",
+          "message": "Backup codes are not enabled",
+          "statusCode": 401
+        },
+        {
+          "name": "rrBadRequestException",
+          "rrCode": "AhSve-VCIR004",
+          "message": "Verification code is required",
+          "statusCode": 400
+        },
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhSve-PANR001",
+          "message": "Passkeys are not registered",
+          "statusCode": 401
+        },
+        {
+          "name": "rrBadRequestException",
+          "rrCode": "AhSve-PAIRIR001",
+          "message": "Passkey assertion response is required",
+          "statusCode": 400
+        },
+        {
+          "name": "rrBadRequestException",
+          "rrCode": "AhSve-PACE001",
+          "message": "Passkey authentication challenge expired",
+          "statusCode": 400
+        },
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhSve-CNR001",
+          "message": "Credential not recognized",
+          "statusCode": 401
+        },
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhSve-PVF001",
+          "message": "Passkey verification failed",
+          "statusCode": 401
+        },
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhSve-IVCOR001",
+          "message": "Invalid verification code or response",
+          "statusCode": 401
+        }
+      ]
+    },
+    {
+      "name": "generatePasskeyLoginOptions",
+      "type": "async",
+      "access": "public",
+      "params": [
+        {
+          "name": "identifier",
+          "type": "string",
+          "typeLib": "typescript",
+          "optional": true
+        }
+      ],
+      "description": "Generates WebAuthn authentication options for passkey login, optionally filtered by known user credentials",
+      "returnValues": ["Promise<any>"],
+      "exceptions": null
+    },
+    {
+      "name": "verifyPasskeyLogin",
+      "type": "async",
+      "access": "public",
+      "params": [
+        {
+          "name": "identifier",
+          "type": "string",
+          "typeLib": "typescript"
+        },
+        {
+          "name": "assertionResponse",
+          "type": "any",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Verifies a WebAuthn passkey assertion response, looks up the user, and returns a signed JWT",
+      "returnValues": ["Promise<any>"],
+      "exceptions": [
+        {
+          "name": "rrNotFoundException",
+          "rrCode": "AhSve-UNF004",
+          "message": "User not found",
+          "statusCode": 404
+        },
+        {
+          "name": "rrBadRequestException",
+          "rrCode": "AhSve-PACE002",
+          "message": "Passkey authentication challenge expired",
+          "statusCode": 400
+        },
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhSve-CNR002",
+          "message": "Credential not recognized",
+          "statusCode": 401
+        },
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhSve-PVF002",
+          "message": "Passkey verification failed",
+          "statusCode": 401
+        },
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhSve-PVF003",
+          "message": "Passkey verification failed",
+          "statusCode": 401
+        }
+      ]
+    },
+    {
+      "name": "generateLoginCode",
+      "type": "async",
+      "access": "public",
+      "params": [],
+      "description": "Generates a unique 10-digit login code cached with PENDING status, used for passwordless login link",
+      "returnValues": ["Promise<any>"],
+      "exceptions": [
+        {
+          "name": "rrBadRequestException",
+          "rrCode": "AhSve-CNGAULC001",
+          "message": "Could not generate a unique login code",
+          "statusCode": 400
+        }
+      ]
+    },
+    {
+      "name": "getLoginCodeStatus",
+      "type": "async",
+      "access": "public",
+      "params": [
+        {
+          "name": "code",
+          "type": "string",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Returns the status of a login code (PENDING, APPROVED, or EXPIRED)",
+      "returnValues": ["Promise<any>"],
+      "exceptions": null
+    },
+    {
+      "name": "linkLoginCode",
+      "type": "async",
+      "access": "public",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string",
+          "typeLib": "typescript"
+        },
+        {
+          "name": "code",
+          "type": "string",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Links an authenticated user to a login code, setting its status to APPROVED",
+      "returnValues": ["Promise<any>"],
+      "exceptions": [
+        {
+          "name": "rrBadRequestException",
+          "rrCode": "AhSve-IOELC001",
+          "message": "Invalid or expired login code",
+          "statusCode": 400
+        }
+      ]
+    },
+    {
+      "name": "verifyLoginCode",
+      "type": "async",
+      "access": "public",
+      "params": [
+        {
+          "name": "code",
+          "type": "string",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Verifies an approved login code and returns a signed JWT for the linked user",
+      "returnValues": ["Promise<any>"],
+      "exceptions": [
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhSve-IOELC002",
+          "message": "Invalid or expired login code",
+          "statusCode": 401
+        },
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhSve-UNF005",
+          "message": "User not found",
+          "statusCode": 401
+        }
+      ]
+    },
+    {
+      "name": "signToken",
+      "type": "async",
+      "access": "private",
+      "params": [
+        {
+          "name": "user",
+          "type": "any",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Signs a JWT token for the authenticated user with a 7-day expiration",
+      "returnValues": ["Promise<string>"],
+      "exceptions": null
+    }
+  ]
+}

@@ -207,7 +207,6 @@ export default function UserAnimePage() {
     }
   }, [
     username,
-    session?.accessToken,
     debouncedSearch,
     activeList,
     filters.format,

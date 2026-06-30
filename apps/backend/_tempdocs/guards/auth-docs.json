@@ -1,0 +1,95 @@
+{
+  "type": "guard",
+  "guardName": "AuthGuard",
+  "guardCode": "AhGd-",
+
+  "dependedOn": "cacheService",
+  "privateVars": [
+    {
+      "name": "guardCode",
+      "type": "string",
+      "description": "Prefix for rrCodes",
+      "readOnly": true
+    },
+    {
+      "name": "secret",
+      "type": "Uint8Array",
+      "description": "Encoded NEXTAUTH_SECRET env var",
+      "readOnly": true
+    },
+    {
+      "name": "isRedis",
+      "type": "boolean",
+      "description": "If true redis will be used, othervise in-memory",
+      "readOnly": true
+    },
+    {
+      "name": "passwordChangeCache",
+      "type": "Map< string, { timestamp: number; lastChecked: number}>",
+      "description": "Local cache if redis is not available",
+      "readOnly": true
+    }
+  ],
+
+  "functions": [
+    {
+      "name": "canActivate",
+      "type": "async",
+      "params": [
+        {
+          "name": "context",
+          "type": "ExecutionContext",
+          "typeLib": "@nestjs/common"
+        }
+      ],
+      "description": "Validates api keys and session",
+      "returnValues": [true, false],
+      "exceptions": [
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhGd-AKNF001",
+          "message": "Api key not found",
+          "statusCode": 401
+        },
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhGd-IAK001",
+          "message": "Invalid API Key",
+          "statusCode": 401
+        },
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhGd-TEDTPC001",
+          "message": "Token expired due to a password change",
+          "statusCode": 401
+        },
+        {
+          "name": "rrNotFoundException",
+          "rrCode": "AhGd-UNF001",
+          "message": "User not found",
+          "statusCode": 404
+        },
+        {
+          "name": "rrUnauthorizedException",
+          "rrCode": "AhGd-NATF001",
+          "message": "No authentication token found",
+          "statusCode": 401
+        }
+      ]
+    },
+    {
+      "name": "extractToken",
+      "type": "synch",
+      "params": [
+        {
+          "name": "request",
+          "type": "Request",
+          "typeLib": "express"
+        }
+      ],
+      "description": "Extracts session token from authorization header or token from searchParams",
+      "returnValues": ["string", null],
+      "exceptions": null
+    }
+  ]
+}

@@ -3,20 +3,22 @@ import { Subject, EMPTY } from 'rxjs';
 import { mergeMap, catchError } from 'rxjs/operators';
 import { GameRepository } from '../repositories/game.repository';
 import type { Media } from '../../../common/types/types';
+import { rrInternalServerErrorException } from 'src/providers/error';
 
 @Injectable()
 export class GameQueueService implements OnModuleInit {
   private readonly logger = new Logger(GameQueueService.name);
   private readonly jobQueue = new Subject<number>();
   private readonly processing = new Set<number>();
+  private readonly moduleCode = 'GeQeSve-';
 
   constructor(private readonly gameRepository: GameRepository) {}
 
-  onModuleInit() {
+  onModuleInit(): void {
     this.processQueue();
   }
 
-  addJob(id: number) {
+  addJob(id: number): void {
     if (!this.processing.has(id)) {
       this.jobQueue.next(id);
     }
@@ -30,7 +32,7 @@ export class GameQueueService implements OnModuleInit {
     return key || '';
   }
 
-  private processQueue() {
+  private processQueue(): void {
     this.jobQueue
       .pipe(
         mergeMap(async (id) => {
@@ -60,7 +62,7 @@ export class GameQueueService implements OnModuleInit {
       .subscribe();
   }
 
-  private async syncGameFromRawg(id: number) {
+  private async syncGameFromRawg(id: number): Promise<void> {
     const media = await this.fetchFromRawg(id);
     if (media) {
       const releaseDate = media.startDate;
@@ -72,8 +74,12 @@ export class GameQueueService implements OnModuleInit {
         releasedYear: releaseDate?.year || null,
         releasedMonth: releaseDate?.month || null,
         releasedDay: releaseDate?.day || null,
-        genres: media.genres?.filter((g: string) => !g.startsWith('Platform:')) || [],
-        platforms: media.genres?.filter((g: string) => g.startsWith('Platform:')).map((g: string) => g.replace('Platform: ', '')) || [],
+        genres:
+          media.genres?.filter((g: string) => !g.startsWith('Platform:')) || [],
+        platforms:
+          media.genres
+            ?.filter((g: string) => g.startsWith('Platform:'))
+            .map((g: string) => g.replace('Platform: ', '')) || [],
         developers: media.studios?.map((s: any) => s.name) || [],
         publishers: [],
         averageScore: media.averageScore || null,
@@ -85,12 +91,16 @@ export class GameQueueService implements OnModuleInit {
   private async fetchFromRawg(id: number): Promise<Media | null> {
     const key = this.getApiKey();
     if (!key) {
-      throw new Error('RAWG_API_KEY is not defined');
+      throw new rrInternalServerErrorException(`${this.moduleCode}RAKIND001`, {
+        message: 'RAWG_API_KEY is not defined',
+      });
     }
 
     const res = await fetch(`https://api.rawg.io/api/games/${id}?key=${key}`);
     if (!res.ok) {
-      throw new Error(`RAWG detail fetch failed: ${res.status}`);
+      throw new rrInternalServerErrorException(`${this.moduleCode}RDFF001`, {
+        message: `RAWG detail fetch failed: ${res.status}`,
+      });
     }
     const item = await res.json();
 
@@ -121,7 +131,8 @@ export class GameQueueService implements OnModuleInit {
         native: null,
       },
       coverImage: {
-        extraLarge: item.background_image_additional || item.background_image || '',
+        extraLarge:
+          item.background_image_additional || item.background_image || '',
         large: item.background_image || '',
       },
       bannerImage: item.background_image || '',
@@ -137,7 +148,8 @@ export class GameQueueService implements OnModuleInit {
         : undefined,
       genres: [...allPlatforms, ...genres],
       studios: developers.map((name: string) => ({ name })),
-      averageScore: item.metacritic || (item.rating ? Math.round(item.rating * 20) : null),
+      averageScore:
+        item.metacritic || (item.rating ? Math.round(item.rating * 20) : null),
       popularity: item.added || null,
     };
   }

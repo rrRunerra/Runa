@@ -1,0 +1,73 @@
+{
+  "type": "controller",
+  "controllerName": "AnimeController",
+  "controllerCode": "AeCtr-",
+
+  "dependedOn": "animeService, cacheService",
+
+  "privateVars": [
+    {
+      "name": "animeService",
+      "type": "AnimeService",
+      "description": "Service used for anime search, details lookup, and refresh operations",
+      "readOnly": true
+    },
+    {
+      "name": "cacheService",
+      "type": "CacheService",
+      "description": "Service used for cooldown caching of refresh requests",
+      "readOnly": true
+    },
+    {
+      "name": "moduleCode",
+      "type": "string",
+      "description": "Prefix for rrCodes",
+      "readOnly": true
+    }
+  ],
+
+  "routes": [
+    {
+      "method": "GET",
+      "endpoint": "/anime/search",
+      "handlerName": "search",
+      "params": [
+        {
+          "name": "query",
+          "source": "query",
+          "type": "{ name: string }"
+        }
+      ],
+      "request": null,
+      "public": true
+    },
+    {
+      "method": "GET",
+      "endpoint": "/anime/details/:id",
+      "handlerName": "getAnime",
+      "params": [
+        {
+          "name": "id",
+          "source": "param",
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "public": true
+    },
+    {
+      "method": "POST",
+      "endpoint": "/anime/refresh/:id",
+      "handlerName": "refreshAnime",
+      "params": [
+        {
+          "name": "id",
+          "source": "param",
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "public": false
+    }
+  ]
+}

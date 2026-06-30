@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
 import { FavoriteController } from './favorite.controller';
 import { FavoriteService } from './favorite.service';
-import { DualAuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth.guard';
 import { Reflector } from '@nestjs/core';
 
 // Mock FavoriteType enum from @runa/database
@@ -29,7 +29,7 @@ describe('FavoriteController', () => {
     getFavoriteStatus: jest.fn(),
   };
 
-  const mockDualAuthGuard = {
+  const mockAuthGuard = {
     canActivate: jest.fn().mockReturnValue(true),
   };
 
@@ -43,8 +43,8 @@ describe('FavoriteController', () => {
         Reflector,
       ],
     })
-      .overrideGuard(DualAuthGuard)
-      .useValue(mockDualAuthGuard)
+      .overrideGuard(AuthGuard)
+      .useValue(mockAuthGuard)
       .compile();
 
     controller = module.get<FavoriteController>(FavoriteController);
@@ -71,7 +71,9 @@ describe('FavoriteController', () => {
   describe('removeFavorite', () => {
     it('should throw BadRequestException if type is invalid', async () => {
       const mockReq = { user: { id: 'user-123' } };
-      await expect(controller.removeFavorite(mockReq, 'INVALID_TYPE', '1')).rejects.toThrow(BadRequestException);
+      await expect(
+        controller.removeFavorite(mockReq, 'INVALID_TYPE', '1'),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should call favoriteService.removeFavorite with valid inputs', async () => {
@@ -80,7 +82,11 @@ describe('FavoriteController', () => {
 
       const result = await controller.removeFavorite(mockReq, 'anime', '1');
 
-      expect(service.removeFavorite).toHaveBeenCalledWith('user-123', 'ANIME', '1');
+      expect(service.removeFavorite).toHaveBeenCalledWith(
+        'user-123',
+        'ANIME',
+        '1',
+      );
       expect(result).toEqual({ success: true });
     });
   });
@@ -103,7 +109,10 @@ describe('FavoriteController', () => {
 
       const result = await controller.getUserFavorites('testuser', 'manga');
 
-      expect(service.getFavoritesByUsername).toHaveBeenCalledWith('testuser', 'MANGA');
+      expect(service.getFavoritesByUsername).toHaveBeenCalledWith(
+        'testuser',
+        'MANGA',
+      );
       expect(result).toEqual([]);
     });
   });
@@ -111,11 +120,17 @@ describe('FavoriteController', () => {
   describe('getFavoriteStatus', () => {
     it('should return check status for a media item', async () => {
       const mockReq = { user: { id: 'user-123' } };
-      mockFavoriteService.getFavoriteStatus.mockResolvedValue({ favorited: true });
+      mockFavoriteService.getFavoriteStatus.mockResolvedValue({
+        favorited: true,
+      });
 
       const result = await controller.getFavoriteStatus(mockReq, 'movie', '2');
 
-      expect(service.getFavoriteStatus).toHaveBeenCalledWith('user-123', 'MOVIE', '2');
+      expect(service.getFavoriteStatus).toHaveBeenCalledWith(
+        'user-123',
+        'MOVIE',
+        '2',
+      );
       expect(result).toEqual({ favorited: true });
     });
   });

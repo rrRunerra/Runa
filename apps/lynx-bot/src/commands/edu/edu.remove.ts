@@ -10,7 +10,7 @@ export default class EduRemoveCommand extends SubCommand {
   constructor() {
     super(client, {
       name: "edu.remove",
-      enabled: true,
+      enabled: false,
       docs: `### Summary
 Remove a specific homework entry by its SuperID.
 

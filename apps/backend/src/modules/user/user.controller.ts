@@ -5,27 +5,29 @@ import {
   Body,
   Get,
   Param,
-  NotFoundException,
   Put,
   Req,
   Delete,
 } from '@nestjs/common';
 import { parsePrivacy, UserService } from './user.service';
-import { DualAuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth.guard';
 import { User } from '@runa/database';
 import { Public } from '../../common/decorators/public.decorator';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrivacySettingsDto } from './dto/privacy-settings.dto';
 import { Throttle } from '@nestjs/throttler';
+import { rrNotFoundException } from 'src/providers/error';
 
 @Controller('user')
-@UseGuards(DualAuthGuard)
+@UseGuards(AuthGuard)
 export class UserController {
+  private readonly moduleCode = 'UsCtr-';
+
   constructor(private readonly usersService: UserService) {}
 
   @Public()
-  @Throttle({default: {limit: 1, ttl: 60000}})
+  @Throttle({ default: { limit: 1, ttl: 60000 } })
   @Post('create')
   create(@Body() data: CreateUserDto): Promise<User> {
     return this.usersService.create(data);
@@ -43,9 +45,11 @@ export class UserController {
     return this.usersService.updatePrivacySettings(userId, data);
   }
 
-
   @Put('settings')
-  async updateSettings(@Req() req: any, @Body() data: { profileSettings: any }) {
+  async updateSettings(
+    @Req() req: any,
+    @Body() data: { profileSettings: any },
+  ) {
     const userId = req.user.id;
     return this.usersService.updateSettings(userId, data.profileSettings);
   }
@@ -165,7 +169,9 @@ export class UserController {
   async findByEmail(@Param('email') email: string) {
     const user = await this.usersService.findByEmail(email);
     if (!user) {
-      throw new NotFoundException(`User with email ${email} not found`);
+      throw new rrNotFoundException(`${this.moduleCode}UWENF001`, {
+        message: `User with email ${email} not found`,
+      });
     }
     return {
       id: user.id,
@@ -181,19 +187,22 @@ export class UserController {
   async findOne(@Param('username') username: string) {
     const user = await this.usersService.findByUsername(username);
     if (!user) {
-      throw new NotFoundException(`User with username ${username} not found`);
+      throw new rrNotFoundException(`${this.moduleCode}UWWNF001`, {
+        message: `User with username ${username} not found`,
+      });
     }
     // Map connections to hide tokens, filtering out private ones
-    const safeConnections = (user as any).connections
-      ?.filter((conn: any) => !conn.private)
-      ?.map((conn: any) => ({
-        id: conn.id,
-        provider: conn.provider,
-        linkedUsername: conn.linkedUsername,
-        linkedTo: conn.linkedTo,
-        private: conn.private,
-        metadata: conn.metadata,
-      })) || [];
+    const safeConnections =
+      (user as any).connections
+        ?.filter((conn: any) => !conn.private)
+        ?.map((conn: any) => ({
+          id: conn.id,
+          provider: conn.provider,
+          linkedUsername: conn.linkedUsername,
+          linkedTo: conn.linkedTo,
+          private: conn.private,
+          metadata: conn.metadata,
+        })) || [];
 
     const privacy = parsePrivacy(user.privacy);
 

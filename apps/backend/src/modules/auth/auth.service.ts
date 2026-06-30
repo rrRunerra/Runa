@@ -1,11 +1,20 @@
-import { UnauthorizedException, BadRequestException, NotFoundException, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import {
+  rrBadRequestException,
+  rrNotFoundException,
+  rrUnauthorizedException,
+} from 'src/providers/error';
 import { LoginAuthDto } from './dto/login-auth.dto';
 import { SignJWT, jwtVerify } from 'jose';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { CacheService } from '../../providers/cache/cache.service';
 import { MailService } from '../../providers/mail/mail.service';
 import { encrypt, decrypt } from '@runa/crypto/server';
-import { generateDataKey, encryptWithDataKey, encryptDataKeyForUser } from '@runa/crypto/node';
+import {
+  generateDataKey,
+  encryptWithDataKey,
+  encryptDataKeyForUser,
+} from '@runa/crypto/node';
 import { verify } from 'otplib';
 import bcrypt from 'bcrypt';
 import type { User, Passkey } from '@runa/database';
@@ -17,6 +26,7 @@ import {
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
+  private readonly moduleCode = 'AhSve-';
 
   constructor(
     private readonly prisma: PrismaService,
@@ -28,7 +38,7 @@ export class AuthService {
     process.env.NEXTAUTH_SECRET,
   );
 
-  public async login(data: LoginAuthDto) {
+  public async login(data: LoginAuthDto): Promise<any> {
     // 1. Check if MFA Success Token is provided (from client after MFA verify succeeded)
     if (data.mfaSuccessToken) {
       try {
@@ -36,7 +46,9 @@ export class AuthService {
           algorithms: ['HS256'],
         });
         if (payload.type !== 'mfa_success' || !payload.sub) {
-          throw new UnauthorizedException('Invalid MFA success token');
+          throw new rrUnauthorizedException(`${this.moduleCode}IMST001`, {
+            message: 'Invalid MFA success token',
+          });
         }
 
         const user = await this.prisma.client.user.findUnique({
@@ -44,7 +56,9 @@ export class AuthService {
         });
 
         if (!user) {
-          throw new UnauthorizedException('User not found');
+          throw new rrUnauthorizedException(`${this.moduleCode}UNF001`, {
+            message: 'User not found',
+          });
         }
 
         const token = await this.signToken(user);
@@ -62,8 +76,13 @@ export class AuthService {
           token,
         };
       } catch (err: any) {
-        this.logger.error(`[Login Step 1/5] MFA success token verification failed: ${err.message}`, err.stack);
-        throw new UnauthorizedException(err.message || 'MFA verification expired or invalid');
+        this.logger.error(
+          `[Login Step 1/5] MFA success token verification failed: ${err.message}`,
+          err.stack,
+        );
+        throw new rrUnauthorizedException(`${this.moduleCode}MVEOI001`, {
+          message: err.message || 'MFA verification expired or invalid',
+        });
       }
     }
 
@@ -78,14 +97,18 @@ export class AuthService {
       try {
         parsedResponse = JSON.parse(data.passkeyResponse);
       } catch {
-        throw new BadRequestException('Invalid passkey assertion response format');
+        throw new rrBadRequestException(`${this.moduleCode}IPARF001`, {
+          message: 'Invalid passkey assertion response format',
+        });
       }
       return this.verifyPasskeyLogin(data.identifier, parsedResponse);
     }
 
     // 3. Locate User by Username or Email
     if (!data.identifier) {
-      throw new BadRequestException('Identifier is required');
+      throw new rrBadRequestException(`${this.moduleCode}IIR001`, {
+        message: 'Identifier is required',
+      });
     }
 
     const user = await this.prisma.client.user.findFirst({
@@ -99,24 +122,31 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new rrUnauthorizedException(`${this.moduleCode}UNF002`, {
+        message: 'User not found',
+      });
     }
 
     // 4. Verify password
     if (!data.password) {
-      throw new UnauthorizedException('Password is required');
+      throw new rrUnauthorizedException(`${this.moduleCode}PIR001`, {
+        message: 'Password is required',
+      });
     }
 
     const passHash = await bcrypt.compare(data.password, user.passwordHash);
 
     if (!passHash) {
-      throw new UnauthorizedException('Invalid password');
+      throw new rrUnauthorizedException(`${this.moduleCode}IP001`, {
+        message: 'Invalid password',
+      });
     }
 
     // 5. Check if MFA is active for this user
     const hasPasskeys = user.passkeys.length > 0;
     const hasDevices = user.devices.length > 0;
-    const isMfaActive = user.totpEnabled || user.emailMfaEnabled || hasPasskeys || hasDevices;
+    const isMfaActive =
+      user.totpEnabled || user.emailMfaEnabled || hasPasskeys || hasDevices;
 
     if (isMfaActive) {
       // Generate a short-lived JWT pending MFA token (5 minutes)
@@ -140,7 +170,10 @@ export class AuthService {
         mfaRequired: true,
         allowedMethods,
         tempToken,
-        devices: user.devices.map(d => ({ id: d.id, deviceName: d.deviceName })),
+        devices: user.devices.map((d) => ({
+          id: d.id,
+          deviceName: d.deviceName,
+        })),
       } as any; // Cast to bypass compiler return warnings
     }
 
@@ -160,18 +193,20 @@ export class AuthService {
     };
   }
 
-  public async verifyToken(token: string) {
+  public async verifyToken(token: string): Promise<any> {
     try {
       const { payload } = await jwtVerify(token, this.secret, {
         algorithms: ['HS256'],
       });
       return payload;
     } catch {
-      throw new UnauthorizedException('Invalid token');
+      throw new rrUnauthorizedException(`${this.moduleCode}IT001`, {
+        message: 'Invalid token',
+      });
     }
   }
 
-  public async sendMfaEmailCode(tempToken: string) {
+  public async sendMfaEmailCode(tempToken: string): Promise<any> {
     let payload;
     try {
       const result = await jwtVerify(tempToken, this.secret, {
@@ -179,18 +214,24 @@ export class AuthService {
       });
       payload = result.payload;
     } catch {
-      throw new UnauthorizedException('Invalid or expired MFA token');
+      throw new rrUnauthorizedException(`${this.moduleCode}IOEMT001`, {
+        message: 'Invalid or expired MFA token',
+      });
     }
 
     if (payload.type !== 'mfa_pending' || !payload.sub) {
-      throw new UnauthorizedException('Invalid MFA token');
+      throw new rrUnauthorizedException(`${this.moduleCode}IMT001`, {
+        message: 'Invalid MFA token',
+      });
     }
 
     const user = await this.prisma.client.user.findUnique({
       where: { id: payload.sub as string },
     });
     if (!user || !user.emailMfaEnabled) {
-      throw new UnauthorizedException('MFA not authorized or not active');
+      throw new rrUnauthorizedException(`${this.moduleCode}MNAONA001`, {
+        message: 'MFA not authorized or not active',
+      });
     }
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
@@ -205,7 +246,10 @@ export class AuthService {
     return { success: true };
   }
 
-  public async sendDeviceMfaCode(tempToken: string, deviceId: string) {
+  public async sendDeviceMfaCode(
+    tempToken: string,
+    deviceId: string,
+  ): Promise<any> {
     let payload;
     try {
       const result = await jwtVerify(tempToken, this.secret, {
@@ -213,11 +257,15 @@ export class AuthService {
       });
       payload = result.payload;
     } catch {
-      throw new UnauthorizedException('Invalid or expired MFA token');
+      throw new rrUnauthorizedException(`${this.moduleCode}IOEMT002`, {
+        message: 'Invalid or expired MFA token',
+      });
     }
 
     if (payload.type !== 'mfa_pending' || !payload.sub) {
-      throw new UnauthorizedException('Invalid MFA token');
+      throw new rrUnauthorizedException(`${this.moduleCode}IMT002`, {
+        message: 'Invalid MFA token',
+      });
     }
 
     const userId = payload.sub as string;
@@ -226,16 +274,25 @@ export class AuthService {
     });
 
     if (!device || !device.identityKey) {
-      throw new UnauthorizedException('Device not found or not capable of receiving encrypted notifications');
+      throw new rrUnauthorizedException(`${this.moduleCode}DNFOOCOREN001`, {
+        message:
+          'Device not found or not capable of receiving encrypted notifications',
+      });
     }
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     await this.cacheService.set(`mfa-device-code:${userId}`, code, 300); // 5 min TTL
 
     const dataKey = generateDataKey();
-    const encryptedMessage = encryptWithDataKey(`Your login verification code is: ${code}`, dataKey);
+    const encryptedMessage = encryptWithDataKey(
+      `Your login verification code is: ${code}`,
+      dataKey,
+    );
     const encryptedTitle = encryptWithDataKey('Device Login Request', dataKey);
-    const encryptedKeyPayload = encryptDataKeyForUser(device.identityKey, dataKey);
+    const encryptedKeyPayload = encryptDataKeyForUser(
+      device.identityKey,
+      dataKey,
+    );
 
     await this.prisma.client.notification.create({
       data: {
@@ -259,7 +316,7 @@ export class AuthService {
     method: string,
     code?: string,
     passkeyResponse?: any,
-  ) {
+  ): Promise<any> {
     let payload;
     try {
       const result = await jwtVerify(tempToken, this.secret, {
@@ -267,11 +324,15 @@ export class AuthService {
       });
       payload = result.payload;
     } catch {
-      throw new UnauthorizedException('Invalid or expired MFA token');
+      throw new rrUnauthorizedException(`${this.moduleCode}IOEMT003`, {
+        message: 'Invalid or expired MFA token',
+      });
     }
 
     if (payload.type !== 'mfa_pending' || !payload.sub) {
-      throw new UnauthorizedException('Invalid MFA token');
+      throw new rrUnauthorizedException(`${this.moduleCode}IMT003`, {
+        message: 'Invalid MFA token',
+      });
     }
 
     const userId = payload.sub as string;
@@ -280,47 +341,79 @@ export class AuthService {
       include: { passkeys: true },
     });
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new rrUnauthorizedException(`${this.moduleCode}UNF003`, {
+        message: 'User not found',
+      });
     }
 
     let isVerified = false;
 
     if (method === 'totp') {
       if (!user.totpEnabled || !user.totpSecret) {
-        throw new UnauthorizedException('TOTP is not enabled');
+        throw new rrUnauthorizedException(`${this.moduleCode}TINE001`, {
+          message: 'TOTP is not enabled',
+        });
       }
-      if (!code) throw new BadRequestException('Verification code is required');
+      if (!code)
+        throw new rrBadRequestException(`${this.moduleCode}VCIR001`, {
+          message: 'Verification code is required',
+        });
       let decryptedSecret: string;
       try {
         decryptedSecret = decrypt(user.totpSecret);
       } catch (err: any) {
-        this.logger.error(`Failed to decrypt TOTP secret for user ${userId}. This usually means NEXTAUTH_SECRET changed or is mismatched. Error: ${err.message}`);
-        throw new UnauthorizedException('Failed to decrypt authentication secret. The server encryption key may have changed.');
+        this.logger.error(
+          `Failed to decrypt TOTP secret for user ${userId}. This usually means NEXTAUTH_SECRET changed or is mismatched. Error: ${err.message}`,
+        );
+        throw new rrUnauthorizedException(`${this.moduleCode}FTDAS001`, {
+          message:
+            'Failed to decrypt authentication secret. The server encryption key may have changed.',
+        });
       }
-      const verifyResult = await verify({ token: code, secret: decryptedSecret });
+      const verifyResult = await verify({
+        token: code,
+        secret: decryptedSecret,
+      });
       isVerified = verifyResult.valid;
     } else if (method === 'email') {
       if (!user.emailMfaEnabled) {
-        throw new UnauthorizedException('Email MFA is not enabled');
+        throw new rrUnauthorizedException(`${this.moduleCode}EMINE001`, {
+          message: 'Email MFA is not enabled',
+        });
       }
-      if (!code) throw new BadRequestException('Verification code is required');
-      const cachedCode = await this.cacheService.get<string>(`mfa-email-code:${userId}`);
+      if (!code)
+        throw new rrBadRequestException(`${this.moduleCode}VCIR002`, {
+          message: 'Verification code is required',
+        });
+      const cachedCode = await this.cacheService.get<string>(
+        `mfa-email-code:${userId}`,
+      );
       isVerified = cachedCode === code;
       if (isVerified) {
         await this.cacheService.del(`mfa-email-code:${userId}`);
       }
     } else if (method === 'device_notification') {
-      if (!code) throw new BadRequestException('Verification code is required');
-      const cachedCode = await this.cacheService.get<string>(`mfa-device-code:${userId}`);
+      if (!code)
+        throw new rrBadRequestException(`${this.moduleCode}VCIR003`, {
+          message: 'Verification code is required',
+        });
+      const cachedCode = await this.cacheService.get<string>(
+        `mfa-device-code:${userId}`,
+      );
       isVerified = cachedCode === code;
       if (isVerified) {
         await this.cacheService.del(`mfa-device-code:${userId}`);
       }
     } else if (method === 'backup') {
       if (user.backupCodes.length === 0) {
-        throw new UnauthorizedException('Backup codes are not enabled');
+        throw new rrUnauthorizedException(`${this.moduleCode}BCANE001`, {
+          message: 'Backup codes are not enabled',
+        });
       }
-      if (!code) throw new BadRequestException('Verification code is required');
+      if (!code)
+        throw new rrBadRequestException(`${this.moduleCode}VCIR004`, {
+          message: 'Verification code is required',
+        });
 
       let matchedIndex = -1;
       for (let i = 0; i < user.backupCodes.length; i++) {
@@ -333,7 +426,9 @@ export class AuthService {
 
       if (matchedIndex !== -1) {
         isVerified = true;
-        const updatedCodes = user.backupCodes.filter((_, idx) => idx !== matchedIndex);
+        const updatedCodes = user.backupCodes.filter(
+          (_, idx) => idx !== matchedIndex,
+        );
         await this.prisma.client.user.update({
           where: { id: userId },
           data: { backupCodes: updatedCodes },
@@ -341,23 +436,37 @@ export class AuthService {
       }
     } else if (method === 'passkey') {
       if (user.passkeys.length === 0) {
-        throw new UnauthorizedException('Passkeys are not registered');
+        throw new rrUnauthorizedException(`${this.moduleCode}PANR001`, {
+          message: 'Passkeys are not registered',
+        });
       }
       if (!passkeyResponse) {
-        throw new BadRequestException('Passkey assertion response is required');
+        throw new rrBadRequestException(`${this.moduleCode}PAIRIR001`, {
+          message: 'Passkey assertion response is required',
+        });
       }
 
-      const expectedChallenge = await this.cacheService.get<string>(`passkey-auth-challenge:${userId}`);
+      const expectedChallenge = await this.cacheService.get<string>(
+        `passkey-auth-challenge:${userId}`,
+      );
       if (!expectedChallenge) {
-        throw new BadRequestException('Passkey authentication challenge expired');
+        throw new rrBadRequestException(`${this.moduleCode}PACE001`, {
+          message: 'Passkey authentication challenge expired',
+        });
       }
 
-      const rpID = process.env.RP_ID || new URL(process.env.NEXT_PUBLIC_URL || 'http://localhost:3000').hostname;
-      const expectedOrigin = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000';
+      const rpID =
+        process.env.RP_ID ||
+        new URL(process.env.NEXT_PUBLIC_URL || 'http://localhost:3000')
+          .hostname;
+      const expectedOrigin =
+        process.env.NEXT_PUBLIC_URL || 'http://localhost:3000';
 
       const passkey = user.passkeys.find((pk) => pk.id === passkeyResponse.id);
       if (!passkey) {
-        throw new UnauthorizedException('Credential not recognized');
+        throw new rrUnauthorizedException(`${this.moduleCode}CNR001`, {
+          message: 'Credential not recognized',
+        });
       }
 
       let verification;
@@ -375,7 +484,9 @@ export class AuthService {
           },
         });
       } catch (err: any) {
-        throw new UnauthorizedException(err.message || 'Passkey verification failed');
+        throw new rrUnauthorizedException(`${this.moduleCode}PVF001`, {
+          message: err.message || 'Passkey verification failed',
+        });
       }
 
       if (verification.verified && verification.authenticationInfo) {
@@ -390,7 +501,9 @@ export class AuthService {
     }
 
     if (!isVerified) {
-      throw new UnauthorizedException('Invalid verification code or response');
+      throw new rrUnauthorizedException(`${this.moduleCode}IVCOR001`, {
+        message: 'Invalid verification code or response',
+      });
     }
 
     const mfaSuccessToken = await new SignJWT({
@@ -405,9 +518,11 @@ export class AuthService {
     return { success: true, mfaSuccessToken };
   }
 
-  public async generatePasskeyLoginOptions(identifier?: string) {
+  public async generatePasskeyLoginOptions(identifier?: string): Promise<any> {
     let user: (User & { passkeys: Passkey[] }) | null = null;
-    let allowCredentials: { id: string; type: 'public-key'; transports?: any[] }[] | undefined = undefined;
+    let allowCredentials:
+      | { id: string; type: 'public-key'; transports?: any[] }[]
+      | undefined = undefined;
 
     if (identifier) {
       user = await this.prisma.client.user.findFirst({
@@ -427,7 +542,9 @@ export class AuthService {
       }
     }
 
-    const rpID = process.env.RP_ID || new URL(process.env.NEXT_PUBLIC_URL || 'http://localhost:3000').hostname;
+    const rpID =
+      process.env.RP_ID ||
+      new URL(process.env.NEXT_PUBLIC_URL || 'http://localhost:3000').hostname;
 
     const options = await generateAuthenticationOptions({
       rpID,
@@ -436,9 +553,17 @@ export class AuthService {
     });
 
     if (user) {
-      await this.cacheService.set(`passkey-auth-challenge:${user.id}`, options.challenge, 300);
+      await this.cacheService.set(
+        `passkey-auth-challenge:${user.id}`,
+        options.challenge,
+        300,
+      );
     } else {
-      await this.cacheService.set(`global-passkey-challenge:${options.challenge}`, options.challenge, 300);
+      await this.cacheService.set(
+        `global-passkey-challenge:${options.challenge}`,
+        options.challenge,
+        300,
+      );
     }
 
     return {
@@ -447,7 +572,10 @@ export class AuthService {
     };
   }
 
-  public async verifyPasskeyLogin(identifier: string | undefined, assertionResponse: any) {
+  public async verifyPasskeyLogin(
+    identifier: string | undefined,
+    assertionResponse: any,
+  ): Promise<any> {
     let user: (User & { passkeys: Passkey[] }) | null = null;
 
     if (identifier) {
@@ -471,29 +599,48 @@ export class AuthService {
       }
     }
 
-    if (!user) throw new NotFoundException('User not found');
+    if (!user)
+      throw new rrNotFoundException(`${this.moduleCode}UNF004`, {
+        message: 'User not found',
+      });
 
-    let expectedChallenge = await this.cacheService.get<string>(`passkey-auth-challenge:${user.id}`);
+    let expectedChallenge = await this.cacheService.get<string>(
+      `passkey-auth-challenge:${user.id}`,
+    );
     if (!expectedChallenge) {
       try {
-        const clientData = JSON.parse(Buffer.from(assertionResponse.response.clientDataJSON, 'base64url').toString('utf8'));
+        const clientData = JSON.parse(
+          Buffer.from(
+            assertionResponse.response.clientDataJSON,
+            'base64url',
+          ).toString('utf8'),
+        );
         const challenge = clientData.challenge;
-        expectedChallenge = await this.cacheService.get<string>(`global-passkey-challenge:${challenge}`);
+        expectedChallenge = await this.cacheService.get<string>(
+          `global-passkey-challenge:${challenge}`,
+        );
       } catch (e) {
         // Ignored
       }
     }
 
     if (!expectedChallenge) {
-      throw new BadRequestException('Passkey authentication challenge expired');
+      throw new rrBadRequestException(`${this.moduleCode}PACE002`, {
+        message: 'Passkey authentication challenge expired',
+      });
     }
 
-    const rpID = process.env.RP_ID || new URL(process.env.NEXT_PUBLIC_URL || 'http://localhost:3000').hostname;
-    const expectedOrigin = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000';
+    const rpID =
+      process.env.RP_ID ||
+      new URL(process.env.NEXT_PUBLIC_URL || 'http://localhost:3000').hostname;
+    const expectedOrigin =
+      process.env.NEXT_PUBLIC_URL || 'http://localhost:3000';
 
     const passkey = user.passkeys.find((pk) => pk.id === assertionResponse.id);
     if (!passkey) {
-      throw new UnauthorizedException('Credential not recognized');
+      throw new rrUnauthorizedException(`${this.moduleCode}CNR002`, {
+        message: 'Credential not recognized',
+      });
     }
 
     let verification;
@@ -511,11 +658,15 @@ export class AuthService {
         },
       });
     } catch (err: any) {
-      throw new UnauthorizedException(err.message || 'Passkey verification failed');
+      throw new rrUnauthorizedException(`${this.moduleCode}PVF002`, {
+        message: err.message || 'Passkey verification failed',
+      });
     }
 
     if (!verification.verified || !verification.authenticationInfo) {
-      throw new UnauthorizedException('Passkey verification failed');
+      throw new rrUnauthorizedException(`${this.moduleCode}PVF003`, {
+        message: 'Passkey verification failed',
+      });
     }
 
     await this.prisma.client.passkey.update({
@@ -524,7 +675,9 @@ export class AuthService {
     });
 
     await this.cacheService.del(`passkey-auth-challenge:${user.id}`);
-    await this.cacheService.del(`global-passkey-challenge:${expectedChallenge}`);
+    await this.cacheService.del(
+      `global-passkey-challenge:${expectedChallenge}`,
+    );
 
     const token = await this.signToken(user);
     return {
@@ -541,7 +694,7 @@ export class AuthService {
     };
   }
 
-  public async generateLoginCode() {
+  public async generateLoginCode(): Promise<any> {
     let code = '';
     let exists = true;
     let attempts = 0;
@@ -556,28 +709,38 @@ export class AuthService {
     }
 
     if (exists) {
-      throw new BadRequestException('Could not generate a unique login code');
+      throw new rrBadRequestException(`${this.moduleCode}CNGAULC001`, {
+        message: 'Could not generate a unique login code',
+      });
     }
 
-    await this.cacheService.set(`login-code:${code}`, { status: 'PENDING' }, 300);
+    await this.cacheService.set(
+      `login-code:${code}`,
+      { status: 'PENDING' },
+      300,
+    );
 
     return { code };
   }
 
-  public async getLoginCodeStatus(code: string) {
-    const data = await this.cacheService.get<{ status: string }>(`login-code:${code}`);
+  public async getLoginCodeStatus(code: string): Promise<any> {
+    const data = await this.cacheService.get<{ status: string }>(
+      `login-code:${code}`,
+    );
     if (!data) {
       return { status: 'EXPIRED' };
     }
     return { status: data.status };
   }
 
-  public async linkLoginCode(userId: string, code: string) {
+  public async linkLoginCode(userId: string, code: string): Promise<any> {
     const cacheKey = `login-code:${code}`;
     const data = await this.cacheService.get<{ status: string }>(cacheKey);
 
     if (!data || data.status !== 'PENDING') {
-      throw new BadRequestException('Invalid or expired login code');
+      throw new rrBadRequestException(`${this.moduleCode}IOELC001`, {
+        message: 'Invalid or expired login code',
+      });
     }
 
     await this.cacheService.set(cacheKey, { status: 'APPROVED', userId }, 300);
@@ -585,12 +748,17 @@ export class AuthService {
     return { success: true };
   }
 
-  public async verifyLoginCode(code: string) {
+  public async verifyLoginCode(code: string): Promise<any> {
     const cacheKey = `login-code:${code}`;
-    const cached = await this.cacheService.get<{ status: string; userId?: string }>(cacheKey);
+    const cached = await this.cacheService.get<{
+      status: string;
+      userId?: string;
+    }>(cacheKey);
 
     if (!cached || cached.status !== 'APPROVED' || !cached.userId) {
-      throw new UnauthorizedException('Invalid or expired login code');
+      throw new rrUnauthorizedException(`${this.moduleCode}IOELC002`, {
+        message: 'Invalid or expired login code',
+      });
     }
 
     await this.cacheService.del(cacheKey);
@@ -600,7 +768,9 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new rrUnauthorizedException(`${this.moduleCode}UNF005`, {
+        message: 'User not found',
+      });
     }
 
     const token = await this.signToken(user);
@@ -619,7 +789,7 @@ export class AuthService {
     };
   }
 
-  private async signToken(user: any) {
+  private async signToken(user: any): Promise<string> {
     return await new SignJWT({
       sub: user.id,
       email: user.email,

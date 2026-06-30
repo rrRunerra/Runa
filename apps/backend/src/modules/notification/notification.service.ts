@@ -1,11 +1,22 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { NotificationGateway } from './notification.gateway';
-import { Notification, NotificationType, NotificationStatus, DeviceApprovalMetadata } from '@runa/notifications';
+import {
+  Notification,
+  NotificationType,
+  NotificationStatus,
+  DeviceApprovalMetadata,
+} from '@runa/notifications';
+import {
+  rrBadRequestException,
+  rrNotFoundException,
+} from 'src/providers/error';
 
 @Injectable()
 export class NotificationService {
+  private readonly moduleCode = 'NoSve-';
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly gateway: NotificationGateway,
@@ -34,7 +45,12 @@ export class NotificationService {
 
   async create(
     userId: string,
-    data: { title: string; message: string; type: NotificationType; metadata?: DeviceApprovalMetadata },
+    data: {
+      title: string;
+      message: string;
+      type: NotificationType;
+      metadata?: DeviceApprovalMetadata;
+    },
   ): Promise<Notification> {
     const record = await this.prisma.client.notification.create({
       data: {
@@ -43,7 +59,9 @@ export class NotificationService {
         message: data.message,
         type: data.type,
         status: 'PENDING',
-        metadata: data.metadata ? JSON.parse(JSON.stringify(data.metadata)) : null,
+        metadata: data.metadata
+          ? JSON.parse(JSON.stringify(data.metadata))
+          : null,
       },
     });
 
@@ -62,7 +80,9 @@ export class NotificationService {
     });
 
     if (!existing) {
-      throw new NotFoundException(`Notification with ID ${notificationId} not found`);
+      throw new rrNotFoundException(`${this.moduleCode}NWIDNF001`, {
+        message: `Notification with ID ${notificationId} not found`,
+      });
     }
 
     const updated = await this.prisma.client.notification.update({
@@ -85,20 +105,28 @@ export class NotificationService {
     });
 
     if (!existing) {
-      throw new NotFoundException(`Notification with ID ${notificationId} not found`);
+      throw new rrNotFoundException(`${this.moduleCode}NWIDNF002`, {
+        message: `Notification with ID ${notificationId} not found`,
+      });
     }
 
     if (existing.type !== 'INTERACTIVE') {
-      throw new BadRequestException('Only interactive notifications can be approved');
+      throw new rrBadRequestException(`${this.moduleCode}OINCBA001`, {
+        message: 'Only interactive notifications can be approved',
+      });
     }
 
     if (existing.status !== 'PENDING') {
-      throw new BadRequestException(`Notification is already in status: ${existing.status}`);
+      throw new rrBadRequestException(`${this.moduleCode}NIWS001`, {
+        message: `Notification is already in status: ${existing.status}`,
+      });
     }
 
     const metadata = existing.metadata as unknown as DeviceApprovalMetadata;
     if (!metadata || !metadata.deviceId) {
-      throw new BadRequestException('Notification metadata is missing device linking details');
+      throw new rrBadRequestException(`${this.moduleCode}NMMDLD001`, {
+        message: 'Notification metadata is missing device linking details',
+      });
     }
 
     // Update the device with the encrypted master key
@@ -107,7 +135,9 @@ export class NotificationService {
     });
 
     if (!deviceRecord) {
-      throw new NotFoundException(`Device with ID ${metadata.deviceId} not found`);
+      throw new rrNotFoundException(`${this.moduleCode}DWIDNF001`, {
+        message: `Device with ID ${metadata.deviceId} not found`,
+      });
     }
 
     await this.prisma.client.device.update({
@@ -132,7 +162,9 @@ export class NotificationService {
     });
 
     if (!existing) {
-      throw new NotFoundException(`Notification with ID ${id} not found`);
+      throw new rrNotFoundException(`${this.moduleCode}NWIDNF003`, {
+        message: `Notification with ID ${id} not found`,
+      });
     }
 
     await this.prisma.client.notification.delete({
@@ -164,7 +196,9 @@ export class NotificationService {
     });
 
     if (result.count > 0) {
-      console.log(`[Notification Cleanup] Deleted ${result.count} notifications older than a week.`);
+      console.log(
+        `[Notification Cleanup] Deleted ${result.count} notifications older than a week.`,
+      );
     }
   }
 
@@ -176,7 +210,9 @@ export class NotificationService {
       message: record.message,
       type: record.type as NotificationType,
       status: record.status as NotificationStatus,
-      metadata: record.metadata ? (record.metadata as unknown as DeviceApprovalMetadata) : null,
+      metadata: record.metadata
+        ? (record.metadata as unknown as DeviceApprovalMetadata)
+        : null,
       createdAt: record.createdAt,
     };
   }

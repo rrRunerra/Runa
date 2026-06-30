@@ -1,0 +1,26 @@
+{
+  "type": "guard",
+  "guardName": "PermissionsGuard",
+  "guardCode": "GnGd-",
+
+  "dependedOn": "reflector",
+
+  "privateVars": null,
+
+  "functions": [
+    {
+      "name": "canActivate",
+      "type": "synch",
+      "params": [
+        {
+          "name": "context",
+          "type": "ExecutionContext",
+          "typeLib": "@nestjs/common"
+        }
+      ],
+      "description": "Checks user permissions against the @Permissions() decorator metadata on the handler. If no @Permissions() is present, access is granted. Requires AuthGuard to run first to set request.user.permissions.",
+      "returnValues": [true, false],
+      "exceptions": null
+    }
+  ]
+}

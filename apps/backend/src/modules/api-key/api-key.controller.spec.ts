@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ApiKeyController } from './api-key.controller';
 import { ApiKeyService } from './api-key.service';
-import { DualAuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth.guard';
 import { Reflector } from '@nestjs/core';
 
 describe('ApiKeyController', () => {
@@ -15,7 +15,7 @@ describe('ApiKeyController', () => {
     deleteKey: jest.fn(),
   };
 
-  const mockDualAuthGuard = {
+  const mockAuthGuard = {
     canActivate: jest.fn().mockReturnValue(true),
   };
 
@@ -29,8 +29,8 @@ describe('ApiKeyController', () => {
         Reflector,
       ],
     })
-      .overrideGuard(DualAuthGuard)
-      .useValue(mockDualAuthGuard)
+      .overrideGuard(AuthGuard)
+      .useValue(mockAuthGuard)
       .compile();
 
     controller = module.get<ApiKeyController>(ApiKeyController);
@@ -40,7 +40,9 @@ describe('ApiKeyController', () => {
   describe('findAll', () => {
     it('should retrieve API keys for the authenticated user (session/token)', async () => {
       const mockReq = { user: { id: 'user-123' } };
-      const expectedKeys = [{ id: 'key-1', name: 'Test Key', truncatedKey: 'abc...' }];
+      const expectedKeys = [
+        { id: 'key-1', name: 'Test Key', truncatedKey: 'abc...' },
+      ];
       mockApiKeyService.findAllKeysByUser.mockResolvedValue(expectedKeys);
 
       const result = await controller.findAll(mockReq);
@@ -54,7 +56,11 @@ describe('ApiKeyController', () => {
     it('should generate a new API key for the authenticated user', async () => {
       const mockReq = { user: { id: 'user-123' } };
       const createDto = { name: 'New Key' };
-      const expectedResult = { id: 'key-2', name: 'New Key', key: 'raw-key-value' };
+      const expectedResult = {
+        id: 'key-2',
+        name: 'New Key',
+        key: 'raw-key-value',
+      };
       mockApiKeyService.createKey.mockResolvedValue(expectedResult);
 
       const result = await controller.create(mockReq, createDto);
@@ -68,7 +74,11 @@ describe('ApiKeyController', () => {
     it('should regenerate the key when requested by the owner', async () => {
       const mockReq = { user: { id: 'user-123' } };
       const regenerateDto = { id: 'key-1' };
-      const expectedResult = { id: 'key-1', name: 'Test Key', key: 'new-raw-key' };
+      const expectedResult = {
+        id: 'key-1',
+        name: 'Test Key',
+        key: 'new-raw-key',
+      };
       mockApiKeyService.regenerateKey.mockResolvedValue(expectedResult);
 
       const result = await controller.regenerate(mockReq, regenerateDto);

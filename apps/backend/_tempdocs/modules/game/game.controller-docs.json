@@ -1,0 +1,73 @@
+{
+  "type": "controller",
+  "controllerName": "GameController",
+  "controllerCode": "GeCtr-",
+
+  "dependedOn": "gameService, cacheService",
+
+  "privateVars": [
+    {
+      "name": "gameService",
+      "type": "GameService",
+      "description": "Service used for game search, details lookup, and refresh operations",
+      "readOnly": true
+    },
+    {
+      "name": "cacheService",
+      "type": "CacheService",
+      "description": "Service used for cooldown caching of refresh requests",
+      "readOnly": true
+    },
+    {
+      "name": "moduleCode",
+      "type": "string",
+      "description": "Prefix for rrCodes",
+      "readOnly": true
+    }
+  ],
+
+  "routes": [
+    {
+      "method": "GET",
+      "endpoint": "/game/search",
+      "handlerName": "search",
+      "params": [
+        {
+          "name": "query",
+          "source": "query",
+          "type": "{ name: string }"
+        }
+      ],
+      "request": null,
+      "public": true
+    },
+    {
+      "method": "GET",
+      "endpoint": "/game/details/:id",
+      "handlerName": "getGame",
+      "params": [
+        {
+          "name": "id",
+          "source": "param",
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "public": true
+    },
+    {
+      "method": "POST",
+      "endpoint": "/game/refresh/:id",
+      "handlerName": "refreshGame",
+      "params": [
+        {
+          "name": "id",
+          "source": "param",
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "public": false
+    }
+  ]
+}

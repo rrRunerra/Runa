@@ -2,27 +2,29 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Subject, EMPTY } from 'rxjs';
 import { mergeMap, catchError } from 'rxjs/operators';
 import { BookRepository } from '../repositories/book.repository';
+import { rrInternalServerErrorException } from 'src/providers/error';
 import type { Media } from '../../../common/types/types';
 
 @Injectable()
 export class BookQueueService implements OnModuleInit {
   private readonly logger = new Logger(BookQueueService.name);
+  private readonly moduleCode = 'BkQeSve-';
   private readonly jobQueue = new Subject<string>();
   private readonly processing = new Set<string>();
 
   constructor(private readonly bookRepository: BookRepository) {}
 
-  onModuleInit() {
+  onModuleInit(): void {
     this.processQueue();
   }
 
-  addJob(id: string) {
+  addJob(id: string): void {
     if (!this.processing.has(id)) {
       this.jobQueue.next(id);
     }
   }
 
-  private processQueue() {
+  private processQueue(): void {
     this.jobQueue
       .pipe(
         mergeMap(async (id) => {
@@ -52,7 +54,7 @@ export class BookQueueService implements OnModuleInit {
       .subscribe();
   }
 
-  private async syncBookFromGoogleBooks(id: string) {
+  private async syncBookFromGoogleBooks(id: string): Promise<void> {
     const media = await this.fetchFromGoogleBooks(id);
     if (media) {
       await this.bookRepository.upsert(id, {
@@ -100,7 +102,10 @@ export class BookQueueService implements OnModuleInit {
       .trim();
   }
 
-  private parseAuthorsAndArtists(info: any): { authors: string[]; artists: string[] } {
+  private parseAuthorsAndArtists(info: any): {
+    authors: string[];
+    artists: string[];
+  } {
     const authors: string[] = [];
     const artists: string[] = [];
     const rawAuthors = info.authors || [];
@@ -132,7 +137,9 @@ export class BookQueueService implements OnModuleInit {
 
     if (artists.length === 0 && info.description) {
       const desc = info.description;
-      const artMatch = desc.match(/(?:illustrated|illustrations|illustrator|art|drawings|illustration)\s+(?:by|of)\s+([A-Z][a-zA-Z'.]+\s+[A-Z][a-zA-Z'.]+(?:\s+[A-Z][a-zA-Z'.]+)?)/i);
+      const artMatch = desc.match(
+        /(?:illustrated|illustrations|illustrator|art|drawings|illustration)\s+(?:by|of)\s+([A-Z][a-zA-Z'.]+\s+[A-Z][a-zA-Z'.]+(?:\s+[A-Z][a-zA-Z'.]+)?)/i,
+      );
       if (artMatch && artMatch[1]) {
         const artistName = artMatch[1].trim();
         if (!authors.includes(artistName) && !artists.includes(artistName)) {
@@ -150,7 +157,9 @@ export class BookQueueService implements OnModuleInit {
       const url = `https://www.googleapis.com/books/v1/volumes/${id}${apiKey ? `?key=${apiKey}` : ''}`;
       const res = await fetch(url);
       if (!res.ok) {
-        throw new Error(`Google Books detail fetch failed: ${res.status}`);
+        throw new rrInternalServerErrorException(`${this.moduleCode}GBDFF001`, {
+          message: `Google Books detail fetch failed: ${res.status}`,
+        });
       }
       const item = await res.json();
       const info = item.volumeInfo || {};
@@ -160,7 +169,13 @@ export class BookQueueService implements OnModuleInit {
 
       let coverUrl = '';
       if (info.imageLinks) {
-        coverUrl = info.imageLinks.extraLarge || info.imageLinks.large || info.imageLinks.medium || info.imageLinks.thumbnail || info.imageLinks.smallThumbnail || '';
+        coverUrl =
+          info.imageLinks.extraLarge ||
+          info.imageLinks.large ||
+          info.imageLinks.medium ||
+          info.imageLinks.thumbnail ||
+          info.imageLinks.smallThumbnail ||
+          '';
         if (coverUrl.startsWith('http://')) {
           coverUrl = coverUrl.replace('http://', 'https://');
         }
@@ -203,7 +218,11 @@ export class BookQueueService implements OnModuleInit {
         staff.push({ id: `author-${author}`, name: author, role: 'Author' });
       }
       for (const artist of artists) {
-        staff.push({ id: `artist-${artist}`, name: artist, role: 'Visual Artist' });
+        staff.push({
+          id: `artist-${artist}`,
+          name: artist,
+          role: 'Visual Artist',
+        });
       }
 
       return {
@@ -231,7 +250,9 @@ export class BookQueueService implements OnModuleInit {
         genres: info.categories || [],
         studios: authors.map((name: string) => ({ name })),
         staff,
-        averageScore: info.averageRating ? Math.round(info.averageRating * 20) : null,
+        averageScore: info.averageRating
+          ? Math.round(info.averageRating * 20)
+          : null,
         popularity: info.ratingsCount || null,
         chapters: null,
         volumes: null,

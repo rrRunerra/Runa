@@ -208,7 +208,6 @@ export default function UserMangaPage() {
     }
   }, [
     username,
-    session?.accessToken,
     debouncedSearch,
     activeList,
     filters.format,
@@ -323,9 +322,7 @@ export default function UserMangaPage() {
 
             <RrMediaListDisplay
               lists={
-                activeList === "All"
-                  ? ["Reading", "Completed"]
-                  : [activeList]
+                activeList === "All" ? ["Reading", "Completed"] : [activeList]
               }
               data={mangaList}
               displayType={displayType}

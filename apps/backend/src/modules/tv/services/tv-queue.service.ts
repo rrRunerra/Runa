@@ -2,10 +2,12 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Subject, EMPTY } from 'rxjs';
 import { mergeMap, catchError } from 'rxjs/operators';
 import { TvRepository } from '../repositories/tv.repository';
+import { rrInternalServerErrorException } from 'src/providers/error';
 
 @Injectable()
 export class TvQueueService implements OnModuleInit {
   private readonly logger = new Logger(TvQueueService.name);
+  private readonly moduleCode = 'TvQeSve-';
   private readonly jobQueue = new Subject<number>();
   private readonly processing = new Set<number>();
 
@@ -73,7 +75,9 @@ export class TvQueueService implements OnModuleInit {
     if (loginData.data) {
       token = loginData.data.token;
     } else {
-      throw new Error(loginData.message);
+      throw new rrInternalServerErrorException(`${this.moduleCode}AEI001`, {
+        message: loginData.message,
+      });
     }
 
     const seriesRes = await fetch(
@@ -90,7 +94,9 @@ export class TvQueueService implements OnModuleInit {
     const seriesData = await seriesRes.json();
 
     if (seriesData.message == 'Unauthorized' || !seriesData.data) {
-      throw new Error('TVdb API error');
+      throw new rrInternalServerErrorException(`${this.moduleCode}TAE001`, {
+        message: 'TVdb API error',
+      });
     }
 
     const series = seriesData.data;
@@ -162,10 +168,13 @@ export class TvQueueService implements OnModuleInit {
         .filter((s: any) => s.episodes.length > 0) || [];
 
     const artworks = series.artworks || [];
-    const seriesBanners = artworks.filter((a: any) => a.type === 1 || a.type === 3);
-    const randomBanner = seriesBanners.length > 0
-      ? seriesBanners[Math.floor(Math.random() * seriesBanners.length)].image
-      : series.bannerImage || null;
+    const seriesBanners = artworks.filter(
+      (a: any) => a.type === 1 || a.type === 3,
+    );
+    const randomBanner =
+      seriesBanners.length > 0
+        ? seriesBanners[Math.floor(Math.random() * seriesBanners.length)].image
+        : series.bannerImage || null;
 
     return {
       tvdbId: series.id,

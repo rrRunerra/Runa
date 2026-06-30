@@ -6,23 +6,24 @@ import {
   Query,
   Injectable,
   Post,
-  Req,
-  ForbiddenException,
-  HttpException,
-  HttpStatus,
 } from '@nestjs/common';
 import { MangaService } from './manga.service';
-import { DualAuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Public } from '../../common/decorators/public.decorator';
 import { SearchMangaDto } from './dto/search-manga.dto';
 import { MangaSearchEntity } from './entities/manga-search.entity';
 import { MangaEntity } from './entities/manga.entity';
-import { AquilaBitField } from '@runa/permissions';
+import { AquilaFlags } from '@runa/permissions';
 import { CacheService } from '../../providers/cache/cache.service';
+import { rrTooManyRequestsException } from 'src/providers/error';
+import { Permissions } from 'src/common/decorators/permissions.decorator';
 
 @Controller('manga')
-@UseGuards(DualAuthGuard)
+@UseGuards(AuthGuard, PermissionsGuard)
 export class MangaController {
+  private readonly moduleCode = 'MaCtr-';
+
   constructor(
     private readonly mangaService: MangaService,
     private readonly cacheService: CacheService,
@@ -41,19 +42,15 @@ export class MangaController {
   }
 
   @Post('refresh/:id')
-  async refreshManga(@Param('id') id: string, @Req() req: any): Promise<MangaEntity> {
-    const bitfield = AquilaBitField.fromRaw(req.user.permissions);
-    if (!bitfield.has('MEDIA_REFRESH')) {
-      throw new ForbiddenException('You do not have permission to refresh media');
-    }
-
+  @Permissions([AquilaFlags.MEDIA_REFRESH])
+  async refreshManga(@Param('id') id: string): Promise<MangaEntity> {
     const cooldownKey = `cooldown:refresh:manga:${id}`;
     const onCooldown = await this.cacheService.get(cooldownKey);
     if (onCooldown) {
-      throw new HttpException(
-        'This media was refreshed recently. Please wait before refreshing again.',
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
+      throw new rrTooManyRequestsException(`${this.moduleCode}TMWRRPWBRA001`, {
+        message:
+          'This media was refreshed recently. Please wait before refreshing again.',
+      });
     }
 
     const result = await this.mangaService.getManga(parseInt(id), true);

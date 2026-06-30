@@ -1,8 +1,13 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../providers/database/prisma.service';
 import type { Media, SearchMedia } from '../../common/types/types';
 import { GameRepository } from './repositories/game.repository';
 import { GameQueueService } from './services/game-queue.service';
+import {
+  rrBadRequestException,
+  rrInternalServerErrorException,
+  rrNotFoundException,
+} from 'src/providers/error';
 
 const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
 const CACHE_DURATION_MS = isDev ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
@@ -10,6 +15,7 @@ const CACHE_DURATION_MS = isDev ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
 @Injectable()
 export class GameService {
   private readonly logger = new Logger(GameService.name);
+  private readonly moduleCode = 'GeSve-';
 
   constructor(
     private readonly prisma: PrismaService,
@@ -36,7 +42,9 @@ export class GameService {
         `https://api.rawg.io/api/games?key=${key}&search=${encodeURIComponent(name)}&page_size=20`,
       );
       if (!res.ok) {
-        throw new Error(`RAWG search failed: ${res.status}`);
+        throw new rrInternalServerErrorException(`${this.moduleCode}RSF001`, {
+          message: `RAWG search failed: ${res.status}`,
+        });
       }
       const data = await res.json();
       const results = data.results || [];
@@ -52,7 +60,9 @@ export class GameService {
         },
         format: 'Game',
         status: item.released ? 'Released' : 'TBA',
-        isAdult: item.esrb_rating?.slug === 'mature' || item.esrb_rating?.slug === 'adults-only',
+        isAdult:
+          item.esrb_rating?.slug === 'mature' ||
+          item.esrb_rating?.slug === 'adults-only',
       }));
     } catch (error) {
       this.logger.error('Failed to search RAWG games', error);
@@ -62,7 +72,9 @@ export class GameService {
 
   public async getGame(id: number, forceRefresh = false): Promise<Media> {
     if (isNaN(id)) {
-      throw new Error(`Invalid game ID: ${id}`);
+      throw new rrBadRequestException(`${this.moduleCode}IGI001`, {
+        message: `Invalid game ID: ${id}`,
+      });
     }
 
     const dbGame = await this.gameRepository.findByRawgId(id);
@@ -79,7 +91,7 @@ export class GameService {
 
     try {
       const media = await this.fetchFromRawg(id);
-      
+
       this.gameQueueService.addJob(id);
 
       return media;
@@ -87,19 +99,25 @@ export class GameService {
       if (dbGame) {
         return this.gameRepository.toMedia(dbGame);
       }
-      throw new NotFoundException(`Game with ID ${id} not found`);
+      throw new rrNotFoundException(`${this.moduleCode}GWIDNF001`, {
+        message: `Game with ID ${id} not found`,
+      });
     }
   }
 
   private async fetchFromRawg(id: number): Promise<Media> {
     const key = this.getApiKey();
     if (!key) {
-      throw new Error('RAWG_API_KEY is not defined');
+      throw new rrInternalServerErrorException(`${this.moduleCode}RAKIND001`, {
+        message: 'RAWG_API_KEY is not defined',
+      });
     }
 
     const res = await fetch(`https://api.rawg.io/api/games/${id}?key=${key}`);
     if (!res.ok) {
-      throw new Error(`RAWG detail fetch failed: ${res.status}`);
+      throw new rrInternalServerErrorException(`${this.moduleCode}RDFF001`, {
+        message: `RAWG detail fetch failed: ${res.status}`,
+      });
     }
     const item = await res.json();
 
@@ -131,7 +149,8 @@ export class GameService {
         native: null,
       },
       coverImage: {
-        extraLarge: item.background_image_additional || item.background_image || '',
+        extraLarge:
+          item.background_image_additional || item.background_image || '',
         large: item.background_image || '',
       },
       bannerImage: item.background_image || '',
@@ -147,7 +166,8 @@ export class GameService {
         : undefined,
       genres: [...allPlatforms, ...genres],
       studios: developers.map((name: string) => ({ name })),
-      averageScore: item.metacritic || (item.rating ? Math.round(item.rating * 20) : null), // map 5 stars to 100
+      averageScore:
+        item.metacritic || (item.rating ? Math.round(item.rating * 20) : null), // map 5 stars to 100
       popularity: item.added || null,
     };
   }

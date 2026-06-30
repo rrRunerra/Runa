@@ -202,7 +202,6 @@ export default function UserMoviesPage() {
     }
   }, [
     username,
-    session?.accessToken,
     debouncedSearch,
     activeList,
     filters.format,

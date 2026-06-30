@@ -1,12 +1,18 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { CreateBookmarkDto } from './dto/create-bookmark.dto';
+import { rrNotFoundException } from 'src/providers/error';
 
 @Injectable()
 export class PolarisService {
+  private readonly moduleCode = 'PoSve-';
+
   constructor(private readonly prisma: PrismaService) {}
 
-  async createOrUpdateBookmark(userId: string, dto: CreateBookmarkDto) {
+  async createOrUpdateBookmark(
+    userId: string,
+    dto: CreateBookmarkDto,
+  ): Promise<any> {
     const existing = await this.prisma.client.polarisUserBookMarks.findFirst({
       where: {
         userId,
@@ -44,26 +50,31 @@ export class PolarisService {
     });
   }
 
-  async getBookmarks(userId: string) {
+  async getBookmarks(userId: string): Promise<any[]> {
     return this.prisma.client.polarisUserBookMarks.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
     });
   }
 
-  async deleteBookmark(userId: string, id: string) {
+  async deleteBookmark(
+    userId: string,
+    id: string,
+  ): Promise<{ success: boolean }> {
     const bookmark = await this.prisma.client.polarisUserBookMarks.findFirst({
       where: { id, userId },
     });
-    
+
     if (!bookmark) {
-      throw new NotFoundException(`Bookmark with ID ${id} not found`);
+      throw new rrNotFoundException(`${this.moduleCode}BWIDNF001`, {
+        message: `Bookmark with ID ${id} not found`,
+      });
     }
 
     await this.prisma.client.polarisUserBookMarks.delete({
       where: { id },
     });
-    
+
     return { success: true };
   }
 }

@@ -10,13 +10,13 @@ import {
   Req,
 } from '@nestjs/common';
 import { ApiKeyService } from './api-key.service';
-import { DualAuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth.guard';
 import { CreateApiKeyDto } from './dto/create-api-key.dto';
 import { RegenerateApiKeyDto } from './dto/regenerate-api-key.dto';
 import { ApiKeyCreatedEntity, ApiKeyEntity } from './entities/api-key.entity';
 
 @Controller('api-key')
-@UseGuards(DualAuthGuard)
+@UseGuards(AuthGuard)
 export class ApiKeyController {
   constructor(private readonly apiKeyService: ApiKeyService) {}
 

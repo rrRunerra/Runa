@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import {
+  rrBadRequestException,
+  rrNotFoundException,
+  rrInternalServerErrorException,
+} from 'src/providers/error';
 import type { Media, SearchMedia } from '../../common/types/types';
 import { BookRepository } from './repositories/book.repository';
 import { BookQueueService } from './services/book-queue.service';
@@ -9,6 +14,7 @@ const CACHE_DURATION_MS = isDev ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
 @Injectable()
 export class BookService {
   private readonly logger = new Logger(BookService.name);
+  private readonly moduleCode = 'BkSve-';
 
   constructor(
     private readonly bookRepository: BookRepository,
@@ -21,7 +27,9 @@ export class BookService {
       const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(name)}&maxResults=20${apiKey ? `&key=${apiKey}` : ''}`;
       const res = await fetch(url);
       if (!res.ok) {
-        throw new Error(`Google Books search failed: ${res.status}`);
+        throw new rrInternalServerErrorException(`${this.moduleCode}GBSF001`, {
+          message: `Google Books search failed: ${res.status}`,
+        });
       }
       const data = await res.json();
       const items = data.items || [];
@@ -32,7 +40,8 @@ export class BookService {
 
         let cover = '';
         if (info.imageLinks) {
-          cover = info.imageLinks.thumbnail || info.imageLinks.smallThumbnail || '';
+          cover =
+            info.imageLinks.thumbnail || info.imageLinks.smallThumbnail || '';
           if (cover.startsWith('http://')) {
             cover = cover.replace('http://', 'https://');
           }
@@ -60,6 +69,11 @@ export class BookService {
   }
 
   public async getBook(id: string, forceRefresh = false): Promise<Media> {
+    if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
+      throw new rrBadRequestException(`${this.moduleCode}IBF001`, {
+        message: 'Invalid book ID format',
+      });
+    }
     const dbBook = await this.bookRepository.findByGoogleBookId(id);
 
     if (dbBook && !forceRefresh) {
@@ -74,29 +88,38 @@ export class BookService {
 
     try {
       const media = await this.fetchFromGoogleBooks(id);
-      
+
       this.bookQueueService.addJob(id);
 
       return media;
     } catch (error) {
-      if (error instanceof BadRequestException) {
+      if (error instanceof rrBadRequestException) {
         throw error;
       }
       if (dbBook) {
         return this.bookRepository.toMedia(dbBook);
       }
-      throw new NotFoundException(`Book with ID ${id} not found`);
+      throw new rrNotFoundException(`${this.moduleCode}BNF001`, {
+        message: `Book with ID ${id} not found`,
+      });
     }
   }
 
   public async getRelatedBooks(id: string): Promise<any[]> {
+    if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
+      throw new rrBadRequestException(`${this.moduleCode}IBF002`, {
+        message: 'Invalid book ID format',
+      });
+    }
     try {
       const apiKey = process.env.GOOGLE_BOOKS_API_KEY;
       const res = await fetch(
         `https://www.googleapis.com/books/v1/volumes?q=related:${id}&maxResults=10${apiKey ? `&key=${apiKey}` : ''}`,
       );
       if (!res.ok) {
-        throw new Error(`Failed to fetch related books: ${res.status}`);
+        throw new rrInternalServerErrorException(`${this.moduleCode}FTFRB001`, {
+          message: `Failed to fetch related books: ${res.status}`,
+        });
       }
       const data = await res.json();
       let items = data.items || [];
@@ -126,7 +149,8 @@ export class BookService {
           const info = item.volumeInfo || {};
           let cover = '';
           if (info.imageLinks) {
-            cover = info.imageLinks.thumbnail || info.imageLinks.smallThumbnail || '';
+            cover =
+              info.imageLinks.thumbnail || info.imageLinks.smallThumbnail || '';
             if (cover.startsWith('http://')) {
               cover = cover.replace('http://', 'https://');
             }
@@ -157,12 +181,20 @@ export class BookService {
   }
 
   public async getBookEditions(id: string): Promise<any[]> {
+    if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
+      throw new rrBadRequestException(`${this.moduleCode}IBF003`, {
+        message: 'Invalid book ID format',
+      });
+    }
     try {
       const mainBook = await this.getBook(id);
       if (!mainBook) return [];
 
       const title = mainBook.title.english || mainBook.title.romaji;
-      const author = mainBook.studios && mainBook.studios.length > 0 ? mainBook.studios[0].name : '';
+      const author =
+        mainBook.studios && mainBook.studios.length > 0
+          ? mainBook.studios[0].name
+          : '';
 
       if (!title) return [];
 
@@ -172,7 +204,9 @@ export class BookService {
         `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(query)}&maxResults=10${apiKey ? `&key=${apiKey}` : ''}`,
       );
       if (!res.ok) {
-        throw new Error(`Failed to fetch book editions: ${res.status}`);
+        throw new rrInternalServerErrorException(`${this.moduleCode}FTFBE001`, {
+          message: `Failed to fetch book editions: ${res.status}`,
+        });
       }
       const data = await res.json();
       const items = data.items || [];
@@ -183,7 +217,8 @@ export class BookService {
           const info = item.volumeInfo || {};
           let cover = '';
           if (info.imageLinks) {
-            cover = info.imageLinks.thumbnail || info.imageLinks.smallThumbnail || '';
+            cover =
+              info.imageLinks.thumbnail || info.imageLinks.smallThumbnail || '';
             if (cover.startsWith('http://')) {
               cover = cover.replace('http://', 'https://');
             }
@@ -229,7 +264,10 @@ export class BookService {
       .trim();
   }
 
-  private parseAuthorsAndArtists(info: any): { authors: string[]; artists: string[] } {
+  private parseAuthorsAndArtists(info: any): {
+    authors: string[];
+    artists: string[];
+  } {
     const authors: string[] = [];
     const artists: string[] = [];
     const rawAuthors = info.authors || [];
@@ -261,7 +299,9 @@ export class BookService {
 
     if (artists.length === 0 && info.description) {
       const desc = info.description;
-      const artMatch = desc.match(/(?:illustrated|illustrations|illustrator|art|drawings|illustration)\s+(?:by|of)\s+([A-Z][a-zA-Z'.]+\s+[A-Z][a-zA-Z'.]+(?:\s+[A-Z][a-zA-Z'.]+)?)/i);
+      const artMatch = desc.match(
+        /(?:illustrated|illustrations|illustrator|art|drawings|illustration)\s+(?:by|of)\s+([A-Z][a-zA-Z'.]+\s+[A-Z][a-zA-Z'.]+(?:\s+[A-Z][a-zA-Z'.]+)?)/i,
+      );
       if (artMatch && artMatch[1]) {
         const artistName = artMatch[1].trim();
         if (!authors.includes(artistName) && !artists.includes(artistName)) {
@@ -274,15 +314,13 @@ export class BookService {
   }
 
   private async fetchFromGoogleBooks(id: string): Promise<Media> {
-    if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
-      throw new BadRequestException('Invalid book ID format');
-    }
-
     const apiKey = process.env.GOOGLE_BOOKS_API_KEY;
     const url = `https://www.googleapis.com/books/v1/volumes/${id}${apiKey ? `?key=${apiKey}` : ''}`;
     const res = await fetch(url);
     if (!res.ok) {
-      throw new Error(`Google Books detail fetch failed: ${res.status}`);
+      throw new rrInternalServerErrorException(`${this.moduleCode}GBDFF001`, {
+        message: `Google Books detail fetch failed: ${res.status}`,
+      });
     }
     const item = await res.json();
     const info = item.volumeInfo || {};
@@ -292,7 +330,13 @@ export class BookService {
 
     let coverUrl = '';
     if (info.imageLinks) {
-      coverUrl = info.imageLinks.extraLarge || info.imageLinks.large || info.imageLinks.medium || info.imageLinks.thumbnail || info.imageLinks.smallThumbnail || '';
+      coverUrl =
+        info.imageLinks.extraLarge ||
+        info.imageLinks.large ||
+        info.imageLinks.medium ||
+        info.imageLinks.thumbnail ||
+        info.imageLinks.smallThumbnail ||
+        '';
       if (coverUrl.startsWith('http://')) {
         coverUrl = coverUrl.replace('http://', 'https://');
       }
@@ -335,7 +379,11 @@ export class BookService {
       staff.push({ id: `author-${author}`, name: author, role: 'Author' });
     }
     for (const artist of artists) {
-      staff.push({ id: `artist-${artist}`, name: artist, role: 'Visual Artist' });
+      staff.push({
+        id: `artist-${artist}`,
+        name: artist,
+        role: 'Visual Artist',
+      });
     }
 
     return {
@@ -363,7 +411,9 @@ export class BookService {
       genres: info.categories || [],
       studios: authors.map((name: string) => ({ name })),
       staff,
-      averageScore: info.averageRating ? Math.round(info.averageRating * 20) : null,
+      averageScore: info.averageRating
+        ? Math.round(info.averageRating * 20)
+        : null,
       popularity: info.ratingsCount || null,
       chapters: null,
       volumes: null,

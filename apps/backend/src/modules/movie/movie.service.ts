@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../providers/database/prisma.service';
 import type {
   Media,
@@ -8,6 +8,10 @@ import type {
 } from '../../common/types/types';
 import { MovieRepository } from './repositories/movie.repository';
 import { MovieQueueService } from './services/movie-queue.service';
+import {
+  rrNotFoundException,
+  rrInternalServerErrorException,
+} from 'src/providers/error';
 
 const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
 const CACHE_DURATION_MS = isDev ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
@@ -21,6 +25,7 @@ export class MovieService {
   ) {}
 
   private readonly logger = new Logger(MovieService.name);
+  private readonly moduleCode = 'MoSve-';
   private token: string | null = null;
 
   private async setTheTvDbToken(): Promise<void> {
@@ -36,7 +41,9 @@ export class MovieService {
     if (data.data) {
       this.token = data.data.token;
     } else {
-      throw new Error(data.message);
+      throw new rrInternalServerErrorException(`${this.moduleCode}AEI001`, {
+        message: data.message,
+      });
     }
   }
 
@@ -82,7 +89,9 @@ export class MovieService {
   public async getMovie(id: string, forceRefresh = false): Promise<Media> {
     const tvdbId = parseInt(id);
     if (isNaN(tvdbId)) {
-      throw new Error('Invalid id format');
+      throw new rrInternalServerErrorException(`${this.moduleCode}IIF001`, {
+        message: 'Invalid id format',
+      });
     }
 
     const dbMovie = await this.movieRepository.findByTvdbId(tvdbId);
@@ -107,7 +116,9 @@ export class MovieService {
       if (dbMovie) {
         return this.movieRepository.toMedia(dbMovie);
       }
-      throw new NotFoundException('Movie not found');
+      throw new rrNotFoundException(`${this.moduleCode}MNF001`, {
+        message: 'Movie not found',
+      });
     }
   }
 
@@ -144,7 +155,9 @@ export class MovieService {
     }
 
     if (!movieData.data) {
-      throw new Error(`Movie with ID ${tvdbId} not found`);
+      throw new rrInternalServerErrorException(`${this.moduleCode}MWIDNF001`, {
+        message: `Movie with ID ${tvdbId} not found`,
+      });
     }
 
     const movie = movieData.data;
@@ -154,10 +167,13 @@ export class MovieService {
     const englishOverview = translation?.overview || movie.overview || '';
 
     const artworks = movie.artworks || [];
-    const movieBanners = artworks.filter((a: any) => a.type === 16 || a.type === 15);
-    const randomBanner = movieBanners.length > 0
-      ? movieBanners[Math.floor(Math.random() * movieBanners.length)].image
-      : movie.bannerImage || null;
+    const movieBanners = artworks.filter(
+      (a: any) => a.type === 16 || a.type === 15,
+    );
+    const randomBanner =
+      movieBanners.length > 0
+        ? movieBanners[Math.floor(Math.random() * movieBanners.length)].image
+        : movie.bannerImage || null;
 
     return {
       id: movie.id.toString(),
@@ -202,7 +218,11 @@ export class MovieService {
     };
   }
 
-  public async ensureMovie(tvdbId: number, title?: string, coverImage?: string) {
+  public async ensureMovie(
+    tvdbId: number,
+    title?: string,
+    coverImage?: string,
+  ): Promise<any> {
     let movie = await this.movieRepository.findByTvdbId(tvdbId);
     if (!movie || movie.description === null) {
       try {
@@ -239,20 +259,28 @@ export class MovieService {
     return movie;
   }
 
-  public async getRemoteIds(tvdbId: number): Promise<{ tmdbId?: number; imdbId?: string } | null> {
+  public async getRemoteIds(
+    tvdbId: number,
+  ): Promise<{ tmdbId?: number; imdbId?: string } | null> {
     try {
       if (!this.token) {
         await this.setTheTvDbToken();
       }
-      const res = await fetch(`https://api4.thetvdb.com/v4/movies/${tvdbId}/extended`, {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-          Authorization: `Bearer ${this.token}`,
+      const res = await fetch(
+        `https://api4.thetvdb.com/v4/movies/${tvdbId}/extended`,
+        {
+          method: 'GET',
+          headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${this.token}`,
+          },
         },
-      });
+      );
       const data = await res.json();
-      if (data.message === 'Unauthorized' || (data.status === 'error' && data.message?.includes('token'))) {
+      if (
+        data.message === 'Unauthorized' ||
+        (data.status === 'error' && data.message?.includes('token'))
+      ) {
         await this.setTheTvDbToken();
         return this.getRemoteIds(tvdbId);
       }
@@ -264,9 +292,11 @@ export class MovieService {
         imdbId: imdbVal || undefined,
       };
     } catch (err) {
-      this.logger.error(`Failed to fetch remote IDs for tvdbId ${tvdbId}:`, err);
+      this.logger.error(
+        `Failed to fetch remote IDs for tvdbId ${tvdbId}:`,
+        err,
+      );
       return null;
     }
   }
 }
-
