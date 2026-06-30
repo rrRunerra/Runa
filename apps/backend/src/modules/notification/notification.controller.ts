@@ -11,7 +11,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { NotificationService } from './notification.service';
-import { AuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { UpdateNotificationStatusDto } from './dto/update-status.dto';
 import { ApproveDeviceDto } from './dto/approve-device.dto';
 import { Notification } from '@runa/notifications';

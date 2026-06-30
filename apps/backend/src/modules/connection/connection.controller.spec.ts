@@ -3,7 +3,7 @@ import { ForbiddenException } from '@nestjs/common';
 import { ConnectionLinkedTo } from '@runa/database';
 import { ConnectionController } from './connection.controller';
 import { ConnectionService } from './connection.service';
-import { AuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { AquilaBitField } from '@runa/permissions';
 import { Reflector } from '@nestjs/core';
 import { Response } from 'express';

@@ -16,7 +16,7 @@ import { jwtVerify } from 'jose';
 import { ConnectionLinkedTo } from '@runa/database';
 import { AquilaFlags } from '@runa/permissions';
 
-import { AuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Public } from 'src/common/decorators/public.decorator';
 import { Permissions } from 'src/common/decorators/permissions.decorator';

@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ListController } from './list.controller';
 import { ListService } from './list.service';
-import { AuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { Reflector } from '@nestjs/core';
 
 describe('ListController', () => {

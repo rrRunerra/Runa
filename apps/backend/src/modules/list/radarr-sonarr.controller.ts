@@ -1,5 +1,5 @@
 import { Controller, Get, UseGuards, Req, Logger } from '@nestjs/common';
-import { AuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { MovieService } from '../movie/movie.service';
 import { TvService } from '../tv/tv.service';

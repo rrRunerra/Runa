@@ -9,7 +9,7 @@ import {
   Req,
 } from '@nestjs/common';
 import { PolarisService } from './polaris.service';
-import { AuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { CreateBookmarkDto } from './dto/create-bookmark.dto';
 
 @Controller('polaris/bookmarks')

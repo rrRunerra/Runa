@@ -10,7 +10,7 @@ import {
   Delete,
 } from '@nestjs/common';
 import { parsePrivacy, UserService } from './user.service';
-import { AuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { User } from '@runa/database';
 import { Public } from '../../common/decorators/public.decorator';
 import { CreateUserDto } from './dto/create-user.dto';

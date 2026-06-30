@@ -1,9 +1,9 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Subject, EMPTY } from 'rxjs';
 import { mergeMap, catchError } from 'rxjs/operators';
-import { AnimeRepository } from '../repositories/anime.repository';
+import { AnimeRepository } from './anime.repository';
 import { rrInternalServerErrorException } from 'src/providers/error';
-import type { AniListGetResponse } from '../../../common/types/types';
+import type { AniListGetResponse } from '../../common/types/types';
 
 @Injectable()
 export class AnimeQueueService implements OnModuleInit {

@@ -1,6 +1,6 @@
 import { Controller, Req, UseGuards, Get } from '@nestjs/common';
 import { Public } from '../../common/decorators/public.decorator';
-import { AuthGuard } from 'src/common/guards/auth.guard';
+import { AuthGuard } from 'src/common/guards/auth/auth.guard';
 import {
   NoAuthResponseEntity,
   SessionResponseEntity,

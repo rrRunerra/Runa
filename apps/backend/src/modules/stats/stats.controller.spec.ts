@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { StatsController } from './stats.controller';
 import { PrismaService } from '../../providers/database/prisma.service';
-import { AuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { Reflector } from '@nestjs/core';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
 

@@ -1,6 +1,6 @@
 import { Controller, Param, UseGuards, Get, Query, Post } from '@nestjs/common';
 import { MovieService } from './movie.service';
-import { AuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Public } from 'src/common/decorators/public.decorator';
 import { SearchMovieDto } from './dto/search-movie.dto';

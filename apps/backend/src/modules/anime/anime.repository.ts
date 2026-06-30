@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../../providers/database/prisma.service';
+import { PrismaService } from '../../providers/database/prisma.service';
 import { Prisma } from '@runa/database';
-import type { Media } from '../../../common/types/types';
+import type { Media } from '../../common/types/types';
 
 @Injectable()
 export class AnimeRepository {

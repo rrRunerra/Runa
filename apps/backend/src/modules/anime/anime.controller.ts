@@ -1,8 +1,8 @@
 import { Controller, Param, UseGuards, Get, Query, Post } from '@nestjs/common';
 import { AnimeService } from './anime.service';
-import { AuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { Public } from 'src/common/decorators/public.decorator';
-import { AnimeSearchEntity } from './entities/anime-search.entity';
+import type { AnimeSearchEntity } from './anime.entities';
 import { AnimeEntity } from './entities/anime.entity';
 import { AquilaFlags } from '@runa/permissions';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
@@ -21,9 +21,9 @@ export class AnimeController {
   private readonly moduleCode: string = 'AeCtr-';
 
   @Public()
-  @Get('search')
-  async search(@Query() query: { name: string }): Promise<AnimeSearchEntity> {
-    return this.animeService.search(query.name);
+  @Get('search/:name')
+  async search(@Param('name') name: string): Promise<AnimeSearchEntity[]> {
+    return this.animeService.search(name);
   }
 
   @Public()

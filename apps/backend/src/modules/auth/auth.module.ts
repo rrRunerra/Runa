@@ -5,7 +5,7 @@ import { UserModule } from '../user/user.module';
 import { PrismaModule } from 'src/providers/database/prisma.module';
 import { MailModule } from 'src/providers/mail/mail.module';
 import { APP_GUARD } from '@nestjs/core';
-import { AuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth/auth.guard';
 
 @Module({
   imports: [UserModule, PrismaModule, MailModule],

@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { AnimeQueueService } from './anime-queue.service';
-import { AnimeRepository } from '../repositories/anime.repository';
+import { AnimeRepository } from './repositories/anime.repository';
 
 describe('AnimeQueueService', () => {
   let service: AnimeQueueService;
@@ -72,10 +72,13 @@ describe('AnimeQueueService', () => {
       await new Promise((resolve) => process.nextTick(resolve));
 
       expect(global.fetch).toHaveBeenCalled();
-      expect(repository.upsert).toHaveBeenCalledWith(1, expect.objectContaining({
-        anilistId: 1,
-        malId: 10,
-      }));
+      expect(repository.upsert).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          anilistId: 1,
+          malId: 10,
+        }),
+      );
     });
 
     it('should retry on AniList rate limiting (429 status code)', async () => {
@@ -111,7 +114,10 @@ describe('AnimeQueueService', () => {
       await new Promise((resolve) => process.nextTick(resolve));
 
       expect(global.fetch).toHaveBeenCalledTimes(2);
-      expect(repository.upsert).toHaveBeenCalledWith(1, expect.objectContaining({ anilistId: 1 }));
+      expect(repository.upsert).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ anilistId: 1 }),
+      );
     });
 
     it('should ignore duplicate jobs if they are currently processing', async () => {
@@ -121,7 +127,13 @@ describe('AnimeQueueService', () => {
         return {
           status: 200,
           ok: true,
-          json: jest.fn().mockResolvedValue({ data: { Media: { id: 1, title: {}, coverImage: { large: 'large-img' } } } }),
+          json: jest
+            .fn()
+            .mockResolvedValue({
+              data: {
+                Media: { id: 1, title: {}, coverImage: { large: 'large-img' } },
+              },
+            }),
         };
       });
 

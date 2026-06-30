@@ -9,7 +9,7 @@ import {
   Delete,
   Req,
 } from '@nestjs/common';
-import { AuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { Public } from 'src/common/decorators/public.decorator';
 import { ListService } from './list.service';
 import ListEntity from './entities/ListEntity';

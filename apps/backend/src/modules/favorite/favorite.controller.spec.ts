@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
 import { FavoriteController } from './favorite.controller';
 import { FavoriteService } from './favorite.service';
-import { AuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { Reflector } from '@nestjs/core';
 
 // Mock FavoriteType enum from @runa/database

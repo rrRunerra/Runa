@@ -13,7 +13,7 @@ import {
   Query,
 } from '@nestjs/common';
 import type { Response as ExpressResponse } from 'express';
-import { AuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import {
   EmailAccountService,
   EmailAutoconfigResult,

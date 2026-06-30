@@ -1,13 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
-import type {
-  Media,
-  SearchMedia,
-  AniListGetResponse,
-  AniListSearchResponse,
-} from '../../common/types/types';
-import { AnimeRepository } from './repositories/anime.repository';
-import { AnimeQueueService } from './services/anime-queue.service';
+import type { Media } from '../../common/types/types';
+import { AnimeRepository } from './anime.repository';
+import { AnimeQueueService } from './anime-queue.service';
 import { rrError, rrNotFoundException } from 'src/providers/error';
+import { AnimeSearchEntity } from './anime.entities';
+
+import type { AniListSearchResponse } from './anime.types';
+import { CacheService } from 'src/providers/cache/cache.service';
+import { AniListGetResponse } from '../../common/types/types';
 
 const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
 const CACHE_DURATION_MS = isDev ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
@@ -20,9 +20,20 @@ export class AnimeService {
   constructor(
     private readonly animeRepository: AnimeRepository,
     private readonly animeQueueService: AnimeQueueService,
+    private readonly cacheService: CacheService,
   ) {}
 
-  public async search(name: string): Promise<SearchMedia[]> {
+  public async search(name: string): Promise<AnimeSearchEntity[]> {
+    const normalized = name.trim().toLowerCase();
+    const cacheKey = `anime-search:${normalized}`;
+
+    const cached = await this.cacheService.get<AnimeSearchEntity[]>(cacheKey);
+
+    if (cached) {
+      this.logger.debug(`Anime search cache hit ${cached.length} entries`);
+      return cached;
+    }
+
     const aniListRes = await fetch('https://graphql.anilist.co', {
       method: 'POST',
       headers: {
@@ -62,20 +73,24 @@ export class AnimeService {
       }),
     });
 
-    const data = (await aniListRes.json()) as AniListSearchResponse;
-    return data.data.Page.media.map((item) => ({
-      id: item.id.toString(),
-      title: {
-        romaji: item.title.romaji,
-        english: item.title.english ?? '',
-      },
-      coverImage: {
-        large: item.coverImage.large,
-      },
+    const data = ((await aniListRes.json()) as AniListSearchResponse).data;
+
+    const result: AnimeSearchEntity[] = data.Page.media.map((item) => ({
+      id: item.id,
+      title: item.title.english ?? item.title.romaji ?? '',
+      secondaryTitle: item.title.romaji ?? null,
+      coverImage: item.coverImage?.large ?? null,
+      averageScore: item.averageScore ?? null,
+      isAdult: item.isAdult ?? false,
       format: item.format,
       status: item.status,
-      isAdult: item.isAdult,
     }));
+
+    if (result.length > 0) {
+      await this.cacheService.set(cacheKey, JSON.stringify(result), 60 * 60);
+    }
+
+    return result;
   }
 
   public async getAnime(id: number, forceRefresh = false): Promise<Media> {

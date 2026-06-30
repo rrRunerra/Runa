@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { EmailAccountController } from './email-account.controller';
 import { EmailAccountService } from './email-account.service';
 import { EmailSyncService } from './email-sync.service';
-import { AuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { Reflector } from '@nestjs/core';
 
 describe('EmailAccountController', () => {

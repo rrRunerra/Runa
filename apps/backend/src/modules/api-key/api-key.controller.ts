@@ -10,7 +10,7 @@ import {
   Req,
 } from '@nestjs/common';
 import { ApiKeyService } from './api-key.service';
-import { AuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { CreateApiKeyDto } from './dto/create-api-key.dto';
 import { RegenerateApiKeyDto } from './dto/regenerate-api-key.dto';
 import { ApiKeyCreatedEntity, ApiKeyEntity } from './entities/api-key.entity';

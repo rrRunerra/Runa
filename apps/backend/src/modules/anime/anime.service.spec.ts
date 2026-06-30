@@ -3,7 +3,7 @@ import { NotFoundException } from '@nestjs/common';
 import { AnimeService } from './anime.service';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { AnimeRepository } from './repositories/anime.repository';
-import { AnimeQueueService } from './services/anime-queue.service';
+import { AnimeQueueService } from './anime-queue.service';
 
 describe('AnimeService', () => {
   let service: AnimeService;
@@ -65,10 +65,13 @@ describe('AnimeService', () => {
 
       const result = await service.search('Test Name');
 
-      expect(global.fetch).toHaveBeenCalledWith('https://graphql.anilist.co', expect.objectContaining({
-        method: 'POST',
-        body: expect.stringContaining('Test Name'),
-      }));
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://graphql.anilist.co',
+        expect.objectContaining({
+          method: 'POST',
+          body: expect.stringContaining('Test Name'),
+        }),
+      );
       expect(result).toEqual([
         {
           id: '1',
@@ -84,13 +87,19 @@ describe('AnimeService', () => {
 
   describe('getAnime', () => {
     it('should throw error for NaN id', async () => {
-      await expect(service.getAnime(NaN)).rejects.toThrow('Invalid anime ID: NaN');
+      await expect(service.getAnime(NaN)).rejects.toThrow(
+        'Invalid anime ID: NaN',
+      );
     });
 
     it('should return from database on a fresh cache hit without calling fetch', async () => {
       const dbAnime = { anilistId: 1, updatedAt: new Date() };
       mockRepository.findByAnilistId.mockResolvedValue(dbAnime);
-      const mappedMedia = { id: '1', anilistId: 1, title: { romaji: 'Cached' } };
+      const mappedMedia = {
+        id: '1',
+        anilistId: 1,
+        title: { romaji: 'Cached' },
+      };
       mockRepository.toMedia.mockReturnValue(mappedMedia);
 
       const result = await service.getAnime(1);
@@ -139,7 +148,10 @@ describe('AnimeService', () => {
     });
 
     it('should fall back to database if AniList fetch fails but stale db record exists', async () => {
-      const staleAnime = { anilistId: 1, updatedAt: new Date(Date.now() - 48 * 60 * 60 * 1000) }; // 2 days old
+      const staleAnime = {
+        anilistId: 1,
+        updatedAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
+      }; // 2 days old
       mockRepository.findByAnilistId.mockResolvedValue(staleAnime);
 
       (global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));

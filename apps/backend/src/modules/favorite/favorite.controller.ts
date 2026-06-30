@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { rrBadRequestException } from 'src/providers/error';
 import { FavoriteService } from './favorite.service';
-import { AuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { CreateFavoriteDto } from './dto/create-favorite.dto';
 import { FavoriteType } from '@runa/database';
 import { Public } from '../../common/decorators/public.decorator';

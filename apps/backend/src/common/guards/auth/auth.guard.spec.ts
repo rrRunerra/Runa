@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Reflector } from '@nestjs/core';
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { AuthGuard } from './auth.guard';
-import { CacheService } from '../../providers/cache/cache.service';
+import { CacheService } from '../../../providers/cache/cache.service';
 import { prisma } from '@runa/database';
 import { jwtVerify } from 'jose';
 import bcrypt from 'bcrypt';

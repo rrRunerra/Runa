@@ -21,11 +21,18 @@ export class MailService {
       });
       this.logger.log(`SMTP Mailer initialized using ${host}:${port}`);
     } else {
-      this.logger.warn('SMTP settings missing. Email verification will run in console-log fallback mode.');
+      this.logger.warn(
+        'SMTP settings missing. Email verification will run in console-log fallback mode.',
+      );
     }
   }
 
-  async sendMail(to: string, subject: string, text: string, html?: string): Promise<boolean> {
+  async sendMail(
+    to: string,
+    subject: string,
+    text: string,
+    html?: string,
+  ): Promise<boolean> {
     const from = process.env.SMTP_FROM || 'no-reply@runerra.org';
 
     if (this.transporter) {
@@ -43,7 +50,8 @@ export class MailService {
         return false;
       }
     } else {
-      const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
+      const isDev =
+        process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
       if (isDev) {
         this.logger.log(`
 =========================================
@@ -55,7 +63,9 @@ Message: ${text}
         `);
         return true;
       } else {
-        this.logger.error(`Failed to send email to ${to}: SMTP is not configured in production.`);
+        this.logger.error(
+          `Failed to send email to ${to}: SMTP is not configured in production.`,
+        );
         return false;
       }
     }

@@ -1,5 +1,5 @@
 import { Controller, Param, UseGuards, Get, Req } from '@nestjs/common';
-import { AuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { Public } from '../../common/decorators/public.decorator';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { parsePrivacy } from '../user/user.service';
