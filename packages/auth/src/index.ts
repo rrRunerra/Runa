@@ -33,9 +33,11 @@ export const authOptions: NextAuthOptions = {
         mfaSuccessToken: { label: "MFA Success Token", type: "text" },
         passkeyResponse: { label: "Passkey Response", type: "text" },
         isPasskeyOnly: { label: "Is Passkey Only", type: "text" },
+        isLoginCode: { label: "Is Login Code", type: "text" },
+        loginCode: { label: "Login Code", type: "text" },
       },
       async authorize(credentials) {
-        if (!credentials?.identifier && credentials?.isPasskeyOnly !== "true") {
+        if (!credentials?.identifier && credentials?.isPasskeyOnly !== "true" && credentials?.isLoginCode !== "true") {
           throw new Error("Missing identifier");
         }
 
@@ -49,6 +51,9 @@ export const authOptions: NextAuthOptions = {
         } else if (credentials?.isPasskeyOnly === "true") {
           requestBody.isPasskeyOnly = "true";
           requestBody.passkeyResponse = credentials.passkeyResponse;
+        } else if (credentials?.isLoginCode === "true") {
+          requestBody.isLoginCode = "true";
+          requestBody.loginCode = credentials.loginCode;
         } else {
           if (!credentials.password) {
             throw new Error("Missing password");

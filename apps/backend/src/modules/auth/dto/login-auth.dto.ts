@@ -23,4 +23,12 @@ export class LoginAuthDto {
   @IsString()
   @IsOptional()
   isPasskeyOnly?: string;
+
+  @IsString()
+  @IsOptional()
+  isLoginCode?: string;
+
+  @IsString()
+  @IsOptional()
+  loginCode?: string;
 }

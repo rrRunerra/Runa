@@ -41,6 +41,11 @@ export default function Page() {
   );
   const [selectedDeviceId, setSelectedDeviceId] = useState("");
 
+  // Login Code States
+  const [loginCodeState, setLoginCodeState] = useState<"none" | "generating" | "code" | "error">("none");
+  const [generatedCode, setGeneratedCode] = useState<string>("");
+  const pollingRef = React.useRef<NodeJS.Timeout | null>(null);
+
   // Background stars animation
   const [stars, setStars] = useState<
     {
@@ -65,6 +70,14 @@ export default function Page() {
       delay: Math.random() * 5,
     }));
     setStars(generatedStars);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+      }
+    };
   }, []);
   const handleRedirect = () => {
     const callbackUrl = new URLSearchParams(window.location.search).get(
@@ -646,6 +659,108 @@ export default function Page() {
     }
   };
 
+  const handleGenerateLoginCode = async () => {
+    setLoginCodeState("generating");
+    setMessage("");
+
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login-code/generate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to generate code");
+      }
+
+      const data = await res.json();
+      setGeneratedCode(data.code);
+      setLoginCodeState("code");
+
+      startPollingLoginCode(data.code);
+    } catch (err) {
+      console.error(err);
+      setLoginCodeState("error");
+    }
+  };
+
+  const handleCancelLoginCode = () => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+    setLoginCodeState("none");
+    setGeneratedCode("");
+  };
+
+  const startPollingLoginCode = (code: string) => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+    }
+
+    pollingRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login-code/status?code=${code}`);
+        if (!res.ok) return;
+
+        const data = await res.json();
+
+        if (data.status === "APPROVED") {
+          if (pollingRef.current) {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+          }
+          await completeLoginWithCode(code);
+        } else if (data.status === "EXPIRED") {
+          if (pollingRef.current) {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+          }
+          setLoginCodeState("error");
+          setMessage("❌ Link code expired. Please generate a new one.");
+        }
+      } catch (err) {
+        console.error("Polling login code status failed:", err);
+      }
+    }, 3000);
+  };
+
+  const completeLoginWithCode = async (code: string) => {
+    setLoading(true);
+    try {
+      const res = await signIn("credentials", {
+        redirect: false,
+        isLoginCode: "true",
+        loginCode: code,
+      });
+
+      if (res?.error) {
+        throw new Error(`Login failed: ${res.error}`);
+      } else if (res?.ok) {
+        const sessionRes = await fetch("/api/auth/session");
+        if (sessionRes.ok) {
+          const sessionData = await sessionRes.json();
+          if (sessionData?.accessToken) {
+            await registerDeviceOnLogin(sessionData.accessToken);
+          }
+        }
+        handleRedirect();
+      }
+    } catch (err: any) {
+      setMessage(`❌ ${err.message || "Failed to log in with code."}`);
+      setLoginCodeState("error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="flex min-h-svh w-full flex-col items-center justify-center bg-zinc-950 p-6 md:p-10">
       <div className="w-full max-w-md md:max-w-4xl lg:max-w-5xl">
@@ -663,6 +778,10 @@ export default function Page() {
           setFieldErrors={setFieldErrors}
           onSubmit={handleSubmit}
           onPasskeyLogin={handlePasskeyLoginDirect}
+          onGenerateLoginCode={handleGenerateLoginCode}
+          onCancelLoginCode={handleCancelLoginCode}
+          loginCodeState={loginCodeState}
+          generatedCode={generatedCode}
           mfaRequired={mfaRequired}
           setMfaRequired={setMfaRequired}
           activeMfaMethod={activeMfaMethod}

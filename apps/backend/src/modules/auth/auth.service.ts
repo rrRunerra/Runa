@@ -67,6 +67,11 @@ export class AuthService {
       }
     }
 
+    // 1.5. Check if this is a Passwordless Login Code verification
+    if (data.isLoginCode === 'true' && data.loginCode) {
+      return this.verifyLoginCode(data.loginCode);
+    }
+
     // 2. Check if this is a Passwordless Passkey direct login
     if (data.isPasskeyOnly === 'true' && data.passkeyResponse) {
       let parsedResponse;
@@ -522,6 +527,84 @@ export class AuthService {
     await this.cacheService.del(`global-passkey-challenge:${expectedChallenge}`);
 
     const token = await this.signToken(user);
+    return {
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        permissions: user.permissions,
+        avatarUrl: user.avatarUrl,
+        displayName: user.displayName,
+        passwordChangedAt: user.passwordChangedAt,
+      },
+      token,
+    };
+  }
+
+  public async generateLoginCode() {
+    let code = '';
+    let exists = true;
+    let attempts = 0;
+
+    while (exists && attempts < 10) {
+      code = Math.floor(1000000000 + Math.random() * 9000000000).toString();
+      const val = await this.cacheService.get(`login-code:${code}`);
+      if (!val) {
+        exists = false;
+      }
+      attempts++;
+    }
+
+    if (exists) {
+      throw new BadRequestException('Could not generate a unique login code');
+    }
+
+    await this.cacheService.set(`login-code:${code}`, { status: 'PENDING' }, 300);
+
+    return { code };
+  }
+
+  public async getLoginCodeStatus(code: string) {
+    const data = await this.cacheService.get<{ status: string }>(`login-code:${code}`);
+    if (!data) {
+      return { status: 'EXPIRED' };
+    }
+    return { status: data.status };
+  }
+
+  public async linkLoginCode(userId: string, code: string) {
+    const cacheKey = `login-code:${code}`;
+    const data = await this.cacheService.get<{ status: string }>(cacheKey);
+
+    if (!data || data.status !== 'PENDING') {
+      throw new BadRequestException('Invalid or expired login code');
+    }
+
+    await this.cacheService.set(cacheKey, { status: 'APPROVED', userId }, 300);
+
+    return { success: true };
+  }
+
+  public async verifyLoginCode(code: string) {
+    const cacheKey = `login-code:${code}`;
+    const cached = await this.cacheService.get<{ status: string; userId?: string }>(cacheKey);
+
+    if (!cached || cached.status !== 'APPROVED' || !cached.userId) {
+      throw new UnauthorizedException('Invalid or expired login code');
+    }
+
+    await this.cacheService.del(cacheKey);
+
+    const user = await this.prisma.client.user.findUnique({
+      where: { id: cached.userId },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const token = await this.signToken(user);
+
     return {
       user: {
         id: user.id,

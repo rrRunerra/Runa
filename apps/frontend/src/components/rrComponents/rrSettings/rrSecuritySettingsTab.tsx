@@ -18,6 +18,7 @@ import {
 import { Badge as UiBadge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Card,
   CardHeader,
@@ -57,6 +58,10 @@ export const RrSecuritySettingsTab = ({
 
   // Devices States
   const [devices, setDevices] = useState<any[]>([]);
+
+  // Link Device States
+  const [linkCodeInput, setLinkCodeInput] = useState<string>("");
+  const [isLinking, setIsLinking] = useState<boolean>(false);
 
   // Session Token Refresh States
   const [refreshCountdown, setRefreshCountdown] = useState<number>(0);
@@ -234,6 +239,29 @@ export const RrSecuritySettingsTab = ({
       fetchDevices();
     } catch (err: any) {
       toast.error(err.message || "Revoke failed.");
+    }
+  };
+
+  const handleLinkDevice = async () => {
+    const code = linkCodeInput.replace(/[\s-]/g, "").trim();
+    if (code.length !== 10) {
+      toast.error("Please enter a valid 10-digit code.");
+      return;
+    }
+
+    setIsLinking(true);
+    try {
+      await apiMutate(
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/login-code/link`,
+        "POST",
+        { code },
+      );
+      toast.success("Device linked successfully!");
+      setLinkCodeInput("");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to link device. Code may be invalid or expired.");
+    } finally {
+      setIsLinking(false);
     }
   };
 
@@ -722,6 +750,50 @@ export const RrSecuritySettingsTab = ({
         <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
           Connected Devices
         </h4>
+
+        {/* Link Device via Code Card */}
+        <Card className="border border-border rounded-2xl bg-card shadow-sm">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-primary/10 shrink-0">
+                <Key className="size-4 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-semibold text-foreground">
+                  Link a New Device
+                </CardTitle>
+                <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                  Enter the 10-digit code shown on the device you want to authorize
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-2">
+              <Input
+                id="link-device-code"
+                placeholder="e.g. 1234567890"
+                value={linkCodeInput}
+                onChange={(e) => setLinkCodeInput(e.target.value.replace(/[^0-9\s-]/g, "").slice(0, 12))}
+                disabled={isLinking}
+                className="h-9 text-sm font-mono tracking-widest rounded-xl bg-background border-input"
+                maxLength={12}
+              />
+              <Button
+                onClick={handleLinkDevice}
+                disabled={isLinking || linkCodeInput.replace(/[\s-]/g, "").length !== 10}
+                className="h-9 px-4 text-xs font-semibold rounded-xl shrink-0"
+              >
+                {isLinking ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  "Authorize"
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {devices.map((device) => (
             <RrDeviceItem

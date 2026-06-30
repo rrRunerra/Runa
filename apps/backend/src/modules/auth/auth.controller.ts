@@ -1,4 +1,4 @@
-import { Controller, Post, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Get, Body, Query, Req, HttpCode, HttpStatus } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { Public } from '../../common/decorators/public.decorator';
 import { LoginAuthDto } from './dto/login-auth.dto';
@@ -66,5 +66,27 @@ export class AuthController {
     @Body('passkeyResponse') passkeyResponse: any,
   ) {
     return this.authService.verifyPasskeyLogin(identifier, passkeyResponse);
+  }
+
+  @Public()
+  @Post('login-code/generate')
+  @Throttle({default: {limit: 5, ttl: 60000}})
+  @HttpCode(HttpStatus.OK)
+  async generateLoginCode() {
+    return this.authService.generateLoginCode();
+  }
+
+  @Public()
+  @Get('login-code/status')
+  @Throttle({default: {limit: 60, ttl: 60000}})
+  @HttpCode(HttpStatus.OK)
+  async getLoginCodeStatus(@Query('code') code: string) {
+    return this.authService.getLoginCodeStatus(code);
+  }
+
+  @Post('login-code/link')
+  @HttpCode(HttpStatus.OK)
+  async linkLoginCode(@Req() req: any, @Body('code') code: string) {
+    return this.authService.linkLoginCode(req.user.id, code);
   }
 }

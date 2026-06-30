@@ -131,7 +131,7 @@ export function RrAppearanceModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] sm:max-w-md md:max-w-xl lg:max-w-2xl bg-card border shadow-xl p-0 gap-0 overflow-hidden rounded-xl flex flex-col">
+      <DialogContent className="max-w-[95vw] sm:max-w-md md:max-w-xl lg:max-w-2xl bg-card border shadow-xl p-0 gap-0 rounded-xl flex flex-col max-h-[90dvh] overflow-hidden">
         {/* Header */}
         <DialogHeader className="p-5 sm:p-6 pb-4 sm:pb-5 border-b flex flex-row items-center gap-3.5 shrink-0">
           <div className="p-2.5 rounded-lg bg-primary/10 text-primary border border-primary/20 hidden sm:block shrink-0">
