@@ -2,13 +2,13 @@ import { Controller, Param, UseGuards, Get, Post } from '@nestjs/common';
 import { AnimeService } from './anime.service';
 import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { Public } from 'src/common/decorators/public.decorator';
-import type { AnimeSearchEntity } from './anime.entities';
-import { AnimeEntity } from './entities/anime.entity';
+import type { AnimeSearchEntity, AnimeEntity } from './anime.entities';
 import { AquilaFlags } from '@runa/permissions';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { CacheService } from '../../providers/cache/cache.service';
 import { rrTooManyRequestsException } from 'src/providers/error';
 import { Permissions } from 'src/common/decorators/permissions.decorator';
+import { AnimeDetailDto, SearchAnimeDto } from './anime.dto';
 
 @Controller('anime')
 @UseGuards(AuthGuard, PermissionsGuard)
@@ -22,14 +22,16 @@ export class AnimeController {
 
   @Public()
   @Get('search/:name')
-  async search(@Param('name') name: string): Promise<AnimeSearchEntity[]> {
-    return this.animeService.search(name);
+  async search(@Param() params: SearchAnimeDto): Promise<AnimeSearchEntity[]> {
+    return this.animeService.search(params.name);
   }
 
   @Public()
-  @Get('details/:id')
-  async getAnime(@Param('id') id: string): Promise<AnimeEntity> {
-    return this.animeService.getAnime(parseInt(id));
+  @Get(':id')
+  async animeDetail(
+    @Param('id') params: AnimeDetailDto,
+  ): Promise<AnimeEntity | null> {
+    return await this.animeService.getAnime(params.id);
   }
 
   @Post('refresh/:id')

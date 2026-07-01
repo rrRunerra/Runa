@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { Prisma } from '@runa/database';
 import type { Media } from '../../common/types/types';
-import { AnimeSearchEntity } from './anime.entities';
+import { AnimeEntity, AnimeSearchEntity } from './anime.entities';
 import { rrError } from 'src/providers/error';
 
 @Injectable()
@@ -39,7 +39,7 @@ export class AnimeRepository {
         id: item.id,
         title: item.titleEnglish || item.titleRomaji || '',
         secondaryTitle: item.titleRomaji || null,
-        coverImage: item.coverImageExtraLarge || item.coverImageLarge || null,
+        coverImage: item.coverImageLarge || null,
         averageScore: item.averageScore || null,
         isAdult: item.isAdult || false,
         format: item.format,
@@ -50,6 +50,20 @@ export class AnimeRepository {
         message: 'Failed to fetch anime from db',
       });
     }
+  }
+
+  public async find(id: number): Promise<AnimeEntity | null> {
+    return await this.prisma.client.aquilaAnime.findUnique({
+      where: {
+        id,
+      },
+      include: {
+        animeCharacters: true,
+        animeRelations: true,
+        animeStudios: true,
+        relatedAnimeRelations: true,
+      },
+    });
   }
 
   async findByAnilistId(anilistId: number): Promise<any> {
@@ -80,7 +94,7 @@ export class AnimeRepository {
         native: dbAnime.titleNative,
       },
       coverImage: {
-        extraLarge: dbAnime.coverImageExtraLarge,
+        extraLarge: dbAnime.coverImageLarge,
         large: dbAnime.coverImageLarge,
       },
       bannerImage: dbAnime.bannerImage,
@@ -108,14 +122,14 @@ export class AnimeRepository {
       genres: dbAnime.genres || [],
       source: dbAnime.source,
       tags: dbAnime.tags,
-      relations: dbAnime.relations,
-      characters: dbAnime.characters,
-      studios: dbAnime.studios?.map((name: string) => ({ name })),
+      // relations: dbAnime.relations,
+      // characters: dbAnime.characters,
+      // studios: dbAnime.studios?.map((name: string) => ({ name })),
       averageScore: dbAnime.averageScore,
-      popularity: dbAnime.popularity,
+      // popularity: dbAnime.popularity,
       favourites: dbAnime.favourites,
-      trending: dbAnime.trending,
-      meanScore: dbAnime.meanScore,
+      // trending: dbAnime.trending,
+      // meanScore: dbAnime.meanScore,
       synonyms: dbAnime.synonyms || [],
       hashtag: dbAnime.hashtag,
       countryOfOrigin: dbAnime.countryOfOrigin,

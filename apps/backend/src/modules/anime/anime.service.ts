@@ -3,7 +3,7 @@ import type { Media } from '../../common/types/types';
 import { AnimeRepository } from './anime.repository';
 import { AnimeQueueService } from './anime-queue.service';
 import { rrError, rrNotFoundException } from 'src/providers/error';
-import { AnimeSearchEntity } from './anime.entities';
+import { AnimeEntity, AnimeSearchEntity } from './anime.entities';
 import { CacheService } from 'src/providers/cache/cache.service';
 import { AniListGetResponse } from '../../common/types/types';
 import { AnimeExternal } from './anime.external';
@@ -39,13 +39,15 @@ export class AnimeService {
     }
 
     let result: AnimeSearchEntity[] = [];
+    let usedExternal = false;
 
     if (this.useLocalMedia) {
-      result = await this.animeRepository.search(name)
-    } 
+      result = await this.animeRepository.search(name);
+    }
 
     if (!this.useLocalMedia || result.length === 0) {
       result = await this.animeExternal.search(name);
+      usedExternal = true;
     }
 
     this.logger.debug(`Anime found: ${result.length}`);
@@ -58,42 +60,23 @@ export class AnimeService {
       );
     }
 
+    // Queue a background refresh only when local results were returned
+    if (this.useLocalMedia && !usedExternal && result.length > 0) {
+      this.logger.debug(`Queuing background refresh for anime`);
+      this.animeQueueService.addSearchRefresh(name, cacheKey);
+    }
+
     return result;
   }
 
-  public async getAnime(id: number, forceRefresh = false): Promise<Media> {
+  public async getAnime(id: number): Promise<AnimeEntity | null> {
     if (isNaN(id)) {
       throw new rrError(`${this.moduleCode}IMBAN001`, {
         message: 'ID must be a number',
       });
     }
 
-    const dbAnime = await this.animeRepository.findByAnilistId(id);
-
-    if (dbAnime && !forceRefresh) {
-      const now = new Date();
-      const updatedAt = new Date(dbAnime.updatedAt);
-      const timeSinceUpdate = now.getTime() - updatedAt.getTime();
-
-      if (timeSinceUpdate < CACHE_DURATION_MS) {
-        return this.animeRepository.toMedia(dbAnime);
-      }
-    }
-
-    try {
-      const media = await this.fetchFromAniList(id);
-
-      this.animeQueueService.addJob(id);
-
-      return media;
-    } catch {
-      if (dbAnime) {
-        return this.animeRepository.toMedia(dbAnime);
-      }
-      throw new rrNotFoundException(`${this.moduleCode}ANF001`, {
-        message: 'Anime not found',
-      });
-    }
+    return await this.animeRepository.find(id);
   }
 
   private async fetchFromAniList(id: number): Promise<Media> {

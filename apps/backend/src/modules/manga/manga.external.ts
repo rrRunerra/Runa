@@ -1,24 +1,19 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { AnimeSearchEntity } from './anime.entities';
+import { MangaSearchEntity } from './manga.entities';
 import {
-  AniListMedia,
+  AniListMangaMedia,
   AniListCharacterNode,
   AniListStudioNode,
   AniListRelationNode,
-} from './anime.types';
-import {
-  AnimeFormat,
-  AnimeStatus,
-  MangaFormat,
-  MangaStatus,
-} from '@runa/database';
+} from './manga.types';
+import { AnimeFormat, AnimeStatus, MangaFormat, MangaStatus } from '@runa/database';
 import { rrError } from 'src/providers/error';
 import { PrismaService } from 'src/providers/database/prisma.service';
 
 @Injectable()
-export class AnimeExternal {
-  private readonly logger = new Logger(AnimeExternal.name);
-  private readonly moduleCode: string = 'AeExt-';
+export class MangaExternal {
+  private readonly logger = new Logger(MangaExternal.name);
+  private readonly moduleCode: string = 'MaExt-';
   constructor(private readonly prisma: PrismaService) {}
 
   private readonly searchQuery = `
@@ -31,7 +26,7 @@ export class AnimeExternal {
           hasNextPage
           perPage
         }
-        media(search: $search, type: ANIME) {
+        media(search: $search, type: MANGA) {
           id
           idMal
           title {
@@ -44,10 +39,8 @@ export class AnimeExternal {
           description
           startDate { year month day }
           endDate { year month day }
-          season
-          seasonYear
-          episodes
-          duration
+          chapters
+          volumes
           countryOfOrigin
           source
           hashtag
@@ -56,7 +49,6 @@ export class AnimeExternal {
           genres
           synonyms
           averageScore
-          favourites
           tags { name rank }
           trailer { id site thumbnail }
           relations {
@@ -132,16 +124,16 @@ export class AnimeExternal {
             }
           }
           isAdult
-          nextAiringEpisode { airingAt timeUntilAiring episode }
+          siteUrl
           updatedAt
         }
       }
     }
   `;
 
-  public async search(title: string): Promise<AnimeSearchEntity[]> {
+  public async search(title: string): Promise<MangaSearchEntity[]> {
     try {
-      this.logger.debug('Searching for anime in AniList');
+      this.logger.debug('Searching for manga in AniList');
 
       const res = await fetch('https://graphql.anilist.co', {
         method: 'POST',
@@ -159,37 +151,37 @@ export class AnimeExternal {
       });
 
       const data = (await res.json()) as {
-        data: { Page: { media: AniListMedia[] } };
+        data: { Page: { media: AniListMangaMedia[] } };
       };
 
       const localData = await Promise.all(
         data.data.Page.media.map(async (item) => {
-          const anime = await this.upsertAnime(item);
+          const manga = await this.upsertManga(item);
 
           return {
-            id: anime.id,
-            title: anime.titleEnglish ?? 'Unknown',
-            secondaryTitle: anime.titleRomaji ?? null,
-            coverImage: anime.coverImageLarge ?? null,
-            averageScore: anime.averageScore ?? null,
-            isAdult: anime.isAdult ?? false,
-            format: anime.format,
-            status: anime.status,
+            id: manga.id,
+            title: manga.titleEnglish ?? 'Unknown',
+            secondaryTitle: manga.titleRomaji ?? null,
+            coverImage: manga.coverImageLarge ?? null,
+            averageScore: manga.averageScore ?? null,
+            isAdult: manga.isAdult ?? false,
+            format: manga.format,
+            status: manga.status,
           };
         }),
       );
 
       return localData;
     } catch (error) {
-      this.logger.error(`Failed to fetch anime from AniList: ${error}`);
+      this.logger.error(`Failed to fetch manga from AniList: ${error}`);
       throw new rrError(`${this.moduleCode}FTFAFA001`, {
-        message: 'Failed to fetch anime from AniList',
+        message: 'Failed to fetch manga from AniList',
       });
     }
   }
 
-  private async upsertAnime(item: AniListMedia) {
-    const anime = await this.prisma.client.aquilaAnime.upsert({
+  private async upsertManga(item: AniListMangaMedia) {
+    const manga = await this.prisma.client.aquilaManga.upsert({
       where: { anilistId: item.id },
       update: {
         anilistId: item.id,
@@ -206,27 +198,18 @@ export class AnimeExternal {
         endDateYear: item.endDate?.year,
         endDateMonth: item.endDate?.month,
         endDateDay: item.endDate?.day,
-        season: item.season,
-        seasonYear: item.seasonYear,
-        episodes: item.episodes,
-        duration: item.duration,
+        chapters: item.chapters,
+        volumes: item.volumes,
         countryOfOrigin: item.countryOfOrigin,
         source: item.source,
         hashtag: item.hashtag,
         genres: item.genres ?? [],
         synonyms: item.synonyms ?? [],
         averageScore: item.averageScore,
-        favourites: item.favourites,
-        format: (item.format ?? 'UNKNOWN') as AnimeFormat,
-        status: (item.status ?? 'NOT_YET_RELEASED') as AnimeStatus,
+        format: (item.format ?? 'UNKNOWN') as MangaFormat,
+        status: (item.status ?? 'NOT_YET_RELEASED') as MangaStatus,
         isAdult: item.isAdult ?? false,
         tags: item.tags ? JSON.parse(JSON.stringify(item.tags)) : null,
-        trailers: item.trailer
-          ? JSON.parse(JSON.stringify(item.trailer))
-          : null,
-        nextAiringEpisode: item.nextAiringEpisode
-          ? JSON.parse(JSON.stringify(item.nextAiringEpisode))
-          : null,
         anilistUpdatedAt: item.updatedAt,
         locked: false,
       },
@@ -245,27 +228,18 @@ export class AnimeExternal {
         endDateYear: item.endDate?.year,
         endDateMonth: item.endDate?.month,
         endDateDay: item.endDate?.day,
-        season: item.season,
-        seasonYear: item.seasonYear,
-        episodes: item.episodes,
-        duration: item.duration,
+        chapters: item.chapters,
+        volumes: item.volumes,
         countryOfOrigin: item.countryOfOrigin,
         source: item.source,
         hashtag: item.hashtag,
         genres: item.genres ?? [],
         synonyms: item.synonyms ?? [],
         averageScore: item.averageScore,
-        favourites: item.favourites,
-        format: (item.format ?? 'UNKNOWN') as AnimeFormat,
-        status: (item.status ?? 'NOT_YET_RELEASED') as AnimeStatus,
+        format: (item.format ?? 'UNKNOWN') as MangaFormat,
+        status: (item.status ?? 'NOT_YET_RELEASED') as MangaStatus,
         isAdult: item.isAdult ?? false,
         tags: item.tags ? JSON.parse(JSON.stringify(item.tags)) : null,
-        trailers: item.trailer
-          ? JSON.parse(JSON.stringify(item.trailer))
-          : null,
-        nextAiringEpisode: item.nextAiringEpisode
-          ? JSON.parse(JSON.stringify(item.nextAiringEpisode))
-          : null,
         anilistUpdatedAt: item.updatedAt,
       },
       select: {
@@ -285,16 +259,16 @@ export class AnimeExternal {
       for (const edge of item.characters.edges) {
         const character = await this.upsertCharacter(edge.node);
 
-        await this.prisma.client.aquilaAnimeCharacter.upsert({
+        await this.prisma.client.aquilaMangaCharacter.upsert({
           where: {
-            animeId_characterId: {
-              animeId: anime.id,
+            mangaId_characterId: {
+              mangaId: manga.id,
               characterId: character.id,
             },
           },
           update: { role: edge.role, order: 0 },
           create: {
-            animeId: anime.id,
+            mangaId: manga.id,
             characterId: character.id,
             role: edge.role,
             order: 0,
@@ -308,16 +282,16 @@ export class AnimeExternal {
       for (const edge of item.studios.edges) {
         const studio = await this.upsertStudio(edge.node);
 
-        await this.prisma.client.aquilaAnimeStudio.upsert({
+        await this.prisma.client.aquilaMangaStudio.upsert({
           where: {
-            animeId_studioId: {
-              animeId: anime.id,
+            mangaId_studioId: {
+              mangaId: manga.id,
               studioId: studio.id,
             },
           },
           update: { isMain: edge.isMain },
           create: {
-            animeId: anime.id,
+            mangaId: manga.id,
             studioId: studio.id,
             isMain: edge.isMain,
           },
@@ -336,7 +310,6 @@ export class AnimeExternal {
           await this.upsertRelatedManga(relationNode);
         }
 
-        // Create the relation join record
         const relatedAnime =
           relationNode.type === 'ANIME'
             ? await this.prisma.client.aquilaAnime.findFirst({
@@ -351,20 +324,18 @@ export class AnimeExternal {
               })
             : null;
 
-        const existing = await this.prisma.client.aquilaMediaRelation.findFirst(
-          {
-            where: {
-              animeId: anime.id,
-              relatedAnimeId: relatedAnime?.id ?? null,
-              relatedMangaId: relatedManga?.id ?? null,
-            },
+        const existing = await this.prisma.client.aquilaMediaRelation.findFirst({
+          where: {
+            mangaId: manga.id,
+            relatedAnimeId: relatedAnime?.id ?? null,
+            relatedMangaId: relatedManga?.id ?? null,
           },
-        );
+        });
 
         if (!existing) {
           await this.prisma.client.aquilaMediaRelation.create({
             data: {
-              animeId: anime.id,
+              mangaId: manga.id,
               relatedAnimeId: relatedAnime?.id ?? null,
               relatedMangaId: relatedManga?.id ?? null,
               relationType: edge.relationType,
@@ -374,7 +345,7 @@ export class AnimeExternal {
       }
     }
 
-    return anime;
+    return manga;
   }
 
   private async upsertCharacter(node: AniListCharacterNode) {
@@ -440,11 +411,13 @@ export class AnimeExternal {
       where: { anilistId: node.id },
       update: {
         anilistId: node.id,
+        malId: node.idMal,
         titleEnglish: node.title?.english,
         titleRomaji: node.title?.romaji,
         titleNative: node.title?.native,
         coverImageLarge: node.coverImage?.large,
         bannerImage: node.bannerImage,
+        description: node.description,
         startDateYear: node.startDate?.year,
         startDateMonth: node.startDate?.month,
         startDateDay: node.startDate?.day,
@@ -458,19 +431,21 @@ export class AnimeExternal {
         genres: node.genres ?? [],
         synonyms: node.synonyms ?? [],
         averageScore: node.averageScore,
-        favourites: node.favourites,
         format: (node.format ?? 'UNKNOWN') as AnimeFormat,
         status: (node.status ?? 'NOT_YET_RELEASED') as AnimeStatus,
         isAdult: node.isAdult ?? false,
         hashtag: node.hashtag,
+        anilistUpdatedAt: node.updatedAt,
       },
       create: {
         anilistId: node.id,
+        malId: node.idMal,
         titleEnglish: node.title?.english,
         titleRomaji: node.title?.romaji,
         titleNative: node.title?.native,
         coverImageLarge: node.coverImage?.large,
         bannerImage: node.bannerImage,
+        description: node.description,
         startDateYear: node.startDate?.year,
         startDateMonth: node.startDate?.month,
         startDateDay: node.startDate?.day,
@@ -484,11 +459,11 @@ export class AnimeExternal {
         genres: node.genres ?? [],
         synonyms: node.synonyms ?? [],
         averageScore: node.averageScore,
-        favourites: node.favourites,
         format: (node.format ?? 'UNKNOWN') as AnimeFormat,
         status: (node.status ?? 'NOT_YET_RELEASED') as AnimeStatus,
         isAdult: node.isAdult ?? false,
         hashtag: node.hashtag,
+        anilistUpdatedAt: node.updatedAt,
       },
     });
   }
@@ -518,7 +493,6 @@ export class AnimeExternal {
         genres: node.genres ?? [],
         synonyms: node.synonyms ?? [],
         averageScore: node.averageScore,
-        favourites: node.favourites,
         format: (node.format ?? 'UNKNOWN') as MangaFormat,
         status: (node.status ?? 'NOT_YET_RELEASED') as MangaStatus,
         isAdult: node.isAdult ?? false,
@@ -547,7 +521,6 @@ export class AnimeExternal {
         genres: node.genres ?? [],
         synonyms: node.synonyms ?? [],
         averageScore: node.averageScore,
-        favourites: node.favourites,
         format: (node.format ?? 'UNKNOWN') as MangaFormat,
         status: (node.status ?? 'NOT_YET_RELEASED') as MangaStatus,
         isAdult: node.isAdult ?? false,

@@ -1,60 +1,26 @@
-import {
-  Controller,
-  Param,
-  UseGuards,
-  Get,
-  Query,
-  Injectable,
-  Post,
-} from '@nestjs/common';
+import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 import { MangaService } from './manga.service';
 import { AuthGuard } from '../../common/guards/auth/auth.guard';
-import { PermissionsGuard } from '../../common/guards/permissions.guard';
-import { Public } from '../../common/decorators/public.decorator';
-import { SearchMangaDto } from './dto/search-manga.dto';
-import { MangaSearchEntity } from './entities/manga-search.entity';
-import { MangaEntity } from './entities/manga.entity';
-import { AquilaFlags } from '@runa/permissions';
-import { CacheService } from '../../providers/cache/cache.service';
-import { rrTooManyRequestsException } from 'src/providers/error';
-import { Permissions } from 'src/common/decorators/permissions.decorator';
+import { Public } from 'src/common/decorators/public.decorator';
+import type { MangaSearchEntity, MangaEntity } from './manga.entities';
+import { SearchMangaDto, MangaDetailDto } from './manga.dto';
 
 @Controller('manga')
-@UseGuards(AuthGuard, PermissionsGuard)
+@UseGuards(AuthGuard)
 export class MangaController {
-  private readonly moduleCode = 'MaCtr-';
-
-  constructor(
-    private readonly mangaService: MangaService,
-    private readonly cacheService: CacheService,
-  ) {}
+  constructor(private readonly mangaService: MangaService) {}
 
   @Public()
-  @Get('search')
-  async search(@Query() query: SearchMangaDto): Promise<MangaSearchEntity> {
-    return this.mangaService.search(query.name);
+  @Get('search/:name')
+  async search(@Param() params: SearchMangaDto): Promise<MangaSearchEntity[]> {
+    return this.mangaService.search(params.name);
   }
 
   @Public()
-  @Get('details/:id')
-  async getManga(@Param('id') id: string): Promise<MangaEntity> {
-    return this.mangaService.getManga(parseInt(id));
-  }
-
-  @Post('refresh/:id')
-  @Permissions([AquilaFlags.MEDIA_REFRESH])
-  async refreshManga(@Param('id') id: string): Promise<MangaEntity> {
-    const cooldownKey = `cooldown:refresh:manga:${id}`;
-    const onCooldown = await this.cacheService.get(cooldownKey);
-    if (onCooldown) {
-      throw new rrTooManyRequestsException(`${this.moduleCode}TMWRRPWBRA001`, {
-        message:
-          'This media was refreshed recently. Please wait before refreshing again.',
-      });
-    }
-
-    const result = await this.mangaService.getManga(parseInt(id), true);
-    await this.cacheService.set(cooldownKey, true, 60);
-    return result;
+  @Get(':id')
+  async mangaDetail(
+    @Param('id') params: MangaDetailDto,
+  ): Promise<MangaEntity | null> {
+    return await this.mangaService.getManga(params.id);
   }
 }

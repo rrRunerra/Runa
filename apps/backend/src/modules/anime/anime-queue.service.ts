@@ -2,8 +2,15 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Subject, EMPTY } from 'rxjs';
 import { mergeMap, catchError } from 'rxjs/operators';
 import { AnimeRepository } from './anime.repository';
+import { AnimeExternal } from './anime.external';
+import { CacheService } from 'src/providers/cache/cache.service';
 import { rrInternalServerErrorException } from 'src/providers/error';
 import type { AniListGetResponse } from '../../common/types/types';
+
+interface SearchRefreshJob {
+  query: string;
+  cacheKey: string;
+}
 
 @Injectable()
 export class AnimeQueueService implements OnModuleInit {
@@ -11,16 +18,30 @@ export class AnimeQueueService implements OnModuleInit {
   private readonly moduleCode = 'AeQeSve-';
   private readonly jobQueue = new Subject<number>();
   private readonly processing = new Set<number>();
+  private readonly searchQueue = new Subject<SearchRefreshJob>();
+  private readonly pendingSearches = new Set<string>();
 
-  constructor(private readonly animeRepository: AnimeRepository) {}
+  constructor(
+    private readonly animeRepository: AnimeRepository,
+    private readonly animeExternal: AnimeExternal,
+    private readonly cacheService: CacheService,
+  ) {}
 
   onModuleInit(): void {
     this.processQueue();
+    this.processSearchQueue();
   }
 
   addJob(anilistId: number): void {
     if (!this.processing.has(anilistId)) {
       this.jobQueue.next(anilistId);
+    }
+  }
+
+  addSearchRefresh(query: string, cacheKey: string): void {
+    if (!this.pendingSearches.has(query)) {
+      this.pendingSearches.add(query);
+      this.searchQueue.next({ query, cacheKey });
     }
   }
 
@@ -48,6 +69,39 @@ export class AnimeQueueService implements OnModuleInit {
         }, 1),
         catchError((error) => {
           this.logger.error(`Queue error: ${error}`);
+          return EMPTY;
+        }),
+      )
+      .subscribe();
+  }
+
+  private processSearchQueue(): void {
+    this.searchQueue
+      .pipe(
+        mergeMap(async (job) => {
+          try {
+            this.logger.log(`Processing search refresh: "${job.query}"`);
+            const fresh = await this.animeExternal.search(job.query);
+            if (fresh.length > 0) {
+              await this.cacheService.set(
+                job.cacheKey,
+                JSON.stringify(fresh),
+                60 * 60,
+              );
+            }
+            this.logger.log(`Completed search refresh: "${job.query}"`);
+          } catch (error) {
+            const message =
+              error instanceof Error ? error.message : 'Unknown error';
+            this.logger.error(
+              `Search refresh failed for "${job.query}": ${message}`,
+            );
+          } finally {
+            this.pendingSearches.delete(job.query);
+          }
+        }, 1),
+        catchError((error) => {
+          this.logger.error(`Search queue error: ${error}`);
           return EMPTY;
         }),
       )
@@ -95,10 +149,10 @@ export class AnimeQueueService implements OnModuleInit {
         duration
         source
         averageScore
-        meanScore
-        popularity
-        trending
-        favourites
+        // meanScore
+        // popularity
+        // trending
+        // favourites
         genres
         synonyms
         hashtag
@@ -166,7 +220,6 @@ export class AnimeQueueService implements OnModuleInit {
 
     for (let i = 0; i < maxRetries; i++) {
       try {
-        // Proactively delay to stay under the 90 req/min limit
         await new Promise((resolve) => setTimeout(resolve, 750));
 
         aniListRes = await fetch('https://graphql.anilist.co', {
@@ -244,7 +297,7 @@ export class AnimeQueueService implements OnModuleInit {
       titleRomaji: media.title.romaji,
       titleNative: media.title.native,
       coverImageLarge: media.coverImage.large,
-      coverImageExtraLarge: media.coverImage.extraLarge,
+      // coverImageExtraLarge: media.coverImage.extraLarge,
       bannerImage: media.bannerImage,
       description: media.description,
       startDateYear: media.startDate?.year,
@@ -263,36 +316,36 @@ export class AnimeQueueService implements OnModuleInit {
       format: media.format,
       status: media.status,
       isAdult: media.isAdult,
-      relations: media.relations?.edges.map((edge) => ({
-        id: edge.node.id.toString(),
-        relationType: edge.relationType,
-        title: { romaji: edge.node.title.romaji },
-        format: edge.node.format,
-        type: edge.node.type,
-      })),
-      characters: media.characters?.edges.map((edge) => ({
-        name: edge.node.name.full,
-        image: edge.node.image.medium,
-        role: edge.role,
-        voiceActor:
-          edge.voiceActors && edge.voiceActors[0]
-            ? {
-                name: edge.voiceActors[0].name.full,
-                image: edge.voiceActors[0].image.medium,
-              }
-            : null,
-      })),
-      studios: media.studios?.nodes.map((node) => node.name),
       averageScore: media.averageScore,
-      popularity: media.popularity,
-      favourites: media.favourites,
-      trending: media.trending,
-      meanScore: media.meanScore,
+      // popularity: media.popularity,
+      // trending: media.trending,
+      // meanScore: media.meanScore,
+      // favourites: media.favourites,
       synonyms: media.synonyms || [],
       hashtag: media.hashtag,
       countryOfOrigin: media.countryOfOrigin,
       nextAiringEpisode: media.nextAiringEpisode || undefined,
       trailers: trailers,
+      // relations: media.relations?.edges.map((edge) => ({
+      //   id: edge.node.id.toString(),
+      //   relationType: edge.relationType,
+      //   title: { romaji: edge.node.title.romaji },
+      //   format: edge.node.format,
+      //   type: edge.node.type,
+      // })),
+      // characters: media.characters?.edges.map((edge) => ({
+      //   name: edge.node.name.full,
+      //   image: edge.node.image.medium,
+      //   role: edge.role,
+      //   voiceActor:
+      //     edge.voiceActors && edge.voiceActors[0]
+      //       ? {
+      //           name: edge.voiceActors[0].name.full,
+      //           image: edge.voiceActors[0].image.medium,
+      //         }
+      //       : null,
+      // })),
+      // studios: media.studios?.nodes.map((node) => node.name),
     };
   }
 }
