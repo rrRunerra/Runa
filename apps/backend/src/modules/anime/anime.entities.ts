@@ -1,6 +1,23 @@
 import { AnimeFormat, AnimeStatus } from '@runa/database';
 
 // Shared sub-entity types (used by both anime and manga)
+export interface MediaTag {
+  name: string;
+  rank: number;
+}
+
+export interface AiringSchedule {
+  airingAt: number;
+  timeUntilAiring: number;
+  episode: number;
+}
+
+export interface MediaTrailer {
+  id: string;
+  site: string;
+  thumbnail: string;
+}
+
 export interface CharacterEntity {
   id: number;
   anilistId: number | null;
@@ -82,7 +99,7 @@ export interface AnimeEntity {
   episodes: number | null;
   duration: number | null;
   genres: string[];
-  tags: unknown | null;
+  tags: MediaTag[] | null;
   source: string | null;
   format: AnimeFormat;
   status: AnimeStatus;
@@ -92,8 +109,8 @@ export interface AnimeEntity {
   synonyms: string[];
   hashtag: string | null;
   countryOfOrigin: string | null;
-  nextAiringEpisode: unknown | null;
-  trailers: unknown | null;
+  nextAiringEpisode: AiringSchedule | null;
+  trailers: MediaTrailer | null;
   locked: boolean;
   anilistUpdatedAt: number | null;
   updatedAt: Date;

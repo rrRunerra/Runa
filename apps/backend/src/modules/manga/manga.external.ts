@@ -11,6 +11,7 @@ import {
   AnimeStatus,
   MangaFormat,
   MangaStatus,
+  Prisma,
 } from '@runa/database';
 import { rrError } from 'src/providers/error';
 import { PrismaService } from 'src/providers/database/prisma.service';
@@ -361,7 +362,7 @@ export class MangaExternal {
         format: (item.format ?? 'UNKNOWN') as MangaFormat,
         status: (item.status ?? 'NOT_YET_RELEASED') as MangaStatus,
         isAdult: item.isAdult ?? false,
-        tags: item.tags ? JSON.parse(JSON.stringify(item.tags)) : null,
+        tags: item.tags as Prisma.InputJsonValue,
         anilistUpdatedAt: item.updatedAt,
         locked: false,
       },
@@ -391,7 +392,7 @@ export class MangaExternal {
         format: (item.format ?? 'UNKNOWN') as MangaFormat,
         status: (item.status ?? 'NOT_YET_RELEASED') as MangaStatus,
         isAdult: item.isAdult ?? false,
-        tags: item.tags ? JSON.parse(JSON.stringify(item.tags)) : null,
+        tags: item.tags as Prisma.InputJsonValue,
         anilistUpdatedAt: item.updatedAt,
       },
       select: {

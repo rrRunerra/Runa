@@ -8,7 +8,13 @@ import { AnimeExternal } from './anime.external';
 
 @Module({
   controllers: [AnimeController],
-  providers: [AnimeService, AnimeRepository, AnimeQueueService, CacheService, AnimeExternal],
+  providers: [
+    AnimeService,
+    AnimeRepository,
+    AnimeQueueService,
+    CacheService,
+    AnimeExternal,
+  ],
   exports: [AnimeService],
 })
 export class AnimeModule {}

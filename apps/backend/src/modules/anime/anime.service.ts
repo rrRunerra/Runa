@@ -139,27 +139,4 @@ export class AnimeService {
 
     return await this.animeRepository.find(id);
   }
-
-  // public async ensureAnime(
-  //   anilistId: number,
-  //   malId?: number | null,
-  //   title?: string,
-  //   coverImage?: string,
-  // ): Promise<any> {
-  //   let anime = await this.animeRepository.findByAnilistId(anilistId);
-  //   if (!anime) {
-  //     anime = await this.animeRepository.upsert(anilistId, {
-  //       anilistId,
-  //       malId: malId || null,
-  //       titleRomaji: title || 'Unknown',
-  //       coverImageLarge: coverImage || '',
-  //     });
-  //     this.animeQueueService.addJob(anilistId);
-  //   } else if (malId && !anime.malId) {
-  //     anime = await this.animeRepository.upsert(anilistId, {
-  //       malId,
-  //     });
-  //   }
-  //   return anime;
-  // }
 }

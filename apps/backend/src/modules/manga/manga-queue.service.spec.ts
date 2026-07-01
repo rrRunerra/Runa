@@ -1,15 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AnimeQueueService } from './anime-queue.service';
-import { AnimeExternal } from './anime.external';
+import { MangaQueueService } from './manga-queue.service';
+import { MangaExternal } from './manga.external';
 import { CacheService } from '../../providers/cache/cache.service';
-import type { AnimeSearchEntity } from './anime.entities';
+import type { MangaSearchEntity } from './manga.entities';
 
-describe('AnimeQueueService', () => {
-  let service: AnimeQueueService;
-  let animeExternal: AnimeExternal;
+describe('MangaQueueService', () => {
+  let service: MangaQueueService;
+  let mangaExternal: MangaExternal;
   let cacheService: CacheService;
 
-  const mockAnimeExternal = {
+  const mockMangaExternal = {
     search: jest.fn(),
   };
 
@@ -20,7 +20,7 @@ describe('AnimeQueueService', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
 
-    // Fast-forward setTimeout so tests don't wait
+    // Fast-forward setTimeout so tests don't actually wait
     jest.spyOn(global, 'setTimeout').mockImplementation((cb: any) => {
       if (typeof cb === 'function') {
         cb();
@@ -30,14 +30,14 @@ describe('AnimeQueueService', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        AnimeQueueService,
-        { provide: AnimeExternal, useValue: mockAnimeExternal },
+        MangaQueueService,
+        { provide: MangaExternal, useValue: mockMangaExternal },
         { provide: CacheService, useValue: mockCacheService },
       ],
     }).compile();
 
-    service = module.get<AnimeQueueService>(AnimeQueueService);
-    animeExternal = module.get<AnimeExternal>(AnimeExternal);
+    service = module.get<MangaQueueService>(MangaQueueService);
+    mangaExternal = module.get<MangaExternal>(MangaExternal);
     cacheService = module.get<CacheService>(CacheService);
   });
 
@@ -50,95 +50,123 @@ describe('AnimeQueueService', () => {
   });
 
   describe('addSearchRefresh and search queue processing', () => {
-    const mockSearchResults: AnimeSearchEntity[] = [
+    const mockSearchResults: MangaSearchEntity[] = [
       {
         id: 1,
         title: 'Naruto',
         secondaryTitle: null,
         coverImage: 'cover.jpg',
-        format: 'TV',
+        format: 'MANGA',
         status: 'FINISHED',
         isAdult: false,
         averageScore: 80,
       },
     ];
 
-    it('should fetch from AnimeExternal and update cache on search refresh', async () => {
-      mockAnimeExternal.search.mockResolvedValue(mockSearchResults);
+    it('should fetch from MangaExternal and update cache on search refresh', async () => {
+      mockMangaExternal.search.mockResolvedValue(mockSearchResults);
 
       // Initialize the queue listener
       service.onModuleInit();
-      service.addSearchRefresh('Naruto', 'anime-search:naruto');
+      service.addSearchRefresh('Naruto', 'manga-search:naruto');
 
       // Allow async pipeline to execute
       await new Promise((resolve) => process.nextTick(resolve));
 
-      expect(mockAnimeExternal.search).toHaveBeenCalledWith('Naruto');
+      expect(mockMangaExternal.search).toHaveBeenCalledWith('Naruto');
       expect(mockCacheService.set).toHaveBeenCalledWith(
-        'anime-search:naruto',
+        'manga-search:naruto',
         JSON.stringify(mockSearchResults),
         60 * 60,
       );
     });
 
     it('should not update cache if search returns empty results', async () => {
-      mockAnimeExternal.search.mockResolvedValue([]);
+      mockMangaExternal.search.mockResolvedValue([]);
 
       service.onModuleInit();
-      service.addSearchRefresh('Empty', 'anime-search:empty');
+      service.addSearchRefresh('Empty', 'manga-search:empty');
 
       await new Promise((resolve) => process.nextTick(resolve));
 
-      expect(mockAnimeExternal.search).toHaveBeenCalledWith('Empty');
+      expect(mockMangaExternal.search).toHaveBeenCalledWith('Empty');
       expect(mockCacheService.set).not.toHaveBeenCalled();
     });
 
     it('should deduplicate identical pending searches', async () => {
-      // Slow enough that first hasn't completed when second is added
-      let resolveSearch!: (value: AnimeSearchEntity[]) => void;
-      mockAnimeExternal.search.mockImplementation(() => {
-        return new Promise<AnimeSearchEntity[]>((resolve) => {
+      let resolveSearch!: (value: MangaSearchEntity[]) => void;
+      mockMangaExternal.search.mockImplementation(() => {
+        return new Promise<MangaSearchEntity[]>((resolve) => {
           resolveSearch = resolve;
         });
       });
 
       service.onModuleInit();
-      service.addSearchRefresh('Naruto', 'anime-search:naruto');
-      service.addSearchRefresh('Naruto', 'anime-search:naruto');
+      service.addSearchRefresh('Naruto', 'manga-search:naruto');
+      service.addSearchRefresh('Naruto', 'manga-search:naruto');
 
-      // Only one job should have been queued (the second is deduped)
-      // Wait for the observable pipe to process
+      // Allow the observable pipe to start processing the first job
       await new Promise((resolve) => process.nextTick(resolve));
 
-      // There should only be one call - but the mergeMap hasn't resolved yet,
-      // so let's resolve it and check the final state
+      // Resolve the first search
       resolveSearch!(mockSearchResults);
       await new Promise((resolve) => process.nextTick(resolve));
 
       // External should only be called once despite adding the same search twice
-      expect(mockAnimeExternal.search).toHaveBeenCalledTimes(1);
+      expect(mockMangaExternal.search).toHaveBeenCalledTimes(1);
+    });
+
+    it('should allow a different search after a pending one completes', async () => {
+      mockMangaExternal.search
+        .mockResolvedValueOnce(mockSearchResults)
+        .mockResolvedValueOnce([
+          {
+            id: 2,
+            title: 'One Piece',
+            secondaryTitle: null,
+            coverImage: null,
+            format: 'MANGA',
+            status: 'RELEASING',
+            isAdult: false,
+            averageScore: 90,
+          },
+        ]);
+
+      service.onModuleInit();
+      service.addSearchRefresh('Naruto', 'manga-search:naruto');
+
+      await new Promise((resolve) => process.nextTick(resolve));
+
+      // After Naruto completes, add a different search
+      service.addSearchRefresh('One Piece', 'manga-search:onepiece');
+
+      await new Promise((resolve) => process.nextTick(resolve));
+
+      expect(mockMangaExternal.search).toHaveBeenCalledTimes(2);
+      expect(mockMangaExternal.search).toHaveBeenNthCalledWith(1, 'Naruto');
+      expect(mockMangaExternal.search).toHaveBeenNthCalledWith(2, 'One Piece');
     });
 
     it('should handle search errors gracefully and not crash the queue', async () => {
-      mockAnimeExternal.search.mockRejectedValue(new Error('API error'));
+      mockMangaExternal.search.mockRejectedValue(new Error('API error'));
 
       service.onModuleInit();
-      service.addSearchRefresh('Naruto', 'anime-search:naruto');
+      service.addSearchRefresh('Naruto', 'manga-search:naruto');
 
       await new Promise((resolve) => process.nextTick(resolve));
 
-      expect(mockAnimeExternal.search).toHaveBeenCalled();
+      expect(mockMangaExternal.search).toHaveBeenCalled();
       expect(mockCacheService.set).not.toHaveBeenCalled();
 
       // Queue should still work after error - add another search
-      mockAnimeExternal.search.mockResolvedValue(mockSearchResults);
-      service.addSearchRefresh('OnePiece', 'anime-search:onepiece');
+      mockMangaExternal.search.mockResolvedValue(mockSearchResults);
+      service.addSearchRefresh('OnePiece', 'manga-search:onepiece');
 
       await new Promise((resolve) => process.nextTick(resolve));
 
-      expect(mockAnimeExternal.search).toHaveBeenCalledWith('OnePiece');
+      expect(mockMangaExternal.search).toHaveBeenCalledWith('OnePiece');
       expect(mockCacheService.set).toHaveBeenCalledWith(
-        'anime-search:onepiece',
+        'manga-search:onepiece',
         JSON.stringify(mockSearchResults),
         60 * 60,
       );
@@ -146,17 +174,17 @@ describe('AnimeQueueService', () => {
 
     it('should process searches sequentially (concurrency 1)', async () => {
       const callOrder: number[] = [];
-      mockAnimeExternal.search.mockImplementation(
+      mockMangaExternal.search.mockImplementation(
         (query: string) =>
-          new Promise<AnimeSearchEntity[]>((resolve) => {
+          new Promise<MangaSearchEntity[]>((resolve) => {
             callOrder.push(Number(query));
-            const results: AnimeSearchEntity[] = [
+            const results: MangaSearchEntity[] = [
               {
                 id: Number(query),
                 title: query,
                 secondaryTitle: null,
                 coverImage: null,
-                format: 'TV',
+                format: 'MANGA',
                 status: 'FINISHED',
                 isAdult: false,
                 averageScore: null,
@@ -174,7 +202,7 @@ describe('AnimeQueueService', () => {
       await new Promise((resolve) => process.nextTick(resolve));
 
       expect(callOrder).toEqual([1, 2]);
-      expect(mockAnimeExternal.search).toHaveBeenCalledTimes(2);
+      expect(mockMangaExternal.search).toHaveBeenCalledTimes(2);
     });
   });
 });

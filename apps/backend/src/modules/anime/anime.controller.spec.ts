@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AnimeController } from './anime.controller';
 import { AnimeService } from './anime.service';
 import { AuthGuard } from '../../common/guards/auth/auth.guard';
+import { CacheService } from '../../providers/cache/cache.service';
 import { Reflector } from '@nestjs/core';
 
 describe('AnimeController', () => {
@@ -12,19 +13,24 @@ describe('AnimeController', () => {
     const mockAnimeService = {
       search: jest.fn(),
       getAnime: jest.fn(),
+      refreshAnime: jest.fn(),
     };
 
     const mockAuthGuard = {
       canActivate: jest.fn().mockReturnValue(true),
     };
 
+    const mockCacheService = {
+      get: jest.fn(),
+      set: jest.fn(),
+      del: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AnimeController],
       providers: [
-        {
-          provide: AnimeService,
-          useValue: mockAnimeService,
-        },
+        { provide: AnimeService, useValue: mockAnimeService },
+        { provide: CacheService, useValue: mockCacheService },
         Reflector,
       ],
     })
@@ -54,14 +60,26 @@ describe('AnimeController', () => {
     });
   });
 
-  describe('getAnime', () => {
+  describe('animeDetail', () => {
     it('should call animeService.getAnime with the parsed integer ID', async () => {
-      const mockResult = { id: '123', title: { romaji: 'Sample' } } as any;
+      const mockResult = { id: 123, title: { romaji: 'Sample' } } as any;
       jest.spyOn(service, 'getAnime').mockResolvedValue(mockResult);
 
-      const result = await controller.getAnime('123');
+      const result = await controller.animeDetail({ id: 123 });
 
       expect(service.getAnime).toHaveBeenCalledWith(123);
+      expect(result).toBe(mockResult);
+    });
+  });
+
+  describe('refreshAnime', () => {
+    it('should call animeService.refreshAnime with the parsed integer ID', async () => {
+      const mockResult = { id: 123, title: { romaji: 'Refreshed' } } as any;
+      jest.spyOn(service, 'refreshAnime').mockResolvedValue(mockResult);
+
+      const result = await controller.refreshAnime({ id: 123 });
+
+      expect(service.refreshAnime).toHaveBeenCalledWith(123);
       expect(result).toBe(mockResult);
     });
   });

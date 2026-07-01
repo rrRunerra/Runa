@@ -5,7 +5,12 @@ import type {
   AniListFuzzyDate,
 } from '../anime/anime.types';
 
-export { AniListCharacterNode, AniListStudioNode, AniListRelationNode, AniListFuzzyDate };
+export {
+  AniListCharacterNode,
+  AniListStudioNode,
+  AniListRelationNode,
+  AniListFuzzyDate,
+};
 
 export interface AniListMangaSearchResponse {
   data: {

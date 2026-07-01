@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../providers/database/prisma.service';
-import { Prisma } from '@runa/database';
 import { MangaEntity, MangaSearchEntity } from './manga.entities';
 import { rrError } from 'src/providers/error';
 
@@ -52,7 +51,7 @@ export class MangaRepository {
   }
 
   public async find(id: number): Promise<MangaEntity | null> {
-    return await this.prisma.client.aquilaManga.findUnique({
+    const result = await this.prisma.client.aquilaManga.findUnique({
       where: {
         id,
       },
@@ -63,22 +62,7 @@ export class MangaRepository {
         mangaStudios: true,
       },
     });
-  }
 
-  async findByAnilistId(anilistId: number): Promise<any> {
-    return this.prisma.client.aquilaManga.findUnique({
-      where: { anilistId },
-    });
-  }
-
-  async upsert(
-    anilistId: number,
-    data: Prisma.AquilaMangaCreateInput | Prisma.AquilaMangaUpdateInput,
-  ): Promise<any> {
-    return this.prisma.client.aquilaManga.upsert({
-      where: { anilistId },
-      update: data,
-      create: data as Prisma.AquilaMangaCreateInput,
-    });
+    return result as unknown as MangaEntity | null;
   }
 }

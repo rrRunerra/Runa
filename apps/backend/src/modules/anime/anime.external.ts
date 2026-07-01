@@ -11,6 +11,7 @@ import {
   AnimeStatus,
   MangaFormat,
   MangaStatus,
+  Prisma,
 } from '@runa/database';
 import { rrError } from 'src/providers/error';
 import { PrismaService } from 'src/providers/database/prisma.service';
@@ -370,13 +371,10 @@ export class AnimeExternal {
         format: (item.format ?? 'UNKNOWN') as AnimeFormat,
         status: (item.status ?? 'NOT_YET_RELEASED') as AnimeStatus,
         isAdult: item.isAdult ?? false,
-        tags: item.tags ? JSON.parse(JSON.stringify(item.tags)) : null,
-        trailers: item.trailer
-          ? JSON.parse(JSON.stringify(item.trailer))
-          : null,
-        nextAiringEpisode: item.nextAiringEpisode
-          ? JSON.parse(JSON.stringify(item.nextAiringEpisode))
-          : null,
+        tags: item.tags as Prisma.InputJsonValue,
+        trailers: (item.trailer ?? Prisma.DbNull) as Prisma.InputJsonValue,
+        nextAiringEpisode: (item.nextAiringEpisode ??
+          Prisma.DbNull) as Prisma.InputJsonValue,
         anilistUpdatedAt: item.updatedAt,
         locked: false,
       },
@@ -409,13 +407,10 @@ export class AnimeExternal {
         format: (item.format ?? 'UNKNOWN') as AnimeFormat,
         status: (item.status ?? 'NOT_YET_RELEASED') as AnimeStatus,
         isAdult: item.isAdult ?? false,
-        tags: item.tags ? JSON.parse(JSON.stringify(item.tags)) : null,
-        trailers: item.trailer
-          ? JSON.parse(JSON.stringify(item.trailer))
-          : null,
-        nextAiringEpisode: item.nextAiringEpisode
-          ? JSON.parse(JSON.stringify(item.nextAiringEpisode))
-          : null,
+        tags: item.tags as Prisma.InputJsonValue,
+        trailers: (item.trailer ?? Prisma.DbNull) as Prisma.InputJsonValue,
+        nextAiringEpisode: (item.nextAiringEpisode ??
+          Prisma.DbNull) as Prisma.InputJsonValue,
         anilistUpdatedAt: item.updatedAt,
       },
       select: {
