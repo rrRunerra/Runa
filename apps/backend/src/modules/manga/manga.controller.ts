@@ -1,9 +1,11 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards, Post } from '@nestjs/common';
 import { MangaService } from './manga.service';
 import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { Public } from 'src/common/decorators/public.decorator';
+import { Permissions } from 'src/common/decorators/permissions.decorator';
+import { AquilaFlags } from '@runa/permissions';
 import type { MangaSearchEntity, MangaEntity } from './manga.entities';
-import { SearchMangaDto, MangaDetailDto } from './manga.dto';
+import { SearchMangaDto, MangaDetailDto, MangaRefreshDto } from './manga.dto';
 
 @Controller('manga')
 @UseGuards(AuthGuard)
@@ -19,8 +21,16 @@ export class MangaController {
   @Public()
   @Get(':id')
   async mangaDetail(
-    @Param('id') params: MangaDetailDto,
-  ): Promise<MangaEntity | null> {
+    @Param() params: MangaDetailDto,
+  ): Promise<MangaEntity | undefined> {
     return await this.mangaService.getManga(params.id);
+  }
+
+  @Post(':id/refresh')
+  @Permissions([AquilaFlags.MEDIA_REFRESH])
+  async refreshAnime(
+    @Param() params: MangaRefreshDto,
+  ): Promise<MangaEntity | undefined | null> {
+    return await this.mangaService.refreshManga(params.id);
   }
 }

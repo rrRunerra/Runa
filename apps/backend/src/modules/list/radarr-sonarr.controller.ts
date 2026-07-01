@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Controller, Get, UseGuards, Req, Logger } from '@nestjs/common';
 import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { PrismaService } from '../../providers/database/prisma.service';

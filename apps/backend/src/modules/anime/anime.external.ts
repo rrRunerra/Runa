@@ -21,6 +21,115 @@ export class AnimeExternal {
   private readonly moduleCode: string = 'AeExt-';
   constructor(private readonly prisma: PrismaService) {}
 
+  private readonly getQuery = `
+    query ($id: Int) {
+      Media(id: $id, type: ANIME) {
+        id
+        idMal
+        title {
+          romaji
+          english
+          native
+        }
+        format
+        status
+        description
+        startDate { year month day }
+        endDate { year month day }
+        season
+        seasonYear
+        episodes
+        duration
+        countryOfOrigin
+        source
+        hashtag
+        coverImage { large }
+        bannerImage
+        genres
+        synonyms
+        averageScore
+        favourites
+        tags { name rank }
+        trailer { id site thumbnail }
+        relations {
+          edges {
+            id
+            relationType
+            node {
+              id
+              idMal
+              title { romaji english native }
+              format
+              type
+              status
+              description
+              coverImage { large }
+              bannerImage
+              startDate { year month day }
+              endDate { year month day }
+              episodes
+              chapters
+              volumes
+              duration
+              countryOfOrigin
+              source
+              averageScore
+              favourites
+              genres
+              synonyms
+              hashtag
+              isAdult
+              siteUrl
+              updatedAt
+            }
+          }
+        }
+        characters(perPage: 25, sort: [ROLE, RELEVANCE, ID]) {
+          edges {
+            role
+            node {
+              id
+              name {
+                first
+                middle
+                last
+                full
+                native
+                alternative
+                alternativeSpoiler
+              }
+              image { large }
+              description
+              gender
+              age
+              bloodType
+              dateOfBirth { year month day }
+            }
+            voiceActors(language: JAPANESE) {
+              id
+              name { full }
+              image { large }
+            }
+          }
+        }
+        studios {
+          edges {
+            isMain
+            node {
+              id
+              name
+              isAnimationStudio
+              siteUrl
+            }
+          }
+        }
+        isAdult
+        nextAiringEpisode { airingAt timeUntilAiring episode }
+        updatedAt
+      }
+    }
+  `;
+
   private readonly searchQuery = `
     query ($search: String, $page: Int, $perPage: Int) {
       Page(page: $page, perPage: $perPage) {
@@ -139,6 +248,47 @@ export class AnimeExternal {
     }
   `;
 
+  public async fetchAndUpsertAnime(anilistId: number): Promise<void> {
+    try {
+      const res = await fetch('https://graphql.anilist.co', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          query: this.getQuery,
+          variables: { id: anilistId },
+        }),
+      });
+
+      if (!res.ok) {
+        throw new rrError(`${this.moduleCode}AAE001`, {
+          message: `AniList API error: ${res.status}`,
+        });
+      }
+
+      const data = (await res.json()) as {
+        data: { Media: AniListMedia };
+      };
+
+      if (!data.data?.Media) {
+        throw new rrError(`${this.moduleCode}AWAINF001`, {
+          message: `Anime with AniList ID ${anilistId} not found`,
+        });
+      }
+
+      await this.upsertAnime(data.data.Media);
+    } catch (error) {
+      this.logger.error(
+        `Failed to fetch anime ${anilistId} from AniList: ${error}`,
+      );
+      throw new rrError(`${this.moduleCode}FTFAFA003`, {
+        message: 'Failed to fetch anime from AniList',
+      });
+    }
+  }
+
   public async search(title: string): Promise<AnimeSearchEntity[]> {
     try {
       this.logger.debug('Searching for anime in AniList');
@@ -168,7 +318,7 @@ export class AnimeExternal {
 
           return {
             id: anime.id,
-            title: anime.titleEnglish ?? 'Unknown',
+            title: anime.titleEnglish ?? 'rrUnknown',
             secondaryTitle: anime.titleRomaji ?? null,
             coverImage: anime.coverImageLarge ?? null,
             averageScore: anime.averageScore ?? null,

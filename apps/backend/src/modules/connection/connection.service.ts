@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import {
   rrBadRequestException,

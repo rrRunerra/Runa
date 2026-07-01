@@ -4,7 +4,11 @@ import { MangaExternal } from './manga.external';
 import { MangaQueueService } from './manga-queue.service';
 import { CacheService } from 'src/providers/cache/cache.service';
 import { MangaEntity, MangaSearchEntity } from './manga.entities';
-import { rrError } from 'src/providers/error';
+import {
+  rrError,
+  rrNotFoundException,
+  rrTooManyRequestsException,
+} from 'src/providers/error';
 
 @Injectable()
 export class MangaService {
@@ -64,35 +68,75 @@ export class MangaService {
     return result;
   }
 
-  public async getManga(id: number): Promise<MangaEntity | null> {
+  public async getManga(id: number): Promise<MangaEntity | undefined> {
     if (isNaN(id)) {
       throw new rrError(`${this.moduleCode}IMBAN001`, {
         message: 'ID must be a number',
       });
     }
 
-    return await this.mangaRepository.find(id);
-  }
+    const cacheKey = `manga:${id}`;
+    const cached = await this.cacheService.get<MangaEntity>(cacheKey);
 
-  public async ensureManga(
-    anilistId: number,
-    malId?: number | null,
-    title?: string,
-    coverImage?: string,
-  ): Promise<any> {
-    let manga = await this.mangaRepository.findByAnilistId(anilistId);
-    if (!manga) {
-      manga = await this.mangaRepository.upsert(anilistId, {
-        anilistId,
-        malId: malId || null,
-        titleRomaji: title || 'Unknown',
-        coverImageLarge: coverImage || '',
-      });
-    } else if (malId && !manga.malId) {
-      manga = await this.mangaRepository.upsert(anilistId, {
-        malId,
+    if (cached) {
+      this.logger.debug(`getManga cache hit for ${id}`);
+      return cached;
+    }
+
+    this.logger.debug(`getManga fetching from db`);
+    const data = await this.mangaRepository.find(id);
+
+    if (!data) {
+      throw new rrNotFoundException(`${this.moduleCode}MNF001`, {
+        message: `Manga not found`,
       });
     }
-    return manga;
+
+    await this.cacheService.set(cacheKey, data, this.cacheDuration);
+
+    return data;
+  }
+
+  public async refreshManga(
+    id: number,
+  ): Promise<MangaEntity | undefined | null> {
+    if (isNaN(id)) {
+      throw new rrError(`${this.moduleCode}IMBAN002`, {
+        message: 'ID must be a number',
+      });
+    }
+
+    const cacheKey = `cooldown:refresh:manga:${id}`;
+    const onCooldown = await this.cacheService.get(cacheKey);
+
+    if (onCooldown) {
+      throw new rrTooManyRequestsException(`${this.moduleCode}TMWRR001`, {
+        message: 'This media was refreshed recently.',
+      });
+    }
+
+    // Look up the existing entry to get the AniList ID
+    const existing = await this.mangaRepository.find(id);
+    if (!existing) {
+      throw new rrNotFoundException(`${this.moduleCode}MNFID001`, {
+        message: 'Manga not found in database',
+      });
+    }
+    if (!existing.anilistId) {
+      throw new rrError(`${this.moduleCode}MHNAICR001`, {
+        message: 'Manga has no AniList ID, cannot refresh',
+      });
+    }
+
+    // Fetch fresh data from AniList
+    await this.mangaExternal.fetchAndUpsertManga(existing.anilistId);
+
+    // Bust the cache so next getManga fetches fresh data
+    await this.cacheService.del(`manga:${id}`);
+
+    const cooldownSeconds = 5 * 60;
+    await this.cacheService.set(cacheKey, true, cooldownSeconds);
+
+    return await this.mangaRepository.find(id);
   }
 }

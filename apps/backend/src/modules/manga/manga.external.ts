@@ -6,7 +6,12 @@ import {
   AniListStudioNode,
   AniListRelationNode,
 } from './manga.types';
-import { AnimeFormat, AnimeStatus, MangaFormat, MangaStatus } from '@runa/database';
+import {
+  AnimeFormat,
+  AnimeStatus,
+  MangaFormat,
+  MangaStatus,
+} from '@runa/database';
 import { rrError } from 'src/providers/error';
 import { PrismaService } from 'src/providers/database/prisma.service';
 
@@ -15,6 +20,112 @@ export class MangaExternal {
   private readonly logger = new Logger(MangaExternal.name);
   private readonly moduleCode: string = 'MaExt-';
   constructor(private readonly prisma: PrismaService) {}
+
+  private readonly getQuery = `
+    query ($id: Int) {
+      Media(id: $id, type: MANGA) {
+        id
+        idMal
+        title {
+          romaji
+          english
+          native
+        }
+        format
+        status
+        description
+        startDate { year month day }
+        endDate { year month day }
+        chapters
+        volumes
+        countryOfOrigin
+        source
+        hashtag
+        coverImage { large }
+        bannerImage
+        genres
+        synonyms
+        averageScore
+        tags { name rank }
+        trailer { id site thumbnail }
+        relations {
+          edges {
+            id
+            relationType
+            node {
+              id
+              idMal
+              title { romaji english native }
+              format
+              type
+              status
+              description
+              coverImage { large }
+              bannerImage
+              startDate { year month day }
+              endDate { year month day }
+              episodes
+              chapters
+              volumes
+              duration
+              countryOfOrigin
+              source
+              averageScore
+              favourites
+              genres
+              synonyms
+              hashtag
+              isAdult
+              siteUrl
+              updatedAt
+            }
+          }
+        }
+        characters(perPage: 25, sort: [ROLE, RELEVANCE, ID]) {
+          edges {
+            role
+            node {
+              id
+              name {
+                first
+                middle
+                last
+                full
+                native
+                alternative
+                alternativeSpoiler
+              }
+              image { large }
+              description
+              gender
+              age
+              bloodType
+              dateOfBirth { year month day }
+            }
+            voiceActors(language: JAPANESE) {
+              id
+              name { full }
+              image { large }
+            }
+          }
+        }
+        studios {
+          edges {
+            isMain
+            node {
+              id
+              name
+              isAnimationStudio
+              siteUrl
+            }
+          }
+        }
+        isAdult
+        siteUrl
+        updatedAt
+      }
+    }
+  `;
 
   private readonly searchQuery = `
     query ($search: String, $page: Int, $perPage: Int) {
@@ -131,6 +242,47 @@ export class MangaExternal {
     }
   `;
 
+  public async fetchAndUpsertManga(anilistId: number): Promise<void> {
+    try {
+      const res = await fetch('https://graphql.anilist.co', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify({
+          query: this.getQuery,
+          variables: { id: anilistId },
+        }),
+      });
+
+      if (!res.ok) {
+        throw new rrError(`${this.moduleCode}AAE001`, {
+          message: `AniList API error: ${res.status}`,
+        });
+      }
+
+      const data = (await res.json()) as {
+        data: { Media: AniListMangaMedia };
+      };
+
+      if (!data.data?.Media) {
+        throw new rrError(`${this.moduleCode}MWAINF002`, {
+          message: `Manga with AniList ID ${anilistId} not found`,
+        });
+      }
+
+      await this.upsertManga(data.data.Media);
+    } catch (error) {
+      this.logger.error(
+        `Failed to fetch manga ${anilistId} from AniList: ${error}`,
+      );
+      throw new rrError(`${this.moduleCode}FTFMFA003`, {
+        message: 'Failed to fetch manga from AniList',
+      });
+    }
+  }
+
   public async search(title: string): Promise<MangaSearchEntity[]> {
     try {
       this.logger.debug('Searching for manga in AniList');
@@ -160,7 +312,7 @@ export class MangaExternal {
 
           return {
             id: manga.id,
-            title: manga.titleEnglish ?? 'Unknown',
+            title: manga.titleEnglish ?? 'rrUnknown',
             secondaryTitle: manga.titleRomaji ?? null,
             coverImage: manga.coverImageLarge ?? null,
             averageScore: manga.averageScore ?? null,
@@ -324,13 +476,15 @@ export class MangaExternal {
               })
             : null;
 
-        const existing = await this.prisma.client.aquilaMediaRelation.findFirst({
-          where: {
-            mangaId: manga.id,
-            relatedAnimeId: relatedAnime?.id ?? null,
-            relatedMangaId: relatedManga?.id ?? null,
+        const existing = await this.prisma.client.aquilaMediaRelation.findFirst(
+          {
+            where: {
+              mangaId: manga.id,
+              relatedAnimeId: relatedAnime?.id ?? null,
+              relatedMangaId: relatedManga?.id ?? null,
+            },
           },
-        });
+        );
 
         if (!existing) {
           await this.prisma.client.aquilaMediaRelation.create({

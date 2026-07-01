@@ -28,7 +28,6 @@ export class AnimeQueueService implements OnModuleInit {
   ) {}
 
   onModuleInit(): void {
-    this.processQueue();
     this.processSearchQueue();
   }
 
@@ -43,36 +42,6 @@ export class AnimeQueueService implements OnModuleInit {
       this.pendingSearches.add(query);
       this.searchQueue.next({ query, cacheKey });
     }
-  }
-
-  private processQueue(): void {
-    this.jobQueue
-      .pipe(
-        mergeMap(async (anilistId) => {
-          if (this.processing.has(anilistId)) {
-            return;
-          }
-
-          this.processing.add(anilistId);
-
-          try {
-            this.logger.log(`Processing sync job for anime ${anilistId}`);
-            await this.syncAnimeFromAniList(anilistId);
-            this.logger.log(`Completed sync job for anime ${anilistId}`);
-          } catch (error) {
-            const message =
-              error instanceof Error ? error.message : 'Unknown error';
-            this.logger.error(`Failed to sync anime ${anilistId}: ${message}`);
-          } finally {
-            this.processing.delete(anilistId);
-          }
-        }, 1),
-        catchError((error) => {
-          this.logger.error(`Queue error: ${error}`);
-          return EMPTY;
-        }),
-      )
-      .subscribe();
   }
 
   private processSearchQueue(): void {

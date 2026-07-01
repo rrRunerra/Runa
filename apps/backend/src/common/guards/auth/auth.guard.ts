@@ -8,6 +8,7 @@ import { prisma } from '@runa/database';
 import { IS_PUBLIC_KEY } from '../../decorators/public.decorator';
 import { CacheService } from '../../../providers/cache/cache.service';
 import {
+  rrError,
   rrNotFoundException,
   rrUnauthorizedException,
 } from 'src/providers/error';
@@ -116,9 +117,12 @@ export class AuthGuard implements CanActivate {
         message: 'No authentication token found',
       });
     }
-
     const { payload } = await jwtVerify<AuthPayload>(token, this.secret, {
       algorithms: ['HS256'],
+    }).catch((e) => {
+      throw new rrError(`${this.guardCode}FTVJT001`, {
+        message: `Failed to verify JWT token`,
+      });
     });
 
     // Verify if password has changed since token issuance (throttled to 5 minutes)
