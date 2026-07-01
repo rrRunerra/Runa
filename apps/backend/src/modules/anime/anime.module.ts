@@ -4,10 +4,11 @@ import { AnimeController } from './anime.controller';
 import { AnimeRepository } from './anime.repository';
 import { AnimeQueueService } from './anime-queue.service';
 import { CacheService } from 'src/providers/cache/cache.service';
+import { AnimeExternal } from './anime.external';
 
 @Module({
   controllers: [AnimeController],
-  providers: [AnimeService, AnimeRepository, AnimeQueueService, CacheService],
+  providers: [AnimeService, AnimeRepository, AnimeQueueService, CacheService, AnimeExternal],
   exports: [AnimeService],
 })
 export class AnimeModule {}

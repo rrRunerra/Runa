@@ -4,10 +4,9 @@ import { AnimeRepository } from './anime.repository';
 import { AnimeQueueService } from './anime-queue.service';
 import { rrError, rrNotFoundException } from 'src/providers/error';
 import { AnimeSearchEntity } from './anime.entities';
-
-import type { AniListSearchResponse } from './anime.types';
 import { CacheService } from 'src/providers/cache/cache.service';
 import { AniListGetResponse } from '../../common/types/types';
+import { AnimeExternal } from './anime.external';
 
 const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
 const CACHE_DURATION_MS = isDev ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
@@ -16,16 +15,21 @@ const CACHE_DURATION_MS = isDev ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
 export class AnimeService {
   private readonly logger = new Logger(AnimeService.name);
   private readonly moduleCode = 'AeSve-';
+  private readonly useLocalMedia = process.env.USE_LOCAL_MEDIA_ONLY ?? false;
+  private readonly cacheDuration = Number(
+    process.env.ANIME_CACHE_DURATION ?? 60 * 60,
+  );
 
   constructor(
     private readonly animeRepository: AnimeRepository,
     private readonly animeQueueService: AnimeQueueService,
     private readonly cacheService: CacheService,
+    private readonly animeExternal: AnimeExternal,
   ) {}
 
   public async search(name: string): Promise<AnimeSearchEntity[]> {
     const normalized = name.trim().toLowerCase();
-    const cacheKey = `anime-search:${normalized}`;
+    const cacheKey = `anime-search:${normalized.replaceAll(' ', '')}`;
 
     const cached = await this.cacheService.get<AnimeSearchEntity[]>(cacheKey);
 
@@ -34,60 +38,24 @@ export class AnimeService {
       return cached;
     }
 
-    const aniListRes = await fetch('https://graphql.anilist.co', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({
-        query: `query ($search: String, $page: Int, $perPage: Int) {
-  Page (page: $page, perPage: $perPage) {
-    pageInfo {
-      total
-      currentPage
-      lastPage
-      hasNextPage
-      perPage
+    let result: AnimeSearchEntity[] = [];
+
+    if (this.useLocalMedia) {
+      result = await this.animeRepository.search(name)
+    } 
+
+    if (!this.useLocalMedia || result.length === 0) {
+      result = await this.animeExternal.search(name);
     }
-    media (search: $search, type: ANIME) {
-      id
-      title {
-        romaji
-        english
-      }
-      coverImage {
-        large
-      }
-      averageScore
-      format
-      status
-      isAdult
-    }
-  }
 
-}`,
-        variables: {
-          search: name,
-        },
-      }),
-    });
-
-    const data = ((await aniListRes.json()) as AniListSearchResponse).data;
-
-    const result: AnimeSearchEntity[] = data.Page.media.map((item) => ({
-      id: item.id,
-      title: item.title.english ?? item.title.romaji ?? '',
-      secondaryTitle: item.title.romaji ?? null,
-      coverImage: item.coverImage?.large ?? null,
-      averageScore: item.averageScore ?? null,
-      isAdult: item.isAdult ?? false,
-      format: item.format,
-      status: item.status,
-    }));
+    this.logger.debug(`Anime found: ${result.length}`);
 
     if (result.length > 0) {
-      await this.cacheService.set(cacheKey, JSON.stringify(result), 60 * 60);
+      await this.cacheService.set(
+        cacheKey,
+        JSON.stringify(result),
+        this.cacheDuration,
+      );
     }
 
     return result;

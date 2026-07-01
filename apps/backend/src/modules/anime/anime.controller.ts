@@ -1,4 +1,4 @@
-import { Controller, Param, UseGuards, Get, Query, Post } from '@nestjs/common';
+import { Controller, Param, UseGuards, Get, Post } from '@nestjs/common';
 import { AnimeService } from './anime.service';
 import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { Public } from 'src/common/decorators/public.decorator';

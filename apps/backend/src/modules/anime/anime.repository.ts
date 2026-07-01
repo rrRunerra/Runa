@@ -1,11 +1,56 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { Prisma } from '@runa/database';
 import type { Media } from '../../common/types/types';
+import { AnimeSearchEntity } from './anime.entities';
+import { rrError } from 'src/providers/error';
 
 @Injectable()
 export class AnimeRepository {
   constructor(private readonly prisma: PrismaService) {}
+
+  private readonly moduleCode = 'AeRpstry-';
+  private readonly logger = new Logger(AnimeRepository.name);
+
+  public async search(name: string): Promise<AnimeSearchEntity[]> {
+    this.logger.debug(`Searching for anime: ${name} in local db`);
+    try {
+      const query = name.trim().split(/\s+/).join(' & ');
+
+      const data = await this.prisma.client.aquilaAnime.findMany({
+        where: {
+          OR: [
+            {
+              titleEnglish: {
+                search: query,
+              },
+            },
+            {
+              titleRomaji: {
+                search: query,
+              },
+            },
+          ],
+        },
+        take: 30,
+      });
+
+      return data.map((item) => ({
+        id: item.id,
+        title: item.titleEnglish || item.titleRomaji || '',
+        secondaryTitle: item.titleRomaji || null,
+        coverImage: item.coverImageExtraLarge || item.coverImageLarge || null,
+        averageScore: item.averageScore || null,
+        isAdult: item.isAdult || false,
+        format: item.format,
+        status: item.status,
+      }));
+    } catch {
+      throw new rrError(`${this.moduleCode}FTFAFD001`, {
+        message: 'Failed to fetch anime from db',
+      });
+    }
+  }
 
   async findByAnilistId(anilistId: number): Promise<any> {
     return this.prisma.client.aquilaAnime.findUnique({

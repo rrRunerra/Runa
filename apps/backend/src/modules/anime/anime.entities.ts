@@ -1,10 +1,12 @@
+import { AnimeFormat, AnimeStatus } from '@runa/database';
+
 export interface AnimeSearchEntity {
   id: number;
   title: string;
   secondaryTitle: string | null;
   coverImage: string | null;
-  format: 'TV' | 'TV_SHORT' | 'MOVIE' | 'SPECIAL' | 'OVA' | 'ONA' | 'MUSIC';
-  status: 'FINISHED' | 'RELEASING' | 'NOT_YET_RELEASED' | 'CANCELLED';
+  format: AnimeFormat;
+  status: AnimeStatus;
   isAdult: boolean;
   averageScore: number | null;
 }
