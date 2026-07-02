@@ -1,319 +1,168 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../../providers/database/prisma.service';
-import type {
-  Media,
-  SearchMedia,
-  SearchApiResponse,
-  SearchMediaItem,
-} from '../../common/types/types';
-import { TvRepository } from './repositories/tv.repository';
-import { TvQueueService } from './services/tv-queue.service';
+import { TvRepository } from './tv.repository';
+import { TvQueueService } from './tv-queue.service';
 import {
+  rrError,
   rrNotFoundException,
-  rrInternalServerErrorException,
+  rrTooManyRequestsException,
 } from 'src/providers/error';
+import { TvEntity, TvSearchEntity } from './tv.entities';
+import { CacheService } from 'src/providers/cache/cache.service';
+import { TvExternal } from './tv.external';
 
-const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
-const CACHE_DURATION_MS = isDev ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
+interface DbTvResult {
+  id: number;
+  tvdbId: number;
+  titleEnglish?: string | null;
+  titleRomaji?: string | null;
+  coverImage?: string | null;
+}
 
 @Injectable()
 export class TvService {
-  constructor(
-    private readonly prisma: PrismaService,
-    private readonly tvRepository: TvRepository,
-    private readonly tvQueueService: TvQueueService,
-  ) {}
-
   private readonly logger = new Logger(TvService.name);
   private readonly moduleCode = 'TvSve-';
-  private token: string | null = null;
+  private readonly useLocalMedia = process.env.USE_LOCAL_MEDIA_ONLY ?? false;
+  private readonly cacheDuration = Number(
+    process.env.TV_CACHE_DURATION ?? 60 * 60,
+  );
 
-  private async setTheTvDbToken(): Promise<void> {
-    const loginRes = await fetch('https://api4.thetvdb.com/v4/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        apikey: process.env.THETVDB_KEY,
-      }),
-    });
-    const data = await loginRes.json();
+  constructor(
+    private readonly tvRepository: TvRepository,
+    private readonly tvQueueService: TvQueueService,
+    private readonly cacheService: CacheService,
+    private readonly tvExternal: TvExternal,
+  ) {}
 
-    if (data.data) {
-      this.token = data.data.token;
-    } else {
-      throw new rrInternalServerErrorException(`${this.moduleCode}AEI001`, {
-        message: data.message,
-      });
+  public async search(name: string): Promise<TvSearchEntity[]> {
+    const normalized = name.trim().toLowerCase();
+    const cacheKey = `tv-search:${normalized.replaceAll(' ', '')}`;
+
+    const cached = await this.cacheService.get<TvSearchEntity[]>(cacheKey);
+
+    if (cached) {
+      this.logger.debug(`TV search cache hit ${cached.length} entries`);
+      return cached;
     }
-  }
 
-  public async search(name: string): Promise<SearchMedia[]> {
-    if (!this.token) {
-      await this.setTheTvDbToken();
-    }
-    const res = await fetch(
-      `https://api4.thetvdb.com/v4/search?query=${name}&type=series&language=eng`,
-      {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-          Authorization: `Bearer ${this.token}`,
-        },
-      },
-    );
+    let result: TvSearchEntity[] = [];
+    let usedExternal = false;
 
-    const data: SearchApiResponse = await res.json();
-    if (data.status == 'error') {
-      await this.setTheTvDbToken();
-      return this.search(name);
+    if (this.useLocalMedia) {
+      result = await this.tvRepository.search(name);
     }
-    const result: SearchMedia[] = data.data.map((item: SearchMediaItem) => {
-      const englishTitle = item.translations?.eng || item.name;
-      return {
-        title: {
-          romaji: item.name,
-          english: englishTitle,
-        },
-        coverImage: {
-          large: item.thumbnail || '',
-        },
-        format: item.type || 'TV',
-        status: item.status || 'FINISHED',
-        isAdult: false,
-        id: item.tvdb_id?.toString() || item.id?.toString() || '',
-      };
-    });
+
+    if (!this.useLocalMedia || result.length === 0) {
+      result = (await this.tvExternal.search(name)) ?? [];
+      usedExternal = true;
+    }
+
+    this.logger.debug(`TV series found: ${result.length}`);
+
+    if (result.length > 0) {
+      await this.cacheService.set(
+        cacheKey,
+        JSON.stringify(result),
+        this.cacheDuration,
+      );
+    }
+
+    if (this.useLocalMedia && !usedExternal && result.length > 0) {
+      this.logger.debug(`Queuing background refresh for TV series`);
+      this.tvQueueService.addSearchRefresh(name, cacheKey);
+    }
+
     return result;
   }
 
-  public async getTv(id: string, forceRefresh = false): Promise<Media> {
-    if (!/^\d+$/.test(id)) {
-      throw new rrInternalServerErrorException(`${this.moduleCode}IIF001`, {
-        message: 'Invalid id format',
+  public async getTv(id: number): Promise<TvEntity | undefined> {
+    if (isNaN(id)) {
+      throw new rrError(`${this.moduleCode}IMBAN001`, {
+        message: 'ID must be a number',
       });
     }
 
-    const tvdbId = parseInt(id);
-    const dbTv = await this.tvRepository.findByTvdbId(tvdbId);
+    const cacheKey = `tv:${id}`;
+    const cached = await this.cacheService.get<TvEntity>(cacheKey);
 
-    if (dbTv && !forceRefresh) {
-      const now = new Date();
-      const updatedAt = new Date(dbTv.updatedAt);
-      const timeSinceUpdate = now.getTime() - updatedAt.getTime();
-
-      if (timeSinceUpdate < CACHE_DURATION_MS && dbTv.description !== null) {
-        return this.tvRepository.toMedia(dbTv);
-      }
+    if (cached) {
+      this.logger.debug(`getTv cache hit for ${id}`);
+      return cached;
     }
 
-    try {
-      const media = await this.fetchFromTvdb(id);
+    this.logger.debug(`getTv fetching from db`);
+    const data = await this.tvRepository.find(id);
 
-      this.tvQueueService.addJob(tvdbId);
-
-      return media;
-    } catch (error) {
-      if (dbTv) {
-        return this.tvRepository.toMedia(dbTv);
-      }
-      throw new rrNotFoundException(`${this.moduleCode}TSNF001`, {
-        message: 'TV show not found',
+    if (!data) {
+      throw new rrNotFoundException(`${this.moduleCode}TNF001`, {
+        message: 'TV series not found',
       });
     }
+
+    await this.cacheService.set(cacheKey, data, this.cacheDuration);
+
+    return data;
   }
 
-  private async fetchFromTvdb(id: string): Promise<Media> {
-    if (!this.token) {
-      await this.setTheTvDbToken();
+  public async refreshTv(id: number): Promise<TvEntity | undefined | null> {
+    if (isNaN(id)) {
+      throw new rrError(`${this.moduleCode}IMBAN002`, {
+        message: 'ID must be a number',
+      });
     }
 
-    // Fetch extended series data (includes seasons, but not all episodes)
-    const seriesRes = await fetch(
-      `https://api4.thetvdb.com/v4/series/${id}/extended`,
-      {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-          Authorization: `Bearer ${this.token}`,
-        },
-      },
-    );
+    const cacheKey = `cooldown:refresh:tv:${id}`;
+    const onCooldown = await this.cacheService.get(cacheKey);
 
-    const seriesData = await seriesRes.json();
-
-    if (seriesData.message == 'Unauthorized') {
-      await this.setTheTvDbToken();
-      return this.fetchFromTvdb(id);
+    if (onCooldown) {
+      throw new rrTooManyRequestsException(`${this.moduleCode}TMWRR001`, {
+        message: 'This media was refreshed recently.',
+      });
     }
 
-    const series = seriesData.data;
+    const existing = await this.tvRepository.find(id);
+    if (!existing) {
+      throw new rrNotFoundException(`${this.moduleCode}TNFID001`, {
+        message: 'TV series not found in database',
+      });
+    }
+    if (!existing.tvdbId) {
+      throw new rrError(`${this.moduleCode}THNTVDB001`, {
+        message: 'TV series has no TVDB ID, cannot refresh',
+      });
+    }
 
-    // Explicitly fetch English translations for the series
-    const transRes = await fetch(
-      `https://api4.thetvdb.com/v4/series/${id}/translations/eng`,
-      {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-          Authorization: `Bearer ${this.token}`,
-        },
-      },
-    );
-    const transData = await transRes.json();
-    const translation = transData.data;
+    await this.tvExternal.fetchAndUpsertTv(existing.tvdbId);
 
-    const englishName = translation?.name || series.name;
-    const englishOverview = translation?.overview || series.overview || '';
+    await this.cacheService.del(`tv:${id}`);
 
-    // Fetch all episodes in 'official' (aired) order with English translations
-    const episodesRes = await fetch(
-      `https://api4.thetvdb.com/v4/series/${id}/episodes/official/eng`,
-      {
-        method: 'GET',
-        headers: {
-          Accept: 'application/json',
-          Authorization: `Bearer ${this.token}`,
-        },
-      },
-    );
-    const episodesData = await episodesRes.json();
-    const allEpisodes = episodesData.data?.episodes || [];
+    const cooldownSeconds = 5 * 60;
+    await this.cacheService.set(cacheKey, true, cooldownSeconds);
 
-    const artworks = series.artworks || [];
-    const seriesBanners = artworks.filter(
-      (a: any) => a.type === 1 || a.type === 3,
-    );
-    const randomBanner =
-      seriesBanners.length > 0
-        ? seriesBanners[Math.floor(Math.random() * seriesBanners.length)].image
-        : series.bannerImage || null;
-
-    return {
-      id: series.id.toString(),
-      title: {
-        romaji: series.name,
-        english: englishName,
-      },
-      coverImage: {
-        large: series.image,
-      },
-      bannerImage: randomBanner,
-      format: 'TV',
-      status: series.status?.name || 'FINISHED',
-      description: englishOverview,
-      genres: series.genres?.map((g: any) => g.name) || [],
-      trailers:
-        series.trailers?.map((t: any) => ({
-          id: t.id.toString(),
-          name: t.name,
-          url: t.url,
-          language: t.language,
-        })) || [],
-      characters:
-        series.characters?.map((c: any) => ({
-          id: c.id.toString(),
-          name: c.name,
-          personName: c.personName,
-          image: c.image ?? '',
-          role: c.peopleType,
-        })) || [],
-      studios:
-        series.companies
-          ?.filter(
-            (co: any) =>
-              co.companyType.name === 'Network' ||
-              co.companyType.name === 'Production Company',
-          )
-          .map((s: any) => ({
-            id: s.id.toString(),
-            name: s.name,
-          })) || [],
-      originalCountry: series.originalCountry || null,
-      originalLanguage: series.originalLanguage || null,
-      tvType: series.type || null,
-      averageRuntime: series.averageRuntime || null,
-      contentRating:
-        series.contentRatings?.find((r: any) => r.country === 'usa')?.name ||
-        series.contentRatings?.[0]?.name ||
-        null,
-      seasons:
-        series.seasons
-          ?.filter((s: any) => s.type.id === 1)
-          .filter((s: any) => s.number !== 0)
-          .sort((a: any, b: any) => a.number - b.number)
-          .map((s: any) => {
-            // Map episodes that belong to this season
-            const seasonEpisodes = allEpisodes
-              .filter((ep: any) => ep.seasonNumber === s.number)
-              .map((ep: any) => ({
-                id: ep.id.toString(),
-                number: ep.number,
-                name:
-                  ep.nameTranslations?.find((t: any) => t.language === 'eng')
-                    ?.name ||
-                  ep.name ||
-                  `Episode ${ep.number}`,
-                overview:
-                  ep.overviewTranslations?.find(
-                    (t: any) => t.language === 'eng',
-                  )?.overview || ep.overview,
-                image: ep.image ?? '',
-                airDate: ep.aired ?? '',
-              }))
-              .sort((a: any, b: any) => a.number - b.number);
-
-            return {
-              id: s.id.toString(),
-              number: s.number,
-              name:
-                s.nameTranslations?.find((t: any) => t.language === 'eng')
-                  ?.name || s.name,
-              image: s.image,
-              episodeCount: seasonEpisodes.length,
-              episodes: seasonEpisodes,
-            };
-          })
-          .filter((s: any) => s.episodes.length > 0) || [],
-    };
+    return await this.tvRepository.find(id);
   }
 
-  public async ensureTv(tvdbId: number, title?: string, coverImage?: string) {
-    let tv = await this.tvRepository.findByTvdbId(tvdbId);
-    if (!tv || tv.description === null || tv.seasons === null) {
+  public async ensureTv(
+    tvdbId: number,
+    title?: string,
+    coverImage?: string,
+  ): Promise<DbTvResult | null> {
+    let tv = (await this.tvRepository.findByTvdbId(
+      tvdbId,
+    )) as DbTvResult | null;
+    if (!tv) {
       try {
-        const fullTv = await this.fetchFromTvdb(tvdbId.toString());
-        const dbData = {
-          tvdbId: parseInt(fullTv.id),
-          titleEnglish: fullTv.title.english || null,
-          titleRomaji: fullTv.title.romaji || null,
-          coverImage: fullTv.coverImage.large || null,
-          bannerImage: fullTv.bannerImage || null,
-          description: fullTv.description || null,
-          status: fullTv.status || null,
-          originalCountry: fullTv.originalCountry || null,
-          originalLanguage: fullTv.originalLanguage || null,
-          tvType: fullTv.tvType || null,
-          averageRuntime: fullTv.averageRuntime || null,
-          contentRating: fullTv.contentRating || null,
-          genres: fullTv.genres || [],
-          studios: fullTv.studios?.map((s) => s.name) || [],
-          cast: fullTv.characters as any,
-          trailers: fullTv.trailers as any,
-          seasons: fullTv.seasons as any,
-        };
-        tv = await this.tvRepository.upsert(tvdbId, dbData);
-      } catch (err) {
-        if (!tv) {
-          this.logger.warn(
-            `Failed to fetch TV series ${tvdbId} details from TVDB synchronously, creating skeleton: ${err.message}`,
-          );
-          tv = await this.tvRepository.upsert(tvdbId, {
-            tvdbId,
-            titleRomaji: title || 'Unknown',
-            coverImage: coverImage || '',
-          });
-          this.tvQueueService.addJob(tvdbId);
-        }
+        await this.tvExternal.fetchAndUpsertTv(tvdbId);
+        tv = (await this.tvRepository.findByTvdbId(
+          tvdbId,
+        )) as DbTvResult | null;
+      } catch {
+        const upserted = await this.tvRepository.upsert(tvdbId, {
+          tvdbId,
+          titleRomaji: title || 'Unknown',
+          coverImage: coverImage || null,
+        });
+        tv = upserted as DbTvResult;
       }
     }
     return tv;

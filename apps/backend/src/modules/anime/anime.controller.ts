@@ -5,17 +5,13 @@ import { Public } from 'src/common/decorators/public.decorator';
 import type { AnimeSearchEntity, AnimeEntity } from './anime.entities';
 import { AquilaFlags } from '@runa/permissions';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
-import { CacheService } from '../../providers/cache/cache.service';
 import { Permissions } from 'src/common/decorators/permissions.decorator';
 import { AnimeDetailDto, SearchAnimeDto, AnimeRefreshDto } from './anime.dto';
 
 @Controller('anime')
 @UseGuards(AuthGuard, PermissionsGuard)
 export class AnimeController {
-  constructor(
-    private readonly animeService: AnimeService,
-    private readonly cacheService: CacheService,
-  ) {}
+  constructor(private readonly animeService: AnimeService) {}
 
   private readonly moduleCode: string = 'AeCtr-';
 

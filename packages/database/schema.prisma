@@ -546,44 +546,66 @@ enum MangaListStatus {
 model AquilaMovie {
     id     Int @id @default(autoincrement())
     tvdbId Int @unique
+    tmdbId Int?
+    imdbId String?
 
-    titleEnglish String?
-    titleRomaji  String?
+    titleEnglish String? @db.Text
+    titleRomaji  String? @db.Text
+    titleNative  String? @db.Text
 
-    coverImage  String?
-    bannerImage String?
-    description String?
+    coverImage  String? @db.Text
+    bannerImage String? @db.Text
+    description String? @db.Text
+    slug        String?
 
-    status  String?
-    runtime Int?
+    releaseDate String?
+    status      String?
+    runtime     Int?
+    budget      String?
+    revenue     String?
+    boxOffice   String?
 
     genres  String[] @db.Text
     studios String[] @db.Text
+    tags    Json?    @db.Json
 
-    cast Json? @db.Json
+    startDateYear  Int?
+    startDateMonth Int?
+    startDateDay   Int?
+
+    endDateYear  Int?
+    endDateMonth Int?
+    endDateDay   Int?
+
+    trailers Json? @db.Json
 
     originalCountry  String?
     originalLanguage String?
     contentRating    String?
-    trailers         Json?   @db.Json
 
     locked               Boolean               @default(false)
     updatedAt            DateTime              @updatedAt
     aquilaMovieUserLists AquilaMovieUserList[]
+    movieActors          AquilaMovieActor[]
 
     @@index([tvdbId])
+    @@index([tmdbId])
 }
 
 model AquilaTv {
     id     Int @id @default(autoincrement())
     tvdbId Int @unique
+    tmdbId Int?
+    imdbId String?
 
-    titleEnglish String?
-    titleRomaji  String?
+    titleEnglish String? @db.Text
+    titleRomaji  String? @db.Text
+    titleNative  String? @db.Text
 
-    coverImage  String?
-    bannerImage String?
-    description String?
+    coverImage  String? @db.Text
+    bannerImage String? @db.Text
+    description String? @db.Text
+    slug        String?
 
     status           String?
     originalCountry  String?
@@ -591,11 +613,20 @@ model AquilaTv {
     tvType           String?
     subgenre         String?
     averageRuntime   Int?
+    firstAired       String?
 
     genres  String[] @db.Text
     studios String[] @db.Text
+    tags    Json?    @db.Json
 
-    cast     Json? @db.Json
+    startDateYear  Int?
+    startDateMonth Int?
+    startDateDay   Int?
+
+    endDateYear  Int?
+    endDateMonth Int?
+    endDateDay   Int?
+
     seasons  Json? @db.Json
     trailers Json? @db.Json
 
@@ -604,8 +635,55 @@ model AquilaTv {
     locked          Boolean            @default(false)
     updatedAt       DateTime           @updatedAt
     aquilaUserLists AquilaTvUserList[]
+    tvActors         AquilaTvActor[]
 
     @@index([tvdbId])
+    @@index([tmdbId])
+}
+
+model AquilaActor {
+    id        Int  @id @default(autoincrement())
+    peopleId  Int? @unique
+
+    name       String? @db.Text
+    personName String? @db.Text
+    image      String? @db.Text
+    peopleType String?
+
+    movieActors AquilaMovieActor[]
+    tvActors    AquilaTvActor[]
+
+    @@index([peopleId])
+}
+
+model AquilaMovieActor {
+    movieId Int
+    actorId Int
+
+    role  String?
+    order Int?
+
+    movie AquilaMovie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+    actor AquilaActor @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+    @@id([movieId, actorId])
+    @@index([movieId])
+    @@index([actorId])
+}
+
+model AquilaTvActor {
+    tvId    Int
+    actorId Int
+
+    role  String?
+    order Int?
+
+    tv    AquilaTv    @relation(fields: [tvId], references: [id], onDelete: Cascade)
+    actor AquilaActor @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+    @@id([tvId, actorId])
+    @@index([tvId])
+    @@index([actorId])
 }
 
 enum TvListStatus {

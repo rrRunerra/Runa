@@ -527,16 +527,28 @@ export class ConnectionService implements OnModuleInit {
               continue;
             }
             // 1. Ensure TV exists in db
-            await this.tvService.ensureTv(
+            const dbTv = await this.tvService.ensureTv(
               item.tvdbId,
               item.title,
               item.coverImage,
             );
+            const tvId = dbTv?.id;
+            if (!tvId) {
+              const errMsg = `Failed to ensure TV series with TVDB ID ${item.tvdbId}`;
+              console.warn(errMsg);
+              failedItems.push({
+                title: itemTitle,
+                providerId: providerItemId,
+                reason: 'Failed to create TV record in DB',
+                mediaType: 'tv',
+              });
+              continue;
+            }
 
             // 2. Conflict Resolution
             const existing =
               await this.prisma.client.aquilaTvUserList.findUnique({
-                where: { username_tvdbId: { username, tvdbId: item.tvdbId } },
+                where: { username_tvId: { username, tvId } },
               });
 
             const finalItemId =
@@ -575,7 +587,7 @@ export class ConnectionService implements OnModuleInit {
                 await this.prisma.client.aquilaTvUserList.create({
                   data: {
                     username,
-                    tvdbId: item.tvdbId,
+                    tvId,
                     status: tvStatus as any,
                     score: item.score || 0,
                     notes: item.notes || '',
@@ -693,16 +705,28 @@ export class ConnectionService implements OnModuleInit {
               continue;
             }
             // 1. Ensure Movie exists in db
-            await this.movieService.ensureMovie(
+            const dbMovie = await this.movieService.ensureMovie(
               item.tvdbId,
               item.title,
               item.coverImage,
             );
+            const movieId = dbMovie?.id;
+            if (!movieId) {
+              const errMsg = `Failed to ensure movie with TVDB ID ${item.tvdbId}`;
+              console.warn(errMsg);
+              failedItems.push({
+                title: itemTitle,
+                providerId: providerItemId,
+                reason: 'Failed to create movie record in DB',
+                mediaType: 'movie',
+              });
+              continue;
+            }
 
             // 2. Conflict Resolution
             const existing =
               await this.prisma.client.aquilaMovieUserList.findUnique({
-                where: { username_tvdbId: { username, tvdbId: item.tvdbId } },
+                where: { username_movieId: { username, movieId } },
               });
 
             const finalItemId =
@@ -736,7 +760,7 @@ export class ConnectionService implements OnModuleInit {
               await this.prisma.client.aquilaMovieUserList.create({
                 data: {
                   username,
-                  tvdbId: item.tvdbId,
+                  movieId,
                   status: movieStatus as any,
                   score: item.score || 0,
                   notes: item.notes || '',

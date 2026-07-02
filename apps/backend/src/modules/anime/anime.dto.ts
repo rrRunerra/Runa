@@ -18,8 +18,8 @@ export class AnimeDetailDto {
 
 export class AnimeRefreshDto {
   @Type(() => Number)
-  @IsDefined({ message: `AeDlDto-ICBE001: Id cannot be empty` })
-  @IsInt({ message: `AeDlDto-IMBAN001: Id must be a number` })
-  @Min(1, { message: `AeDlDto-ICBLTO001: Id cannot be less than one` })
+  @IsDefined({ message: `AeRhDto-ICBE001: Id cannot be empty` })
+  @IsInt({ message: `AeRhDto-IMBAN001: Id must be a number` })
+  @Min(1, { message: `AeRhDto-ICBLTO001: Id cannot be less than one` })
   id: number;
 }
