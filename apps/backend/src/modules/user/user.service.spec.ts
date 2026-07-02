@@ -312,7 +312,7 @@ describe('UserService', () => {
         },
       });
 
-      const backup = await service.verifyPasskeyRegister('user-1', { id: 'cred-1' }, 'My PC');
+      const backup = await service.verifyPasskeyRegister('user-1', { id: 'cred-1' } as never, 'My PC');
 
       expect(backup.length).toBe(10);
       expect(mockPrismaClient.$transaction).toHaveBeenCalled();

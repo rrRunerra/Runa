@@ -1,26 +1,48 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { PrismaService } from '../../providers/database/prisma.service';
-import { CacheService } from '../../providers/cache/cache.service';
-import { MailService } from '../../providers/mail/mail.service';
-import type { User } from '@runa/database';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { PrivacySettingsDto } from './dto/privacy-settings.dto';
-import { MediaService } from '../media/media.service';
+import { Prisma, type User } from '@runa/database';
 import { BitField, DEFAULT_PERMISSIONS, RunaFlags } from '@runa/permissions';
 import bcrypt from 'bcrypt';
 import { generateSecret, generateURI, verify } from 'otplib';
-import { encrypt, decrypt } from '@runa/crypto/server';
+import { encrypt } from '@runa/crypto/server';
 import * as crypto from 'crypto';
 import {
   generateRegistrationOptions,
   verifyRegistrationResponse,
+  type RegistrationResponseJSON,
 } from '@simplewebauthn/server';
+
 import {
   rrBadRequestException,
   rrConflictException,
   rrNotFoundException,
 } from 'src/providers/error';
+import { CacheService } from '../../providers/cache/cache.service';
+import { MailService } from '../../providers/mail/mail.service';
+import { MediaService } from '../media/media.service';
+
+import { UserRepository } from './user.repository';
+import type { PrivacySettings, RegisterDeviceData } from './user.types';
+import type {
+  TotpSetupEntity,
+  PasskeyEntity,
+  MfaStatusEntity,
+  DeviceEntity,
+  DeviceStatusEntity,
+  E2eeKeysEntity,
+  SuccessEntity,
+  UserProfileEntity,
+} from './user.entities';
+import type {
+  CreateUserDto,
+  UpdateUserDto,
+  PrivacySettingsDto,
+  UpdateSettingsDto,
+  RegisterDeviceDto,
+} from './user.dto';
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 const RESERVED_KEYWORDS = new Set([
   'break',
@@ -129,16 +151,6 @@ const RESERVED_KEYWORDS = new Set([
   'is',
 ]);
 
-export interface PrivacySettings {
-  [key: string]: boolean;
-  profile: boolean;
-  animeList: boolean;
-  mangaList: boolean;
-  tvList: boolean;
-  movieList: boolean;
-  connections: boolean;
-}
-
 export function parsePrivacy(privacy: unknown): PrivacySettings {
   if (privacy && typeof privacy === 'object') {
     const p = privacy as Record<string, unknown>;
@@ -161,120 +173,137 @@ export function parsePrivacy(privacy: unknown): PrivacySettings {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Cache TTL constants (seconds)
+// ---------------------------------------------------------------------------
+
+const TTL_HOUR = 3600;
+
+// ---------------------------------------------------------------------------
+// UserService
+// ---------------------------------------------------------------------------
+
 @Injectable()
 export class UserService {
-  private readonly moduleCode = 'UsSve-';
+  private readonly logger = new Logger(UserService.name);
+  private readonly moduleCode = 'UrSve-';
+
+  private hasAdmin = false;
 
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly userRepository: UserRepository,
     private readonly mediaService: MediaService,
     private readonly cacheService: CacheService,
     private readonly mailService: MailService,
   ) {
-    this.checkHasAdmin();
+    void this.checkHasAdmin();
   }
 
-  private readonly logger = new Logger(UserService.name);
+  // ---------------------------------------------------------------------------
+  // Init
+  // ---------------------------------------------------------------------------
 
-  private hasAdmin = false;
-
-  private async checkHasAdmin() {
-    this.hasAdmin = (await this.prisma.client.user.count()) > 0;
+  private async checkHasAdmin(): Promise<void> {
+    this.hasAdmin = (await this.userRepository.countUsers()) > 0;
   }
+
+  // ---------------------------------------------------------------------------
+  // User CRUD
+  // ---------------------------------------------------------------------------
 
   async create(data: CreateUserDto): Promise<User> {
-    const errors: string[] = [];
     const sanitizedUsername = data.username.replace(/[^a-zA-Z0-9_]/g, '');
     const lowerUsername = sanitizedUsername.toLowerCase();
+    const lowerEmail = data.email.toLowerCase();
 
+    // Reserved keyword check
     if (RESERVED_KEYWORDS.has(lowerUsername)) {
-      errors.push('Username cannot be a reserved keyword.');
+      throw new rrConflictException(`${this.moduleCode}UCARK001`, {
+        message: 'Username cannot be a reserved keyword.',
+      });
     }
 
-    const existing = await this.prisma.client.user.findFirst({
-      where: {
-        OR: [{ email: data.email }, { username: lowerUsername }],
-      },
-    });
+    // Uniqueness checks
+    const existing = await this.userRepository.findFirstUserByEmailOrUsername(
+      lowerEmail,
+      lowerUsername,
+    );
 
-    if (existing?.email.toLowerCase() === data.email.toLowerCase()) {
+    const errors: string[] = [];
+    if (existing?.email.toLowerCase() === lowerEmail) {
       errors.push('Email is already taken.');
     }
-
     if (existing?.username.toLowerCase() === lowerUsername) {
       errors.push('Username is already taken.');
     }
-
     if (errors.length > 0) {
       throw new rrConflictException(`${this.moduleCode}C001`, {
         message: errors.join('. '),
       });
     }
 
-    const passHash = await bcrypt.hash(data.password, 10);
-
+    const passwordHash = await bcrypt.hash(data.password, 10);
     const permissions = new BitField([...DEFAULT_PERMISSIONS]);
-
     if (!this.hasAdmin) {
       permissions.add(RunaFlags.ADMINISTRATOR);
     }
 
-    const initialPermissions = permissions.serialize();
-
-    return await this.prisma.client.user
-      .create({
-        data: {
-          email: data.email.toLowerCase(),
-          username: data.username.toLowerCase(),
-          passwordHash: passHash,
-          permissions: initialPermissions,
-        },
+    return this.userRepository
+      .createUser({
+        email: lowerEmail,
+        username: lowerUsername,
+        passwordHash,
+        permissions: permissions.serialize(),
       })
-      .catch((err) => {
-        this.logger.error(err);
+      .catch((err: unknown) => {
+        this.logger.error('Failed to create user', err);
         throw new rrBadRequestException(`${this.moduleCode}FTCU001`, {
           message: 'Failed to create user',
         });
       });
   }
 
-  async findByUsername(username: string): Promise<User | null> {
-    return await this.prisma.client.user.findUnique({
-      where: { username: username.toLowerCase() },
-      include: {
-        connections: true,
-      },
-    });
+  async findByUsername(
+    username: string,
+  ): Promise<
+    (User & { connections: import('@runa/database').Connections[] }) | null
+  > {
+    const cacheKey = `user:profile:${username.toLowerCase()}`;
+    const cached = await this.cacheService.get<
+      User & { connections: import('@runa/database').Connections[] }
+    >(cacheKey);
+    if (cached) return cached;
+
+    const user =
+      await this.userRepository.findUserByUsernameWithConnections(username);
+    if (user) {
+      await this.cacheService.set(cacheKey, user, TTL_HOUR);
+    }
+    return user;
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    return await this.prisma.client.user.findUnique({
-      where: { email: email.toLowerCase().trim() },
-    });
+    return this.userRepository.findUserByEmail(email);
   }
 
   async update(userId: string, data: UpdateUserDto): Promise<User> {
-    const user = await this.prisma.client.user.findUnique({
-      where: { id: userId },
-    });
-
+    const user = await this.userRepository.findUserById(userId);
     if (!user) {
       throw new rrNotFoundException(`${this.moduleCode}UWIDNF001`, {
         message: `User with ID ${userId} not found`,
       });
     }
 
-    const updateData: any = {};
+    const updateData: Prisma.UserUpdateInput = {};
     let passwordOrEmailChanged = false;
 
-    // Email change check
+    // Email change
     if (data.email !== undefined && data.email.toLowerCase() !== user.email) {
       passwordOrEmailChanged = true;
 
-      // Ensure the email is not already taken
-      const existingEmail = await this.prisma.client.user.findFirst({
-        where: { email: data.email.toLowerCase() },
-      });
+      const existingEmail = await this.userRepository.findUserByEmail(
+        data.email,
+      );
       if (existingEmail && existingEmail.id !== userId) {
         throw new rrConflictException(`${this.moduleCode}EIAT001`, {
           message: 'Email is already taken.',
@@ -283,12 +312,12 @@ export class UserService {
       updateData.email = data.email.toLowerCase();
     }
 
-    // Password change check
+    // Password change
     if (data.newPassword !== undefined) {
       passwordOrEmailChanged = true;
     }
 
-    // Enforce password confirmation for password or email changes
+    // Require current password for sensitive changes
     if (passwordOrEmailChanged) {
       if (!data.currentPassword) {
         throw new rrBadRequestException(`${this.moduleCode}CPRTCEROP001`, {
@@ -311,169 +340,127 @@ export class UserService {
       }
     }
 
+    // Profile fields
     const oldAvatarUrl = user.avatarUrl;
     const oldBannerUrl = user.bannerUrl;
-    const oldSidebarCardBackgroundUrl = user.sidebarCardBackgroundUrl;
+    const oldSidebarUrl = user.sidebarCardBackgroundUrl;
 
-    if (data.displayName !== undefined) {
+    if (data.displayName !== undefined)
       updateData.displayName = data.displayName;
-    }
-
-    if (data.avatarUrl !== undefined) {
-      updateData.avatarUrl = data.avatarUrl;
-    }
-
-    if (data.bannerUrl !== undefined) {
-      updateData.bannerUrl = data.bannerUrl;
-    }
-
+    if (data.avatarUrl !== undefined) updateData.avatarUrl = data.avatarUrl;
+    if (data.bannerUrl !== undefined) updateData.bannerUrl = data.bannerUrl;
     if (data.sidebarCardBackgroundUrl !== undefined) {
       updateData.sidebarCardBackgroundUrl = data.sidebarCardBackgroundUrl;
     }
 
-    const updatedUser = await this.prisma.client.user.update({
-      where: { id: userId },
-      data: updateData,
-    });
+    const updatedUser = await this.userRepository.updateUser(
+      userId,
+      updateData,
+    );
 
-    await this.cacheService.del(`user:permissions:${userId}`);
+    // Invalidate caches
+    await Promise.all([
+      this.cacheService.del(`user:profile:${user.username}`),
+      this.cacheService.del(`user:permissions:${userId}`),
+    ]);
 
+    // Clean up old media files
     if (data.avatarUrl !== undefined && data.avatarUrl !== oldAvatarUrl) {
       this.mediaService.deleteFileByUrl(oldAvatarUrl);
     }
-
     if (data.bannerUrl !== undefined && data.bannerUrl !== oldBannerUrl) {
       this.mediaService.deleteFileByUrl(oldBannerUrl);
     }
-
     if (
       data.sidebarCardBackgroundUrl !== undefined &&
-      data.sidebarCardBackgroundUrl !== oldSidebarCardBackgroundUrl
+      data.sidebarCardBackgroundUrl !== oldSidebarUrl
     ) {
-      this.mediaService.deleteFileByUrl(oldSidebarCardBackgroundUrl);
+      this.mediaService.deleteFileByUrl(oldSidebarUrl);
     }
 
     return updatedUser;
   }
 
-  async getPrivacySettings(username: string): Promise<PrivacySettings> {
-    const user = await this.prisma.client.user.findUnique({
-      where: { username: username.toLowerCase() },
-      select: {
-        privacy: true,
-      },
-    });
-
-    if (!user) {
-      throw new rrNotFoundException(`${this.moduleCode}UUNF001`, {
-        message: `User ${username} not found`,
-      });
-    }
-
-    return parsePrivacy(user.privacy);
-  }
-
-  async updatePrivacySettings(
-    userId: string,
-    dto: PrivacySettingsDto,
-  ): Promise<{ success: boolean }> {
-    const user = await this.prisma.client.user.findUnique({
-      where: { id: userId },
-      select: {
-        username: true,
-        privacy: true,
-      },
-    });
-
+  async updateSettings(userId: string, dto: UpdateSettingsDto): Promise<User> {
+    const user = await this.userRepository.findUserById(userId);
     if (!user) {
       throw new rrNotFoundException(`${this.moduleCode}UWIDNF002`, {
         message: `User with ID ${userId} not found`,
       });
     }
 
+    const updated = await this.userRepository.updateUser(userId, {
+      profileSettings: dto.profileSettings as Prisma.JsonObject,
+    });
+
+    await this.cacheService.del(`user:profile:${user.username}`);
+    return updated;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Privacy
+  // ---------------------------------------------------------------------------
+
+  async getPrivacySettings(username: string): Promise<PrivacySettings> {
+    const cacheKey = `user:privacy:${username.toLowerCase()}`;
+    const cached = await this.cacheService.get<PrivacySettings>(cacheKey);
+    if (cached) return cached;
+
+    const user = await this.userRepository.findUserByUsername(username);
+    if (!user) {
+      throw new rrNotFoundException(`${this.moduleCode}UUNF001`, {
+        message: `User ${username} not found`,
+      });
+    }
+
+    const privacy = parsePrivacy(user.privacy);
+    await this.cacheService.set(cacheKey, privacy, TTL_HOUR);
+    return privacy;
+  }
+
+  async updatePrivacySettings(
+    userId: string,
+    dto: PrivacySettingsDto,
+  ): Promise<SuccessEntity> {
+    const user = await this.userRepository.findUserById(userId);
+    if (!user) {
+      throw new rrNotFoundException(`${this.moduleCode}UWIDNF003`, {
+        message: `User with ID ${userId} not found`,
+      });
+    }
+
     const currentPrivacy = parsePrivacy(user.privacy);
     const updatedPrivacy: PrivacySettings = {
-      profile: dto.profile !== undefined ? dto.profile : currentPrivacy.profile,
-      animeList:
-        dto.animeList !== undefined ? dto.animeList : currentPrivacy.animeList,
-      mangaList:
-        dto.mangaList !== undefined ? dto.mangaList : currentPrivacy.mangaList,
-      tvList: dto.tvList !== undefined ? dto.tvList : currentPrivacy.tvList,
-      movieList:
-        dto.movieList !== undefined ? dto.movieList : currentPrivacy.movieList,
-      connections:
-        dto.connections !== undefined
-          ? dto.connections
-          : currentPrivacy.connections,
+      profile: dto.profile ?? currentPrivacy.profile,
+      animeList: dto.animeList ?? currentPrivacy.animeList,
+      mangaList: dto.mangaList ?? currentPrivacy.mangaList,
+      tvList: dto.tvList ?? currentPrivacy.tvList,
+      movieList: dto.movieList ?? currentPrivacy.movieList,
+      connections: dto.connections ?? currentPrivacy.connections,
     };
 
-    await this.prisma.client.$transaction([
-      this.prisma.client.user.update({
-        where: { id: userId },
-        data: { privacy: updatedPrivacy },
-      }),
-      ...(dto.animeList !== undefined
-        ? [
-            this.prisma.client.aquilaAnimeUserList.updateMany({
-              where: { username: user.username },
-              data: { private: dto.animeList },
-            }),
-          ]
-        : []),
-      ...(dto.mangaList !== undefined
-        ? [
-            this.prisma.client.aquilaMangaUserList.updateMany({
-              where: { username: user.username },
-              data: { private: dto.mangaList },
-            }),
-          ]
-        : []),
-      ...(dto.tvList !== undefined
-        ? [
-            this.prisma.client.aquilaTvUserList.updateMany({
-              where: { username: user.username },
-              data: { private: dto.tvList },
-            }),
-          ]
-        : []),
-      ...(dto.movieList !== undefined
-        ? [
-            this.prisma.client.aquilaMovieUserList.updateMany({
-              where: { username: user.username },
-              data: { private: dto.movieList },
-            }),
-          ]
-        : []),
-      ...(dto.connections !== undefined
-        ? [
-            this.prisma.client.connections.updateMany({
-              where: { username: user.username },
-              data: { private: dto.connections },
-            }),
-          ]
-        : []),
-    ]);
+    await this.userRepository.updatePrivacySettings(
+      userId,
+      user.username,
+      updatedPrivacy,
+      dto,
+    );
 
+    await this.cacheService.del(`user:privacy:${user.username}`);
     return { success: true };
   }
 
-  async updateSettings(userId: string, settings: any) {
-    return await this.prisma.client.user.update({
-      where: { id: userId },
-      data: { profileSettings: settings },
-    });
-  }
+  // ---------------------------------------------------------------------------
+  // MFA — TOTP
+  // ---------------------------------------------------------------------------
 
-  // --- MFA Configuration & Setup Methods ---
-
-  async generateTotpSetup(userId: string) {
-    const user = await this.prisma.client.user.findUnique({
-      where: { id: userId },
-    });
-    if (!user)
+  async generateTotpSetup(userId: string): Promise<TotpSetupEntity> {
+    const user = await this.userRepository.findUserById(userId);
+    if (!user) {
       throw new rrNotFoundException(`${this.moduleCode}UNF001`, {
         message: 'User not found',
       });
+    }
 
     const secret = generateSecret();
     const otpauthUrl = generateURI({
@@ -482,21 +469,19 @@ export class UserService {
       secret,
     });
 
-    // Save pending secret to cache for 10 minutes
+    // Store pending TOTP secret for 10 minutes
     await this.cacheService.set(`pending-totp:${userId}`, secret, 600);
 
     return { secret, otpauthUrl };
   }
 
   async enableTotp(userId: string, code: string): Promise<string[]> {
-    const user = await this.prisma.client.user.findUnique({
-      where: { id: userId },
-      include: { passkeys: true },
-    });
-    if (!user)
+    const user = await this.userRepository.findUserWithPasskeysById(userId);
+    if (!user) {
       throw new rrNotFoundException(`${this.moduleCode}UNF002`, {
         message: 'User not found',
       });
+    }
 
     const pendingSecret = await this.cacheService.get<string>(
       `pending-totp:${userId}`,
@@ -507,79 +492,65 @@ export class UserService {
       });
     }
 
-    const verifyResult = await verify({ token: code, secret: pendingSecret });
-    if (!verifyResult.valid) {
+    const { valid } = await verify({ token: code, secret: pendingSecret });
+    if (!valid) {
       throw new rrBadRequestException(`${this.moduleCode}IVC001`, {
         message: 'Invalid verification code',
       });
     }
 
-    // Encrypt the TOTP secret
     const encryptedSecret = encrypt(pendingSecret);
+    const { backupCodes, hashedBackupCodes } =
+      await this.maybeGenerateBackupCodes(user);
 
-    // Check if we need to generate backup codes (only if no other MFA was active)
-    const isMfaActive =
-      user.totpEnabled || user.emailMfaEnabled || user.passkeys.length > 0;
-    let backupCodes: string[] = [];
-    let hashedBackupCodes: string[] = [];
-
-    if (!isMfaActive) {
-      const generated = await this.generateBackupCodesRaw();
-      backupCodes = generated.plain;
-      hashedBackupCodes = generated.hashed;
-    }
-
-    await this.prisma.client.user.update({
-      where: { id: userId },
-      data: {
-        totpSecret: encryptedSecret,
-        totpEnabled: true,
-        ...(hashedBackupCodes.length > 0
-          ? { backupCodes: hashedBackupCodes }
-          : {}),
-      },
+    await this.userRepository.updateUser(userId, {
+      totpSecret: encryptedSecret,
+      totpEnabled: true,
+      ...(hashedBackupCodes.length > 0
+        ? { backupCodes: hashedBackupCodes }
+        : {}),
     });
 
     await this.cacheService.del(`pending-totp:${userId}`);
+    await this.cacheService.del(`user:mfa-status:${userId}`);
 
     return backupCodes;
   }
 
-  async disableTotp(userId: string) {
-    const user = await this.prisma.client.user.findUnique({
-      where: { id: userId },
-      include: { passkeys: true },
-    });
-    if (!user)
+  async disableTotp(userId: string): Promise<SuccessEntity> {
+    const user = await this.userRepository.findUserWithPasskeysById(userId);
+    if (!user) {
       throw new rrNotFoundException(`${this.moduleCode}UNF003`, {
         message: 'User not found',
       });
+    }
 
     const remainingMfa = user.emailMfaEnabled || user.passkeys.length > 0;
 
-    await this.prisma.client.user.update({
-      where: { id: userId },
-      data: {
-        totpEnabled: false,
-        totpSecret: null,
-        ...(!remainingMfa ? { backupCodes: [] } : {}),
-      },
+    await this.userRepository.updateUser(userId, {
+      totpEnabled: false,
+      totpSecret: null,
+      ...(!remainingMfa ? { backupCodes: [] } : {}),
     });
 
+    await this.cacheService.del(`user:mfa-status:${userId}`);
     return { success: true };
   }
 
-  async sendEmailMfaSetupCode(userId: string) {
-    const user = await this.prisma.client.user.findUnique({
-      where: { id: userId },
-    });
-    if (!user)
+  // ---------------------------------------------------------------------------
+  // MFA — Email
+  // ---------------------------------------------------------------------------
+
+  async sendEmailMfaSetupCode(userId: string): Promise<SuccessEntity> {
+    const user = await this.userRepository.findUserById(userId);
+    if (!user) {
       throw new rrNotFoundException(`${this.moduleCode}UNF004`, {
         message: 'User not found',
       });
+    }
 
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    await this.cacheService.set(`pending-email-mfa:${userId}`, code, 300); // 5 min expiry
+    await this.cacheService.set(`pending-email-mfa:${userId}`, code, 300); // 5 min
 
     await this.mailService.sendMail(
       user.email,
@@ -591,14 +562,12 @@ export class UserService {
   }
 
   async enableEmailMfa(userId: string, code: string): Promise<string[]> {
-    const user = await this.prisma.client.user.findUnique({
-      where: { id: userId },
-      include: { passkeys: true },
-    });
-    if (!user)
+    const user = await this.userRepository.findUserWithPasskeysById(userId);
+    if (!user) {
       throw new rrNotFoundException(`${this.moduleCode}UNF005`, {
         message: 'User not found',
       });
+    }
 
     const cachedCode = await this.cacheService.get<string>(
       `pending-email-mfa:${userId}`,
@@ -609,80 +578,52 @@ export class UserService {
       });
     }
 
-    const isMfaActive =
-      user.totpEnabled || user.emailMfaEnabled || user.passkeys.length > 0;
-    let backupCodes: string[] = [];
-    let hashedBackupCodes: string[] = [];
+    const { backupCodes, hashedBackupCodes } =
+      await this.maybeGenerateBackupCodes(user);
 
-    if (!isMfaActive) {
-      const generated = await this.generateBackupCodesRaw();
-      backupCodes = generated.plain;
-      hashedBackupCodes = generated.hashed;
-    }
-
-    await this.prisma.client.user.update({
-      where: { id: userId },
-      data: {
-        emailMfaEnabled: true,
-        ...(hashedBackupCodes.length > 0
-          ? { backupCodes: hashedBackupCodes }
-          : {}),
-      },
+    await this.userRepository.updateUser(userId, {
+      emailMfaEnabled: true,
+      ...(hashedBackupCodes.length > 0
+        ? { backupCodes: hashedBackupCodes }
+        : {}),
     });
 
     await this.cacheService.del(`pending-email-mfa:${userId}`);
+    await this.cacheService.del(`user:mfa-status:${userId}`);
 
     return backupCodes;
   }
 
-  async disableEmailMfa(userId: string) {
-    const user = await this.prisma.client.user.findUnique({
-      where: { id: userId },
-      include: { passkeys: true },
-    });
-    if (!user)
+  async disableEmailMfa(userId: string): Promise<SuccessEntity> {
+    const user = await this.userRepository.findUserWithPasskeysById(userId);
+    if (!user) {
       throw new rrNotFoundException(`${this.moduleCode}UNF006`, {
         message: 'User not found',
       });
+    }
 
     const remainingMfa = user.totpEnabled || user.passkeys.length > 0;
 
-    await this.prisma.client.user.update({
-      where: { id: userId },
-      data: {
-        emailMfaEnabled: false,
-        ...(!remainingMfa ? { backupCodes: [] } : {}),
-      },
+    await this.userRepository.updateUser(userId, {
+      emailMfaEnabled: false,
+      ...(!remainingMfa ? { backupCodes: [] } : {}),
     });
 
+    await this.cacheService.del(`user:mfa-status:${userId}`);
     return { success: true };
   }
 
-  private async generateBackupCodesRaw(): Promise<{
-    plain: string[];
-    hashed: string[];
-  }> {
-    const plain: string[] = [];
-    const hashed: string[] = [];
-
-    for (let i = 0; i < 10; i++) {
-      const code = crypto.randomBytes(5).toString('hex');
-      plain.push(code);
-      hashed.push(await bcrypt.hash(code, 10));
-    }
-
-    return { plain, hashed };
-  }
+  // ---------------------------------------------------------------------------
+  // MFA — Backup Codes
+  // ---------------------------------------------------------------------------
 
   async regenerateBackupCodes(userId: string): Promise<string[]> {
-    const user = await this.prisma.client.user.findUnique({
-      where: { id: userId },
-      include: { passkeys: true },
-    });
-    if (!user)
+    const user = await this.userRepository.findUserWithPasskeysById(userId);
+    if (!user) {
       throw new rrNotFoundException(`${this.moduleCode}UNF007`, {
         message: 'User not found',
       });
+    }
 
     const isMfaActive =
       user.totpEnabled || user.emailMfaEnabled || user.passkeys.length > 0;
@@ -694,41 +635,35 @@ export class UserService {
 
     const { plain, hashed } = await this.generateBackupCodesRaw();
 
-    await this.prisma.client.user.update({
-      where: { id: userId },
-      data: {
-        backupCodes: hashed,
-      },
-    });
-
+    await this.userRepository.updateUser(userId, { backupCodes: hashed });
     return plain;
   }
 
-  // --- WebAuthn / Passkey Registration Methods ---
+  // ---------------------------------------------------------------------------
+  // MFA — Passkeys
+  // ---------------------------------------------------------------------------
 
-  async generatePasskeyRegisterOptions(userId: string) {
-    const user = await this.prisma.client.user.findUnique({
-      where: { id: userId },
-      include: { passkeys: true },
-    });
-    if (!user)
+  async generatePasskeyRegisterOptions(userId: string): Promise<object> {
+    const user = await this.userRepository.findUserWithPasskeysById(userId);
+    if (!user) {
       throw new rrNotFoundException(`${this.moduleCode}UNF008`, {
         message: 'User not found',
       });
+    }
 
     const rpID =
-      process.env.RP_ID ||
-      new URL(process.env.NEXT_PUBLIC_URL || 'http://localhost:3000').hostname;
+      process.env.RP_ID ??
+      new URL(process.env.NEXT_PUBLIC_URL ?? 'http://localhost:3000').hostname;
 
     const options = await generateRegistrationOptions({
       rpName: 'Runa',
       rpID,
       userID: new Uint8Array(Buffer.from(user.id)),
       userName: user.username,
-      userDisplayName: user.displayName || user.username,
+      userDisplayName: user.displayName ?? user.username,
       excludeCredentials: user.passkeys.map((pk) => ({
         id: pk.id,
-        type: 'public-key',
+        type: 'public-key' as const,
       })),
       authenticatorSelection: {
         residentKey: 'required',
@@ -747,17 +682,15 @@ export class UserService {
 
   async verifyPasskeyRegister(
     userId: string,
-    body: any,
+    body: RegistrationResponseJSON,
     name?: string,
   ): Promise<string[]> {
-    const user = await this.prisma.client.user.findUnique({
-      where: { id: userId },
-      include: { passkeys: true },
-    });
-    if (!user)
+    const user = await this.userRepository.findUserWithPasskeysById(userId);
+    if (!user) {
       throw new rrNotFoundException(`${this.moduleCode}UNF009`, {
         message: 'User not found',
       });
+    }
 
     const expectedChallenge = await this.cacheService.get<string>(
       `passkey-reg-challenge:${userId}`,
@@ -769,12 +702,12 @@ export class UserService {
     }
 
     const rpID =
-      process.env.RP_ID ||
-      new URL(process.env.NEXT_PUBLIC_URL || 'http://localhost:3000').hostname;
+      process.env.RP_ID ??
+      new URL(process.env.NEXT_PUBLIC_URL ?? 'http://localhost:3000').hostname;
     const expectedOrigin =
-      process.env.NEXT_PUBLIC_URL || 'http://localhost:3000';
+      process.env.NEXT_PUBLIC_URL ?? 'http://localhost:3000';
 
-    let verification;
+    let verification: Awaited<ReturnType<typeof verifyRegistrationResponse>>;
     try {
       verification = await verifyRegistrationResponse({
         response: body,
@@ -782,10 +715,10 @@ export class UserService {
         expectedOrigin,
         expectedRPID: rpID,
       });
-    } catch (err: any) {
-      throw new rrBadRequestException(`${this.moduleCode}PVF001`, {
-        message: err.message || 'Passkey verification failed',
-      });
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : 'Passkey verification failed';
+      throw new rrBadRequestException(`${this.moduleCode}PVF001`, { message });
     }
 
     if (!verification.verified || !verification.registrationInfo) {
@@ -801,267 +734,287 @@ export class UserService {
       transports,
     } = verification.registrationInfo.credential;
 
-    const isMfaActive =
-      user.totpEnabled || user.emailMfaEnabled || user.passkeys.length > 0;
-    let backupCodes: string[] = [];
-    let hashedBackupCodes: string[] = [];
+    const { backupCodes, hashedBackupCodes } =
+      await this.maybeGenerateBackupCodes(user);
 
-    if (!isMfaActive) {
-      const generated = await this.generateBackupCodesRaw();
-      backupCodes = generated.plain;
-      hashedBackupCodes = generated.hashed;
-    }
-
-    await this.prisma.client.$transaction([
-      this.prisma.client.passkey.create({
-        data: {
-          id: credentialID,
-          publicKey: Buffer.from(credentialPublicKey).toString('base64url'),
-          counter: counter,
-          transports:
-            (transports as string[]) || body.response.transports || [],
-          name: name || 'Passkey',
-          userId: user.id,
-        },
-      }),
-      this.prisma.client.user.update({
-        where: { id: userId },
-        data: {
-          ...(hashedBackupCodes.length > 0
-            ? { backupCodes: hashedBackupCodes }
-            : {}),
-        },
-      }),
-    ]);
+    await this.userRepository.createPasskey(
+      {
+        id: credentialID,
+        publicKey: Buffer.from(credentialPublicKey).toString('base64url'),
+        counter,
+        transports: (transports as string[]) ?? body.response?.transports ?? [],
+        name: name ?? 'Passkey',
+        user: { connect: { id: user.id } },
+      },
+      userId,
+      hashedBackupCodes.length > 0 ? hashedBackupCodes : undefined,
+    );
 
     await this.cacheService.del(`passkey-reg-challenge:${userId}`);
+    await this.cacheService.del(`user:mfa-status:${userId}`);
+    await this.cacheService.del(`user:passkeys:${userId}`);
 
     return backupCodes;
   }
 
-  async deletePasskey(userId: string, passkeyId: string) {
-    const user = await this.prisma.client.user.findUnique({
-      where: { id: userId },
-      include: { passkeys: true },
-    });
-    if (!user)
-      throw new rrNotFoundException(`${this.moduleCode}UNF010`, {
-        message: 'User not found',
-      });
+  async getPasskeys(userId: string): Promise<PasskeyEntity[]> {
+    const cacheKey = `user:passkeys:${userId}`;
+    const cached = await this.cacheService.get<PasskeyEntity[]>(cacheKey);
+    if (cached) return cached;
 
-    const passkey = user.passkeys.find((pk) => pk.id === passkeyId);
-    if (!passkey)
-      throw new rrNotFoundException(`${this.moduleCode}PNF001`, {
-        message: 'Passkey not found',
-      });
-
-    await this.prisma.client.passkey.delete({
-      where: { id: passkeyId },
-    });
-
-    const remainingPasskeys = user.passkeys.filter(
-      (pk) => pk.id !== passkeyId,
-    ).length;
-    const remainingMfa =
-      user.totpEnabled || user.emailMfaEnabled || remainingPasskeys > 0;
-
-    if (!remainingMfa) {
-      await this.prisma.client.user.update({
-        where: { id: userId },
-        data: {
-          backupCodes: [],
-        },
-      });
-    }
-
-    return { success: true };
+    const passkeys = await this.userRepository.findPasskeysByUserId(userId);
+    await this.cacheService.set(cacheKey, passkeys, TTL_HOUR);
+    return passkeys;
   }
 
-  async getPasskeys(userId: string) {
-    return await this.prisma.client.passkey.findMany({
-      where: { userId },
-      select: {
-        id: true,
-        name: true,
-        createdAt: true,
-      },
-    });
-  }
+  async getMfaStatus(userId: string): Promise<MfaStatusEntity> {
+    const cacheKey = `user:mfa-status:${userId}`;
+    const cached = await this.cacheService.get<MfaStatusEntity>(cacheKey);
+    if (cached) return cached;
 
-  async getMfaStatus(userId: string) {
-    const user = await this.prisma.client.user.findUnique({
-      where: { id: userId },
-      include: { passkeys: true },
-    });
+    const user = await this.userRepository.findUserWithPasskeysById(userId);
     if (!user) {
       throw new rrNotFoundException(`${this.moduleCode}UNF011`, {
         message: 'User not found',
       });
     }
-    return {
+
+    const status: MfaStatusEntity = {
       totpEnabled: user.totpEnabled,
       emailMfaEnabled: user.emailMfaEnabled,
       hasBackupCodes: user.backupCodes.length > 0,
       passkeysCount: user.passkeys.length,
     };
+
+    await this.cacheService.set(cacheKey, status, TTL_HOUR);
+    return status;
   }
 
-  // --- Device Management Methods ---
+  async deletePasskey(
+    userId: string,
+    passkeyId: string,
+  ): Promise<SuccessEntity> {
+    const user = await this.userRepository.findUserWithPasskeysById(userId);
+    if (!user) {
+      throw new rrNotFoundException(`${this.moduleCode}UNF010`, {
+        message: 'User not found',
+      });
+    }
 
-  async getDevices(userId: string) {
-    return await this.prisma.client.device.findMany({
-      where: { userId },
-      select: {
-        id: true,
-        deviceName: true,
-        userAgent: true,
-        lastActiveAt: true,
-        identityKey: true,
-        signedPreKey: true,
-        encryptedMasterKey: true,
-      },
-    });
+    const passkey = user.passkeys.find((pk) => pk.id === passkeyId);
+    if (!passkey) {
+      throw new rrNotFoundException(`${this.moduleCode}PNF001`, {
+        message: 'Passkey not found',
+      });
+    }
+
+    const remainingPasskeysCount = user.passkeys.filter(
+      (pk) => pk.id !== passkeyId,
+    ).length;
+    const remainingMfa =
+      user.totpEnabled || user.emailMfaEnabled || remainingPasskeysCount > 0;
+
+    await this.userRepository.deletePasskey(passkeyId, userId, !remainingMfa);
+
+    await this.cacheService.del(`user:mfa-status:${userId}`);
+    await this.cacheService.del(`user:passkeys:${userId}`);
+    return { success: true };
   }
 
-  async deleteDevice(userId: string, deviceId: string) {
-    const device = await this.prisma.client.device.findFirst({
-      where: { id: deviceId, userId },
-    });
-    if (!device)
+  // ---------------------------------------------------------------------------
+  // Device Management
+  // ---------------------------------------------------------------------------
+
+  async getDevices(userId: string): Promise<DeviceEntity[]> {
+    const cacheKey = `user:devices:${userId}`;
+    const cached = await this.cacheService.get<DeviceEntity[]>(cacheKey);
+    if (cached) return cached;
+
+    const devices = await this.userRepository.findDevicesByUserId(userId);
+    await this.cacheService.set(cacheKey, devices, TTL_HOUR);
+    return devices;
+  }
+
+  async deleteDevice(userId: string, deviceId: string): Promise<SuccessEntity> {
+    const device = await this.userRepository.findDeviceById(deviceId, userId);
+    if (!device) {
       throw new rrNotFoundException(`${this.moduleCode}DNF001`, {
         message: 'Device not found',
       });
+    }
 
-    await this.prisma.client.device.delete({
-      where: { id: deviceId },
-    });
-
+    await this.userRepository.deleteDevice(deviceId);
+    await this.cacheService.del(`user:devices:${userId}`);
     return { success: true };
   }
 
   async registerDevice(
     userId: string,
-    data: {
-      deviceName: string;
-      userAgent?: string;
-      identityKey: string;
-      signedPreKey: string;
-      preKeys?: string[];
-    },
-  ) {
-    const existing = await this.prisma.client.device.findFirst({
-      where: { identityKey: data.identityKey, userId },
-    });
+    dto: RegisterDeviceDto,
+  ): Promise<DeviceEntity> {
+    // If device already exists (same identity key), update it
+    const existingDevice = await this.userRepository.findDeviceByIdentityKey(
+      dto.identityKey,
+      userId,
+    );
 
-    if (existing) {
-      const updated = await this.prisma.client.device.update({
-        where: { id: existing.id },
-        data: {
-          deviceName: data.deviceName,
-          userAgent: data.userAgent || null,
+    if (existingDevice) {
+      const updated = await this.userRepository.updateDevice(
+        existingDevice.id,
+        {
+          deviceName: dto.deviceName,
+          userAgent: dto.userAgent ?? null,
           lastActiveAt: new Date(),
-          signedPreKey: data.signedPreKey,
+          signedPreKey: dto.signedPreKey,
         },
-      });
-      return updated;
+      );
+
+      await this.cacheService.del(`user:devices:${userId}`);
+
+      return {
+        id: updated.id,
+        deviceName: updated.deviceName,
+        userAgent: updated.userAgent,
+        lastActiveAt: updated.lastActiveAt,
+        identityKey: updated.identityKey,
+        signedPreKey: updated.signedPreKey,
+        encryptedMasterKey: updated.encryptedMasterKey,
+      };
     }
 
-    const device = await this.prisma.client.device.create({
-      data: {
-        userId,
-        deviceName: data.deviceName,
-        userAgent: data.userAgent || null,
-        identityKey: data.identityKey,
-        signedPreKey: data.signedPreKey,
-      },
+    // Create new device
+    const device = await this.userRepository.createDevice({
+      userId,
+      deviceName: dto.deviceName,
+      userAgent: dto.userAgent ?? null,
+      identityKey: dto.identityKey,
+      signedPreKey: dto.signedPreKey,
     });
 
-    if (data.preKeys && data.preKeys.length > 0) {
-      await this.prisma.client.preKey.createMany({
-        data: data.preKeys.map((key) => ({
-          deviceId: device.id,
-          key,
-        })),
-      });
+    // Persist pre-keys if provided
+    if (dto.preKeys && dto.preKeys.length > 0) {
+      await this.userRepository.createPreKeys(device.id, dto.preKeys);
     }
 
-    const otherDevices = await this.prisma.client.device.findMany({
-      where: { userId, id: { not: device.id } },
-    });
-
+    // Notify other devices of the new link request
+    const otherDevices = await this.userRepository.findOtherDevicesByUserId(
+      userId,
+      device.id,
+    );
     if (otherDevices.length > 0) {
-      await this.prisma.client.notification.create({
-        data: {
-          userId,
-          title: 'New Device Link Request',
-          message: `A new device "${data.deviceName}" wants to link to your account.`,
-          type: 'INTERACTIVE',
-          status: 'PENDING',
-          metadata: {
-            deviceId: device.id,
-            deviceName: data.deviceName,
-            publicKey: data.identityKey,
-          } as any,
-        },
-      });
+      await this.userRepository.createDeviceLinkNotification(
+        userId,
+        device.id,
+        dto.deviceName,
+        dto.identityKey,
+      );
     }
 
-    return device;
+    await this.cacheService.del(`user:devices:${userId}`);
+
+    return {
+      id: device.id,
+      deviceName: device.deviceName,
+      userAgent: device.userAgent,
+      lastActiveAt: device.lastActiveAt,
+      identityKey: device.identityKey,
+      signedPreKey: device.signedPreKey,
+      encryptedMasterKey: device.encryptedMasterKey,
+    };
   }
 
-  async getDeviceStatus(userId: string, deviceId: string) {
-    const device = await this.prisma.client.device.findFirst({
-      where: { id: deviceId, userId },
-      select: {
-        id: true,
-        encryptedMasterKey: true,
-      },
-    });
-    if (!device)
+  async getDeviceStatus(
+    userId: string,
+    deviceId: string,
+  ): Promise<DeviceStatusEntity> {
+    const status = await this.userRepository.getDeviceStatus(userId, deviceId);
+    if (!status) {
       throw new rrNotFoundException(`${this.moduleCode}DNF002`, {
         message: 'Device not found',
       });
-    return {
-      id: device.id,
-      approved: device.encryptedMasterKey !== null,
-      encryptedMasterKey: device.encryptedMasterKey,
-    };
+    }
+    return status;
+  }
+
+  // ---------------------------------------------------------------------------
+  // E2EE Keys
+  // ---------------------------------------------------------------------------
+
+  async getE2eeKeys(userId: string): Promise<E2eeKeysEntity> {
+    const cacheKey = `user:e2ee-keys:${userId}`;
+    const cached = await this.cacheService.get<E2eeKeysEntity>(cacheKey);
+    if (cached) return cached;
+
+    const keys = await this.userRepository.getE2eeKeys(userId);
+    if (!keys) {
+      throw new rrNotFoundException(`${this.moduleCode}UNF013`, {
+        message: 'User not found',
+      });
+    }
+
+    await this.cacheService.set(cacheKey, keys, TTL_HOUR);
+    return keys;
   }
 
   async updateE2eeKeys(
     userId: string,
     userPublicKey: string,
     encryptedUserPrivateKey: string,
-  ) {
-    const user = await this.prisma.client.user.findUnique({
-      where: { id: userId },
-    });
-    if (!user)
+  ): Promise<User> {
+    const user = await this.userRepository.findUserById(userId);
+    if (!user) {
       throw new rrNotFoundException(`${this.moduleCode}UNF012`, {
         message: 'User not found',
       });
+    }
 
-    return await this.prisma.client.user.update({
-      where: { id: userId },
-      data: {
-        userPublicKey,
-        encryptedUserPrivateKey,
-      },
-    });
+    const updated = await this.userRepository.updateE2eeKeys(
+      userId,
+      userPublicKey,
+      encryptedUserPrivateKey,
+    );
+
+    await this.cacheService.del(`user:e2ee-keys:${userId}`);
+    return updated;
   }
 
-  async getE2eeKeys(userId: string) {
-    const user = await this.prisma.client.user.findUnique({
-      where: { id: userId },
-      select: {
-        userPublicKey: true,
-        encryptedUserPrivateKey: true,
-      },
-    });
-    if (!user)
-      throw new rrNotFoundException(`${this.moduleCode}UNF013`, {
-        message: 'User not found',
-      });
-    return user;
+  // ---------------------------------------------------------------------------
+  // Private helpers
+  // ---------------------------------------------------------------------------
+
+  private async generateBackupCodesRaw(): Promise<{
+    plain: string[];
+    hashed: string[];
+  }> {
+    const plain: string[] = [];
+    const hashed: string[] = [];
+
+    for (let i = 0; i < 10; i++) {
+      const code = crypto.randomBytes(5).toString('hex');
+      plain.push(code);
+      hashed.push(await bcrypt.hash(code, 10));
+    }
+
+    return { plain, hashed };
+  }
+
+  /**
+   * Generates backup codes only when no MFA method is currently active.
+   * Returns empty arrays when backup codes are not needed.
+   */
+  private async maybeGenerateBackupCodes(user: {
+    totpEnabled: boolean;
+    emailMfaEnabled: boolean;
+    passkeys: { id: string }[];
+  }): Promise<{ backupCodes: string[]; hashedBackupCodes: string[] }> {
+    const isMfaAlreadyActive =
+      user.totpEnabled || user.emailMfaEnabled || user.passkeys.length > 0;
+
+    if (isMfaAlreadyActive) {
+      return { backupCodes: [], hashedBackupCodes: [] };
+    }
+
+    const { plain, hashed } = await this.generateBackupCodesRaw();
+    return { backupCodes: plain, hashedBackupCodes: hashed };
   }
 }
