@@ -68,12 +68,10 @@ export class TvRepository {
       description: result.description,
       slug: result.slug,
       status: result.status,
-      tvType: result.tvType,
       averageRuntime: result.averageRuntime,
       firstAired: result.firstAired,
       genres: result.genres,
       studios: result.studios,
-      tags: result.tags as Record<string, any> | null,
       characters:
         result.tvActors?.map((ta) => ({
           name: ta.role || '',

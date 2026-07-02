@@ -106,6 +106,7 @@ export class MovieExternal {
             update: {
               titleEnglish: item.translations?.eng || item.name,
               titleRomaji: item.name,
+              titleNative: item.name,
               coverImage: item.image || item.thumbnail,
               status: item.status || null,
             },
@@ -113,6 +114,7 @@ export class MovieExternal {
               tvdbId,
               titleEnglish: item.translations?.eng || item.name,
               titleRomaji: item.name,
+              titleNative: item.name,
               coverImage: item.image || item.thumbnail,
               status: item.status || null,
             },
@@ -120,6 +122,7 @@ export class MovieExternal {
               id: true,
               titleEnglish: true,
               titleRomaji: true,
+              titleNative: true,
               coverImage: true,
             },
           });
@@ -165,6 +168,23 @@ export class MovieExternal {
     const englishName = translation?.name || movie.name;
     const englishOverview = translation?.overview || movie.overview || '';
 
+    // Read studios from companies block (TVDB v4)
+    const allStudios: string[] = [];
+    if (movie.companies) {
+      for (const companyList of [
+        movie.companies.studio,
+        movie.companies.production,
+        movie.companies.network,
+        movie.companies.distributor,
+      ]) {
+        for (const company of companyList) {
+          if (company.name && !allStudios.includes(company.name)) {
+            allStudios.push(company.name);
+          }
+        }
+      }
+    }
+
     const artworks = movie.artworks || [];
     const bannerArtworks = artworks.filter(
       (a) => a.type === 16 || a.type === 15,
@@ -184,9 +204,12 @@ export class MovieExternal {
     let startDateMonth: number | null = null;
     let startDateDay: number | null = null;
 
-    if (movie.releaseDate) {
-      releaseDate = movie.releaseDate;
-      const parts = movie.releaseDate.split('-');
+    // TVDB v4 returns release date in first_release or releases array, not as top-level releaseDate
+    const releaseRaw =
+      movie.first_release?.date ?? movie.releases?.[0]?.date ?? null;
+    if (releaseRaw) {
+      releaseDate = releaseRaw;
+      const parts = releaseRaw.split('-');
       if (parts.length === 3) {
         startDateYear = parseInt(parts[0]) || null;
         startDateMonth = parseInt(parts[1]) || null;
@@ -203,6 +226,7 @@ export class MovieExternal {
       where: { tvdbId: movie.id },
       update: {
         tmdbId: tmdbIdStr ? parseInt(tmdbIdStr) : null,
+        titleNative: movie.name || null,
         imdbId: imdbId || null,
         titleEnglish: englishName,
         titleRomaji: movie.name,
@@ -214,11 +238,9 @@ export class MovieExternal {
         status: movie.status?.name || 'RELEASED',
         runtime: movie.runtime || null,
         budget: movie.budget ? String(movie.budget) : null,
-        revenue: movie.revenue ? String(movie.revenue) : null,
         boxOffice: movie.boxOffice || null,
         genres: movie.genres?.map((g) => g.name) || [],
-        studios: movie.studios?.map((s) => s.name) || [],
-        tags: Prisma.DbNull as unknown as Prisma.InputJsonValue,
+        studios: allStudios,
         startDateYear,
         startDateMonth,
         startDateDay,
@@ -230,6 +252,7 @@ export class MovieExternal {
       create: {
         tvdbId: movie.id,
         tmdbId: tmdbIdStr ? parseInt(tmdbIdStr) : null,
+        titleNative: movie.name || null,
         imdbId: imdbId || null,
         titleEnglish: englishName,
         titleRomaji: movie.name,
@@ -241,11 +264,9 @@ export class MovieExternal {
         status: movie.status?.name || 'RELEASED',
         runtime: movie.runtime || null,
         budget: movie.budget ? String(movie.budget) : null,
-        revenue: movie.revenue ? String(movie.revenue) : null,
         boxOffice: movie.boxOffice || null,
         genres: movie.genres?.map((g) => g.name) || [],
-        studios: movie.studios?.map((s) => s.name) || [],
-        tags: Prisma.DbNull as unknown as Prisma.InputJsonValue,
+        studios: allStudios,
         startDateYear,
         startDateMonth,
         startDateDay,

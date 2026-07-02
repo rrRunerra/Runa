@@ -43,11 +43,9 @@ export interface MovieEntity {
   status: string | null;
   runtime: number | null;
   budget: string | null;
-  revenue: string | null;
   boxOffice: string | null;
   genres: string[];
   studios: string[];
-  tags: Record<string, any> | null;
   characters: MovieCharacterEntity[] | null;
   trailers: MovieTrailerEntity[] | null;
   originalCountry: string | null;
@@ -56,9 +54,6 @@ export interface MovieEntity {
   startDateYear: number | null;
   startDateMonth: number | null;
   startDateDay: number | null;
-  endDateYear: number | null;
-  endDateMonth: number | null;
-  endDateDay: number | null;
   locked: boolean;
   updatedAt: Date;
 }

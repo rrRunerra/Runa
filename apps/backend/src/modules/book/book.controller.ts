@@ -1,61 +1,39 @@
-import { Controller, Param, UseGuards, Get, Query, Post } from '@nestjs/common';
-import { rrTooManyRequestsException } from 'src/providers/error';
+import { Controller, Param, UseGuards, Get, Post } from '@nestjs/common';
 import { BookService } from './book.service';
 import { AuthGuard } from '../../common/guards/auth/auth.guard';
-import { PermissionsGuard } from '../../common/guards/permissions.guard';
-import { Public } from '../../common/decorators/public.decorator';
+import { Public } from 'src/common/decorators/public.decorator';
 import { AquilaFlags } from '@runa/permissions';
-import { CacheService } from '../../providers/cache/cache.service';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { Permissions } from 'src/common/decorators/permissions.decorator';
+import { SearchBookDto, BookDetailDto, BookRefreshDto } from './book.dto';
+import type { BookSearchEntity, BookEntity } from './book.entities';
 
 @Controller('book')
 @UseGuards(AuthGuard, PermissionsGuard)
 export class BookController {
-  private readonly moduleCode = 'BkCtr-';
+  private readonly moduleCode: string = 'BkCtr-';
 
-  constructor(
-    private readonly bookService: BookService,
-    private readonly cacheService: CacheService,
-  ) {}
+  constructor(private readonly bookService: BookService) {}
 
   @Public()
-  @Get('search')
-  async search(@Query() query: { name: string }): Promise<any> {
-    return this.bookService.search(query.name);
+  @Get('search/:name')
+  async search(@Param() params: SearchBookDto): Promise<BookSearchEntity[]> {
+    return this.bookService.search(params.name);
   }
 
   @Public()
-  @Get('details/:id')
-  async getBook(@Param('id') id: string): Promise<any> {
-    return this.bookService.getBook(id);
+  @Get(':id')
+  async bookDetail(
+    @Param() params: BookDetailDto,
+  ): Promise<BookEntity | undefined> {
+    return await this.bookService.getBook(params.id);
   }
 
-  @Public()
-  @Get('details/:id/related')
-  async getRelatedBooks(@Param('id') id: string): Promise<any> {
-    return this.bookService.getRelatedBooks(id);
-  }
-
-  @Public()
-  @Get('details/:id/editions')
-  async getBookEditions(@Param('id') id: string): Promise<any> {
-    return this.bookService.getBookEditions(id);
-  }
-
-  @Post('refresh/:id')
+  @Post(':id/refresh')
   @Permissions([AquilaFlags.MEDIA_REFRESH])
-  async refreshBook(@Param('id') id: string): Promise<any> {
-    const cooldownKey = `cooldown:refresh:book:${id}`;
-    const onCooldown = await this.cacheService.get(cooldownKey);
-    if (onCooldown) {
-      throw new rrTooManyRequestsException(`${this.moduleCode}TMWRR001`, {
-        message:
-          'This media was refreshed recently. Please wait before refreshing again.',
-      });
-    }
-
-    const result = await this.bookService.getBook(id, true);
-    await this.cacheService.set(cooldownKey, true, 60);
-    return result;
+  async refreshBook(
+    @Param() params: BookRefreshDto,
+  ): Promise<BookEntity | undefined | null> {
+    return await this.bookService.refreshBook(params.id);
   }
 }

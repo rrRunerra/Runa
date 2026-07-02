@@ -29,16 +29,18 @@ export interface TvdbMovieExtended {
   runtime?: number;
   status?: { id: number; name: string };
   genres?: { id: number; name: string }[];
-  studios?: { id: number; name: string }[];
-  characters?: {
-    id: number;
-    name: string;
-    personName: string;
-    image?: string;
-    peopleType?: string;
-    peopleId?: number;
-    sort?: number;
-  }[];
+  studios?: null;
+  characters?:
+    | {
+        id: number;
+        name: string;
+        personName: string;
+        image?: string;
+        peopleType?: string;
+        peopleId?: number;
+        sort?: number;
+      }[]
+    | null;
   artworks?: {
     id: number;
     image: string;
@@ -47,7 +49,7 @@ export interface TvdbMovieExtended {
   }[];
   originalCountry?: string;
   originalLanguage?: string;
-  contentRatings?: { name: string; country: string }[];
+  contentRatings?: { name: string; country: string }[] | null;
   trailers?: {
     id: number;
     name: string;
@@ -55,10 +57,18 @@ export interface TvdbMovieExtended {
     language: string;
   }[];
   remoteIds?: { id: string; type: number }[];
-  releaseDate?: string;
-  budget?: number;
-  revenue?: number;
+  first_release?: { country: string; date: string; detail: string | null };
+  releases?: { country: string; date: string; detail: string | null }[];
+  budget?: string;
   boxOffice?: string;
+  boxOfficeUS?: string;
+  companies?: {
+    studio: { id: number; name: string }[];
+    network: { id: number; name: string }[];
+    production: { id: number; name: string }[];
+    distributor: { id: number; name: string }[];
+  };
+  tagOptions?: unknown;
 }
 
 export interface TvdbMovieResponse {

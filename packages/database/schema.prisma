@@ -562,20 +562,14 @@ model AquilaMovie {
     status      String?
     runtime     Int?
     budget      String?
-    revenue     String?
     boxOffice   String?
 
     genres  String[] @db.Text
     studios String[] @db.Text
-    tags    Json?    @db.Json
 
     startDateYear  Int?
     startDateMonth Int?
     startDateDay   Int?
-
-    endDateYear  Int?
-    endDateMonth Int?
-    endDateDay   Int?
 
     trailers Json? @db.Json
 
@@ -610,22 +604,15 @@ model AquilaTv {
     status           String?
     originalCountry  String?
     originalLanguage String?
-    tvType           String?
-    subgenre         String?
     averageRuntime   Int?
     firstAired       String?
 
     genres  String[] @db.Text
     studios String[] @db.Text
-    tags    Json?    @db.Json
 
     startDateYear  Int?
     startDateMonth Int?
     startDateDay   Int?
-
-    endDateYear  Int?
-    endDateMonth Int?
-    endDateDay   Int?
 
     seasons  Json? @db.Json
     trailers Json? @db.Json
@@ -809,21 +796,31 @@ model AquilaGame {
     rawgId Int @unique
 
     titleString String? @db.Text
+    titleNative String? @db.Text
+    slug        String?
 
-    coverImage  String? @db.Text
-    description String? @db.Text
+    coverImage      String? @db.Text
+    backgroundImage String? @db.Text
+    description     String? @db.Text
 
     releasedYear  Int?
     releasedMonth Int?
     releasedDay   Int?
 
-    genres     String[] @db.Text
-    platforms  String[] @db.Text
-    developers String[] @db.Text
-    publishers String[] @db.Text
+    released String?
+
+    genres      String[] @db.Text
+    platforms   String[] @db.Text
+    developers  String[] @db.Text
+    publishers  String[] @db.Text
+    tags        Json?    @db.Json
 
     averageScore Float?
     popularity   Int?
+    metacritic   Int?
+    rating       Float?
+    ratingsCount Int?
+    esrbRating   String?
 
     locked          Boolean              @default(false)
     updatedAt       DateTime             @updatedAt
@@ -866,8 +863,10 @@ model AquilaBook {
     coverImage  String? @db.Text
     description String? @db.Text
 
-    publishYear   Int?
-    publishedDate String?
+    publishedYear  Int?
+    publishedMonth Int?
+    publishedDay   Int?
+    publishedDate  String?
 
     subjects   String[] @db.Text
     authors    String[] @db.Text
@@ -875,6 +874,7 @@ model AquilaBook {
     publishers String[] @db.Text
 
     pages    Int?
+    pageCount Int?
     chapters Int?
 
     averageRating       Float?
@@ -888,6 +888,7 @@ model AquilaBook {
     retailPrice         Float?
     retailPriceCurrency String?
     maturityRating      String?
+    publisher           String? @db.Text
 
     locked          Boolean              @default(false)
     updatedAt       DateTime             @updatedAt

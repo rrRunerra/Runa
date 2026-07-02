@@ -30,11 +30,19 @@ export interface TvdbSeriesExtended {
   type?: { id: number; name: string };
   averageRuntime?: number;
   firstAired?: string;
+  lastAired?: string;
   genres?: { id: number; name: string }[];
   companies?: {
     id: number;
     name: string;
-    companyType?: { id: number; name: string };
+    companyType?: { companyTypeId: number; companyTypeName: string };
+  }[];
+  tags?: {
+    id: number;
+    tag: number;
+    tagName: string;
+    name: string;
+    helpText?: string;
   }[];
   characters?: {
     id: number;
@@ -43,6 +51,7 @@ export interface TvdbSeriesExtended {
     personName: string;
     image?: string;
     peopleType?: string;
+    sort?: number;
   }[];
   artworks?: {
     id: number;

@@ -116,6 +116,7 @@ export class TvExternal {
               update: {
                 titleEnglish: item.translations?.eng || item.name,
                 titleRomaji: item.name,
+                titleNative: item.name,
                 coverImage: item.image || item.thumbnail,
                 status: item.status || null,
               },
@@ -123,6 +124,7 @@ export class TvExternal {
                 tvdbId,
                 titleEnglish: item.translations?.eng || item.name,
                 titleRomaji: item.name,
+                titleNative: item.name,
                 coverImage: item.image || item.thumbnail,
                 status: item.status || null,
               },
@@ -130,6 +132,7 @@ export class TvExternal {
                 id: true,
                 titleEnglish: true,
                 titleRomaji: true,
+                titleNative: true,
                 coverImage: true,
               },
             });
@@ -184,7 +187,10 @@ export class TvExternal {
         : null;
 
     const remoteIds = series.remoteIds || [];
-    const tmdbIdStr = remoteIds.find((r) => r.type === 10)?.id;
+    // TV: TMDB is type 12 (movies use type 10)
+    const tmdbIdStr =
+      remoteIds.find((r) => r.type === 12)?.id ??
+      remoteIds.find((r) => r.type === 10)?.id;
     const imdbId = remoteIds.find((r) => r.type === 2)?.id;
 
     // Build seasons with episodes
@@ -228,20 +234,31 @@ export class TvExternal {
         })
         .filter((s) => s.episodes.length > 0) || [];
 
-    const studios =
-      series.companies
-        ?.filter(
-          (co) =>
-            co.companyType?.name === 'Network' ||
-            co.companyType?.name === 'Production Company',
-        )
-        .map((s) => s.name) || [];
+    const studios = (series.companies || [])
+      .filter(
+        (co) =>
+          co.companyType?.companyTypeName === 'Network' ||
+          co.companyType?.companyTypeName === 'Production Company',
+      )
+      .map((s) => s.name);
 
     const contentRating =
       series.contentRatings?.find((r) => r.country === 'usa')?.name ||
       series.contentRatings?.[0]?.name ||
       null;
 
+    // Parse firstAired into startDate components
+    let startDateYear: number | null = null;
+    let startDateMonth: number | null = null;
+    let startDateDay: number | null = null;
+    if (series.firstAired) {
+      const parts = series.firstAired.split('-');
+      if (parts.length === 3) {
+        startDateYear = parseInt(parts[0]) || null;
+        startDateMonth = parseInt(parts[1]) || null;
+        startDateDay = parseInt(parts[2]) || null;
+      }
+    }
     const dbTv = await this.prisma.client.aquilaTv.upsert({
       where: { tvdbId: series.id },
       update: {
@@ -249,17 +266,19 @@ export class TvExternal {
         imdbId: imdbId || null,
         titleEnglish: englishName,
         titleRomaji: series.name,
+        titleNative: series.name || null,
         coverImage: series.image || null,
         bannerImage: bannerImage || null,
         description: englishOverview || null,
         slug: series.slug || null,
         status: series.status?.name || 'RELEASED',
-        tvType: series.type?.name || null,
         averageRuntime: series.averageRuntime || null,
         firstAired: series.firstAired || null,
+        startDateYear,
+        startDateMonth,
+        startDateDay,
         genres: series.genres?.map((g) => g.name) || [],
         studios,
-        tags: Prisma.DbNull as unknown as Prisma.InputJsonValue,
         seasons: seasons as Prisma.InputJsonValue,
         trailers: (series.trailers || []) as Prisma.InputJsonValue,
         originalCountry: series.originalCountry || null,
@@ -272,17 +291,19 @@ export class TvExternal {
         imdbId: imdbId || null,
         titleEnglish: englishName,
         titleRomaji: series.name,
+        titleNative: series.name || null,
         coverImage: series.image || null,
         bannerImage: bannerImage || null,
         description: englishOverview || null,
         slug: series.slug || null,
         status: series.status?.name || 'RELEASED',
-        tvType: series.type?.name || null,
         averageRuntime: series.averageRuntime || null,
         firstAired: series.firstAired || null,
+        startDateYear,
+        startDateMonth,
+        startDateDay,
         genres: series.genres?.map((g) => g.name) || [],
         studios,
-        tags: Prisma.DbNull as unknown as Prisma.InputJsonValue,
         seasons: seasons as Prisma.InputJsonValue,
         trailers: (series.trailers || []) as Prisma.InputJsonValue,
         originalCountry: series.originalCountry || null,

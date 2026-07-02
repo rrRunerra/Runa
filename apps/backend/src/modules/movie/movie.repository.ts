@@ -71,11 +71,9 @@ export class MovieRepository {
       status: result.status,
       runtime: result.runtime,
       budget: result.budget,
-      revenue: result.revenue ? String(result.revenue) : null,
       boxOffice: result.boxOffice,
       genres: result.genres,
       studios: result.studios,
-      tags: result.tags as Record<string, any> | null,
       characters:
         result.movieActors?.map((ma) => ({
           name: ma.role || '',
@@ -90,9 +88,6 @@ export class MovieRepository {
       startDateYear: result.startDateYear,
       startDateMonth: result.startDateMonth,
       startDateDay: result.startDateDay,
-      endDateYear: result.endDateYear,
-      endDateMonth: result.endDateMonth,
-      endDateDay: result.endDateDay,
       locked: result.locked,
       updatedAt: result.updatedAt,
     };

@@ -54,12 +54,10 @@ export interface TvEntity {
   description: string | null;
   slug: string | null;
   status: string | null;
-  tvType: string | null;
   averageRuntime: number | null;
   firstAired: string | null;
   genres: string[];
   studios: string[];
-  tags: Record<string, any> | null;
   characters: TvCharacterEntity[] | null;
   seasons: TvSeasonEntity[] | null;
   trailers: TvTrailerEntity[] | null;
