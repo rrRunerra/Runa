@@ -1,54 +1,65 @@
-import { Injectable } from '@nestjs/common';
-import { rrNotFoundException } from 'src/providers/error';
-import { PrismaService } from '../../providers/database/prisma.service';
-import { CreateFavoriteDto } from './dto/create-favorite.dto';
-import { Favorite, FavoriteType } from '@runa/database';
+import { Injectable, Logger } from '@nestjs/common';
+
+import { FavoriteType } from '@runa/database';
+
+import { rrNotFoundException, rrConflictException } from 'src/providers/error';
+
+import { FavoriteRepository } from './favorite.repository';
+import type { AddFavoriteDto } from './favorite.dto';
+import type {
+  FavoriteEntity,
+  FavoriteStatusEntity,
+  FavoriteSuccessEntity,
+  ResolvedFavoriteEntity,
+} from './favorite.entities';
 
 @Injectable()
 export class FavoriteService {
+  private readonly logger = new Logger(FavoriteService.name);
   private readonly moduleCode = 'FeSve-';
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly favoriteRepository: FavoriteRepository) {}
 
-  async addFavorite(userId: string, dto: CreateFavoriteDto): Promise<Favorite> {
-    const existing = await this.prisma.client.favorite.findUnique({
-      where: {
-        userId_type_mediaId: {
-          userId,
-          type: dto.type,
-          mediaId: dto.mediaId,
-        },
-      },
-    });
+  // ---------------------------------------------------------------------------
+  // Add
+  // ---------------------------------------------------------------------------
+
+  async addFavorite(
+    userId: string,
+    dto: AddFavoriteDto,
+  ): Promise<FavoriteEntity> {
+    const existing = await this.favoriteRepository.findUnique(
+      userId,
+      dto.type,
+      dto.targetId,
+    );
 
     if (existing) {
-      return existing;
+      throw new rrConflictException(`${this.moduleCode}FAE001`, {
+        message: 'Already in favorites',
+      });
     }
 
-    return this.prisma.client.favorite.create({
-      data: {
-        userId,
-        type: dto.type,
-        mediaId: dto.mediaId,
-      },
-    });
+    const record = await this.favoriteRepository.create(
+      userId,
+      dto.type,
+      dto.targetId,
+    );
+
+    return this.toEntity(record);
   }
+
+  // ---------------------------------------------------------------------------
+  // Remove
+  // ---------------------------------------------------------------------------
 
   async removeFavorite(
     userId: string,
     type: FavoriteType,
-    mediaId: string,
-  ): Promise<{ success: boolean }> {
+    targetId: string,
+  ): Promise<FavoriteSuccessEntity> {
     try {
-      await this.prisma.client.favorite.delete({
-        where: {
-          userId_type_mediaId: {
-            userId,
-            type,
-            mediaId,
-          },
-        },
-      });
+      await this.favoriteRepository.delete(userId, type, targetId);
       return { success: true };
     } catch {
       throw new rrNotFoundException(`${this.moduleCode}FNF001`, {
@@ -57,151 +68,142 @@ export class FavoriteService {
     }
   }
 
-  async getFavorites(userId: string, type?: FavoriteType): Promise<Favorite[]> {
-    return this.prisma.client.favorite.findMany({
-      where: {
-        userId,
-        ...(type ? { type } : {}),
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+  // ---------------------------------------------------------------------------
+  // List (authenticated user's own favorites)
+  // ---------------------------------------------------------------------------
+
+  async getFavorites(
+    userId: string,
+    type?: FavoriteType,
+  ): Promise<FavoriteEntity[]> {
+    const records = await this.favoriteRepository.findManyByUserId(
+      userId,
+      type,
+    );
+    return records.map((r) => this.toEntity(r));
   }
+
+  // ---------------------------------------------------------------------------
+  // Status check
+  // ---------------------------------------------------------------------------
 
   async getFavoriteStatus(
     userId: string,
     type: FavoriteType,
-    mediaId: string,
-  ): Promise<{ favorited: boolean }> {
-    const favorite = await this.prisma.client.favorite.findUnique({
-      where: {
-        userId_type_mediaId: {
-          userId,
-          type,
-          mediaId,
-        },
-      },
-    });
-
-    return { favorited: !!favorite };
+    targetId: string,
+  ): Promise<FavoriteStatusEntity> {
+    const record = await this.favoriteRepository.findUnique(
+      userId,
+      type,
+      targetId,
+    );
+    return { favorited: !!record };
   }
+
+  // ---------------------------------------------------------------------------
+  // Public profile favorites (enriched)
+  // ---------------------------------------------------------------------------
 
   async getFavoritesByUsername(
     username: string,
     type?: FavoriteType,
-  ): Promise<
-    {
-      id: string;
-      userId: string;
-      type: FavoriteType;
-      mediaId: string;
-      createdAt: Date;
-      title: string;
-      image: string;
-    }[]
-  > {
-    const user = await this.prisma.client.user.findUnique({
-      where: { username: username.toLowerCase() },
-    });
+  ): Promise<ResolvedFavoriteEntity[]> {
+    const user = await this.favoriteRepository.findUserByUsername(username);
     if (!user) {
       throw new rrNotFoundException(`${this.moduleCode}UNF001`, {
         message: `User ${username} not found`,
       });
     }
-    const favorites = await this.prisma.client.favorite.findMany({
-      where: {
-        userId: user.id,
-        ...(type ? { type } : {}),
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
 
-    const resolvedFavorites: {
-      id: string;
-      userId: string;
-      type: FavoriteType;
-      mediaId: string;
-      createdAt: Date;
-      title: string;
-      image: string;
-    }[] = [];
-    for (const fav of favorites) {
-      let mediaDetails: any = null;
-      const mediaIdNum = Number(fav.mediaId);
+    const records = await this.favoriteRepository.findManyByUserId(
+      user.id,
+      type,
+    );
 
-      try {
-        if (fav.type === FavoriteType.ANIME) {
-          mediaDetails = await this.prisma.client.aquilaAnime.findUnique({
-            where: { anilistId: mediaIdNum },
-          });
-        } else if (fav.type === FavoriteType.MANGA) {
-          mediaDetails = await this.prisma.client.aquilaManga.findUnique({
-            where: { anilistId: mediaIdNum },
-          });
-        } else if (fav.type === FavoriteType.TV) {
-          mediaDetails = await this.prisma.client.aquilaTv.findUnique({
-            where: { tvdbId: mediaIdNum },
-          });
-        } else if (fav.type === FavoriteType.MOVIE) {
-          mediaDetails = await this.prisma.client.aquilaMovie.findUnique({
-            where: { tvdbId: mediaIdNum },
-          });
-        } else if (fav.type === FavoriteType.GAME) {
-          mediaDetails = await this.prisma.client.aquilaGame.findUnique({
-            where: { rawgId: mediaIdNum },
-          });
-        } else if (fav.type === FavoriteType.BOOK) {
-          mediaDetails = await this.prisma.client.aquilaBook.findUnique({
-            where: { googleBookId: fav.mediaId },
-          });
-        }
-      } catch (err) {
-        // Silently skip on error
-      }
+    const resolved: ResolvedFavoriteEntity[] = [];
 
+    for (const fav of records) {
       let title = '';
       let image = '';
 
-      if (mediaDetails) {
-        if (
-          fav.type === FavoriteType.ANIME ||
-          fav.type === FavoriteType.MANGA
-        ) {
-          title =
-            mediaDetails.titleEnglish ??
-            mediaDetails.titleRomaji ??
-            mediaDetails.titleNative ??
-            '';
-          image = mediaDetails.coverImageLarge ?? '';
-        } else if (fav.type === FavoriteType.TV) {
-          title = mediaDetails.titleEnglish ?? mediaDetails.titleRomaji ?? '';
-          image = mediaDetails.coverImage ?? '';
-        } else if (fav.type === FavoriteType.MOVIE) {
-          title = mediaDetails.titleEnglish ?? mediaDetails.titleRomaji ?? '';
-          image = mediaDetails.coverImage ?? '';
-        } else if (fav.type === FavoriteType.GAME) {
-          title = mediaDetails.titleString ?? '';
-          image = mediaDetails.coverImage ?? '';
-        } else if (fav.type === FavoriteType.BOOK) {
-          title = mediaDetails.titleString ?? '';
-          image = mediaDetails.coverImage ?? '';
+      try {
+        const details = await this.favoriteRepository.resolveMedia(
+          fav.type,
+          fav.mediaId,
+        );
+
+        if (details) {
+          ({ title, image } = this.extractTitleAndImage(fav.type, details));
         }
+      } catch (err: unknown) {
+        this.logger.warn(`Failed to resolve media for favorite ${fav.id}`, err);
       }
 
-      resolvedFavorites.push({
+      resolved.push({
         id: fav.id,
         userId: fav.userId,
         type: fav.type,
-        mediaId: fav.mediaId,
+        targetId: fav.mediaId,
         createdAt: fav.createdAt,
         title,
         image,
       });
     }
 
-    return resolvedFavorites;
+    return resolved;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Helpers
+  // ---------------------------------------------------------------------------
+
+  private toEntity(record: import('@runa/database').Favorite): FavoriteEntity {
+    return {
+      id: record.id,
+      userId: record.userId,
+      type: record.type,
+      targetId: record.mediaId,
+      createdAt: record.createdAt,
+    };
+  }
+
+  private extractTitleAndImage(
+    type: FavoriteType,
+    details: Record<string, unknown>,
+  ): { title: string; image: string } {
+    switch (type) {
+      case FavoriteType.ANIME:
+      case FavoriteType.MANGA:
+        return {
+          title:
+            (details.titleEnglish as string | null) ??
+            (details.titleRomaji as string | null) ??
+            (details.titleNative as string | null) ??
+            '',
+          image: (details.coverImageLarge as string | null) ?? '',
+        };
+      case FavoriteType.TV:
+      case FavoriteType.MOVIE:
+        return {
+          title: (details.titleEnglish as string | null) ?? '',
+          image: (details.coverImage as string | null) ?? '',
+        };
+      case FavoriteType.GAME:
+      case FavoriteType.BOOK:
+        return {
+          title: (details.titleString as string | null) ?? '',
+          image: (details.coverImage as string | null) ?? '',
+        };
+      case FavoriteType.USER:
+        return {
+          title:
+            (details.displayName as string | null) ??
+            (details.username as string) ??
+            '',
+          image: (details.avatarUrl as string | null) ?? '',
+        };
+      default:
+        return { title: '', image: '' };
+    }
   }
 }

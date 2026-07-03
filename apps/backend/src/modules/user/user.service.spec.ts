@@ -8,7 +8,7 @@ import {
 import { UserService } from './user.service';
 import { UserRepository } from './user.repository';
 import { PrismaService } from '../../providers/database/prisma.service';
-import { MediaService } from '../media/media.service';
+import { FilesService } from '../files/files.service';
 import { CacheService } from '../../providers/cache/cache.service';
 import { MailService } from '../../providers/mail/mail.service';
 import bcrypt from 'bcrypt';
@@ -33,7 +33,7 @@ jest.mock('@simplewebauthn/server', () => ({
 
 describe('UserService', () => {
   let service: UserService;
-  let mediaService: MediaService;
+  let filesService: FilesService;
   let cacheService: CacheService;
   let mailService: MailService;
 
@@ -69,7 +69,7 @@ describe('UserService', () => {
     client: mockPrismaClient,
   };
 
-  const mockMediaService = {
+  const mockFilesService = {
     deleteFileByUrl: jest.fn(),
   };
 
@@ -91,14 +91,14 @@ describe('UserService', () => {
         UserService,
         UserRepository,
         { provide: PrismaService, useValue: mockPrisma },
-        { provide: MediaService, useValue: mockMediaService },
+        { provide: FilesService, useValue: mockFilesService },
         { provide: CacheService, useValue: mockCacheService },
         { provide: MailService, useValue: mockMailService },
       ],
     }).compile();
 
     service = module.get<UserService>(UserService);
-    mediaService = module.get<MediaService>(MediaService);
+    filesService = module.get<FilesService>(FilesService);
     cacheService = module.get<CacheService>(CacheService);
     mailService = module.get<MailService>(MailService);
   });
@@ -238,7 +238,7 @@ describe('UserService', () => {
 
       await service.update('user-1', { avatarUrl: 'new-avatar.png' });
 
-      expect(mediaService.deleteFileByUrl).toHaveBeenCalledWith(
+      expect(filesService.deleteFileByUrl).toHaveBeenCalledWith(
         'old-avatar.png',
       );
     });

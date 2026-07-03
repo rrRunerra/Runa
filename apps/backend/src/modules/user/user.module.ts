@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
 
-import { MediaModule } from '../media/media.module';
+import { FilesModule } from '../files/files.module';
 import { MailModule } from '../../providers/mail/mail.module';
 import { UserRepository } from './user.repository';
 import { UserService } from './user.service';
 import { UserController } from './user.controller';
 
 @Module({
-  imports: [MediaModule, MailModule],
+  imports: [FilesModule, MailModule],
   controllers: [UserController],
   providers: [UserService, UserRepository],
   exports: [UserService],

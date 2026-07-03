@@ -1,9 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
-import { FavoriteService } from './favorite.service';
-import { PrismaService } from '../../providers/database/prisma.service';
 
-// Mock FavoriteType enum from @runa/database
+import { FavoriteService } from './favorite.service';
+import { FavoriteRepository } from './favorite.repository';
+
 jest.mock('@runa/database', () => ({
   FavoriteType: {
     ANIME: 'ANIME',
@@ -12,35 +11,23 @@ jest.mock('@runa/database', () => ({
     MOVIE: 'MOVIE',
     GAME: 'GAME',
     BOOK: 'BOOK',
+    USER: 'USER',
   },
 }));
 
 import { FavoriteType } from '@runa/database';
 
+const mockRepo = {
+  findUnique: jest.fn(),
+  create: jest.fn(),
+  delete: jest.fn(),
+  findManyByUserId: jest.fn(),
+  findUserByUsername: jest.fn(),
+  resolveMedia: jest.fn(),
+};
+
 describe('FavoriteService', () => {
   let service: FavoriteService;
-
-  const mockPrismaClient = {
-    favorite: {
-      findUnique: jest.fn(),
-      create: jest.fn(),
-      delete: jest.fn(),
-      findMany: jest.fn(),
-    },
-    user: {
-      findUnique: jest.fn(),
-    },
-    aquilaAnime: { findUnique: jest.fn() },
-    aquilaManga: { findUnique: jest.fn() },
-    aquilaTv: { findUnique: jest.fn() },
-    aquilaMovie: { findUnique: jest.fn() },
-    aquilaGame: { findUnique: jest.fn() },
-    aquilaBook: { findUnique: jest.fn() },
-  };
-
-  const mockPrisma = {
-    client: mockPrismaClient,
-  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -48,121 +35,190 @@ describe('FavoriteService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FavoriteService,
-        { provide: PrismaService, useValue: mockPrisma },
+        { provide: FavoriteRepository, useValue: mockRepo },
       ],
     }).compile();
 
     service = module.get<FavoriteService>(FavoriteService);
   });
 
+  // ---------------------------------------------------------------------------
+  // addFavorite
+  // ---------------------------------------------------------------------------
+
   describe('addFavorite', () => {
-    it('should return existing favorite if already added', async () => {
-      const mockExisting = { id: 'fav-1', userId: 'user-1', type: 'ANIME', mediaId: '10' };
-      mockPrismaClient.favorite.findUnique.mockResolvedValue(mockExisting);
+    it('should throw conflict if already favorited', async () => {
+      mockRepo.findUnique.mockResolvedValue({ id: 'fav-1' });
 
-      const result = await service.addFavorite('user-1', { type: FavoriteType.ANIME, mediaId: '10' });
-
-      expect(mockPrismaClient.favorite.findUnique).toHaveBeenCalled();
-      expect(mockPrismaClient.favorite.create).not.toHaveBeenCalled();
-      expect(result).toBe(mockExisting);
+      await expect(
+        service.addFavorite('user-1', {
+          type: FavoriteType.ANIME,
+          targetId: '10',
+        }),
+      ).rejects.toMatchObject({ status: 409 });
     });
 
-    it('should create new favorite if it does not exist', async () => {
-      mockPrismaClient.favorite.findUnique.mockResolvedValue(null);
-      const mockNew = { id: 'fav-2', userId: 'user-1', type: 'ANIME', mediaId: '11' };
-      mockPrismaClient.favorite.create.mockResolvedValue(mockNew);
+    it('should create and return entity if not yet favorited', async () => {
+      mockRepo.findUnique.mockResolvedValue(null);
+      const raw = {
+        id: 'fav-2',
+        userId: 'user-1',
+        type: 'ANIME',
+        mediaId: '11',
+        createdAt: new Date(),
+      };
+      mockRepo.create.mockResolvedValue(raw);
 
-      const result = await service.addFavorite('user-1', { type: FavoriteType.ANIME, mediaId: '11' });
-
-      expect(mockPrismaClient.favorite.create).toHaveBeenCalledWith({
-        data: { userId: 'user-1', type: FavoriteType.ANIME, mediaId: '11' },
+      const result = await service.addFavorite('user-1', {
+        type: FavoriteType.ANIME,
+        targetId: '11',
       });
-      expect(result).toBe(mockNew);
+
+      expect(mockRepo.create).toHaveBeenCalledWith(
+        'user-1',
+        FavoriteType.ANIME,
+        '11',
+      );
+      expect(result).toMatchObject({
+        targetId: '11',
+        type: FavoriteType.ANIME,
+      });
     });
   });
 
+  // ---------------------------------------------------------------------------
+  // removeFavorite
+  // ---------------------------------------------------------------------------
+
   describe('removeFavorite', () => {
-    it('should delete favorite and return success', async () => {
-      mockPrismaClient.favorite.delete.mockResolvedValue({});
-
-      const result = await service.removeFavorite('user-1', FavoriteType.ANIME, '10');
-
-      expect(mockPrismaClient.favorite.delete).toHaveBeenCalled();
+    it('should return success on delete', async () => {
+      mockRepo.delete.mockResolvedValue(undefined);
+      const result = await service.removeFavorite(
+        'user-1',
+        FavoriteType.ANIME,
+        '10',
+      );
       expect(result).toEqual({ success: true });
     });
 
-    it('should throw NotFoundException if delete fails', async () => {
-      mockPrismaClient.favorite.delete.mockRejectedValue(new Error('Record not found'));
-
-      await expect(service.removeFavorite('user-1', FavoriteType.ANIME, '10')).rejects.toThrow(NotFoundException);
+    it('should throw 404 if delete fails', async () => {
+      mockRepo.delete.mockRejectedValue(new Error('not found'));
+      await expect(
+        service.removeFavorite('user-1', FavoriteType.ANIME, '10'),
+      ).rejects.toMatchObject({ status: 404 });
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // getFavorites
+  // ---------------------------------------------------------------------------
 
   describe('getFavorites', () => {
-    it('should fetch favorites filtering by type if specified', async () => {
-      mockPrismaClient.favorite.findMany.mockResolvedValue([]);
-
-      const result = await service.getFavorites('user-1', FavoriteType.ANIME);
-
-      expect(mockPrismaClient.favorite.findMany).toHaveBeenCalledWith({
-        where: { userId: 'user-1', type: FavoriteType.ANIME },
-        orderBy: { createdAt: 'desc' },
-      });
-      expect(result).toEqual([]);
-    });
-  });
-
-  describe('getFavoriteStatus', () => {
-    it('should return favorited: true if record exists', async () => {
-      mockPrismaClient.favorite.findUnique.mockResolvedValue({ id: 'fav-1' });
-
-      const result = await service.getFavoriteStatus('user-1', FavoriteType.ANIME, '10');
-
-      expect(result).toEqual({ favorited: true });
-    });
-
-    it('should return favorited: false if record does not exist', async () => {
-      mockPrismaClient.favorite.findUnique.mockResolvedValue(null);
-
-      const result = await service.getFavoriteStatus('user-1', FavoriteType.ANIME, '10');
-
-      expect(result).toEqual({ favorited: false });
-    });
-  });
-
-  describe('getFavoritesByUsername', () => {
-    it('should throw NotFoundException if user does not exist', async () => {
-      mockPrismaClient.user.findUnique.mockResolvedValue(null);
-
-      await expect(service.getFavoritesByUsername('nonexistent')).rejects.toThrow(NotFoundException);
-    });
-
-    it('should fetch and resolve favorites with titles and images', async () => {
-      const mockUser = { id: 'user-1', username: 'testuser' };
-      mockPrismaClient.user.findUnique.mockResolvedValue(mockUser);
-
-      const mockFavorites = [
-        { id: 'fav-1', userId: 'user-1', type: FavoriteType.ANIME, mediaId: '100', createdAt: new Date() },
-      ];
-      mockPrismaClient.favorite.findMany.mockResolvedValue(mockFavorites);
-
-      const mockAnimeDetails = { anilistId: 100, titleEnglish: 'Anime English', coverImageLarge: 'image-large' };
-      mockPrismaClient.aquilaAnime.findUnique.mockResolvedValue(mockAnimeDetails);
-
-      const result = await service.getFavoritesByUsername('testuser', FavoriteType.ANIME);
-
-      expect(mockPrismaClient.aquilaAnime.findUnique).toHaveBeenCalledWith({ where: { anilistId: 100 } });
-      expect(result).toEqual([
+    it('should return mapped entities', async () => {
+      const raw = [
         {
           id: 'fav-1',
-          userId: 'user-1',
-          type: FavoriteType.ANIME,
-          mediaId: '100',
-          createdAt: mockFavorites[0].createdAt,
-          title: 'Anime English',
-          image: 'image-large',
+          userId: 'u1',
+          type: 'ANIME',
+          mediaId: '5',
+          createdAt: new Date(),
+        },
+      ];
+      mockRepo.findManyByUserId.mockResolvedValue(raw);
+
+      const result = await service.getFavorites('u1', FavoriteType.ANIME);
+
+      expect(mockRepo.findManyByUserId).toHaveBeenCalledWith(
+        'u1',
+        FavoriteType.ANIME,
+      );
+      expect(result[0]).toMatchObject({ targetId: '5', type: 'ANIME' });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // getFavoriteStatus
+  // ---------------------------------------------------------------------------
+
+  describe('getFavoriteStatus', () => {
+    it('should return favorited: true when record exists', async () => {
+      mockRepo.findUnique.mockResolvedValue({ id: 'fav-1' });
+      expect(
+        await service.getFavoriteStatus('u1', FavoriteType.ANIME, '10'),
+      ).toEqual({
+        favorited: true,
+      });
+    });
+
+    it('should return favorited: false when record is null', async () => {
+      mockRepo.findUnique.mockResolvedValue(null);
+      expect(
+        await service.getFavoriteStatus('u1', FavoriteType.ANIME, '10'),
+      ).toEqual({
+        favorited: false,
+      });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // getFavoritesByUsername
+  // ---------------------------------------------------------------------------
+
+  describe('getFavoritesByUsername', () => {
+    it('should throw 404 if user not found', async () => {
+      mockRepo.findUserByUsername.mockResolvedValue(null);
+      await expect(
+        service.getFavoritesByUsername('ghost'),
+      ).rejects.toMatchObject({
+        status: 404,
+      });
+    });
+
+    it('should resolve media and return enriched entities', async () => {
+      mockRepo.findUserByUsername.mockResolvedValue({ id: 'u1' });
+      const createdAt = new Date();
+      mockRepo.findManyByUserId.mockResolvedValue([
+        { id: 'fav-1', userId: 'u1', type: 'ANIME', mediaId: '100', createdAt },
+      ]);
+      mockRepo.resolveMedia.mockResolvedValue({
+        titleEnglish: 'Test Anime',
+        coverImageLarge: 'http://img.test',
+      });
+
+      const result = await service.getFavoritesByUsername('testuser');
+
+      expect(result[0]).toMatchObject({
+        targetId: '100',
+        title: 'Test Anime',
+        image: 'http://img.test',
+      });
+    });
+
+    it('should handle USER type favorites with displayName', async () => {
+      mockRepo.findUserByUsername.mockResolvedValue({ id: 'u1' });
+      const createdAt = new Date();
+      mockRepo.findManyByUserId.mockResolvedValue([
+        {
+          id: 'fav-2',
+          userId: 'u1',
+          type: 'USER',
+          mediaId: 'other-user-id',
+          createdAt,
         },
       ]);
+      mockRepo.resolveMedia.mockResolvedValue({
+        username: 'otheruser',
+        displayName: 'Other User',
+        avatarUrl: 'http://avatar.test',
+      });
+
+      const result = await service.getFavoritesByUsername('testuser');
+
+      expect(result[0]).toMatchObject({
+        targetId: 'other-user-id',
+        title: 'Other User',
+        image: 'http://avatar.test',
+      });
     });
   });
 });

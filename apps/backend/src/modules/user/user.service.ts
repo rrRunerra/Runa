@@ -19,7 +19,7 @@ import {
 } from 'src/providers/error';
 import { CacheService } from '../../providers/cache/cache.service';
 import { MailService } from '../../providers/mail/mail.service';
-import { MediaService } from '../media/media.service';
+import { FilesService } from '../files/files.service';
 
 import { UserRepository } from './user.repository';
 import type { PrivacySettings, RegisterDeviceData } from './user.types';
@@ -196,7 +196,7 @@ export class UserService {
 
   constructor(
     private readonly userRepository: UserRepository,
-    private readonly mediaService: MediaService,
+    private readonly filesService: FilesService,
     private readonly cacheService: CacheService,
     private readonly mailService: MailService,
   ) {
@@ -370,16 +370,16 @@ export class UserService {
 
     // Clean up old media files
     if (data.avatarUrl !== undefined && data.avatarUrl !== oldAvatarUrl) {
-      this.mediaService.deleteFileByUrl(oldAvatarUrl);
+      this.filesService.deleteFileByUrl(oldAvatarUrl);
     }
     if (data.bannerUrl !== undefined && data.bannerUrl !== oldBannerUrl) {
-      this.mediaService.deleteFileByUrl(oldBannerUrl);
+      this.filesService.deleteFileByUrl(oldBannerUrl);
     }
     if (
       data.sidebarCardBackgroundUrl !== undefined &&
       data.sidebarCardBackgroundUrl !== oldSidebarUrl
     ) {
-      this.mediaService.deleteFileByUrl(oldSidebarUrl);
+      this.filesService.deleteFileByUrl(oldSidebarUrl);
     }
 
     return updatedUser;

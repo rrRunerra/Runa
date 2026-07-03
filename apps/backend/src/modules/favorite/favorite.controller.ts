@@ -9,12 +9,25 @@ import {
   Query,
   Req,
 } from '@nestjs/common';
-import { rrBadRequestException } from 'src/providers/error';
-import { FavoriteService } from './favorite.service';
-import { AuthGuard } from '../../common/guards/auth/auth.guard';
-import { CreateFavoriteDto } from './dto/create-favorite.dto';
+
 import { FavoriteType } from '@runa/database';
+
+import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { Public } from '../../common/decorators/public.decorator';
+import {
+  rrBadRequestException,
+  rrUnauthorizedException,
+} from 'src/providers/error';
+import type { ExtendedRequest } from '../../common/guards/auth/auth.types';
+
+import { FavoriteService } from './favorite.service';
+import { AddFavoriteDto } from './favorite.dto';
+import type {
+  FavoriteEntity,
+  FavoriteStatusEntity,
+  FavoriteSuccessEntity,
+  ResolvedFavoriteEntity,
+} from './favorite.entities';
 
 @Controller('favorites')
 @UseGuards(AuthGuard)
@@ -23,78 +36,100 @@ export class FavoriteController {
 
   constructor(private readonly favoriteService: FavoriteService) {}
 
-  private parseType(type: string): FavoriteType {
-    const upperType = type.toUpperCase();
-    if (!Object.values(FavoriteType).includes(upperType as FavoriteType)) {
+  // ---------------------------------------------------------------------------
+  // Helpers
+  // ---------------------------------------------------------------------------
+
+  private parseType(raw: string): FavoriteType {
+    const upper = raw.toUpperCase();
+    if (!Object.values(FavoriteType).includes(upper as FavoriteType)) {
       throw new rrBadRequestException(`${this.moduleCode}IT001`, {
-        message: `Invalid type: ${type}. Must be one of: ${Object.values(FavoriteType).join(', ')}`,
+        message: `Invalid type: ${raw}. Must be one of: ${Object.values(FavoriteType).join(', ')}`,
       });
     }
-    return upperType as FavoriteType;
+    return upper as FavoriteType;
   }
+
+  private userId(req: ExtendedRequest): string {
+    const id = req.user?.id;
+    if (!id) {
+      throw new rrUnauthorizedException(`${this.moduleCode}UA001`, {
+        message: 'Unauthenticated',
+      });
+    }
+    return id;
+  }
+
+  // ---------------------------------------------------------------------------
+  // POST /favorites — add to collection
+  // ---------------------------------------------------------------------------
 
   @Post()
   async addFavorite(
-    @Req() req: any,
-    @Body() dto: CreateFavoriteDto,
-  ): Promise<import('@runa/database').Favorite> {
-    return this.favoriteService.addFavorite(req.user.id, dto);
+    @Req() req: ExtendedRequest,
+    @Body() dto: AddFavoriteDto,
+  ): Promise<FavoriteEntity> {
+    return this.favoriteService.addFavorite(this.userId(req), dto);
   }
 
-  @Delete(':type/:mediaId')
-  async removeFavorite(
-    @Req() req: any,
-    @Param('type') type: string,
-    @Param('mediaId') mediaId: string,
-  ): Promise<{ success: boolean }> {
-    const favoriteType = this.parseType(type);
-    return this.favoriteService.removeFavorite(
-      req.user.id,
-      favoriteType,
-      mediaId,
-    );
-  }
+  // ---------------------------------------------------------------------------
+  // GET /favorites — my collection
+  // ---------------------------------------------------------------------------
 
   @Get()
   async getFavorites(
-    @Req() req: any,
+    @Req() req: ExtendedRequest,
     @Query('type') type?: string,
-  ): Promise<import('@runa/database').Favorite[]> {
+  ): Promise<FavoriteEntity[]> {
     const favoriteType = type ? this.parseType(type) : undefined;
-    return this.favoriteService.getFavorites(req.user.id, favoriteType);
+    return this.favoriteService.getFavorites(this.userId(req), favoriteType);
   }
+
+  // ---------------------------------------------------------------------------
+  // GET /favorites/user/:username — public collection (must be before /:type/:targetId)
+  // ---------------------------------------------------------------------------
 
   @Public()
   @Get('user/:username')
   async getUserFavorites(
     @Param('username') username: string,
     @Query('type') type?: string,
-  ): Promise<
-    {
-      id: string;
-      userId: string;
-      type: import('@runa/database').FavoriteType;
-      mediaId: string;
-      createdAt: Date;
-      title: string;
-      image: string;
-    }[]
-  > {
+  ): Promise<ResolvedFavoriteEntity[]> {
     const favoriteType = type ? this.parseType(type) : undefined;
     return this.favoriteService.getFavoritesByUsername(username, favoriteType);
   }
 
-  @Get('status/:type/:mediaId')
+  // ---------------------------------------------------------------------------
+  // GET /favorites/:type/:targetId/status — singleton status
+  // ---------------------------------------------------------------------------
+
+  @Get(':type/:targetId/status')
   async getFavoriteStatus(
-    @Req() req: any,
+    @Req() req: ExtendedRequest,
     @Param('type') type: string,
-    @Param('mediaId') mediaId: string,
-  ): Promise<{ favorited: boolean }> {
-    const favoriteType = this.parseType(type);
+    @Param('targetId') targetId: string,
+  ): Promise<FavoriteStatusEntity> {
     return this.favoriteService.getFavoriteStatus(
-      req.user.id,
-      favoriteType,
-      mediaId,
+      this.userId(req),
+      this.parseType(type),
+      targetId,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // DELETE /favorites/:type/:targetId — remove singleton
+  // ---------------------------------------------------------------------------
+
+  @Delete(':type/:targetId')
+  async removeFavorite(
+    @Req() req: ExtendedRequest,
+    @Param('type') type: string,
+    @Param('targetId') targetId: string,
+  ): Promise<FavoriteSuccessEntity> {
+    return this.favoriteService.removeFavorite(
+      this.userId(req),
+      this.parseType(type),
+      targetId,
     );
   }
 }

@@ -16,7 +16,7 @@ import { TvModule } from './modules/tv/tv.module';
 import { ConnectionModule } from './modules/connection/connection.module';
 import { ListModule } from './modules/list/list.module';
 import { FavoriteModule } from './modules/favorite/favorite.module';
-import { MediaModule } from './modules/media/media.module';
+import { FilesModule } from './modules/files/files.module';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { StatsModule } from './modules/stats/stats.module';
 import { PolarisModule } from './modules/polaris/polaris.module';
@@ -49,7 +49,7 @@ import { NotificationModule } from './modules/notification/notification.module';
     ConnectionModule,
     ListModule,
     FavoriteModule,
-    MediaModule,
+    FilesModule,
     StatsModule,
     PolarisModule,
     NotificationModule,

@@ -23,6 +23,7 @@
     "db:assign-admin": "dotenvx run -f ../../.env -- ts-node -r tsconfig-paths/register src/scripts/assign-admin.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1078.0",
     "@nestjs/common": "^11.1.27",
     "@nestjs/core": "^11.1.27",
     "@nestjs/platform-express": "^11.1.27",

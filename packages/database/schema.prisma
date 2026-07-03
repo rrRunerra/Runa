@@ -38,6 +38,7 @@ model User {
     cannedResponses          CannedResponse[]
     devices                  Device[]
     notifications            Notification[]
+    laceraFiles              LaceraFile[]
 
     // MFA Configuration Fields
     totpSecret      String?
@@ -53,6 +54,20 @@ model User {
     @@index([id])
     @@index([username])
     @@index([email])
+}
+
+model LaceraFile {
+    id         String   @id @default(nanoid())
+    key        String   @unique
+    userId     String
+    isPublic   Boolean  @default(false)
+    wrappedKey String
+    createdAt  DateTime @default(now())
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([userId])
+    @@index([key])
 }
 
 model Passkey {
