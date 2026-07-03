@@ -1,4 +1,5 @@
-import { IsNotEmpty, IsIn, IsString } from 'class-validator';
+import { IsIn, IsNotEmpty, IsString } from 'class-validator';
+
 import type { NotificationStatus } from '@runa/notifications';
 
 export class UpdateNotificationStatusDto {
@@ -8,4 +9,14 @@ export class UpdateNotificationStatusDto {
     message: 'status must be one of: PENDING, APPROVED, DENIED, READ',
   })
   status!: NotificationStatus;
+}
+
+export class ApproveDeviceDto {
+  @IsString()
+  @IsNotEmpty()
+  notificationId!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  encryptedMasterKey!: string;
 }

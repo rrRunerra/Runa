@@ -2,7 +2,7 @@ import {
   Controller,
   Get,
   Post,
-  Put,
+  Patch,
   Delete,
   Body,
   Param,
@@ -10,11 +10,21 @@ import {
   Req,
   Query,
 } from '@nestjs/common';
-import { NotificationService } from './notification.service';
+
 import { AuthGuard } from '../../common/guards/auth/auth.guard';
-import { UpdateNotificationStatusDto } from './dto/update-status.dto';
-import { ApproveDeviceDto } from './dto/approve-device.dto';
-import { Notification } from '@runa/notifications';
+import { rrUnauthorizedException } from 'src/providers/error';
+import type { ExtendedRequest } from '../../common/guards/auth/auth.types';
+
+import { NotificationService } from './notification.service';
+import {
+  UpdateNotificationStatusDto,
+  ApproveDeviceDto,
+} from './notification.dto';
+import type {
+  NotificationEntity,
+  NotificationType,
+  NotificationStatus,
+} from './notification.entities';
 
 @Controller('notifications')
 @UseGuards(AuthGuard)
@@ -23,56 +33,88 @@ export class NotificationController {
 
   constructor(private readonly notificationService: NotificationService) {}
 
+  private userId(req: ExtendedRequest): string {
+    const id = req.user?.id;
+    if (!id) {
+      throw new rrUnauthorizedException(`${this.moduleCode}UA001`, {
+        message: 'Unauthenticated',
+      });
+    }
+    return id;
+  }
+
+  // ---------------------------------------------------------------------------
+  // GET /notifications — collection
+  // ---------------------------------------------------------------------------
+
   @Get()
   async findAll(
-    @Req() req: any,
+    @Req() req: ExtendedRequest,
     @Query('skip') skip?: number,
     @Query('take') take?: number,
-    @Query('type') type?: string,
-    @Query('status') status?: string,
-  ): Promise<Notification[]> {
-    const userId = req.user.id;
+    @Query('type') type?: NotificationType,
+    @Query('status') status?: NotificationStatus,
+  ): Promise<NotificationEntity[]> {
     return this.notificationService.findAll(
-      userId,
+      this.userId(req),
       skip,
       take,
-      type as any,
-      status as any,
+      type,
+      status,
     );
   }
 
-  @Put(':id/status')
+  // ---------------------------------------------------------------------------
+  // PATCH /notifications/:id/status — singleton status update
+  // ---------------------------------------------------------------------------
+
+  @Patch(':id/status')
   async updateStatus(
-    @Req() req: any,
+    @Req() req: ExtendedRequest,
     @Param('id') id: string,
     @Body() body: UpdateNotificationStatusDto,
-  ): Promise<Notification> {
-    const userId = req.user.id;
-    return this.notificationService.updateStatus(userId, id, body.status);
+  ): Promise<NotificationEntity> {
+    return this.notificationService.updateStatus(
+      this.userId(req),
+      id,
+      body.status,
+    );
   }
+
+  // ---------------------------------------------------------------------------
+  // POST /notifications/approve — approve device request
+  // ---------------------------------------------------------------------------
 
   @Post('approve')
   async approveDevice(
-    @Req() req: any,
+    @Req() req: ExtendedRequest,
     @Body() body: ApproveDeviceDto,
-  ): Promise<Notification> {
-    const userId = req.user.id;
+  ): Promise<NotificationEntity> {
     return this.notificationService.approveDeviceRequest(
-      userId,
+      this.userId(req),
       body.notificationId,
       body.encryptedMasterKey,
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // DELETE /notifications/:id — singleton
+  // ---------------------------------------------------------------------------
+
   @Delete(':id')
-  async delete(@Req() req: any, @Param('id') id: string): Promise<void> {
-    const userId = req.user.id;
-    await this.notificationService.delete(userId, id);
+  async delete(
+    @Req() req: ExtendedRequest,
+    @Param('id') id: string,
+  ): Promise<void> {
+    await this.notificationService.delete(this.userId(req), id);
   }
 
+  // ---------------------------------------------------------------------------
+  // DELETE /notifications — clear collection
+  // ---------------------------------------------------------------------------
+
   @Delete()
-  async deleteAll(@Req() req: any): Promise<void> {
-    const userId = req.user.id;
-    await this.notificationService.deleteAll(userId);
+  async deleteAll(@Req() req: ExtendedRequest): Promise<void> {
+    await this.notificationService.deleteAll(this.userId(req));
   }
 }

@@ -1,24 +1,28 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { PrismaService } from '../../providers/database/prisma.service';
-import { NotificationGateway } from './notification.gateway';
+
 import {
   Notification,
   NotificationType,
   NotificationStatus,
   DeviceApprovalMetadata,
 } from '@runa/notifications';
+
 import {
   rrBadRequestException,
   rrNotFoundException,
 } from 'src/providers/error';
 
+import { NotificationGateway } from './notification.gateway';
+import { NotificationRepository } from './notification.repository';
+
 @Injectable()
 export class NotificationService {
+  private readonly logger = new Logger(NotificationService.name);
   private readonly moduleCode = 'NoSve-';
 
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly notificationRepository: NotificationRepository,
     private readonly gateway: NotificationGateway,
   ) {}
 
@@ -29,18 +33,14 @@ export class NotificationService {
     type?: NotificationType,
     status?: NotificationStatus,
   ): Promise<Notification[]> {
-    const where: any = { userId };
-    if (type) where.type = type;
-    if (status) where.status = status;
-
-    const records = await this.prisma.client.notification.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      skip: skip ? Number(skip) : undefined,
-      take: take ? Number(take) : undefined,
-    });
-
-    return records.map((record) => this.mapToDto(record));
+    const records = await this.notificationRepository.findMany(
+      userId,
+      skip,
+      take,
+      type,
+      status,
+    );
+    return records.map((r) => this.toEntity(r));
   }
 
   async create(
@@ -52,20 +52,17 @@ export class NotificationService {
       metadata?: DeviceApprovalMetadata;
     },
   ): Promise<Notification> {
-    const record = await this.prisma.client.notification.create({
-      data: {
-        userId,
-        title: data.title,
-        message: data.message,
-        type: data.type,
-        status: 'PENDING',
-        metadata: data.metadata
-          ? JSON.parse(JSON.stringify(data.metadata))
-          : null,
-      },
+    const record = await this.notificationRepository.create({
+      userId,
+      title: data.title,
+      message: data.message,
+      type: data.type,
+      metadata: data.metadata
+        ? (JSON.parse(JSON.stringify(data.metadata)) as Record<string, unknown>)
+        : null,
     });
 
-    const notification = this.mapToDto(record);
+    const notification = this.toEntity(record);
     this.gateway.sendToUser(userId, 'notification:created', notification);
     return notification;
   }
@@ -75,9 +72,10 @@ export class NotificationService {
     notificationId: string,
     status: NotificationStatus,
   ): Promise<Notification> {
-    const existing = await this.prisma.client.notification.findFirst({
-      where: { id: notificationId, userId },
-    });
+    const existing = await this.notificationRepository.findFirstByIdAndUser(
+      notificationId,
+      userId,
+    );
 
     if (!existing) {
       throw new rrNotFoundException(`${this.moduleCode}NWIDNF001`, {
@@ -85,12 +83,12 @@ export class NotificationService {
       });
     }
 
-    const updated = await this.prisma.client.notification.update({
-      where: { id: notificationId },
-      data: { status },
-    });
+    const updated = await this.notificationRepository.updateStatus(
+      notificationId,
+      status,
+    );
 
-    const notification = this.mapToDto(updated);
+    const notification = this.toEntity(updated);
     this.gateway.sendToUser(userId, 'notification:updated', notification);
     return notification;
   }
@@ -100,9 +98,10 @@ export class NotificationService {
     notificationId: string,
     encryptedMasterKey: string,
   ): Promise<Notification> {
-    const existing = await this.prisma.client.notification.findFirst({
-      where: { id: notificationId, userId },
-    });
+    const existing = await this.notificationRepository.findFirstByIdAndUser(
+      notificationId,
+      userId,
+    );
 
     if (!existing) {
       throw new rrNotFoundException(`${this.moduleCode}NWIDNF002`, {
@@ -123,43 +122,43 @@ export class NotificationService {
     }
 
     const metadata = existing.metadata as unknown as DeviceApprovalMetadata;
-    if (!metadata || !metadata.deviceId) {
+    if (!metadata?.deviceId) {
       throw new rrBadRequestException(`${this.moduleCode}NMMDLD001`, {
         message: 'Notification metadata is missing device linking details',
       });
     }
 
-    // Update the device with the encrypted master key
-    const deviceRecord = await this.prisma.client.device.findFirst({
-      where: { id: metadata.deviceId, userId },
-    });
+    const device = await this.notificationRepository.findDeviceByIdAndUser(
+      metadata.deviceId,
+      userId,
+    );
 
-    if (!deviceRecord) {
+    if (!device) {
       throw new rrNotFoundException(`${this.moduleCode}DWIDNF001`, {
         message: `Device with ID ${metadata.deviceId} not found`,
       });
     }
 
-    await this.prisma.client.device.update({
-      where: { id: metadata.deviceId },
-      data: { encryptedMasterKey },
-    });
+    await this.notificationRepository.updateDeviceMasterKey(
+      metadata.deviceId,
+      encryptedMasterKey,
+    );
 
-    // Mark notification as APPROVED
-    const updatedNotification = await this.prisma.client.notification.update({
-      where: { id: notificationId },
-      data: { status: 'APPROVED' },
-    });
+    const updated = await this.notificationRepository.updateStatus(
+      notificationId,
+      'APPROVED',
+    );
 
-    const notification = this.mapToDto(updatedNotification);
+    const notification = this.toEntity(updated);
     this.gateway.sendToUser(userId, 'notification:updated', notification);
     return notification;
   }
 
   async delete(userId: string, id: string): Promise<void> {
-    const existing = await this.prisma.client.notification.findFirst({
-      where: { id, userId },
-    });
+    const existing = await this.notificationRepository.findFirstByIdAndUser(
+      id,
+      userId,
+    );
 
     if (!existing) {
       throw new rrNotFoundException(`${this.moduleCode}NWIDNF003`, {
@@ -167,18 +166,12 @@ export class NotificationService {
       });
     }
 
-    await this.prisma.client.notification.delete({
-      where: { id },
-    });
-
+    await this.notificationRepository.delete(id);
     this.gateway.sendToUser(userId, 'notification:deleted', { id });
   }
 
   async deleteAll(userId: string): Promise<void> {
-    await this.prisma.client.notification.deleteMany({
-      where: { userId },
-    });
-
+    await this.notificationRepository.deleteAllByUser(userId);
     this.gateway.sendToUser(userId, 'notifications:cleared', {});
   }
 
@@ -187,22 +180,29 @@ export class NotificationService {
     const oneWeekAgo = new Date();
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-    const result = await this.prisma.client.notification.deleteMany({
-      where: {
-        createdAt: {
-          lt: oneWeekAgo,
-        },
-      },
-    });
+    const count = await this.notificationRepository.deleteOlderThan(oneWeekAgo);
 
-    if (result.count > 0) {
-      console.log(
-        `[Notification Cleanup] Deleted ${result.count} notifications older than a week.`,
+    if (count > 0) {
+      this.logger.log(
+        `[Notification Cleanup] Deleted ${count} notifications older than a week.`,
       );
     }
   }
 
-  private mapToDto(record: any): Notification {
+  // ---------------------------------------------------------------------------
+  // Helpers
+  // ---------------------------------------------------------------------------
+
+  private toEntity(record: {
+    id: string;
+    userId: string;
+    title: string;
+    message: string;
+    type: string;
+    status: string;
+    metadata: unknown;
+    createdAt: Date;
+  }): Notification {
     return {
       id: record.id,
       userId: record.userId,
@@ -211,7 +211,7 @@ export class NotificationService {
       type: record.type as NotificationType,
       status: record.status as NotificationStatus,
       metadata: record.metadata
-        ? (record.metadata as unknown as DeviceApprovalMetadata)
+        ? (record.metadata as DeviceApprovalMetadata)
         : null,
       createdAt: record.createdAt,
     };

@@ -4,12 +4,11 @@ import {
   rrNotFoundException,
   rrUnauthorizedException,
 } from 'src/providers/error';
-import { LoginAuthDto } from './dto/login-auth.dto';
 import { SignJWT, jwtVerify } from 'jose';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { CacheService } from '../../providers/cache/cache.service';
 import { MailService } from '../../providers/mail/mail.service';
-import { encrypt, decrypt } from '@runa/crypto/server';
+import { decrypt } from '@runa/crypto/server';
 import {
   generateDataKey,
   encryptWithDataKey,
@@ -18,10 +17,29 @@ import {
 import { verify } from 'otplib';
 import bcrypt from 'bcrypt';
 import type { User, Passkey } from '@runa/database';
+import { LoginAuthDto } from './auth.dto';
+import type {
+  AuthResponseEntity,
+  MfaRequiredEntity,
+  LoginCodeEntity,
+  LoginCodeStatusEntity,
+} from './auth.entities';
 import {
   generateAuthenticationOptions,
   verifyAuthenticationResponse,
 } from '@simplewebauthn/server';
+import type {
+  AuthenticationResponseJSON,
+  PublicKeyCredentialRequestOptionsJSON,
+  VerifiedAuthenticationResponse,
+  AuthenticatorTransportFuture,
+} from '@simplewebauthn/server';
+
+interface MfaTokenPayload {
+  sub?: string;
+  type?: string;
+  [key: string]: unknown;
+}
 
 @Injectable()
 export class AuthService {
@@ -38,21 +56,24 @@ export class AuthService {
     process.env.NEXTAUTH_SECRET,
   );
 
-  public async login(data: LoginAuthDto): Promise<any> {
+  public async login(
+    data: LoginAuthDto,
+  ): Promise<AuthResponseEntity | MfaRequiredEntity> {
     // 1. Check if MFA Success Token is provided (from client after MFA verify succeeded)
     if (data.mfaSuccessToken) {
       try {
         const { payload } = await jwtVerify(data.mfaSuccessToken, this.secret, {
           algorithms: ['HS256'],
         });
-        if (payload.type !== 'mfa_success' || !payload.sub) {
+        const tokenPayload = payload as MfaTokenPayload;
+        if (tokenPayload.type !== 'mfa_success' || !tokenPayload.sub) {
           throw new rrUnauthorizedException(`${this.moduleCode}IMST001`, {
             message: 'Invalid MFA success token',
           });
         }
 
         const user = await this.prisma.client.user.findUnique({
-          where: { id: payload.sub as string },
+          where: { id: tokenPayload.sub },
         });
 
         if (!user) {
@@ -75,13 +96,15 @@ export class AuthService {
           },
           token,
         };
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'MFA verification failed';
         this.logger.error(
-          `[Login Step 1/5] MFA success token verification failed: ${err.message}`,
-          err.stack,
+          `[Login Step 1/5] MFA success token verification failed: ${errorMessage}`,
+          err instanceof Error ? err.stack : undefined,
         );
         throw new rrUnauthorizedException(`${this.moduleCode}MVEOI001`, {
-          message: err.message || 'MFA verification expired or invalid',
+          message: errorMessage,
         });
       }
     }
@@ -93,9 +116,11 @@ export class AuthService {
 
     // 2. Check if this is a Passwordless Passkey direct login
     if (data.isPasskeyOnly === 'true' && data.passkeyResponse) {
-      let parsedResponse;
+      let parsedResponse: AuthenticationResponseJSON;
       try {
-        parsedResponse = JSON.parse(data.passkeyResponse);
+        parsedResponse = JSON.parse(
+          data.passkeyResponse,
+        ) as AuthenticationResponseJSON;
       } catch {
         throw new rrBadRequestException(`${this.moduleCode}IPARF001`, {
           message: 'Invalid passkey assertion response format',
@@ -174,7 +199,7 @@ export class AuthService {
           id: d.id,
           deviceName: d.deviceName,
         })),
-      } as any; // Cast to bypass compiler return warnings
+      };
     }
 
     const token = await this.signToken(user);
@@ -193,7 +218,7 @@ export class AuthService {
     };
   }
 
-  public async verifyToken(token: string): Promise<any> {
+  public async verifyToken(token: string): Promise<Record<string, unknown>> {
     try {
       const { payload } = await jwtVerify(token, this.secret, {
         algorithms: ['HS256'],
@@ -206,27 +231,29 @@ export class AuthService {
     }
   }
 
-  public async sendMfaEmailCode(tempToken: string): Promise<any> {
-    let payload;
+  public async sendMfaEmailCode(
+    tempToken: string,
+  ): Promise<{ success: boolean }> {
+    let tokenPayload: MfaTokenPayload | null = null;
     try {
       const result = await jwtVerify(tempToken, this.secret, {
         algorithms: ['HS256'],
       });
-      payload = result.payload;
+      tokenPayload = result.payload;
     } catch {
       throw new rrUnauthorizedException(`${this.moduleCode}IOEMT001`, {
         message: 'Invalid or expired MFA token',
       });
     }
 
-    if (payload.type !== 'mfa_pending' || !payload.sub) {
+    if (tokenPayload.type !== 'mfa_pending' || !tokenPayload.sub) {
       throw new rrUnauthorizedException(`${this.moduleCode}IMT001`, {
         message: 'Invalid MFA token',
       });
     }
 
     const user = await this.prisma.client.user.findUnique({
-      where: { id: payload.sub as string },
+      where: { id: tokenPayload.sub },
     });
     if (!user || !user.emailMfaEnabled) {
       throw new rrUnauthorizedException(`${this.moduleCode}MNAONA001`, {
@@ -249,26 +276,26 @@ export class AuthService {
   public async sendDeviceMfaCode(
     tempToken: string,
     deviceId: string,
-  ): Promise<any> {
-    let payload;
+  ): Promise<{ success: boolean }> {
+    let tokenPayload: MfaTokenPayload | null = null;
     try {
       const result = await jwtVerify(tempToken, this.secret, {
         algorithms: ['HS256'],
       });
-      payload = result.payload;
+      tokenPayload = result.payload;
     } catch {
       throw new rrUnauthorizedException(`${this.moduleCode}IOEMT002`, {
         message: 'Invalid or expired MFA token',
       });
     }
 
-    if (payload.type !== 'mfa_pending' || !payload.sub) {
+    if (tokenPayload.type !== 'mfa_pending' || !tokenPayload.sub) {
       throw new rrUnauthorizedException(`${this.moduleCode}IMT002`, {
         message: 'Invalid MFA token',
       });
     }
 
-    const userId = payload.sub as string;
+    const userId = tokenPayload.sub;
     const device = await this.prisma.client.device.findFirst({
       where: { id: deviceId, userId },
     });
@@ -304,7 +331,7 @@ export class AuthService {
         metadata: {
           encryptedKey: encryptedKeyPayload,
           targetDeviceId: device.id,
-        } as any,
+        } as Record<string, unknown>,
       },
     });
 
@@ -315,27 +342,27 @@ export class AuthService {
     tempToken: string,
     method: string,
     code?: string,
-    passkeyResponse?: any,
-  ): Promise<any> {
-    let payload;
+    passkeyResponse?: AuthenticationResponseJSON,
+  ): Promise<{ success: boolean; mfaSuccessToken: string }> {
+    let tokenPayload: MfaTokenPayload | null = null;
     try {
       const result = await jwtVerify(tempToken, this.secret, {
         algorithms: ['HS256'],
       });
-      payload = result.payload;
+      tokenPayload = result.payload;
     } catch {
       throw new rrUnauthorizedException(`${this.moduleCode}IOEMT003`, {
         message: 'Invalid or expired MFA token',
       });
     }
 
-    if (payload.type !== 'mfa_pending' || !payload.sub) {
+    if (tokenPayload.type !== 'mfa_pending' || !tokenPayload.sub) {
       throw new rrUnauthorizedException(`${this.moduleCode}IMT003`, {
         message: 'Invalid MFA token',
       });
     }
 
-    const userId = payload.sub as string;
+    const userId = tokenPayload.sub;
     const user = await this.prisma.client.user.findUnique({
       where: { id: userId },
       include: { passkeys: true },
@@ -361,9 +388,11 @@ export class AuthService {
       let decryptedSecret: string;
       try {
         decryptedSecret = decrypt(user.totpSecret);
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Unknown error';
         this.logger.error(
-          `Failed to decrypt TOTP secret for user ${userId}. This usually means NEXTAUTH_SECRET changed or is mismatched. Error: ${err.message}`,
+          `Failed to decrypt TOTP secret for user ${userId}. This usually means NEXTAUTH_SECRET changed or is mismatched. Error: ${errorMessage}`,
         );
         throw new rrUnauthorizedException(`${this.moduleCode}FTDAS001`, {
           message:
@@ -469,7 +498,7 @@ export class AuthService {
         });
       }
 
-      let verification;
+      let verification: VerifiedAuthenticationResponse;
       try {
         verification = await verifyAuthenticationResponse({
           response: passkeyResponse,
@@ -480,12 +509,14 @@ export class AuthService {
             id: passkey.id,
             publicKey: Buffer.from(passkey.publicKey, 'base64url'),
             counter: passkey.counter,
-            transports: passkey.transports as any,
+            transports: passkey.transports as AuthenticatorTransportFuture[],
           },
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Passkey verification failed';
         throw new rrUnauthorizedException(`${this.moduleCode}PVF001`, {
-          message: err.message || 'Passkey verification failed',
+          message: errorMessage,
         });
       }
 
@@ -518,7 +549,10 @@ export class AuthService {
     return { success: true, mfaSuccessToken };
   }
 
-  public async generatePasskeyLoginOptions(identifier?: string): Promise<any> {
+  public async generatePasskeyLoginOptions(identifier?: string): Promise<{
+    options: PublicKeyCredentialRequestOptionsJSON;
+    userId: string | undefined;
+  }> {
     let user: (User & { passkeys: Passkey[] }) | null = null;
     let allowCredentials:
       | { id: string; type: 'public-key'; transports?: any[] }[]
@@ -537,7 +571,7 @@ export class AuthService {
         allowCredentials = user.passkeys.map((pk) => ({
           id: pk.id,
           type: 'public-key' as const,
-          transports: pk.transports as any,
+          transports: pk.transports,
         }));
       }
     }
@@ -574,8 +608,8 @@ export class AuthService {
 
   public async verifyPasskeyLogin(
     identifier: string | undefined,
-    assertionResponse: any,
-  ): Promise<any> {
+    assertionResponse: AuthenticationResponseJSON,
+  ): Promise<AuthResponseEntity> {
     let user: (User & { passkeys: Passkey[] }) | null = null;
 
     if (identifier) {
@@ -614,12 +648,12 @@ export class AuthService {
             assertionResponse.response.clientDataJSON,
             'base64url',
           ).toString('utf8'),
-        );
+        ) as { challenge: string };
         const challenge = clientData.challenge;
         expectedChallenge = await this.cacheService.get<string>(
           `global-passkey-challenge:${challenge}`,
         );
-      } catch (e) {
+      } catch {
         // Ignored
       }
     }
@@ -643,7 +677,7 @@ export class AuthService {
       });
     }
 
-    let verification;
+    let verification: VerifiedAuthenticationResponse;
     try {
       verification = await verifyAuthenticationResponse({
         response: assertionResponse,
@@ -654,12 +688,14 @@ export class AuthService {
           id: passkey.id,
           publicKey: Buffer.from(passkey.publicKey, 'base64url'),
           counter: passkey.counter,
-          transports: passkey.transports as any,
+          transports: passkey.transports as AuthenticatorTransportFuture[],
         },
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Passkey verification failed';
       throw new rrUnauthorizedException(`${this.moduleCode}PVF002`, {
-        message: err.message || 'Passkey verification failed',
+        message: errorMessage,
       });
     }
 
@@ -694,7 +730,7 @@ export class AuthService {
     };
   }
 
-  public async generateLoginCode(): Promise<any> {
+  public async generateLoginCode(): Promise<LoginCodeEntity> {
     let code = '';
     let exists = true;
     let attempts = 0;
@@ -723,7 +759,9 @@ export class AuthService {
     return { code };
   }
 
-  public async getLoginCodeStatus(code: string): Promise<any> {
+  public async getLoginCodeStatus(
+    code: string,
+  ): Promise<LoginCodeStatusEntity> {
     const data = await this.cacheService.get<{ status: string }>(
       `login-code:${code}`,
     );
@@ -733,7 +771,10 @@ export class AuthService {
     return { status: data.status };
   }
 
-  public async linkLoginCode(userId: string, code: string): Promise<any> {
+  public async linkLoginCode(
+    userId: string,
+    code: string,
+  ): Promise<{ success: boolean }> {
     const cacheKey = `login-code:${code}`;
     const data = await this.cacheService.get<{ status: string }>(cacheKey);
 
@@ -748,7 +789,7 @@ export class AuthService {
     return { success: true };
   }
 
-  public async verifyLoginCode(code: string): Promise<any> {
+  public async verifyLoginCode(code: string): Promise<AuthResponseEntity> {
     const cacheKey = `login-code:${code}`;
     const cached = await this.cacheService.get<{
       status: string;
@@ -789,7 +830,7 @@ export class AuthService {
     };
   }
 
-  private async signToken(user: any): Promise<string> {
+  private async signToken(user: User): Promise<string> {
     return await new SignJWT({
       sub: user.id,
       email: user.email,

@@ -1,12 +1,12 @@
 import { ConnectionLinkedTo } from '@runa/database';
 import {
+  IsBoolean,
+  IsDateString,
   IsEnum,
   IsNotEmpty,
+  IsObject,
   IsOptional,
   IsString,
-  IsDateString,
-  IsBoolean,
-  IsObject,
 } from 'class-validator';
 
 export enum ConnectionProvider {
@@ -54,5 +54,11 @@ export class UpsertConnectionDto {
 
   @IsObject()
   @IsOptional()
-  metadata?: any;
+  metadata?: Record<string, unknown>;
+}
+
+export class RemoveConnectionDto {
+  @IsString()
+  @IsOptional()
+  username?: string;
 }

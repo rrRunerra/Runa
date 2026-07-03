@@ -83,7 +83,7 @@ export class ConnectionService implements OnModuleInit {
     providerId: string,
     token: string,
     redirectUrl?: string,
-  ): Promise<any> {
+  ): Promise<string> {
     const provider = this.getConnectionInstance(providerId);
     return provider.getAuthUrl(token, redirectUrl);
   }
@@ -101,7 +101,7 @@ export class ConnectionService implements OnModuleInit {
     username: string,
     linkedTo?: ConnectionLinkedTo,
     capabilities?: string | string[],
-  ): Promise<any[]> {
+  ): Promise<ConnectionEntity[]> {
     const connections = await this.prisma.client.connections.findMany({
       where: {
         username,
@@ -166,9 +166,9 @@ export class ConnectionService implements OnModuleInit {
       connectionId?: string;
       linkedTo?: ConnectionLinkedTo;
       private?: boolean;
-      metadata?: any;
+      metadata?: Record<string, unknown>;
     },
-  ): Promise<any> {
+  ): Promise<ConnectionEntity> {
     const provider = this.toProvider(data.provider);
 
     const connection = await this.prisma.client.connections.upsert({
