@@ -14,6 +14,7 @@ import {
 import {
   rrBadRequestException,
   rrConflictException,
+  rrInternalServerErrorException,
   rrNotFoundException,
 } from 'src/providers/error';
 import { CacheService } from '../../providers/cache/cache.service';
@@ -31,6 +32,9 @@ import type {
   E2eeKeysEntity,
   SuccessEntity,
   UserProfileEntity,
+  ApiKeyEntity,
+  ApiKeyCreatedEntity,
+  DeleteSuccessEntity,
 } from './user.entities';
 import type {
   CreateUserDto,
@@ -976,6 +980,102 @@ export class UserService {
 
     await this.cacheService.del(`user:e2ee-keys:${userId}`);
     return updated;
+  }
+
+  // ---------------------------------------------------------------------------
+  // API Keys
+  // ---------------------------------------------------------------------------
+
+  public async createApiKey(
+    userId: string,
+    name: string,
+  ): Promise<ApiKeyCreatedEntity> {
+    const rawKey = crypto.randomBytes(32).toString('hex');
+    const keyPrefix = rawKey.slice(0, 16);
+    const keyHash = await bcrypt.hash(rawKey, 10);
+
+    const apiKey = await this.userRepository.createApiKey({
+      name,
+      keyPrefix,
+      keyHash,
+      user: { connect: { id: userId } },
+    });
+
+    return {
+      ...apiKey,
+      key: rawKey,
+    };
+  }
+
+  public async findAllApiKeysByUser(userId: string): Promise<ApiKeyEntity[]> {
+    const keys = await this.userRepository.findApiKeysByUser(userId);
+
+    return keys.map((key) => ({
+      id: key.id,
+      name: key.name,
+      createdAt: key.createdAt,
+      lastUsedAt: key.lastUsedAt,
+      truncatedKey: `${key.keyPrefix}...`,
+    }));
+  }
+
+  public async regenerateApiKey(
+    id: string,
+    userId: string,
+  ): Promise<ApiKeyCreatedEntity> {
+    const existing = await this.userRepository.findApiKeyByIdAndUser(
+      id,
+      userId,
+    );
+
+    if (!existing) {
+      throw new rrNotFoundException(`${this.moduleCode}AKNF001`, {
+        message: 'API Key not found',
+      });
+    }
+
+    const rawKey = crypto.randomBytes(32).toString('hex');
+    const keyPrefix = rawKey.slice(0, 16);
+    const keyHash = await bcrypt.hash(rawKey, 10);
+
+    const updated = await this.userRepository.updateApiKey(id, {
+      keyHash,
+      keyPrefix,
+      lastUsedAt: null,
+    });
+
+    return {
+      ...updated,
+      key: rawKey,
+    };
+  }
+
+  public async deleteApiKey(
+    id: string,
+    userId: string,
+  ): Promise<DeleteSuccessEntity> {
+    const existing = await this.userRepository.findApiKeyByIdAndUser(
+      id,
+      userId,
+    );
+
+    if (!existing) {
+      throw new rrNotFoundException(`${this.moduleCode}AKNF002`, {
+        message: 'API Key not found',
+      });
+    }
+
+    try {
+      await this.userRepository.deleteApiKey(id);
+    } catch {
+      throw new rrInternalServerErrorException(`${this.moduleCode}FTDAK001`, {
+        message: 'Failed to delete API Key',
+      });
+    }
+
+    return {
+      message: 'API Key deleted successfully',
+    };
   }
 
   // ---------------------------------------------------------------------------

@@ -5,6 +5,7 @@ import {
   type Connections,
   type Device,
   type Passkey,
+  type ApiKey,
 } from '@runa/database';
 
 import { PrismaService } from '../../providers/database/prisma.service';
@@ -331,6 +332,46 @@ export class UserRepository {
     return this.prisma.client.user.update({
       where: { id: userId },
       data: { userPublicKey, encryptedUserPrivateKey },
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // API Keys
+  // ---------------------------------------------------------------------------
+
+  async findApiKeysByUser(userId: string): Promise<ApiKey[]> {
+    return this.prisma.client.apiKey.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async findApiKeyByIdAndUser(
+    id: string,
+    userId: string,
+  ): Promise<ApiKey | null> {
+    return this.prisma.client.apiKey.findFirst({
+      where: { id, userId },
+    });
+  }
+
+  async createApiKey(data: Prisma.ApiKeyCreateInput): Promise<ApiKey> {
+    return this.prisma.client.apiKey.create({ data });
+  }
+
+  async updateApiKey(
+    id: string,
+    data: Prisma.ApiKeyUpdateInput,
+  ): Promise<ApiKey> {
+    return this.prisma.client.apiKey.update({
+      where: { id },
+      data,
+    });
+  }
+
+  async deleteApiKey(id: string): Promise<void> {
+    await this.prisma.client.apiKey.delete({
+      where: { id },
     });
   }
 }

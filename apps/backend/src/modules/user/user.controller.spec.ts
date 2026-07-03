@@ -45,6 +45,10 @@ const mockUserService = {
   getDeviceStatus: jest.fn(),
   getE2eeKeys: jest.fn(),
   updateE2eeKeys: jest.fn(),
+  findAllApiKeysByUser: jest.fn(),
+  createApiKey: jest.fn(),
+  regenerateApiKey: jest.fn(),
+  deleteApiKey: jest.fn(),
 };
 
 const mockAuthGuard = {
@@ -53,7 +57,13 @@ const mockAuthGuard = {
 
 // Helper to create a typed mock request
 function mockReq(partial: { id?: string; username?: string }): ExtendedRequest {
-  return { user: { id: partial.id ?? 'user-1', username: partial.username ?? 'testuser', permissions: [] } } as unknown as ExtendedRequest;
+  return {
+    user: {
+      id: partial.id ?? 'user-1',
+      username: partial.username ?? 'testuser',
+      permissions: [],
+    },
+  } as unknown as ExtendedRequest;
 }
 
 // ---------------------------------------------------------------------------
@@ -135,7 +145,9 @@ describe('UserController', () => {
     it('should update privacy settings', async () => {
       const req = mockReq({ id: 'user-1' });
       const dto: PrivacySettingsDto = { profile: true };
-      mockUserService.updatePrivacySettings.mockResolvedValue({ success: true });
+      mockUserService.updatePrivacySettings.mockResolvedValue({
+        success: true,
+      });
 
       const result = await controller.updatePrivacy(req, dto);
       expect(service.updatePrivacySettings).toHaveBeenCalledWith('user-1', dto);
@@ -148,11 +160,17 @@ describe('UserController', () => {
     it('should update profile settings', async () => {
       const req = mockReq({ id: 'user-1' });
       const dto: UpdateSettingsDto = { profileSettings: { theme: 'dark' } };
-      mockUserService.updateSettings.mockResolvedValue({ id: 'user-1', profileSettings: { theme: 'dark' } });
+      mockUserService.updateSettings.mockResolvedValue({
+        id: 'user-1',
+        profileSettings: { theme: 'dark' },
+      });
 
       const result = await controller.updateSettings(req, dto);
       expect(service.updateSettings).toHaveBeenCalledWith('user-1', dto);
-      expect(result).toEqual({ id: 'user-1', profileSettings: { theme: 'dark' } });
+      expect(result).toEqual({
+        id: 'user-1',
+        profileSettings: { theme: 'dark' },
+      });
     });
   });
 
@@ -161,7 +179,10 @@ describe('UserController', () => {
     it('should update user info', async () => {
       const req = mockReq({ id: 'user-1' });
       const dto: UpdateUserDto = { displayName: 'New Name' };
-      mockUserService.update.mockResolvedValue({ id: 'user-1', displayName: 'New Name' });
+      mockUserService.update.mockResolvedValue({
+        id: 'user-1',
+        displayName: 'New Name',
+      });
 
       const result = await controller.update(req, dto);
       expect(service.update).toHaveBeenCalledWith('user-1', dto);
@@ -175,7 +196,9 @@ describe('UserController', () => {
       mockUserService.findByUsername.mockResolvedValue(null);
       await expect(
         controller.findOne({ username: 'nonexistent' }),
-      ).rejects.toThrow(new NotFoundException('User with username nonexistent not found'));
+      ).rejects.toThrow(
+        new NotFoundException('User with username nonexistent not found'),
+      );
     });
 
     it('should return safe public user profile when user exists', async () => {
@@ -248,7 +271,10 @@ describe('UserController', () => {
     const req = mockReq({ id: 'user-1' });
 
     it('setupTotp should call generateTotpSetup', async () => {
-      mockUserService.generateTotpSetup.mockResolvedValue({ secret: 'sec', otpauthUrl: 'url' });
+      mockUserService.generateTotpSetup.mockResolvedValue({
+        secret: 'sec',
+        otpauthUrl: 'url',
+      });
       const result = await controller.setupTotp(req);
       expect(service.generateTotpSetup).toHaveBeenCalledWith('user-1');
       expect(result).toEqual({ secret: 'sec', otpauthUrl: 'url' });
@@ -270,7 +296,9 @@ describe('UserController', () => {
     });
 
     it('sendEmailMfaSetupCode should call sendEmailMfaSetupCode', async () => {
-      mockUserService.sendEmailMfaSetupCode.mockResolvedValue({ success: true });
+      mockUserService.sendEmailMfaSetupCode.mockResolvedValue({
+        success: true,
+      });
       const result = await controller.sendEmailMfaSetupCode(req);
       expect(service.sendEmailMfaSetupCode).toHaveBeenCalledWith('user-1');
       expect(result).toEqual({ success: true });
@@ -301,15 +329,29 @@ describe('UserController', () => {
     it('generatePasskeyRegisterOptions should call generatePasskeyRegisterOptions', async () => {
       mockUserService.generatePasskeyRegisterOptions.mockResolvedValue({});
       const result = await controller.generatePasskeyRegisterOptions(req);
-      expect(service.generatePasskeyRegisterOptions).toHaveBeenCalledWith('user-1');
+      expect(service.generatePasskeyRegisterOptions).toHaveBeenCalledWith(
+        'user-1',
+      );
       expect(result).toEqual({});
     });
 
     it('verifyPasskeyRegister should call verifyPasskeyRegister', async () => {
       mockUserService.verifyPasskeyRegister.mockResolvedValue([]);
-      const dto: VerifyPasskeyDto = { response: { id: 'cred', rawId: 'raw', type: 'public-key', response: {} } as Record<string, unknown>, name: 'mykey' };
+      const dto: VerifyPasskeyDto = {
+        response: {
+          id: 'cred',
+          rawId: 'raw',
+          type: 'public-key',
+          response: {},
+        } as Record<string, unknown>,
+        name: 'mykey',
+      };
       const result = await controller.verifyPasskeyRegister(req, dto);
-      expect(service.verifyPasskeyRegister).toHaveBeenCalledWith('user-1', dto.response, 'mykey');
+      expect(service.verifyPasskeyRegister).toHaveBeenCalledWith(
+        'user-1',
+        dto.response,
+        'mykey',
+      );
       expect(result).toEqual([]);
     });
 
@@ -332,6 +374,76 @@ describe('UserController', () => {
       const result = await controller.deletePasskey(req, { id: 'pass-1' });
       expect(service.deletePasskey).toHaveBeenCalledWith('user-1', 'pass-1');
       expect(result).toEqual({ success: true });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // API Keys — /users/me/api-keys
+  // ---------------------------------------------------------------------------
+
+  describe('findAllApiKeys', () => {
+    it('should retrieve API keys for the authenticated user', async () => {
+      const req = mockReq({ id: 'user-123' });
+      const expectedKeys = [
+        { id: 'key-1', name: 'Test Key', truncatedKey: 'abc...' },
+      ];
+      mockUserService.findAllApiKeysByUser.mockResolvedValue(expectedKeys);
+
+      const result = await controller.findAllApiKeys(req);
+
+      expect(service.findAllApiKeysByUser).toHaveBeenCalledWith('user-123');
+      expect(result).toBe(expectedKeys);
+    });
+  });
+
+  describe('createApiKey', () => {
+    it('should generate a new API key for the authenticated user', async () => {
+      const req = mockReq({ id: 'user-123' });
+      const createDto = { name: 'New Key' };
+      const expectedResult = {
+        id: 'key-2',
+        name: 'New Key',
+        key: 'raw-key-value',
+      };
+      mockUserService.createApiKey.mockResolvedValue(expectedResult);
+
+      const result = await controller.createApiKey(req, createDto);
+
+      expect(service.createApiKey).toHaveBeenCalledWith('user-123', 'New Key');
+      expect(result).toBe(expectedResult);
+    });
+  });
+
+  describe('regenerateApiKey', () => {
+    it('should regenerate the key when requested by the owner', async () => {
+      const req = mockReq({ id: 'user-123' });
+      const expectedResult = {
+        id: 'key-1',
+        name: 'Test Key',
+        key: 'new-raw-key',
+      };
+      mockUserService.regenerateApiKey.mockResolvedValue(expectedResult);
+
+      const result = await controller.regenerateApiKey(req, 'key-1');
+
+      expect(service.regenerateApiKey).toHaveBeenCalledWith(
+        'key-1',
+        'user-123',
+      );
+      expect(result).toBe(expectedResult);
+    });
+  });
+
+  describe('removeApiKey', () => {
+    it('should delete the API key when requested by the owner', async () => {
+      const req = mockReq({ id: 'user-123' });
+      const expectedResult = { message: 'API Key deleted successfully' };
+      mockUserService.deleteApiKey.mockResolvedValue(expectedResult);
+
+      const result = await controller.removeApiKey(req, 'key-1');
+
+      expect(service.deleteApiKey).toHaveBeenCalledWith('key-1', 'user-123');
+      expect(result).toBe(expectedResult);
     });
   });
 });

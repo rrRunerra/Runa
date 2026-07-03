@@ -8,6 +8,7 @@ import {
   IsObject,
   MinLength,
   MaxLength,
+  IsUUID,
   Matches,
 } from 'class-validator';
 
@@ -199,4 +200,19 @@ export class UsernameParamDto {
   @IsString()
   @IsNotEmpty()
   username!: string;
+}
+
+// --- API Key ---
+
+export class CreateApiKeyDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(64, { message: 'Name must be at most 64 characters long' })
+  name!: string;
+}
+
+export class RegenerateApiKeyDto {
+  @IsUUID()
+  @IsNotEmpty()
+  id!: string;
 }

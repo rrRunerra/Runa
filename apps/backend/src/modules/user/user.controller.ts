@@ -27,6 +27,7 @@ import {
   EnableEmailMfaDto,
   VerifyPasskeyDto,
   RegisterDeviceDto,
+  CreateApiKeyDto,
   IdParamDto,
   EmailParamDto,
   UsernameParamDto,
@@ -42,6 +43,9 @@ import type {
   E2eeKeysEntity,
   SuccessEntity,
   PrivacySettings,
+  ApiKeyEntity,
+  ApiKeyCreatedEntity,
+  DeleteSuccessEntity,
 } from './user.entities';
 
 @Controller('users')
@@ -304,5 +308,38 @@ export class UserController {
       private: privacy.profile,
       connections: safeConnections,
     };
+  }
+
+  // ---------------------------------------------------------------------------
+  // API Keys — /users/me/api-keys
+  // ---------------------------------------------------------------------------
+
+  @Get('me/api-keys')
+  async findAllApiKeys(@Req() req: ExtendedRequest): Promise<ApiKeyEntity[]> {
+    return this.usersService.findAllApiKeysByUser(req.user!.id);
+  }
+
+  @Post('me/api-keys')
+  async createApiKey(
+    @Req() req: ExtendedRequest,
+    @Body() body: CreateApiKeyDto,
+  ): Promise<ApiKeyCreatedEntity> {
+    return this.usersService.createApiKey(req.user!.id, body.name);
+  }
+
+  @Post('me/api-keys/:id/regenerate')
+  async regenerateApiKey(
+    @Req() req: ExtendedRequest,
+    @Param('id') id: string,
+  ): Promise<ApiKeyCreatedEntity> {
+    return this.usersService.regenerateApiKey(id, req.user!.id);
+  }
+
+  @Delete('me/api-keys/:id')
+  async removeApiKey(
+    @Req() req: ExtendedRequest,
+    @Param('id') id: string,
+  ): Promise<DeleteSuccessEntity> {
+    return this.usersService.deleteApiKey(id, req.user!.id);
   }
 }
