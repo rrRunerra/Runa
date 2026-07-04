@@ -144,6 +144,15 @@ steps:
       - printf "LYNX_PORT=%s\n" "$LYNX_PORT" >> .env
       - printf "LYNX_API_URL=%s\n" "$LYNX_API_URL" >> .env
       - printf "rrLynxKey=%s\n" "$rrLynxKey" >> .env
+      - printf "USE_LOCAL_MEDIA_ONLY=%s\n" "$USE_LOCAL_MEDIA_ONLY" >> .env
+      - printf "RUSTFS_ENDPOINT=%s\n" "$RUSTFS_ENDPOINT" >> .env
+      - printf "RUSTFS_REGION=%s\n" "$RUSTFS_REGION" >> .env
+      - printf "RUSTFS_ACCESS_KEY=%s\n" "$RUSTFS_ACCESS_KEY" >> .env
+      - printf "RUSTFS_SECRET_KEY=%s\n" "$RUSTFS_SECRET_KEY" >> .env
+      - printf "RUSTFS_PUBLIC_BUCKET=%s\n" "$RUSTFS_PUBLIC_BUCKET" >> .env
+      - printf "RUSTFS_LACERTA_BUCKET=%s\n" "$RUSTFS_LACERTA_BUCKET" >> .env
+      - printf "FILES_CDN_URL=%s\n" "$FILES_CDN_URL" >> .env
+      - docker compose build
       - docker compose build
       - docker compose up -d
       - sleep 5
