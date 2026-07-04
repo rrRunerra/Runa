@@ -14,6 +14,7 @@ import {
   Loader2,
   Trash2,
   Lock,
+  Menu,
 } from "lucide-react";
 import {
   Dialog,
@@ -22,6 +23,12 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -394,7 +401,7 @@ export function RrNotificationsModal({
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/notifications/${id}/status`,
         {
-          method: "PUT",
+          method: "PATCH",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.accessToken}`,
@@ -428,7 +435,7 @@ export function RrNotificationsModal({
           await fetch(
             `${process.env.NEXT_PUBLIC_API_URL}/notifications/${n.id}/status`,
             {
-              method: "PUT",
+              method: "PATCH",
               headers: {
                 "Content-Type": "application/json",
                 Authorization: `Bearer ${session.accessToken}`,
@@ -660,26 +667,34 @@ export function RrNotificationsModal({
                 </SelectContent>
               </Select>
 
-              {unreadCount > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleMarkAllRead}
-                  className="h-8 text-[10px] font-bold text-primary hover:text-primary hover:bg-primary/10 transition-all cursor-pointer"
-                >
-                  Mark All Read
-                </Button>
-              )}
-
               {notifications.length > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleClearAll}
-                  className="h-8 text-[10px] font-bold text-destructive hover:text-destructive hover:bg-destructive/10 transition-all cursor-pointer"
-                >
-                  Clear All
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
+                    >
+                      <Menu className="size-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-40">
+                    {unreadCount > 0 && (
+                      <DropdownMenuItem
+                        onClick={handleMarkAllRead}
+                        className="cursor-pointer text-xs font-semibold"
+                      >
+                        Mark All Read
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem
+                      onClick={handleClearAll}
+                      className="cursor-pointer text-xs font-semibold text-destructive focus:text-destructive focus:bg-destructive/10"
+                    >
+                      Clear All
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
             </div>
           </div>

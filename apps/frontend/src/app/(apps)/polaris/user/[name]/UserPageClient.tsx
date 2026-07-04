@@ -74,7 +74,7 @@ export default function UserPageClient(): React.ReactNode {
           <Skeleton className="h-10 w-48 rounded-md" />
           <Skeleton className="h-10 w-48 rounded-md" />
         </div>
-        <Skeleton className="w-full aspect-21/9 sm:aspect-3/1 max-h-[260px] rounded-xl" />
+        <Skeleton className="w-full aspect-4.5/1 rounded-xl" />
         <div className="w-full px-4 md:px-6 relative -mt-10 md:-mt-16 space-y-6">
           <div className="flex flex-col md:flex-row md:items-end gap-4 md:gap-6 pb-6 border-b">
             <Skeleton className="size-24 md:size-32 rounded-full shrink-0" />
@@ -177,7 +177,7 @@ export default function UserPageClient(): React.ReactNode {
         {/* User Profile Header / Banner Card */}
         <div className="relative w-full rounded-xl overflow-hidden bg-card border shadow-sm">
           {/* Flat Cinematic Banner Image */}
-          <div className="relative w-full aspect-21/9 sm:aspect-3/1 max-h-[260px] overflow-hidden bg-muted border-b">
+          <div className="relative w-full aspect-4.5/1 overflow-hidden bg-muted border-b">
             {user.bannerUrl ? (
               <img
                 src={getSafeImageUrl(user.bannerUrl)}

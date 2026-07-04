@@ -20,10 +20,17 @@ import {
   RotateCcw,
   FolderOpen,
   Star,
+  Menu,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 
 interface Attachment {
   id: string;
@@ -72,6 +79,7 @@ interface RrThreadListProps {
   onBulkAction: (
     action: "read" | "unread" | "archive" | "trash" | "restore",
   ) => void;
+  onEmptyTrash?: () => void;
 }
 
 export default function RrThreadList({
@@ -93,6 +101,7 @@ export default function RrThreadList({
   onToggleSelect,
   onToggleSelectAll,
   onBulkAction,
+  onEmptyTrash,
 }: RrThreadListProps): React.JSX.Element {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [expandedThreadSubjects, setExpandedThreadSubjects] = useState<
@@ -295,30 +304,40 @@ export default function RrThreadList({
                 ({threadedGroupMessages.length} threads)
               </span>
             </div>
-            <div className="flex items-center gap-1.5">
-              {accountId !== "unified" && (
-                <button
-                  disabled={syncingEmails}
-                  onClick={onTriggerSync}
-                  className="p-1.5 bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground border border-border rounded-xl text-xs font-semibold flex items-center gap-1 transition-all disabled:opacity-50 cursor-pointer"
-                >
-                  <RefreshCw
-                    className={cn(
-                      "size-3.5",
-                      syncingEmails && "animate-spin text-primary",
+            {accountId !== "unified" && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="p-1.5 hover:bg-muted text-muted-foreground hover:text-foreground border border-border rounded-xl transition-all cursor-pointer flex items-center justify-center">
+                    <Menu className="size-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-40">
+                  <DropdownMenuItem
+                    disabled={syncingEmails}
+                    onClick={onTriggerSync}
+                    className="cursor-pointer flex items-center gap-2"
+                  >
+                    <RefreshCw
+                      className={cn(
+                        "size-3.5",
+                        syncingEmails && "animate-spin text-primary",
+                      )}
+                    />
+                    <span>Sync Folder</span>
+                  </DropdownMenuItem>
+                  {folder.toLowerCase() === "trash" &&
+                    threadedGroupMessages.length > 0 && (
+                      <DropdownMenuItem
+                        onClick={onEmptyTrash}
+                        className="cursor-pointer flex items-center gap-2 text-destructive focus:text-destructive focus:bg-destructive/10"
+                      >
+                        <Trash className="size-3.5" />
+                        <span>Empty Trash</span>
+                      </DropdownMenuItem>
                     )}
-                  />
-                  <span>Sync</span>
-                </button>
-              )}
-              <button
-                onClick={onInitiateNewCompose}
-                className="p-1.5 bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-600 border border-emerald-500/20 rounded-xl text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
-              >
-                <Edit className="size-3.5" />
-                <span>Compose</span>
-              </button>
-            </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
           </div>
         )}
 

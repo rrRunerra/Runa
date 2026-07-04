@@ -4,6 +4,9 @@ export interface UserProfile {
   username: string;
   displayName?: string;
   avatarUrl?: string;
+  profileSettings?: {
+    bio?: string;
+  };
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL

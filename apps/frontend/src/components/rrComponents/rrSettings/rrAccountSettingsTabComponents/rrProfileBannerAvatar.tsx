@@ -92,7 +92,7 @@ export function RrProfileBannerAvatar({
         <CardHeader>
           <CardTitle>Profile Banner & Avatar</CardTitle>
           <CardDescription>
-            Customize your profile banner (recommended: 1200x400px) and avatar
+            Customize your profile banner (recommended: 1200x266px) and avatar
             image (recommended: 512x512px).
           </CardDescription>
         </CardHeader>
@@ -105,7 +105,7 @@ export function RrProfileBannerAvatar({
                 ? setIsBannerMenuOpen(true)
                 : bannerInputRef.current?.click()
             }
-            className="w-full aspect-3/1 bg-linear-to-r from-indigo-500/20 to-purple-500/20 rounded-xl relative overflow-hidden group/banner border border-border cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all duration-200 block text-left"
+            className="w-full aspect-4.5/1 bg-linear-to-r from-indigo-500/20 to-purple-500/20 rounded-xl relative overflow-hidden group/banner border border-border cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all duration-200 block text-left"
           >
             {bannerUrl ? (
               <img
@@ -158,7 +158,7 @@ export function RrProfileBannerAvatar({
         open={isCropperOpen}
         onOpenChange={setIsCropperOpen}
         imageSrc={cropImageSrc || ""}
-        aspectRatio={cropType === "banner" ? 3 : 1}
+        aspectRatio={cropType === "banner" ? 4.5 : 1}
         title={cropType === "avatar" ? "Edit Avatar" : "Edit Banner"}
         description={
           cropType === "avatar"

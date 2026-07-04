@@ -219,7 +219,7 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
             <DropdownMenuTrigger asChild>
               <SidebarMenuButton
                 size="lg"
-                className="relative h-12 w-full flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-300 border border-transparent hover:border-zinc-800/40 hover:bg-white/5 data-[state=open]:bg-white/5 data-[state=open]:border-zinc-800/40 overflow-hidden isolate transform-[translate3d(0,0,0)]"
+                className="relative h-12 w-full flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-300 border border-border/40 hover:border-border/85 hover:bg-muted/50 data-[state=open]:bg-muted/80 data-[state=open]:border-border overflow-hidden isolate transform-[translate3d(0,0,0)]"
               >
                 {/* Custom card bg image */}
                 {session.user?.sidebarCardBackgroundUrl && (
@@ -294,7 +294,7 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
               {/* User banner card */}
               <DropdownMenuLabel className="p-0 font-normal">
                 <Link href={`/polaris/user/${session.user.username}`}>
-                  <div className="relative overflow-hidden flex items-center gap-3.5 px-3 py-2.5 text-left text-sm bg-zinc-900/40 border border-zinc-800/30 hover:border-zinc-700/45 hover:bg-zinc-800/30 rounded-xl mb-2 transition-all duration-200 isolate transform-[translate3d(0,0,0)]">
+                  <div className="relative overflow-hidden flex-row flex items-center gap-3.5 px-3 py-2.5 text-left text-sm  border border-border/50 hover:border-border hover:bg-muted rounded-xl mb-2 transition-all duration-200 isolate transform-[translate3d(0,0,0)]">
                     {/* Custom Card Background Image */}
                     {session.user?.sidebarCardBackgroundUrl && (
                       <>
@@ -308,7 +308,7 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
                       </>
                     )}
 
-                    <Avatar className="h-9 w-9 border border-zinc-800/60 z-10 shrink-0">
+                    <Avatar className="h-9 w-9 border border-zinc-300 dark:border-zinc-800/60 z-10 shrink-0">
                       <AvatarImage
                         src={
                           session.user?.avatarUrl

@@ -788,6 +788,46 @@ export class EmailService {
     return { success: true };
   }
 
+  async emptyTrash(
+    username: string,
+    accountId: string,
+  ): Promise<{ success: boolean }> {
+    const account = await this.prisma.client.userEmailAccount.findFirst({
+      where: { id: accountId, username },
+    });
+    if (!account)
+      throw new rrNotFoundException(`${this.moduleCode}EANF009`, {
+        message: 'Email account not found',
+      });
+
+    const messages = await this.prisma.client.emailMessage.findMany({
+      where: {
+        userEmailAccountId: accountId,
+        folder: 'trash',
+      },
+    });
+
+    if (messages.length === 0) return { success: true };
+
+    const uids = messages.map((m) => m.uid);
+
+    // Sync remote deletion to IMAP server in the background
+    this.deleteRemoteMessages(account, [{ folder: 'trash', uids }]).catch((remoteErr) => {
+      this.logger.error(
+        `Background remote sync empty trash failed: ${remoteErr instanceof Error ? remoteErr.message : String(remoteErr)}`,
+      );
+    });
+
+    await this.prisma.client.emailMessage.deleteMany({
+      where: {
+        userEmailAccountId: accountId,
+        folder: 'trash',
+      },
+    });
+
+    return { success: true };
+  }
+
   private async deleteRemoteMessages(
     account: any,
     folderMessages: { folder: string; uids: number[] }[],

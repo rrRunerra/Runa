@@ -523,7 +523,7 @@ export default function RrEmailReader({
           )}
 
           {/* Scoped Native email viewer */}
-          <div className="border border-border rounded-2xl bg-background/50 p-6 overflow-hidden text-sm leading-relaxed wrap-break-word">
+          <div className="overflow-hidden text-sm leading-relaxed wrap-break-word">
             <style
               dangerouslySetInnerHTML={{
                 __html: `
@@ -559,8 +559,9 @@ export default function RrEmailReader({
               .rr-email-body pre { background-color: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1rem; overflow-x: auto; font-family: ui-monospace, monospace; margin-bottom: 1rem; }
               .rr-email-body code { background-color: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 0.25rem; padding: 0.125rem 0.25rem; font-family: ui-monospace, monospace; }
               .rr-email-body pre code { background-color: transparent; border: 0; padding: 0; }
-              .rr-email-body table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; }
-              .rr-email-body th, .rr-email-body td { border: 1px solid #e5e7eb; padding: 0.5rem; text-align: left; }
+              .rr-email-body table { border-collapse: collapse; margin-bottom: 1rem; }
+              .rr-email-body table:not([cellpadding]):not([cellspacing]) th,
+              .rr-email-body table:not([cellpadding]):not([cellspacing]) td { border: 1px solid #e5e7eb; padding: 0.5rem; text-align: left; }
               .rr-email-body th { background-color: #f9fafb; }
             `,
               }}

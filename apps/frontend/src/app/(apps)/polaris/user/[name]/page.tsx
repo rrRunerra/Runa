@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import UserPageClient from "./UserPageClient";
-import { getUserProfile } from "@/lib/metadata";
+import { getUserProfile, cleanDescription } from "@/lib/metadata";
 
 interface PageProps {
   params: Promise<{ name: string }>;
@@ -41,7 +41,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const totalTracked = listCounts.reduce((a, b) => a + b, 0);
   const displayName = user.displayName || user.username;
   const title = `Polaris > User > ${displayName}`;
-  const description = `Check out ${displayName}'s profile on Polaris.`;
+  const bio = user.profileSettings?.bio;
+  const cleanedBio = bio ? cleanDescription(bio) : "";
+  const description = cleanedBio || `Check out ${displayName}'s profile on Polaris.`;
   const image = user.avatarUrl;
 
   return {

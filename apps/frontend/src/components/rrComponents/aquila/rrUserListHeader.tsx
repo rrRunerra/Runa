@@ -25,7 +25,7 @@ export function RrUserListHeader({
   return (
     <div className="relative w-full rounded-3xl overflow-hidden bg-card/40 border border-border/40 shadow-2xl mb-2 select-none">
       {/* Banner Image / Gradient */}
-      <div className="relative h-44 sm:h-60 w-full overflow-hidden bg-linear-to-r from-primary/10 via-muted/20 to-accent/10 border-b border-border/30">
+      <div className="relative w-full aspect-4.5/1 overflow-hidden bg-linear-to-r from-primary/10 via-muted/20 to-accent/10 border-b border-border/30">
         {userData.bannerUrl ? (
           <Image
             src={getSafeImageUrl(userData.bannerUrl)}

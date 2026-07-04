@@ -11,8 +11,9 @@ for (const env of REQUIRED_ENVS) {
 const nextConfig: NextConfig = {
   reactCompiler: false,
   transpilePackages: ["@runa/auth", "@runa/database"],
-  allowedDevOrigins: ["192.168.0.56"],
+  allowedDevOrigins: ["192.168.0.56", "192.168.0.44"],
   images: {
+    dangerouslyAllowLocalIP: true,
     remotePatterns: [
       {
         protocol: "https",
@@ -22,6 +23,11 @@ const nextConfig: NextConfig = {
         protocol: "http",
         hostname: "localhost",
       },
+      {
+        protocol: "http",
+        hostname: "192.168.0.44",
+        port: "9000",
+      }
     ],
   },
 

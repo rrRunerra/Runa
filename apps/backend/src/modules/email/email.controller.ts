@@ -237,6 +237,14 @@ export class EmailController {
     );
   }
 
+  @Delete(':accountId/messages/trash/empty')
+  async emptyTrash(
+    @Req() req: any,
+    @Param('accountId') accountId: string,
+  ): Promise<{ success: boolean }> {
+    return this.emailService.emptyTrash(req.user.username, accountId);
+  }
+
   @Post(':accountId/send')
   async sendEmail(
     @Req() req: any,
