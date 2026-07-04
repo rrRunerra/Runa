@@ -83,4 +83,38 @@ export class AnimeRepository {
 
     return result as unknown as AnimeEntity | null;
   }
+
+  public async findByAnilistId(anilistId: number): Promise<any | null> {
+    return this.prisma.client.aquilaAnime.findUnique({
+      where: { anilistId },
+      select: {
+        id: true,
+        anilistId: true,
+        titleRomaji: true,
+        coverImageLarge: true,
+      },
+    });
+  }
+
+  public async upsert(
+    anilistId: number,
+    data: {
+      malId?: number | null;
+      titleRomaji: string;
+      coverImageLarge?: string | null;
+    },
+  ): Promise<any> {
+    return this.prisma.client.aquilaAnime.upsert({
+      where: { anilistId },
+      update: {},
+      create: {
+        anilistId,
+        malId: data.malId ?? null,
+        titleRomaji: data.titleRomaji,
+        coverImageLarge: data.coverImageLarge ?? null,
+        format: 'UNKNOWN',
+        status: 'NOT_YET_RELEASED',
+      },
+    });
+  }
 }

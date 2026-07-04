@@ -251,27 +251,9 @@ export class AnimeExternal {
 
   public async fetchAndUpsertAnime(anilistId: number): Promise<void> {
     try {
-      const res = await fetch('https://graphql.anilist.co', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-        body: JSON.stringify({
-          query: this.getQuery,
-          variables: { id: anilistId },
-        }),
-      });
-
-      if (!res.ok) {
-        throw new rrError(`${this.moduleCode}AAE001`, {
-          message: `AniList API error: ${res.status}`,
-        });
-      }
-
-      const data = (await res.json()) as {
-        data: { Media: AniListMedia };
-      };
+      const data = (await this.fetchWithRateLimit(this.getQuery, {
+        id: anilistId,
+      })) as { data: { Media: AniListMedia } };
 
       if (!data.data?.Media) {
         throw new rrError(`${this.moduleCode}AWAINF001`, {
@@ -294,24 +276,10 @@ export class AnimeExternal {
     try {
       this.logger.debug('Searching for anime in AniList');
 
-      const res = await fetch('https://graphql.anilist.co', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
-        body: JSON.stringify({
-          query: this.searchQuery,
-          variables: {
-            search: title,
-            perPage: 30,
-          },
-        }),
-      });
-
-      const data = (await res.json()) as {
-        data: { Page: { media: AniListMedia[] } };
-      };
+      const data = (await this.fetchWithRateLimit(this.searchQuery, {
+        search: title,
+        perPage: 30,
+      })) as { data: { Page: { media: AniListMedia[] } } };
 
       const localData = await Promise.all(
         data.data.Page.media.map(async (item) => {
@@ -337,6 +305,63 @@ export class AnimeExternal {
         message: 'Failed to fetch anime from AniList',
       });
     }
+  }
+
+  /**
+   * Fires a GraphQL request to AniList and retries on 429 (rate limited)
+   * using the Retry-After header or exponential back-off.
+   */
+  private async fetchWithRateLimit(
+    query: string,
+    variables: Record<string, any>,
+    maxRetries = 5,
+    baseDelay = 1000,
+  ): Promise<unknown> {
+    let res: Response | null = null;
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        res = await fetch('https://graphql.anilist.co', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify({ query, variables }),
+        });
+
+        if (res.status === 429) {
+          const retryAfter = res.headers.get('retry-after');
+          const waitMs = retryAfter
+            ? parseInt(retryAfter, 10) * 1000 + 500
+            : baseDelay * Math.pow(2, attempt);
+          this.logger.warn(
+            `AniList rate limit hit (429). Waiting ${waitMs}ms before retry ${attempt + 1}/${maxRetries}...`,
+          );
+          await new Promise((resolve) => setTimeout(resolve, waitMs));
+          continue;
+        }
+
+        if (!res.ok) {
+          throw new rrError(`${this.moduleCode}AAE001`, {
+            message: `AniList API error: ${res.status}`,
+          });
+        }
+
+        return res.json();
+      } catch (err: any) {
+        if (attempt === maxRetries - 1) throw err;
+        const waitMs = baseDelay * Math.pow(2, attempt);
+        this.logger.warn(
+          `AniList request failed (attempt ${attempt + 1}/${maxRetries}), retrying in ${waitMs}ms: ${err.message}`,
+        );
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
+      }
+    }
+
+    throw new rrError(`${this.moduleCode}FTFAFA002`, {
+      message: 'AniList request failed after maximum retries',
+    });
   }
 
   private async upsertAnime(item: AniListMedia) {

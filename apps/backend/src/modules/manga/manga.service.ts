@@ -139,4 +139,31 @@ export class MangaService {
 
     return await this.mangaRepository.find(id);
   }
+
+  public async ensureManga(
+    anilistId: number,
+    malId?: number | null,
+    title?: string,
+    coverImage?: string,
+  ): Promise<any> {
+    // Check if already in DB by anilistId
+    let manga = await this.mangaRepository.findByAnilistId(anilistId);
+    if (!manga) {
+      try {
+        await this.mangaExternal.fetchAndUpsertManga(anilistId);
+        manga = await this.mangaRepository.findByAnilistId(anilistId);
+      } catch {
+        // AniList fetch failed — write minimal stub so the list entry can be created
+        this.logger.warn(
+          `ensureManga: AniList fetch failed for ${anilistId}, writing stub`,
+        );
+        manga = await this.mangaRepository.upsert(anilistId, {
+          malId: malId ?? null,
+          titleRomaji: title || 'Unknown',
+          coverImageLarge: coverImage ?? null,
+        });
+      }
+    }
+    return manga;
+  }
 }

@@ -486,4 +486,51 @@ export class ListController {
   ): Promise<any> {
     return this.listService.getUserListFilters(username, mediaType);
   }
+
+  // ─────────────────────────── RADARR/SONARR ───────────────────────────
+
+  @Get(['radarr/api/v3/movie', 'api/v3/movie'])
+  public async getRadarrMovieList(@Req() req: any): Promise<any[]> {
+    return this.listService.getRadarrMovieList(req.user.username);
+  }
+
+  @Get(['radarr/api/v3/qualityprofile', 'api/v3/qualityprofile'])
+  public getRadarrQualityProfiles(): any[] {
+    return [
+      {
+        id: 1,
+        name: 'Any',
+      },
+    ];
+  }
+
+  @Get(['sonarr/api/v3/series', 'api/v3/series'])
+  public async getSonarrSeriesListCombined(@Req() req: any): Promise<any[]> {
+    return this.listService.fetchSonarrSeries(req.user.username, true, true);
+  }
+
+  @Get('sonarr/tv/api/v3/series')
+  public async getSonarrTvList(@Req() req: any): Promise<any[]> {
+    return this.listService.fetchSonarrSeries(req.user.username, true, false);
+  }
+
+  @Get('sonarr/anime/api/v3/series')
+  public async getSonarrAnimeList(@Req() req: any): Promise<any[]> {
+    return this.listService.fetchSonarrSeries(req.user.username, false, true);
+  }
+
+  @Get([
+    'sonarr/api/v3/qualityprofile',
+    'api/v3/qualityprofile',
+    'sonarr/tv/api/v3/qualityprofile',
+    'sonarr/anime/api/v3/qualityprofile',
+  ])
+  public getSonarrQualityProfiles(): any[] {
+    return [
+      {
+        id: 1,
+        name: 'Any',
+      },
+    ];
+  }
 }

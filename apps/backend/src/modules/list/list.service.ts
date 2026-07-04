@@ -15,6 +15,8 @@ import { PrismaService } from '../../providers/database/prisma.service';
 import { StatsService } from '../stats/stats.service';
 import { ListExternal } from './list.external';
 import ListEntity from './list.entities';
+import { MovieService } from '../movie/movie.service';
+import { TvService } from '../tv/tv.service';
 
 export interface ListQueryOptions {
   limit?: number;
@@ -28,6 +30,42 @@ export interface ListQueryOptions {
   mediaStatus?: string;
 }
 
+// Simple in-memory cache for Fribb's AniList -> TVDB mapping
+class AnimeMappingCache {
+  private static mappings: Map<number, number> | null = null;
+  private static lastFetched = 0;
+  private static isFetching = false;
+
+  public static async getTvdbId(anilistId: number): Promise<number | null> {
+    const now = Date.now();
+    if (
+      (!this.mappings || now - this.lastFetched > 24 * 60 * 60 * 1000) &&
+      !this.isFetching
+    ) {
+      this.isFetching = true;
+      try {
+        const res = await fetch(
+          'https://raw.githubusercontent.com/Fribb/anime-lists/master/anime-list-full.json',
+        );
+        const list = await res.json();
+        const newMap = new Map<number, number>();
+        for (const item of list) {
+          if (item.anilist_id && item.tvdb_id) {
+            newMap.set(item.anilist_id, item.tvdb_id);
+          }
+        }
+        this.mappings = newMap;
+        this.lastFetched = now;
+      } catch (err) {
+        console.error('Failed to fetch anime mapping from Fribb:', err);
+      } finally {
+        this.isFetching = false;
+      }
+    }
+    return this.mappings?.get(anilistId) || null;
+  }
+}
+
 @Injectable()
 export class ListService {
   private readonly moduleCode = 'LeSve-';
@@ -36,6 +74,8 @@ export class ListService {
     private readonly prisma: PrismaService,
     private readonly connectionsManager: ListExternal,
     private readonly statsService: StatsService,
+    private readonly movieService: MovieService,
+    private readonly tvService: TvService,
   ) {}
 
   private readonly logger = new Logger(ListService.name);
@@ -1994,7 +2034,7 @@ export class ListService {
         whereClause.book.subjects = { hasEvery: genreList };
       }
       if (year) {
-        whereClause.book.publishYear = Number(year);
+        whereClause.book.publishedYear = Number(year);
       }
     }
 
@@ -2016,7 +2056,7 @@ export class ListService {
             select: {
               titleString: true,
               coverImage: true,
-              publishYear: true,
+              publishedYear: true,
             },
           },
         },
@@ -2037,8 +2077,8 @@ export class ListService {
       last_added: item.createdAt,
       type: 'book',
       mediaStatus: (() => {
-        if (!item.book.publishYear) return undefined;
-        return item.book.publishYear > new Date().getFullYear()
+        if (!item.book.publishedYear) return undefined;
+        return item.book.publishedYear > new Date().getFullYear()
           ? 'NOT_YET_RELEASED'
           : 'RELEASED';
       })(),
@@ -2788,7 +2828,7 @@ export class ListService {
           where: { username },
           select: {
             book: {
-              select: { subjects: true, publishYear: true },
+              select: { subjects: true, publishedYear: true },
             },
           },
         });
@@ -2797,7 +2837,7 @@ export class ListService {
         list.forEach((item) => {
           if (item.book) {
             item.book.subjects?.forEach((s) => genres.add(s));
-            if (item.book.publishYear) years.add(item.book.publishYear);
+            if (item.book.publishedYear) years.add(item.book.publishedYear);
           }
         });
         return {
@@ -2812,5 +2852,197 @@ export class ListService {
           message: `Unsupported media type: ${mediaType}`,
         });
     }
+  }
+
+  // ─────────────────────────── RADARR/SONARR ───────────────────────────
+
+  public async getRadarrMovieList(username: string): Promise<any[]> {
+    this.logger.log(`Fetching Radarr movie list for user ${username}`);
+
+    const movieEntries = await this.prisma.client.aquilaMovieUserList.findMany({
+      where: {
+        username: username.toLowerCase(),
+        status: 'PLANNING',
+      },
+      select: {
+        id: true,
+        tvdbId: true,
+        connections: true,
+        movie: {
+          select: {
+            titleEnglish: true,
+            titleRomaji: true,
+          },
+        },
+      },
+    });
+
+    const resultList: any[] = [];
+
+    for (const entry of movieEntries) {
+      let tmdbId: number | undefined;
+      let imdbId: string | undefined;
+
+      const connectionsObj = (entry.connections as Record<string, any>) || {};
+
+      if (connectionsObj.tmdbId) {
+        tmdbId = connectionsObj.tmdbId;
+        imdbId = connectionsObj.imdbId;
+      } else {
+        // Resolve dynamically from TVDB API
+        const remoteIds = await this.movieService.getRemoteIds(entry.tvdbId);
+        if (remoteIds) {
+          tmdbId = remoteIds.tmdbId;
+          imdbId = remoteIds.imdbId;
+
+          // Cache in database
+          try {
+            await this.prisma.client.aquilaMovieUserList.update({
+              where: { id: entry.id },
+              data: {
+                connections: {
+                  ...connectionsObj,
+                  tmdbId,
+                  imdbId,
+                },
+              },
+            });
+          } catch (dbErr) {
+            this.logger.error(
+              `Failed to save resolved movie IDs for entry ${entry.id}:`,
+              dbErr,
+            );
+          }
+        }
+      }
+
+      if (tmdbId) {
+        const title =
+          entry.movie.titleEnglish ||
+          entry.movie.titleRomaji ||
+          'Unknown Movie';
+        resultList.push({
+          title,
+          tmdbId,
+          imdbId: imdbId || null,
+          year: 0,
+          monitored: true,
+          id: tmdbId,
+        });
+      }
+    }
+
+    return resultList;
+  }
+
+  public async fetchSonarrSeries(
+    username: string,
+    includeTv: boolean,
+    includeAnime: boolean,
+  ): Promise<any[]> {
+    const resultList: any[] = [];
+
+    if (includeTv) {
+      const tvEntries = await this.prisma.client.aquilaTvUserList.findMany({
+        where: {
+          username: username.toLowerCase(),
+          status: 'PLANNING',
+        },
+        select: {
+          tvdbId: true,
+          tv: {
+            select: {
+              titleEnglish: true,
+              titleRomaji: true,
+            },
+          },
+        },
+      });
+
+      for (const entry of tvEntries) {
+        const title =
+          entry.tv.titleEnglish || entry.tv.titleRomaji || 'Unknown TV Show';
+        resultList.push({
+          title,
+          tvdbId: entry.tvdbId,
+          year: 0,
+          monitored: true,
+          seasons: [],
+        });
+      }
+    }
+
+    if (includeAnime) {
+      const animeEntries =
+        await this.prisma.client.aquilaAnimeUserList.findMany({
+          where: {
+            username: username.toLowerCase(),
+            status: 'PLANNING',
+          },
+          select: {
+            id: true,
+            animeId: true,
+            connections: true,
+            anime: {
+              select: {
+                titleEnglish: true,
+                titleRomaji: true,
+                seasonYear: true,
+              },
+            },
+          },
+        });
+
+      for (const entry of animeEntries) {
+        if (!entry.animeId) continue;
+
+        let tvdbId: number | null = null;
+        const connectionsObj = (entry.connections as Record<string, any>) || {};
+
+        if (connectionsObj.tvdbId) {
+          tvdbId = connectionsObj.tvdbId;
+        } else {
+          // Resolve using Fribb's mapping
+          const resolvedId = await AnimeMappingCache.getTvdbId(entry.animeId);
+          if (resolvedId) {
+            tvdbId = resolvedId;
+
+            // Cache in database
+            try {
+              await this.prisma.client.aquilaAnimeUserList.update({
+                where: { id: entry.id },
+                data: {
+                  connections: {
+                    ...connectionsObj,
+                    tvdbId,
+                  },
+                },
+              });
+            } catch (dbErr) {
+              this.logger.error(
+                `Failed to save resolved anime TVDB ID for entry ${entry.id}:`,
+                dbErr,
+              );
+            }
+          }
+        }
+
+        if (tvdbId) {
+          const title =
+            entry.anime.titleEnglish ||
+            entry.anime.titleRomaji ||
+            'Unknown Anime';
+          resultList.push({
+            title,
+            tvdbId,
+            year: entry.anime.seasonYear || 0,
+            monitored: true,
+            seasons: [],
+          });
+        }
+      }
+    }
+
+    return resultList;
   }
 }

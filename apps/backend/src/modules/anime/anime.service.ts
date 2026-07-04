@@ -139,4 +139,31 @@ export class AnimeService {
 
     return await this.animeRepository.find(id);
   }
+
+  public async ensureAnime(
+    anilistId: number,
+    malId?: number | null,
+    title?: string,
+    coverImage?: string,
+  ): Promise<any> {
+    // Check if already in DB by anilistId
+    let anime = await this.animeRepository.findByAnilistId(anilistId);
+    if (!anime) {
+      try {
+        await this.animeExternal.fetchAndUpsertAnime(anilistId);
+        anime = await this.animeRepository.findByAnilistId(anilistId);
+      } catch {
+        // AniList fetch failed — write minimal stub so the list entry can be created
+        this.logger.warn(
+          `ensureAnime: AniList fetch failed for ${anilistId}, writing stub`,
+        );
+        anime = await this.animeRepository.upsert(anilistId, {
+          malId: malId ?? null,
+          titleRomaji: title || 'Unknown',
+          coverImageLarge: coverImage ?? null,
+        });
+      }
+    }
+    return anime;
+  }
 }

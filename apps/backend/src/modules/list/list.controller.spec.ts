@@ -37,6 +37,9 @@ describe('ListController', () => {
     incrementProgress: jest.fn(),
     toggleEpisodeWatched: jest.fn(),
     toggleSeasonWatched: jest.fn(),
+    getUserListFilters: jest.fn(),
+    getRadarrMovieList: jest.fn(),
+    fetchSonarrSeries: jest.fn(),
   };
 
   const mockAuthGuard = {
