@@ -610,11 +610,11 @@ export function RrMediaEditDialog({
       basePayload.volumes = volumes ? Number(volumes) : undefined;
       basePayload.reread = rewatches ? Number(rewatches) : undefined;
     } else if (mediaType === "tv") {
-      basePayload.tvdbId = Number(media.id);
+      basePayload.tvId = Number(media.id);
       basePayload.rewatched = rewatches ? Number(rewatches) : undefined;
       basePayload.episodes = watchedEpisodes;
     } else if (mediaType === "movie") {
-      basePayload.tvdbId = Number(media.id);
+      basePayload.movieId = Number(media.id);
       basePayload.rewatched = rewatches ? Number(rewatches) : undefined;
     } else if (mediaType === "game") {
       basePayload.gameId = Number(media.id);

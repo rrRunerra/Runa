@@ -1363,9 +1363,7 @@ export class ListService {
           { titleRomaji: { contains: search, mode: 'insensitive' } },
         ];
       }
-      if (format) {
-        whereClause.tv.tvType = format;
-      }
+      // format (tvType) is not available on AquilaTv model
       if (genres) {
         const genreList = genres.split(',').map((g) => g.trim());
         whereClause.tv.genres = { hasEvery: genreList };
@@ -1621,9 +1619,9 @@ export class ListService {
   ) {
     const listEntry = await this.prisma.client.aquilaTvUserList.findUnique({
       where: {
-        username_tvdbId: {
+        username_tvId: {
           username: username.toLowerCase(),
-          tvdbId,
+          tvId: tvdbId,
         },
       },
     });
@@ -1693,9 +1691,9 @@ export class ListService {
   ) {
     const listEntry = await this.prisma.client.aquilaTvUserList.findUnique({
       where: {
-        username_tvdbId: {
+        username_tvId: {
           username: username.toLowerCase(),
-          tvdbId,
+          tvId: tvdbId,
         },
       },
     });
@@ -2776,7 +2774,7 @@ export class ListService {
           where: { username },
           select: {
             tv: {
-              select: { genres: true, status: true, tvType: true },
+              select: { genres: true, status: true },
             },
           },
         });
@@ -2787,7 +2785,6 @@ export class ListService {
           if (item.tv) {
             item.tv.genres?.forEach((g) => genres.add(g));
             if (item.tv.status) statuses.add(item.tv.status);
-            if (item.tv.tvType) formats.add(item.tv.tvType);
           }
         });
         return {

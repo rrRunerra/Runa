@@ -29,6 +29,9 @@ export class EmailSyncService {
 
   @Cron(CronExpression.EVERY_MINUTE)
   async handleSyncCron(): Promise<void> {
+    if (process.env.NODE_ENV === 'development') {
+      return;
+    }
     this.logger.log('Checking background email sync scheduler...');
 
     try {
