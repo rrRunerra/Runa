@@ -16,7 +16,7 @@ import type { Response as ExpressResponse } from 'express';
 import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { EmailService, EmailAutoconfigResult } from './email.service';
 import { EmailSyncService } from './email-sync.service';
-import { EmailAccountDto, SendEmailDto } from './email.dto';
+import { EmailAccountDto, SendEmailDto, SaveDraftDto } from './email.dto';
 
 @Controller('/emails')
 @UseGuards(AuthGuard)
@@ -243,6 +243,15 @@ export class EmailController {
     @Param('accountId') accountId: string,
   ): Promise<{ success: boolean }> {
     return this.emailService.emptyTrash(req.user.username, accountId);
+  }
+
+  @Post(':accountId/drafts')
+  async saveDraft(
+    @Req() req: any,
+    @Param('accountId') accountId: string,
+    @Body() body: SaveDraftDto,
+  ): Promise<any> {
+    return this.emailService.saveDraft(req.user.username, accountId, body);
   }
 
   @Post(':accountId/send')

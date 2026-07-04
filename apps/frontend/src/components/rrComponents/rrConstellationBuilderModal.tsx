@@ -128,7 +128,12 @@ export function RrConstellationBuilderModal({
     session?.accessToken && open
       ? [`${process.env.NEXT_PUBLIC_API_URL}/bookmarks`, session.accessToken]
       : null,
-    fetcher
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      revalidateIfStale: false,
+    }
   );
 
   useEffect(() => {

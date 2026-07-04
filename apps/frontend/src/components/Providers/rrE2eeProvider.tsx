@@ -77,7 +77,12 @@ export function RrE2eeProvider({ children }: { children: React.ReactNode }) {
     encryptedUserPrivateKey?: string;
   }>(
     e2eKeysUrl ? [e2eKeysUrl, session?.accessToken] : null,
-    fetcher
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      revalidateIfStale: false,
+    }
   );
 
   // Initial Check via useFetch data changes

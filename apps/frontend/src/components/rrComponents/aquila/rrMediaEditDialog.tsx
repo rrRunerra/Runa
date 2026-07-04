@@ -525,7 +525,7 @@ export function RrMediaEditDialog({
             },
             body: JSON.stringify({
               type: upperType,
-              mediaId: media.id.toString(),
+              targetId: media.id.toString(),
             }),
           },
         );
@@ -652,7 +652,7 @@ export function RrMediaEditDialog({
               },
               body: JSON.stringify({
                 type: mediaType.toUpperCase(),
-                mediaId: media.id.toString(),
+                targetId: media.id.toString(),
               }),
             });
             setInitialFavorited(true);

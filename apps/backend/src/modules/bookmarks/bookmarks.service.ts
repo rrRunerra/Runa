@@ -4,6 +4,7 @@ import { CacheService } from '../../providers/cache/cache.service';
 import { CreateBookmarkDto } from './bookmarks.dto';
 import { rrNotFoundException } from 'src/providers/error';
 import BookmarkEntity from './bookmarks.entities';
+import { NotificationGateway } from '../notification/notification.gateway';
 
 @Injectable()
 export class BookmarksService {
@@ -13,6 +14,7 @@ export class BookmarksService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: CacheService,
+    private readonly gateway: NotificationGateway,
   ) {}
 
   async createOrUpdateBookmark(
@@ -60,6 +62,9 @@ export class BookmarksService {
     // Bust bookmarks cache for user
     await this.cache.del(CacheService.keys.bookmarksUser(userId));
 
+    // Emit real-time WebSocket update
+    this.gateway.sendToUser(userId, 'bookmark:updated', result);
+
     return result;
   }
 
@@ -97,6 +102,9 @@ export class BookmarksService {
 
     // Bust bookmarks cache for user
     await this.cache.del(CacheService.keys.bookmarksUser(userId));
+
+    // Emit real-time WebSocket update
+    this.gateway.sendToUser(userId, 'bookmark:deleted', { id });
 
     return { success: true };
   }

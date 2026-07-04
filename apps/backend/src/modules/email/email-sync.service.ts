@@ -51,7 +51,7 @@ export class EmailSyncService {
         }
 
         if (now - state.lastSyncAt >= state.intervalMs) {
-          this.logger.log(
+          this.logger.debug(
             `Triggering email sync for account ${account.emailAddress} (Interval: ${Math.round(
               state.intervalMs / 1000,
             )}s)`,
@@ -60,7 +60,7 @@ export class EmailSyncService {
           // Trigger sync task in the background
           this.syncAccount(account.id).catch((err) => {
             this.logger.error(
-              `Error syncing account ${account.emailAddress}:`,
+              `Error syncing account ...${account.emailAddress.split("@")[1]}:`,
               err,
             );
           });

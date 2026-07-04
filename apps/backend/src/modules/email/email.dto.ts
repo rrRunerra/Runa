@@ -72,6 +72,32 @@ export class EmailAccountDto {
   password?: string;
 }
 
+export class SaveDraftDto {
+  @IsString({ message: 'SvDrDto-TMBAS001: To must be a string' })
+  @IsOptional()
+  to?: string;
+
+  @IsString({ message: 'SvDrDto-CCMBAS001: CC must be a string' })
+  @IsOptional()
+  cc?: string;
+
+  @IsString({ message: 'SvDrDto-BCMBAS001: BCC must be a string' })
+  @IsOptional()
+  bcc?: string;
+
+  @IsString({ message: 'SvDrDto-SMBAS001: Subject must be a string' })
+  @IsOptional()
+  subject?: string;
+
+  @IsString({ message: 'SvDrDto-BMBAS001: Body must be a string' })
+  @IsOptional()
+  body?: string;
+
+  @IsString({ message: 'SvDrDto-HMBAS001: HTML must be a string' })
+  @IsOptional()
+  html?: string;
+}
+
 export class SendEmailDto {
   @IsString({ message: 'SeElDto-TMBAS001: To must be a string' })
   @IsNotEmpty({ message: 'SeElDto-TMNBE001: To must not be empty' })

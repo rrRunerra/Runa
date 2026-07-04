@@ -74,6 +74,11 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
         ]
       : null,
     fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      revalidateIfStale: false,
+    }
   );
 
   useEffect(() => {
@@ -135,14 +140,26 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
       window.dispatchEvent(new Event("runa-sidebar-changed"));
     };
 
+    const handleBookmarkUpdated = () => {
+      window.dispatchEvent(new Event("runa-bookmarks-changed"));
+    };
+
+    const handleBookmarkDeleted = () => {
+      window.dispatchEvent(new Event("runa-bookmarks-changed"));
+    };
+
     socket.on("notification:created", handleCreated);
     socket.on("notification:updated", handleUpdated);
     socket.on("notification:deleted", handleDelete);
     socket.on("notifications:cleared", handleCleared);
     socket.on("email:new", handleEmailNew);
+    socket.on("bookmark:updated", handleBookmarkUpdated);
+    socket.on("bookmark:deleted", handleBookmarkDeleted);
 
     return () => {
       socket.off("email:new", handleEmailNew);
+      socket.off("bookmark:updated", handleBookmarkUpdated);
+      socket.off("bookmark:deleted", handleBookmarkDeleted);
       socket.disconnect();
     };
   }, [session?.accessToken, refetchNotifications]);

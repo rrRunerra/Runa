@@ -15,7 +15,7 @@ import {
   encryptWithDataKey,
   encryptDataKeyForUser,
 } from '@runa/crypto/node';
-import { EmailAccountDto, SendEmailDto } from './email.dto';
+import { EmailAccountDto, SendEmailDto, SaveDraftDto } from './email.dto';
 import { NotificationGateway } from '../notification/notification.gateway';
 
 export interface EmailAutoconfigResult {
@@ -1122,6 +1122,107 @@ export class EmailService {
         this.gateway.sendToUser(userRecord.id, 'email:new', {
           accountId,
           folder: 'sent',
+          message: savedMessage,
+        });
+      }
+    } catch (wsErr) {
+      // Fail silently on WS broadcasting issues
+    }
+
+    return savedMessage;
+  }
+
+  async saveDraft(
+    username: string,
+    accountId: string,
+    data: SaveDraftDto,
+  ): Promise<any> {
+    const account = await this.prisma.client.userEmailAccount.findFirst({
+      where: { id: accountId, username },
+    });
+    if (!account) {
+      throw new rrNotFoundException(`${this.moduleCode}EANF010`, {
+        message: 'Email account not found',
+      });
+    }
+
+    const from = account.senderName
+      ? `"${account.senderName}" <${account.emailAddress}>`
+      : account.emailAddress;
+
+    const escapedBodyHtml =
+      data.html || (data.body ? escapeHtml(data.body).replace(/\n/g, '<br />') : '');
+
+    // Determine the next local UID for the drafts folder
+    const lastDraftMessage = await this.prisma.client.emailMessage.findFirst({
+      where: {
+        userEmailAccountId: accountId,
+        folder: 'drafts',
+      },
+      orderBy: { uid: 'desc' },
+    });
+    const nextUid = lastDraftMessage ? lastDraftMessage.uid + 1 : 1;
+
+    const userRecord = await this.prisma.client.user.findUnique({
+      where: { username },
+      select: { id: true, userPublicKey: true },
+    });
+
+    let subject = data.subject || '';
+    let bodyText = data.body || '';
+    let bodyHtml = escapedBodyHtml || '';
+    let toVal = data.to || '';
+    let fromVal = from || '';
+    let ccVal = data.cc || null;
+    let bccVal = data.bcc || null;
+    let encryptedKey = null;
+
+    if (userRecord && userRecord.userPublicKey) {
+      try {
+        const dataKey = generateDataKey();
+        subject = encryptWithDataKey(subject, dataKey);
+        bodyText = encryptWithDataKey(bodyText, dataKey);
+        bodyHtml = encryptWithDataKey(bodyHtml, dataKey);
+
+        if (toVal) toVal = encryptWithDataKey(toVal, dataKey);
+        if (fromVal) fromVal = encryptWithDataKey(fromVal, dataKey);
+        if (ccVal) ccVal = encryptWithDataKey(ccVal, dataKey);
+        if (bccVal) bccVal = encryptWithDataKey(bccVal, dataKey);
+
+        encryptedKey = encryptDataKeyForUser(
+          userRecord.userPublicKey,
+          dataKey,
+        ) as any;
+      } catch (encErr) {
+        this.logger.error(`E2EE encryption failed for draft email:`, encErr);
+      }
+    }
+
+    // Create the message in database
+    const savedMessage = await this.prisma.client.emailMessage.create({
+      data: {
+        userEmailAccountId: accountId,
+        uid: nextUid,
+        messageId: null,
+        subject,
+        from: fromVal,
+        to: toVal,
+        cc: ccVal || null,
+        bcc: bccVal || null,
+        date: new Date(),
+        bodyText,
+        bodyHtml,
+        read: true,
+        folder: 'drafts',
+        encryptedKey: encryptedKey || undefined,
+      },
+    });
+
+    try {
+      if (userRecord) {
+        this.gateway.sendToUser(userRecord.id, 'email:new', {
+          accountId,
+          folder: 'drafts',
           message: savedMessage,
         });
       }

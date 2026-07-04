@@ -3,6 +3,7 @@ import { NotFoundException } from '@nestjs/common';
 import { BookmarksService } from './bookmarks.service';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { CacheService } from '../../providers/cache/cache.service';
+import { NotificationGateway } from '../notification/notification.gateway';
 
 describe('BookmarksService', () => {
   let service: BookmarksService;
@@ -27,6 +28,10 @@ describe('BookmarksService', () => {
     del: jest.fn(),
   };
 
+  const mockNotificationGateway = {
+    sendToUser: jest.fn(),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
     mockCache.get.mockResolvedValue(null);
@@ -38,6 +43,7 @@ describe('BookmarksService', () => {
         BookmarksService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: CacheService, useValue: mockCache },
+        { provide: NotificationGateway, useValue: mockNotificationGateway },
       ],
     }).compile();
 

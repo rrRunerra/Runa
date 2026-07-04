@@ -63,7 +63,6 @@ const RrMediaCardComponent = ({
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const mediaType = item.type;
 
-
   const progressPercentage = item.episodes
     ? Math.min((item.progress / item.episodes) * 100, 100)
     : 50;
@@ -72,7 +71,7 @@ const RrMediaCardComponent = ({
     <>
       <div className="group relative flex flex-col w-full bg-card hover:bg-accent/5 rounded-2xl border border-border/40 hover:border-primary/30 transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5">
         {/* Poster Image Container */}
-        <div className="relative aspect-[2/3] w-full rounded-t-2xl overflow-hidden bg-muted">
+        <div className="relative aspect-2/3 w-full rounded-t-2xl overflow-hidden bg-muted">
           <Link
             href={href}
             prefetch={false}
@@ -141,19 +140,27 @@ const RrMediaCardComponent = ({
           )}
 
           {/* Progress Bar overlay at bottom of poster */}
-          {showProgress && item.progress !== undefined && (
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted/20 z-15 overflow-hidden">
-              <div
-                className="bg-primary h-full transition-all duration-500 shadow-[0_0_8px_rgba(var(--primary),0.5)]"
-                style={{ width: `${progressPercentage}%` }}
-              />
-            </div>
-          )}
+          {showProgress &&
+            item.progress !== undefined &&
+            (item.status?.toUpperCase() === "WATCHING" ||
+              item.status?.toUpperCase() === "READING" ||
+              item.status?.toUpperCase() === "PLAYING") && (
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-muted/20 z-15 overflow-hidden">
+                <div
+                  className="bg-primary h-full transition-all duration-500 shadow-[0_0_8px_rgba(var(--primary),0.5)]"
+                  style={{ width: `${progressPercentage}%` }}
+                />
+              </div>
+            )}
         </div>
 
         {/* Metadata Details Area */}
         <div className="p-3 flex flex-col flex-1 gap-2.5">
-          <Link href={href} prefetch={false} className="block flex-1 group/title cursor-pointer">
+          <Link
+            href={href}
+            prefetch={false}
+            className="block flex-1 group/title cursor-pointer"
+          >
             <h4
               title={item.title}
               className="font-semibold text-xs sm:text-sm text-foreground line-clamp-2 leading-tight group-hover/title:text-primary transition-colors duration-200 tracking-wide wrap-break-word"
@@ -232,6 +239,7 @@ export const RrMediaCard = memo(
       prevProps.item.title === nextProps.item.title &&
       prevProps.item.episodes === nextProps.item.episodes &&
       prevProps.item.type === nextProps.item.type &&
+      prevProps.item.status === nextProps.item.status &&
       prevProps.item.meta?.season === nextProps.item.meta?.season &&
       prevProps.item.meta?.episode === nextProps.item.meta?.episode
     );

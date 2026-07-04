@@ -19,6 +19,8 @@ import {
   UserListSortType,
   RrUserListFilterState,
 } from "@/components/rrComponents/aquila/rrUserListFilters";
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -82,12 +84,20 @@ export default function UserMangaPage() {
   });
   const [sort, setSort] = useState<UserListSortType>("last_updated");
 
-  const [userData, setUserData] = useState<{
+  const { data: userData } = useSWR<{
     username: string;
     displayName?: string;
     avatarUrl?: string;
     bannerUrl?: string;
-  } | null>(null);
+  }>(
+    username ? `${process.env.NEXT_PUBLIC_API_URL}/users/${username}` : null,
+    fetcher,
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      revalidateIfStale: false,
+    }
+  );
 
   const [mangaList, setMangaList] = useState<MediaEntry[]>([]);
   const [isPrivate, setIsPrivate] = useState(false);
@@ -106,19 +116,13 @@ export default function UserMangaPage() {
     return () => clearTimeout(handler);
   }, [searchVal]);
 
-  useEffect(() => {
-    if (username) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${username}`)
-        .then(async (res) => await res.json())
-        .then((data) => setUserData(data))
-        .catch((err) => console.error("Failed to fetch user data", err));
-    }
-  }, [username]);
+
 
   const fetchMangaList = (
     currentOffset = 0,
     isReset = false,
     statusOverride?: string,
+    signal?: AbortSignal,
   ) => {
     if (!username) return;
     if (isFetchingRef.current && !isReset) return;
@@ -146,7 +150,7 @@ export default function UserMangaPage() {
 
     fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/list/manga/user/${username}?${queryParams}`,
-      { headers },
+      { headers, signal },
     )
       .then(async (res) => {
         if (res.status === 403) {
@@ -189,7 +193,10 @@ export default function UserMangaPage() {
           }
         }
       })
-      .catch((err) => console.error("Failed to fetch manga list", err))
+      .catch((err) => {
+        if (err.name === "AbortError") return;
+        console.error("Failed to fetch manga list", err);
+      })
       .finally(() => {
         setLoading(false);
         isFetchingRef.current = false;
@@ -197,15 +204,19 @@ export default function UserMangaPage() {
   };
 
   useEffect(() => {
+    const controller = new AbortController();
     setPriorityIdx(0);
     setPriorityOff(0);
     setOffset(0);
     setHasMore(true);
     if (activeList === "All") {
-      fetchMangaList(0, true, MANGA_PRIORITY_STATUSES[0]);
+      fetchMangaList(0, true, MANGA_PRIORITY_STATUSES[0], controller.signal);
     } else {
-      fetchMangaList(0, true);
+      fetchMangaList(0, true, undefined, controller.signal);
     }
+    return () => {
+      controller.abort();
+    };
   }, [
     username,
     debouncedSearch,
@@ -246,7 +257,7 @@ export default function UserMangaPage() {
         variants={itemVariants}
         className="flex-1 flex flex-col gap-6 w-full z-10"
       >
-        <RrUserListHeader userData={userData} listTitle="Manga List" />
+        <RrUserListHeader userData={userData || null} listTitle="Manga List" />
 
         {isPrivate ? (
           <div className="flex flex-col items-center justify-center py-20 bg-card/20 backdrop-blur-xl border border-border/40 rounded-2xl shadow-xl text-center p-6 mt-4">
