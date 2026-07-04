@@ -19,6 +19,7 @@ import {
   Loader2,
 } from "lucide-react";
 import RrLapplandWelcomeImage from "../rrImages/rrLapplandWelcomeImage";
+import RrLapplandRateLimit from "../rrImages/rrLapplandRateLimit";
 import RrLapplandBackupCode from "../rrImages/rrLapplandBackupCode";
 import RrLapplandBackupCodeError from "../rrImages/rrLapplandBackupCodeError";
 import RrLapplandEmail from "../rrImages/rrLapplandEmail";
@@ -935,7 +936,14 @@ export function RrLoginForm({
               let ActiveComponent: React.ComponentType<any>;
               let stateKey: string;
 
-              if (mfaRequired) {
+              if (
+                message?.toLowerCase().includes("too many requests") ||
+                message?.toLowerCase().includes("throttled") ||
+                message?.toLowerCase().includes("rate limit")
+              ) {
+                ActiveComponent = RrLapplandRateLimit;
+                stateKey = "rate-limited";
+              } else if (mfaRequired) {
                 if (activeMfaMethod === "passkey") {
                   if (hasError) {
                     ActiveComponent = RrLapplandPasskeyDenied;

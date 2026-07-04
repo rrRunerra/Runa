@@ -83,7 +83,7 @@ export default function RrFavoritesTab({
     return (
       <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
         {Array.from({ length: 8 }).map((_, idx) => (
-          <Skeleton key={idx} className="aspect-2/3 w-full rounded-xl" />
+          <Skeleton key={idx} className="aspect-[2/3] w-full rounded-xl" />
         ))}
       </div>
     );
@@ -139,7 +139,7 @@ export default function RrFavoritesTab({
                       <motion.div
                         whileHover={{ y: -4 }}
                         whileTap={{ scale: 0.98 }}
-                        className="group relative aspect-2/3 rounded-xl overflow-hidden border bg-card cursor-pointer shadow-sm"
+                        className="group relative aspect-[2/3] rounded-xl overflow-hidden border bg-card cursor-pointer shadow-sm"
                       >
                         {fav.image ? (
                           <Image

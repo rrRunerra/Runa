@@ -1,7 +1,17 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { Play, Clock, Film, Globe } from "lucide-react";
+import React, { useEffect, useState, useMemo } from "react";
+import {
+  Play,
+  Star,
+  TrendingUp,
+  Heart,
+  Film,
+  Globe,
+  Clock,
+  Calendar,
+  ExternalLink,
+} from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -18,6 +28,7 @@ import { Media } from "@/types/aquila";
 import { RrMediaEditDialog } from "@/components/rrComponents/aquila/rrMediaEditDialog";
 import RrLapplandImageNotFound from "@/components/rrComponents/rrImages/rrLapplandImageNotFound";
 import { RrMediaRefreshButton } from "@/components/rrComponents/aquila/rrMediaRefreshButton";
+import { MovieEntity } from "@/types/movie.entities";
 
 interface ListEntry {
   id: number | string;
@@ -51,27 +62,65 @@ export default function MovieDetailsPage(): React.JSX.Element {
   const session = useSession();
 
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
+  const [showAllCharacters, setShowAllCharacters] = useState<boolean>(false);
 
   // SWR queries replacing sequential imperative fetching
-  const { data: movie, error: movieError, isLoading: movieLoading, mutate: mutateMovie } = useSWR<Media>(
-    id ? `${process.env.NEXT_PUBLIC_API_URL}/movie/details/${id}` : null,
-    fetcher
+  const {
+    data: movie,
+    error: movieError,
+    isLoading: movieLoading,
+    mutate: mutateMovie,
+  } = useSWR<MovieEntity>(
+    id ? `${process.env.NEXT_PUBLIC_API_URL}/movie/${id}` : null,
+    fetcher,
   );
 
   const { data: listEntry, mutate: mutateListEntry } = useSWR<ListEntry>(
     id && session.status === "authenticated" && session.data?.accessToken
-      ? [`${process.env.NEXT_PUBLIC_API_URL}/list/movie/entry/${id}`, session.data.accessToken]
+      ? [
+          `${process.env.NEXT_PUBLIC_API_URL}/list/movie/entry/${id}`,
+          session.data.accessToken,
+        ]
       : null,
     fetcher,
-    { shouldRetryOnError: false }
+    { shouldRetryOnError: false },
   );
 
   const hasListEntry = !!listEntry;
 
+  const titleEnglish = movie?.titleEnglish ?? "";
+  const titleRomaji = movie?.titleRomaji ?? "";
+  const titleNative = movie?.titleNative ?? "";
+  const displayTitle = titleEnglish || titleRomaji || "Movie Details";
+  const coverUrl = movie?.coverImage ?? "";
+  const bannerUrl = movie?.bannerImage ?? "";
+
+  const formattedReleaseDate = useMemo((): string | null => {
+    if (!movie?.releaseDate) return null;
+    try {
+      return new Date(movie.releaseDate).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    } catch {
+      return movie.releaseDate;
+    }
+  }, [movie?.releaseDate]);
+
+  const releaseYear = useMemo((): string | null => {
+    if (!movie?.releaseDate) return null;
+    try {
+      return new Date(movie.releaseDate).getFullYear().toString();
+    } catch {
+      return null;
+    }
+  }, [movie?.releaseDate]);
+
   useEffect((): void => {
     if (!movie) return;
-    document.title = `Aquila > Movie > ${movie.title.english ?? movie.title.romaji ?? ""}`;
-  }, [movie]);
+    document.title = `Aquila > Movie > ${titleEnglish || titleRomaji || ""}`;
+  }, [movie, titleEnglish, titleRomaji]);
 
   if (movieLoading) {
     return (
@@ -87,7 +136,9 @@ export default function MovieDetailsPage(): React.JSX.Element {
     return (
       <div className="flex flex-col flex-1 min-h-screen bg-background relative overflow-hidden items-center justify-center gap-4">
         <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-primary/2 rounded-full blur-3xl pointer-events-none" />
-        <h2 className="text-2xl font-bold text-foreground z-10">Movie not found</h2>
+        <h2 className="text-2xl font-bold text-foreground z-10">
+          Movie not found
+        </h2>
         <Button asChild variant="default" className="z-10 rounded-xl">
           <Link href="/aquila/browse">Back to Browse</Link>
         </Button>
@@ -106,7 +157,7 @@ export default function MovieDetailsPage(): React.JSX.Element {
             Authorization: `Bearer ${session.data?.accessToken}`,
           },
           body: JSON.stringify({
-            tvdbId: parseInt(movie.id),
+            movieId: Number(id),
             status: "PLANNING",
           }),
         },
@@ -131,10 +182,10 @@ export default function MovieDetailsPage(): React.JSX.Element {
       {/* Banner Section */}
       <div className="relative h-[240px] md:h-[360px] w-full overflow-hidden shrink-0 z-10">
         <div className="absolute inset-x-0 bottom-0 h-48 bg-linear-to-t from-background to-transparent z-10" />
-        {movie.bannerImage ? (
+        {bannerUrl ? (
           <Image
-            src={movie.bannerImage}
-            alt={movie.title?.romaji ?? "Banner"}
+            src={bannerUrl}
+            alt={titleRomaji || "Banner"}
             fill
             sizes="100vw"
             className="object-cover scale-105 filter blur-[1px] brightness-75"
@@ -184,10 +235,10 @@ export default function MovieDetailsPage(): React.JSX.Element {
           >
             <div className="bg-card/75 border border-border/40 backdrop-blur-xl shadow-2xl rounded-2xl p-4 flex flex-col sm:flex-row lg:flex-col gap-4 items-center sm:items-start lg:items-stretch">
               <div className="relative aspect-2/3 w-36 sm:w-40 lg:w-full rounded-xl overflow-hidden shadow-lg border border-border/30 shrink-0 bg-muted flex items-center justify-center">
-                {movie.coverImage.large ? (
+                {coverUrl ? (
                   <Image
-                    src={movie.coverImage.large}
-                    alt={movie.title?.romaji ?? "Cover"}
+                    src={coverUrl}
+                    alt={titleRomaji || "Cover"}
                     fill
                     sizes="(max-width: 640px) 150px, 260px"
                     className="object-cover"
@@ -235,8 +286,8 @@ export default function MovieDetailsPage(): React.JSX.Element {
                       media={{
                         id: movie.id.toString(),
                         type: "movie",
-                        title: movie.title,
-                        coverImage: { large: movie.coverImage.large },
+                        title: { english: titleEnglish, romaji: titleRomaji },
+                        coverImage: { large: coverUrl },
                       }}
                       hasListEntry={hasListEntry}
                       open={isDialogOpen}
@@ -283,14 +334,12 @@ export default function MovieDetailsPage(): React.JSX.Element {
                 Information
               </h3>
               <div className="space-y-3">
-                <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
-                  <span className="text-muted-foreground">Format</span>
-                  <span className="font-medium text-foreground">{movie.format}</span>
-                </div>
                 {movie.runtime && (
                   <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
                     <span className="text-muted-foreground">Runtime</span>
-                    <span className="font-medium text-foreground">{movie.runtime} mins</span>
+                    <span className="font-medium text-foreground">
+                      {movie.runtime} mins
+                    </span>
                   </div>
                 )}
                 <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
@@ -299,16 +348,44 @@ export default function MovieDetailsPage(): React.JSX.Element {
                     {movie.status?.replace(/_/g, " ").toLowerCase()}
                   </span>
                 </div>
+                {formattedReleaseDate && (
+                  <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
+                    <span className="text-muted-foreground">Release Date</span>
+                    <span className="font-medium text-foreground">
+                      {formattedReleaseDate}
+                    </span>
+                  </div>
+                )}
+                {movie.budget && (
+                  <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
+                    <span className="text-muted-foreground">Budget</span>
+                    <span className="font-medium text-foreground">
+                      {movie.budget}
+                    </span>
+                  </div>
+                )}
+                {movie.boxOffice && (
+                  <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
+                    <span className="text-muted-foreground">Box Office</span>
+                    <span className="font-medium text-foreground">
+                      {movie.boxOffice}
+                    </span>
+                  </div>
+                )}
                 {movie.originalCountry && (
                   <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
                     <span className="text-muted-foreground">Country</span>
-                    <span className="font-medium text-foreground">{movie.originalCountry}</span>
+                    <span className="font-medium text-foreground">
+                      {movie.originalCountry}
+                    </span>
                   </div>
                 )}
                 {movie.originalLanguage && (
                   <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
                     <span className="text-muted-foreground">Language</span>
-                    <span className="font-medium text-foreground uppercase">{movie.originalLanguage}</span>
+                    <span className="font-medium text-foreground uppercase">
+                      {movie.originalLanguage}
+                    </span>
                   </div>
                 )}
                 {movie.contentRating && (
@@ -329,14 +406,21 @@ export default function MovieDetailsPage(): React.JSX.Element {
                   Studios
                 </h4>
                 <div className="flex flex-wrap gap-2">
-                  {movie.studios.map((studio) => (
-                    <span
-                      key={studio.name}
-                      className="text-xs bg-secondary text-secondary-foreground border border-border/40 px-3 py-1.5 rounded-xl"
-                    >
-                      {studio.name}
-                    </span>
-                  ))}
+                  {movie.studios.map((studio, idx) => {
+                    const name =
+                      typeof studio === "string"
+                        ? studio
+                        : (studio as any)?.name;
+                    if (!name) return null;
+                    return (
+                      <span
+                        key={idx}
+                        className="text-xs bg-secondary text-secondary-foreground border border-border/40 px-3 py-1.5 rounded-xl"
+                      >
+                        {name}
+                      </span>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -363,6 +447,50 @@ export default function MovieDetailsPage(): React.JSX.Element {
                 </div>
               </div>
             )}
+
+            {/* External Links */}
+            {(movie.tvdbId || movie.tmdbId || movie.imdbId) && (
+              <div className="bg-card/65 border border-border/40 backdrop-blur-xl rounded-2xl p-5">
+                <h4 className="font-semibold text-xs tracking-wide text-muted-foreground uppercase mb-3">
+                  External Links
+                </h4>
+                <div className="flex flex-col gap-2">
+                  {movie.tvdbId && (
+                    <a
+                      href={`https://thetvdb.com/dereferrer/movie/${movie.tvdbId}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-between text-xs bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border/40 px-3 py-2 rounded-xl transition-all"
+                    >
+                      <span className="font-medium">TheTVDB</span>
+                      <ExternalLink className="size-3 text-muted-foreground" />
+                    </a>
+                  )}
+                  {movie.tmdbId && (
+                    <a
+                      href={`https://www.themoviedb.org/movie/${movie.tmdbId}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-between text-xs bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border/40 px-3 py-2 rounded-xl transition-all"
+                    >
+                      <span className="font-medium">TMDB</span>
+                      <ExternalLink className="size-3 text-muted-foreground" />
+                    </a>
+                  )}
+                  {movie.imdbId && (
+                    <a
+                      href={`https://www.imdb.com/title/${movie.imdbId}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-between text-xs bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border/40 px-3 py-2 rounded-xl transition-all"
+                    >
+                      <span className="font-medium">IMDb</span>
+                      <ExternalLink className="size-3 text-muted-foreground" />
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
           </motion.div>
 
           {/* Right Column - Info */}
@@ -370,21 +498,47 @@ export default function MovieDetailsPage(): React.JSX.Element {
             {/* Header */}
             <motion.div variants={itemVariants} className="space-y-2">
               <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">
-                {movie.title.english || movie.title.romaji}
+                {displayTitle}
               </h1>
-              {movie.title.romaji && movie.title.romaji !== movie.title.english && (
+              {(titleEnglish && titleEnglish !== displayTitle) ||
+              (titleRomaji && titleRomaji !== displayTitle) ||
+              titleNative ? (
                 <p className="text-xs text-muted-foreground italic">
-                  Also known as: {movie.title.romaji}
+                  Also known as:{" "}
+                  {[
+                    titleEnglish && titleEnglish !== displayTitle
+                      ? titleEnglish
+                      : null,
+                    titleRomaji && titleRomaji !== displayTitle
+                      ? titleRomaji
+                      : null,
+                    titleNative,
+                  ]
+                    .filter(Boolean)
+                    .join(", ")}
                 </p>
-              )}
+              ) : null}
             </motion.div>
 
             {/* Quick Info Badges */}
-            <motion.div variants={itemVariants} className="flex flex-wrap gap-3">
+            <motion.div
+              variants={itemVariants}
+              className="flex flex-wrap gap-3"
+            >
+              {releaseYear && (
+                <div className="bg-card/45 border border-border/30 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2">
+                  <Calendar className="size-4 text-primary" />
+                  <span className="text-sm font-semibold text-foreground">
+                    {releaseYear}
+                  </span>
+                </div>
+              )}
               {movie.runtime && (
                 <div className="bg-card/45 border border-border/30 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2">
                   <Clock className="size-4 text-primary" />
-                  <span className="text-sm font-semibold text-foreground">{movie.runtime} min</span>
+                  <span className="text-sm font-semibold text-foreground">
+                    {movie.runtime} min
+                  </span>
                 </div>
               )}
               <div className="bg-card/45 border border-border/30 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2">
@@ -396,11 +550,16 @@ export default function MovieDetailsPage(): React.JSX.Element {
               {movie.originalCountry && (
                 <div className="bg-card/45 border border-border/30 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2">
                   <Globe className="size-4 text-primary" />
-                  <span className="text-sm font-semibold text-foreground">{movie.originalCountry}</span>
+                  <span className="text-sm font-semibold text-foreground">
+                    {movie.originalCountry}
+                  </span>
                 </div>
               )}
               {movie.contentRating && (
-                <Badge variant="outline" className="px-4 py-2 rounded-xl text-xs font-bold text-muted-foreground">
+                <Badge
+                  variant="outline"
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-muted-foreground"
+                >
                   {movie.contentRating}
                 </Badge>
               )}
@@ -411,11 +570,12 @@ export default function MovieDetailsPage(): React.JSX.Element {
               variants={itemVariants}
               className="bg-card/30 border border-border/20 backdrop-blur-sm p-6 rounded-2xl"
             >
-              <h3 className="text-base font-bold text-foreground mb-3">Synopsis</h3>
-              <div
-                className="prose prose-neutral dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-sm prose-p:my-2 prose-a:text-primary hover:prose-a:text-primary transition-colors"
-                dangerouslySetInnerHTML={{ __html: movie.description }}
-              />
+              <h3 className="text-base font-bold text-foreground mb-3">
+                Synopsis
+              </h3>
+              <div className="prose prose-neutral dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-sm prose-p:my-2 prose-a:text-primary hover:prose-a:text-primary transition-colors">
+                <p>{movie.description}</p>
+              </div>
             </motion.div>
 
             {/* Genres */}
@@ -424,7 +584,11 @@ export default function MovieDetailsPage(): React.JSX.Element {
                 <h3 className="text-base font-bold text-foreground">Genres</h3>
                 <div className="flex flex-wrap gap-2">
                   {movie.genres.map((genre) => (
-                    <Badge key={genre} variant="secondary" className="rounded-xl px-3 py-1 text-xs">
+                    <Badge
+                      key={genre}
+                      variant="secondary"
+                      className="rounded-xl px-3 py-1 text-xs"
+                    >
                       {genre}
                     </Badge>
                   ))}
@@ -437,7 +601,10 @@ export default function MovieDetailsPage(): React.JSX.Element {
               <motion.div variants={itemVariants} className="space-y-3">
                 <h3 className="text-base font-bold text-foreground">Cast</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {movie.characters.slice(0, 12).map((char, idx) => (
+                  {(showAllCharacters
+                    ? movie.characters
+                    : movie.characters.slice(0, 12)
+                  ).map((char, idx) => (
                     <div
                       key={idx}
                       className="flex items-center justify-between bg-card/45 border border-border/30 backdrop-blur-md p-3 rounded-xl overflow-hidden hover:border-border/50 transition-all group"
@@ -475,6 +642,22 @@ export default function MovieDetailsPage(): React.JSX.Element {
                     </div>
                   ))}
                 </div>
+                {movie.characters.length > 12 && (
+                  <div className="flex justify-center mt-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(): void =>
+                        setShowAllCharacters(!showAllCharacters)
+                      }
+                      className="rounded-xl cursor-pointer"
+                    >
+                      {showAllCharacters
+                        ? "Show Less"
+                        : `Show All (${movie.characters.length})`}
+                    </Button>
+                  </div>
+                )}
               </motion.div>
             )}
           </div>

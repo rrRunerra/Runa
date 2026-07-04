@@ -126,7 +126,7 @@ export function RrConstellationBuilderModal({
   // Sync bookmarks using useSWR
   const { data: fetchedBookmarks, mutate: refetchBookmarks } = useSWR<Bookmark[]>(
     session?.accessToken && open
-      ? [`${process.env.NEXT_PUBLIC_API_URL}/polaris/bookmarks`, session.accessToken]
+      ? [`${process.env.NEXT_PUBLIC_API_URL}/bookmarks`, session.accessToken]
       : null,
     fetcher
   );
@@ -1028,7 +1028,7 @@ export function RrConstellationBuilderModal({
 
     setIsSaving(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/polaris/bookmarks`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/bookmarks`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1070,7 +1070,7 @@ export function RrConstellationBuilderModal({
     setDeleteId(id);
     setIsDeleting(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/polaris/bookmarks/${id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/bookmarks/${id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${session.accessToken}`,

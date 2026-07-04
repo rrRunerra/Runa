@@ -47,10 +47,10 @@ export function RrMediaEditDialogHeader({
           <img
             src={coverImageLarge}
             alt="cover"
-            className="w-20 sm:w-24 aspect-2/3 rounded-xl shadow-2xl object-cover bg-background/40 border border-border/40 shrink-0"
+            className="w-20 sm:w-24 aspect-[2/3] rounded-xl shadow-2xl object-cover bg-background/40 border border-border/40 shrink-0"
           />
         ) : (
-          <div className="w-20 sm:w-24 aspect-2/3 rounded-xl shadow-2xl bg-muted border border-border/40 overflow-hidden flex items-center justify-center shrink-0 relative">
+          <div className="w-20 sm:w-24 aspect-[2/3] rounded-xl shadow-2xl bg-muted border border-border/40 overflow-hidden flex items-center justify-center shrink-0 relative">
             <RrLapplandImageNotFound className="size-full object-cover scale-150" />
           </div>
         )}

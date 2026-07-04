@@ -6,7 +6,9 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { id } = await params;
   const book = await getMediaDetails("books", id);
 
@@ -17,9 +19,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
-  const title = book.title.english || book.title.romaji || "Book Details";
+  const title = book.titleString ?? "Book Details";
   const description = cleanDescription(book.description, 160);
-  const image = book.coverImage.extraLarge || book.coverImage.large;
+  const image = typeof book.coverImage === "string" ? book.coverImage : "";
 
   return {
     title: `Aquila > Book > ${title}`,
@@ -27,12 +29,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     openGraph: {
       title,
       description,
-      images: [
-        {
-          url: image,
-          alt: title,
-        },
-      ],
+      images: image ? [{ url: image, alt: title }] : [],
       type: "book",
       siteName: "Aquila",
     },
@@ -40,7 +37,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       card: "summary_large_image",
       title,
       description,
-      images: [image],
+      images: image ? [image] : [],
     },
   };
 }

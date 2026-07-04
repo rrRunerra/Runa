@@ -1,154 +1,168 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../providers/database/prisma.service';
-import type { Media, SearchMedia } from '../../common/types/types';
-import { GameRepository } from './repositories/game.repository';
-import { GameQueueService } from './services/game-queue.service';
+import { Injectable, Logger } from '@nestjs/common';
+import { GameRepository } from './game.repository';
+import { GameQueueService } from './game-queue.service';
+import {
+  rrError,
+  rrNotFoundException,
+  rrTooManyRequestsException,
+} from 'src/providers/error';
+import { GameEntity, GameSearchEntity } from './game.entities';
+import { CacheService } from 'src/providers/cache/cache.service';
+import { GameExternal } from './game.external';
 
-const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
-const CACHE_DURATION_MS = isDev ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
+interface DbGameResult {
+  id: number;
+  rawgId: number;
+  titleString?: string | null;
+  titleNative?: string | null;
+  coverImage?: string | null;
+}
 
 @Injectable()
 export class GameService {
   private readonly logger = new Logger(GameService.name);
+  private readonly moduleCode = 'GeSve-';
+  private readonly useLocalMedia = process.env.USE_LOCAL_MEDIA_ONLY ?? false;
+  private readonly cacheDuration = Number(
+    process.env.GAME_CACHE_DURATION ?? 60 * 60,
+  );
 
   constructor(
-    private readonly prisma: PrismaService,
     private readonly gameRepository: GameRepository,
     private readonly gameQueueService: GameQueueService,
+    private readonly cacheService: CacheService,
+    private readonly gameExternal: GameExternal,
   ) {}
 
-  private getApiKey(): string {
-    const key = process.env.RAWG_API_KEY;
-    if (!key) {
-      this.logger.warn('RAWG_API_KEY is not defined in environment variables');
-    }
-    return key || '';
-  }
+  public async search(name: string): Promise<GameSearchEntity[]> {
+    const normalized = name.trim().toLowerCase();
+    const cacheKey = `game-search:${normalized.replaceAll(' ', '')}`;
 
-  public async search(name: string): Promise<SearchMedia[]> {
-    const key = this.getApiKey();
-    if (!key) {
-      return [];
+    const cached = await this.cacheService.get<GameSearchEntity[]>(cacheKey);
+
+    if (cached) {
+      this.logger.debug(`Game search cache hit ${cached.length} entries`);
+      return cached;
     }
 
-    try {
-      const res = await fetch(
-        `https://api.rawg.io/api/games?key=${key}&search=${encodeURIComponent(name)}&page_size=20`,
+    let result: GameSearchEntity[] = [];
+    let usedExternal = false;
+
+    if (this.useLocalMedia) {
+      result = await this.gameRepository.search(name);
+    }
+
+    if (!this.useLocalMedia || result.length === 0) {
+      result = await this.gameExternal.search(name);
+      usedExternal = true;
+    }
+
+    this.logger.debug(`Games found: ${result.length}`);
+
+    if (result.length > 0) {
+      await this.cacheService.set(
+        cacheKey,
+        JSON.stringify(result),
+        this.cacheDuration,
       );
-      if (!res.ok) {
-        throw new Error(`RAWG search failed: ${res.status}`);
-      }
-      const data = await res.json();
-      const results = data.results || [];
-
-      return results.map((item: any) => ({
-        id: item.id.toString(),
-        title: {
-          romaji: item.name,
-          english: item.name,
-        },
-        coverImage: {
-          large: item.background_image || '',
-        },
-        format: 'Game',
-        status: item.released ? 'Released' : 'TBA',
-        isAdult: item.esrb_rating?.slug === 'mature' || item.esrb_rating?.slug === 'adults-only',
-      }));
-    } catch (error) {
-      this.logger.error('Failed to search RAWG games', error);
-      return [];
     }
+
+    // Queue a background refresh only when local results were returned
+    if (this.useLocalMedia && !usedExternal && result.length > 0) {
+      this.logger.debug('Queuing background refresh for games');
+      this.gameQueueService.addSearchRefresh(name, cacheKey);
+    }
+
+    return result;
   }
 
-  public async getGame(id: number, forceRefresh = false): Promise<Media> {
+  public async getGame(id: number): Promise<GameEntity | undefined> {
     if (isNaN(id)) {
-      throw new Error(`Invalid game ID: ${id}`);
+      throw new rrError(`${this.moduleCode}IMBAN001`, {
+        message: 'ID must be a number',
+      });
     }
 
-    const dbGame = await this.gameRepository.findByRawgId(id);
+    const cacheKey = `game:${id}`;
+    const cached = await this.cacheService.get<GameEntity>(cacheKey);
 
-    if (dbGame && !forceRefresh) {
-      const now = new Date();
-      const updatedAt = new Date(dbGame.updatedAt);
-      const timeSinceUpdate = now.getTime() - updatedAt.getTime();
-
-      if (timeSinceUpdate < CACHE_DURATION_MS) {
-        return this.gameRepository.toMedia(dbGame);
-      }
+    if (cached) {
+      this.logger.debug(`getGame cache hit for ${id}`);
+      return cached;
     }
 
-    try {
-      const media = await this.fetchFromRawg(id);
-      
-      this.gameQueueService.addJob(id);
+    this.logger.debug('getGame fetching from db');
+    const data = await this.gameRepository.find(id);
 
-      return media;
-    } catch (error) {
-      if (dbGame) {
-        return this.gameRepository.toMedia(dbGame);
-      }
-      throw new NotFoundException(`Game with ID ${id} not found`);
+    if (!data) {
+      throw new rrNotFoundException(`${this.moduleCode}GNF001`, {
+        message: 'Game not found',
+      });
     }
+
+    await this.cacheService.set(cacheKey, data, this.cacheDuration);
+
+    return data;
   }
 
-  private async fetchFromRawg(id: number): Promise<Media> {
-    const key = this.getApiKey();
-    if (!key) {
-      throw new Error('RAWG_API_KEY is not defined');
+  public async refreshGame(id: number): Promise<GameEntity | undefined | null> {
+    if (isNaN(id)) {
+      throw new rrError(`${this.moduleCode}IMBAN002`, {
+        message: 'ID must be a number',
+      });
     }
 
-    const res = await fetch(`https://api.rawg.io/api/games/${id}?key=${key}`);
-    if (!res.ok) {
-      throw new Error(`RAWG detail fetch failed: ${res.status}`);
+    const cacheKey = `cooldown:refresh:game:${id}`;
+    const onCooldown = await this.cacheService.get(cacheKey);
+
+    if (onCooldown) {
+      throw new rrTooManyRequestsException(`${this.moduleCode}TMWRR001`, {
+        message: 'This media was refreshed recently.',
+      });
     }
-    const item = await res.json();
 
-    let releaseYear: number | null = null;
-    let releaseMonth: number | null = null;
-    let releaseDay: number | null = null;
+    // Look up the existing entry to get the RAWG ID
+    const existing = await this.gameRepository.find(id);
+    if (!existing) {
+      throw new rrNotFoundException(`${this.moduleCode}GNFID001`, {
+        message: 'Game not found in database',
+      });
+    }
 
-    if (item.released) {
-      const parts = item.released.split('-');
-      if (parts.length === 3) {
-        releaseYear = parseInt(parts[0], 10);
-        releaseMonth = parseInt(parts[1], 10);
-        releaseDay = parseInt(parts[2], 10);
+    // Fetch fresh data from RAWG
+    await this.gameExternal.fetchAndUpsertGame(existing.rawgId);
+
+    // Bust the cache so next getGame fetches fresh data
+    await this.cacheService.del(`game:${id}`);
+
+    const cooldownSeconds = 5 * 60;
+    await this.cacheService.set(cacheKey, true, cooldownSeconds);
+
+    return this.gameRepository.find(id);
+  }
+
+  public async ensureGame(
+    rawgId: number,
+    title?: string,
+    coverImage?: string,
+  ): Promise<{ id: number } | null> {
+    let game = (await this.gameRepository.findByRawgId(
+      rawgId,
+    )) as DbGameResult | null;
+    if (!game) {
+      try {
+        await this.gameExternal.fetchAndUpsertGame(rawgId);
+        game = (await this.gameRepository.findByRawgId(
+          rawgId,
+        )) as DbGameResult | null;
+      } catch {
+        game = (await this.gameRepository.upsert(rawgId, {
+          rawgId,
+          titleString: title || 'Unknown',
+          coverImage: coverImage || null,
+        })) as DbGameResult;
       }
     }
-
-    const developers = (item.developers || []).map((d: any) => d.name);
-    const genres = (item.genres || []).map((g: any) => g.name);
-    const platforms = (item.platforms || []).map((p: any) => p.platform.name);
-
-    // Combine platforms into formats or genres cleanly
-    const allPlatforms = platforms.map((p: string) => `Platform: ${p}`);
-
-    return {
-      id: item.id.toString(),
-      title: {
-        romaji: item.name,
-        english: item.name,
-        native: null,
-      },
-      coverImage: {
-        extraLarge: item.background_image_additional || item.background_image || '',
-        large: item.background_image || '',
-      },
-      bannerImage: item.background_image || '',
-      format: 'Game',
-      status: item.released ? 'Released' : 'TBA',
-      description: item.description || item.description_raw || '',
-      startDate: releaseYear
-        ? {
-            year: releaseYear,
-            month: releaseMonth,
-            day: releaseDay,
-          }
-        : undefined,
-      genres: [...allPlatforms, ...genres],
-      studios: developers.map((name: string) => ({ name })),
-      averageScore: item.metacritic || (item.rating ? Math.round(item.rating * 20) : null), // map 5 stars to 100
-      popularity: item.added || null,
-    };
+    return game ? { id: game.id } : null;
   }
 }

@@ -1,7 +1,15 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { Play, Check, Globe, Clock, Tv2 } from "lucide-react";
+import {
+  Play,
+  Check,
+  Globe,
+  Clock,
+  Tv2,
+  Calendar,
+  ExternalLink,
+} from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -25,6 +33,7 @@ import { Season, Media } from "@/types/aquila";
 import { RrMediaEditDialog } from "@/components/rrComponents/aquila/rrMediaEditDialog";
 import RrLapplandImageNotFound from "@/components/rrComponents/rrImages/rrLapplandImageNotFound";
 import { RrMediaRefreshButton } from "@/components/rrComponents/aquila/rrMediaRefreshButton";
+import { TvEntity } from "@/types/tv.entities";
 
 interface TvMedia extends Media {
   seasons: Season[];
@@ -63,32 +72,74 @@ export default function TvDetailsPage(): React.JSX.Element {
   const session = useSession();
 
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
+  const [showAllCharacters, setShowAllCharacters] = useState<boolean>(false);
 
   // SWR queries replacing sequential imperative fetching
-  const { data: tv, error: tvError, isLoading: tvLoading, mutate: mutateTv } = useSWR<TvMedia>(
-    id ? `${process.env.NEXT_PUBLIC_API_URL}/tv/details/${id}` : null,
-    fetcher
+  const {
+    data: tv,
+    error: tvError,
+    isLoading: tvLoading,
+    mutate: mutateTv,
+  } = useSWR<TvEntity>(
+    id ? `${process.env.NEXT_PUBLIC_API_URL}/tv/${id}` : null,
+    fetcher,
   );
 
   const { data: listEntry, mutate: mutateListEntry } = useSWR<ListEntry>(
     id && session.status === "authenticated" && session.data?.accessToken
-      ? [`${process.env.NEXT_PUBLIC_API_URL}/list/tv/entry/${id}`, session.data.accessToken]
+      ? [
+          `${process.env.NEXT_PUBLIC_API_URL}/list/tv/entry/${id}`,
+          session.data.accessToken,
+        ]
       : null,
     fetcher,
-    { shouldRetryOnError: false }
+    { shouldRetryOnError: false },
   );
 
   const hasListEntry = !!listEntry;
   const watchedEpisodes = listEntry?.watchedEpisodes || [];
   const watchedCount = watchedEpisodes.length;
 
+  const titleEnglish = tv?.titleEnglish ?? "";
+  const titleRomaji = tv?.titleRomaji ?? "";
+  const titleNative = tv?.titleNative ?? "";
+  const displayTitle = titleEnglish || titleRomaji || "TV Details";
+  const coverUrl = tv?.coverImage ?? "";
+  const bannerUrl = tv?.bannerImage ?? "";
+
+  const formattedFirstAired = useMemo((): string | null => {
+    if (!tv?.firstAired) return null;
+    try {
+      return new Date(tv.firstAired).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    } catch {
+      return tv.firstAired;
+    }
+  }, [tv?.firstAired]);
+
+  const firstAiredYear = useMemo((): string | null => {
+    if (!tv?.firstAired) return null;
+    try {
+      return new Date(tv.firstAired).getFullYear().toString();
+    } catch {
+      return null;
+    }
+  }, [tv?.firstAired]);
+
   useEffect((): void => {
     if (!tv) return;
-    document.title = `Aquila > TV > ${tv.title.english ?? tv.title.romaji ?? ""}`;
-  }, [tv]);
+    document.title = `Aquila > TV > ${titleEnglish || titleRomaji || ""}`;
+  }, [tv, titleEnglish, titleRomaji]);
 
-  const toggleEpisode = async (seasonNum: number, episodeNum: number): Promise<void> => {
-    if (!tv || session.status !== "authenticated" || !session.data?.accessToken) return;
+  const toggleEpisode = async (
+    seasonNum: number,
+    episodeNum: number,
+  ): Promise<void> => {
+    if (!tv || session.status !== "authenticated" || !session.data?.accessToken)
+      return;
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/list/tv/entry/${tv.id}/episode`,
@@ -109,9 +160,13 @@ export default function TvDetailsPage(): React.JSX.Element {
     }
   };
 
-  const toggleSeason = async (seasonNum: number, watched: boolean): Promise<void> => {
-    if (!tv || session.status !== "authenticated" || !session.data?.accessToken) return;
-    const season = tv.seasons.find((s) => s.number === seasonNum);
+  const toggleSeason = async (
+    seasonNum: number,
+    watched: boolean,
+  ): Promise<void> => {
+    if (!tv || session.status !== "authenticated" || !session.data?.accessToken)
+      return;
+    const season = tv.seasons?.find((s) => s.number === seasonNum);
     if (!season) return;
 
     try {
@@ -143,7 +198,7 @@ export default function TvDetailsPage(): React.JSX.Element {
 
   const totalEpisodes = useMemo((): number => {
     if (!tv) return 0;
-    return tv.seasons.reduce((acc, s) => acc + s.episodeCount, 0);
+    return tv.seasons?.reduce((acc, s) => acc + s.episodeCount, 0) ?? 0;
   }, [tv]);
 
   const progressPercent =
@@ -163,7 +218,9 @@ export default function TvDetailsPage(): React.JSX.Element {
     return (
       <div className="flex flex-col flex-1 min-h-screen bg-background relative overflow-hidden items-center justify-center gap-4">
         <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-primary/2 rounded-full blur-3xl pointer-events-none" />
-        <h2 className="text-2xl font-bold text-foreground z-10">TV show not found</h2>
+        <h2 className="text-2xl font-bold text-foreground z-10">
+          TV show not found
+        </h2>
         <Button asChild variant="default" className="z-10 rounded-xl">
           <Link href="/aquila/browse">Back to Browse</Link>
         </Button>
@@ -182,7 +239,7 @@ export default function TvDetailsPage(): React.JSX.Element {
             Authorization: `Bearer ${session.data?.accessToken}`,
           },
           body: JSON.stringify({
-            tvdbId: parseInt(tv.id),
+            tvId: Number(id),
             status: "PLANNING",
           }),
         },
@@ -207,10 +264,10 @@ export default function TvDetailsPage(): React.JSX.Element {
       {/* Banner Section */}
       <div className="relative h-[240px] md:h-[360px] w-full overflow-hidden shrink-0 z-10">
         <div className="absolute inset-x-0 bottom-0 h-48 bg-linear-to-t from-background to-transparent z-10" />
-        {tv.bannerImage ? (
+        {bannerUrl ? (
           <Image
-            src={tv.bannerImage}
-            alt={tv.title?.romaji ?? "Banner"}
+            src={bannerUrl}
+            alt={titleRomaji || "Banner"}
             fill
             sizes="100vw"
             className="object-cover scale-105 filter blur-[1px] brightness-75"
@@ -260,10 +317,10 @@ export default function TvDetailsPage(): React.JSX.Element {
           >
             <div className="bg-card/75 border border-border/40 backdrop-blur-xl shadow-2xl rounded-2xl p-4 flex flex-col sm:flex-row lg:flex-col gap-4 items-center sm:items-start lg:items-stretch">
               <div className="relative aspect-2/3 w-36 sm:w-40 lg:w-full rounded-xl overflow-hidden shadow-lg border border-border/30 shrink-0 bg-muted flex items-center justify-center">
-                {tv.coverImage.large ? (
+                {coverUrl ? (
                   <Image
-                    src={tv.coverImage.large}
-                    alt={tv.title?.romaji ?? "Cover"}
+                    src={coverUrl}
+                    alt={titleRomaji || "Cover"}
                     fill
                     sizes="(max-width: 640px) 150px, 260px"
                     className="object-cover"
@@ -311,9 +368,9 @@ export default function TvDetailsPage(): React.JSX.Element {
                       media={{
                         id: tv.id.toString(),
                         type: "tv",
-                        title: tv.title,
-                        coverImage: { large: tv.coverImage.large },
-                        seasons: tv.seasons,
+                        title: { english: titleEnglish, romaji: titleRomaji },
+                        coverImage: { large: coverUrl },
+                        seasons: tv.seasons ?? undefined,
                       }}
                       hasListEntry={hasListEntry}
                       open={isDialogOpen}
@@ -361,16 +418,16 @@ export default function TvDetailsPage(): React.JSX.Element {
               </h3>
               <div className="space-y-3">
                 <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
-                  <span className="text-muted-foreground">Format</span>
-                  <span className="font-medium text-foreground">{tv.format}</span>
-                </div>
-                <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
                   <span className="text-muted-foreground">Episodes</span>
-                  <span className="font-medium text-foreground">{totalEpisodes}</span>
+                  <span className="font-medium text-foreground">
+                    {totalEpisodes}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
                   <span className="text-muted-foreground">Seasons</span>
-                  <span className="font-medium text-foreground">{tv.seasons.length}</span>
+                  <span className="font-medium text-foreground">
+                    {tv.seasons?.length}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
                   <span className="text-muted-foreground">Status</span>
@@ -378,22 +435,36 @@ export default function TvDetailsPage(): React.JSX.Element {
                     {tv.status?.replace(/_/g, " ").toLowerCase()}
                   </span>
                 </div>
+                {formattedFirstAired && (
+                  <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
+                    <span className="text-muted-foreground">First Aired</span>
+                    <span className="font-medium text-foreground">
+                      {formattedFirstAired}
+                    </span>
+                  </div>
+                )}
                 {tv.originalCountry && (
                   <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
                     <span className="text-muted-foreground">Country</span>
-                    <span className="font-medium text-foreground">{tv.originalCountry}</span>
+                    <span className="font-medium text-foreground">
+                      {tv.originalCountry}
+                    </span>
                   </div>
                 )}
                 {tv.originalLanguage && (
                   <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
                     <span className="text-muted-foreground">Language</span>
-                    <span className="font-medium text-foreground uppercase">{tv.originalLanguage}</span>
+                    <span className="font-medium text-foreground uppercase">
+                      {tv.originalLanguage}
+                    </span>
                   </div>
                 )}
                 {tv.averageRuntime && (
                   <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
                     <span className="text-muted-foreground">Avg Runtime</span>
-                    <span className="font-medium text-foreground">{tv.averageRuntime} min</span>
+                    <span className="font-medium text-foreground">
+                      {tv.averageRuntime} min
+                    </span>
                   </div>
                 )}
                 {tv.contentRating && (
@@ -414,14 +485,21 @@ export default function TvDetailsPage(): React.JSX.Element {
                   Networks
                 </h4>
                 <div className="flex flex-wrap gap-2">
-                  {tv.studios.map((studio) => (
-                    <span
-                      key={studio.name}
-                      className="text-xs bg-secondary text-secondary-foreground border border-border/40 px-3 py-1.5 rounded-xl"
-                    >
-                      {studio.name}
-                    </span>
-                  ))}
+                  {tv.studios.map((studio, idx) => {
+                    const name =
+                      typeof studio === "string"
+                        ? studio
+                        : (studio as any)?.name;
+                    if (!name) return null;
+                    return (
+                      <span
+                        key={idx}
+                        className="text-xs bg-secondary text-secondary-foreground border border-border/40 px-3 py-1.5 rounded-xl"
+                      >
+                        {name}
+                      </span>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -448,6 +526,50 @@ export default function TvDetailsPage(): React.JSX.Element {
                 </div>
               </div>
             )}
+
+            {/* External Links */}
+            {(tv.tvdbId || tv.tmdbId || tv.imdbId) && (
+              <div className="bg-card/65 border border-border/40 backdrop-blur-xl rounded-2xl p-5">
+                <h4 className="font-semibold text-xs tracking-wide text-muted-foreground uppercase mb-3">
+                  External Links
+                </h4>
+                <div className="flex flex-col gap-2">
+                  {tv.tvdbId && (
+                    <a
+                      href={`https://thetvdb.com/dereferrer/series/${tv.tvdbId}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-between text-xs bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border/40 px-3 py-2 rounded-xl transition-all"
+                    >
+                      <span className="font-medium">TheTVDB</span>
+                      <ExternalLink className="size-3 text-muted-foreground" />
+                    </a>
+                  )}
+                  {tv.tmdbId && (
+                    <a
+                      href={`https://www.themoviedb.org/tv/${tv.tmdbId}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-between text-xs bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border/40 px-3 py-2 rounded-xl transition-all"
+                    >
+                      <span className="font-medium">TMDB</span>
+                      <ExternalLink className="size-3 text-muted-foreground" />
+                    </a>
+                  )}
+                  {tv.imdbId && (
+                    <a
+                      href={`https://www.imdb.com/title/${tv.imdbId}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-between text-xs bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border/40 px-3 py-2 rounded-xl transition-all"
+                    >
+                      <span className="font-medium">IMDb</span>
+                      <ExternalLink className="size-3 text-muted-foreground" />
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
           </motion.div>
 
           {/* Right Column - Info */}
@@ -455,17 +577,41 @@ export default function TvDetailsPage(): React.JSX.Element {
             {/* Header */}
             <motion.div variants={itemVariants} className="space-y-2">
               <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">
-                {tv.title.english || tv.title.romaji}
+                {displayTitle}
               </h1>
-              {tv.title.romaji && tv.title.romaji !== tv.title.english && (
+              {(titleEnglish && titleEnglish !== displayTitle) ||
+              (titleRomaji && titleRomaji !== displayTitle) ||
+              titleNative ? (
                 <p className="text-xs text-muted-foreground italic">
-                  Also known as: {tv.title.romaji}
+                  Also known as:{" "}
+                  {[
+                    titleEnglish && titleEnglish !== displayTitle
+                      ? titleEnglish
+                      : null,
+                    titleRomaji && titleRomaji !== displayTitle
+                      ? titleRomaji
+                      : null,
+                    titleNative,
+                  ]
+                    .filter(Boolean)
+                    .join(", ")}
                 </p>
-              )}
+              ) : null}
             </motion.div>
 
             {/* Quick Info Badges */}
-            <motion.div variants={itemVariants} className="flex flex-wrap gap-3">
+            <motion.div
+              variants={itemVariants}
+              className="flex flex-wrap gap-3"
+            >
+              {firstAiredYear && (
+                <div className="bg-card/45 border border-border/30 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2">
+                  <Calendar className="size-4 text-primary" />
+                  <span className="text-sm font-semibold text-foreground">
+                    {firstAiredYear}
+                  </span>
+                </div>
+              )}
               <div className="bg-card/45 border border-border/30 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2">
                 <Tv2 className="size-4 text-primary" />
                 <span className="text-sm font-semibold text-foreground capitalize">
@@ -475,17 +621,24 @@ export default function TvDetailsPage(): React.JSX.Element {
               {tv.averageRuntime && (
                 <div className="bg-card/45 border border-border/30 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2">
                   <Clock className="size-4 text-primary" />
-                  <span className="text-sm font-semibold text-foreground">{tv.averageRuntime} min/ep</span>
+                  <span className="text-sm font-semibold text-foreground">
+                    {tv.averageRuntime} min/ep
+                  </span>
                 </div>
               )}
               {tv.originalCountry && (
                 <div className="bg-card/45 border border-border/30 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2">
                   <Globe className="size-4 text-primary" />
-                  <span className="text-sm font-semibold text-foreground">{tv.originalCountry}</span>
+                  <span className="text-sm font-semibold text-foreground">
+                    {tv.originalCountry}
+                  </span>
                 </div>
               )}
               {tv.contentRating && (
-                <Badge variant="outline" className="px-4 py-2 rounded-xl text-xs font-bold text-muted-foreground">
+                <Badge
+                  variant="outline"
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-muted-foreground"
+                >
                   {tv.contentRating}
                 </Badge>
               )}
@@ -498,7 +651,9 @@ export default function TvDetailsPage(): React.JSX.Element {
                 className="bg-card/30 border border-border/20 backdrop-blur-sm p-5 rounded-2xl"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-semibold text-foreground/90">Watch Progress</span>
+                  <span className="text-sm font-semibold text-foreground/90">
+                    Watch Progress
+                  </span>
                   <span className="text-xs font-bold text-primary tabular-nums">
                     {watchedCount} / {totalEpisodes} ({progressPercent}%)
                   </span>
@@ -517,11 +672,12 @@ export default function TvDetailsPage(): React.JSX.Element {
               variants={itemVariants}
               className="bg-card/30 border border-border/20 backdrop-blur-sm p-6 rounded-2xl"
             >
-              <h3 className="text-base font-bold text-foreground mb-3">Synopsis</h3>
-              <div
-                className="prose prose-neutral dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-sm prose-p:my-2 prose-a:text-primary hover:prose-a:text-primary transition-colors"
-                dangerouslySetInnerHTML={{ __html: tv.description }}
-              />
+              <h3 className="text-base font-bold text-foreground mb-3">
+                Synopsis
+              </h3>
+              <div className="prose prose-neutral dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-sm prose-p:my-2 prose-a:text-primary hover:prose-a:text-primary transition-colors">
+                <p>{tv.description}</p>
+              </div>
             </motion.div>
 
             {/* Genres */}
@@ -530,7 +686,11 @@ export default function TvDetailsPage(): React.JSX.Element {
                 <h3 className="text-base font-bold text-foreground">Genres</h3>
                 <div className="flex flex-wrap gap-2">
                   {tv.genres.map((genre) => (
-                    <Badge key={genre} variant="secondary" className="rounded-xl px-3 py-1 text-xs">
+                    <Badge
+                      key={genre}
+                      variant="secondary"
+                      className="rounded-xl px-3 py-1 text-xs"
+                    >
                       {genre}
                     </Badge>
                   ))}
@@ -543,7 +703,10 @@ export default function TvDetailsPage(): React.JSX.Element {
               <motion.div variants={itemVariants} className="space-y-3">
                 <h3 className="text-base font-bold text-foreground">Cast</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {tv.characters.slice(0, 12).map((char, idx) => (
+                  {(showAllCharacters
+                    ? tv.characters
+                    : tv.characters.slice(0, 12)
+                  ).map((char, idx) => (
                     <div
                       key={idx}
                       className="flex items-center justify-between bg-card/45 border border-border/30 backdrop-blur-md p-3 rounded-xl overflow-hidden hover:border-border/50 transition-all group"
@@ -581,6 +744,22 @@ export default function TvDetailsPage(): React.JSX.Element {
                     </div>
                   ))}
                 </div>
+                {tv.characters.length > 12 && (
+                  <div className="flex justify-center mt-4">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(): void =>
+                        setShowAllCharacters(!showAllCharacters)
+                      }
+                      className="rounded-xl cursor-pointer"
+                    >
+                      {showAllCharacters
+                        ? "Show Less"
+                        : `Show All (${tv.characters.length})`}
+                    </Button>
+                  </div>
+                )}
               </motion.div>
             )}
 
@@ -603,15 +782,15 @@ export default function TvDetailsPage(): React.JSX.Element {
                     return (
                       <AccordionItem
                         key={season.id}
-                        value={season.id}
+                        value={season.id.toString()}
                         className="border border-border/30 rounded-2xl overflow-hidden bg-card/25 backdrop-blur-md shadow-none"
                       >
                         <AccordionTrigger className="hover:no-underline px-4 py-3 transition-colors hover:bg-muted/30">
                           <div className="flex items-center gap-6 w-full pr-8">
                             <div className="shrink-0 w-12 aspect-2/3 rounded-lg overflow-hidden border border-border/50 bg-muted relative flex items-center justify-center">
-                              {(season.image || tv.coverImage.large) ? (
+                              {season.image || coverUrl ? (
                                 <Image
-                                  src={season.image || tv.coverImage.large}
+                                  src={season.image || coverUrl}
                                   alt={season.name || `Season ${season.number}`}
                                   fill
                                   sizes="48px"
@@ -678,10 +857,19 @@ export default function TvDetailsPage(): React.JSX.Element {
                                         : "border-border",
                                     )}
                                   >
-                                    {watched && (
-                                      <Check className="size-3.5" />
-                                    )}
+                                    {watched && <Check className="size-3.5" />}
                                   </div>
+                                  {episode.image && (
+                                    <div className="relative w-16 md:w-24 aspect-16/10 rounded-lg overflow-hidden shrink-0 border border-border/30 bg-muted">
+                                      <Image
+                                        src={`https://www.imdb.com${episode.image}`}
+                                        alt={episode.name}
+                                        fill
+                                        sizes="(max-width: 768px) 64px, 96px"
+                                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                      />
+                                    </div>
+                                  )}
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-3">
                                       <span className="text-xs font-bold text-foreground">

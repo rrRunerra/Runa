@@ -1,5 +1,6 @@
 generator client {
-    provider = "prisma-client-js"
+    provider        = "prisma-client-js"
+    previewFeatures = ["fullTextSearchPostgres"]
 }
 
 datasource db {
@@ -7,46 +8,47 @@ datasource db {
 }
 
 model User {
-    id                   String                @id @default(nanoid())
-    createdAt            DateTime              @default(now())
-    updatedAt            DateTime              @updatedAt
-    email                String                @unique
-    username             String                @unique
-    passwordHash         String
-    passwordChangedAt    DateTime?
-    privacy              Json?                 @db.Json
-    permissions          Int[]                 @default([])
+    id                String    @id @default(nanoid())
+    createdAt         DateTime  @default(now())
+    updatedAt         DateTime  @updatedAt
+    email             String    @unique
+    username          String    @unique
+    passwordHash      String
+    passwordChangedAt DateTime?
+    privacy           Json?     @db.Json
+    permissions       Int[]     @default([])
 
-    displayName          String?
-    avatarUrl            String?
-    bannerUrl            String?
+    displayName              String?
+    avatarUrl                String?
+    bannerUrl                String?
     sidebarCardBackgroundUrl String?
-    profileSettings      Json?                 @db.Json
-    apiKeys              ApiKey[]
-    connections          Connections[]
-    animeList            AquilaAnimeUserList[]
-    mangaList            AquilaMangaUserList[]
-    aquilaMovieUserLists AquilaMovieUserList[]
-    aquilaTvUserLists    AquilaTvUserList[]
-    favorites            Favorite[]
-    gameList             AquilaGameUserList[]
-    bookList             AquilaBookUserList[]
-    userStats            UserStats[]
-    polarisBookmarks     PolarisUserBookMarks[]
-    emailAccounts        UserEmailAccount[]
-    cannedResponses      CannedResponse[]
-    devices              Device[]
-    notifications        Notification[]
+    profileSettings          Json?                  @db.Json
+    apiKeys                  ApiKey[]
+    connections              Connections[]
+    animeList                AquilaAnimeUserList[]
+    mangaList                AquilaMangaUserList[]
+    aquilaMovieUserLists     AquilaMovieUserList[]
+    aquilaTvUserLists        AquilaTvUserList[]
+    favorites                Favorite[]
+    gameList                 AquilaGameUserList[]
+    bookList                 AquilaBookUserList[]
+    userStats                UserStats[]
+    polarisBookmarks         PolarisUserBookMarks[]
+    emailAccounts            UserEmailAccount[]
+    cannedResponses          CannedResponse[]
+    devices                  Device[]
+    notifications            Notification[]
+    laceraFiles              LaceraFile[]
 
     // MFA Configuration Fields
-    totpSecret           String?
-    totpEnabled          Boolean               @default(false)
-    emailMfaEnabled      Boolean               @default(false)
-    backupCodes          String[]              @default([])
-    passkeys             Passkey[]
+    totpSecret      String?
+    totpEnabled     Boolean   @default(false)
+    emailMfaEnabled Boolean   @default(false)
+    backupCodes     String[]  @default([])
+    passkeys        Passkey[]
 
     // E2EE Keys
-    userPublicKey        String?
+    userPublicKey           String?
     encryptedUserPrivateKey String?
 
     @@index([id])
@@ -54,12 +56,26 @@ model User {
     @@index([email])
 }
 
+model LaceraFile {
+    id         String   @id @default(nanoid())
+    key        String   @unique
+    userId     String
+    isPublic   Boolean  @default(false)
+    wrappedKey String
+    createdAt  DateTime @default(now())
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@index([userId])
+    @@index([key])
+}
+
 model Passkey {
     id         String   @id // The base64url encoded credential ID
-    publicKey  String   // The base64url encoded public key
-    counter    Int      // Credential counter
+    publicKey  String // The base64url encoded public key
+    counter    Int // Credential counter
     transports String[] // Transports (usb, nfc, ble, internal, hybrid)
-    name       String?  // Nickname/label for the passkey
+    name       String? // Nickname/label for the passkey
     createdAt  DateTime @default(now())
     userId     String
     user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -223,8 +239,7 @@ model AquilaAnime {
     titleRomaji  String? @db.Text
     titleNative  String? @db.Text
 
-    coverImageLarge      String? @db.Text
-    coverImageExtraLarge String? @db.Text
+    coverImageLarge String? @db.Text
 
     bannerImage String? @db.Text
     description String? @db.Text
@@ -250,42 +265,125 @@ model AquilaAnime {
     status  AnimeStatus @default(NOT_YET_RELEASED)
     isAdult Boolean?    @db.Boolean
 
-    relations  Json?    @db.Json
-    characters Json?    @db.Json
-    studios    String[] @db.Text
-
     averageScore      Int?
-    popularity        Int?
     favourites        Int?
-    trending          Int?
-    meanScore         Int?
-    synonyms          String[]    @db.Text
+    synonyms          String[] @db.Text
     hashtag           String?
     countryOfOrigin   String?
-    nextAiringEpisode Json?       @db.Json
-    trailers          Json?       @db.Json
+    nextAiringEpisode Json?    @db.Json
+    trailers          Json?    @db.Json
 
     locked          Boolean               @default(false)
+    anilistUpdatedAt Int?
     updatedAt       DateTime              @updatedAt
     aquilaUserLists AquilaAnimeUserList[]
+    animeCharacters AquilaAnimeCharacter[]
+    animeStudios    AquilaAnimeStudio[]
+    animeRelations         AquilaMediaRelation[]
+    relatedAnimeRelations  AquilaMediaRelation[] @relation("MediaRelationFrom")
 
     @@index([anilistId])
     @@index([malId])
     @@index([titleEnglish])
 }
 
+model AquilaCharacter {
+    id        Int  @id @default(autoincrement())
+    anilistId Int? @unique
+
+    nameFirst          String? @db.Text
+    nameMiddle         String? @db.Text
+    nameLast           String? @db.Text
+    nameNative         String? @db.Text
+    nameAlternative     String[] @db.Text
+    nameAlternativeSpoiler String[] @db.Text
+
+    image String? @db.Text
+
+    description String? @db.Text
+    gender      String?
+    age         String?
+    bloodType   String?
+
+    dateOfBirthYear  Int?
+    dateOfBirthMonth Int?
+    dateOfBirthDay   Int?
+
+    animeCharacters AquilaAnimeCharacter[]
+    mangaCharacters AquilaMangaCharacter[]
+
+    @@index([anilistId])
+}
+
+model AquilaAnimeCharacter {
+    animeId     Int
+    characterId Int
+
+    role  String?
+    order Int?
+
+    anime     AquilaAnime     @relation(fields: [animeId], references: [id], onDelete: Cascade)
+    character AquilaCharacter @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+    @@id([animeId, characterId])
+    @@index([animeId])
+    @@index([characterId])
+}
+
+model AquilaStudio {
+    id        Int  @id @default(autoincrement())
+    anilistId Int? @unique
+
+    name              String?  @db.Text
+    isAnimationStudio Boolean? @default(false)
+    siteUrl           String?  @db.Text
+
+    animeStudios AquilaAnimeStudio[]
+    mangaStudios AquilaMangaStudio[]
+
+    @@index([anilistId])
+}
+
+model AquilaAnimeStudio {
+    animeId  Int
+    studioId Int
+    isMain   Boolean? @default(false)
+
+    anime  AquilaAnime  @relation(fields: [animeId], references: [id], onDelete: Cascade)
+    studio AquilaStudio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+
+    @@id([animeId, studioId])
+    @@index([animeId])
+    @@index([studioId])
+}
+
+model AquilaMediaRelation {
+    id             Int     @id @default(autoincrement())
+    animeId        Int?
+    mangaId        Int?
+    relatedAnimeId Int?
+    relatedMangaId Int?
+    relationType   String?
+
+    anime         AquilaAnime? @relation(fields: [animeId], references: [id], onDelete: Cascade)
+    manga         AquilaManga? @relation("MediaRelationManga", fields: [mangaId], references: [id])
+    relatedAnime  AquilaAnime? @relation("MediaRelationFrom", fields: [relatedAnimeId], references: [id])
+    relatedManga  AquilaManga? @relation("MediaRelationRelatedManga", fields: [relatedMangaId], references: [id])
+
+    @@index([animeId])
+    @@index([mangaId])
+}
+
 model AquilaAnimeUserList {
-    id        Int             @id @default(autoincrement())
-    username  String
-    animeId   Int
-    malId     Int?
-    anilistId Int?
-    status    AnimeListStatus @default(PLANNING)
-    progress  Int?
-    score     Int?
-    notes     String?         @db.Text
+    id       Int             @id @default(autoincrement())
+    username String
+    animeId  Int
+    status   AnimeListStatus @default(PLANNING)
+    progress Int?
+    score    Int?
+    notes    String?         @db.Text
     rewatched Int?
-    private   Boolean         @default(false)
+    private  Boolean         @default(false)
 
     startDate Int?
     endDate   Int?
@@ -296,7 +394,7 @@ model AquilaAnimeUserList {
     connections Json? @db.Json
 
     user  User        @relation(fields: [username], references: [username])
-    anime AquilaAnime @relation(fields: [animeId], references: [anilistId])
+    anime AquilaAnime @relation(fields: [animeId], references: [id])
 
     @@unique([username, animeId])
     @@index([username])
@@ -338,8 +436,7 @@ model AquilaManga {
     titleRomaji  String? @db.Text
     titleNative  String? @db.Text
 
-    coverImageLarge      String? @db.Text
-    coverImageExtraLarge String? @db.Text
+    coverImageLarge String? @db.Text
 
     bannerImage String? @db.Text
     description String? @db.Text
@@ -363,41 +460,65 @@ model AquilaManga {
     status  MangaStatus @default(NOT_YET_RELEASED)
     isAdult Boolean?    @db.Boolean
 
-    relations  Json?    @db.Json
-    characters Json?    @db.Json
-    studios    String[] @db.Text
+    averageScore    Int?
+    favourites      Int?
+    synonyms        String[] @db.Text
+    hashtag         String?
+    countryOfOrigin String?
 
-    averageScore      Int?
-    popularity        Int?
-    favourites        Int?
-    trending          Int?
-    meanScore         Int?
-    synonyms          String[]    @db.Text
-    hashtag           String?
-    countryOfOrigin   String?
-
-    locked          Boolean               @default(false)
-    updatedAt       DateTime              @updatedAt
+    locked    Boolean               @default(false)
+    anilistUpdatedAt Int?
+    updatedAt DateTime              @updatedAt
     aquilaUserLists AquilaMangaUserList[]
+    mangaCharacters AquilaMangaCharacter[]
+    mangaStudios    AquilaMangaStudio[]
+    mangaMangaRelations          AquilaMediaRelation[] @relation("MediaRelationManga")
+    mangaRelatedMangaRelations   AquilaMediaRelation[] @relation("MediaRelationRelatedManga")
 
     @@index([anilistId])
     @@index([malId])
     @@index([titleEnglish])
 }
 
+model AquilaMangaCharacter {
+    mangaId     Int
+    characterId Int
+
+    role  String?
+    order Int?
+
+    manga     AquilaManga     @relation(fields: [mangaId], references: [id], onDelete: Cascade)
+    character AquilaCharacter @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+    @@id([mangaId, characterId])
+    @@index([mangaId])
+    @@index([characterId])
+}
+
+model AquilaMangaStudio {
+    mangaId  Int
+    studioId Int
+    isMain   Boolean? @default(false)
+
+    manga  AquilaManga  @relation(fields: [mangaId], references: [id], onDelete: Cascade)
+    studio AquilaStudio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+
+    @@id([mangaId, studioId])
+    @@index([mangaId])
+    @@index([studioId])
+}
+
 model AquilaMangaUserList {
-    id        Int             @id @default(autoincrement())
-    username  String
-    mangaId   Int
-    malId     Int?
-    anilistId Int?
-    status    MangaListStatus @default(PLANNING)
-    chapters  Int?
-    volumes   Int?
-    score     Int?
-    notes     String?         @db.Text
-    reread    Int?
-    private   Boolean         @default(false)
+    id       Int             @id @default(autoincrement())
+    username String
+    mangaId  Int
+    status   MangaListStatus @default(PLANNING)
+    chapters Int?
+    volumes  Int?
+    score    Int?
+    notes    String?         @db.Text
+    reread   Int?
+    private  Boolean         @default(false)
 
     startDate Int?
     endDate   Int?
@@ -408,7 +529,7 @@ model AquilaMangaUserList {
     connections Json? @db.Json
 
     user  User        @relation(fields: [username], references: [username])
-    manga AquilaManga @relation(fields: [mangaId], references: [anilistId])
+    manga AquilaManga @relation(fields: [mangaId], references: [id])
 
     @@unique([username, mangaId])
     @@index([username])
@@ -440,66 +561,131 @@ enum MangaListStatus {
 model AquilaMovie {
     id     Int @id @default(autoincrement())
     tvdbId Int @unique
+    tmdbId Int?
+    imdbId String?
 
-    titleEnglish String?
-    titleRomaji  String?
+    titleEnglish String? @db.Text
+    titleRomaji  String? @db.Text
+    titleNative  String? @db.Text
 
-    coverImage  String?
-    bannerImage String?
-    description String?
+    coverImage  String? @db.Text
+    bannerImage String? @db.Text
+    description String? @db.Text
+    slug        String?
 
-    status  String?
-    runtime Int?
+    releaseDate String?
+    status      String?
+    runtime     Int?
+    budget      String?
+    boxOffice   String?
 
     genres  String[] @db.Text
     studios String[] @db.Text
 
-    cast Json? @db.Json
+    startDateYear  Int?
+    startDateMonth Int?
+    startDateDay   Int?
+
+    trailers Json? @db.Json
 
     originalCountry  String?
     originalLanguage String?
     contentRating    String?
-    trailers         Json?    @db.Json
 
     locked               Boolean               @default(false)
     updatedAt            DateTime              @updatedAt
     aquilaMovieUserLists AquilaMovieUserList[]
+    movieActors          AquilaMovieActor[]
 
     @@index([tvdbId])
+    @@index([tmdbId])
 }
 
 model AquilaTv {
     id     Int @id @default(autoincrement())
     tvdbId Int @unique
+    tmdbId Int?
+    imdbId String?
 
-    titleEnglish String?
-    titleRomaji  String?
+    titleEnglish String? @db.Text
+    titleRomaji  String? @db.Text
+    titleNative  String? @db.Text
 
-    coverImage  String?
-    bannerImage String?
-    description String?
+    coverImage  String? @db.Text
+    bannerImage String? @db.Text
+    description String? @db.Text
+    slug        String?
 
     status           String?
     originalCountry  String?
     originalLanguage String?
-    tvType           String?
-    subgenre         String?
     averageRuntime   Int?
+    firstAired       String?
 
     genres  String[] @db.Text
     studios String[] @db.Text
 
-    cast     Json? @db.Json
+    startDateYear  Int?
+    startDateMonth Int?
+    startDateDay   Int?
+
     seasons  Json? @db.Json
     trailers Json? @db.Json
 
-    contentRating    String?
+    contentRating String?
 
     locked          Boolean            @default(false)
     updatedAt       DateTime           @updatedAt
     aquilaUserLists AquilaTvUserList[]
+    tvActors         AquilaTvActor[]
 
     @@index([tvdbId])
+    @@index([tmdbId])
+}
+
+model AquilaActor {
+    id        Int  @id @default(autoincrement())
+    peopleId  Int? @unique
+
+    name       String? @db.Text
+    personName String? @db.Text
+    image      String? @db.Text
+    peopleType String?
+
+    movieActors AquilaMovieActor[]
+    tvActors    AquilaTvActor[]
+
+    @@index([peopleId])
+}
+
+model AquilaMovieActor {
+    movieId Int
+    actorId Int
+
+    role  String?
+    order Int?
+
+    movie AquilaMovie @relation(fields: [movieId], references: [id], onDelete: Cascade)
+    actor AquilaActor @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+    @@id([movieId, actorId])
+    @@index([movieId])
+    @@index([actorId])
+}
+
+model AquilaTvActor {
+    tvId    Int
+    actorId Int
+
+    role  String?
+    order Int?
+
+    tv    AquilaTv    @relation(fields: [tvId], references: [id], onDelete: Cascade)
+    actor AquilaActor @relation(fields: [actorId], references: [id], onDelete: Cascade)
+
+    @@id([tvId, actorId])
+    @@index([tvId])
+    @@index([actorId])
 }
 
 enum TvListStatus {
@@ -512,7 +698,7 @@ enum TvListStatus {
 model AquilaTvUserList {
     id        Int          @id @default(autoincrement())
     username  String
-    tvdbId    Int
+    tvId      Int
     status    TvListStatus @default(PLANNING)
     score     Int?
     notes     String?      @db.Text
@@ -528,12 +714,12 @@ model AquilaTvUserList {
     connections Json? @db.Json
 
     user            User                     @relation(fields: [username], references: [username])
-    tv              AquilaTv                 @relation(fields: [tvdbId], references: [tvdbId])
+    tv              AquilaTv                 @relation(fields: [tvId], references: [id])
     watchedEpisodes AquilaTvWatchedEpisode[]
 
-    @@unique([username, tvdbId])
+    @@unique([username, tvId])
     @@index([username])
-    @@index([tvdbId])
+    @@index([tvId])
 }
 
 model AquilaTvWatchedEpisode {
@@ -556,14 +742,14 @@ enum MovieListStatus {
 }
 
 model AquilaMovieUserList {
-    id        Int             @id @default(autoincrement())
-    username  String
-    tvdbId    Int
-    status    MovieListStatus @default(PLANNING)
-    score     Int?
-    notes     String?         @db.Text
+    id       Int             @id @default(autoincrement())
+    username String
+    movieId  Int
+    status   MovieListStatus @default(PLANNING)
+    score    Int?
+    notes    String?         @db.Text
     rewatched Int?
-    private   Boolean         @default(false)
+    private  Boolean         @default(false)
 
     startDate Int?
     endDate   Int?
@@ -574,11 +760,11 @@ model AquilaMovieUserList {
     connections Json? @db.Json
 
     user  User        @relation(fields: [username], references: [username])
-    movie AquilaMovie @relation(fields: [tvdbId], references: [tvdbId])
+    movie AquilaMovie @relation(fields: [movieId], references: [id])
 
-    @@unique([username, tvdbId])
+    @@unique([username, movieId])
     @@index([username])
-    @@index([tvdbId])
+    @@index([movieId])
 }
 
 enum FavoriteType {
@@ -598,7 +784,7 @@ model Favorite {
     mediaId   String
     createdAt DateTime     @default(now())
 
-    user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@unique([userId, type, mediaId])
     @@index([userId])
@@ -621,28 +807,38 @@ enum BookListStatus {
 }
 
 model AquilaGame {
-    id        Int  @id @default(autoincrement())
-    rawgId    Int  @unique
+    id     Int @id @default(autoincrement())
+    rawgId Int @unique
 
     titleString String? @db.Text
+    titleNative String? @db.Text
+    slug        String?
 
     coverImage      String? @db.Text
+    backgroundImage String? @db.Text
     description     String? @db.Text
 
     releasedYear  Int?
     releasedMonth Int?
     releasedDay   Int?
 
-    genres  String[] @db.Text
-    platforms String[] @db.Text
-    developers String[] @db.Text
-    publishers String[] @db.Text
+    released String?
+
+    genres      String[] @db.Text
+    platforms   String[] @db.Text
+    developers  String[] @db.Text
+    publishers  String[] @db.Text
+    tags        Json?    @db.Json
 
     averageScore Float?
     popularity   Int?
+    metacritic   Int?
+    rating       Float?
+    ratingsCount Int?
+    esrbRating   String?
 
-    locked          Boolean               @default(false)
-    updatedAt       DateTime              @updatedAt
+    locked          Boolean              @default(false)
+    updatedAt       DateTime             @updatedAt
     aquilaUserLists AquilaGameUserList[]
 
     @@index([rawgId])
@@ -650,14 +846,14 @@ model AquilaGame {
 }
 
 model AquilaGameUserList {
-    id        Int             @id @default(autoincrement())
-    username  String
-    gameId    Int
-    status    GameListStatus @default(PLANNING)
-    progress  Int?            // Hours played
-    score     Int?
-    notes     String?         @db.Text
-    private   Boolean         @default(false)
+    id       Int            @id @default(autoincrement())
+    username String
+    gameId   Int
+    status   GameListStatus @default(PLANNING)
+    progress Int? // Hours played
+    score    Int?
+    notes    String?        @db.Text
+    private  Boolean        @default(false)
 
     startDate Int?
     endDate   Int?
@@ -665,8 +861,8 @@ model AquilaGameUserList {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    user  User        @relation(fields: [username], references: [username])
-    game  AquilaGame  @relation(fields: [gameId], references: [rawgId])
+    user User       @relation(fields: [username], references: [username])
+    game AquilaGame @relation(fields: [gameId], references: [id])
 
     @@unique([username, gameId])
     @@index([username])
@@ -674,39 +870,43 @@ model AquilaGameUserList {
 }
 
 model AquilaBook {
-    id            Int      @id @default(autoincrement())
-    googleBookId  String   @unique
+    id           Int    @id @default(autoincrement())
+    googleBookId String @unique
 
-    titleString   String?  @db.Text
-    subtitle      String?  @db.Text
-    coverImage    String?  @db.Text
-    description   String?  @db.Text
+    titleString String? @db.Text
+    subtitle    String? @db.Text
+    coverImage  String? @db.Text
+    description String? @db.Text
 
-    publishYear   Int?
-    publishedDate String?
+    publishedYear  Int?
+    publishedMonth Int?
+    publishedDay   Int?
+    publishedDate  String?
 
-    subjects      String[] @db.Text
-    authors       String[] @db.Text
-    artists       String[] @db.Text
-    publishers    String[] @db.Text
+    subjects   String[] @db.Text
+    authors    String[] @db.Text
+    artists    String[] @db.Text
+    publishers String[] @db.Text
 
-    pages         Int?
-    chapters      Int?
+    pages    Int?
+    pageCount Int?
+    chapters Int?
 
-    averageRating Float?
-    ratingsCount  Int?
-    language      String?
-    isbn10        String?
-    isbn13        String?
-    previewLink   String?  @db.Text
-    infoLink      String?  @db.Text
-    buyLink       String?  @db.Text
-    retailPrice   Float?
+    averageRating       Float?
+    ratingsCount        Int?
+    language            String?
+    isbn10              String?
+    isbn13              String?
+    previewLink         String? @db.Text
+    infoLink            String? @db.Text
+    buyLink             String? @db.Text
+    retailPrice         Float?
     retailPriceCurrency String?
-    maturityRating String?
+    maturityRating      String?
+    publisher           String? @db.Text
 
-    locked          Boolean               @default(false)
-    updatedAt       DateTime              @updatedAt
+    locked          Boolean              @default(false)
+    updatedAt       DateTime             @updatedAt
     aquilaUserLists AquilaBookUserList[]
 
     @@index([googleBookId])
@@ -714,15 +914,15 @@ model AquilaBook {
 }
 
 model AquilaBookUserList {
-    id        Int             @id @default(autoincrement())
-    username  String
-    bookId    String
-    status    BookListStatus  @default(PLANNING)
-    chapters  Int?
-    volumes   Int?
-    score     Int?
-    notes     String?         @db.Text
-    private   Boolean         @default(false)
+    id       Int            @id @default(autoincrement())
+    username String
+    bookId   Int
+    status   BookListStatus @default(PLANNING)
+    chapters Int?
+    volumes  Int?
+    score    Int?
+    notes    String?        @db.Text
+    private  Boolean        @default(false)
 
     startDate Int?
     endDate   Int?
@@ -730,8 +930,8 @@ model AquilaBookUserList {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    user  User        @relation(fields: [username], references: [username])
-    book  AquilaBook  @relation(fields: [bookId], references: [googleBookId])
+    user User       @relation(fields: [username], references: [username])
+    book AquilaBook @relation(fields: [bookId], references: [id])
 
     @@unique([username, bookId])
     @@index([username])
@@ -741,46 +941,46 @@ model AquilaBookUserList {
 model UserStats {
     id        String   @id @default(nanoid())
     userId    String
-    mediaType String   // "anime" | "manga" | "movie" | "tv" | "game" | "book"
+    mediaType String // "anime" | "manga" | "movie" | "tv" | "game" | "book"
     updatedAt DateTime @updatedAt
     statsData Json     @db.Json
 
-    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@unique([userId, mediaType])
     @@index([userId])
 }
 
 model PolarisUserBookMarks {
-    id          String   @id @default(nanoid())
-    userId      String
-    name        String
-    description String
-    redirect    String
-    stars       Json     @db.Json
-    connections Json     @db.Json
-    icon        String?
+    id              String   @id @default(nanoid())
+    userId          String
+    name            String
+    description     String
+    redirect        String
+    stars           Json     @db.Json
+    connections     Json     @db.Json
+    icon            String?
     connectionColor String?
-    starColor   String?
-    createdAt   DateTime @default(now())
-    updatedAt   DateTime @updatedAt
-    user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    starColor       String?
+    createdAt       DateTime @default(now())
+    updatedAt       DateTime @updatedAt
+    user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@index([userId])
 }
 
 model UserEmailAccount {
-    id                String   @id @default(nanoid())
+    id                String         @id @default(nanoid())
     username          String
     accountName       String
-    color             String   @default("#8B00FF")
+    color             String         @default("#8B00FF")
     senderName        String
     emailAddress      String
     loginEmail        String?
     replyToAddress    String?
     organization      String?
     signatureText     String?
-    useHtmlSignature  Boolean  @default(false)
+    useHtmlSignature  Boolean        @default(false)
     encryptedPassword String
     encryptionIv      String
     imapHost          String
@@ -789,9 +989,9 @@ model UserEmailAccount {
     smtpHost          String
     smtpPort          Int
     smtpSecure        Boolean
-    createdAt         DateTime @default(now())
-    updatedAt         DateTime @updatedAt
-    user              User     @relation(fields: [username], references: [username], onDelete: Cascade)
+    createdAt         DateTime       @default(now())
+    updatedAt         DateTime       @updatedAt
+    user              User           @relation(fields: [username], references: [username], onDelete: Cascade)
     emailMessages     EmailMessage[]
 
     @@index([username])
@@ -902,4 +1102,3 @@ model CannedResponse {
 
     @@index([username])
 }
-

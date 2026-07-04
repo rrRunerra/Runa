@@ -146,7 +146,7 @@ export const RrSecuritySettingsTab = ({
   const { data: mfaStatusData, mutate: refetchMfaSettings } = useSWR<any>(
     session?.accessToken
       ? [
-          `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/status`,
+          `${process.env.NEXT_PUBLIC_API_URL}/users/me/mfa/status`,
           session.accessToken,
         ]
       : null,
@@ -156,7 +156,7 @@ export const RrSecuritySettingsTab = ({
   const { data: passkeysData, mutate: refetchPasskeys } = useSWR<any[]>(
     session?.accessToken
       ? [
-          `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/passkeys`,
+          `${process.env.NEXT_PUBLIC_API_URL}/users/me/mfa/passkeys`,
           session.accessToken,
         ]
       : null,
@@ -165,7 +165,7 @@ export const RrSecuritySettingsTab = ({
 
   const { data: devicesData, mutate: refetchDevices } = useSWR<any[]>(
     session?.accessToken
-      ? [`${process.env.NEXT_PUBLIC_API_URL}/user/devices`, session.accessToken]
+      ? [`${process.env.NEXT_PUBLIC_API_URL}/users/me/devices`, session.accessToken]
       : null,
     fetcher,
   );
@@ -232,7 +232,7 @@ export const RrSecuritySettingsTab = ({
       return;
     try {
       await apiMutate(
-        `${process.env.NEXT_PUBLIC_API_URL}/user/device/${deviceId}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/users/me/devices/${deviceId}`,
         "DELETE",
       );
       toast.success("Device revoked successfully.");
@@ -271,7 +271,7 @@ export const RrSecuritySettingsTab = ({
   ): Promise<void> => {
     setIsSubmitting(true);
     try {
-      await apiMutate(`${process.env.NEXT_PUBLIC_API_URL}/user/update`, "PUT", {
+      await apiMutate(`${process.env.NEXT_PUBLIC_API_URL}/users/me`, "PUT", {
         currentPassword: current,
         newPassword: newPass,
       });
@@ -288,7 +288,7 @@ export const RrSecuritySettingsTab = ({
   const initiateTotpSetup = async (): Promise<void> => {
     try {
       const data = await apiMutate(
-        `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/totp/setup`,
+        `${process.env.NEXT_PUBLIC_API_URL}/users/me/mfa/totp/setup`,
         "POST",
       );
       setTotpSecret(data.secret);
@@ -308,7 +308,7 @@ export const RrSecuritySettingsTab = ({
     setIsSubmitting(true);
     try {
       const data = await apiMutate(
-        `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/totp/enable`,
+        `${process.env.NEXT_PUBLIC_API_URL}/users/me/mfa/totp/enable`,
         "POST",
         { code: totpCode },
       );
@@ -332,7 +332,7 @@ export const RrSecuritySettingsTab = ({
   const initiateEmailMfaSetup = async (): Promise<void> => {
     try {
       await apiMutate(
-        `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/email/send-setup-code`,
+        `${process.env.NEXT_PUBLIC_API_URL}/users/me/mfa/email/send-setup-code`,
         "POST",
       );
       setIsEmailSetupOpen(true);
@@ -351,7 +351,7 @@ export const RrSecuritySettingsTab = ({
     setIsSubmitting(true);
     try {
       const data = await apiMutate(
-        `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/email/enable`,
+        `${process.env.NEXT_PUBLIC_API_URL}/users/me/mfa/email/enable`,
         "POST",
         { code: emailOtpCode },
       );
@@ -380,7 +380,7 @@ export const RrSecuritySettingsTab = ({
     setIsSubmitting(true);
     try {
       const options = await apiMutate(
-        `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/passkey/register-options`,
+        `${process.env.NEXT_PUBLIC_API_URL}/users/me/mfa/passkey/register-options`,
         "POST",
       );
 
@@ -389,7 +389,7 @@ export const RrSecuritySettingsTab = ({
       });
 
       const verifyData = await apiMutate(
-        `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/passkey/register-verify`,
+        `${process.env.NEXT_PUBLIC_API_URL}/users/me/mfa/passkey/register-verify`,
         "POST",
         {
           response: attestationResponse,
@@ -428,11 +428,11 @@ export const RrSecuritySettingsTab = ({
       let method = "POST";
 
       if (disableMethod === "totp") {
-        endpoint = `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/totp/disable`;
+        endpoint = `${process.env.NEXT_PUBLIC_API_URL}/users/me/mfa/totp/disable`;
       } else if (disableMethod === "email") {
-        endpoint = `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/email/disable`;
+        endpoint = `${process.env.NEXT_PUBLIC_API_URL}/users/me/mfa/email/disable`;
       } else if (disableMethod === "passkey" && disablePasskeyId) {
-        endpoint = `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/passkey/${disablePasskeyId}`;
+        endpoint = `${process.env.NEXT_PUBLIC_API_URL}/users/me/mfa/passkeys/${disablePasskeyId}`;
         method = "DELETE";
       }
 
@@ -463,7 +463,7 @@ export const RrSecuritySettingsTab = ({
     setIsSubmitting(true);
     try {
       const data = await apiMutate(
-        `${process.env.NEXT_PUBLIC_API_URL}/user/mfa/backup-codes/regenerate`,
+        `${process.env.NEXT_PUBLIC_API_URL}/users/me/mfa/backup-codes/regenerate`,
         "POST",
       );
       setDisplayedBackupCodes(data);

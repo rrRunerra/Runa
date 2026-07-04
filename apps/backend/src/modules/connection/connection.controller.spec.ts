@@ -3,7 +3,7 @@ import { ForbiddenException } from '@nestjs/common';
 import { ConnectionLinkedTo } from '@runa/database';
 import { ConnectionController } from './connection.controller';
 import { ConnectionService } from './connection.service';
-import { DualAuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { AquilaBitField } from '@runa/permissions';
 import { Reflector } from '@nestjs/core';
 import { Response } from 'express';
@@ -22,7 +22,7 @@ describe('ConnectionController', () => {
     getImportStatus: jest.fn(),
   };
 
-  const mockDualAuthGuard = {
+  const mockAuthGuard = {
     canActivate: jest.fn().mockReturnValue(true),
   };
 
@@ -36,8 +36,8 @@ describe('ConnectionController', () => {
         Reflector,
       ],
     })
-      .overrideGuard(DualAuthGuard)
-      .useValue(mockDualAuthGuard)
+      .overrideGuard(AuthGuard)
+      .useValue(mockAuthGuard)
       .compile();
 
     controller = module.get<ConnectionController>(ConnectionController);
@@ -53,9 +53,17 @@ describe('ConnectionController', () => {
       const mockReq = { user: { username: 'testuser' } };
       mockConnectionService.findAll.mockResolvedValue([]);
 
-      const result = await controller.findAll(mockReq, ConnectionLinkedTo.AQUILA, 'sync');
+      const result = await controller.findAll(
+        mockReq,
+        ConnectionLinkedTo.AQUILA,
+        'sync',
+      );
 
-      expect(service.findAll).toHaveBeenCalledWith('testuser', ConnectionLinkedTo.AQUILA, 'sync');
+      expect(service.findAll).toHaveBeenCalledWith(
+        'testuser',
+        ConnectionLinkedTo.AQUILA,
+        'sync',
+      );
       expect(result).toEqual([]);
     });
   });
@@ -63,15 +71,22 @@ describe('ConnectionController', () => {
   describe('save', () => {
     it('should save connection details', async () => {
       const mockReq = { user: { username: 'testuser' } };
-      const body = { provider: 'anilist', linkedUsername: 'linkuser', linkedTo: ConnectionLinkedTo.AQUILA };
+      const body = {
+        provider: 'anilist',
+        linkedUsername: 'linkuser',
+        linkedTo: ConnectionLinkedTo.AQUILA,
+      };
       mockConnectionService.upsert.mockResolvedValue({ id: 'conn-1' });
 
       const result = await controller.save(mockReq, body);
 
-      expect(service.upsert).toHaveBeenCalledWith('testuser', expect.objectContaining({
-        provider: 'anilist',
-        linkedUsername: 'linkuser',
-      }));
+      expect(service.upsert).toHaveBeenCalledWith(
+        'testuser',
+        expect.objectContaining({
+          provider: 'anilist',
+          linkedUsername: 'linkuser',
+        }),
+      );
       expect(result).toEqual({ id: 'conn-1' });
     });
   });
@@ -97,7 +112,11 @@ describe('ConnectionController', () => {
 
       await controller.connect('anilist', 'token-123', '/redirect', mockRes);
 
-      expect(service.getAuthUrl).toHaveBeenCalledWith('anilist', 'token-123', '/redirect');
+      expect(service.getAuthUrl).toHaveBeenCalledWith(
+        'anilist',
+        'token-123',
+        '/redirect',
+      );
       expect(mockRes.redirect).toHaveBeenCalledWith('https://auth.url');
     });
   });
@@ -106,7 +125,9 @@ describe('ConnectionController', () => {
     it('should throw ForbiddenException if user lacks IMPORT_LIST permission', async () => {
       const mockReq = { user: { username: 'testuser', permissions: [] } };
 
-      await expect(controller.importList(mockReq, 'anilist')).rejects.toThrow(ForbiddenException);
+      await expect(controller.importList(mockReq, 'anilist')).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('should start list import if user has permission', async () => {
@@ -114,9 +135,13 @@ describe('ConnectionController', () => {
       const mockReq = { user: { username: 'testuser', permissions } };
       mockConnectionService.startImport.mockResolvedValue({ success: true });
 
-      const result = await controller.importList(mockReq, 'anilist', { mediaTypes: ['anime'] });
+      const result = await controller.importList(mockReq, 'anilist', {
+        mediaTypes: ['anime'],
+      });
 
-      expect(service.startImport).toHaveBeenCalledWith('testuser', 'anilist', ['anime']);
+      expect(service.startImport).toHaveBeenCalledWith('testuser', 'anilist', [
+        'anime',
+      ]);
       expect(result).toEqual({ success: true });
     });
   });
@@ -125,17 +150,24 @@ describe('ConnectionController', () => {
     it('should throw ForbiddenException if user lacks IMPORT_LIST permission', async () => {
       const mockReq = { user: { username: 'testuser', permissions: [] } };
 
-      await expect(controller.importStatus(mockReq, 'anilist')).rejects.toThrow(ForbiddenException);
+      await expect(controller.importStatus(mockReq, 'anilist')).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('should return import status if user has permission', async () => {
       const permissions = new AquilaBitField(['IMPORT_LIST']).serialize();
       const mockReq = { user: { username: 'testuser', permissions } };
-      mockConnectionService.getImportStatus.mockResolvedValue({ status: 'running' });
+      mockConnectionService.getImportStatus.mockResolvedValue({
+        status: 'running',
+      });
 
       const result = await controller.importStatus(mockReq, 'anilist');
 
-      expect(service.getImportStatus).toHaveBeenCalledWith('testuser', 'anilist');
+      expect(service.getImportStatus).toHaveBeenCalledWith(
+        'testuser',
+        'anilist',
+      );
       expect(result).toEqual({ status: 'running' });
     });
   });

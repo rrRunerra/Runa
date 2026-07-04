@@ -5,7 +5,7 @@ import { PrismaService } from '../providers/database/prisma.service';
 
 async function bootstrap() {
   console.log('--- Starting Stats Backfill Script ---');
-  
+
   // Create NestJS standalone context (does not launch web server)
   const app = await NestFactory.createApplicationContext(AppModule);
   const prisma = app.get(PrismaService);
@@ -17,13 +17,17 @@ async function bootstrap() {
       select: { id: true, username: true },
     });
 
-    console.log(`Found ${users.length} users. Starting statistics compilation...`);
+    console.log(
+      `Found ${users.length} users. Starting statistics compilation...`,
+    );
 
     const mediaTypes = ['anime', 'manga', 'tv', 'movie', 'game', 'book'];
 
     for (let i = 0; i < users.length; i++) {
       const user = users[i];
-      console.log(`\n[${i + 1}/${users.length}] Processing user: ${user.username} (${user.id})`);
+      console.log(
+        `\n[${i + 1}/${users.length}] Processing user: ${user.username} (${user.id})`,
+      );
 
       for (const type of mediaTypes) {
         try {
@@ -31,7 +35,9 @@ async function bootstrap() {
           // We call doRecalculate directly to execute immediately (bypassing debounce)
           await statsService.doRecalculate(user.id, type);
         } catch (err: any) {
-          console.error(`  [ERROR] Failed to compile ${type} stats: ${err.message}`);
+          console.error(
+            `  [ERROR] Failed to compile ${type} stats: ${err.message}`,
+          );
         }
       }
     }

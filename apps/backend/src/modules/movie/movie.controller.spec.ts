@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { MovieController } from './movie.controller';
 import { MovieService } from './movie.service';
-import { DualAuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { Reflector } from '@nestjs/core';
 
 describe('MovieController', () => {
@@ -14,7 +14,7 @@ describe('MovieController', () => {
     getMovie: jest.fn(),
   };
 
-  const mockDualAuthGuard = {
+  const mockAuthGuard = {
     canActivate: jest.fn().mockReturnValue(true),
   };
 
@@ -28,8 +28,8 @@ describe('MovieController', () => {
         Reflector,
       ],
     })
-      .overrideGuard(DualAuthGuard)
-      .useValue(mockDualAuthGuard)
+      .overrideGuard(AuthGuard)
+      .useValue(mockAuthGuard)
       .compile();
 
     controller = module.get<MovieController>(MovieController);
@@ -54,7 +54,12 @@ describe('MovieController', () => {
   });
 
   describe('search', () => {
-    const mockResult = [{ id: '1', title: { romaji: 'Movie Title', english: 'Movie Title' } } as any];
+    const mockResult = [
+      {
+        id: '1',
+        title: { romaji: 'Movie Title', english: 'Movie Title' },
+      } as any,
+    ];
 
     it('should search movies under session authenticated context', async () => {
       mockMovieService.search.mockResolvedValue(mockResult);

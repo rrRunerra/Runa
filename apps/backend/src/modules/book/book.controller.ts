@@ -1,60 +1,39 @@
-import { Controller, Param, UseGuards, Get, Query, Post, Req, ForbiddenException, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Param, UseGuards, Get, Post } from '@nestjs/common';
 import { BookService } from './book.service';
-import { DualAuthGuard } from '../../common/guards/auth.guard';
-import { Public } from '../../common/decorators/public.decorator';
-import { AquilaBitField } from '@runa/permissions';
-import { CacheService } from '../../providers/cache/cache.service';
+import { AuthGuard } from '../../common/guards/auth/auth.guard';
+import { Public } from 'src/common/decorators/public.decorator';
+import { AquilaFlags } from '@runa/permissions';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { Permissions } from 'src/common/decorators/permissions.decorator';
+import { SearchBookDto, BookDetailDto, BookRefreshDto } from './book.dto';
+import type { BookSearchEntity, BookEntity } from './book.entities';
 
 @Controller('book')
-@UseGuards(DualAuthGuard)
+@UseGuards(AuthGuard, PermissionsGuard)
 export class BookController {
-  constructor(
-    private readonly bookService: BookService,
-    private readonly cacheService: CacheService,
-  ) {}
+  private readonly moduleCode: string = 'BkCtr-';
+
+  constructor(private readonly bookService: BookService) {}
 
   @Public()
-  @Get('search')
-  async search(@Query() query: { name: string }) {
-    return this.bookService.search(query.name);
+  @Get('search/:name')
+  async search(@Param() params: SearchBookDto): Promise<BookSearchEntity[]> {
+    return this.bookService.search(params.name);
   }
 
   @Public()
-  @Get('details/:id')
-  async getBook(@Param('id') id: string) {
-    return this.bookService.getBook(id);
+  @Get(':id')
+  async bookDetail(
+    @Param() params: BookDetailDto,
+  ): Promise<BookEntity | undefined> {
+    return await this.bookService.getBook(params.id);
   }
 
-  @Public()
-  @Get('details/:id/related')
-  async getRelatedBooks(@Param('id') id: string) {
-    return this.bookService.getRelatedBooks(id);
-  }
-
-  @Public()
-  @Get('details/:id/editions')
-  async getBookEditions(@Param('id') id: string) {
-    return this.bookService.getBookEditions(id);
-  }
-
-  @Post('refresh/:id')
-  async refreshBook(@Param('id') id: string, @Req() req: any) {
-    const bitfield = AquilaBitField.fromRaw(req.user.permissions);
-    if (!bitfield.has('MEDIA_REFRESH')) {
-      throw new ForbiddenException('You do not have permission to refresh media');
-    }
-
-    const cooldownKey = `cooldown:refresh:book:${id}`;
-    const onCooldown = await this.cacheService.get(cooldownKey);
-    if (onCooldown) {
-      throw new HttpException(
-        'This media was refreshed recently. Please wait before refreshing again.',
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
-    }
-
-    const result = await this.bookService.getBook(id, true);
-    await this.cacheService.set(cooldownKey, true, 60);
-    return result;
+  @Post(':id/refresh')
+  @Permissions([AquilaFlags.MEDIA_REFRESH])
+  async refreshBook(
+    @Param() params: BookRefreshDto,
+  ): Promise<BookEntity | undefined | null> {
+    return await this.bookService.refreshBook(params.id);
   }
 }

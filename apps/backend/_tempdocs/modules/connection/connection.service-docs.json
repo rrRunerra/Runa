@@ -1,0 +1,376 @@
+{
+  "type": "service",
+  "serviceName": "ConnectionService",
+  "serviceCode": "CnSve-",
+
+  "dependedOn": "prisma, animeService, mangaService, movieService, tvService, statsService",
+
+  "privateVars": [
+    {
+      "name": "loader",
+      "type": "ConnectionLoader",
+      "description": "Loader instance that manages connection provider instances",
+      "readOnly": false
+    },
+    {
+      "name": "activeImports",
+      "type": "Map<string, { total: number; processed: number; status: string; error?: string; failedItems?: object[] }>",
+      "description": "Tracks active background import jobs by user-provider key",
+      "readOnly": false
+    },
+    {
+      "name": "moduleCode",
+      "type": "string",
+      "description": "Prefix for rrCodes",
+      "readOnly": true
+    },
+    {
+      "name": "prisma",
+      "type": "PrismaService",
+      "description": "Prisma database service for connection and user list queries",
+      "readOnly": true
+    },
+    {
+      "name": "animeService",
+      "type": "AnimeService",
+      "description": "Service used to ensure anime records exist during import",
+      "readOnly": true
+    },
+    {
+      "name": "mangaService",
+      "type": "MangaService",
+      "description": "Service used to ensure manga records exist during import",
+      "readOnly": true
+    },
+    {
+      "name": "movieService",
+      "type": "MovieService",
+      "description": "Service used to ensure movie records exist during import",
+      "readOnly": true
+    },
+    {
+      "name": "tvService",
+      "type": "TvService",
+      "description": "Service used to ensure TV records exist during import",
+      "readOnly": true
+    },
+    {
+      "name": "statsService",
+      "type": "StatsService",
+      "description": "Service used to recalculate user stats after import completes",
+      "readOnly": true
+    }
+  ],
+
+  "functions": [
+    {
+      "name": "onModuleInit",
+      "type": "async",
+      "access": "public",
+      "params": [],
+      "description": "Initializes the ConnectionLoader with Prisma, API URL, and env variables, then loads all connection providers",
+      "returnValues": ["Promise<void>"],
+      "exceptions": null
+    },
+    {
+      "name": "toProvider",
+      "type": "synch",
+      "access": "private",
+      "params": [
+        {
+          "name": "value",
+          "type": "string",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Validates and converts a provider string to a ConnectionProvider enum value",
+      "returnValues": ["ConnectionProvider"],
+      "exceptions": [
+        {
+          "name": "rrBadRequestException",
+          "rrCode": "CnSve-IP001",
+          "message": "Invalid provider: ${value}",
+          "statusCode": 400
+        }
+      ]
+    },
+    {
+      "name": "getConnectionInstance",
+      "type": "synch",
+      "access": "public",
+      "params": [
+        {
+          "name": "providerId",
+          "type": "string",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Retrieves a connection provider instance by ID, validating it exists and is enabled",
+      "returnValues": ["any"],
+      "exceptions": [
+        {
+          "name": "rrBadRequestException",
+          "rrCode": "CnSve-IP001",
+          "message": "Invalid provider: ${providerId}",
+          "statusCode": 400
+        },
+        {
+          "name": "rrBadRequestException",
+          "rrCode": "CnSve-EMCC001",
+          "message": "ENV MISSING CHECK CONSOLE",
+          "statusCode": 400
+        }
+      ]
+    },
+    {
+      "name": "getAuthUrl",
+      "type": "async",
+      "access": "public",
+      "params": [
+        {
+          "name": "providerId",
+          "type": "string",
+          "typeLib": "typescript"
+        },
+        {
+          "name": "token",
+          "type": "string",
+          "typeLib": "typescript"
+        },
+        {
+          "name": "redirectUrl",
+          "type": "string",
+          "typeLib": "typescript",
+          "optional": true
+        }
+      ],
+      "description": "Gets the OAuth authorization URL from the specified connection provider",
+      "returnValues": ["Promise<any>"],
+      "exceptions": null
+    },
+    {
+      "name": "handleCallback",
+      "type": "async",
+      "access": "public",
+      "params": [
+        {
+          "name": "providerId",
+          "type": "string",
+          "typeLib": "typescript"
+        },
+        {
+          "name": "code",
+          "type": "string",
+          "typeLib": "typescript"
+        },
+        {
+          "name": "username",
+          "type": "string",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Handles the OAuth callback by exchanging the code for tokens via the provider",
+      "returnValues": ["Promise<any>"],
+      "exceptions": null
+    },
+    {
+      "name": "findAll",
+      "type": "async",
+      "access": "public",
+      "params": [
+        {
+          "name": "username",
+          "type": "string",
+          "typeLib": "typescript"
+        },
+        {
+          "name": "linkedTo",
+          "type": "ConnectionLinkedTo",
+          "typeLib": "typescript",
+          "optional": true
+        },
+        {
+          "name": "capabilities",
+          "type": "string | string[]",
+          "typeLib": "typescript",
+          "optional": true
+        }
+      ],
+      "description": "Finds all connections for a user, optionally filtered by linkedTo and provider capabilities",
+      "returnValues": ["Promise<any[]>"],
+      "exceptions": null
+    },
+    {
+      "name": "upsert",
+      "type": "async",
+      "access": "public",
+      "params": [
+        {
+          "name": "username",
+          "type": "string",
+          "typeLib": "typescript"
+        },
+        {
+          "name": "data",
+          "type": "{ provider: string; linkedUsername?: string; accessToken?: string; refreshToken?: string; expiresAt?: Date; connectionId?: string; linkedTo?: ConnectionLinkedTo; private?: boolean; metadata?: any }",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Creates or updates a connection record for a user by provider",
+      "returnValues": ["Promise<any>"],
+      "exceptions": null
+    },
+    {
+      "name": "remove",
+      "type": "async",
+      "access": "public",
+      "params": [
+        {
+          "name": "username",
+          "type": "string",
+          "typeLib": "typescript"
+        },
+        {
+          "name": "providerRaw",
+          "type": "string",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Removes a connection record by username and provider",
+      "returnValues": ["Promise<{ success: boolean }>"],
+      "exceptions": [
+        {
+          "name": "rrNotFoundException",
+          "rrCode": "CnSve-CNF001",
+          "message": "Connection not found",
+          "statusCode": 404
+        }
+      ]
+    },
+    {
+      "name": "getImportStatus",
+      "type": "synch",
+      "access": "public",
+      "params": [
+        {
+          "name": "username",
+          "type": "string",
+          "typeLib": "typescript"
+        },
+        {
+          "name": "providerId",
+          "type": "string",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Returns the current status of an active or completed import job",
+      "returnValues": ["{ total: number; processed: number; status: string; error?: string; failedItems?: object[] }"],
+      "exceptions": null
+    },
+    {
+      "name": "startImport",
+      "type": "async",
+      "access": "public",
+      "params": [
+        {
+          "name": "username",
+          "type": "string",
+          "typeLib": "typescript"
+        },
+        {
+          "name": "providerId",
+          "type": "string",
+          "typeLib": "typescript"
+        },
+        {
+          "name": "mediaTypes",
+          "type": "string[]",
+          "typeLib": "typescript",
+          "optional": true
+        }
+      ],
+      "description": "Starts a background import job for the user's media lists from the specified provider",
+      "returnValues": ["Promise<{ status: string }>"],
+      "exceptions": [
+        {
+          "name": "rrBadRequestException",
+          "rrCode": "CnSve-IAIP001",
+          "message": "Import already in progress",
+          "statusCode": 400
+        },
+        {
+          "name": "rrBadRequestException",
+          "rrCode": "CnSve-PDSIL001",
+          "message": "Provider ${providerId} does not support importing lists",
+          "statusCode": 400
+        }
+      ]
+    },
+    {
+      "name": "runImportInBackground",
+      "type": "async",
+      "access": "private",
+      "params": [
+        {
+          "name": "username",
+          "type": "string",
+          "typeLib": "typescript"
+        },
+        {
+          "name": "providerId",
+          "type": "string",
+          "typeLib": "typescript"
+        },
+        {
+          "name": "mediaTypes",
+          "type": "string[]",
+          "typeLib": "typescript",
+          "optional": true
+        }
+      ],
+      "description": "Runs the full import pipeline in the background: fetches user list, resolves IDs, ensures media records, upserts user list entries, syncs watched episodes, and recalculates stats",
+      "returnValues": ["Promise<void>"],
+      "exceptions": null
+    },
+    {
+      "name": "mergeConnections",
+      "type": "synch",
+      "access": "private",
+      "params": [
+        {
+          "name": "existingConnections",
+          "type": "any",
+          "typeLib": "typescript"
+        },
+        {
+          "name": "providerId",
+          "type": "string",
+          "typeLib": "typescript"
+        },
+        {
+          "name": "connectionItemId",
+          "type": "number",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Merges new connection data into existing connections object for a user list entry",
+      "returnValues": ["any"],
+      "exceptions": null
+    },
+    {
+      "name": "resolveMalToAnilistIds",
+      "type": "async",
+      "access": "private",
+      "params": [
+        {
+          "name": "malIds",
+          "type": "number[]",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Resolves a batch of MAL IDs to AniList IDs via the AniList GraphQL API with rate limit handling",
+      "returnValues": ["Promise<Record<number, number>>"],
+      "exceptions": null
+    }
+  ]
+}

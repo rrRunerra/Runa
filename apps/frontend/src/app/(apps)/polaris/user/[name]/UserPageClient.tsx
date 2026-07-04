@@ -48,7 +48,7 @@ export default function UserPageClient(): React.ReactNode {
     session?.user?.username?.toLowerCase() === name?.toLowerCase();
 
   const profileUrl = name
-    ? `${process.env.NEXT_PUBLIC_API_URL}/user/${name}`
+    ? `${process.env.NEXT_PUBLIC_API_URL}/users/${name}`
     : null;
 
   const {

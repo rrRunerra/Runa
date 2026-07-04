@@ -1,0 +1,142 @@
+{
+  "type": "service",
+  "serviceName": "AnimeService",
+  "serviceCode": "AeSve-",
+
+  "dependedOn": "animeRepository, animeQueueService",
+
+  "privateVars": [
+    {
+      "name": "logger",
+      "type": "Logger",
+      "description": "Logger instance scoped to AnimeService",
+      "readOnly": true
+    },
+    {
+      "name": "moduleCode",
+      "type": "string",
+      "description": "Prefix for rrCodes",
+      "readOnly": true
+    },
+    {
+      "name": "animeRepository",
+      "type": "AnimeRepository",
+      "description": "Repository used to read, write, and map anime records",
+      "readOnly": true
+    },
+    {
+      "name": "animeQueueService",
+      "type": "AnimeQueueService",
+      "description": "Queue service used to schedule anime refresh jobs",
+      "readOnly": true
+    }
+  ],
+
+  "functions": [
+    {
+      "name": "search",
+      "type": "async",
+      "access": "public",
+      "params": [
+        {
+          "name": "name",
+          "type": "string",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Searches AniList for anime by name and maps the response to SearchMedia items",
+      "returnValues": ["Promise<SearchMedia[]>"],
+      "exceptions": null
+    },
+    {
+      "name": "getAnime",
+      "type": "async",
+      "access": "public",
+      "params": [
+        {
+          "name": "id",
+          "type": "number",
+          "typeLib": "typescript"
+        },
+        {
+          "name": "forceRefresh",
+          "type": "boolean",
+          "typeLib": "typescript",
+          "optional": true,
+          "default": false
+        }
+      ],
+      "description": "Gets anime data from cache/database when fresh enough, otherwise fetches from AniList and queues a refresh job",
+      "returnValues": ["Promise<Media>"],
+      "exceptions": [
+        {
+          "name": "rrError",
+          "rrCode": "AeSve-IMBAN001",
+          "message": "ID must be a number",
+          "statusCode": 500
+        },
+        {
+          "name": "rrNotFoundException",
+          "rrCode": "AeSve-ANF001",
+          "message": "Anime not found",
+          "statusCode": 404
+        }
+      ]
+    },
+    {
+      "name": "fetchFromAniList",
+      "type": "async",
+      "access": "private",
+      "params": [
+        {
+          "name": "id",
+          "type": "number",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Fetches detailed anime data from AniList GraphQL and maps it to the Media shape",
+      "returnValues": ["Promise<Media>"],
+      "exceptions": [
+        {
+          "name": "rrError",
+          "rrCode": "AeSve-AWINFOA001",
+          "message": "Anime with ID ${id} not found on AniList",
+          "statusCode": 500
+        }
+      ]
+    },
+    {
+      "name": "ensureAnime",
+      "type": "async",
+      "access": "public",
+      "params": [
+        {
+          "name": "anilistId",
+          "type": "number",
+          "typeLib": "typescript"
+        },
+        {
+          "name": "malId",
+          "type": "number | null",
+          "typeLib": "typescript",
+          "optional": true
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "typeLib": "typescript",
+          "optional": true
+        },
+        {
+          "name": "coverImage",
+          "type": "string",
+          "typeLib": "typescript",
+          "optional": true
+        }
+      ],
+      "description": "Ensures an anime record exists in the repository, creating or updating it and queueing a job when needed",
+      "returnValues": ["Promise<unknown>"],
+      "exceptions": null
+    }
+  ]
+}

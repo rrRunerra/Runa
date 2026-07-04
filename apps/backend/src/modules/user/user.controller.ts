@@ -5,167 +5,262 @@ import {
   Body,
   Get,
   Param,
-  NotFoundException,
   Put,
-  Req,
   Delete,
+  Req,
 } from '@nestjs/common';
-import { parsePrivacy, UserService } from './user.service';
-import { DualAuthGuard } from '../../common/guards/auth.guard';
-import { User } from '@runa/database';
-import { Public } from '../../common/decorators/public.decorator';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { PrivacySettingsDto } from './dto/privacy-settings.dto';
 import { Throttle } from '@nestjs/throttler';
+import type { User } from '@runa/database';
 
-@Controller('user')
-@UseGuards(DualAuthGuard)
+import { AuthGuard } from '../../common/guards/auth/auth.guard';
+import { Public } from '../../common/decorators/public.decorator';
+import { rrNotFoundException } from 'src/providers/error';
+import type { ExtendedRequest } from '../../common/guards/auth/auth.types';
+
+import { UserService, parsePrivacy } from './user.service';
+import {
+  CreateUserDto,
+  UpdateUserDto,
+  PrivacySettingsDto,
+  UpdateSettingsDto,
+  EnableTotpDto,
+  EnableEmailMfaDto,
+  VerifyPasskeyDto,
+  RegisterDeviceDto,
+  CreateApiKeyDto,
+  IdParamDto,
+  EmailParamDto,
+  UsernameParamDto,
+} from './user.dto';
+import type {
+  UserProfileEntity,
+  UserSearchEntity,
+  TotpSetupEntity,
+  PasskeyEntity,
+  MfaStatusEntity,
+  DeviceEntity,
+  DeviceStatusEntity,
+  E2eeKeysEntity,
+  SuccessEntity,
+  PrivacySettings,
+  ApiKeyEntity,
+  ApiKeyCreatedEntity,
+  DeleteSuccessEntity,
+} from './user.entities';
+
+@Controller('users')
+@UseGuards(AuthGuard)
 export class UserController {
+  private readonly moduleCode = 'UrCtr-';
+
   constructor(private readonly usersService: UserService) {}
 
+  // ---------------------------------------------------------------------------
+  // Collection: /users
+  // ---------------------------------------------------------------------------
+
   @Public()
-  @Throttle({default: {limit: 1, ttl: 60000}})
-  @Post('create')
-  create(@Body() data: CreateUserDto): Promise<User> {
+  @Throttle({ default: { limit: 1, ttl: 60000 } })
+  @Post()
+  async create(@Body() data: CreateUserDto): Promise<User> {
     return this.usersService.create(data);
   }
 
-  @Get('privacy')
-  async getPrivacy(@Req() req: any) {
-    const username = req.user.username;
-    return this.usersService.getPrivacySettings(username);
+  // ---------------------------------------------------------------------------
+  // Singleton: /users/me — authenticated user
+  // ---------------------------------------------------------------------------
+
+  @Put('me')
+  async update(
+    @Req() req: ExtendedRequest,
+    @Body() data: UpdateUserDto,
+  ): Promise<User> {
+    return this.usersService.update(req.user!.id, data);
   }
 
-  @Put('privacy')
-  async updatePrivacy(@Req() req: any, @Body() data: PrivacySettingsDto) {
-    const userId = req.user.id;
-    return this.usersService.updatePrivacySettings(userId, data);
+  @Get('me/privacy')
+  async getPrivacy(@Req() req: ExtendedRequest): Promise<PrivacySettings> {
+    return this.usersService.getPrivacySettings(req.user!.username);
   }
 
-
-  @Put('settings')
-  async updateSettings(@Req() req: any, @Body() data: { profileSettings: any }) {
-    const userId = req.user.id;
-    return this.usersService.updateSettings(userId, data.profileSettings);
+  @Put('me/privacy')
+  async updatePrivacy(
+    @Req() req: ExtendedRequest,
+    @Body() data: PrivacySettingsDto,
+  ): Promise<SuccessEntity> {
+    return this.usersService.updatePrivacySettings(req.user!.id, data);
   }
 
-  @Put('update')
-  async update(@Req() req: any, @Body() data: UpdateUserDto) {
-    const userId = req.user.id;
-    return this.usersService.update(userId, data);
+  @Put('me/settings')
+  async updateSettings(
+    @Req() req: ExtendedRequest,
+    @Body() data: UpdateSettingsDto,
+  ): Promise<User> {
+    return this.usersService.updateSettings(req.user!.id, data);
   }
 
-  // --- User MFA Management Endpoints ---
+  // ---------------------------------------------------------------------------
+  // MFA — TOTP
+  // ---------------------------------------------------------------------------
 
-  @Post('mfa/totp/setup')
-  async setupTotp(@Req() req: any) {
-    return this.usersService.generateTotpSetup(req.user.id);
+  @Post('me/mfa/totp/setup')
+  async setupTotp(@Req() req: ExtendedRequest): Promise<TotpSetupEntity> {
+    return this.usersService.generateTotpSetup(req.user!.id);
   }
 
-  @Post('mfa/totp/enable')
-  async enableTotp(@Req() req: any, @Body('code') code: string) {
-    return this.usersService.enableTotp(req.user.id, code);
+  @Post('me/mfa/totp/enable')
+  async enableTotp(
+    @Req() req: ExtendedRequest,
+    @Body() data: EnableTotpDto,
+  ): Promise<string[]> {
+    return this.usersService.enableTotp(req.user!.id, data.code);
   }
 
-  @Post('mfa/totp/disable')
-  async disableTotp(@Req() req: any) {
-    return this.usersService.disableTotp(req.user.id);
+  @Post('me/mfa/totp/disable')
+  async disableTotp(@Req() req: ExtendedRequest): Promise<SuccessEntity> {
+    return this.usersService.disableTotp(req.user!.id);
   }
 
-  @Post('mfa/email/send-setup-code')
-  async sendEmailMfaSetupCode(@Req() req: any) {
-    return this.usersService.sendEmailMfaSetupCode(req.user.id);
+  // ---------------------------------------------------------------------------
+  // MFA — Email
+  // ---------------------------------------------------------------------------
+
+  @Post('me/mfa/email/send-setup-code')
+  async sendEmailMfaSetupCode(
+    @Req() req: ExtendedRequest,
+  ): Promise<SuccessEntity> {
+    return this.usersService.sendEmailMfaSetupCode(req.user!.id);
   }
 
-  @Post('mfa/email/enable')
-  async enableEmailMfa(@Req() req: any, @Body('code') code: string) {
-    return this.usersService.enableEmailMfa(req.user.id, code);
+  @Post('me/mfa/email/enable')
+  async enableEmailMfa(
+    @Req() req: ExtendedRequest,
+    @Body() data: EnableEmailMfaDto,
+  ): Promise<string[]> {
+    return this.usersService.enableEmailMfa(req.user!.id, data.code);
   }
 
-  @Post('mfa/email/disable')
-  async disableEmailMfa(@Req() req: any) {
-    return this.usersService.disableEmailMfa(req.user.id);
+  @Post('me/mfa/email/disable')
+  async disableEmailMfa(@Req() req: ExtendedRequest): Promise<SuccessEntity> {
+    return this.usersService.disableEmailMfa(req.user!.id);
   }
 
-  @Post('mfa/backup-codes/regenerate')
-  async regenerateBackupCodes(@Req() req: any) {
-    return this.usersService.regenerateBackupCodes(req.user.id);
+  // ---------------------------------------------------------------------------
+  // MFA — Backup Codes
+  // ---------------------------------------------------------------------------
+
+  @Post('me/mfa/backup-codes/regenerate')
+  async regenerateBackupCodes(@Req() req: ExtendedRequest): Promise<string[]> {
+    return this.usersService.regenerateBackupCodes(req.user!.id);
   }
 
-  @Post('mfa/passkey/register-options')
-  async generatePasskeyRegisterOptions(@Req() req: any) {
-    return this.usersService.generatePasskeyRegisterOptions(req.user.id);
+  // ---------------------------------------------------------------------------
+  // MFA — Passkeys
+  // ---------------------------------------------------------------------------
+
+  @Post('me/mfa/passkey/register-options')
+  async generatePasskeyRegisterOptions(
+    @Req() req: ExtendedRequest,
+  ): Promise<object> {
+    return this.usersService.generatePasskeyRegisterOptions(req.user!.id);
   }
 
-  @Post('mfa/passkey/register-verify')
+  @Post('me/mfa/passkey/register-verify')
   async verifyPasskeyRegister(
-    @Req() req: any,
-    @Body('response') response: any,
-    @Body('name') name?: string,
-  ) {
-    return this.usersService.verifyPasskeyRegister(req.user.id, response, name);
+    @Req() req: ExtendedRequest,
+    @Body() data: VerifyPasskeyDto,
+  ): Promise<string[]> {
+    return this.usersService.verifyPasskeyRegister(
+      req.user!.id,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data.response as any,
+      data.name,
+    );
   }
 
-  @Get('mfa/passkeys')
-  async getPasskeys(@Req() req: any) {
-    return this.usersService.getPasskeys(req.user.id);
+  @Get('me/mfa/passkeys')
+  async getPasskeys(@Req() req: ExtendedRequest): Promise<PasskeyEntity[]> {
+    return this.usersService.getPasskeys(req.user!.id);
   }
 
-  @Get('mfa/status')
-  async getMfaStatus(@Req() req: any) {
-    return this.usersService.getMfaStatus(req.user.id);
+  @Get('me/mfa/status')
+  async getMfaStatus(@Req() req: ExtendedRequest): Promise<MfaStatusEntity> {
+    return this.usersService.getMfaStatus(req.user!.id);
   }
 
-  @Delete('mfa/passkey/:id')
-  async deletePasskey(@Req() req: any, @Param('id') id: string) {
-    return this.usersService.deletePasskey(req.user.id, id);
+  @Delete('me/mfa/passkeys/:id')
+  async deletePasskey(
+    @Req() req: ExtendedRequest,
+    @Param() params: IdParamDto,
+  ): Promise<SuccessEntity> {
+    return this.usersService.deletePasskey(req.user!.id, params.id);
   }
 
-  // --- Device Management Endpoints ---
+  // ---------------------------------------------------------------------------
+  // Device Management
+  // ---------------------------------------------------------------------------
 
-  @Get('devices')
-  async getDevices(@Req() req: any) {
-    return this.usersService.getDevices(req.user.id);
+  @Get('me/devices')
+  async getDevices(@Req() req: ExtendedRequest): Promise<DeviceEntity[]> {
+    return this.usersService.getDevices(req.user!.id);
   }
 
-  @Delete('device/:id')
-  async deleteDevice(@Req() req: any, @Param('id') id: string) {
-    return this.usersService.deleteDevice(req.user.id, id);
+  @Post('me/devices')
+  async registerDevice(
+    @Req() req: ExtendedRequest,
+    @Body() body: RegisterDeviceDto,
+  ): Promise<DeviceEntity> {
+    return this.usersService.registerDevice(req.user!.id, body);
   }
 
-  @Post('device/register')
-  async registerDevice(@Req() req: any, @Body() body: any) {
-    return this.usersService.registerDevice(req.user.id, body);
+  @Delete('me/devices/:id')
+  async deleteDevice(
+    @Req() req: ExtendedRequest,
+    @Param() params: IdParamDto,
+  ): Promise<SuccessEntity> {
+    return this.usersService.deleteDevice(req.user!.id, params.id);
   }
 
-  @Get('device/status/:id')
-  async getDeviceStatus(@Req() req: any, @Param('id') id: string) {
-    return this.usersService.getDeviceStatus(req.user.id, id);
+  @Get('me/devices/:id/status')
+  async getDeviceStatus(
+    @Req() req: ExtendedRequest,
+    @Param() params: IdParamDto,
+  ): Promise<DeviceStatusEntity> {
+    return this.usersService.getDeviceStatus(req.user!.id, params.id);
   }
 
-  @Put(['e2ee-keys', 'e2e-keys'])
+  // ---------------------------------------------------------------------------
+  // E2EE Keys
+  // ---------------------------------------------------------------------------
+
+  @Put('me/e2ee-keys')
   async updateE2eeKeys(
-    @Req() req: any,
+    @Req() req: ExtendedRequest,
     @Body() body: { userPublicKey: string; encryptedUserPrivateKey: string },
-  ) {
+  ): Promise<User> {
     return this.usersService.updateE2eeKeys(
-      req.user.id,
+      req.user!.id,
       body.userPublicKey,
       body.encryptedUserPrivateKey,
     );
   }
 
-  @Get(['e2ee-keys', 'e2e-keys'])
-  async getE2eeKeys(@Req() req: any) {
-    return this.usersService.getE2eeKeys(req.user.id);
+  @Get('me/e2ee-keys')
+  async getE2eeKeys(@Req() req: ExtendedRequest): Promise<E2eeKeysEntity> {
+    return this.usersService.getE2eeKeys(req.user!.id);
   }
 
+  // ---------------------------------------------------------------------------
+  // Resource lookups — /users/by-email/:email & /users/:username
+  // ---------------------------------------------------------------------------
+
   @Get('by-email/:email')
-  async findByEmail(@Param('email') email: string) {
-    const user = await this.usersService.findByEmail(email);
+  async findByEmail(@Param() params: EmailParamDto): Promise<UserSearchEntity> {
+    const user = await this.usersService.findByEmail(params.email);
     if (!user) {
-      throw new NotFoundException(`User with email ${email} not found`);
+      throw new rrNotFoundException(`${this.moduleCode}UWENF001`, {
+        message: `User with email ${params.email} not found`,
+      });
     }
     return {
       id: user.id,
@@ -178,36 +273,73 @@ export class UserController {
 
   @Public()
   @Get(':username')
-  async findOne(@Param('username') username: string) {
-    const user = await this.usersService.findByUsername(username);
+  async findOne(@Param() params: UsernameParamDto): Promise<UserProfileEntity> {
+    const user = await this.usersService.findByUsername(params.username);
     if (!user) {
-      throw new NotFoundException(`User with username ${username} not found`);
+      throw new rrNotFoundException(`${this.moduleCode}UWWNF001`, {
+        message: `User with username ${params.username} not found`,
+      });
     }
-    // Map connections to hide tokens, filtering out private ones
-    const safeConnections = (user as any).connections
-      ?.filter((conn: any) => !conn.private)
-      ?.map((conn: any) => ({
+
+    const safeConnections = (user.connections ?? [])
+      .filter((conn) => !conn.private)
+      .map((conn) => ({
         id: conn.id,
         provider: conn.provider,
         linkedUsername: conn.linkedUsername,
         linkedTo: conn.linkedTo,
         private: conn.private,
-        metadata: conn.metadata,
-      })) || [];
+        metadata: conn.metadata as Record<string, unknown> | null,
+      }));
 
     const privacy = parsePrivacy(user.privacy);
 
-    // Return only public fields
     return {
       id: user.id,
       username: user.username,
       displayName: user.displayName,
       avatarUrl: user.avatarUrl,
       bannerUrl: user.bannerUrl,
-      sidebarCardBackgroundUrl: (user as any).sidebarCardBackgroundUrl,
-      profileSettings: user.profileSettings,
+      sidebarCardBackgroundUrl: user.sidebarCardBackgroundUrl,
+      profileSettings: user.profileSettings as Record<
+        string,
+        string | number | boolean | null
+      > | null,
       private: privacy.profile,
       connections: safeConnections,
     };
+  }
+
+  // ---------------------------------------------------------------------------
+  // API Keys — /users/me/api-keys
+  // ---------------------------------------------------------------------------
+
+  @Get('me/api-keys')
+  async findAllApiKeys(@Req() req: ExtendedRequest): Promise<ApiKeyEntity[]> {
+    return this.usersService.findAllApiKeysByUser(req.user!.id);
+  }
+
+  @Post('me/api-keys')
+  async createApiKey(
+    @Req() req: ExtendedRequest,
+    @Body() body: CreateApiKeyDto,
+  ): Promise<ApiKeyCreatedEntity> {
+    return this.usersService.createApiKey(req.user!.id, body.name);
+  }
+
+  @Post('me/api-keys/:id/regenerate')
+  async regenerateApiKey(
+    @Req() req: ExtendedRequest,
+    @Param('id') id: string,
+  ): Promise<ApiKeyCreatedEntity> {
+    return this.usersService.regenerateApiKey(id, req.user!.id);
+  }
+
+  @Delete('me/api-keys/:id')
+  async removeApiKey(
+    @Req() req: ExtendedRequest,
+    @Param('id') id: string,
+  ): Promise<DeleteSuccessEntity> {
+    return this.usersService.deleteApiKey(id, req.user!.id);
   }
 }

@@ -108,7 +108,7 @@ export default function UserMangaPage() {
 
   useEffect(() => {
     if (username) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/${username}`)
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${username}`)
         .then(async (res) => await res.json())
         .then((data) => setUserData(data))
         .catch((err) => console.error("Failed to fetch user data", err));
@@ -208,7 +208,6 @@ export default function UserMangaPage() {
     }
   }, [
     username,
-    session?.accessToken,
     debouncedSearch,
     activeList,
     filters.format,
@@ -323,9 +322,7 @@ export default function UserMangaPage() {
 
             <RrMediaListDisplay
               lists={
-                activeList === "All"
-                  ? ["Reading", "Completed"]
-                  : [activeList]
+                activeList === "All" ? ["Reading", "Completed"] : [activeList]
               }
               data={mangaList}
               displayType={displayType}

@@ -1,39 +1,79 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { UserController } from './user.controller';
 import { UserService } from './user.service';
-import { DualAuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { Reflector } from '@nestjs/core';
 import { NotFoundException } from '@nestjs/common';
+import type { ExtendedRequest } from '../../common/guards/auth/auth.types';
+import type {
+  CreateUserDto,
+  PrivacySettingsDto,
+  UpdateUserDto,
+  UpdateSettingsDto,
+  EnableTotpDto,
+  EnableEmailMfaDto,
+  VerifyPasskeyDto,
+} from './user.dto';
+
+// ---------------------------------------------------------------------------
+// Mocks
+// ---------------------------------------------------------------------------
+
+const mockUserService = {
+  create: jest.fn(),
+  getPrivacySettings: jest.fn(),
+  updatePrivacySettings: jest.fn(),
+  findByUsername: jest.fn(),
+  findByEmail: jest.fn(),
+  updateSettings: jest.fn(),
+  update: jest.fn(),
+  generateTotpSetup: jest.fn(),
+  enableTotp: jest.fn(),
+  disableTotp: jest.fn(),
+  sendEmailMfaSetupCode: jest.fn(),
+  enableEmailMfa: jest.fn(),
+  disableEmailMfa: jest.fn(),
+  regenerateBackupCodes: jest.fn(),
+  generatePasskeyRegisterOptions: jest.fn(),
+  verifyPasskeyRegister: jest.fn(),
+  getPasskeys: jest.fn(),
+  getMfaStatus: jest.fn(),
+  deletePasskey: jest.fn(),
+  getDevices: jest.fn(),
+  deleteDevice: jest.fn(),
+  registerDevice: jest.fn(),
+  getDeviceStatus: jest.fn(),
+  getE2eeKeys: jest.fn(),
+  updateE2eeKeys: jest.fn(),
+  findAllApiKeysByUser: jest.fn(),
+  createApiKey: jest.fn(),
+  regenerateApiKey: jest.fn(),
+  deleteApiKey: jest.fn(),
+};
+
+const mockAuthGuard = {
+  canActivate: jest.fn().mockReturnValue(true),
+};
+
+// Helper to create a typed mock request
+function mockReq(partial: { id?: string; username?: string }): ExtendedRequest {
+  return {
+    user: {
+      id: partial.id ?? 'user-1',
+      username: partial.username ?? 'testuser',
+      permissions: [],
+    },
+  } as unknown as ExtendedRequest;
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
 
 describe('UserController', () => {
   let controller: UserController;
   let service: UserService;
   let reflector: Reflector;
-
-  const mockUserService = {
-    create: jest.fn(),
-    getPrivacySettings: jest.fn(),
-    updatePrivacySettings: jest.fn(),
-    findByUsername: jest.fn(),
-    updateSettings: jest.fn(),
-    update: jest.fn(),
-    generateTotpSetup: jest.fn(),
-    enableTotp: jest.fn(),
-    disableTotp: jest.fn(),
-    sendEmailMfaSetupCode: jest.fn(),
-    enableEmailMfa: jest.fn(),
-    disableEmailMfa: jest.fn(),
-    regenerateBackupCodes: jest.fn(),
-    generatePasskeyRegisterOptions: jest.fn(),
-    verifyPasskeyRegister: jest.fn(),
-    getPasskeys: jest.fn(),
-    getMfaStatus: jest.fn(),
-    deletePasskey: jest.fn(),
-  };
-
-  const mockDualAuthGuard = {
-    canActivate: jest.fn().mockReturnValue(true),
-  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -45,8 +85,8 @@ describe('UserController', () => {
         Reflector,
       ],
     })
-      .overrideGuard(DualAuthGuard)
-      .useValue(mockDualAuthGuard)
+      .overrideGuard(AuthGuard)
+      .useValue(mockAuthGuard)
       .compile();
 
     controller = module.get<UserController>(UserController);
@@ -58,6 +98,7 @@ describe('UserController', () => {
     expect(controller).toBeDefined();
   });
 
+  // --- @Public() decorator checks ---
   describe('public decorators', () => {
     it('create should have @Public() decorator', () => {
       const isPublic = reflector.get<boolean>('isPublic', controller.create);
@@ -70,9 +111,14 @@ describe('UserController', () => {
     });
   });
 
+  // --- POST /users ---
   describe('create', () => {
     it('should create user', async () => {
-      const dto = { username: 'testuser', email: 'test@runa.com', password: 'password123' };
+      const dto: CreateUserDto = {
+        username: 'testuser',
+        email: 'test@runa.com',
+        password: 'Password123!@#456',
+      };
       const expected = { id: 'user-1', ...dto };
       mockUserService.create.mockResolvedValue(expected);
 
@@ -82,35 +128,75 @@ describe('UserController', () => {
     });
   });
 
+  // --- GET /users/me/privacy ---
   describe('getPrivacy', () => {
-    it('should call getPrivacySettings with session authenticated user', async () => {
-      const mockReq = { user: { username: 'testuser', authType: 'session' } };
+    it('should call getPrivacySettings with the authenticated user username', async () => {
+      const req = mockReq({ username: 'testuser' });
       mockUserService.getPrivacySettings.mockResolvedValue({ profile: false });
 
-      const result = await controller.getPrivacy(mockReq);
+      const result = await controller.getPrivacy(req);
       expect(service.getPrivacySettings).toHaveBeenCalledWith('testuser');
       expect(result).toEqual({ profile: false });
-    });
-
-    it('should call getPrivacySettings with API key authenticated user', async () => {
-      const mockReq = { user: { username: 'testuser', authType: 'api-key' } };
-      mockUserService.getPrivacySettings.mockResolvedValue({ profile: false });
-
-      const result = await controller.getPrivacy(mockReq);
-      expect(service.getPrivacySettings).toHaveBeenCalledWith('testuser');
-      expect(result).toEqual({ profile: false });
-    });
-
-    it('should fail (throw TypeError) without authentication context', async () => {
-      const mockReq = {} as any;
-      await expect(controller.getPrivacy(mockReq)).rejects.toThrow(TypeError);
     });
   });
 
+  // --- PUT /users/me/privacy ---
+  describe('updatePrivacy', () => {
+    it('should update privacy settings', async () => {
+      const req = mockReq({ id: 'user-1' });
+      const dto: PrivacySettingsDto = { profile: true };
+      mockUserService.updatePrivacySettings.mockResolvedValue({
+        success: true,
+      });
+
+      const result = await controller.updatePrivacy(req, dto);
+      expect(service.updatePrivacySettings).toHaveBeenCalledWith('user-1', dto);
+      expect(result).toEqual({ success: true });
+    });
+  });
+
+  // --- PUT /users/me/settings ---
+  describe('updateSettings', () => {
+    it('should update profile settings', async () => {
+      const req = mockReq({ id: 'user-1' });
+      const dto: UpdateSettingsDto = { profileSettings: { theme: 'dark' } };
+      mockUserService.updateSettings.mockResolvedValue({
+        id: 'user-1',
+        profileSettings: { theme: 'dark' },
+      });
+
+      const result = await controller.updateSettings(req, dto);
+      expect(service.updateSettings).toHaveBeenCalledWith('user-1', dto);
+      expect(result).toEqual({
+        id: 'user-1',
+        profileSettings: { theme: 'dark' },
+      });
+    });
+  });
+
+  // --- PUT /users/me ---
+  describe('update', () => {
+    it('should update user info', async () => {
+      const req = mockReq({ id: 'user-1' });
+      const dto: UpdateUserDto = { displayName: 'New Name' };
+      mockUserService.update.mockResolvedValue({
+        id: 'user-1',
+        displayName: 'New Name',
+      });
+
+      const result = await controller.update(req, dto);
+      expect(service.update).toHaveBeenCalledWith('user-1', dto);
+      expect(result).toEqual({ id: 'user-1', displayName: 'New Name' });
+    });
+  });
+
+  // --- GET /users/:username ---
   describe('findOne', () => {
     it('should throw NotFoundException if user not found', async () => {
       mockUserService.findByUsername.mockResolvedValue(null);
-      await expect(controller.findOne('nonexistent')).rejects.toThrow(
+      await expect(
+        controller.findOne({ username: 'nonexistent' }),
+      ).rejects.toThrow(
         new NotFoundException('User with username nonexistent not found'),
       );
     });
@@ -126,142 +212,238 @@ describe('UserController', () => {
         profileSettings: {},
         privacy: { profile: false },
         connections: [
-          { id: 'c-1', provider: 'anilist', linkedUsername: 'ani', linkedTo: 'user-1', private: false },
-          { id: 'c-2', provider: 'mal', linkedUsername: 'mal-user', linkedTo: 'user-1', private: true },
+          {
+            id: 'c-1',
+            provider: 'ANILIST',
+            linkedUsername: 'ani',
+            linkedTo: 'user-1',
+            private: false,
+            metadata: null,
+          },
+          {
+            id: 'c-2',
+            provider: 'MAL',
+            linkedUsername: 'mal-user',
+            linkedTo: 'user-1',
+            private: true,
+            metadata: null,
+          },
         ],
       };
       mockUserService.findByUsername.mockResolvedValue(dbUser);
 
-      const result = await controller.findOne('testuser');
+      const result = await controller.findOne({ username: 'testuser' });
 
       expect(service.findByUsername).toHaveBeenCalledWith('testuser');
       expect(result.id).toBe('user-1');
-      expect(result.connections.length).toBe(1); // Hidden private connection
+      expect(result.connections.length).toBe(1); // private connection is hidden
       expect(result.connections[0].id).toBe('c-1');
     });
   });
 
-  describe('updatePrivacy', () => {
-    it('should update privacy settings with session auth', async () => {
-      const mockReq = { user: { id: 'user-1', authType: 'session' } };
-      const dto = { profile: true };
-      mockUserService.updatePrivacySettings.mockResolvedValue({ success: true });
+  // --- GET /users/by-email/:email ---
+  describe('findByEmail', () => {
+    it('should throw NotFoundException if user not found by email', async () => {
+      mockUserService.findByEmail.mockResolvedValue(null);
+      await expect(
+        controller.findByEmail({ email: 'nobody@runa.com' }),
+      ).rejects.toThrow(NotFoundException);
+    });
 
-      const result = await controller.updatePrivacy(mockReq, dto);
-      expect(service.updatePrivacySettings).toHaveBeenCalledWith('user-1', dto);
-      expect(result).toEqual({ success: true });
+    it('should return search entity when user found', async () => {
+      const user = {
+        id: 'user-1',
+        username: 'testuser',
+        displayName: 'Test',
+        avatarUrl: null,
+        bannerUrl: null,
+      };
+      mockUserService.findByEmail.mockResolvedValue(user);
+
+      const result = await controller.findByEmail({ email: 'test@runa.com' });
+      expect(result.id).toBe('user-1');
+      expect(result.username).toBe('testuser');
     });
   });
 
-  describe('updateSettings', () => {
-    it('should update profile settings with session auth', async () => {
-      const mockReq = { user: { id: 'user-1', authType: 'session' } };
-      const profileSettings = { theme: 'dark' };
-      mockUserService.updateSettings.mockResolvedValue({ id: 'user-1', profileSettings });
-
-      const result = await controller.updateSettings(mockReq, { profileSettings });
-      expect(service.updateSettings).toHaveBeenCalledWith('user-1', profileSettings);
-      expect(result).toEqual({ id: 'user-1', profileSettings });
-    });
-  });
-
-  describe('update', () => {
-    it('should update user info with session auth', async () => {
-      const mockReq = { user: { id: 'user-1', authType: 'session' } };
-      const dto = { displayName: 'New Name' };
-      mockUserService.update.mockResolvedValue({ id: 'user-1', displayName: 'New Name' });
-
-      const result = await controller.update(mockReq, dto);
-      expect(service.update).toHaveBeenCalledWith('user-1', dto);
-      expect(result).toEqual({ id: 'user-1', displayName: 'New Name' });
-    });
-  });
-
+  // --- MFA & Passkey Endpoints ---
   describe('MFA & Passkey Endpoints', () => {
-    const mockReq = { user: { id: 'user-1' } };
+    const req = mockReq({ id: 'user-1' });
 
     it('setupTotp should call generateTotpSetup', async () => {
-      mockUserService.generateTotpSetup.mockResolvedValue({ secret: 'sec' });
-      const result = await controller.setupTotp(mockReq);
+      mockUserService.generateTotpSetup.mockResolvedValue({
+        secret: 'sec',
+        otpauthUrl: 'url',
+      });
+      const result = await controller.setupTotp(req);
       expect(service.generateTotpSetup).toHaveBeenCalledWith('user-1');
-      expect(result).toEqual({ secret: 'sec' });
+      expect(result).toEqual({ secret: 'sec', otpauthUrl: 'url' });
     });
 
     it('enableTotp should call enableTotp', async () => {
       mockUserService.enableTotp.mockResolvedValue([]);
-      const result = await controller.enableTotp(mockReq, '123456');
+      const dto: EnableTotpDto = { code: '123456' };
+      const result = await controller.enableTotp(req, dto);
       expect(service.enableTotp).toHaveBeenCalledWith('user-1', '123456');
       expect(result).toEqual([]);
     });
 
     it('disableTotp should call disableTotp', async () => {
       mockUserService.disableTotp.mockResolvedValue({ success: true });
-      const result = await controller.disableTotp(mockReq);
+      const result = await controller.disableTotp(req);
       expect(service.disableTotp).toHaveBeenCalledWith('user-1');
       expect(result).toEqual({ success: true });
     });
 
     it('sendEmailMfaSetupCode should call sendEmailMfaSetupCode', async () => {
-      mockUserService.sendEmailMfaSetupCode.mockResolvedValue({ success: true });
-      const result = await controller.sendEmailMfaSetupCode(mockReq);
+      mockUserService.sendEmailMfaSetupCode.mockResolvedValue({
+        success: true,
+      });
+      const result = await controller.sendEmailMfaSetupCode(req);
       expect(service.sendEmailMfaSetupCode).toHaveBeenCalledWith('user-1');
       expect(result).toEqual({ success: true });
     });
 
     it('enableEmailMfa should call enableEmailMfa', async () => {
       mockUserService.enableEmailMfa.mockResolvedValue([]);
-      const result = await controller.enableEmailMfa(mockReq, '123456');
+      const dto: EnableEmailMfaDto = { code: '123456' };
+      const result = await controller.enableEmailMfa(req, dto);
       expect(service.enableEmailMfa).toHaveBeenCalledWith('user-1', '123456');
       expect(result).toEqual([]);
     });
 
     it('disableEmailMfa should call disableEmailMfa', async () => {
       mockUserService.disableEmailMfa.mockResolvedValue({ success: true });
-      const result = await controller.disableEmailMfa(mockReq);
+      const result = await controller.disableEmailMfa(req);
       expect(service.disableEmailMfa).toHaveBeenCalledWith('user-1');
       expect(result).toEqual({ success: true });
     });
 
     it('regenerateBackupCodes should call regenerateBackupCodes', async () => {
       mockUserService.regenerateBackupCodes.mockResolvedValue([]);
-      const result = await controller.regenerateBackupCodes(mockReq);
+      const result = await controller.regenerateBackupCodes(req);
       expect(service.regenerateBackupCodes).toHaveBeenCalledWith('user-1');
       expect(result).toEqual([]);
     });
 
     it('generatePasskeyRegisterOptions should call generatePasskeyRegisterOptions', async () => {
       mockUserService.generatePasskeyRegisterOptions.mockResolvedValue({});
-      const result = await controller.generatePasskeyRegisterOptions(mockReq);
-      expect(service.generatePasskeyRegisterOptions).toHaveBeenCalledWith('user-1');
+      const result = await controller.generatePasskeyRegisterOptions(req);
+      expect(service.generatePasskeyRegisterOptions).toHaveBeenCalledWith(
+        'user-1',
+      );
       expect(result).toEqual({});
     });
 
     it('verifyPasskeyRegister should call verifyPasskeyRegister', async () => {
       mockUserService.verifyPasskeyRegister.mockResolvedValue([]);
-      const result = await controller.verifyPasskeyRegister(mockReq, 'response', 'name');
-      expect(service.verifyPasskeyRegister).toHaveBeenCalledWith('user-1', 'response', 'name');
+      const dto: VerifyPasskeyDto = {
+        response: {
+          id: 'cred',
+          rawId: 'raw',
+          type: 'public-key',
+          response: {},
+        } as Record<string, unknown>,
+        name: 'mykey',
+      };
+      const result = await controller.verifyPasskeyRegister(req, dto);
+      expect(service.verifyPasskeyRegister).toHaveBeenCalledWith(
+        'user-1',
+        dto.response,
+        'mykey',
+      );
       expect(result).toEqual([]);
     });
 
     it('getPasskeys should call getPasskeys', async () => {
       mockUserService.getPasskeys.mockResolvedValue([]);
-      const result = await controller.getPasskeys(mockReq);
+      const result = await controller.getPasskeys(req);
       expect(service.getPasskeys).toHaveBeenCalledWith('user-1');
       expect(result).toEqual([]);
     });
 
     it('getMfaStatus should call getMfaStatus', async () => {
       mockUserService.getMfaStatus.mockResolvedValue({ totpEnabled: true });
-      const result = await controller.getMfaStatus(mockReq);
+      const result = await controller.getMfaStatus(req);
       expect(service.getMfaStatus).toHaveBeenCalledWith('user-1');
       expect(result).toEqual({ totpEnabled: true });
     });
 
     it('deletePasskey should call deletePasskey', async () => {
       mockUserService.deletePasskey.mockResolvedValue({ success: true });
-      const result = await controller.deletePasskey(mockReq, 'pass-1');
+      const result = await controller.deletePasskey(req, { id: 'pass-1' });
       expect(service.deletePasskey).toHaveBeenCalledWith('user-1', 'pass-1');
       expect(result).toEqual({ success: true });
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // API Keys — /users/me/api-keys
+  // ---------------------------------------------------------------------------
+
+  describe('findAllApiKeys', () => {
+    it('should retrieve API keys for the authenticated user', async () => {
+      const req = mockReq({ id: 'user-123' });
+      const expectedKeys = [
+        { id: 'key-1', name: 'Test Key', truncatedKey: 'abc...' },
+      ];
+      mockUserService.findAllApiKeysByUser.mockResolvedValue(expectedKeys);
+
+      const result = await controller.findAllApiKeys(req);
+
+      expect(service.findAllApiKeysByUser).toHaveBeenCalledWith('user-123');
+      expect(result).toBe(expectedKeys);
+    });
+  });
+
+  describe('createApiKey', () => {
+    it('should generate a new API key for the authenticated user', async () => {
+      const req = mockReq({ id: 'user-123' });
+      const createDto = { name: 'New Key' };
+      const expectedResult = {
+        id: 'key-2',
+        name: 'New Key',
+        key: 'raw-key-value',
+      };
+      mockUserService.createApiKey.mockResolvedValue(expectedResult);
+
+      const result = await controller.createApiKey(req, createDto);
+
+      expect(service.createApiKey).toHaveBeenCalledWith('user-123', 'New Key');
+      expect(result).toBe(expectedResult);
+    });
+  });
+
+  describe('regenerateApiKey', () => {
+    it('should regenerate the key when requested by the owner', async () => {
+      const req = mockReq({ id: 'user-123' });
+      const expectedResult = {
+        id: 'key-1',
+        name: 'Test Key',
+        key: 'new-raw-key',
+      };
+      mockUserService.regenerateApiKey.mockResolvedValue(expectedResult);
+
+      const result = await controller.regenerateApiKey(req, 'key-1');
+
+      expect(service.regenerateApiKey).toHaveBeenCalledWith(
+        'key-1',
+        'user-123',
+      );
+      expect(result).toBe(expectedResult);
+    });
+  });
+
+  describe('removeApiKey', () => {
+    it('should delete the API key when requested by the owner', async () => {
+      const req = mockReq({ id: 'user-123' });
+      const expectedResult = { message: 'API Key deleted successfully' };
+      mockUserService.deleteApiKey.mockResolvedValue(expectedResult);
+
+      const result = await controller.removeApiKey(req, 'key-1');
+
+      expect(service.deleteApiKey).toHaveBeenCalledWith('key-1', 'user-123');
+      expect(result).toBe(expectedResult);
     });
   });
 });

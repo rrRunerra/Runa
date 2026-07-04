@@ -59,7 +59,7 @@ function RrMediaListRowComponent({
           className="flex-1 flex cursor-pointer items-center justify-between gap-4 py-2 px-2 transition-colors"
         >
           <div className="flex items-center gap-3 min-w-0">
-            <div className="relative h-12 w-8.5 shrink-0 overflow-hidden rounded-lg bg-muted aspect-2/3 shadow-sm border border-border/10">
+            <div className="relative h-12 w-8.5 shrink-0 overflow-hidden rounded-lg bg-muted aspect-[2/3] shadow-sm border border-border/10">
               {entry.image && (
                 <Image
                   src={entry.image}

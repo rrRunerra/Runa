@@ -1,0 +1,148 @@
+{
+  "type": "service",
+  "serviceName": "MangaService",
+  "serviceCode": "MaSve-",
+
+  "dependedOn": "prisma, mangaRepository, mangaQueueService",
+
+  "privateVars": [
+    {
+      "name": "logger",
+      "type": "Logger",
+      "description": "Logger instance scoped to MangaService",
+      "readOnly": true
+    },
+    {
+      "name": "moduleCode",
+      "type": "string",
+      "description": "Prefix for rrCodes",
+      "readOnly": true
+    },
+    {
+      "name": "prisma",
+      "type": "PrismaService",
+      "description": "Prisma database service",
+      "readOnly": true
+    },
+    {
+      "name": "mangaRepository",
+      "type": "MangaRepository",
+      "description": "Repository used to read, write, and map manga records",
+      "readOnly": true
+    },
+    {
+      "name": "mangaQueueService",
+      "type": "MangaQueueService",
+      "description": "Queue service used to schedule manga refresh jobs",
+      "readOnly": true
+    }
+  ],
+
+  "functions": [
+    {
+      "name": "search",
+      "type": "async",
+      "access": "public",
+      "params": [
+        {
+          "name": "name",
+          "type": "string",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Searches AniList for manga by name and maps the response to SearchMedia items",
+      "returnValues": ["Promise<SearchMedia[]>"],
+      "exceptions": null
+    },
+    {
+      "name": "getManga",
+      "type": "async",
+      "access": "public",
+      "params": [
+        {
+          "name": "id",
+          "type": "number",
+          "typeLib": "typescript"
+        },
+        {
+          "name": "forceRefresh",
+          "type": "boolean",
+          "typeLib": "typescript",
+          "optional": true,
+          "default": false
+        }
+      ],
+      "description": "Gets manga data from cache/database when fresh enough, otherwise fetches from AniList and queues a refresh job",
+      "returnValues": ["Promise<Media>"],
+      "exceptions": [
+        {
+          "name": "rrInternalServerErrorException",
+          "rrCode": "MaSve-IMID001",
+          "message": "Invalid manga ID: ${id}",
+          "statusCode": 500
+        },
+        {
+          "name": "rrNotFoundException",
+          "rrCode": "MaSve-MNF001",
+          "message": "Manga not found",
+          "statusCode": 404
+        }
+      ]
+    },
+    {
+      "name": "fetchFromAniList",
+      "type": "async",
+      "access": "private",
+      "params": [
+        {
+          "name": "id",
+          "type": "number",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Fetches detailed manga data from AniList GraphQL and maps it to the Media shape",
+      "returnValues": ["Promise<Media>"],
+      "exceptions": [
+        {
+          "name": "rrInternalServerErrorException",
+          "rrCode": "MaSve-MWIDNFOA001",
+          "message": "Manga with ID ${id} not found on AniList",
+          "statusCode": 500
+        }
+      ]
+    },
+    {
+      "name": "ensureManga",
+      "type": "async",
+      "access": "public",
+      "params": [
+        {
+          "name": "anilistId",
+          "type": "number",
+          "typeLib": "typescript"
+        },
+        {
+          "name": "malId",
+          "type": "number | null",
+          "typeLib": "typescript",
+          "optional": true
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "typeLib": "typescript",
+          "optional": true
+        },
+        {
+          "name": "coverImage",
+          "type": "string",
+          "typeLib": "typescript",
+          "optional": true
+        }
+      ],
+      "description": "Ensures a manga record exists in the repository, creating or updating it and queueing a job when needed",
+      "returnValues": ["Promise<any>"],
+      "exceptions": null
+    }
+  ]
+}

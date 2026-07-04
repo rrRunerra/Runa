@@ -1,0 +1,129 @@
+{
+  "type": "service",
+  "serviceName": "ApiKeyService",
+  "serviceCode": "AySve-",
+
+  "dependedOn": "prisma",
+
+  "privateVars": [
+    {
+      "name": "moduleCode",
+      "type": "string",
+      "description": "Prefix for rrCodes",
+      "readOnly": true
+    },
+    {
+      "name": "prisma",
+      "type": "PrismaService",
+      "description": "Prisma database service for API key CRUD operations",
+      "readOnly": true
+    }
+  ],
+
+  "functions": [
+    {
+      "name": "generateKey",
+      "type": "synch",
+      "access": "private",
+      "params": [],
+      "description": "Generates a random 64-character hex string as a raw API key",
+      "returnValues": ["string"],
+      "exceptions": null
+    },
+    {
+      "name": "createKey",
+      "type": "async",
+      "access": "public",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string",
+          "typeLib": "typescript"
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Creates a new API key for the user, storing the hashed key and returning the raw key once",
+      "returnValues": ["Promise<ApiKeyCreatedEntity>"],
+      "exceptions": null
+    },
+    {
+      "name": "findAllKeysByUser",
+      "type": "async",
+      "access": "public",
+      "params": [
+        {
+          "name": "userId",
+          "type": "string",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Lists all API keys for a user, returning truncated key previews",
+      "returnValues": ["Promise<ApiKeyEntity[]>"],
+      "exceptions": null
+    },
+    {
+      "name": "regenerateKey",
+      "type": "async",
+      "access": "public",
+      "params": [
+        {
+          "name": "id",
+          "type": "string",
+          "typeLib": "typescript"
+        },
+        {
+          "name": "userId",
+          "type": "string",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Regenerates an existing API key by replacing its hash and prefix, returning the new raw key",
+      "returnValues": ["Promise<ApiKeyCreatedEntity>"],
+      "exceptions": [
+        {
+          "name": "rrNotFoundException",
+          "rrCode": "AySve-AKNF001",
+          "message": "API Key not found",
+          "statusCode": 404
+        }
+      ]
+    },
+    {
+      "name": "deleteKey",
+      "type": "async",
+      "access": "public",
+      "params": [
+        {
+          "name": "id",
+          "type": "string",
+          "typeLib": "typescript"
+        },
+        {
+          "name": "userId",
+          "type": "string",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Deletes an API key after verifying ownership",
+      "returnValues": ["Promise<{ message: string }>"],
+      "exceptions": [
+        {
+          "name": "rrNotFoundException",
+          "rrCode": "AySve-AKNF001",
+          "message": "API Key not found",
+          "statusCode": 404
+        },
+        {
+          "name": "rrInternalServerErrorException",
+          "rrCode": "AySve-FTDAK001",
+          "message": "Failed to delete API Key",
+          "statusCode": 500
+        }
+      ]
+    }
+  ]
+}

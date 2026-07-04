@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { MangaController } from './manga.controller';
 import { MangaService } from './manga.service';
-import { DualAuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { Reflector } from '@nestjs/core';
 
 describe('MangaController', () => {
@@ -12,9 +12,10 @@ describe('MangaController', () => {
   const mockMangaService = {
     search: jest.fn(),
     getManga: jest.fn(),
+    refreshManga: jest.fn(),
   };
 
-  const mockDualAuthGuard = {
+  const mockAuthGuard = {
     canActivate: jest.fn().mockReturnValue(true),
   };
 
@@ -28,8 +29,8 @@ describe('MangaController', () => {
         Reflector,
       ],
     })
-      .overrideGuard(DualAuthGuard)
-      .useValue(mockDualAuthGuard)
+      .overrideGuard(AuthGuard)
+      .useValue(mockAuthGuard)
       .compile();
 
     controller = module.get<MangaController>(MangaController);
@@ -47,59 +48,61 @@ describe('MangaController', () => {
       expect(isPublic).toBe(true);
     });
 
-    it('getManga should have @Public() decorator (accessible without authentication)', () => {
-      const isPublic = reflector.get<boolean>('isPublic', controller.getManga);
+    it('mangaDetail should have @Public() decorator (accessible without authentication)', () => {
+      const isPublic = reflector.get<boolean>(
+        'isPublic',
+        controller.mangaDetail,
+      );
       expect(isPublic).toBe(true);
     });
   });
 
   describe('search', () => {
-    const mockResult = [{ id: '1', title: { romaji: 'Test Manga', english: 'Test Manga' } } as any];
+    const mockResult = [
+      {
+        id: 1,
+        title: { romaji: 'Test Manga', english: 'Test Manga' },
+      } as any,
+    ];
 
-    it('should search manga when request has session authentication', async () => {
+    it('should call mangaService.search with the query name', async () => {
       mockMangaService.search.mockResolvedValue(mockResult);
-      // Simulate session request context (though controller method does not read it, this verifies route execution under session context)
-      const result = await controller.search({ name: 'Test' });
-      expect(service.search).toHaveBeenCalledWith('Test');
-      expect(result).toBe(mockResult);
-    });
 
-    it('should search manga when request has API key authentication', async () => {
-      mockMangaService.search.mockResolvedValue(mockResult);
       const result = await controller.search({ name: 'Test' });
-      expect(service.search).toHaveBeenCalledWith('Test');
-      expect(result).toBe(mockResult);
-    });
 
-    it('should search manga when request has no authentication', async () => {
-      mockMangaService.search.mockResolvedValue(mockResult);
-      const result = await controller.search({ name: 'Test' });
       expect(service.search).toHaveBeenCalledWith('Test');
       expect(result).toBe(mockResult);
     });
   });
 
-  describe('getManga', () => {
-    const mockResult = { id: '123', title: { romaji: 'Test Manga Detail' } } as any;
+  describe('mangaDetail', () => {
+    const mockResult = {
+      id: 123,
+      title: { romaji: 'Test Manga Detail' },
+    } as any;
 
-    it('should get manga details when request has session authentication', async () => {
+    it('should call mangaService.getManga with the parsed integer ID', async () => {
       mockMangaService.getManga.mockResolvedValue(mockResult);
-      const result = await controller.getManga('123');
+
+      const result = await controller.mangaDetail({ id: 123 });
+
       expect(service.getManga).toHaveBeenCalledWith(123);
       expect(result).toBe(mockResult);
     });
+  });
 
-    it('should get manga details when request has API key authentication', async () => {
-      mockMangaService.getManga.mockResolvedValue(mockResult);
-      const result = await controller.getManga('123');
-      expect(service.getManga).toHaveBeenCalledWith(123);
-      expect(result).toBe(mockResult);
-    });
+  describe('refreshAnime', () => {
+    const mockResult = {
+      id: 123,
+      title: { romaji: 'Refreshed Manga' },
+    } as any;
 
-    it('should get manga details when request has no authentication', async () => {
-      mockMangaService.getManga.mockResolvedValue(mockResult);
-      const result = await controller.getManga('123');
-      expect(service.getManga).toHaveBeenCalledWith(123);
+    it('should call mangaService.refreshManga with the parsed integer ID', async () => {
+      mockMangaService.refreshManga.mockResolvedValue(mockResult);
+
+      const result = await controller.refreshAnime({ id: 123 });
+
+      expect(service.refreshManga).toHaveBeenCalledWith(123);
       expect(result).toBe(mockResult);
     });
   });

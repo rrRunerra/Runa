@@ -1,386 +1,142 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../../providers/database/prisma.service';
-import type { Media, SearchMedia } from '../../common/types/types';
-import { MangaRepository } from './repositories/manga.repository';
-import { MangaQueueService } from './services/manga-queue.service';
-
-const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
-const CACHE_DURATION_MS = isDev ? 24 * 60 * 60 * 1000 : 7 * 24 * 60 * 60 * 1000;
+import { Injectable, Logger } from '@nestjs/common';
+import { MangaRepository } from './manga.repository';
+import { MangaExternal } from './manga.external';
+import { MangaQueueService } from './manga-queue.service';
+import { CacheService } from 'src/providers/cache/cache.service';
+import { MangaEntity, MangaSearchEntity } from './manga.entities';
+import {
+  rrError,
+  rrNotFoundException,
+  rrTooManyRequestsException,
+} from 'src/providers/error';
 
 @Injectable()
 export class MangaService {
   private readonly logger = new Logger(MangaService.name);
+  private readonly moduleCode = 'MaSve-';
+  private readonly useLocalMedia = process.env.USE_LOCAL_MEDIA_ONLY ?? false;
+  private readonly cacheDuration = Number(
+    process.env.MANGA_CACHE_DURATION ?? 60 * 60,
+  );
 
   constructor(
-    private readonly prisma: PrismaService,
     private readonly mangaRepository: MangaRepository,
     private readonly mangaQueueService: MangaQueueService,
+    private readonly cacheService: CacheService,
+    private readonly mangaExternal: MangaExternal,
   ) {}
 
-  public async search(name: string): Promise<SearchMedia[]> {
-    const aniListRes = await fetch('https://graphql.anilist.co', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({
-        query: `query ($search: String, $page: Int, $perPage: Int) {
-  Page (page: $page, perPage: $perPage) {
-    pageInfo {
-      total
-      currentPage
-      lastPage
-      hasNextPage
-      perPage
+  public async search(name: string): Promise<MangaSearchEntity[]> {
+    const normalized = name.trim().toLowerCase();
+    const cacheKey = `manga-search:${normalized.replaceAll(' ', '')}`;
+
+    const cached = await this.cacheService.get<MangaSearchEntity[]>(cacheKey);
+
+    if (cached) {
+      this.logger.debug(`Manga search cache hit ${cached.length} entries`);
+      return cached;
     }
-    media (search: $search, type: MANGA) {
-      id
-      title {
-        romaji
-        english
-      }
-      coverImage {
-        large
-      }
-      averageScore
-      format
-      status
-      isAdult
+
+    let result: MangaSearchEntity[] = [];
+    let externalUsed = false;
+
+    if (this.useLocalMedia) {
+      result = await this.mangaRepository.search(name);
     }
+
+    if (!this.useLocalMedia || result.length === 0) {
+      result = await this.mangaExternal.search(name);
+      externalUsed = true;
+    }
+
+    this.logger.debug(`Manga found: ${result.length}`);
+
+    if (result.length > 0) {
+      await this.cacheService.set(
+        cacheKey,
+        JSON.stringify(result),
+        this.cacheDuration,
+      );
+    }
+
+    // Queue a background refresh only when local results were returned
+    if (this.useLocalMedia && !externalUsed && result.length > 0) {
+      this.logger.debug(`Queuing background refresh for manga`);
+      this.mangaQueueService.addSearchRefresh(name, cacheKey);
+    }
+
+    return result;
   }
 
-}`,
-        variables: {
-          search: name,
-        },
-      }),
-    });
-
-    const data: AniListSearchResponse = await aniListRes.json();
-    return data.data.Page.media.map((item) => ({
-      id: item.id.toString(),
-      title: {
-        romaji: item.title.romaji,
-        english: item.title.english ?? '',
-      },
-      coverImage: {
-        large: item.coverImage.large,
-      },
-      format: item.format,
-      status: item.status,
-      isAdult: item.isAdult,
-    }));
-  }
-
-  public async getManga(id: number, forceRefresh = false): Promise<Media> {
+  public async getManga(id: number): Promise<MangaEntity | undefined> {
     if (isNaN(id)) {
-      throw new Error(`Invalid manga ID: ${id}`);
-    }
-
-    const dbManga = await this.mangaRepository.findByAnilistId(id);
-
-    if (dbManga && !forceRefresh) {
-      const now = new Date();
-      const updatedAt = new Date(dbManga.updatedAt);
-      const timeSinceUpdate = now.getTime() - updatedAt.getTime();
-
-      if (timeSinceUpdate < CACHE_DURATION_MS) {
-        return this.mangaRepository.toMedia(dbManga);
-      }
-    }
-
-    try {
-      const media = await this.fetchFromAniList(id);
-
-      this.mangaQueueService.addJob(id);
-
-      return media;
-    } catch (error) {
-      if (dbManga) {
-        return this.mangaRepository.toMedia(dbManga);
-      }
-      throw new NotFoundException('Manga not found');
-    }
-  }
-
-  private async fetchFromAniList(id: number): Promise<Media> {
-    const aniListRes = await fetch('https://graphql.anilist.co', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({
-        query: `query ($id: Int) {
-  Media (id: $id, type: MANGA) {
-    id
-    idMal
-    title {
-      romaji
-      english
-      native
-    }
-    # Visuals
-    coverImage {
-      extraLarge
-      large
-      color
-    }
-    bannerImage
-    # Metadata
-    format # e.g., MANGA, ONE_SHOT, NOVEL
-    status # e.g., FINISHED, RELEASING, CANCELLED
-    description
-    chapters
-    volumes
-    countryOfOrigin
-    source
-    # Dates
-    startDate {
-      year
-      month
-      day
-    }
-    endDate {
-      year
-      month
-      day
-    }
-    # Stats
-    averageScore
-    meanScore
-    popularity
-    favourites
-    trending
-    synonyms
-    hashtag
-    # Categories
-    genres
-    tags {
-      name
-      rank
-      isMediaSpoiler
-    }
-    # Staff (Authors and Illustrators)
-    staff (perPage: 5) {
-      edges {
-        role # e.g., "Story & Art"
-        node {
-          id
-          name {
-            full
-          }
-        }
-      }
-    }
-    # Relationships (Anime adaptations, sequels)
-    relations {
-      edges {
-        relationType
-        node {
-          id
-          title {
-            romaji
-          }
-          type # Useful to see if the relation is ANIME or MANGA
-          format
-        }
-      }
-    }
-    # External Links (Official sites, retailers)
-    externalLinks {
-      id
-      url
-      site
-    }
-  }
-}`,
-        variables: {
-          id: id,
-        },
-      }),
-    });
-
-    const data: AniListGetResponse = await aniListRes.json();
-    const media = data.data?.Media;
-
-    if (!media) {
-      throw new Error(`Manga with ID ${id} not found on AniList`);
-    }
-
-    return {
-      id: media.id.toString(),
-      anilistId: media.id,
-      malId: media.idMal,
-      title: media.title,
-      coverImage: media.coverImage,
-      bannerImage: media.bannerImage,
-      format: media.format,
-      status: media.status,
-      description: media.description,
-      startDate: media.startDate,
-      endDate: media.endDate,
-      chapters: media.chapters,
-      volumes: media.volumes,
-      genres: media.genres,
-      source: media.source,
-      tags: media.tags?.map((tag) => ({
-        id: tag.name.toString(),
-        name: tag.name,
-        rank: tag.rank,
-      })),
-      averageScore: media.averageScore,
-      popularity: media.popularity,
-      favourites: media.favourites,
-      trending: media.trending,
-      meanScore: media.meanScore,
-      synonyms: media.synonyms || [],
-      hashtag: media.hashtag,
-      countryOfOrigin: media.countryOfOrigin,
-      relations: media.relations?.edges.map((edge) => ({
-        id: edge.node.id.toString(),
-        relationType: edge.relationType,
-        title: { romaji: edge.node.title.romaji },
-        format: edge.node.format,
-        type: edge.node.type,
-      })),
-      externalLinks: media.externalLinks?.map((link) => ({
-        id: link.id.toString(),
-        url: link.url,
-        site: link.site,
-      })),
-      trailers: [],
-      staff: media.staff?.edges.map((edge) => ({
-        id: edge.node.id.toString(),
-        name: edge.node.name.full,
-        role: edge.role,
-      })),
-    };
-  }
-
-  public async ensureManga(anilistId: number, malId?: number | null, title?: string, coverImage?: string) {
-    let manga = await this.mangaRepository.findByAnilistId(anilistId);
-    if (!manga) {
-      manga = await this.mangaRepository.upsert(anilistId, {
-        anilistId,
-        malId: malId || null,
-        titleRomaji: title || 'Unknown',
-        coverImageLarge: coverImage || '',
-      });
-      this.mangaQueueService.addJob(anilistId);
-    } else if (malId && !manga.malId) {
-      manga = await this.mangaRepository.upsert(anilistId, {
-        malId,
+      throw new rrError(`${this.moduleCode}IMBAN001`, {
+        message: 'ID must be a number',
       });
     }
-    return manga;
+
+    const cacheKey = `manga:${id}`;
+    const cached = await this.cacheService.get<MangaEntity>(cacheKey);
+
+    if (cached) {
+      this.logger.debug(`getManga cache hit for ${id}`);
+      return cached;
+    }
+
+    this.logger.debug(`getManga fetching from db`);
+    const data = await this.mangaRepository.find(id);
+
+    if (!data) {
+      throw new rrNotFoundException(`${this.moduleCode}MNF001`, {
+        message: `Manga not found`,
+      });
+    }
+
+    await this.cacheService.set(cacheKey, data, this.cacheDuration);
+
+    return data;
   }
-}
 
-interface AniListSearchResponse {
-  data: {
-    Page: {
-      pageInfo: {
-        total: number;
-        currentPage: number;
-        lastPage: number;
-        hasNextPage: boolean;
-        perPage: number;
-      };
-      media: {
-        id: number;
-        title: {
-          romaji: string;
-          english: string;
-        };
-        coverImage: {
-          large: string;
-        };
-        averageScore: number;
-        format: string;
-        status: string;
-        isAdult: boolean;
-      }[];
-    };
-  };
-}
+  public async refreshManga(
+    id: number,
+  ): Promise<MangaEntity | undefined | null> {
+    if (isNaN(id)) {
+      throw new rrError(`${this.moduleCode}IMBAN002`, {
+        message: 'ID must be a number',
+      });
+    }
 
-interface AniListGetResponse {
-  data: {
-    Media: {
-      id: number;
-      idMal?: number | null;
-      title: {
-        romaji: string;
-        english: string;
-        native: string;
-      };
-      coverImage: {
-        extraLarge: string;
-        large: string;
-        color: string;
-      };
-      bannerImage: string;
-      format: string;
-      status: string;
-      description: string;
-      startDate: {
-        year: number;
-        month: number;
-        day: number;
-      };
-      endDate: {
-        year: number;
-        month: number;
-        day: number;
-      };
-      chapters: number;
-      volumes: number;
-      countryOfOrigin: string;
-      source: string;
-      averageScore: number;
-      meanScore: number;
-      popularity: number;
-      trending: number;
-      favourites: number;
-      genres: string[];
-      synonyms: string[];
-      hashtag: string;
-      tags: {
-        name: string;
-        rank: number;
-        isMediaSpoiler: boolean;
-      }[];
-      staff: {
-        edges: {
-          role: string;
-          node: {
-            id: number;
-            name: {
-              full: string;
-            };
-          };
-        }[];
-      };
-      relations: {
-        edges: {
-          relationType: string;
-          node: {
-            id: number;
-            title: {
-              romaji: string;
-            };
-            type: string;
-            format: string;
-          };
-        }[];
-      };
-      externalLinks: {
-        id: string;
-        url: string;
-        site: string;
-      }[];
-    };
-  };
+    const cacheKey = `cooldown:refresh:manga:${id}`;
+    const onCooldown = await this.cacheService.get(cacheKey);
+
+    if (onCooldown) {
+      throw new rrTooManyRequestsException(`${this.moduleCode}TMWRR001`, {
+        message: 'This media was refreshed recently.',
+      });
+    }
+
+    // Look up the existing entry to get the AniList ID
+    const existing = await this.mangaRepository.find(id);
+    if (!existing) {
+      throw new rrNotFoundException(`${this.moduleCode}MNFID001`, {
+        message: 'Manga not found in database',
+      });
+    }
+    if (!existing.anilistId) {
+      throw new rrError(`${this.moduleCode}MHNAICR001`, {
+        message: 'Manga has no AniList ID, cannot refresh',
+      });
+    }
+
+    // Fetch fresh data from AniList
+    await this.mangaExternal.fetchAndUpsertManga(existing.anilistId);
+
+    // Bust the cache so next getManga fetches fresh data
+    await this.cacheService.del(`manga:${id}`);
+
+    const cooldownSeconds = 5 * 60;
+    await this.cacheService.set(cacheKey, true, cooldownSeconds);
+
+    return await this.mangaRepository.find(id);
+  }
 }

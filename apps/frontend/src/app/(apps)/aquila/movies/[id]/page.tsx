@@ -17,22 +17,27 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
-  const title = movie.title.english || movie.title.romaji || "Movie Details";
+  const title =
+    movie.titleEnglish ??
+    movie.titleRomaji ??
+    movie.title?.english ??
+    movie.title?.romaji ??
+    "Movie Details";
   const description = cleanDescription(movie.description, 160);
-  const image = movie.coverImage.extraLarge || movie.coverImage.large;
+  const image =
+    typeof movie.coverImage === "string"
+      ? movie.coverImage
+      : (movie.coverImage?.extraLarge ?? movie.coverImage?.large ?? "");
+  const keywords: string[] = Array.isArray(movie.genres) ? movie.genres : [];
 
   return {
     title: `Aquila > Movie > ${title}`,
     description,
+    keywords,
     openGraph: {
       title,
       description,
-      images: [
-        {
-          url: image,
-          alt: title,
-        },
-      ],
+      images: image ? [{ url: image, alt: title }] : [],
       type: "video.movie",
       siteName: "Aquila",
     },
@@ -40,7 +45,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       card: "summary_large_image",
       title,
       description,
-      images: [image],
+      images: image ? [image] : [],
     },
   };
 }

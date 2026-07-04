@@ -444,7 +444,7 @@ export default function RrEmailFolderView({
           if (shouldFetch) {
             setLoadingProfile(true);
             fetch(
-              `${process.env.NEXT_PUBLIC_API_URL}/user/by-email/${rawEmail}`,
+              `${process.env.NEXT_PUBLIC_API_URL}/users/by-email/${rawEmail}`,
               {
                 headers: { Authorization: `Bearer ${session.accessToken}` },
               },

@@ -121,11 +121,20 @@ export default function RrEmailReader({
     return match && match[1] ? match[1].replace(/['"]/g, "").trim() : from;
   };
 
+  const senderEmail = message ? getSenderEmail(message.from) : "";
+
   // Reset states when email selection changes
   useEffect(() => {
     setReplyMode(null);
-    setLoadRemoteContent(false);
-  }, [message?.id]);
+    if (senderEmail) {
+      const allowedSenders = JSON.parse(
+        localStorage.getItem("pegasus_allowed_remote_content_senders") || "[]"
+      );
+      setLoadRemoteContent(allowedSenders.includes(senderEmail.toLowerCase()));
+    } else {
+      setLoadRemoteContent(false);
+    }
+  }, [message?.id, senderEmail]);
 
   const initiateReply = (mode: "reply" | "replyAll" | "forward") => {
     if (!message) return;
@@ -481,12 +490,35 @@ export default function RrEmailReader({
           {hasRemoteContent && !loadRemoteContent && (
             <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 text-amber-500 text-[11px] rounded-xl flex items-center justify-between gap-4">
               <span>Remote content in this message has been blocked.</span>
-              <button
-                onClick={() => setLoadRemoteContent(true)}
-                className="px-2 py-0.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-600 rounded-lg font-semibold cursor-pointer"
-              >
-                Show content
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setLoadRemoteContent(true)}
+                  className="px-2 py-0.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-600 rounded-lg font-semibold cursor-pointer"
+                >
+                  Show once
+                </button>
+                <button
+                  onClick={() => {
+                    if (senderEmail) {
+                      const allowedSenders = JSON.parse(
+                        localStorage.getItem("pegasus_allowed_remote_content_senders") || "[]"
+                      );
+                      const lowerEmail = senderEmail.toLowerCase();
+                      if (!allowedSenders.includes(lowerEmail)) {
+                        allowedSenders.push(lowerEmail);
+                        localStorage.setItem(
+                          "pegasus_allowed_remote_content_senders",
+                          JSON.stringify(allowedSenders)
+                        );
+                      }
+                    }
+                    setLoadRemoteContent(true);
+                  }}
+                  className="px-2 py-0.5 bg-amber-500/30 hover:bg-amber-500/40 text-amber-600 rounded-lg font-semibold cursor-pointer"
+                >
+                  Always allow
+                </button>
+              </div>
             </div>
           )}
 
