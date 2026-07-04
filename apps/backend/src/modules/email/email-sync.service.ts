@@ -135,9 +135,35 @@ export class EmailSyncService {
           });
           const lastUid = lastMessage ? lastMessage.uid : 0;
 
-          // Fetch only newer UIDs
-          const range = `${lastUid + 1}:*`;
-          const uids = await client.search({ uid: range }, { uid: true });
+          // Query all UIDs from the server to find new/missing messages
+          const allServerUids = (await client.search({}, { uid: true })) || [];
+          const serverUidSet = new Set(allServerUids);
+
+          // Find all local message UIDs stored in the DB for this folder
+          const dbMessages = await this.prisma.client.emailMessage.findMany({
+            where: { userEmailAccountId: account.id, folder: standardFolder },
+            select: { uid: true },
+          });
+          const dbUids = dbMessages.map((m) => m.uid);
+
+          // Find UIDs in the database that are no longer on the server
+          const uidsToDelete = dbUids.filter((uid) => !serverUidSet.has(uid));
+
+          if (uidsToDelete.length > 0) {
+            this.logger.log(
+              `Deleting ${uidsToDelete.length} messages in folder ${standardFolder} for account ${account.emailAddress} that are no longer on the server: [${uidsToDelete.join(', ')}]`,
+            );
+            await this.prisma.client.emailMessage.deleteMany({
+              where: {
+                userEmailAccountId: account.id,
+                folder: standardFolder,
+                uid: { in: uidsToDelete },
+              },
+            });
+          }
+
+          // Fetch only UIDs that are newer than the highest cached UID
+          const uids = allServerUids.filter((uid) => uid > lastUid);
 
           if (Array.isArray(uids) && uids.length > 0) {
             for await (const msg of client.fetch(
