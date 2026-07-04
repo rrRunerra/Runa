@@ -53,6 +53,22 @@ steps:
         from_secret: ANILIST_CLIENT_ID
       ANILIST_CLIENT_SECRET:
         from_secret: ANILIST_CLIENT_SECRET
+      USE_LOCAL_MEDIA_ONLY:
+        from_secret: USE_LOCAL_MEDIA_ONLY
+      RUSTFS_ENDPOINT:
+        from_secret: RUSTFS_ENDPOINT
+      RUSTFS_REGION:
+        from_secret: RUSTFS_REGION
+      RUSTFS_ACCESS_KEY:
+        from_secret: RUSTFS_ACCESS_KEY
+      RUSTFS_SECRET_KEY:
+        from_secret: RUSTFS_SECRET_KEY
+      RUSTFS_PUBLIC_BUCKET:
+        from_secret: RUSTFS_PUBLIC_BUCKET
+      RUSTFS_LACERTA_BUCKET:
+        from_secret: RUSTFS_LACERTA_BUCKET
+      FILES_CDN_URL:
+        from_secret: FILES_CDN_URL
       DISCORD_CLIENT_ID:
         from_secret: DISCORD_CLIENT_ID
       DISCORD_CLIENT_SECRET:
