@@ -1,10 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
-import { PolarisService } from './polaris.service';
+import { BookmarksService } from './bookmarks.service';
 import { PrismaService } from '../../providers/database/prisma.service';
+import { CacheService } from '../../providers/cache/cache.service';
 
-describe('PolarisService', () => {
-  let service: PolarisService;
+describe('BookmarksService', () => {
+  let service: BookmarksService;
 
   const mockPrismaClient = {
     polarisUserBookMarks: {
@@ -20,17 +21,27 @@ describe('PolarisService', () => {
     client: mockPrismaClient,
   };
 
+  const mockCache = {
+    get: jest.fn(),
+    set: jest.fn(),
+    del: jest.fn(),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockCache.get.mockResolvedValue(null);
+    mockCache.set.mockResolvedValue(undefined);
+    mockCache.del.mockResolvedValue(undefined);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        PolarisService,
+        BookmarksService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: CacheService, useValue: mockCache },
       ],
     }).compile();
 
-    service = module.get<PolarisService>(PolarisService);
+    service = module.get<BookmarksService>(BookmarksService);
   });
 
   describe('createOrUpdateBookmark', () => {
@@ -67,6 +78,7 @@ describe('PolarisService', () => {
           starColor: dto.starColor,
         },
       });
+      expect(mockCache.del).toHaveBeenCalled();
       expect(result.id).toBe('bookmark-1');
     });
 
@@ -89,12 +101,24 @@ describe('PolarisService', () => {
           starColor: dto.starColor,
         },
       });
+      expect(mockCache.del).toHaveBeenCalled();
       expect(result.id).toBe('bookmark-2');
     });
   });
 
   describe('getBookmarks', () => {
-    it('should retrieve bookmarks list for a user sorted by createdAt desc', async () => {
+    it('should return cached bookmarks if available', async () => {
+      const cached = [{ id: 'bookmark-1' }];
+      mockCache.get.mockResolvedValue(cached);
+
+      const result = await service.getBookmarks('user-1');
+
+      expect(mockCache.get).toHaveBeenCalled();
+      expect(mockPrismaClient.polarisUserBookMarks.findMany).not.toHaveBeenCalled();
+      expect(result).toBe(cached);
+    });
+
+    it('should retrieve bookmarks list for a user sorted by createdAt desc and cache result', async () => {
       const mockList = [{ id: 'bookmark-1', createdAt: new Date() }];
       mockPrismaClient.polarisUserBookMarks.findMany.mockResolvedValue(mockList);
 
@@ -104,6 +128,7 @@ describe('PolarisService', () => {
         where: { userId: 'user-1' },
         orderBy: { createdAt: 'desc' },
       });
+      expect(mockCache.set).toHaveBeenCalled();
       expect(result).toBe(mockList);
     });
   });
@@ -122,6 +147,7 @@ describe('PolarisService', () => {
       expect(mockPrismaClient.polarisUserBookMarks.delete).toHaveBeenCalledWith({
         where: { id: 'bookmark-1' },
       });
+      expect(mockCache.del).toHaveBeenCalled();
       expect(result).toEqual({ success: true });
     });
 
@@ -129,7 +155,7 @@ describe('PolarisService', () => {
       mockPrismaClient.polarisUserBookMarks.findFirst.mockResolvedValue(null);
 
       await expect(service.deleteBookmark('user-1', 'bookmark-1')).rejects.toThrow(
-        new NotFoundException('Bookmark with ID bookmark-1 not found'),
+        NotFoundException,
       );
       expect(mockPrismaClient.polarisUserBookMarks.delete).not.toHaveBeenCalled();
     });

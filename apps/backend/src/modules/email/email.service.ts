@@ -8,14 +8,14 @@ import { resolveMx } from 'dns/promises';
 import * as nodemailer from 'nodemailer';
 import { ImapFlow } from 'imapflow';
 import { PrismaService } from '../../providers/database/prisma.service';
+import { CacheService } from '../../providers/cache/cache.service';
 import { encrypt, decrypt } from '@runa/crypto/server';
 import {
   generateDataKey,
   encryptWithDataKey,
   encryptDataKeyForUser,
 } from '@runa/crypto/node';
-import { EmailAccountDto } from './dto/email-account.dto';
-import { SendEmailDto } from './dto/send-email.dto';
+import { EmailAccountDto, SendEmailDto } from './email.dto';
 import { NotificationGateway } from '../notification/notification.gateway';
 
 export interface EmailAutoconfigResult {
@@ -41,13 +41,76 @@ function escapeHtml(text: string): string {
     .replace(/'/g, '&#039;');
 }
 
+/**
+ * Extracts IMAP/SMTP config from Thunderbird ISPDB XML response text.
+ * Returns null if required data is not found.
+ */
+function parseThunderbirdXml(xmlText: string): EmailAutoconfigResult | null {
+  const imapMatch = xmlText.match(
+    /<incomingServer\s+type="imap"[^>]*>([\s\S]*?)<\/incomingServer>/i,
+  );
+  const smtpMatch = xmlText.match(
+    /<outgoingServer\s+type="smtp"[^>]*>([\s\S]*?)<\/outgoingServer>/i,
+  );
+
+  if (!imapMatch || !smtpMatch) return null;
+
+  const extractTag = (block: string, tag: string): string => {
+    const match = block.match(
+      new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`, 'i'),
+    );
+    return match ? match[1].trim() : '';
+  };
+
+  const imapBlock = imapMatch[1];
+  const imapHost = extractTag(imapBlock, 'hostname');
+  const imapPortVal = extractTag(imapBlock, 'port');
+  const imapSecureType = extractTag(imapBlock, 'socketType');
+
+  const smtpBlock = smtpMatch[1];
+  const smtpHost = extractTag(smtpBlock, 'hostname');
+  const smtpPortVal = extractTag(smtpBlock, 'port');
+  const smtpSecureType = extractTag(smtpBlock, 'socketType');
+
+  if (!imapHost || !smtpHost) return null;
+
+  return {
+    imapHost,
+    imapPort: imapPortVal ? parseInt(imapPortVal, 10) : 993,
+    imapSecure:
+      imapSecureType.toUpperCase() === 'SSL' ||
+      imapSecureType.toUpperCase() === 'SSL/TLS',
+    smtpHost,
+    smtpPort: smtpPortVal ? parseInt(smtpPortVal, 10) : 465,
+    smtpSecure:
+      smtpSecureType.toUpperCase() === 'SSL' ||
+      smtpSecureType.toUpperCase() === 'SSL/TLS',
+  };
+}
+
+/** Fetches and parses Thunderbird ISPDB autoconfig for a domain. Returns null on failure. */
+async function fetchThunderbirdConfig(
+  domain: string,
+): Promise<EmailAutoconfigResult | null> {
+  try {
+    const url = `https://autoconfig.thunderbird.net/v1.1/${domain}`;
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const xmlText = await response.text();
+    return parseThunderbirdXml(xmlText);
+  } catch {
+    return null;
+  }
+}
+
 @Injectable()
-export class EmailAccountService {
+export class EmailService {
   private readonly moduleCode = 'ElSve-';
-  private readonly logger = new Logger(EmailAccountService.name);
+  private readonly logger = new Logger(EmailService.name);
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly cache: CacheService,
     private readonly gateway: NotificationGateway,
   ) {}
 
@@ -191,7 +254,7 @@ export class EmailAccountService {
       where: { id: accountId, username },
     });
     if (!account)
-      throw new rrNotFoundException(`${this.moduleCode}EANF001`, {
+      throw new rrNotFoundException(`${this.moduleCode}EANF002`, {
         message: 'Email account not found',
       });
 
@@ -218,68 +281,33 @@ export class EmailAccountService {
       });
     }
 
-    // 1. Thunderbird ISPDB lookup
-    try {
-      const url = `https://autoconfig.thunderbird.net/v1.1/${normalizedDomain}`;
-      const response = await fetch(url);
-      if (response.ok) {
-        const xmlText = await response.text();
+    // Check cache first
+    const cacheKey = CacheService.keys.emailAutoconfig(normalizedDomain);
+    const cached = await this.cache.get<EmailAutoconfigResult>(cacheKey);
+    if (cached) return cached;
 
-        const imapMatch = xmlText.match(
-          /<incomingServer\s+type="imap"[^>]*>([\s\S]*?)<\/incomingServer>/i,
-        );
-        const smtpMatch = xmlText.match(
-          /<outgoingServer\s+type="smtp"[^>]*>([\s\S]*?)<\/outgoingServer>/i,
-        );
-
-        if (imapMatch && smtpMatch) {
-          const extractTag = (block: string, tag: string): string => {
-            const match = block.match(
-              new RegExp(`<${tag}>([\\s\\S]*?)<\/${tag}>`, 'i'),
-            );
-            return match ? match[1].trim() : '';
-          };
-
-          const imapBlock = imapMatch[1];
-          const imapHost = extractTag(imapBlock, 'hostname');
-          const imapPortVal = extractTag(imapBlock, 'port');
-          const imapSecureType = extractTag(imapBlock, 'socketType');
-
-          const smtpBlock = smtpMatch[1];
-          const smtpHost = extractTag(smtpBlock, 'hostname');
-          const smtpPortVal = extractTag(smtpBlock, 'port');
-          const smtpSecureType = extractTag(smtpBlock, 'socketType');
-
-          if (imapHost && smtpHost) {
-            return {
-              imapHost,
-              imapPort: imapPortVal ? parseInt(imapPortVal, 10) : 993,
-              imapSecure: imapSecureType.toUpperCase() === 'SSL',
-              smtpHost,
-              smtpPort: smtpPortVal ? parseInt(smtpPortVal, 10) : 465,
-              smtpSecure: smtpSecureType.toUpperCase() === 'SSL',
-            };
-          }
-        }
-      }
-    } catch (error) {
-      // Fail silently to proceed to DNS/MX fallback
+    // 1. Thunderbird ISPDB lookup for the domain directly
+    const directConfig = await fetchThunderbirdConfig(normalizedDomain);
+    if (directConfig) {
+      await this.cache.set(cacheKey, directConfig, 86400); // 24h TTL
+      return directConfig;
     }
 
-    // 2. DNS MX checks
+    // 2. DNS MX records - check known providers first, then fall back to ISPDB lookup for the MX host domain
     try {
       const mxRecords = await resolveMx(normalizedDomain);
       if (mxRecords && mxRecords.length > 0) {
         mxRecords.sort((a, b) => a.priority - b.priority);
 
         for (const record of mxRecords) {
-          const exchange = record.exchange.toLowerCase();
+          const exchange = record.exchange.toLowerCase().replace(/\.$/, '');
 
+          // Known provider fast-paths
           if (
             isDomainOrSubdomain(exchange, 'google.com') ||
             isDomainOrSubdomain(exchange, 'googlemail.com')
           ) {
-            return {
+            const result: EmailAutoconfigResult = {
               imapHost: 'imap.gmail.com',
               imapPort: 993,
               imapSecure: true,
@@ -287,6 +315,8 @@ export class EmailAccountService {
               smtpPort: 465,
               smtpSecure: true,
             };
+            await this.cache.set(cacheKey, result, 86400);
+            return result;
           }
 
           if (
@@ -294,7 +324,7 @@ export class EmailAccountService {
             isDomainOrSubdomain(exchange, 'mail.protection.outlook.com') ||
             isDomainOrSubdomain(exchange, 'lync.com')
           ) {
-            return {
+            const result: EmailAutoconfigResult = {
               imapHost: 'outlook.office365.com',
               imapPort: 993,
               imapSecure: true,
@@ -302,41 +332,32 @@ export class EmailAccountService {
               smtpPort: 587,
               smtpSecure: false,
             };
+            await this.cache.set(cacheKey, result, 86400);
+            return result;
           }
 
-          if (isDomainOrSubdomain(exchange, 'purelymail.com')) {
-            return {
-              imapHost: 'imap.purelymail.com',
-              imapPort: 993,
-              imapSecure: true,
-              smtpHost: 'smtp.purelymail.com',
-              smtpPort: 465,
-              smtpSecure: true,
-            };
-          }
-
-          if (
-            isDomainOrSubdomain(exchange, 'zoho.com') ||
-            isDomainOrSubdomain(exchange, 'zoho.eu')
-          ) {
-            return {
-              imapHost: 'imap.zoho.com',
-              imapPort: 993,
-              imapSecure: true,
-              smtpHost: 'smtp.zoho.com',
-              smtpPort: 465,
-              smtpSecure: true,
-            };
+          // For all other MX hosts: extract the base domain and query Thunderbird ISPDB
+          // e.g. "mailserver.purelymail.com" → "purelymail.com"
+          const parts = exchange.split('.');
+          if (parts.length >= 2) {
+            const mxBaseDomain = parts.slice(-2).join('.');
+            if (mxBaseDomain !== normalizedDomain) {
+              const mxConfig = await fetchThunderbirdConfig(mxBaseDomain);
+              if (mxConfig) {
+                await this.cache.set(cacheKey, mxConfig, 86400);
+                return mxConfig;
+              }
+            }
           }
         }
       }
     } catch (dnsError) {
-      // Fail silently to explicit checks and generic guess
+      // Fail silently to known domain list and generic guess
     }
 
     // 3. Known domain mappings
     if (normalizedDomain === 'gmail.com') {
-      return {
+      const result: EmailAutoconfigResult = {
         imapHost: 'imap.gmail.com',
         imapPort: 993,
         imapSecure: true,
@@ -344,13 +365,15 @@ export class EmailAccountService {
         smtpPort: 465,
         smtpSecure: true,
       };
+      await this.cache.set(cacheKey, result, 86400);
+      return result;
     }
     if (
       normalizedDomain === 'outlook.com' ||
       normalizedDomain === 'hotmail.com' ||
       normalizedDomain.endsWith('.live.com')
     ) {
-      return {
+      const result: EmailAutoconfigResult = {
         imapHost: 'outlook.office365.com',
         imapPort: 993,
         imapSecure: true,
@@ -358,9 +381,11 @@ export class EmailAccountService {
         smtpPort: 587,
         smtpSecure: false,
       };
+      await this.cache.set(cacheKey, result, 86400);
+      return result;
     }
     if (normalizedDomain === 'yahoo.com') {
-      return {
+      const result: EmailAutoconfigResult = {
         imapHost: 'imap.mail.yahoo.com',
         imapPort: 993,
         imapSecure: true,
@@ -368,9 +393,11 @@ export class EmailAccountService {
         smtpPort: 465,
         smtpSecure: true,
       };
+      await this.cache.set(cacheKey, result, 86400);
+      return result;
     }
     if (normalizedDomain === 'purelymail.com') {
-      return {
+      const result: EmailAutoconfigResult = {
         imapHost: 'imap.purelymail.com',
         imapPort: 993,
         imapSecure: true,
@@ -378,9 +405,11 @@ export class EmailAccountService {
         smtpPort: 465,
         smtpSecure: true,
       };
+      await this.cache.set(cacheKey, result, 86400);
+      return result;
     }
     if (normalizedDomain === 'zoho.com') {
-      return {
+      const result: EmailAutoconfigResult = {
         imapHost: 'imap.zoho.com',
         imapPort: 993,
         imapSecure: true,
@@ -388,10 +417,12 @@ export class EmailAccountService {
         smtpPort: 465,
         smtpSecure: true,
       };
+      await this.cache.set(cacheKey, result, 86400);
+      return result;
     }
 
     // 4. Generic Guess
-    return {
+    const result: EmailAutoconfigResult = {
       imapHost: `imap.${normalizedDomain}`,
       imapPort: 993,
       imapSecure: true,
@@ -399,6 +430,7 @@ export class EmailAccountService {
       smtpPort: 465,
       smtpSecure: true,
     };
+    return result;
   }
 
   async getFolderMessages(
@@ -412,7 +444,7 @@ export class EmailAccountService {
       where: { id: accountId, username },
     });
     if (!account)
-      throw new rrNotFoundException(`${this.moduleCode}EANF001`, {
+      throw new rrNotFoundException(`${this.moduleCode}EANF003`, {
         message: 'Email account not found',
       });
 
@@ -463,7 +495,7 @@ export class EmailAccountService {
       where: { id: accountId, username },
     });
     if (!account)
-      throw new rrNotFoundException(`${this.moduleCode}EANF001`, {
+      throw new rrNotFoundException(`${this.moduleCode}EANF004`, {
         message: 'Email account not found',
       });
 
@@ -503,7 +535,7 @@ export class EmailAccountService {
       where: { id: accountId, username },
     });
     if (!account)
-      throw new rrNotFoundException(`${this.moduleCode}EANF001`, {
+      throw new rrNotFoundException(`${this.moduleCode}EANF005`, {
         message: 'Email account not found',
       });
 
@@ -511,7 +543,7 @@ export class EmailAccountService {
       where: { id: messageId, userEmailAccountId: accountId },
     });
     if (!message)
-      throw new rrNotFoundException(`${this.moduleCode}MNF001`, {
+      throw new rrNotFoundException(`${this.moduleCode}MNF002`, {
         message: 'Message not found',
       });
 
@@ -559,7 +591,7 @@ export class EmailAccountService {
       where: { id: accountId, username },
     });
     if (!account)
-      throw new rrNotFoundException(`${this.moduleCode}EANF001`, {
+      throw new rrNotFoundException(`${this.moduleCode}EANF006`, {
         message: 'Email account not found',
       });
 
@@ -567,7 +599,7 @@ export class EmailAccountService {
       where: { id: messageId, userEmailAccountId: accountId },
     });
     if (!message)
-      throw new rrNotFoundException(`${this.moduleCode}MNF001`, {
+      throw new rrNotFoundException(`${this.moduleCode}MNF003`, {
         message: 'Message not found',
       });
 
@@ -618,7 +650,7 @@ export class EmailAccountService {
       where: { id: accountId, username },
     });
     if (!account)
-      throw new rrNotFoundException(`${this.moduleCode}EANF001`, {
+      throw new rrNotFoundException(`${this.moduleCode}EANF007`, {
         message: 'Email account not found',
       });
 
@@ -693,7 +725,7 @@ export class EmailAccountService {
       where: { id: accountId, username },
     });
     if (!account)
-      throw new rrNotFoundException(`${this.moduleCode}EANF001`, {
+      throw new rrNotFoundException(`${this.moduleCode}EANF008`, {
         message: 'Email account not found',
       });
 
@@ -935,7 +967,7 @@ export class EmailAccountService {
       where: { id: accountId, username },
     });
     if (!account) {
-      throw new rrNotFoundException(`${this.moduleCode}EANF001`, {
+      throw new rrNotFoundException(`${this.moduleCode}EANF009`, {
         message: 'Email account not found',
       });
     }
@@ -1220,7 +1252,7 @@ export class EmailAccountService {
       where: { id, username },
     });
     if (!template)
-      throw new rrNotFoundException(`${this.moduleCode}CRNF001`, {
+      throw new rrNotFoundException(`${this.moduleCode}CRNF002`, {
         message: 'Canned response not found',
       });
 

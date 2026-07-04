@@ -14,25 +14,23 @@ import {
 } from '@nestjs/common';
 import type { Response as ExpressResponse } from 'express';
 import { AuthGuard } from '../../common/guards/auth/auth.guard';
-import {
-  EmailAccountService,
-  EmailAutoconfigResult,
-} from './email-account.service';
+import { EmailService, EmailAutoconfigResult } from './email.service';
 import { EmailSyncService } from './email-sync.service';
-import { EmailAccountDto } from './dto/email-account.dto';
-import { SendEmailDto } from './dto/send-email.dto';
+import { EmailAccountDto, SendEmailDto } from './email.dto';
 
 @Controller('/emails')
 @UseGuards(AuthGuard)
-export class EmailAccountController {
+export class EmailController {
   constructor(
-    private readonly emailAccountService: EmailAccountService,
+    private readonly emailService: EmailService,
     private readonly emailSyncService: EmailSyncService,
   ) {}
 
+  // ─────────────────────────── ACCOUNTS (Collection) ───────────────────────────
+
   @Get()
   async getEmailAccounts(@Req() req: any): Promise<any[]> {
-    return this.emailAccountService.getEmailAccounts(req.user.username);
+    return this.emailService.getEmailAccounts(req.user.username);
   }
 
   @Post()
@@ -40,7 +38,7 @@ export class EmailAccountController {
     @Req() req: any,
     @Body() body: EmailAccountDto,
   ): Promise<any> {
-    return this.emailAccountService.addEmailAccount(req.user.username, body);
+    return this.emailService.addEmailAccount(req.user.username, body);
   }
 
   @Put(':id')
@@ -49,11 +47,7 @@ export class EmailAccountController {
     @Param('id') id: string,
     @Body() body: EmailAccountDto,
   ): Promise<any> {
-    return this.emailAccountService.updateEmailAccount(
-      req.user.username,
-      id,
-      body,
-    );
+    return this.emailService.updateEmailAccount(req.user.username, id, body);
   }
 
   @Delete(':id')
@@ -61,8 +55,10 @@ export class EmailAccountController {
     @Req() req: any,
     @Param('id') id: string,
   ): Promise<{ success: boolean }> {
-    return this.emailAccountService.deleteEmailAccount(req.user.username, id);
+    return this.emailService.deleteEmailAccount(req.user.username, id);
   }
+
+  // ─────────────────────────── CANNED RESPONSES ───────────────────────────
 
   @Get('canned-responses')
   async getCannedResponses(
@@ -72,7 +68,7 @@ export class EmailAccountController {
   ): Promise<any[]> {
     const pageNum = page ? parseInt(page, 10) : undefined;
     const limitNum = limit ? parseInt(limit, 10) : undefined;
-    return this.emailAccountService.getCannedResponses(
+    return this.emailService.getCannedResponses(
       req.user.username,
       pageNum,
       limitNum,
@@ -84,10 +80,7 @@ export class EmailAccountController {
     @Req() req: any,
     @Body() body: { name: string; subject?: string; bodyText: string },
   ): Promise<any> {
-    return this.emailAccountService.createCannedResponse(
-      req.user.username,
-      body,
-    );
+    return this.emailService.createCannedResponse(req.user.username, body);
   }
 
   @Put('canned-responses/:id')
@@ -96,11 +89,7 @@ export class EmailAccountController {
     @Param('id') id: string,
     @Body() body: { name: string; subject?: string; bodyText: string },
   ): Promise<any> {
-    return this.emailAccountService.updateCannedResponse(
-      req.user.username,
-      id,
-      body,
-    );
+    return this.emailService.updateCannedResponse(req.user.username, id, body);
   }
 
   @Delete('canned-responses/:id')
@@ -108,17 +97,35 @@ export class EmailAccountController {
     @Req() req: any,
     @Param('id') id: string,
   ): Promise<{ success: boolean }> {
-    return this.emailAccountService.deleteCannedResponse(req.user.username, id);
+    return this.emailService.deleteCannedResponse(req.user.username, id);
   }
+
+  // ─────────────────────────── AUTOCONFIG ───────────────────────────
 
   @Get('autoconfig/:domain')
   async fetchEmailAutoconfig(
     @Param('domain') domain: string,
   ): Promise<EmailAutoconfigResult> {
-    return this.emailAccountService.fetchEmailAutoconfig(domain);
+    return this.emailService.fetchEmailAutoconfig(domain);
   }
 
-  // --- Linked Folder & Message Queries ---
+  // ─────────────────────────── ATTACHMENTS ───────────────────────────
+
+  @Get('attachments/:attachmentId')
+  async downloadAttachment(
+    @Param('attachmentId') attachmentId: string,
+    @Response({ passthrough: true }) res: ExpressResponse,
+  ): Promise<StreamableFile> {
+    const attach = await this.emailService.getAttachment(attachmentId);
+    res.set({
+      'Content-Type': attach.contentType,
+      'Content-Disposition': `attachment; filename="${encodeURIComponent(attach.filename)}"`,
+      'Content-Length': attach.size,
+    });
+    return new StreamableFile(attach.content);
+  }
+
+  // ─────────────────────────── ACCOUNT MESSAGES (Singleton) ───────────────────────────
 
   @Get('unified/folders/:folder/messages')
   async getUnifiedFolderMessages(
@@ -129,7 +136,7 @@ export class EmailAccountController {
   ): Promise<any[]> {
     const pageNum = page ? parseInt(page, 10) : undefined;
     const limitNum = limit ? parseInt(limit, 10) : undefined;
-    return this.emailAccountService.getUnifiedFolderMessages(
+    return this.emailService.getUnifiedFolderMessages(
       req.user.username,
       folder,
       pageNum,
@@ -147,7 +154,7 @@ export class EmailAccountController {
   ): Promise<any[]> {
     const pageNum = page ? parseInt(page, 10) : undefined;
     const limitNum = limit ? parseInt(limit, 10) : undefined;
-    return this.emailAccountService.getFolderMessages(
+    return this.emailService.getFolderMessages(
       req.user.username,
       accountId,
       folder,
@@ -162,7 +169,7 @@ export class EmailAccountController {
     @Param('accountId') accountId: string,
     @Param('messageId') messageId: string,
   ): Promise<any> {
-    return this.emailAccountService.getMessageDetail(
+    return this.emailService.getMessageDetail(
       req.user.username,
       accountId,
       messageId,
@@ -176,7 +183,7 @@ export class EmailAccountController {
     @Param('messageId') messageId: string,
     @Body() body: { read?: boolean; flagged?: boolean; folder?: string },
   ): Promise<any> {
-    return this.emailAccountService.updateMessageStatus(
+    return this.emailService.updateMessageStatus(
       req.user.username,
       accountId,
       messageId,
@@ -190,7 +197,7 @@ export class EmailAccountController {
     @Param('accountId') accountId: string,
     @Param('messageId') messageId: string,
   ): Promise<{ success: boolean }> {
-    return this.emailAccountService.deleteMessage(
+    return this.emailService.deleteMessage(
       req.user.username,
       accountId,
       messageId,
@@ -209,7 +216,7 @@ export class EmailAccountController {
       folder?: string;
     },
   ): Promise<{ success: boolean }> {
-    return this.emailAccountService.bulkUpdateMessageStatus(
+    return this.emailService.bulkUpdateMessageStatus(
       req.user.username,
       accountId,
       body.messageIds,
@@ -223,7 +230,7 @@ export class EmailAccountController {
     @Param('accountId') accountId: string,
     @Body() body: { messageIds: string[] },
   ): Promise<{ success: boolean }> {
-    return this.emailAccountService.bulkDeleteMessages(
+    return this.emailService.bulkDeleteMessages(
       req.user.username,
       accountId,
       body.messageIds,
@@ -236,11 +243,7 @@ export class EmailAccountController {
     @Param('accountId') accountId: string,
     @Body() body: SendEmailDto,
   ): Promise<any> {
-    return this.emailAccountService.sendEmail(
-      req.user.username,
-      accountId,
-      body,
-    );
+    return this.emailService.sendEmail(req.user.username, accountId, body);
   }
 
   @Post(':accountId/sync')
@@ -250,19 +253,5 @@ export class EmailAccountController {
   ): Promise<{ success: boolean }> {
     await this.emailSyncService.syncAccount(accountId);
     return { success: true };
-  }
-
-  @Get('attachments/:attachmentId')
-  async downloadAttachment(
-    @Param('attachmentId') attachmentId: string,
-    @Response({ passthrough: true }) res: ExpressResponse,
-  ): Promise<StreamableFile> {
-    const attach = await this.emailAccountService.getAttachment(attachmentId);
-    res.set({
-      'Content-Type': attach.contentType,
-      'Content-Disposition': `attachment; filename="${encodeURIComponent(attach.filename)}"`,
-      'Content-Length': attach.size,
-    });
-    return new StreamableFile(attach.content);
   }
 }

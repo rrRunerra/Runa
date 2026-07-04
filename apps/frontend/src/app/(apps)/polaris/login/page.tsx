@@ -42,7 +42,9 @@ export default function Page() {
   const [selectedDeviceId, setSelectedDeviceId] = useState("");
 
   // Login Code States
-  const [loginCodeState, setLoginCodeState] = useState<"none" | "generating" | "code" | "error">("none");
+  const [loginCodeState, setLoginCodeState] = useState<
+    "none" | "generating" | "code" | "error"
+  >("none");
   const [generatedCode, setGeneratedCode] = useState<string>("");
   const pollingRef = React.useRef<NodeJS.Timeout | null>(null);
 
@@ -558,7 +560,10 @@ export default function Page() {
     });
 
     if (res?.error) {
-      console.error("[Login] MFA completeLoginWithSuccessToken signIn credentials error:", res.error);
+      console.error(
+        "[Login] MFA completeLoginWithSuccessToken signIn credentials error:",
+        res.error,
+      );
       setMessage(`❌ Session establishment failed: ${res.error}`);
       setLoading(false);
     } else if (res?.ok) {
@@ -669,12 +674,15 @@ export default function Page() {
     }
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login-code/generate`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/login-code/generate`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
         },
-      });
+      );
 
       if (!res.ok) {
         throw new Error("Failed to generate code");
@@ -707,7 +715,9 @@ export default function Page() {
 
     pollingRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login-code/status?code=${code}`);
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/auth/login-code/status?code=${code}`,
+        );
         if (!res.ok) return;
 
         const data = await res.json();

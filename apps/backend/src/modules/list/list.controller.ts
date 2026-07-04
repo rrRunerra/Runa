@@ -12,7 +12,7 @@ import {
 import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { Public } from 'src/common/decorators/public.decorator';
 import { ListService } from './list.service';
-import ListEntity from './entities/ListEntity';
+import ListEntity from './list.entities';
 import { $Enums } from '@runa/database';
 
 @Controller('list')
@@ -195,14 +195,14 @@ export class ListController {
     });
   }
 
-  @Get('/movie/entry/:tvdbId')
+  @Get('/movie/entry/:movieId')
   public async getMovieListEntry(
-    @Param('tvdbId') tvdbId: string,
+    @Param('movieId') movieId: string,
     @Req() req: any,
   ): Promise<any> {
     return this.listService.getMovieListEntry(
       req.user.username,
-      Number(tvdbId),
+      Number(movieId),
     );
   }
 
@@ -211,7 +211,7 @@ export class ListController {
     @Req() req: any,
     @Body()
     body: {
-      tvdbId: number;
+      movieId: number;
       status?: $Enums.MovieListStatus;
       score?: number;
       startDate?: number;
@@ -225,12 +225,12 @@ export class ListController {
     return this.listService.upsertMovieList(req.user.username, body);
   }
 
-  @Delete('/movie/entry/:tvdbId')
+  @Delete('/movie/entry/:movieId')
   public async deleteMovieListEntry(
-    @Param('tvdbId') tvdbId: string,
+    @Param('movieId') movieId: string,
     @Req() req: any,
   ): Promise<{ success: boolean; message: string; error?: any }> {
-    return this.listService.deleteMovieList(req.user.username, Number(tvdbId));
+    return this.listService.deleteMovieList(req.user.username, Number(movieId));
   }
 
   // ─────────────────────────── TV ───────────────────────────
@@ -263,12 +263,12 @@ export class ListController {
     });
   }
 
-  @Get('/tv/entry/:tvdbId')
+  @Get('/tv/entry/:tvId')
   public async getTvListEntry(
-    @Param('tvdbId') tvdbId: string,
+    @Param('tvId') tvId: string,
     @Req() req: any,
   ): Promise<any> {
-    return this.listService.getTvListEntry(req.user.username, Number(tvdbId));
+    return this.listService.getTvListEntry(req.user.username, Number(tvId));
   }
 
   @Post('/tv/entry/save')
@@ -276,7 +276,7 @@ export class ListController {
     @Req() req: any,
     @Body()
     body: {
-      tvdbId: number;
+      tvId: number;
       status?: $Enums.TvListStatus;
       score?: number;
       startDate?: number;
@@ -291,12 +291,12 @@ export class ListController {
     return this.listService.upsertTvList(req.user.username, body);
   }
 
-  @Delete('/tv/entry/:tvdbId')
+  @Delete('/tv/entry/:tvId')
   public async deleteTvListEntry(
-    @Param('tvdbId') tvdbId: string,
+    @Param('tvId') tvId: string,
     @Req() req: any,
   ): Promise<{ success: boolean; message: string; error?: any }> {
-    return this.listService.deleteTvList(req.user.username, Number(tvdbId));
+    return this.listService.deleteTvList(req.user.username, Number(tvId));
   }
 
   // ─────────────────────────── GAME ───────────────────────────
@@ -449,29 +449,29 @@ export class ListController {
     );
   }
 
-  @Post('/tv/entry/:tvdbId/episode')
+  @Post('/tv/entry/:tvId/episode')
   public async toggleEpisode(
-    @Param('tvdbId') tvdbId: string,
+    @Param('tvId') tvId: string,
     @Req() req: any,
     @Body() body: { seasonNum: number; episodeNum: number },
   ): Promise<any> {
     return this.listService.toggleEpisodeWatched(
       req.user.username,
-      Number(tvdbId),
+      Number(tvId),
       body.seasonNum,
       body.episodeNum,
     );
   }
 
-  @Post('/tv/entry/:tvdbId/season')
+  @Post('/tv/entry/:tvId/season')
   public async toggleSeason(
-    @Param('tvdbId') tvdbId: string,
+    @Param('tvId') tvId: string,
     @Req() req: any,
     @Body() body: { seasonNum: number; episodes: any[]; watched: boolean },
   ): Promise<any> {
     return this.listService.toggleSeasonWatched(
       req.user.username,
-      Number(tvdbId),
+      Number(tvId),
       body.seasonNum,
       body.episodes,
       body.watched,

@@ -3,10 +3,15 @@ import { NotFoundException, ForbiddenException } from '@nestjs/common';
 import { ListService } from './list.service';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { StatsService } from '../stats/stats.service';
-import { ConnectionsManager } from './connections/connections.manager';
+import { ListExternal } from './list.external';
 
-// Mock database $Enums
+// Mock database $Enums and prisma client
 jest.mock('@runa/database', () => ({
+  prisma: {
+    $extends: jest.fn(() => ({})),
+    $connect: jest.fn().mockResolvedValue(undefined),
+    $disconnect: jest.fn().mockResolvedValue(undefined),
+  },
   $Enums: {
     AnimeListStatus: {
       WATCHING: 'WATCHING',
@@ -146,7 +151,7 @@ describe('ListService', () => {
       providers: [
         ListService,
         { provide: PrismaService, useValue: mockPrisma },
-        { provide: ConnectionsManager, useValue: mockConnectionsManager },
+        { provide: ListExternal, useValue: mockConnectionsManager },
         { provide: StatsService, useValue: mockStatsService },
       ],
     }).compile();

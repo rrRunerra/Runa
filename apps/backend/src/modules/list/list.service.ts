@@ -13,8 +13,8 @@ import { MovieUpdateData, TvUpdateData } from '@runa/connections';
 
 import { PrismaService } from '../../providers/database/prisma.service';
 import { StatsService } from '../stats/stats.service';
-import { ConnectionsManager } from './connections/connections.manager';
-import ListEntity from './entities/ListEntity';
+import { ListExternal } from './list.external';
+import ListEntity from './list.entities';
 
 export interface ListQueryOptions {
   limit?: number;
@@ -34,7 +34,7 @@ export class ListService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly connectionsManager: ConnectionsManager,
+    private readonly connectionsManager: ListExternal,
     private readonly statsService: StatsService,
   ) {}
 
@@ -945,7 +945,7 @@ export class ListService {
 
   private async updateTvConnections(
     username: string,
-    tvdbId: number,
+    tvId: number,
     connections: any,
     status?: string,
     score?: number,
@@ -959,9 +959,9 @@ export class ListService {
     // Fetch watched episodes to sync progress
     const listEntry = await this.prisma.client.aquilaTvUserList.findUnique({
       where: {
-        username_tvdbId: {
+        username_tvId: {
           username: username.toLowerCase(),
-          tvdbId,
+          tvId,
         },
       },
       include: {
@@ -1080,7 +1080,7 @@ export class ListService {
         skip: query?.offset ?? 0,
         orderBy: this.getMovieOrderBy(query?.sort),
         select: {
-          tvdbId: true,
+          movieId: true,
           status: true,
           score: true,
           updatedAt: true,
@@ -1099,7 +1099,7 @@ export class ListService {
     ]);
 
     const mappedList: ListEntity[] = list.map((item) => ({
-      id: item.tvdbId,
+      id: item.movieId,
       title: item.movie.titleEnglish ?? item.movie.titleRomaji ?? '',
       score: item.score,
       progress: item.status === 'COMPLETED' ? 1 : 0,
@@ -1116,12 +1116,12 @@ export class ListService {
     return { entries: mappedList, counts };
   }
 
-  public async getMovieListEntry(username: string, tvdbId: number) {
+  public async getMovieListEntry(username: string, movieId: number) {
     const out = await this.prisma.client.aquilaMovieUserList.findUnique({
       where: {
-        username_tvdbId: {
+        username_movieId: {
           username: username.toLowerCase(),
-          tvdbId,
+          movieId,
         },
       },
     });
@@ -1136,7 +1136,7 @@ export class ListService {
   public async upsertMovieList(
     username: string,
     body: {
-      tvdbId: number;
+      movieId: number;
       status?: $Enums.MovieListStatus;
       score?: number;
       startDate?: number;
@@ -1157,9 +1157,9 @@ export class ListService {
 
       await this.prisma.client.aquilaMovieUserList.upsert({
         where: {
-          username_tvdbId: {
+          username_movieId: {
             username: username.toLowerCase(),
-            tvdbId: body.tvdbId,
+            movieId: body.movieId,
           },
         },
         update: {
@@ -1173,7 +1173,7 @@ export class ListService {
         },
         create: {
           username: username.toLowerCase(),
-          tvdbId: body.tvdbId,
+          movieId: body.movieId,
           status: body.status,
           score: body.score,
           startDate: body.startDate,
@@ -1188,7 +1188,7 @@ export class ListService {
       if (body.updateConnection) {
         await this.updateMovieConnections(
           username.toLowerCase(),
-          body.tvdbId,
+          body.movieId,
           body.connections || {},
           body.status,
           body.score,
@@ -1218,23 +1218,23 @@ export class ListService {
 
   public async deleteMovieList(
     username: string,
-    tvdbId: number,
+    movieId: number,
   ): Promise<{ success: boolean; message: string; error?: any }> {
     try {
       const entry = await this.prisma.client.aquilaMovieUserList.findUnique({
         where: {
-          username_tvdbId: {
+          username_movieId: {
             username: username.toLowerCase(),
-            tvdbId,
+            movieId,
           },
         },
       });
 
       await this.prisma.client.aquilaMovieUserList.delete({
         where: {
-          username_tvdbId: {
+          username_movieId: {
             username: username.toLowerCase(),
-            tvdbId,
+            movieId,
           },
         },
       });
@@ -1342,7 +1342,7 @@ export class ListService {
         skip: query?.offset ?? 0,
         orderBy: this.getTvOrderBy(query?.sort),
         select: {
-          tvdbId: true,
+          tvId: true,
           status: true,
           score: true,
           updatedAt: true,
@@ -1377,7 +1377,7 @@ export class ListService {
       }
 
       return {
-        id: item.tvdbId,
+        id: item.tvId,
         title: item.tv.titleEnglish ?? item.tv.titleRomaji ?? '',
         score: item.score,
         progress: item._count.watchedEpisodes,
@@ -1395,12 +1395,12 @@ export class ListService {
     return { entries: mappedList, counts };
   }
 
-  public async getTvListEntry(username: string, tvdbId: number) {
+  public async getTvListEntry(username: string, tvId: number) {
     const out = await this.prisma.client.aquilaTvUserList.findUnique({
       where: {
-        username_tvdbId: {
+        username_tvId: {
           username: username.toLowerCase(),
-          tvdbId,
+          tvId,
         },
       },
       include: {
@@ -1418,7 +1418,7 @@ export class ListService {
   public async upsertTvList(
     username: string,
     body: {
-      tvdbId: number;
+      tvId: number;
       status?: $Enums.TvListStatus;
       score?: number;
       startDate?: number;
@@ -1440,9 +1440,9 @@ export class ListService {
 
       const listEntry = await this.prisma.client.aquilaTvUserList.upsert({
         where: {
-          username_tvdbId: {
+          username_tvId: {
             username: username.toLowerCase(),
-            tvdbId: body.tvdbId,
+            tvId: body.tvId,
           },
         },
         update: {
@@ -1456,7 +1456,7 @@ export class ListService {
         },
         create: {
           username: username.toLowerCase(),
-          tvdbId: body.tvdbId,
+          tvId: body.tvId,
           status: body.status,
           score: body.score,
           startDate: body.startDate,
@@ -1486,7 +1486,7 @@ export class ListService {
       if (body.updateConnection) {
         await this.updateTvConnections(
           username.toLowerCase(),
-          body.tvdbId,
+          body.tvId,
           body.connections || {},
           body.status,
           body.score,
@@ -1516,23 +1516,23 @@ export class ListService {
 
   public async deleteTvList(
     username: string,
-    tvdbId: number,
+    tvId: number,
   ): Promise<{ success: boolean; message: string; error?: any }> {
     try {
       const entry = await this.prisma.client.aquilaTvUserList.findUnique({
         where: {
-          username_tvdbId: {
+          username_tvId: {
             username: username.toLowerCase(),
-            tvdbId,
+            tvId,
           },
         },
       });
 
       await this.prisma.client.aquilaTvUserList.delete({
         where: {
-          username_tvdbId: {
+          username_tvId: {
             username: username.toLowerCase(),
-            tvdbId,
+            tvId,
           },
         },
       });

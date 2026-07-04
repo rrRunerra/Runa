@@ -17,8 +17,8 @@ export class MangaDetailDto {
 
 export class MangaRefreshDto {
   @Type(() => Number)
-  @IsDefined({ message: `AeDlDto-ICBE001: Id cannot be empty` })
-  @IsInt({ message: `AeDlDto-IMBAN001: Id must be a number` })
-  @Min(1, { message: `AeDlDto-ICBLTO001: Id cannot be less than one` })
+  @IsDefined({ message: `MaRhDto-ICBE001: Id cannot be empty` })
+  @IsInt({ message: `MaRhDto-IMBAN001: Id must be a number` })
+  @Min(1, { message: `MaRhDto-ICBLTO001: Id cannot be less than one` })
   id: number;
 }

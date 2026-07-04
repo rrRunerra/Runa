@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
-import { EmailAccountModule } from './modules/email-account/email-account.module';
+import { EmailModule } from './modules/email/email.module';
 import { PrismaModule } from './providers/database/prisma.module';
 import { CacheModule } from './providers/cache/cache.module';
 import { rrErrorModule } from './providers/error';
@@ -19,7 +19,7 @@ import { FavoriteModule } from './modules/favorite/favorite.module';
 import { FilesModule } from './modules/files/files.module';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { StatsModule } from './modules/stats/stats.module';
-import { PolarisModule } from './modules/polaris/polaris.module';
+import { BookmarksModule } from './modules/bookmarks/bookmarks.module';
 import { NotificationModule } from './modules/notification/notification.module';
 
 @Module({
@@ -36,7 +36,7 @@ import { NotificationModule } from './modules/notification/notification.module';
   imports: [
     UserModule,
     AuthModule,
-    EmailAccountModule,
+    EmailModule,
     PrismaModule,
     CacheModule,
     rrErrorModule,
@@ -51,7 +51,7 @@ import { NotificationModule } from './modules/notification/notification.module';
     FavoriteModule,
     FilesModule,
     StatsModule,
-    PolarisModule,
+    BookmarksModule,
     NotificationModule,
     ThrottlerModule.forRoot({
       throttlers: [

@@ -5,7 +5,7 @@ import { ListController } from './list.controller';
 import { RadarrSonarrController } from './radarr-sonarr.controller';
 import { PrismaModule } from '../../providers/database/prisma.module';
 import { ConnectionModule } from '../connection/connection.module';
-import { ConnectionsManager } from './connections/connections.manager';
+import { ListExternal } from './list.external';
 import { StatsModule } from '../stats/stats.module';
 import { MovieModule } from '../movie/movie.module';
 import { TvModule } from '../tv/tv.module';
@@ -15,7 +15,8 @@ import { TvModule } from '../tv/tv.module';
   controllers: [ListController, RadarrSonarrController],
   providers: [
     ListService,
-    ConnectionsManager,
+    { provide: 'ConnectionsManager', useClass: ListExternal },
+    ListExternal,
   ],
   exports: [ListService],
 })

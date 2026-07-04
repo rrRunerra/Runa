@@ -15,32 +15,30 @@ import {
 // --- User Creation ---
 
 export class CreateUserDto {
-  @IsEmail()
-  @IsNotEmpty()
-  @MaxLength(255, { message: 'Email must be at most 255 characters long' })
+  @IsEmail({}, { message: 'CeUrdto-EMBAVE001: Email must be a valid email' })
+  @IsNotEmpty({ message: 'CeUrdto-EMNBE001: Email must not be empty' })
+  @MaxLength(255, { message: 'CeUrdto-EMBALTC001: Email must be at most 255 characters long' })
   @Matches(/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/, {
-    message: 'Email must be lowercase and valid',
+    message: 'CeUrdto-EMBMLAV001: Email must be lowercase and valid',
   })
   email!: string;
 
-  @IsString()
-  @IsNotEmpty()
-  @MinLength(3, { message: 'Username must be at least 3 characters long' })
-  @MaxLength(32, { message: 'Username must be at most 32 characters long' })
+  @IsString({ message: 'CeUrdto-UMBAS001: Username must be a string' })
+  @IsNotEmpty({ message: 'CeUrdto-UMNBE001: Username must not be empty' })
+  @MinLength(3, { message: 'CeUrdto-UMBALTC001: Username must be at least 3 characters long' })
+  @MaxLength(32, { message: 'CeUrdto-UMBALTC002: Username must be at most 32 characters long' })
   @Matches(/^[a-z0-9_]+$/, {
-    message:
-      'Username must contain only lowercase letters, numbers, and underscores',
+    message: 'CeUrdto-UMMOCLLNAU001: Username must contain only lowercase letters, numbers, and underscores',
   })
   username!: string;
 
-  @IsString()
-  @MinLength(16, { message: 'Password must be at least 16 characters long' })
-  @MaxLength(64, { message: 'Password must be at most 64 characters long' })
+  @IsString({ message: 'CeUrdto-PMBAS001: Password must be a string' })
+  @MinLength(16, { message: 'CeUrdto-PMBALTC001: Password must be at least 16 characters long' })
+  @MaxLength(64, { message: 'CeUrdto-PMBALTC002: Password must be at most 64 characters long' })
   @Matches(
     /^(?=(?:.*[0-9]){2})(?=.*[A-Z])(?=.*[!@#$%^&*(),.?":{}|<>~'_\-+=/\\[\]\x60]).*$/,
     {
-      message:
-        'Password must contain at least 2 numbers, 1 uppercase letter, and 1 special character',
+      message: 'CeUrdto-PMBCA2N1UL1SC001: Password must contain at least 2 numbers, 1 uppercase letter, and 1 special character',
     },
   )
   password!: string;
@@ -49,45 +47,44 @@ export class CreateUserDto {
 // --- User Update ---
 
 export class UpdateUserDto {
-  @IsString()
+  @IsString({ message: 'UeUrdto-DNMBAS001: Display Name must be a string' })
   @IsOptional()
-  @MaxLength(64, { message: 'Display Name must be at most 64 characters long' })
+  @MaxLength(64, { message: 'UeUrdto-DNMBALTC001: Display Name must be at most 64 characters long' })
   displayName?: string;
 
-  @IsEmail()
+  @IsEmail({}, { message: 'UeUrdto-EMBAVE001: Email must be a valid email' })
   @IsOptional()
-  @MaxLength(255, { message: 'Email must be at most 255 characters long' })
+  @MaxLength(255, { message: 'UeUrdto-EMBALTC001: Email must be at most 255 characters long' })
   @Matches(/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/, {
-    message: 'Email must be lowercase and valid',
+    message: 'UeUrdto-EMBMLAV001: Email must be lowercase and valid',
   })
   email?: string;
 
-  @IsString()
+  @IsString({ message: 'UeUrdto-CPMBAS001: Current password must be a string' })
   @IsOptional()
   currentPassword?: string;
 
-  @IsString()
+  @IsString({ message: 'UeUrdto-NPMBAS001: New password must be a string' })
   @IsOptional()
-  @MinLength(16, { message: 'Password must be at least 16 characters long' })
-  @MaxLength(64, { message: 'Password must be at most 64 characters long' })
+  @MinLength(16, { message: 'UeUrdto-NPMBALTC001: New password must be at least 16 characters long' })
+  @MaxLength(64, { message: 'UeUrdto-NPMBALTC002: New password must be at most 64 characters long' })
   @Matches(
     /^(?=(?:.*[0-9]){2})(?=.*[A-Z])(?=.*[!@#$%^&*(),.?":{}|<>~'_\-+=/\\[\]\x60]).*$/,
     {
-      message:
-        'Password must contain at least 2 numbers, 1 uppercase letter, and 1 special character',
+      message: 'UeUrdto-NPMBCA2N1UL1SC001: New password must contain at least 2 numbers, 1 uppercase letter, and 1 special character',
     },
   )
   newPassword?: string;
 
-  @IsString()
+  @IsString({ message: 'UeUrdto-AUMBAS001: Avatar url must be a string' })
   @IsOptional()
   avatarUrl?: string;
 
-  @IsString()
+  @IsString({ message: 'UeUrdto-BUMBAS001: Banner url must be a string' })
   @IsOptional()
   bannerUrl?: string;
 
-  @IsString()
+  @IsString({ message: 'UeUrdto-SCBUMBAS001: Sidebar card background url must be a string' })
   @IsOptional()
   sidebarCardBackgroundUrl?: string;
 }
@@ -95,27 +92,27 @@ export class UpdateUserDto {
 // --- Privacy Settings ---
 
 export class PrivacySettingsDto {
-  @IsBoolean()
+  @IsBoolean({ message: 'PySgDto-PMBAB001: Profile must be a boolean' })
   @IsOptional()
   profile?: boolean;
 
-  @IsBoolean()
+  @IsBoolean({ message: 'PySgDto-ALMBAB001: Anime list must be a boolean' })
   @IsOptional()
   animeList?: boolean;
 
-  @IsBoolean()
+  @IsBoolean({ message: 'PySgDto-MLMBAB001: Manga list must be a boolean' })
   @IsOptional()
   mangaList?: boolean;
 
-  @IsBoolean()
+  @IsBoolean({ message: 'PySgDto-TLMBAB001: TV list must be a boolean' })
   @IsOptional()
   tvList?: boolean;
 
-  @IsBoolean()
+  @IsBoolean({ message: 'PySgDto-MLMBAB002: Movie list must be a boolean' })
   @IsOptional()
   movieList?: boolean;
 
-  @IsBoolean()
+  @IsBoolean({ message: 'PySgDto-CMBAB001: Connections must be a boolean' })
   @IsOptional()
   connections?: boolean;
 }
@@ -123,36 +120,36 @@ export class PrivacySettingsDto {
 // --- Profile Settings ---
 
 export class UpdateSettingsDto {
-  @IsObject()
-  @IsNotEmpty()
+  @IsObject({ message: 'UeSgDto-PMBAO001: Profile settings must be an object' })
+  @IsNotEmpty({ message: 'UeSgDto-PMNBE001: Profile settings must not be empty' })
   profileSettings!: Record<string, string | number | boolean | null>;
 }
 
 // --- MFA: TOTP ---
 
 export class EnableTotpDto {
-  @IsString()
-  @IsNotEmpty()
+  @IsString({ message: 'EeTpdto-CMBAS001: Code must be a string' })
+  @IsNotEmpty({ message: 'EeTpdto-CMNBE001: Code must not be empty' })
   code!: string;
 }
 
 // --- MFA: Email ---
 
 export class EnableEmailMfaDto {
-  @IsString()
-  @IsNotEmpty()
+  @IsString({ message: 'EeEMdto-CMBAS001: Code must be a string' })
+  @IsNotEmpty({ message: 'EeEMdto-CMNBE001: Code must not be empty' })
   code!: string;
 }
 
 // --- MFA: Passkey ---
 
 export class VerifyPasskeyDto {
-  @IsObject()
-  @IsNotEmpty()
+  @IsObject({ message: 'VyPkDto-RMBAO001: Response must be an object' })
+  @IsNotEmpty({ message: 'VyPkDto-RMNBE001: Response must not be empty' })
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   response!: Record<string, any>;
 
-  @IsString()
+  @IsString({ message: 'VyPkDto-NMBAS001: Name must be a string' })
   @IsOptional()
   name?: string;
 }
@@ -160,24 +157,24 @@ export class VerifyPasskeyDto {
 // --- Device Registration ---
 
 export class RegisterDeviceDto {
-  @IsString()
-  @IsNotEmpty()
+  @IsString({ message: 'RrDvdto-DNMBAS001: Device name must be a string' })
+  @IsNotEmpty({ message: 'RrDvdto-DNMNBE001: Device name must not be empty' })
   deviceName!: string;
 
-  @IsString()
+  @IsString({ message: 'RrDvdto-UAMBAS001: User agent must be a string' })
   @IsOptional()
   userAgent?: string;
 
-  @IsString()
-  @IsNotEmpty()
+  @IsString({ message: 'RrDvdto-IKMBAS001: Identity key must be a string' })
+  @IsNotEmpty({ message: 'RrDvdto-IKMNBE001: Identity key must not be empty' })
   identityKey!: string;
 
-  @IsString()
-  @IsNotEmpty()
+  @IsString({ message: 'RrDvdto-SPKMBAS001: Signed pre key must be a string' })
+  @IsNotEmpty({ message: 'RrDvdto-SPKMNBE001: Signed pre key must not be empty' })
   signedPreKey!: string;
 
-  @IsArray()
-  @IsString({ each: true })
+  @IsArray({ message: 'RrDvdto-PMBAA001: Pre keys must be an array' })
+  @IsString({ each: true, message: 'RrDvdto-PKMBAS001: Pre key must be a string' })
   @IsOptional()
   preKeys?: string[];
 }
@@ -185,34 +182,34 @@ export class RegisterDeviceDto {
 // --- Param DTOs ---
 
 export class IdParamDto {
-  @IsString()
-  @IsNotEmpty()
+  @IsString({ message: 'IdPmdto-IMBAS001: Id must be a string' })
+  @IsNotEmpty({ message: 'IdPmdto-IMNBE001: Id must not be empty' })
   id!: string;
 }
 
 export class EmailParamDto {
-  @IsEmail()
-  @IsNotEmpty()
+  @IsEmail({}, { message: 'ElPmdto-EMBAVE001: Email must be a valid email' })
+  @IsNotEmpty({ message: 'ElPmdto-EMNBE001: Email must not be empty' })
   email!: string;
 }
 
 export class UsernameParamDto {
-  @IsString()
-  @IsNotEmpty()
+  @IsString({ message: 'UePmdto-UMBAS001: Username must be a string' })
+  @IsNotEmpty({ message: 'UePmdto-UMNBE001: Username must not be empty' })
   username!: string;
 }
 
 // --- API Key ---
 
 export class CreateApiKeyDto {
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(64, { message: 'Name must be at most 64 characters long' })
+  @IsString({ message: 'CeAKdto-NMBAS001: Name must be a string' })
+  @IsNotEmpty({ message: 'CeAKdto-NMNBE001: Name must not be empty' })
+  @MaxLength(64, { message: 'CeAKdto-NMBALTC001: Name must be at most 64 characters long' })
   name!: string;
 }
 
 export class RegenerateApiKeyDto {
-  @IsUUID()
-  @IsNotEmpty()
+  @IsUUID(undefined, { message: 'ReAKdto-IMBAU001: Id must be a UUID' })
+  @IsNotEmpty({ message: 'ReAKdto-IMNBE001: Id must not be empty' })
   id!: string;
 }

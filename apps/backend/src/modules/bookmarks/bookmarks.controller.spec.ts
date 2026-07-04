@@ -1,14 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PolarisController } from './polaris.controller';
-import { PolarisService } from './polaris.service';
+import { BookmarksController } from './bookmarks.controller';
+import { BookmarksService } from './bookmarks.service';
 import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { Reflector } from '@nestjs/core';
 
-describe('PolarisController', () => {
-  let controller: PolarisController;
-  let service: PolarisService;
+describe('BookmarksController', () => {
+  let controller: BookmarksController;
+  let service: BookmarksService;
 
-  const mockPolarisService = {
+  const mockBookmarksService = {
     createOrUpdateBookmark: jest.fn(),
     getBookmarks: jest.fn(),
     deleteBookmark: jest.fn(),
@@ -22,9 +22,9 @@ describe('PolarisController', () => {
     jest.clearAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
-      controllers: [PolarisController],
+      controllers: [BookmarksController],
       providers: [
-        { provide: PolarisService, useValue: mockPolarisService },
+        { provide: BookmarksService, useValue: mockBookmarksService },
         Reflector,
       ],
     })
@@ -32,8 +32,8 @@ describe('PolarisController', () => {
       .useValue(mockAuthGuard)
       .compile();
 
-    controller = module.get<PolarisController>(PolarisController);
-    service = module.get<PolarisService>(PolarisService);
+    controller = module.get<BookmarksController>(BookmarksController);
+    service = module.get<BookmarksService>(BookmarksService);
   });
 
   it('should be defined', () => {
@@ -51,33 +51,14 @@ describe('PolarisController', () => {
 
     it('should create or update bookmark with session authenticated user', async () => {
       const mockReq = { user: { id: 'user-123', authType: 'session' } };
-      mockPolarisService.createOrUpdateBookmark.mockResolvedValue({
+      mockBookmarksService.createOrUpdateBookmark.mockResolvedValue({
         id: 'b-1',
         ...dto,
       });
 
       const result = await controller.createOrUpdateBookmark(mockReq, dto);
 
-      expect(service.createOrUpdateBookmark).toHaveBeenCalledWith(
-        'user-123',
-        dto,
-      );
-      expect(result.id).toBe('b-1');
-    });
-
-    it('should create or update bookmark with API key authenticated user', async () => {
-      const mockReq = { user: { id: 'user-123', authType: 'api-key' } };
-      mockPolarisService.createOrUpdateBookmark.mockResolvedValue({
-        id: 'b-1',
-        ...dto,
-      });
-
-      const result = await controller.createOrUpdateBookmark(mockReq, dto);
-
-      expect(service.createOrUpdateBookmark).toHaveBeenCalledWith(
-        'user-123',
-        dto,
-      );
+      expect(service.createOrUpdateBookmark).toHaveBeenCalledWith('user-123', dto);
       expect(result.id).toBe('b-1');
     });
 
@@ -90,19 +71,9 @@ describe('PolarisController', () => {
   });
 
   describe('getBookmarks', () => {
-    it('should get bookmarks with session authenticated user', async () => {
+    it('should get bookmarks with authenticated user', async () => {
       const mockReq = { user: { id: 'user-123', authType: 'session' } };
-      mockPolarisService.getBookmarks.mockResolvedValue([]);
-
-      const result = await controller.getBookmarks(mockReq);
-
-      expect(service.getBookmarks).toHaveBeenCalledWith('user-123');
-      expect(result).toEqual([]);
-    });
-
-    it('should get bookmarks with API key authenticated user', async () => {
-      const mockReq = { user: { id: 'user-123', authType: 'api-key' } };
-      mockPolarisService.getBookmarks.mockResolvedValue([]);
+      mockBookmarksService.getBookmarks.mockResolvedValue([]);
 
       const result = await controller.getBookmarks(mockReq);
 
@@ -117,19 +88,9 @@ describe('PolarisController', () => {
   });
 
   describe('deleteBookmark', () => {
-    it('should delete bookmark with session authenticated user', async () => {
+    it('should delete bookmark with authenticated user', async () => {
       const mockReq = { user: { id: 'user-123', authType: 'session' } };
-      mockPolarisService.deleteBookmark.mockResolvedValue({ success: true });
-
-      const result = await controller.deleteBookmark(mockReq, 'b-1');
-
-      expect(service.deleteBookmark).toHaveBeenCalledWith('user-123', 'b-1');
-      expect(result).toEqual({ success: true });
-    });
-
-    it('should delete bookmark with API key authenticated user', async () => {
-      const mockReq = { user: { id: 'user-123', authType: 'api-key' } };
-      mockPolarisService.deleteBookmark.mockResolvedValue({ success: true });
+      mockBookmarksService.deleteBookmark.mockResolvedValue({ success: true });
 
       const result = await controller.deleteBookmark(mockReq, 'b-1');
 

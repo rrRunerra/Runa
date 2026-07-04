@@ -1,10 +1,16 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConnectionService } from '../../connection/connection.service';
-import { AnimeUpdateData, MangaUpdateData, MovieUpdateData, TvUpdateData, ConnectionCapability } from '@runa/connections';
+import { ConnectionService } from '../connection/connection.service';
+import {
+  AnimeUpdateData,
+  MangaUpdateData,
+  MovieUpdateData,
+  TvUpdateData,
+  ConnectionCapability,
+} from '@runa/connections';
 
 @Injectable()
-export class ConnectionsManager {
-  private readonly logger = new Logger(ConnectionsManager.name);
+export class ListExternal {
+  private readonly logger = new Logger(ListExternal.name);
 
   constructor(private readonly connectionService: ConnectionService) {}
 
@@ -17,10 +23,11 @@ export class ConnectionsManager {
     try {
       const provider = this.connectionService.getConnectionInstance(providerKey);
 
-      
       // Enforce capability tag check
       if (!provider.capabilities.includes(ConnectionCapability.ANIME)) {
-        this.logger.warn(`Provider '${providerKey}' does not support anime synchronization`);
+        this.logger.warn(
+          `Provider '${providerKey}' does not support anime synchronization`,
+        );
         return;
       }
 
@@ -28,7 +35,9 @@ export class ConnectionsManager {
         await provider.updateAnimeEntry(username, providerId, data);
       }
     } catch (err: any) {
-      this.logger.error(`Failed to sync anime for provider '${providerKey}': ${err.message}`);
+      this.logger.error(
+        `Failed to sync anime for provider '${providerKey}': ${err.message}`,
+      );
     }
   }
 
@@ -40,10 +49,12 @@ export class ConnectionsManager {
   ): Promise<void> {
     try {
       const provider = this.connectionService.getConnectionInstance(providerKey);
-      
+
       // Enforce capability tag check
       if (!provider.capabilities.includes(ConnectionCapability.MANGA)) {
-        this.logger.warn(`Provider '${providerKey}' does not support manga synchronization`);
+        this.logger.warn(
+          `Provider '${providerKey}' does not support manga synchronization`,
+        );
         return;
       }
 
@@ -51,7 +62,9 @@ export class ConnectionsManager {
         await provider.updateMangaEntry(username, providerId, data);
       }
     } catch (err: any) {
-      this.logger.error(`Failed to sync manga for provider '${providerKey}': ${err.message}`);
+      this.logger.error(
+        `Failed to sync manga for provider '${providerKey}': ${err.message}`,
+      );
     }
   }
 
@@ -66,7 +79,9 @@ export class ConnectionsManager {
 
       // Enforce capability tag check
       if (!provider.capabilities.includes(ConnectionCapability.MOVIES)) {
-        this.logger.warn(`Provider '${providerKey}' does not support movie synchronization`);
+        this.logger.warn(
+          `Provider '${providerKey}' does not support movie synchronization`,
+        );
         return;
       }
 
@@ -74,7 +89,9 @@ export class ConnectionsManager {
         await provider.updateMovieEntry(username, providerId, data);
       }
     } catch (err: any) {
-      this.logger.error(`Failed to sync movie for provider '${providerKey}': ${err.message}`);
+      this.logger.error(
+        `Failed to sync movie for provider '${providerKey}': ${err.message}`,
+      );
     }
   }
 
@@ -89,7 +106,9 @@ export class ConnectionsManager {
 
       // Enforce capability tag check
       if (!provider.capabilities.includes(ConnectionCapability.TV_SHOWS)) {
-        this.logger.warn(`Provider '${providerKey}' does not support TV show synchronization`);
+        this.logger.warn(
+          `Provider '${providerKey}' does not support TV show synchronization`,
+        );
         return;
       }
 
@@ -97,7 +116,9 @@ export class ConnectionsManager {
         await provider.updateTvEntry(username, providerId, data);
       }
     } catch (err: any) {
-      this.logger.error(`Failed to sync TV show for provider '${providerKey}': ${err.message}`);
+      this.logger.error(
+        `Failed to sync TV show for provider '${providerKey}': ${err.message}`,
+      );
     }
   }
 
@@ -110,7 +131,9 @@ export class ConnectionsManager {
       const provider = this.connectionService.getConnectionInstance(providerKey);
 
       if (!provider.capabilities.includes(ConnectionCapability.ANIME)) {
-        this.logger.warn(`Provider '${providerKey}' does not support anime synchronization`);
+        this.logger.warn(
+          `Provider '${providerKey}' does not support anime synchronization`,
+        );
         return;
       }
 
@@ -118,7 +141,9 @@ export class ConnectionsManager {
         await provider.deleteAnimeEntry(username, providerId);
       }
     } catch (err: any) {
-      this.logger.error(`Failed to delete anime for provider '${providerKey}': ${err.message}`);
+      this.logger.error(
+        `Failed to delete anime for provider '${providerKey}': ${err.message}`,
+      );
     }
   }
 
@@ -131,7 +156,9 @@ export class ConnectionsManager {
       const provider = this.connectionService.getConnectionInstance(providerKey);
 
       if (!provider.capabilities.includes(ConnectionCapability.MANGA)) {
-        this.logger.warn(`Provider '${providerKey}' does not support manga synchronization`);
+        this.logger.warn(
+          `Provider '${providerKey}' does not support manga synchronization`,
+        );
         return;
       }
 
@@ -139,7 +166,9 @@ export class ConnectionsManager {
         await provider.deleteMangaEntry(username, providerId);
       }
     } catch (err: any) {
-      this.logger.error(`Failed to delete manga for provider '${providerKey}': ${err.message}`);
+      this.logger.error(
+        `Failed to delete manga for provider '${providerKey}': ${err.message}`,
+      );
     }
   }
 
@@ -152,7 +181,9 @@ export class ConnectionsManager {
       const provider = this.connectionService.getConnectionInstance(providerKey);
 
       if (!provider.capabilities.includes(ConnectionCapability.MOVIES)) {
-        this.logger.warn(`Provider '${providerKey}' does not support movie synchronization`);
+        this.logger.warn(
+          `Provider '${providerKey}' does not support movie synchronization`,
+        );
         return;
       }
 
@@ -160,7 +191,9 @@ export class ConnectionsManager {
         await provider.deleteMovieEntry(username, providerId);
       }
     } catch (err: any) {
-      this.logger.error(`Failed to delete movie for provider '${providerKey}': ${err.message}`);
+      this.logger.error(
+        `Failed to delete movie for provider '${providerKey}': ${err.message}`,
+      );
     }
   }
 
@@ -173,7 +206,9 @@ export class ConnectionsManager {
       const provider = this.connectionService.getConnectionInstance(providerKey);
 
       if (!provider.capabilities.includes(ConnectionCapability.TV_SHOWS)) {
-        this.logger.warn(`Provider '${providerKey}' does not support TV show synchronization`);
+        this.logger.warn(
+          `Provider '${providerKey}' does not support TV show synchronization`,
+        );
         return;
       }
 
@@ -181,7 +216,9 @@ export class ConnectionsManager {
         await provider.deleteTvEntry(username, providerId);
       }
     } catch (err: any) {
-      this.logger.error(`Failed to delete TV show for provider '${providerKey}': ${err.message}`);
+      this.logger.error(
+        `Failed to delete TV show for provider '${providerKey}': ${err.message}`,
+      );
     }
   }
 }
