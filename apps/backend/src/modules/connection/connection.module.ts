@@ -7,6 +7,7 @@ import { MangaModule } from '../manga/manga.module';
 import { MovieModule } from '../movie/movie.module';
 import { TvModule } from '../tv/tv.module';
 import { StatsModule } from '../stats/stats.module';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { StatsModule } from '../stats/stats.module';
     MovieModule,
     TvModule,
     StatsModule,
+    NotificationModule,
   ],
   controllers: [ConnectionController],
   providers: [ConnectionService],

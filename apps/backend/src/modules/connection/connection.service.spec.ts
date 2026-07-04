@@ -6,6 +6,8 @@ import { AnimeService } from '../anime/anime.service';
 import { MangaService } from '../manga/manga.service';
 import { MovieService } from '../movie/movie.service';
 import { TvService } from '../tv/tv.service';
+import { StatsService } from '../stats/stats.service';
+import { NotificationService } from '../notification/notification.service';
 
 const mockProviderInstance = {
   capabilities: ['IMPORT_LIST'],
@@ -46,6 +48,9 @@ describe('ConnectionService', () => {
       update: jest.fn(),
       create: jest.fn(),
     },
+    user: {
+      findFirst: jest.fn(),
+    },
   };
 
   const mockPrisma = { client: mockPrismaClient };
@@ -54,10 +59,14 @@ describe('ConnectionService', () => {
   const mockMangaService = { ensureManga: jest.fn() };
   const mockMovieService = { ensureMovie: jest.fn() };
   const mockTvService = { ensureTv: jest.fn() };
+  const mockStatsService = { recalculate: jest.fn().mockResolvedValue(undefined) };
+  const mockNotificationService = { create: jest.fn().mockResolvedValue(undefined) };
 
   beforeEach(async () => {
     jest.clearAllMocks();
     global.fetch = jest.fn();
+    mockAnimeService.ensureAnime.mockResolvedValue({ id: 1 });
+    mockMangaService.ensureManga.mockResolvedValue({ id: 1 });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -67,6 +76,8 @@ describe('ConnectionService', () => {
         { provide: MangaService, useValue: mockMangaService },
         { provide: MovieService, useValue: mockMovieService },
         { provide: TvService, useValue: mockTvService },
+        { provide: StatsService, useValue: mockStatsService },
+        { provide: NotificationService, useValue: mockNotificationService },
       ],
     }).compile();
 
@@ -175,12 +186,31 @@ describe('ConnectionService', () => {
       service['loader'].getConnection = jest.fn().mockReturnValue(mockProviderInstance);
       mockPrismaClient.aquilaAnimeUserList.findUnique.mockResolvedValue(null);
       mockPrismaClient.aquilaAnimeUserList.create.mockResolvedValue({});
+      mockPrismaClient.user.findFirst.mockResolvedValue({ id: 'user-id-123' });
 
       await service['runImportInBackground']('testuser', 'anilist');
 
       expect(mockAnimeService.ensureAnime).toHaveBeenCalledWith(1, 10, 'Test Anime', 'img');
       expect(mockPrismaClient.aquilaAnimeUserList.create).toHaveBeenCalled();
       expect(service.getImportStatus('testuser', 'anilist').status).toBe('completed');
+    });
+
+    it('should handle rate limiting (Too Many Requests) by notifying the user and failing gracefully/silently', async () => {
+      const rateLimitError = new Error('Failed to fetch AniList ANIME list: Too Many Requests');
+      const mockProviderWithRateLimit = {
+        ...mockProviderInstance,
+        fetchUserList: jest.fn().mockRejectedValue(rateLimitError),
+      };
+      service['loader'].getConnection = jest.fn().mockReturnValue(mockProviderWithRateLimit);
+      mockPrismaClient.user.findFirst.mockResolvedValue({ id: 'user-id-123' });
+
+      await service['runImportInBackground']('testuser', 'anilist');
+
+      expect(mockNotificationService.create).toHaveBeenCalledWith('user-id-123', expect.objectContaining({
+        title: 'AniList Import Rate Limited',
+        type: 'INFO',
+      }));
+      expect(service.getImportStatus('testuser', 'anilist').status).toBe('failed');
     });
   });
 });

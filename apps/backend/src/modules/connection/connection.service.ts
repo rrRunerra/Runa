@@ -13,6 +13,7 @@ import { MangaService } from '../manga/manga.service';
 import { MovieService } from '../movie/movie.service';
 import { TvService } from '../tv/tv.service';
 import { StatsService } from '../stats/stats.service';
+import { NotificationService } from '../notification/notification.service';
 
 @Injectable()
 export class ConnectionService implements OnModuleInit {
@@ -40,6 +41,7 @@ export class ConnectionService implements OnModuleInit {
     private readonly movieService: MovieService,
     private readonly tvService: TvService,
     private readonly statsService: StatsService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   private readonly moduleCode = 'CnSve-';
@@ -381,18 +383,30 @@ export class ConnectionService implements OnModuleInit {
               continue;
             }
             // 1. Ensure Anime exists in db
-            await this.animeService.ensureAnime(
+            const dbAnime = await this.animeService.ensureAnime(
               item.anilistId,
               item.malId,
               itemTitle,
               item.coverImage,
             );
+            const animeId = dbAnime?.id;
+            if (!animeId) {
+              const errMsg = `Failed to ensure Anime with AniList ID ${item.anilistId}`;
+              console.warn(errMsg);
+              failedItems.push({
+                title: itemTitle,
+                providerId: providerItemId,
+                reason: 'Failed to create Anime record in DB',
+                mediaType: 'anime',
+              });
+              continue;
+            }
 
             // 2. Conflict Resolution: Additive import
             const existing =
               await this.prisma.client.aquilaAnimeUserList.findUnique({
                 where: {
-                  username_animeId: { username, animeId: item.anilistId },
+                  username_animeId: { username, animeId },
                 },
               });
 
@@ -426,9 +440,7 @@ export class ConnectionService implements OnModuleInit {
               await this.prisma.client.aquilaAnimeUserList.create({
                 data: {
                   username,
-                  animeId: item.anilistId,
-                  malId: item.malId || null,
-                  anilistId: item.anilistId,
+                  animeId,
                   status: item.status,
                   progress: item.progress || 0,
                   score: item.score || 0,
@@ -454,18 +466,30 @@ export class ConnectionService implements OnModuleInit {
               continue;
             }
             // 1. Ensure Manga exists in db
-            await this.mangaService.ensureManga(
+            const dbManga = await this.mangaService.ensureManga(
               item.anilistId,
               item.malId,
               itemTitle,
               item.coverImage,
             );
+            const mangaId = dbManga?.id;
+            if (!mangaId) {
+              const errMsg = `Failed to ensure Manga with AniList ID ${item.anilistId}`;
+              console.warn(errMsg);
+              failedItems.push({
+                title: itemTitle,
+                providerId: providerItemId,
+                reason: 'Failed to create Manga record in DB',
+                mediaType: 'manga',
+              });
+              continue;
+            }
 
             // 2. Conflict Resolution
             const existing =
               await this.prisma.client.aquilaMangaUserList.findUnique({
                 where: {
-                  username_mangaId: { username, mangaId: item.anilistId },
+                  username_mangaId: { username, mangaId },
                 },
               });
 
@@ -498,9 +522,7 @@ export class ConnectionService implements OnModuleInit {
               await this.prisma.client.aquilaMangaUserList.create({
                 data: {
                   username,
-                  mangaId: item.anilistId,
-                  malId: item.malId || null,
-                  anilistId: item.anilistId,
+                  mangaId,
                   status: item.status,
                   chapters: item.progress || 0,
                   volumes: item.volumesProgress || 0,
@@ -827,14 +849,45 @@ export class ConnectionService implements OnModuleInit {
         );
       }
     } catch (error: any) {
-      console.error(`Background import failed:`, error);
-      this.activeImports.set(key, {
-        total: 0,
-        processed: 0,
-        status: 'failed',
-        error: error.message,
-        failedItems,
-      });
+      const isRateLimit = error.message?.includes('Too Many Requests') || error.message?.includes('429');
+
+      if (isRateLimit) {
+        console.warn(`Background import rate limited for user ${username}: ${error.message}`);
+        this.activeImports.set(key, {
+          total: 0,
+          processed: 0,
+          status: 'failed',
+          error: error.message,
+          failedItems,
+        });
+
+        try {
+          const user = await this.prisma.client.user.findFirst({
+            where: { username: { equals: username, mode: 'insensitive' } },
+          });
+          if (user) {
+            await this.notificationService.create(user.id, {
+              title: 'AniList Import Rate Limited',
+              message: 'The import process was rate limited by AniList. Please try again later.',
+              type: 'INFO',
+            });
+          }
+        } catch (notificationErr: any) {
+          console.error(
+            `Failed to send rate limit notification to user:`,
+            notificationErr.message,
+          );
+        }
+      } else {
+        console.error(`Background import failed:`, error);
+        this.activeImports.set(key, {
+          total: 0,
+          processed: 0,
+          status: 'failed',
+          error: error.message,
+          failedItems,
+        });
+      }
     }
   }
 
