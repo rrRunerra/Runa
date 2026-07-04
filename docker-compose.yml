@@ -2,7 +2,6 @@ networks:
   Runerra:
     external: true
 
-
 services:
   runa-frontend:
     build:
@@ -48,6 +47,7 @@ services:
     environment:
       - UPLOAD_DIR=/app/uploads
       - TZ=Europe/Bratislava
+
     volumes:
       - ~/app-data/runa/uploads:/app/uploads
     restart: unless-stopped
