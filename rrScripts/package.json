@@ -1,0 +1,8 @@
+{
+  "name": "rr-scripts",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "prompts": "^2.4.2"
+  }
+}

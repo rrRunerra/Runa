@@ -1,0 +1,176 @@
+{
+  "type": "controller",
+  "controllerName": "ConnectionController",
+  "controllerCode": "CnCtr-",
+
+  "dependedOn": "connectionService",
+
+  "privateVars": [
+    {
+      "name": "connectionService",
+      "type": "ConnectionService",
+      "description": "Service used for connection CRUD, OAuth flow, and list importing",
+      "readOnly": true
+    },
+    {
+      "name": "moduleCode",
+      "type": "string",
+      "description": "Prefix for rrCodes",
+      "readOnly": true
+    }
+  ],
+
+  "routes": [
+    {
+      "method": "GET",
+      "endpoint": "/connections",
+      "handlerName": "findAll",
+      "params": [
+        {
+          "name": "linkedTo",
+          "source": "query",
+          "type": "ConnectionLinkedTo",
+          "optional": true
+        },
+        {
+          "name": "capabilities",
+          "source": "query",
+          "type": "string | string[]",
+          "optional": true
+        }
+      ],
+      "request": {
+        "name": "req",
+        "type": "Request & { user: { username: string } }"
+      },
+      "public": false
+    },
+    {
+      "method": "POST",
+      "endpoint": "/connections/save",
+      "handlerName": "save",
+      "params": [
+        {
+          "name": "body",
+          "source": "body",
+          "type": "UpsertConnectionDto"
+        }
+      ],
+      "request": {
+        "name": "req",
+        "type": "Request & { user: { username: string } }"
+      },
+      "public": false
+    },
+    {
+      "method": "DELETE",
+      "endpoint": "/connections/remove/:provider",
+      "handlerName": "remove",
+      "params": [
+        {
+          "name": "provider",
+          "source": "param",
+          "type": "string"
+        },
+        {
+          "name": "body",
+          "source": "body",
+          "type": "RemoveConnectionDto"
+        }
+      ],
+      "request": {
+        "name": "req",
+        "type": "Request & { user: { username: string } }"
+      },
+      "public": false
+    },
+    {
+      "method": "GET",
+      "endpoint": "/connections/:provider/connect",
+      "handlerName": "connect",
+      "params": [
+        {
+          "name": "provider",
+          "source": "param",
+          "type": "string"
+        },
+        {
+          "name": "token",
+          "source": "query",
+          "type": "string"
+        },
+        {
+          "name": "redirectUrl",
+          "source": "query",
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "public": false
+    },
+    {
+      "method": "GET",
+      "endpoint": "/connections/:provider/callback",
+      "handlerName": "callback",
+      "params": [
+        {
+          "name": "provider",
+          "source": "param",
+          "type": "string"
+        },
+        {
+          "name": "code",
+          "source": "query",
+          "type": "string"
+        },
+        {
+          "name": "state",
+          "source": "query",
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "public": true
+    },
+    {
+      "method": "POST",
+      "endpoint": "/connections/:provider/import",
+      "handlerName": "importList",
+      "params": [
+        {
+          "name": "provider",
+          "source": "param",
+          "type": "string"
+        },
+        {
+          "name": "body",
+          "source": "body",
+          "type": "{ mediaTypes?: string[] }",
+          "optional": true
+        }
+      ],
+      "request": {
+        "name": "req",
+        "type": "Request & { user: { username: string; permissions: number[] } }"
+      },
+      "public": false
+    },
+    {
+      "method": "GET",
+      "endpoint": "/connections/:provider/import/status",
+      "handlerName": "importStatus",
+      "params": [
+        {
+          "name": "provider",
+          "source": "param",
+          "type": "string"
+        }
+      ],
+      "request": {
+        "name": "req",
+        "type": "Request & { user: { username: string; permissions: number[] } }"
+      },
+      "public": false
+    }
+  ]
+}

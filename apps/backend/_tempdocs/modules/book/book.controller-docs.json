@@ -1,0 +1,101 @@
+{
+  "type": "controller",
+  "controllerName": "BookController",
+  "controllerCode": "BkCtr-",
+
+  "dependedOn": "bookService, cacheService",
+
+  "privateVars": [
+    {
+      "name": "bookService",
+      "type": "BookService",
+      "description": "Service used for book search, details lookup, and refresh operations",
+      "readOnly": true
+    },
+    {
+      "name": "cacheService",
+      "type": "CacheService",
+      "description": "Service used for cooldown caching of refresh requests",
+      "readOnly": true
+    },
+    {
+      "name": "moduleCode",
+      "type": "string",
+      "description": "Prefix for rrCodes",
+      "readOnly": true
+    }
+  ],
+
+  "routes": [
+    {
+      "method": "GET",
+      "endpoint": "/book/search",
+      "handlerName": "search",
+      "params": [
+        {
+          "name": "query",
+          "source": "query",
+          "type": "{ name: string }"
+        }
+      ],
+      "request": null,
+      "public": true
+    },
+    {
+      "method": "GET",
+      "endpoint": "/book/details/:id",
+      "handlerName": "getBook",
+      "params": [
+        {
+          "name": "id",
+          "source": "param",
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "public": true
+    },
+    {
+      "method": "GET",
+      "endpoint": "/book/details/:id/related",
+      "handlerName": "getRelatedBooks",
+      "params": [
+        {
+          "name": "id",
+          "source": "param",
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "public": true
+    },
+    {
+      "method": "GET",
+      "endpoint": "/book/details/:id/editions",
+      "handlerName": "getBookEditions",
+      "params": [
+        {
+          "name": "id",
+          "source": "param",
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "public": true
+    },
+    {
+      "method": "POST",
+      "endpoint": "/book/refresh/:id",
+      "handlerName": "refreshBook",
+      "params": [
+        {
+          "name": "id",
+          "source": "param",
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "public": false
+    }
+  ]
+}

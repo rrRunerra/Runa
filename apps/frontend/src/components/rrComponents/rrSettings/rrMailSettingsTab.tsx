@@ -139,7 +139,7 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
     if (!session?.accessToken) return;
     if (!window.confirm("Are you sure you want to remove this email account?")) return;
     try {
-      await apiMutate(`${process.env.NEXT_PUBLIC_API_URL}/user/emails/${id}`, "DELETE");
+      await apiMutate(`${process.env.NEXT_PUBLIC_API_URL}/emails/${id}`, "DELETE");
       toast.success("Email account removed");
       fetchEmailAccounts();
       window.dispatchEvent(new CustomEvent("runa-sidebar-changed"));

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
@@ -82,7 +82,7 @@ export function RrMediaEditDialog({
   // SWR queries replacing sequential imperative fetching
   const { data: mediaDetails } = useSWR<any>(
     open
-      ? `${process.env.NEXT_PUBLIC_API_URL}/${initialMedia.type}/details/${initialMedia.id}`
+      ? `${process.env.NEXT_PUBLIC_API_URL}/${initialMedia.type}/${initialMedia.id}`
       : null,
     fetcher,
     { shouldRetryOnError: false },
@@ -91,7 +91,7 @@ export function RrMediaEditDialog({
   const { data: favoriteData, mutate: mutateFavorite } = useSWR<any>(
     open && session?.accessToken
       ? [
-          `${process.env.NEXT_PUBLIC_API_URL}/favorites/status/${initialMedia.type}/${initialMedia.id}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/favorites/${initialMedia.type}/${initialMedia.id}/status`,
           session.accessToken,
         ]
       : null,
@@ -127,9 +127,37 @@ export function RrMediaEditDialog({
     { shouldRetryOnError: false },
   );
 
-  const media = mediaDetails
-    ? { ...mediaDetails, type: initialMedia.type }
-    : initialMedia;
+  const media = useMemo(() => {
+    const raw = mediaDetails
+      ? { ...mediaDetails, type: initialMedia.type }
+      : initialMedia;
+
+    const title =
+      typeof raw.title === "object" && raw.title !== null
+        ? raw.title
+        : {
+            english: raw.titleEnglish || raw.titleString || "",
+            romaji: raw.titleRomaji || raw.titleString || "",
+            native: raw.titleNative || "",
+          };
+
+    const coverImage =
+      typeof raw.coverImage === "object" && raw.coverImage !== null
+        ? raw.coverImage
+        : {
+            large:
+              typeof raw.coverImage === "string"
+                ? raw.coverImage
+                : raw.coverImageLarge || "",
+          };
+
+    return {
+      ...raw,
+      title,
+      coverImage,
+    };
+  }, [mediaDetails, initialMedia]);
+
   const mediaType = media.type;
   const scoreMax = mediaType === "game" ? 100 : 10;
 
@@ -853,8 +881,8 @@ export function RrMediaEditDialog({
 
       <RrMediaEditDialogHeader
         bannerImage={media.bannerImage}
-        coverImageLarge={media.coverImage.large}
-        title={media.title.english || media.title.romaji}
+        coverImageLarge={media.coverImage?.large ?? ""}
+        title={media.title?.english || media.title?.romaji || ""}
         mediaType={mediaType}
         isFavorited={isFavorited}
         isSubmittingFavorite={isSubmittingFavorite}

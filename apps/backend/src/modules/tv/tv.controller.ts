@@ -1,51 +1,37 @@
-import { Controller, Param, UseGuards, Get, Query, Post, Req, ForbiddenException, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Param, UseGuards, Get, Post } from '@nestjs/common';
 import { TvService } from './tv.service';
-import { DualAuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { Public } from 'src/common/decorators/public.decorator';
-import { SearchTvDto } from './dto/search-tv.dto';
-import { TvSearchEntity } from './entities/tv-search.entity';
-import { TvEntity } from './entities/tv.entity';
-import { AquilaBitField } from '@runa/permissions';
-import { CacheService } from '../../providers/cache/cache.service';
+import type { TvSearchEntity, TvEntity } from './tv.entities';
+import { AquilaFlags } from '@runa/permissions';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { Permissions } from 'src/common/decorators/permissions.decorator';
+import { SearchTvDto, TvDetailDto, TvRefreshDto } from './tv.dto';
 
 @Controller('tv')
-@UseGuards(DualAuthGuard)
+@UseGuards(AuthGuard, PermissionsGuard)
 export class TvController {
-  constructor(
-    private readonly tvService: TvService,
-    private readonly cacheService: CacheService,
-  ) {}
+  constructor(private readonly tvService: TvService) {}
+
+  private readonly moduleCode = 'TvCtr-';
 
   @Public()
-  @Get('search')
-  public async search(@Query() query: SearchTvDto): Promise<TvSearchEntity> {
-    return this.tvService.search(query.name);
+  @Get('search/:name')
+  async search(@Param() params: SearchTvDto): Promise<TvSearchEntity[]> {
+    return this.tvService.search(params.name);
   }
 
   @Public()
-  @Get('details/:id')
-  public async getTv(@Param('id') id: string): Promise<TvEntity> {
-    return this.tvService.getTv(id);
+  @Get(':id')
+  async tvDetail(@Param() params: TvDetailDto): Promise<TvEntity | undefined> {
+    return await this.tvService.getTv(params.id);
   }
 
-  @Post('refresh/:id')
-  public async refreshTv(@Param('id') id: string, @Req() req: any): Promise<TvEntity> {
-    const bitfield = AquilaBitField.fromRaw(req.user.permissions);
-    if (!bitfield.has('MEDIA_REFRESH')) {
-      throw new ForbiddenException('You do not have permission to refresh media');
-    }
-
-    const cooldownKey = `cooldown:refresh:tv:${id}`;
-    const onCooldown = await this.cacheService.get(cooldownKey);
-    if (onCooldown) {
-      throw new HttpException(
-        'This media was refreshed recently. Please wait before refreshing again.',
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
-    }
-
-    const result = await this.tvService.getTv(id, true);
-    await this.cacheService.set(cooldownKey, true, 60);
-    return result;
+  @Post(':id/refresh')
+  @Permissions([AquilaFlags.MEDIA_REFRESH])
+  async refreshTv(
+    @Param() params: TvRefreshDto,
+  ): Promise<TvEntity | undefined | null> {
+    return await this.tvService.refreshTv(params.id);
   }
 }

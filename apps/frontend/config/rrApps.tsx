@@ -1,5 +1,6 @@
 import React from "react";
 import {
+  Folder,
   Bot,
   List,
   Mail,
@@ -9,6 +10,7 @@ import {
   GlassWater,
 } from "lucide-react";
 import {
+  AndromedaFlags,
   PolarisFlags,
   LynxFlags,
   AquilaFlags,
@@ -28,6 +30,14 @@ export const rrApps: rrApp[] = [
     icon: <Star className="size-4" />,
     description: "Landing page",
     descriptionShort: "Account",
+  },
+  {
+    name: "Andromeda",
+    href: "/andromeda",
+    icon: <Folder className="size-4" />,
+    description: "Docs/Knowledge base",
+    descriptionShort: "Knowledge hub",
+    permissions: [AndromedaFlags.VIEW],
   },
   {
     name: "Aquarius",

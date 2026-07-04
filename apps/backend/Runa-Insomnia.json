@@ -1,0 +1,2783 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2025-01-15T00:00:00.000Z",
+  "__export_source": "insomnia.desktop.app:v2024.1.0",
+  "resources": [
+    {
+      "_type": "workspace",
+      "_id": "wrk_runa",
+      "parentId": null,
+      "name": "Runa API",
+      "description": "Runa Backend API"
+    },
+    {
+      "_type": "environment",
+      "_id": "env_base",
+      "parentId": "wrk_runa",
+      "name": "Base Environment",
+      "data": {
+        "base_url": "http://localhost:3001",
+        "session_token": "",
+        "api_key": ""
+      }
+    },
+
+    {
+      "_type": "request_group",
+      "_id": "fg_anime",
+      "parentId": "wrk_runa",
+      "name": "Anime"
+    },
+    {
+      "_type": "request",
+      "_id": "req_anime_001",
+      "parentId": "fg_anime",
+      "name": "GET /anime/search",
+      "method": "GET",
+      "url": "{{base_url}}/anime/search?name={{name}}"
+    },
+    {
+      "_type": "request",
+      "_id": "req_anime_002",
+      "parentId": "fg_anime",
+      "name": "GET /anime/details/:id",
+      "method": "GET",
+      "url": "{{base_url}}/anime/details/1"
+    },
+    {
+      "_type": "request",
+      "_id": "req_anime_003",
+      "parentId": "fg_anime",
+      "name": "POST /anime/refresh/:id (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/anime/refresh/1",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_anime_004",
+      "parentId": "fg_anime",
+      "name": "POST /anime/refresh/:id (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/anime/refresh/1",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+
+    {
+      "_type": "request_group",
+      "_id": "fg_apikey",
+      "parentId": "wrk_runa",
+      "name": "ApiKey"
+    },
+    {
+      "_type": "request",
+      "_id": "req_apikey_001",
+      "parentId": "fg_apikey",
+      "name": "GET /api-key (API Key)",
+      "method": "GET",
+      "url": "{{base_url}}/api-key",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_apikey_002",
+      "parentId": "fg_apikey",
+      "name": "GET /api-key (Session)",
+      "method": "GET",
+      "url": "{{base_url}}/api-key",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_apikey_003",
+      "parentId": "fg_apikey",
+      "name": "POST /api-key (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/api-key",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"name\": \"My API Key\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_apikey_004",
+      "parentId": "fg_apikey",
+      "name": "POST /api-key (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/api-key",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"name\": \"My API Key\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_apikey_005",
+      "parentId": "fg_apikey",
+      "name": "PUT /api-key (API Key)",
+      "method": "PUT",
+      "url": "{{base_url}}/api-key",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"id\": \"key-id-here\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_apikey_006",
+      "parentId": "fg_apikey",
+      "name": "PUT /api-key (Session)",
+      "method": "PUT",
+      "url": "{{base_url}}/api-key",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"id\": \"key-id-here\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_apikey_007",
+      "parentId": "fg_apikey",
+      "name": "DELETE /api-key/:id (API Key)",
+      "method": "DELETE",
+      "url": "{{base_url}}/api-key/key-id-here",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_apikey_008",
+      "parentId": "fg_apikey",
+      "name": "DELETE /api-key/:id (Session)",
+      "method": "DELETE",
+      "url": "{{base_url}}/api-key/key-id-here",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+
+    {
+      "_type": "request_group",
+      "_id": "fg_auth",
+      "parentId": "wrk_runa",
+      "name": "Auth"
+    },
+    {
+      "_type": "request",
+      "_id": "req_auth_001",
+      "parentId": "fg_auth",
+      "name": "POST /auth/login",
+      "method": "POST",
+      "url": "{{base_url}}/auth/login",
+      "headers": [{ "name": "Content-Type", "value": "application/json" }],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"identifier\": \"user@example.com\", \"password\": \"your-password\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_auth_002",
+      "parentId": "fg_auth",
+      "name": "POST /auth/mfa/send-email-code",
+      "method": "POST",
+      "url": "{{base_url}}/auth/mfa/send-email-code",
+      "headers": [{ "name": "Content-Type", "value": "application/json" }],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"tempToken\": \"your-temp-token\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_auth_003",
+      "parentId": "fg_auth",
+      "name": "POST /auth/mfa/device/send",
+      "method": "POST",
+      "url": "{{base_url}}/auth/mfa/device/send",
+      "headers": [{ "name": "Content-Type", "value": "application/json" }],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"tempToken\": \"your-temp-token\", \"deviceId\": \"device-id\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_auth_004",
+      "parentId": "fg_auth",
+      "name": "POST /auth/mfa/verify",
+      "method": "POST",
+      "url": "{{base_url}}/auth/mfa/verify",
+      "headers": [{ "name": "Content-Type", "value": "application/json" }],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"tempToken\": \"your-temp-token\", \"method\": \"totp\", \"code\": \"123456\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_auth_005",
+      "parentId": "fg_auth",
+      "name": "POST /auth/passkey/login-options",
+      "method": "POST",
+      "url": "{{base_url}}/auth/passkey/login-options",
+      "headers": [{ "name": "Content-Type", "value": "application/json" }],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"identifier\": \"user@example.com\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_auth_006",
+      "parentId": "fg_auth",
+      "name": "POST /auth/passkey/login-verify",
+      "method": "POST",
+      "url": "{{base_url}}/auth/passkey/login-verify",
+      "headers": [{ "name": "Content-Type", "value": "application/json" }],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"identifier\": \"user@example.com\", \"passkeyResponse\": {}}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_auth_007",
+      "parentId": "fg_auth",
+      "name": "POST /auth/login-code/generate",
+      "method": "POST",
+      "url": "{{base_url}}/auth/login-code/generate"
+    },
+    {
+      "_type": "request",
+      "_id": "req_auth_008",
+      "parentId": "fg_auth",
+      "name": "GET /auth/login-code/status",
+      "method": "GET",
+      "url": "{{base_url}}/auth/login-code/status?code=ABCDEF"
+    },
+    {
+      "_type": "request",
+      "_id": "req_auth_009",
+      "parentId": "fg_auth",
+      "name": "POST /auth/login-code/link (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/auth/login-code/link",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"code\": \"ABCDEF\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_auth_010",
+      "parentId": "fg_auth",
+      "name": "POST /auth/login-code/link (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/auth/login-code/link",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"code\": \"ABCDEF\"}"
+      }
+    },
+
+    {
+      "_type": "request_group",
+      "_id": "fg_book",
+      "parentId": "wrk_runa",
+      "name": "Book"
+    },
+    {
+      "_type": "request",
+      "_id": "req_book_001",
+      "parentId": "fg_book",
+      "name": "GET /book/search",
+      "method": "GET",
+      "url": "{{base_url}}/book/search?name={{name}}"
+    },
+    {
+      "_type": "request",
+      "_id": "req_book_002",
+      "parentId": "fg_book",
+      "name": "GET /book/details/:id",
+      "method": "GET",
+      "url": "{{base_url}}/book/details/google-book-id"
+    },
+    {
+      "_type": "request",
+      "_id": "req_book_003",
+      "parentId": "fg_book",
+      "name": "GET /book/details/:id/related",
+      "method": "GET",
+      "url": "{{base_url}}/book/details/google-book-id/related"
+    },
+    {
+      "_type": "request",
+      "_id": "req_book_004",
+      "parentId": "fg_book",
+      "name": "GET /book/details/:id/editions",
+      "method": "GET",
+      "url": "{{base_url}}/book/details/google-book-id/editions"
+    },
+    {
+      "_type": "request",
+      "_id": "req_book_005",
+      "parentId": "fg_book",
+      "name": "POST /book/refresh/:id (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/book/refresh/google-book-id",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_book_006",
+      "parentId": "fg_book",
+      "name": "POST /book/refresh/:id (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/book/refresh/google-book-id",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+
+    {
+      "_type": "request_group",
+      "_id": "fg_connection",
+      "parentId": "wrk_runa",
+      "name": "Connection"
+    },
+    {
+      "_type": "request",
+      "_id": "req_conn_001",
+      "parentId": "fg_connection",
+      "name": "GET /connections (API Key)",
+      "method": "GET",
+      "url": "{{base_url}}/connections?linkedTo={{linkedTo}}&capabilities={{capabilities}}",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_conn_002",
+      "parentId": "fg_connection",
+      "name": "GET /connections (Session)",
+      "method": "GET",
+      "url": "{{base_url}}/connections?linkedTo={{linkedTo}}&capabilities={{capabilities}}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_conn_003",
+      "parentId": "fg_connection",
+      "name": "POST /connections/save (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/connections/save",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"provider\": \"anilist\", \"accessToken\": \"token\", \"linkedUsername\": \"user\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_conn_004",
+      "parentId": "fg_connection",
+      "name": "POST /connections/save (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/connections/save",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"provider\": \"anilist\", \"accessToken\": \"token\", \"linkedUsername\": \"user\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_conn_005",
+      "parentId": "fg_connection",
+      "name": "DELETE /connections/remove/:provider (API Key)",
+      "method": "DELETE",
+      "url": "{{base_url}}/connections/remove/anilist",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_conn_006",
+      "parentId": "fg_connection",
+      "name": "DELETE /connections/remove/:provider (Session)",
+      "method": "DELETE",
+      "url": "{{base_url}}/connections/remove/anilist",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_conn_007",
+      "parentId": "fg_connection",
+      "name": "GET /connections/:provider/connect (API Key)",
+      "method": "GET",
+      "url": "{{base_url}}/connections/anilist/connect?token={{session_token}}&redirectUrl={{redirectUrl}}",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_conn_008",
+      "parentId": "fg_connection",
+      "name": "GET /connections/:provider/connect (Session)",
+      "method": "GET",
+      "url": "{{base_url}}/connections/anilist/connect?token={{session_token}}&redirectUrl={{redirectUrl}}",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_conn_009",
+      "parentId": "fg_connection",
+      "name": "GET /connections/:provider/callback",
+      "method": "GET",
+      "url": "{{base_url}}/connections/anilist/callback?code={{code}}&state={{state}}"
+    },
+    {
+      "_type": "request",
+      "_id": "req_conn_010",
+      "parentId": "fg_connection",
+      "name": "POST /connections/:provider/import (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/connections/anilist/import",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"mediaTypes\": [\"anime\", \"manga\"]}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_conn_011",
+      "parentId": "fg_connection",
+      "name": "POST /connections/:provider/import (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/connections/anilist/import",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"mediaTypes\": [\"anime\", \"manga\"]}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_conn_012",
+      "parentId": "fg_connection",
+      "name": "GET /connections/:provider/import/status (API Key)",
+      "method": "GET",
+      "url": "{{base_url}}/connections/anilist/import/status",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_conn_013",
+      "parentId": "fg_connection",
+      "name": "GET /connections/:provider/import/status (Session)",
+      "method": "GET",
+      "url": "{{base_url}}/connections/anilist/import/status",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+
+    {
+      "_type": "request_group",
+      "_id": "fg_email",
+      "parentId": "wrk_runa",
+      "name": "Email Account"
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_001",
+      "parentId": "fg_email",
+      "name": "GET /emails (API Key)",
+      "method": "GET",
+      "url": "{{base_url}}/emails",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_002",
+      "parentId": "fg_email",
+      "name": "GET /emails (Session)",
+      "method": "GET",
+      "url": "{{base_url}}/emails",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_003",
+      "parentId": "fg_email",
+      "name": "POST /emails (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/emails",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"emailAddress\": \"user@example.com\", \"imapHost\": \"imap.example.com\", \"imapPort\": 993, \"imapSecure\": true, \"smtpHost\": \"smtp.example.com\", \"smtpPort\": 465, \"smtpSecure\": true, \"password\": \"your-password\", \"accountName\": \"My Email\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_004",
+      "parentId": "fg_email",
+      "name": "POST /emails (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/emails",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"emailAddress\": \"user@example.com\", \"imapHost\": \"imap.example.com\", \"imapPort\": 993, \"imapSecure\": true, \"smtpHost\": \"smtp.example.com\", \"smtpPort\": 465, \"smtpSecure\": true, \"password\": \"your-password\", \"accountName\": \"My Email\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_005",
+      "parentId": "fg_email",
+      "name": "PUT /emails/:id (API Key)",
+      "method": "PUT",
+      "url": "{{base_url}}/emails/account-id-here",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"accountName\": \"Updated Name\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_006",
+      "parentId": "fg_email",
+      "name": "PUT /emails/:id (Session)",
+      "method": "PUT",
+      "url": "{{base_url}}/emails/account-id-here",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"accountName\": \"Updated Name\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_007",
+      "parentId": "fg_email",
+      "name": "DELETE /emails/:id (API Key)",
+      "method": "DELETE",
+      "url": "{{base_url}}/emails/account-id-here",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_008",
+      "parentId": "fg_email",
+      "name": "DELETE /emails/:id (Session)",
+      "method": "DELETE",
+      "url": "{{base_url}}/emails/account-id-here",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_009",
+      "parentId": "fg_email",
+      "name": "GET /emails/canned-responses (API Key)",
+      "method": "GET",
+      "url": "{{base_url}}/emails/canned-responses?page=1&limit=20",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_010",
+      "parentId": "fg_email",
+      "name": "GET /emails/canned-responses (Session)",
+      "method": "GET",
+      "url": "{{base_url}}/emails/canned-responses?page=1&limit=20",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_011",
+      "parentId": "fg_email",
+      "name": "POST /emails/canned-responses (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/emails/canned-responses",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"name\": \"My Response\", \"bodyText\": \"Thank you for your email.\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_012",
+      "parentId": "fg_email",
+      "name": "POST /emails/canned-responses (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/emails/canned-responses",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"name\": \"My Response\", \"bodyText\": \"Thank you for your email.\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_013",
+      "parentId": "fg_email",
+      "name": "PUT /emails/canned-responses/:id (API Key)",
+      "method": "PUT",
+      "url": "{{base_url}}/emails/canned-responses/response-id",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"name\": \"Updated Response\", \"bodyText\": \"Updated text.\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_014",
+      "parentId": "fg_email",
+      "name": "PUT /emails/canned-responses/:id (Session)",
+      "method": "PUT",
+      "url": "{{base_url}}/emails/canned-responses/response-id",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"name\": \"Updated Response\", \"bodyText\": \"Updated text.\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_015",
+      "parentId": "fg_email",
+      "name": "DELETE /emails/canned-responses/:id (API Key)",
+      "method": "DELETE",
+      "url": "{{base_url}}/emails/canned-responses/response-id",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_016",
+      "parentId": "fg_email",
+      "name": "DELETE /emails/canned-responses/:id (Session)",
+      "method": "DELETE",
+      "url": "{{base_url}}/emails/canned-responses/response-id",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_017",
+      "parentId": "fg_email",
+      "name": "GET /emails/autoconfig/:domain (API Key)",
+      "method": "GET",
+      "url": "{{base_url}}/emails/autoconfig/example.com",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_018",
+      "parentId": "fg_email",
+      "name": "GET /emails/autoconfig/:domain (Session)",
+      "method": "GET",
+      "url": "{{base_url}}/emails/autoconfig/example.com",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_019",
+      "parentId": "fg_email",
+      "name": "GET /emails/unified/folders/:folder/messages (API Key)",
+      "method": "GET",
+      "url": "{{base_url}}/emails/unified/folders/inbox/messages?page=1&limit=50",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_020",
+      "parentId": "fg_email",
+      "name": "GET /emails/unified/folders/:folder/messages (Session)",
+      "method": "GET",
+      "url": "{{base_url}}/emails/unified/folders/inbox/messages?page=1&limit=50",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_021",
+      "parentId": "fg_email",
+      "name": "GET /emails/:accountId/folders/:folder/messages (API Key)",
+      "method": "GET",
+      "url": "{{base_url}}/emails/account-id/folders/inbox/messages?page=1&limit=50",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_022",
+      "parentId": "fg_email",
+      "name": "GET /emails/:accountId/folders/:folder/messages (Session)",
+      "method": "GET",
+      "url": "{{base_url}}/emails/account-id/folders/inbox/messages?page=1&limit=50",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_023",
+      "parentId": "fg_email",
+      "name": "GET /emails/:accountId/messages/:messageId (API Key)",
+      "method": "GET",
+      "url": "{{base_url}}/emails/account-id/messages/message-id",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_024",
+      "parentId": "fg_email",
+      "name": "GET /emails/:accountId/messages/:messageId (Session)",
+      "method": "GET",
+      "url": "{{base_url}}/emails/account-id/messages/message-id",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_025",
+      "parentId": "fg_email",
+      "name": "PUT /emails/:accountId/messages/:messageId (API Key)",
+      "method": "PUT",
+      "url": "{{base_url}}/emails/account-id/messages/message-id",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"read\": true, \"flagged\": false}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_026",
+      "parentId": "fg_email",
+      "name": "PUT /emails/:accountId/messages/:messageId (Session)",
+      "method": "PUT",
+      "url": "{{base_url}}/emails/account-id/messages/message-id",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"read\": true, \"flagged\": false}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_027",
+      "parentId": "fg_email",
+      "name": "DELETE /emails/:accountId/messages/:messageId (API Key)",
+      "method": "DELETE",
+      "url": "{{base_url}}/emails/account-id/messages/message-id",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_028",
+      "parentId": "fg_email",
+      "name": "DELETE /emails/:accountId/messages/:messageId (Session)",
+      "method": "DELETE",
+      "url": "{{base_url}}/emails/account-id/messages/message-id",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_029",
+      "parentId": "fg_email",
+      "name": "PUT /emails/:accountId/messages/bulk (API Key)",
+      "method": "PUT",
+      "url": "{{base_url}}/emails/account-id/messages/bulk",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"messageIds\": [\"id1\", \"id2\"], \"read\": true, \"folder\": \"archive\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_030",
+      "parentId": "fg_email",
+      "name": "PUT /emails/:accountId/messages/bulk (Session)",
+      "method": "PUT",
+      "url": "{{base_url}}/emails/account-id/messages/bulk",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"messageIds\": [\"id1\", \"id2\"], \"read\": true, \"folder\": \"archive\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_031",
+      "parentId": "fg_email",
+      "name": "POST /emails/:accountId/messages/bulk-delete (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/emails/account-id/messages/bulk-delete",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"messageIds\": [\"id1\", \"id2\"]}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_032",
+      "parentId": "fg_email",
+      "name": "POST /emails/:accountId/messages/bulk-delete (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/emails/account-id/messages/bulk-delete",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"messageIds\": [\"id1\", \"id2\"]}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_033",
+      "parentId": "fg_email",
+      "name": "POST /emails/:accountId/send (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/emails/account-id/send",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"to\": \"recipient@example.com\", \"subject\": \"Hello\", \"bodyText\": \"Message body\", \"bodyHtml\": \"<p>Message body</p>\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_034",
+      "parentId": "fg_email",
+      "name": "POST /emails/:accountId/send (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/emails/account-id/send",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"to\": \"recipient@example.com\", \"subject\": \"Hello\", \"bodyText\": \"Message body\", \"bodyHtml\": \"<p>Message body</p>\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_035",
+      "parentId": "fg_email",
+      "name": "POST /emails/:accountId/sync (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/emails/account-id/sync",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_036",
+      "parentId": "fg_email",
+      "name": "POST /emails/:accountId/sync (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/emails/account-id/sync",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_037",
+      "parentId": "fg_email",
+      "name": "GET /emails/attachments/:attachmentId (API Key)",
+      "method": "GET",
+      "url": "{{base_url}}/emails/attachments/attachment-id",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_email_038",
+      "parentId": "fg_email",
+      "name": "GET /emails/attachments/:attachmentId (Session)",
+      "method": "GET",
+      "url": "{{base_url}}/emails/attachments/attachment-id",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+
+    {
+      "_type": "request_group",
+      "_id": "fg_favorite",
+      "parentId": "wrk_runa",
+      "name": "Favorite"
+    },
+    {
+      "_type": "request",
+      "_id": "req_fav_001",
+      "parentId": "fg_favorite",
+      "name": "POST /favorites (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/favorites",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"type\": \"ANIME\", \"mediaId\": \"1\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_fav_002",
+      "parentId": "fg_favorite",
+      "name": "POST /favorites (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/favorites",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"type\": \"ANIME\", \"mediaId\": \"1\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_fav_003",
+      "parentId": "fg_favorite",
+      "name": "DELETE /favorites/:type/:mediaId (API Key)",
+      "method": "DELETE",
+      "url": "{{base_url}}/favorites/ANIME/1",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_fav_004",
+      "parentId": "fg_favorite",
+      "name": "DELETE /favorites/:type/:mediaId (Session)",
+      "method": "DELETE",
+      "url": "{{base_url}}/favorites/ANIME/1",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_fav_005",
+      "parentId": "fg_favorite",
+      "name": "GET /favorites (API Key)",
+      "method": "GET",
+      "url": "{{base_url}}/favorites?type=ANIME",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_fav_006",
+      "parentId": "fg_favorite",
+      "name": "GET /favorites (Session)",
+      "method": "GET",
+      "url": "{{base_url}}/favorites?type=ANIME",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_fav_007",
+      "parentId": "fg_favorite",
+      "name": "GET /favorites/user/:username",
+      "method": "GET",
+      "url": "{{base_url}}/favorites/user/username?type=ANIME"
+    },
+    {
+      "_type": "request",
+      "_id": "req_fav_008",
+      "parentId": "fg_favorite",
+      "name": "GET /favorites/status/:type/:mediaId (API Key)",
+      "method": "GET",
+      "url": "{{base_url}}/favorites/status/ANIME/1",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_fav_009",
+      "parentId": "fg_favorite",
+      "name": "GET /favorites/status/:type/:mediaId (Session)",
+      "method": "GET",
+      "url": "{{base_url}}/favorites/status/ANIME/1",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+
+    {
+      "_type": "request_group",
+      "_id": "fg_game",
+      "parentId": "wrk_runa",
+      "name": "Game"
+    },
+    {
+      "_type": "request",
+      "_id": "req_game_001",
+      "parentId": "fg_game",
+      "name": "GET /game/search",
+      "method": "GET",
+      "url": "{{base_url}}/game/search?name={{name}}"
+    },
+    {
+      "_type": "request",
+      "_id": "req_game_002",
+      "parentId": "fg_game",
+      "name": "GET /game/details/:id",
+      "method": "GET",
+      "url": "{{base_url}}/game/details/1"
+    },
+    {
+      "_type": "request",
+      "_id": "req_game_003",
+      "parentId": "fg_game",
+      "name": "POST /game/refresh/:id (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/game/refresh/1",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_game_004",
+      "parentId": "fg_game",
+      "name": "POST /game/refresh/:id (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/game/refresh/1",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+
+    {
+      "_type": "request_group",
+      "_id": "fg_list",
+      "parentId": "wrk_runa",
+      "name": "List"
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_001",
+      "parentId": "fg_list",
+      "name": "GET /list/anime/user/:username",
+      "method": "GET",
+      "url": "{{base_url}}/list/anime/user/username?limit=30&offset=0&status=ALL"
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_002",
+      "parentId": "fg_list",
+      "name": "GET /list/anime/entry/:animeId (API Key)",
+      "method": "GET",
+      "url": "{{base_url}}/list/anime/entry/1",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_003",
+      "parentId": "fg_list",
+      "name": "GET /list/anime/entry/:animeId (Session)",
+      "method": "GET",
+      "url": "{{base_url}}/list/anime/entry/1",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_004",
+      "parentId": "fg_list",
+      "name": "POST /list/anime/entry/save (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/list/anime/entry/save",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"animeId\": 1, \"status\": \"COMPLETED\", \"score\": 8, \"progress\": 24}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_005",
+      "parentId": "fg_list",
+      "name": "POST /list/anime/entry/save (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/list/anime/entry/save",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"animeId\": 1, \"status\": \"COMPLETED\", \"score\": 8, \"progress\": 24}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_006",
+      "parentId": "fg_list",
+      "name": "DELETE /list/anime/entry/:animeId (API Key)",
+      "method": "DELETE",
+      "url": "{{base_url}}/list/anime/entry/1",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_007",
+      "parentId": "fg_list",
+      "name": "DELETE /list/anime/entry/:animeId (Session)",
+      "method": "DELETE",
+      "url": "{{base_url}}/list/anime/entry/1",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_008",
+      "parentId": "fg_list",
+      "name": "GET /list/manga/user/:username",
+      "method": "GET",
+      "url": "{{base_url}}/list/manga/user/username?limit=30&offset=0"
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_009",
+      "parentId": "fg_list",
+      "name": "GET /list/manga/entry/:mangaId (API Key)",
+      "method": "GET",
+      "url": "{{base_url}}/list/manga/entry/1",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_010",
+      "parentId": "fg_list",
+      "name": "GET /list/manga/entry/:mangaId (Session)",
+      "method": "GET",
+      "url": "{{base_url}}/list/manga/entry/1",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_011",
+      "parentId": "fg_list",
+      "name": "POST /list/manga/entry/save (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/list/manga/entry/save",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"mangaId\": 1, \"status\": \"READING\", \"chapters\": 10, \"score\": 7}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_012",
+      "parentId": "fg_list",
+      "name": "POST /list/manga/entry/save (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/list/manga/entry/save",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"mangaId\": 1, \"status\": \"READING\", \"chapters\": 10, \"score\": 7}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_013",
+      "parentId": "fg_list",
+      "name": "DELETE /list/manga/entry/:mangaId (API Key)",
+      "method": "DELETE",
+      "url": "{{base_url}}/list/manga/entry/1",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_014",
+      "parentId": "fg_list",
+      "name": "DELETE /list/manga/entry/:mangaId (Session)",
+      "method": "DELETE",
+      "url": "{{base_url}}/list/manga/entry/1",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_015",
+      "parentId": "fg_list",
+      "name": "GET /list/movie/user/:username",
+      "method": "GET",
+      "url": "{{base_url}}/list/movie/user/username?limit=30&offset=0"
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_016",
+      "parentId": "fg_list",
+      "name": "GET /list/movie/entry/:tvdbId (API Key)",
+      "method": "GET",
+      "url": "{{base_url}}/list/movie/entry/1",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_017",
+      "parentId": "fg_list",
+      "name": "GET /list/movie/entry/:tvdbId (Session)",
+      "method": "GET",
+      "url": "{{base_url}}/list/movie/entry/1",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_018",
+      "parentId": "fg_list",
+      "name": "POST /list/movie/entry/save (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/list/movie/entry/save",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"tvdbId\": 1, \"status\": \"COMPLETED\", \"score\": 8}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_019",
+      "parentId": "fg_list",
+      "name": "POST /list/movie/entry/save (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/list/movie/entry/save",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"tvdbId\": 1, \"status\": \"COMPLETED\", \"score\": 8}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_020",
+      "parentId": "fg_list",
+      "name": "DELETE /list/movie/entry/:tvdbId (API Key)",
+      "method": "DELETE",
+      "url": "{{base_url}}/list/movie/entry/1",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_021",
+      "parentId": "fg_list",
+      "name": "DELETE /list/movie/entry/:tvdbId (Session)",
+      "method": "DELETE",
+      "url": "{{base_url}}/list/movie/entry/1",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_022",
+      "parentId": "fg_list",
+      "name": "GET /list/tv/user/:username",
+      "method": "GET",
+      "url": "{{base_url}}/list/tv/user/username?limit=30&offset=0"
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_023",
+      "parentId": "fg_list",
+      "name": "GET /list/tv/entry/:tvdbId (API Key)",
+      "method": "GET",
+      "url": "{{base_url}}/list/tv/entry/1",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_024",
+      "parentId": "fg_list",
+      "name": "GET /list/tv/entry/:tvdbId (Session)",
+      "method": "GET",
+      "url": "{{base_url}}/list/tv/entry/1",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_025",
+      "parentId": "fg_list",
+      "name": "POST /list/tv/entry/save (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/list/tv/entry/save",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"tvdbId\": 1, \"status\": \"WATCHING\", \"score\": 9}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_026",
+      "parentId": "fg_list",
+      "name": "POST /list/tv/entry/save (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/list/tv/entry/save",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"tvdbId\": 1, \"status\": \"WATCHING\", \"score\": 9}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_027",
+      "parentId": "fg_list",
+      "name": "DELETE /list/tv/entry/:tvdbId (API Key)",
+      "method": "DELETE",
+      "url": "{{base_url}}/list/tv/entry/1",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_028",
+      "parentId": "fg_list",
+      "name": "DELETE /list/tv/entry/:tvdbId (Session)",
+      "method": "DELETE",
+      "url": "{{base_url}}/list/tv/entry/1",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_029",
+      "parentId": "fg_list",
+      "name": "GET /list/game/user/:username",
+      "method": "GET",
+      "url": "{{base_url}}/list/game/user/username?limit=30&offset=0"
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_030",
+      "parentId": "fg_list",
+      "name": "GET /list/game/entry/:gameId (API Key)",
+      "method": "GET",
+      "url": "{{base_url}}/list/game/entry/1",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_031",
+      "parentId": "fg_list",
+      "name": "GET /list/game/entry/:gameId (Session)",
+      "method": "GET",
+      "url": "{{base_url}}/list/game/entry/1",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_032",
+      "parentId": "fg_list",
+      "name": "POST /list/game/entry/save (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/list/game/entry/save",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"gameId\": 1, \"status\": \"PLAYING\", \"score\": 8}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_033",
+      "parentId": "fg_list",
+      "name": "POST /list/game/entry/save (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/list/game/entry/save",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"gameId\": 1, \"status\": \"PLAYING\", \"score\": 8}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_034",
+      "parentId": "fg_list",
+      "name": "DELETE /list/game/entry/:gameId (API Key)",
+      "method": "DELETE",
+      "url": "{{base_url}}/list/game/entry/1",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_035",
+      "parentId": "fg_list",
+      "name": "DELETE /list/game/entry/:gameId (Session)",
+      "method": "DELETE",
+      "url": "{{base_url}}/list/game/entry/1",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_036",
+      "parentId": "fg_list",
+      "name": "GET /list/book/user/:username",
+      "method": "GET",
+      "url": "{{base_url}}/list/book/user/username?limit=30&offset=0"
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_037",
+      "parentId": "fg_list",
+      "name": "GET /list/book/entry/:bookId (API Key)",
+      "method": "GET",
+      "url": "{{base_url}}/list/book/entry/google-book-id",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_038",
+      "parentId": "fg_list",
+      "name": "GET /list/book/entry/:bookId (Session)",
+      "method": "GET",
+      "url": "{{base_url}}/list/book/entry/google-book-id",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_039",
+      "parentId": "fg_list",
+      "name": "POST /list/book/entry/save (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/list/book/entry/save",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"bookId\": \"book-id\", \"status\": \"READING\", \"chapters\": 5}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_040",
+      "parentId": "fg_list",
+      "name": "POST /list/book/entry/save (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/list/book/entry/save",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"bookId\": \"book-id\", \"status\": \"READING\", \"chapters\": 5}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_041",
+      "parentId": "fg_list",
+      "name": "DELETE /list/book/entry/:bookId (API Key)",
+      "method": "DELETE",
+      "url": "{{base_url}}/list/book/entry/book-id",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_042",
+      "parentId": "fg_list",
+      "name": "DELETE /list/book/entry/:bookId (Session)",
+      "method": "DELETE",
+      "url": "{{base_url}}/list/book/entry/book-id",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_043",
+      "parentId": "fg_list",
+      "name": "GET /list/watching (API Key)",
+      "method": "GET",
+      "url": "{{base_url}}/list/watching",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_044",
+      "parentId": "fg_list",
+      "name": "GET /list/watching (Session)",
+      "method": "GET",
+      "url": "{{base_url}}/list/watching",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_045",
+      "parentId": "fg_list",
+      "name": "POST /list/increment (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/list/increment",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"mediaType\": \"anime\", \"id\": 1, \"count\": 1}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_046",
+      "parentId": "fg_list",
+      "name": "POST /list/increment (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/list/increment",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"mediaType\": \"anime\", \"id\": 1, \"count\": 1}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_047",
+      "parentId": "fg_list",
+      "name": "POST /list/tv/entry/:tvdbId/episode (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/list/tv/entry/1/episode",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"seasonNum\": 1, \"episodeNum\": 1}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_048",
+      "parentId": "fg_list",
+      "name": "POST /list/tv/entry/:tvdbId/episode (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/list/tv/entry/1/episode",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"seasonNum\": 1, \"episodeNum\": 1}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_049",
+      "parentId": "fg_list",
+      "name": "POST /list/tv/entry/:tvdbId/season (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/list/tv/entry/1/season",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"seasonNum\": 1, \"episodes\": [{\"number\": 1}], \"watched\": true}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_050",
+      "parentId": "fg_list",
+      "name": "POST /list/tv/entry/:tvdbId/season (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/list/tv/entry/1/season",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"seasonNum\": 1, \"episodes\": [{\"number\": 1}], \"watched\": true}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_list_051",
+      "parentId": "fg_list",
+      "name": "GET /list/:mediaType/user/:username/filters",
+      "method": "GET",
+      "url": "{{base_url}}/list/anime/user/username/filters"
+    },
+
+    {
+      "_type": "request_group",
+      "_id": "fg_manga",
+      "parentId": "wrk_runa",
+      "name": "Manga"
+    },
+    {
+      "_type": "request",
+      "_id": "req_manga_001",
+      "parentId": "fg_manga",
+      "name": "GET /manga/search",
+      "method": "GET",
+      "url": "{{base_url}}/manga/search?name={{name}}"
+    },
+    {
+      "_type": "request",
+      "_id": "req_manga_002",
+      "parentId": "fg_manga",
+      "name": "GET /manga/details/:id",
+      "method": "GET",
+      "url": "{{base_url}}/manga/details/1"
+    },
+    {
+      "_type": "request",
+      "_id": "req_manga_003",
+      "parentId": "fg_manga",
+      "name": "POST /manga/refresh/:id (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/manga/refresh/1",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_manga_004",
+      "parentId": "fg_manga",
+      "name": "POST /manga/refresh/:id (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/manga/refresh/1",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+
+    {
+      "_type": "request_group",
+      "_id": "fg_media",
+      "parentId": "wrk_runa",
+      "name": "Media"
+    },
+    {
+      "_type": "request",
+      "_id": "req_media_001",
+      "parentId": "fg_media",
+      "name": "POST /media/upload (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/media/upload",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_media_002",
+      "parentId": "fg_media",
+      "name": "POST /media/upload (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/media/upload",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_media_003",
+      "parentId": "fg_media",
+      "name": "GET /media/image/:filename",
+      "method": "GET",
+      "url": "{{base_url}}/media/image/filename.jpg"
+    },
+
+    {
+      "_type": "request_group",
+      "_id": "fg_movie",
+      "parentId": "wrk_runa",
+      "name": "Movie"
+    },
+    {
+      "_type": "request",
+      "_id": "req_movie_001",
+      "parentId": "fg_movie",
+      "name": "GET /movie/search",
+      "method": "GET",
+      "url": "{{base_url}}/movie/search?name={{name}}"
+    },
+    {
+      "_type": "request",
+      "_id": "req_movie_002",
+      "parentId": "fg_movie",
+      "name": "GET /movie/details/:id",
+      "method": "GET",
+      "url": "{{base_url}}/movie/details/tvdb-id"
+    },
+    {
+      "_type": "request",
+      "_id": "req_movie_003",
+      "parentId": "fg_movie",
+      "name": "POST /movie/refresh/:id (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/movie/refresh/tvdb-id",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_movie_004",
+      "parentId": "fg_movie",
+      "name": "POST /movie/refresh/:id (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/movie/refresh/tvdb-id",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+
+    {
+      "_type": "request_group",
+      "_id": "fg_notification",
+      "parentId": "wrk_runa",
+      "name": "Notification"
+    },
+    {
+      "_type": "request",
+      "_id": "req_notif_001",
+      "parentId": "fg_notification",
+      "name": "GET /notifications (API Key)",
+      "method": "GET",
+      "url": "{{base_url}}/notifications?skip=0&take=20",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_notif_002",
+      "parentId": "fg_notification",
+      "name": "GET /notifications (Session)",
+      "method": "GET",
+      "url": "{{base_url}}/notifications?skip=0&take=20",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_notif_003",
+      "parentId": "fg_notification",
+      "name": "PUT /notifications/:id/status (API Key)",
+      "method": "PUT",
+      "url": "{{base_url}}/notifications/notif-id/status",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"status\": \"READ\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_notif_004",
+      "parentId": "fg_notification",
+      "name": "PUT /notifications/:id/status (Session)",
+      "method": "PUT",
+      "url": "{{base_url}}/notifications/notif-id/status",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"status\": \"READ\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_notif_005",
+      "parentId": "fg_notification",
+      "name": "POST /notifications/approve (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/notifications/approve",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"notificationId\": \"notif-id\", \"encryptedMasterKey\": \"encrypted-key\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_notif_006",
+      "parentId": "fg_notification",
+      "name": "POST /notifications/approve (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/notifications/approve",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"notificationId\": \"notif-id\", \"encryptedMasterKey\": \"encrypted-key\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_notif_007",
+      "parentId": "fg_notification",
+      "name": "DELETE /notifications/:id (API Key)",
+      "method": "DELETE",
+      "url": "{{base_url}}/notifications/notif-id",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_notif_008",
+      "parentId": "fg_notification",
+      "name": "DELETE /notifications/:id (Session)",
+      "method": "DELETE",
+      "url": "{{base_url}}/notifications/notif-id",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_notif_009",
+      "parentId": "fg_notification",
+      "name": "DELETE /notifications (API Key)",
+      "method": "DELETE",
+      "url": "{{base_url}}/notifications",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_notif_010",
+      "parentId": "fg_notification",
+      "name": "DELETE /notifications (Session)",
+      "method": "DELETE",
+      "url": "{{base_url}}/notifications",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+
+    {
+      "_type": "request_group",
+      "_id": "fg_polaris",
+      "parentId": "wrk_runa",
+      "name": "Polaris"
+    },
+    {
+      "_type": "request",
+      "_id": "req_polaris_001",
+      "parentId": "fg_polaris",
+      "name": "POST /polaris/bookmarks (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/polaris/bookmarks",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"name\": \"My Bookmark\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_polaris_002",
+      "parentId": "fg_polaris",
+      "name": "POST /polaris/bookmarks (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/polaris/bookmarks",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"name\": \"My Bookmark\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_polaris_003",
+      "parentId": "fg_polaris",
+      "name": "GET /polaris/bookmarks (API Key)",
+      "method": "GET",
+      "url": "{{base_url}}/polaris/bookmarks",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_polaris_004",
+      "parentId": "fg_polaris",
+      "name": "GET /polaris/bookmarks (Session)",
+      "method": "GET",
+      "url": "{{base_url}}/polaris/bookmarks",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_polaris_005",
+      "parentId": "fg_polaris",
+      "name": "DELETE /polaris/bookmarks/:id (API Key)",
+      "method": "DELETE",
+      "url": "{{base_url}}/polaris/bookmarks/bookmark-id",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_polaris_006",
+      "parentId": "fg_polaris",
+      "name": "DELETE /polaris/bookmarks/:id (Session)",
+      "method": "DELETE",
+      "url": "{{base_url}}/polaris/bookmarks/bookmark-id",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+
+    {
+      "_type": "request_group",
+      "_id": "fg_stats",
+      "parentId": "wrk_runa",
+      "name": "Stats"
+    },
+    {
+      "_type": "request",
+      "_id": "req_stats_001",
+      "parentId": "fg_stats",
+      "name": "GET /stats/:username/:mediaType",
+      "method": "GET",
+      "url": "{{base_url}}/stats/username/anime"
+    },
+
+    {
+      "_type": "request_group",
+      "_id": "fg_test",
+      "parentId": "wrk_runa",
+      "name": "Test"
+    },
+    {
+      "_type": "request",
+      "_id": "req_test_001",
+      "parentId": "fg_test",
+      "name": "GET /test/noauth",
+      "method": "GET",
+      "url": "{{base_url}}/test/noauth"
+    },
+    {
+      "_type": "request",
+      "_id": "req_test_002",
+      "parentId": "fg_test",
+      "name": "GET /test/session (Session)",
+      "method": "GET",
+      "url": "{{base_url}}/test/session",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_test_003",
+      "parentId": "fg_test",
+      "name": "GET /test/apikey (API Key)",
+      "method": "GET",
+      "url": "{{base_url}}/test/apikey",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+
+    {
+      "_type": "request_group",
+      "_id": "fg_tv",
+      "parentId": "wrk_runa",
+      "name": "TV"
+    },
+    {
+      "_type": "request",
+      "_id": "req_tv_001",
+      "parentId": "fg_tv",
+      "name": "GET /tv/search",
+      "method": "GET",
+      "url": "{{base_url}}/tv/search?name={{name}}"
+    },
+    {
+      "_type": "request",
+      "_id": "req_tv_002",
+      "parentId": "fg_tv",
+      "name": "GET /tv/details/:id",
+      "method": "GET",
+      "url": "{{base_url}}/tv/details/tvdb-id"
+    },
+    {
+      "_type": "request",
+      "_id": "req_tv_003",
+      "parentId": "fg_tv",
+      "name": "POST /tv/refresh/:id (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/tv/refresh/tvdb-id",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_tv_004",
+      "parentId": "fg_tv",
+      "name": "POST /tv/refresh/:id (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/tv/refresh/tvdb-id",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+
+    {
+      "_type": "request_group",
+      "_id": "fg_user",
+      "parentId": "wrk_runa",
+      "name": "User"
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_001",
+      "parentId": "fg_user",
+      "name": "POST /user/create",
+      "method": "POST",
+      "url": "{{base_url}}/user/create",
+      "headers": [{ "name": "Content-Type", "value": "application/json" }],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"email\": \"new@example.com\", \"username\": \"newuser\", \"password\": \"secure-password\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_002",
+      "parentId": "fg_user",
+      "name": "GET /user/privacy (API Key)",
+      "method": "GET",
+      "url": "{{base_url}}/user/privacy",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_003",
+      "parentId": "fg_user",
+      "name": "GET /user/privacy (Session)",
+      "method": "GET",
+      "url": "{{base_url}}/user/privacy",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_004",
+      "parentId": "fg_user",
+      "name": "PUT /user/privacy (API Key)",
+      "method": "PUT",
+      "url": "{{base_url}}/user/privacy",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"profile\": true, \"animeList\": false}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_005",
+      "parentId": "fg_user",
+      "name": "PUT /user/privacy (Session)",
+      "method": "PUT",
+      "url": "{{base_url}}/user/privacy",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"profile\": true, \"animeList\": false}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_006",
+      "parentId": "fg_user",
+      "name": "PUT /user/settings (API Key)",
+      "method": "PUT",
+      "url": "{{base_url}}/user/settings",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"profileSettings\": {}}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_007",
+      "parentId": "fg_user",
+      "name": "PUT /user/settings (Session)",
+      "method": "PUT",
+      "url": "{{base_url}}/user/settings",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"profileSettings\": {}}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_008",
+      "parentId": "fg_user",
+      "name": "PUT /user/update (API Key)",
+      "method": "PUT",
+      "url": "{{base_url}}/user/update",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"displayName\": \"New Name\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_009",
+      "parentId": "fg_user",
+      "name": "PUT /user/update (Session)",
+      "method": "PUT",
+      "url": "{{base_url}}/user/update",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"displayName\": \"New Name\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_010",
+      "parentId": "fg_user",
+      "name": "POST /user/mfa/totp/setup (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/user/mfa/totp/setup",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_011",
+      "parentId": "fg_user",
+      "name": "POST /user/mfa/totp/setup (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/user/mfa/totp/setup",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_012",
+      "parentId": "fg_user",
+      "name": "POST /user/mfa/totp/enable (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/user/mfa/totp/enable",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"code\": \"123456\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_013",
+      "parentId": "fg_user",
+      "name": "POST /user/mfa/totp/enable (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/user/mfa/totp/enable",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"code\": \"123456\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_014",
+      "parentId": "fg_user",
+      "name": "POST /user/mfa/totp/disable (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/user/mfa/totp/disable",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_015",
+      "parentId": "fg_user",
+      "name": "POST /user/mfa/totp/disable (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/user/mfa/totp/disable",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_016",
+      "parentId": "fg_user",
+      "name": "POST /user/mfa/email/send-setup-code (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/user/mfa/email/send-setup-code",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_017",
+      "parentId": "fg_user",
+      "name": "POST /user/mfa/email/send-setup-code (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/user/mfa/email/send-setup-code",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_018",
+      "parentId": "fg_user",
+      "name": "POST /user/mfa/email/enable (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/user/mfa/email/enable",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"code\": \"123456\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_019",
+      "parentId": "fg_user",
+      "name": "POST /user/mfa/email/enable (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/user/mfa/email/enable",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"code\": \"123456\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_020",
+      "parentId": "fg_user",
+      "name": "POST /user/mfa/email/disable (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/user/mfa/email/disable",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_021",
+      "parentId": "fg_user",
+      "name": "POST /user/mfa/email/disable (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/user/mfa/email/disable",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_022",
+      "parentId": "fg_user",
+      "name": "POST /user/mfa/backup-codes/regenerate (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/user/mfa/backup-codes/regenerate",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_023",
+      "parentId": "fg_user",
+      "name": "POST /user/mfa/backup-codes/regenerate (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/user/mfa/backup-codes/regenerate",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_024",
+      "parentId": "fg_user",
+      "name": "POST /user/mfa/passkey/register-options (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/user/mfa/passkey/register-options",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_025",
+      "parentId": "fg_user",
+      "name": "POST /user/mfa/passkey/register-options (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/user/mfa/passkey/register-options",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_026",
+      "parentId": "fg_user",
+      "name": "POST /user/mfa/passkey/register-verify (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/user/mfa/passkey/register-verify",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"response\": {}, \"name\": \"My Passkey\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_027",
+      "parentId": "fg_user",
+      "name": "POST /user/mfa/passkey/register-verify (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/user/mfa/passkey/register-verify",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"response\": {}, \"name\": \"My Passkey\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_028",
+      "parentId": "fg_user",
+      "name": "GET /user/mfa/passkeys (API Key)",
+      "method": "GET",
+      "url": "{{base_url}}/user/mfa/passkeys",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_029",
+      "parentId": "fg_user",
+      "name": "GET /user/mfa/passkeys (Session)",
+      "method": "GET",
+      "url": "{{base_url}}/user/mfa/passkeys",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_030",
+      "parentId": "fg_user",
+      "name": "GET /user/mfa/status (API Key)",
+      "method": "GET",
+      "url": "{{base_url}}/user/mfa/status",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_031",
+      "parentId": "fg_user",
+      "name": "GET /user/mfa/status (Session)",
+      "method": "GET",
+      "url": "{{base_url}}/user/mfa/status",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_032",
+      "parentId": "fg_user",
+      "name": "DELETE /user/mfa/passkey/:id (API Key)",
+      "method": "DELETE",
+      "url": "{{base_url}}/user/mfa/passkey/passkey-id",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_033",
+      "parentId": "fg_user",
+      "name": "DELETE /user/mfa/passkey/:id (Session)",
+      "method": "DELETE",
+      "url": "{{base_url}}/user/mfa/passkey/passkey-id",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_034",
+      "parentId": "fg_user",
+      "name": "GET /user/devices (API Key)",
+      "method": "GET",
+      "url": "{{base_url}}/user/devices",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_035",
+      "parentId": "fg_user",
+      "name": "GET /user/devices (Session)",
+      "method": "GET",
+      "url": "{{base_url}}/user/devices",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_036",
+      "parentId": "fg_user",
+      "name": "DELETE /user/device/:id (API Key)",
+      "method": "DELETE",
+      "url": "{{base_url}}/user/device/device-id",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_037",
+      "parentId": "fg_user",
+      "name": "DELETE /user/device/:id (Session)",
+      "method": "DELETE",
+      "url": "{{base_url}}/user/device/device-id",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_038",
+      "parentId": "fg_user",
+      "name": "POST /user/device/register (API Key)",
+      "method": "POST",
+      "url": "{{base_url}}/user/device/register",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"deviceName\": \"My Device\", \"identityKey\": \"key\", \"signedPreKey\": \"pre-key\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_039",
+      "parentId": "fg_user",
+      "name": "POST /user/device/register (Session)",
+      "method": "POST",
+      "url": "{{base_url}}/user/device/register",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"deviceName\": \"My Device\", \"identityKey\": \"key\", \"signedPreKey\": \"pre-key\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_040",
+      "parentId": "fg_user",
+      "name": "GET /user/device/status/:id (API Key)",
+      "method": "GET",
+      "url": "{{base_url}}/user/device/status/device-id",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_041",
+      "parentId": "fg_user",
+      "name": "GET /user/device/status/:id (Session)",
+      "method": "GET",
+      "url": "{{base_url}}/user/device/status/device-id",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_042",
+      "parentId": "fg_user",
+      "name": "PUT /user/e2ee-keys (API Key)",
+      "method": "PUT",
+      "url": "{{base_url}}/user/e2ee-keys",
+      "headers": [
+        { "name": "x-api-key", "value": "{{api_key}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"userPublicKey\": \"public-key\", \"encryptedUserPrivateKey\": \"encrypted-private-key\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_043",
+      "parentId": "fg_user",
+      "name": "PUT /user/e2ee-keys (Session)",
+      "method": "PUT",
+      "url": "{{base_url}}/user/e2ee-keys",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" },
+        { "name": "Content-Type", "value": "application/json" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\"userPublicKey\": \"public-key\", \"encryptedUserPrivateKey\": \"encrypted-private-key\"}"
+      }
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_044",
+      "parentId": "fg_user",
+      "name": "GET /user/e2ee-keys (API Key)",
+      "method": "GET",
+      "url": "{{base_url}}/user/e2ee-keys",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_045",
+      "parentId": "fg_user",
+      "name": "GET /user/e2ee-keys (Session)",
+      "method": "GET",
+      "url": "{{base_url}}/user/e2ee-keys",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_046",
+      "parentId": "fg_user",
+      "name": "GET /user/by-email/:email (API Key)",
+      "method": "GET",
+      "url": "{{base_url}}/user/by-email/user@example.com",
+      "headers": [{ "name": "x-api-key", "value": "{{api_key}}" }]
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_047",
+      "parentId": "fg_user",
+      "name": "GET /user/by-email/:email (Session)",
+      "method": "GET",
+      "url": "{{base_url}}/user/by-email/user@example.com",
+      "headers": [
+        { "name": "Authorization", "value": "Bearer {{session_token}}" }
+      ]
+    },
+    {
+      "_type": "request",
+      "_id": "req_user_048",
+      "parentId": "fg_user",
+      "name": "GET /user/:username",
+      "method": "GET",
+      "url": "{{base_url}}/user/username"
+    }
+  ]
+}

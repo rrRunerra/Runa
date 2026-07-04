@@ -1,0 +1,119 @@
+{
+  "type": "service",
+  "serviceName": "MovieQueueService",
+  "serviceCode": "MoQeSve-",
+
+  "dependedOn": "movieRepository",
+
+  "privateVars": [
+    {
+      "name": "logger",
+      "type": "Logger",
+      "description": "Logger instance scoped to MovieQueueService",
+      "readOnly": true
+    },
+    {
+      "name": "moduleCode",
+      "type": "string",
+      "description": "Prefix for rrCodes",
+      "readOnly": true
+    },
+    {
+      "name": "jobQueue",
+      "type": "Subject<number>",
+      "description": "RxJS Subject used as an internal job queue for movie sync requests",
+      "readOnly": true
+    },
+    {
+      "name": "processing",
+      "type": "Set<number>",
+      "description": "Set of tvdb IDs currently being processed to prevent duplicate jobs",
+      "readOnly": true
+    },
+    {
+      "name": "movieRepository",
+      "type": "MovieRepository",
+      "description": "Repository used to upsert movie data synced from TheTVDB",
+      "readOnly": true
+    }
+  ],
+
+  "functions": [
+    {
+      "name": "onModuleInit",
+      "type": "synch",
+      "access": "public",
+      "params": [],
+      "description": "NestJS lifecycle hook that starts processing the job queue on module initialization",
+      "returnValues": ["void"],
+      "exceptions": null
+    },
+    {
+      "name": "addJob",
+      "type": "synch",
+      "access": "public",
+      "params": [
+        {
+          "name": "tvdbId",
+          "type": "number",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Adds a tvdb ID to the job queue if it is not already being processed",
+      "returnValues": ["void"],
+      "exceptions": null
+    },
+    {
+      "name": "processQueue",
+      "type": "synch",
+      "access": "private",
+      "params": [],
+      "description": "Subscribes to the job queue and processes jobs concurrently (concurrency 3) with error handling",
+      "returnValues": ["void"],
+      "exceptions": null
+    },
+    {
+      "name": "syncMovieFromTvdb",
+      "type": "async",
+      "access": "private",
+      "params": [
+        {
+          "name": "tvdbId",
+          "type": "number",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Fetches movie data from TheTVDB and upserts it into the repository",
+      "returnValues": ["Promise<void>"],
+      "exceptions": null
+    },
+    {
+      "name": "fetchFromTvdb",
+      "type": "async",
+      "access": "private",
+      "params": [
+        {
+          "name": "tvdbId",
+          "type": "number",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Authenticates with TheTVDB, fetches extended movie data and English translations, maps to database shape",
+      "returnValues": ["Promise<any | null>"],
+      "exceptions": [
+        {
+          "name": "rrInternalServerErrorException",
+          "rrCode": "MoQeSve-AEI001",
+          "message": "TheTVDB auth error",
+          "statusCode": 500
+        },
+        {
+          "name": "rrInternalServerErrorException",
+          "rrCode": "MoQeSve-TAE001",
+          "message": "TVdb API error",
+          "statusCode": 500
+        }
+      ]
+    }
+  ]
+}

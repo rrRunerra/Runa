@@ -30,7 +30,7 @@ export default class EduCommand extends Command {
         "SendMessagesInThreads",
         "ManageThreads",
       ],
-      enabled: true,
+      enabled: false,
       cooldown: 60,
       cooldownFilteredUsers: [],
       nsfw: false,

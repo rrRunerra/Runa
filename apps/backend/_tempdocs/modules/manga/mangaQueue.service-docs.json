@@ -1,0 +1,119 @@
+{
+  "type": "service",
+  "serviceName": "MangaQueueService",
+  "serviceCode": "MaQeSve-",
+
+  "dependedOn": "mangaRepository",
+
+  "privateVars": [
+    {
+      "name": "logger",
+      "type": "Logger",
+      "description": "Logger instance scoped to MangaQueueService",
+      "readOnly": true
+    },
+    {
+      "name": "moduleCode",
+      "type": "string",
+      "description": "Prefix for rrCodes",
+      "readOnly": true
+    },
+    {
+      "name": "jobQueue",
+      "type": "Subject<number>",
+      "description": "RxJS Subject used as an internal job queue for manga sync requests",
+      "readOnly": true
+    },
+    {
+      "name": "processing",
+      "type": "Set<number>",
+      "description": "Set of anilist IDs currently being processed to prevent duplicate jobs",
+      "readOnly": true
+    },
+    {
+      "name": "mangaRepository",
+      "type": "MangaRepository",
+      "description": "Repository used to upsert manga data synced from AniList",
+      "readOnly": true
+    }
+  ],
+
+  "functions": [
+    {
+      "name": "onModuleInit",
+      "type": "synch",
+      "access": "public",
+      "params": [],
+      "description": "NestJS lifecycle hook that starts processing the job queue on module initialization",
+      "returnValues": ["void"],
+      "exceptions": null
+    },
+    {
+      "name": "addJob",
+      "type": "synch",
+      "access": "public",
+      "params": [
+        {
+          "name": "anilistId",
+          "type": "number",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Adds an anilist ID to the job queue if it is not already being processed",
+      "returnValues": ["void"],
+      "exceptions": null
+    },
+    {
+      "name": "processQueue",
+      "type": "synch",
+      "access": "private",
+      "params": [],
+      "description": "Subscribes to the job queue and processes jobs sequentially (concurrency 1) with error handling",
+      "returnValues": ["void"],
+      "exceptions": null
+    },
+    {
+      "name": "syncMangaFromAniList",
+      "type": "async",
+      "access": "private",
+      "params": [
+        {
+          "name": "anilistId",
+          "type": "number",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Fetches manga data from AniList and upserts it into the repository",
+      "returnValues": ["Promise<void>"],
+      "exceptions": null
+    },
+    {
+      "name": "fetchFromAniList",
+      "type": "async",
+      "access": "private",
+      "params": [
+        {
+          "name": "anilistId",
+          "type": "number",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Fetches full manga details from AniList GraphQL with retry logic (max 5 retries, exponential backoff) for rate limiting",
+      "returnValues": ["Promise<any | null>"],
+      "exceptions": [
+        {
+          "name": "rrInternalServerErrorException",
+          "rrCode": "MaQeSve-FFTANRR001",
+          "message": "Failed to fetch from AniList: No response received",
+          "statusCode": 500
+        },
+        {
+          "name": "rrInternalServerErrorException",
+          "rrCode": "MaQeSve-AAE001",
+          "message": "AniList API error: ${status}",
+          "statusCode": 500
+        }
+      ]
+    }
+  ]
+}

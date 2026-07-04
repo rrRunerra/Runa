@@ -45,7 +45,7 @@ export default class PolarisSpotlightFeature extends BaseSpotlightFeature {
             });
           }
         } else {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/polaris/bookmarks`, {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/bookmarks`, {
             headers: {
               Authorization: `Bearer ${context.accessToken}`,
             },

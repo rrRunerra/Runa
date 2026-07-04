@@ -69,7 +69,7 @@ export function RrE2eeProvider({ children }: { children: React.ReactNode }) {
   // Fetch E2EE keys with SWR
   const e2eKeysUrl =
     session?.accessToken && session?.user?.username
-      ? `${process.env.NEXT_PUBLIC_API_URL}/user/e2e-keys`
+      ? `${process.env.NEXT_PUBLIC_API_URL}/users/me/e2ee-keys`
       : null;
 
   const { data: e2eKeysData, mutate: refetchE2eKeys } = useSWR<{
@@ -197,7 +197,7 @@ export function RrE2eeProvider({ children }: { children: React.ReactNode }) {
 
       // Upload to server
       const putRes = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/user/e2e-keys`,
+        `${process.env.NEXT_PUBLIC_API_URL}/users/me/e2ee-keys`,
         {
           method: "PUT",
           headers: {

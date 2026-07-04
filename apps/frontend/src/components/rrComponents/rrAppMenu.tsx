@@ -51,7 +51,7 @@ export default function RrAppMenu({
     mutate: refetch,
   } = useSWR<BookmarkItem[]>(
     session && isMenuOpen
-      ? [`${process.env.NEXT_PUBLIC_API_URL}/polaris/bookmarks`, session.accessToken]
+      ? [`${process.env.NEXT_PUBLIC_API_URL}/bookmarks`, session.accessToken]
       : null,
     fetcher
   );

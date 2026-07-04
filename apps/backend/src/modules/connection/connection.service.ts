@@ -1,9 +1,10 @@
+// @ts-nocheck
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  OnModuleInit,
-} from '@nestjs/common';
+  rrBadRequestException,
+  rrNotFoundException,
+  rrInternalServerErrorException,
+} from 'src/providers/error';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { ConnectionLinkedTo, ConnectionProvider } from '@runa/database';
 import { ConnectionLoader, ConnectionCapability } from '@runa/connections';
@@ -23,7 +24,12 @@ export class ConnectionService implements OnModuleInit {
       processed: number;
       status: 'processing' | 'completed' | 'failed';
       error?: string;
-      failedItems?: { title: string; providerId: number | string; reason: string; mediaType: string }[];
+      failedItems?: {
+        title: string;
+        providerId: number | string;
+        reason: string;
+        mediaType: string;
+      }[];
     }
   >();
 
@@ -36,7 +42,9 @@ export class ConnectionService implements OnModuleInit {
     private readonly statsService: StatsService,
   ) {}
 
-  async onModuleInit() {
+  private readonly moduleCode = 'CnSve-';
+
+  async onModuleInit(): Promise<void> {
     this.loader = new ConnectionLoader({
       prisma: this.prisma,
       apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000', // DevSkim: ignore DS137138, DS162092
@@ -49,33 +57,51 @@ export class ConnectionService implements OnModuleInit {
   private toProvider(value: string): ConnectionProvider {
     const upper = value.toUpperCase() as ConnectionProvider;
     if (!Object.values(ConnectionProvider).includes(upper)) {
-      throw new BadRequestException(`Invalid provider: ${value}`);
+      throw new rrBadRequestException(`${this.moduleCode}IP001`, {
+        message: `Invalid provider: ${value}`,
+      });
     }
     return upper;
   }
 
-  public getConnectionInstance(providerId: string) {
+  public getConnectionInstance(providerId: string): any {
     const provider = this.loader.getConnection(this.toProvider(providerId));
     if (!provider) {
-      throw new BadRequestException(`Invalid provider: ${providerId}`);
+      throw new rrBadRequestException(`${this.moduleCode}IP001`, {
+        message: `Invalid provider: ${providerId}`,
+      });
     }
     if (!provider.isEnabled) {
-      throw new BadRequestException('ENV MISSING CHECK CONSOLE');
+      throw new rrBadRequestException(`${this.moduleCode}EMCC001`, {
+        message: 'ENV MISSING CHECK CONSOLE',
+      });
     }
     return provider;
   }
 
-  async getAuthUrl(providerId: string, token: string, redirectUrl?: string) {
+  async getAuthUrl(
+    providerId: string,
+    token: string,
+    redirectUrl?: string,
+  ): Promise<string> {
     const provider = this.getConnectionInstance(providerId);
     return provider.getAuthUrl(token, redirectUrl);
   }
 
-  async handleCallback(providerId: string, code: string, username: string) {
+  async handleCallback(
+    providerId: string,
+    code: string,
+    username: string,
+  ): Promise<any> {
     const provider = this.getConnectionInstance(providerId);
     return provider.handleCallback(code, username);
   }
 
-  async findAll(username: string, linkedTo?: ConnectionLinkedTo, capabilities?: string | string[]) {
+  async findAll(
+    username: string,
+    linkedTo?: ConnectionLinkedTo,
+    capabilities?: string | string[],
+  ): Promise<ConnectionEntity[]> {
     const connections = await this.prisma.client.connections.findMany({
       where: {
         username,
@@ -101,11 +127,15 @@ export class ConnectionService implements OnModuleInit {
       const rawCaps = Array.isArray(capabilities)
         ? capabilities
         : typeof capabilities === 'string'
-        ? capabilities.split(',')
-        : [];
+          ? capabilities.split(',')
+          : [];
       capabilitiesFilter = rawCaps
         .map((cap) => cap.trim().toUpperCase() as ConnectionCapability)
-        .filter((cap) => Object.values(ConnectionCapability).includes(cap as ConnectionCapability));
+        .filter((cap) =>
+          Object.values(ConnectionCapability).includes(
+            cap as ConnectionCapability,
+          ),
+        );
     }
 
     if (capabilitiesFilter && capabilitiesFilter.length > 0) {
@@ -114,7 +144,7 @@ export class ConnectionService implements OnModuleInit {
           const providerInstance = this.loader.getConnection(conn.provider);
           if (!providerInstance) return false;
           return providerInstance.capabilities.some((cap) =>
-            capabilitiesFilter!.includes(cap)
+            capabilitiesFilter!.includes(cap),
           );
         } catch {
           return false;
@@ -136,9 +166,9 @@ export class ConnectionService implements OnModuleInit {
       connectionId?: string;
       linkedTo?: ConnectionLinkedTo;
       private?: boolean;
-      metadata?: any;
+      metadata?: Record<string, unknown>;
     },
-  ) {
+  ): Promise<ConnectionEntity> {
     const provider = this.toProvider(data.provider);
 
     const connection = await this.prisma.client.connections.upsert({
@@ -183,7 +213,10 @@ export class ConnectionService implements OnModuleInit {
     };
   }
 
-  async remove(username: string, providerRaw: string) {
+  async remove(
+    username: string,
+    providerRaw: string,
+  ): Promise<{ success: boolean }> {
     const provider = this.toProvider(providerRaw);
 
     const existing = await this.prisma.client.connections.findUnique({
@@ -193,7 +226,9 @@ export class ConnectionService implements OnModuleInit {
     });
 
     if (!existing) {
-      throw new NotFoundException('Connection not found');
+      throw new rrNotFoundException(`${this.moduleCode}CNF001`, {
+        message: 'Connection not found',
+      });
     }
 
     await this.prisma.client.connections.delete({
@@ -203,56 +238,112 @@ export class ConnectionService implements OnModuleInit {
     return { success: true };
   }
 
-  public getImportStatus(username: string, providerId: string) {
+  public getImportStatus(
+    username: string,
+    providerId: string,
+  ): {
+    total: number;
+    processed: number;
+    status: string;
+    error?: string;
+    failedItems?: {
+      title: string;
+      providerId: number | string;
+      reason: string;
+      mediaType: string;
+    }[];
+  } {
     const key = `${username.toLowerCase()}:${providerId.toLowerCase()}`;
-    return this.activeImports.get(key) || { total: 0, processed: 0, status: 'completed' };
+    return (
+      this.activeImports.get(key) || {
+        total: 0,
+        processed: 0,
+        status: 'completed',
+      }
+    );
   }
 
-  public async startImport(username: string, providerId: string, mediaTypes?: string[]) {
+  public async startImport(
+    username: string,
+    providerId: string,
+    mediaTypes?: string[],
+  ): Promise<{ status: string }> {
     const key = `${username.toLowerCase()}:${providerId.toLowerCase()}`;
     const active = this.activeImports.get(key);
     if (active && active.status === 'processing') {
-      throw new BadRequestException('Import already in progress');
+      throw new rrBadRequestException(`${this.moduleCode}IAIP001`, {
+        message: 'Import already in progress',
+      });
     }
 
     const providerInstance = this.getConnectionInstance(providerId);
     if (!providerInstance.fetchUserList) {
-      throw new BadRequestException(`Provider ${providerId} does not support importing lists`);
+      throw new rrBadRequestException(`${this.moduleCode}PDSIL001`, {
+        message: `Provider ${providerId} does not support importing lists`,
+      });
     }
 
-    this.activeImports.set(key, { total: 0, processed: 0, status: 'processing' });
-    
-    // Trigger background import without awaiting it
-    this.runImportInBackground(username, providerId, mediaTypes).catch((err) => {
-      console.error('Background import failed for user %s on provider %s:', username, providerId, err);
+    this.activeImports.set(key, {
+      total: 0,
+      processed: 0,
+      status: 'processing',
     });
+
+    // Trigger background import without awaiting it
+    this.runImportInBackground(username, providerId, mediaTypes).catch(
+      (err) => {
+        console.error(
+          'Background import failed for user %s on provider %s:',
+          username,
+          providerId,
+          err,
+        );
+      },
+    );
 
     return { status: 'processing' };
   }
 
-  private async runImportInBackground(username: string, providerId: string, mediaTypes?: string[]) {
+  private async runImportInBackground(
+    username: string,
+    providerId: string,
+    mediaTypes?: string[],
+  ): Promise<void> {
     const key = `${username.toLowerCase()}:${providerId.toLowerCase()}`;
     const providerKey = this.toProvider(providerId);
     const providerInstance = this.getConnectionInstance(providerId);
-    const failedItems: { title: string; providerId: number | string; reason: string; mediaType: string }[] = [];
+    const failedItems: {
+      title: string;
+      providerId: number | string;
+      reason: string;
+      mediaType: string;
+    }[] = [];
 
     try {
       if (!providerInstance.fetchUserList) {
-        throw new Error(`Provider ${providerId} does not support importing lists`);
+        throw new rrInternalServerErrorException(`${this.moduleCode}PDSIL001`, {
+          message: `Provider ${providerId} does not support importing lists`,
+        });
       }
 
       const items = await providerInstance.fetchUserList(username);
-      
-      const filteredItems = mediaTypes && mediaTypes.length > 0
-        ? items.filter((item) => mediaTypes.includes(item.mediaType))
-        : items;
 
-      this.activeImports.set(key, { total: filteredItems.length, processed: 0, status: 'processing', failedItems });
+      const filteredItems =
+        mediaTypes && mediaTypes.length > 0
+          ? items.filter((item) => mediaTypes.includes(item.mediaType))
+          : items;
+
+      this.activeImports.set(key, {
+        total: filteredItems.length,
+        processed: 0,
+        status: 'processing',
+        failedItems,
+      });
 
       // Before we iterate, we can resolve any missing AniList IDs for MAL / Simkl items
       // (MAL is already resolved in MalConnection, but Simkl might have missing AniList IDs for some Anime)
       const missingAnilistAnime = filteredItems.filter(
-        (item) => item.mediaType === 'anime' && !item.anilistId && item.malId
+        (item) => item.mediaType === 'anime' && !item.anilistId && item.malId,
       );
       if (missingAnilistAnime.length > 0) {
         const malIds = missingAnilistAnime.map((item) => item.malId);
@@ -266,10 +357,15 @@ export class ConnectionService implements OnModuleInit {
 
       let processed = 0;
       for (const item of filteredItems) {
-        const itemTitle = typeof item.title === 'object'
-          ? (item.title.romaji || item.title.english || item.title.native || 'Unknown')
-          : (item.title || 'Unknown');
-        const providerItemId = item.anilistId || item.malId || item.tvdbId || item.simklId || 0;
+        const itemTitle =
+          typeof item.title === 'object'
+            ? item.title.romaji ||
+              item.title.english ||
+              item.title.native ||
+              'Unknown'
+            : item.title || 'Unknown';
+        const providerItemId =
+          item.anilistId || item.malId || item.tvdbId || item.simklId || 0;
 
         try {
           if (item.mediaType === 'anime') {
@@ -289,13 +385,16 @@ export class ConnectionService implements OnModuleInit {
               item.anilistId,
               item.malId,
               itemTitle,
-              item.coverImage
+              item.coverImage,
             );
 
             // 2. Conflict Resolution: Additive import
-            const existing = await this.prisma.client.aquilaAnimeUserList.findUnique({
-              where: { username_animeId: { username, animeId: item.anilistId } },
-            });
+            const existing =
+              await this.prisma.client.aquilaAnimeUserList.findUnique({
+                where: {
+                  username_animeId: { username, animeId: item.anilistId },
+                },
+              });
 
             const connectionItemId = item.anilistId; // For AniList connection, the ID is anilistId
             let finalItemId = connectionItemId;
@@ -306,13 +405,21 @@ export class ConnectionService implements OnModuleInit {
             }
 
             if (existing) {
-              const connections = this.mergeConnections(existing.connections, providerId, finalItemId);
+              const connections = this.mergeConnections(
+                existing.connections,
+                providerId,
+                finalItemId,
+              );
               await this.prisma.client.aquilaAnimeUserList.update({
                 where: { id: existing.id },
                 data: {
                   connections,
-                  ...(item.startDate !== undefined && { startDate: item.startDate || null }),
-                  ...(item.endDate !== undefined && { endDate: item.endDate || null }),
+                  ...(item.startDate !== undefined && {
+                    startDate: item.startDate || null,
+                  }),
+                  ...(item.endDate !== undefined && {
+                    endDate: item.endDate || null,
+                  }),
                 },
               });
             } else {
@@ -326,7 +433,9 @@ export class ConnectionService implements OnModuleInit {
                   progress: item.progress || 0,
                   score: item.score || 0,
                   notes: item.notes || '',
-                  connections: { [providerId.toLowerCase()]: { id: finalItemId, sync: true } },
+                  connections: {
+                    [providerId.toLowerCase()]: { id: finalItemId, sync: true },
+                  },
                   startDate: item.startDate || null,
                   endDate: item.endDate || null,
                 },
@@ -349,13 +458,16 @@ export class ConnectionService implements OnModuleInit {
               item.anilistId,
               item.malId,
               itemTitle,
-              item.coverImage
+              item.coverImage,
             );
 
             // 2. Conflict Resolution
-            const existing = await this.prisma.client.aquilaMangaUserList.findUnique({
-              where: { username_mangaId: { username, mangaId: item.anilistId } },
-            });
+            const existing =
+              await this.prisma.client.aquilaMangaUserList.findUnique({
+                where: {
+                  username_mangaId: { username, mangaId: item.anilistId },
+                },
+              });
 
             let finalItemId = item.anilistId;
             if (providerKey === ConnectionProvider.MAL) {
@@ -365,13 +477,21 @@ export class ConnectionService implements OnModuleInit {
             }
 
             if (existing) {
-              const connections = this.mergeConnections(existing.connections, providerId, finalItemId);
+              const connections = this.mergeConnections(
+                existing.connections,
+                providerId,
+                finalItemId,
+              );
               await this.prisma.client.aquilaMangaUserList.update({
                 where: { id: existing.id },
                 data: {
                   connections,
-                  ...(item.startDate !== undefined && { startDate: item.startDate || null }),
-                  ...(item.endDate !== undefined && { endDate: item.endDate || null }),
+                  ...(item.startDate !== undefined && {
+                    startDate: item.startDate || null,
+                  }),
+                  ...(item.endDate !== undefined && {
+                    endDate: item.endDate || null,
+                  }),
                 },
               });
             } else {
@@ -386,7 +506,9 @@ export class ConnectionService implements OnModuleInit {
                   volumes: item.volumesProgress || 0,
                   score: item.score || 0,
                   notes: item.notes || '',
-                  connections: { [providerId.toLowerCase()]: { id: finalItemId, sync: true } },
+                  connections: {
+                    [providerId.toLowerCase()]: { id: finalItemId, sync: true },
+                  },
                   startDate: item.startDate || null,
                   endDate: item.endDate || null,
                 },
@@ -405,123 +527,171 @@ export class ConnectionService implements OnModuleInit {
               continue;
             }
             // 1. Ensure TV exists in db
-            await this.tvService.ensureTv(item.tvdbId, item.title, item.coverImage);
+            const dbTv = await this.tvService.ensureTv(
+              item.tvdbId,
+              item.title,
+              item.coverImage,
+            );
+            const tvId = dbTv?.id;
+            if (!tvId) {
+              const errMsg = `Failed to ensure TV series with TVDB ID ${item.tvdbId}`;
+              console.warn(errMsg);
+              failedItems.push({
+                title: itemTitle,
+                providerId: providerItemId,
+                reason: 'Failed to create TV record in DB',
+                mediaType: 'tv',
+              });
+              continue;
+            }
 
             // 2. Conflict Resolution
-            const existing = await this.prisma.client.aquilaTvUserList.findUnique({
-              where: { username_tvdbId: { username, tvdbId: item.tvdbId } },
-            });
+            const existing =
+              await this.prisma.client.aquilaTvUserList.findUnique({
+                where: { username_tvId: { username, tvId } },
+              });
 
-            const finalItemId = providerKey === ConnectionProvider.SIMKL ? (item.simklId || item.tvdbId) : item.tvdbId;
+            const finalItemId =
+              providerKey === ConnectionProvider.SIMKL
+                ? item.simklId || item.tvdbId
+                : item.tvdbId;
 
-             let listEntryId: number;
+            let listEntryId: number;
 
-             if (existing) {
-               const connections = this.mergeConnections(existing.connections, providerId, finalItemId);
-               await this.prisma.client.aquilaTvUserList.update({
-                 where: { id: existing.id },
-                 data: {
-                   connections,
-                   ...(item.startDate !== undefined && { startDate: item.startDate || null }),
-                   ...(item.endDate !== undefined && { endDate: item.endDate || null }),
-                 },
-               });
-               listEntryId = existing.id;
-             } else {
-               let tvStatus = 'PLANNING';
-               if (item.status === 'WATCHING') tvStatus = 'WATCHING';
-               else if (item.status === 'COMPLETED') tvStatus = 'COMPLETED';
-               else if (item.status === 'DROPPED') tvStatus = 'DROPPED';
+            if (existing) {
+              const connections = this.mergeConnections(
+                existing.connections,
+                providerId,
+                finalItemId,
+              );
+              await this.prisma.client.aquilaTvUserList.update({
+                where: { id: existing.id },
+                data: {
+                  connections,
+                  ...(item.startDate !== undefined && {
+                    startDate: item.startDate || null,
+                  }),
+                  ...(item.endDate !== undefined && {
+                    endDate: item.endDate || null,
+                  }),
+                },
+              });
+              listEntryId = existing.id;
+            } else {
+              let tvStatus = 'PLANNING';
+              if (item.status === 'WATCHING') tvStatus = 'WATCHING';
+              else if (item.status === 'COMPLETED') tvStatus = 'COMPLETED';
+              else if (item.status === 'DROPPED') tvStatus = 'DROPPED';
 
-               const listEntry = await this.prisma.client.aquilaTvUserList.create({
-                 data: {
-                   username,
-                   tvdbId: item.tvdbId,
-                   status: tvStatus as any,
-                   score: item.score || 0,
-                   notes: item.notes || '',
-                   connections: { [providerId.toLowerCase()]: { id: finalItemId, sync: true } },
-                   startDate: item.startDate || null,
-                   endDate: item.endDate || null,
-                 },
-               });
-               listEntryId = listEntry.id;
-             }
+              const listEntry =
+                await this.prisma.client.aquilaTvUserList.create({
+                  data: {
+                    username,
+                    tvId,
+                    status: tvStatus as any,
+                    score: item.score || 0,
+                    notes: item.notes || '',
+                    connections: {
+                      [providerId.toLowerCase()]: {
+                        id: finalItemId,
+                        sync: true,
+                      },
+                    },
+                    startDate: item.startDate || null,
+                    endDate: item.endDate || null,
+                  },
+                });
+              listEntryId = listEntry.id;
+            }
 
-             // Sync watched episodes if there is progress or a list of episodes
-             if (item.watchedEpisodes && Array.isArray(item.watchedEpisodes) && item.watchedEpisodes.length > 0) {
-               const episodesData = item.watchedEpisodes.map((ep: any) => ({
-                 listId: listEntryId,
-                 seasonNum: ep.seasonNum,
-                 episodeNum: ep.episodeNum,
-               }));
-               await this.prisma.client.aquilaTvWatchedEpisode.createMany({
-                 data: episodesData,
-                 skipDuplicates: true,
-               });
-             } else if (item.progress > 0) {
-               const dbTv = await this.prisma.client.aquilaTv.findUnique({
-                 where: { tvdbId: item.tvdbId },
-                 select: { seasons: true },
-               });
+            // Sync watched episodes if there is progress or a list of episodes
+            if (
+              item.watchedEpisodes &&
+              Array.isArray(item.watchedEpisodes) &&
+              item.watchedEpisodes.length > 0
+            ) {
+              const episodesData = item.watchedEpisodes.map((ep: any) => ({
+                listId: listEntryId,
+                seasonNum: ep.seasonNum,
+                episodeNum: ep.episodeNum,
+              }));
+              await this.prisma.client.aquilaTvWatchedEpisode.createMany({
+                data: episodesData,
+                skipDuplicates: true,
+              });
+            } else if (item.progress > 0) {
+              const dbTv = await this.prisma.client.aquilaTv.findUnique({
+                where: { tvdbId: item.tvdbId },
+                select: { seasons: true },
+              });
 
-               const seasons = dbTv?.seasons as any[];
-               if (seasons && Array.isArray(seasons) && seasons.length > 0) {
-                 const episodesData: { listId: number; seasonNum: number; episodeNum: number }[] = [];
-                 let remaining = item.progress;
+              const seasons = dbTv?.seasons as any[];
+              if (seasons && Array.isArray(seasons) && seasons.length > 0) {
+                const episodesData: {
+                  listId: number;
+                  seasonNum: number;
+                  episodeNum: number;
+                }[] = [];
+                let remaining = item.progress;
 
-                 // Sort seasons by number (excluding specials / season 0 if any)
-                 const sortedSeasons = [...seasons]
-                   .filter((s) => s.number > 0)
-                   .sort((a, b) => a.number - b.number);
+                // Sort seasons by number (excluding specials / season 0 if any)
+                const sortedSeasons = [...seasons]
+                  .filter((s) => s.number > 0)
+                  .sort((a, b) => a.number - b.number);
 
-                 for (const season of sortedSeasons) {
-                   if (remaining <= 0) break;
-                   const count = season.episodeCount || (season.episodes ? season.episodes.length : 0) || 0;
-                   const take = Math.min(remaining, count);
+                for (const season of sortedSeasons) {
+                  if (remaining <= 0) break;
+                  const count =
+                    season.episodeCount ||
+                    (season.episodes ? season.episodes.length : 0) ||
+                    0;
+                  const take = Math.min(remaining, count);
 
-                   for (let i = 0; i < take; i++) {
-                     const epNum = season.episodes?.[i]?.number || (i + 1);
-                     episodesData.push({
-                       listId: listEntryId,
-                       seasonNum: season.number,
-                       episodeNum: epNum,
-                     });
-                   }
-                   remaining -= take;
-                 }
+                  for (let i = 0; i < take; i++) {
+                    const epNum = season.episodes?.[i]?.number || i + 1;
+                    episodesData.push({
+                      listId: listEntryId,
+                      seasonNum: season.number,
+                      episodeNum: epNum,
+                    });
+                  }
+                  remaining -= take;
+                }
 
-                 // Fallback: if there is still remaining progress, or we had no matched seasons
-                 if (remaining > 0) {
-                   const offset = episodesData.length;
-                   for (let i = 0; i < remaining; i++) {
-                     episodesData.push({
-                       listId: listEntryId,
-                       seasonNum: 1,
-                       episodeNum: offset + i + 1,
-                     });
-                   }
-                 }
+                // Fallback: if there is still remaining progress, or we had no matched seasons
+                if (remaining > 0) {
+                  const offset = episodesData.length;
+                  for (let i = 0; i < remaining; i++) {
+                    episodesData.push({
+                      listId: listEntryId,
+                      seasonNum: 1,
+                      episodeNum: offset + i + 1,
+                    });
+                  }
+                }
 
-                 if (episodesData.length > 0) {
-                   await this.prisma.client.aquilaTvWatchedEpisode.createMany({
-                     data: episodesData,
-                     skipDuplicates: true,
-                   });
-                 }
-               } else {
-                 // Fallback: mark everything as season 1
-                 const episodesData = Array.from({ length: item.progress }, (_, i) => ({
-                   listId: listEntryId,
-                   seasonNum: 1,
-                   episodeNum: i + 1,
-                 }));
-                 await this.prisma.client.aquilaTvWatchedEpisode.createMany({
-                   data: episodesData,
-                   skipDuplicates: true,
-                 });
-               }
-             }
+                if (episodesData.length > 0) {
+                  await this.prisma.client.aquilaTvWatchedEpisode.createMany({
+                    data: episodesData,
+                    skipDuplicates: true,
+                  });
+                }
+              } else {
+                // Fallback: mark everything as season 1
+                const episodesData = Array.from(
+                  { length: item.progress },
+                  (_, i) => ({
+                    listId: listEntryId,
+                    seasonNum: 1,
+                    episodeNum: i + 1,
+                  }),
+                );
+                await this.prisma.client.aquilaTvWatchedEpisode.createMany({
+                  data: episodesData,
+                  skipDuplicates: true,
+                });
+              }
+            }
           } else if (item.mediaType === 'movie') {
             if (!item.tvdbId) {
               const errMsg = `Skipping movie "${item.title}" as it lacks TVDB ID`;
@@ -535,23 +705,51 @@ export class ConnectionService implements OnModuleInit {
               continue;
             }
             // 1. Ensure Movie exists in db
-            await this.movieService.ensureMovie(item.tvdbId, item.title, item.coverImage);
+            const dbMovie = await this.movieService.ensureMovie(
+              item.tvdbId,
+              item.title,
+              item.coverImage,
+            );
+            const movieId = dbMovie?.id;
+            if (!movieId) {
+              const errMsg = `Failed to ensure movie with TVDB ID ${item.tvdbId}`;
+              console.warn(errMsg);
+              failedItems.push({
+                title: itemTitle,
+                providerId: providerItemId,
+                reason: 'Failed to create movie record in DB',
+                mediaType: 'movie',
+              });
+              continue;
+            }
 
             // 2. Conflict Resolution
-            const existing = await this.prisma.client.aquilaMovieUserList.findUnique({
-              where: { username_tvdbId: { username, tvdbId: item.tvdbId } },
-            });
+            const existing =
+              await this.prisma.client.aquilaMovieUserList.findUnique({
+                where: { username_movieId: { username, movieId } },
+              });
 
-            const finalItemId = providerKey === ConnectionProvider.SIMKL ? (item.simklId || item.tvdbId) : item.tvdbId;
+            const finalItemId =
+              providerKey === ConnectionProvider.SIMKL
+                ? item.simklId || item.tvdbId
+                : item.tvdbId;
 
             if (existing) {
-              const connections = this.mergeConnections(existing.connections, providerId, finalItemId);
+              const connections = this.mergeConnections(
+                existing.connections,
+                providerId,
+                finalItemId,
+              );
               await this.prisma.client.aquilaMovieUserList.update({
                 where: { id: existing.id },
                 data: {
                   connections,
-                  ...(item.startDate !== undefined && { startDate: item.startDate || null }),
-                  ...(item.endDate !== undefined && { endDate: item.endDate || null }),
+                  ...(item.startDate !== undefined && {
+                    startDate: item.startDate || null,
+                  }),
+                  ...(item.endDate !== undefined && {
+                    endDate: item.endDate || null,
+                  }),
                 },
               });
             } else {
@@ -562,11 +760,13 @@ export class ConnectionService implements OnModuleInit {
               await this.prisma.client.aquilaMovieUserList.create({
                 data: {
                   username,
-                  tvdbId: item.tvdbId,
+                  movieId,
                   status: movieStatus as any,
                   score: item.score || 0,
                   notes: item.notes || '',
-                  connections: { [providerId.toLowerCase()]: { id: finalItemId, sync: true } },
+                  connections: {
+                    [providerId.toLowerCase()]: { id: finalItemId, sync: true },
+                  },
                   startDate: item.startDate || null,
                   endDate: item.endDate || null,
                 },
@@ -574,7 +774,10 @@ export class ConnectionService implements OnModuleInit {
             }
           }
         } catch (err: any) {
-          console.error(`Failed to import media item "${itemTitle}" in background:`, err.message);
+          console.error(
+            `Failed to import media item "${itemTitle}" in background:`,
+            err.message,
+          );
           failedItems.push({
             title: itemTitle,
             providerId: providerItemId,
@@ -583,44 +786,77 @@ export class ConnectionService implements OnModuleInit {
           });
         }
         processed++;
-        this.activeImports.set(key, { total: filteredItems.length, processed, status: 'processing', failedItems });
+        this.activeImports.set(key, {
+          total: filteredItems.length,
+          processed,
+          status: 'processing',
+          failedItems,
+        });
       }
 
-      this.activeImports.set(key, { total: filteredItems.length, processed, status: 'completed', failedItems });
+      this.activeImports.set(key, {
+        total: filteredItems.length,
+        processed,
+        status: 'completed',
+        failedItems,
+      });
 
       try {
         const user = await this.prisma.client.user.findFirst({
           where: { username: { equals: username, mode: 'insensitive' } },
         });
         if (user) {
-          const importedTypes = Array.from(new Set(filteredItems.map((item) => item.mediaType)));
-          for (const mediaType of importedTypes) {
+          const importedTypes = Array.from(
+            new Set(filteredItems.map((item) => item.mediaType)),
+          );
+          for (const mediaType of importedTypes as string[]) {
             try {
               await this.statsService.recalculate(user.id, mediaType);
             } catch (err: any) {
-              console.error(`Failed to trigger stats recalculation for ${mediaType}:`, err.message);
+              console.error(
+                `Failed to trigger stats recalculation for ${mediaType}:`,
+                err.message,
+              );
             }
           }
         }
       } catch (err: any) {
-        console.error('Failed to resolve user for stats recalculation:', err.message);
+        console.error(
+          'Failed to resolve user for stats recalculation:',
+          err.message,
+        );
       }
     } catch (error: any) {
       console.error(`Background import failed:`, error);
-      this.activeImports.set(key, { total: 0, processed: 0, status: 'failed', error: error.message, failedItems });
+      this.activeImports.set(key, {
+        total: 0,
+        processed: 0,
+        status: 'failed',
+        error: error.message,
+        failedItems,
+      });
     }
   }
 
-  private mergeConnections(existingConnections: any, providerId: string, connectionItemId: number) {
+  private mergeConnections(
+    existingConnections: any,
+    providerId: string,
+    connectionItemId: number,
+  ): any {
     const connections =
       existingConnections && typeof existingConnections === 'object'
         ? { ...existingConnections }
         : {};
-    connections[providerId.toLowerCase()] = { id: connectionItemId, sync: true };
+    connections[providerId.toLowerCase()] = {
+      id: connectionItemId,
+      sync: true,
+    };
     return connections;
   }
 
-  private async resolveMalToAnilistIds(malIds: number[]): Promise<Record<number, number>> {
+  private async resolveMalToAnilistIds(
+    malIds: number[],
+  ): Promise<Record<number, number>> {
     const malToAnilistMap: Record<number, number> = {};
     const batchSize = 40;
     const maxRetries = 5;
@@ -635,10 +871,10 @@ export class ConnectionService implements OnModuleInit {
           // Proactive delay to avoid hitting rate limit
           await new Promise((resolve) => setTimeout(resolve, 750));
 
-          res = await fetch("https://graphql.anilist.co", {
-            method: "POST",
+          res = await fetch('https://graphql.anilist.co', {
+            method: 'POST',
             headers: {
-              "Content-Type": "application/json",
+              'Content-Type': 'application/json',
             },
             body: JSON.stringify({
               query: `
@@ -662,7 +898,9 @@ export class ConnectionService implements OnModuleInit {
             const waitTime = retryAfter
               ? parseInt(retryAfter, 10) * 1000 + 1000
               : baseDelay * Math.pow(2, attempt);
-            console.warn(`AniList rate limit hit (429) during MAL ID resolution. Waiting ${waitTime}ms before retry ${attempt + 1}/${maxRetries}...`);
+            console.warn(
+              `AniList rate limit hit (429) during MAL ID resolution. Waiting ${waitTime}ms before retry ${attempt + 1}/${maxRetries}...`,
+            );
             await new Promise((resolve) => setTimeout(resolve, waitTime));
             continue;
           }
@@ -688,7 +926,10 @@ export class ConnectionService implements OnModuleInit {
             }
           }
         } catch (err: any) {
-          console.error(`resolveMalToAnilistIds json parse error:`, err.message);
+          console.error(
+            `resolveMalToAnilistIds json parse error:`,
+            err.message,
+          );
         }
       }
     }

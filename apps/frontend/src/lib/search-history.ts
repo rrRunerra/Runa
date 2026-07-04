@@ -10,14 +10,15 @@ export interface SearchHistoryEntry {
 
 export interface OpenedItemEntry {
   category: string;
-  id: string;
-  title: {
+  id: string | number;
+  title: string | {
     romaji: string;
-    english: string;
+    english?: string;
   };
-  coverImage: {
+  secondaryTitle?: string | null;
+  coverImage?: string | {
     large: string;
-  };
+  } | null;
   isAdult: boolean;
   openedAt: number;
 }
@@ -237,7 +238,7 @@ export async function addRecentlyOpened(
   }
 }
 
-export async function deleteRecentlyOpened(category: string, id: string): Promise<void> {
+export async function deleteRecentlyOpened(category: string, id: string | number): Promise<void> {
   try {
     const db = await openDB();
     return new Promise<void>((resolve, reject) => {

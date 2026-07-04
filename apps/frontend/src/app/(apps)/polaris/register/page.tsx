@@ -3,113 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { RrRegisterForm } from "@/components/rrComponents/polaris/rrRegisterForm";
-
-const RESERVED_KEYWORDS = new Set([
-  "break",
-  "case",
-  "catch",
-  "class",
-  "const",
-  "continue",
-  "debugger",
-  "default",
-  "delete",
-  "do",
-  "else",
-  "export",
-  "extends",
-  "false",
-  "finally",
-  "for",
-  "function",
-  "if",
-  "import",
-  "in",
-  "instanceof",
-  "new",
-  "null",
-  "return",
-  "super",
-  "switch",
-  "this",
-  "throw",
-  "true",
-  "try",
-  "typeof",
-  "var",
-  "void",
-  "while",
-  "with",
-  "yield",
-  "let",
-  "package",
-  "private",
-  "protected",
-  "public",
-  "static",
-  "any",
-  "boolean",
-  "constructor",
-  "declare",
-  "get",
-  "module",
-  "require",
-  "number",
-  "set",
-  "string",
-  "symbol",
-  "type",
-  "undefined",
-  "unknown",
-  "never",
-  "readonly",
-  "keyof",
-  "infer",
-  "as",
-  "from",
-  "of",
-  "namespace",
-  "interface",
-  "implements",
-  "enum",
-  "await",
-  "select",
-  "insert",
-  "update",
-  "drop",
-  "truncate",
-  "alter",
-  "create",
-  "table",
-  "database",
-  "index",
-  "use",
-  "where",
-  "join",
-  "left",
-  "right",
-  "inner",
-  "outer",
-  "on",
-  "and",
-  "or",
-  "not",
-  "union",
-  "values",
-  "into",
-  "order",
-  "by",
-  "group",
-  "having",
-  "limit",
-  "offset",
-  "distinct",
-  "all",
-  "exists",
-  "like",
-  "between",
-  "is",
-]);
+import { RESERVED_KEYWORDS } from "@/lib/rrReservedKeywords";
 
 export default function Page() {
   const router = useRouter();
@@ -188,9 +82,10 @@ export default function Page() {
     if (sanitizedUsername.length < 3 || sanitizedUsername.length > 32) {
       setFieldErrors((prev) => ({
         ...prev,
-        username: sanitizedUsername.length < 3
-          ? "Username must be at least 3 characters long"
-          : "Username must be at most 32 characters long",
+        username:
+          sanitizedUsername.length < 3
+            ? "Username must be at least 3 characters long"
+            : "Username must be at most 32 characters long",
       }));
       setLoading(false);
       return;
@@ -222,13 +117,23 @@ export default function Page() {
         } = {};
         if (errorMessages.length > 0) {
           errorMessages.forEach((msg: string) => {
-            const lowerMsg = msg.toLowerCase();
-            if (lowerMsg.includes("email")) {
+            const hasCode = msg.includes(":");
+            const code = hasCode ? msg.split(":")[0].trim() : data.rrCode || "";
+
+            if (code.startsWith("CeUrdto-EM")) {
               newFieldErrors.email = msg;
-            } else if (lowerMsg.includes("username")) {
+            } else if (code.startsWith("CeUrdto-UM") || code === "UrSve-UCARK001") {
               newFieldErrors.username = msg;
-            } else if (lowerMsg.includes("password")) {
+            } else if (code.startsWith("CeUrdto-PM")) {
               newFieldErrors.password = msg;
+            } else if (code === "UrSve-C001") {
+              const lowerMsg = msg.toLowerCase();
+              if (lowerMsg.includes("email")) {
+                newFieldErrors.email = "Email is already taken.";
+              }
+              if (lowerMsg.includes("username")) {
+                newFieldErrors.username = "Username is already taken.";
+              }
             }
           });
           setFieldErrors(newFieldErrors);
@@ -254,6 +159,7 @@ export default function Page() {
       }, 2200);
     } catch (err: any) {
       console.error("Registration failed:", err);
+      setMessage(`❌ ${err.message || "Registration failed."}`);
     } finally {
       setLoading(false);
     }

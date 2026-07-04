@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { Star, TrendingUp, Heart } from "lucide-react";
+import React, { useEffect, useState, useMemo } from "react";
+import { Star, TrendingUp, Heart, Calendar, ExternalLink } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -18,6 +18,7 @@ import { Media } from "@/types/aquila";
 import { RrMediaEditDialog } from "@/components/rrComponents/aquila/rrMediaEditDialog";
 import RrLapplandImageNotFound from "@/components/rrComponents/rrImages/rrLapplandImageNotFound";
 import { RrMediaRefreshButton } from "@/components/rrComponents/aquila/rrMediaRefreshButton";
+import { GameEntity } from "@/types/game.entities";
 
 interface ListEntry {
   id: number | string;
@@ -53,25 +54,84 @@ export default function GameDetailsPage(): React.JSX.Element {
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
 
   // SWR queries replacing sequential imperative fetching
-  const { data: game, error: gameError, isLoading: gameLoading, mutate: mutateGame } = useSWR<Media>(
-    id ? `${process.env.NEXT_PUBLIC_API_URL}/game/details/${id}` : null,
-    fetcher
+  const {
+    data: game,
+    error: gameError,
+    isLoading: gameLoading,
+    mutate: mutateGame,
+  } = useSWR<GameEntity>(
+    id ? `${process.env.NEXT_PUBLIC_API_URL}/game/${id}` : null,
+    fetcher,
   );
 
   const { data: listEntry, mutate: mutateListEntry } = useSWR<ListEntry>(
     id && session.status === "authenticated" && session.data?.accessToken
-      ? [`${process.env.NEXT_PUBLIC_API_URL}/list/game/entry/${id}`, session.data.accessToken]
+      ? [
+          `${process.env.NEXT_PUBLIC_API_URL}/list/game/entry/${id}`,
+          session.data.accessToken,
+        ]
       : null,
     fetcher,
-    { shouldRetryOnError: false }
+    { shouldRetryOnError: false },
   );
 
   const hasListEntry = !!listEntry;
 
+  const getHighResRawgUrl = (url: string | null | undefined): string => {
+    if (!url) return "";
+    return url.replace(/\/media\/crop\/\d+\/\d+\//, "/media/");
+  };
+
+  const displayTitle = game?.titleString ?? "Game Details";
+  const coverUrl = getHighResRawgUrl(game?.coverImage ?? "");
+  const bannerUrl = getHighResRawgUrl(game?.backgroundImage ?? "");
+
+  const formattedReleaseDate = useMemo((): string | null => {
+    const dateStr =
+      game?.released ||
+      (game?.releasedYear
+        ? `${game?.releasedYear}-${String(game?.releasedMonth || 1).padStart(2, "0")}-${String(game?.releasedDay || 1).padStart(2, "0")}`
+        : null);
+    if (!dateStr) return null;
+    try {
+      return new Date(dateStr).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    } catch {
+      return dateStr;
+    }
+  }, [
+    game?.released,
+    game?.releasedYear,
+    game?.releasedMonth,
+    game?.releasedDay,
+  ]);
+
+  const releaseYear = useMemo((): string | null => {
+    const dateStr =
+      game?.released ||
+      (game?.releasedYear
+        ? `${game?.releasedYear}-${String(game?.releasedMonth || 1).padStart(2, "0")}-${String(game?.releasedDay || 1).padStart(2, "0")}`
+        : null);
+    if (!dateStr) return null;
+    try {
+      return new Date(dateStr).getFullYear().toString();
+    } catch {
+      return null;
+    }
+  }, [
+    game?.released,
+    game?.releasedYear,
+    game?.releasedMonth,
+    game?.releasedDay,
+  ]);
+
   useEffect((): void => {
     if (!game) return;
-    document.title = `Aquila > Game > ${game.title.english ?? game.title.romaji ?? ""}`;
-  }, [game]);
+    document.title = `Aquila > Game > ${displayTitle}`;
+  }, [game, displayTitle]);
 
   if (gameLoading) {
     return (
@@ -87,7 +147,9 @@ export default function GameDetailsPage(): React.JSX.Element {
     return (
       <div className="flex flex-col flex-1 min-h-screen bg-background relative overflow-hidden items-center justify-center gap-4">
         <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-primary/2 rounded-full blur-3xl pointer-events-none" />
-        <h2 className="text-2xl font-bold text-foreground z-10">Game not found</h2>
+        <h2 className="text-2xl font-bold text-foreground z-10">
+          Game not found
+        </h2>
         <Button asChild variant="default" className="z-10 rounded-xl">
           <Link href="/aquila/browse?type=games">Back to Browse</Link>
         </Button>
@@ -95,13 +157,8 @@ export default function GameDetailsPage(): React.JSX.Element {
     );
   }
 
-  // Filter genres (which might contain platform prefixes)
-  const platforms = game.genres
-    ? game.genres.filter((g) => g.startsWith("Platform:")).map((g) => g.replace("Platform: ", ""))
-    : [];
-  const cleanGenres = game.genres
-    ? game.genres.filter((g) => !g.startsWith("Platform:"))
-    : [];
+  const platforms = game.platforms ?? [];
+  const cleanGenres = game.genres ?? [];
 
   const handleQuickAdd = async (): Promise<void> => {
     try {
@@ -139,10 +196,10 @@ export default function GameDetailsPage(): React.JSX.Element {
       {/* Banner Section */}
       <div className="relative h-[240px] md:h-[360px] w-full overflow-hidden shrink-0 z-10">
         <div className="absolute inset-x-0 bottom-0 h-48 bg-linear-to-t from-background to-transparent z-10" />
-        {game.bannerImage ? (
+        {bannerUrl ? (
           <Image
-            src={game.bannerImage}
-            alt={game.title?.romaji ?? "Banner"}
+            src={bannerUrl}
+            alt={displayTitle}
             fill
             sizes="100vw"
             className="object-cover scale-105 filter blur-[1px] brightness-75"
@@ -186,10 +243,10 @@ export default function GameDetailsPage(): React.JSX.Element {
           >
             <div className="bg-card/75 border border-border/40 backdrop-blur-xl shadow-2xl rounded-2xl p-4 flex flex-col sm:flex-row lg:flex-col gap-4 items-center sm:items-start lg:items-stretch">
               <div className="relative aspect-2/3 w-36 sm:w-40 lg:w-full rounded-xl overflow-hidden shadow-lg border border-border/30 shrink-0 bg-muted flex items-center justify-center">
-                {(game.coverImage.extraLarge || game.coverImage.large) ? (
+                {coverUrl ? (
                   <Image
-                    src={game.coverImage.extraLarge || game.coverImage.large}
-                    alt={game.title?.romaji ?? "Cover"}
+                    src={coverUrl}
+                    alt={displayTitle}
                     fill
                     sizes="(max-width: 640px) 150px, 260px"
                     className="object-cover"
@@ -237,8 +294,8 @@ export default function GameDetailsPage(): React.JSX.Element {
                       media={{
                         id: game.id.toString(),
                         type: "game",
-                        title: game.title,
-                        coverImage: { large: game.coverImage.large },
+                        title: { english: displayTitle, romaji: displayTitle },
+                        coverImage: { large: coverUrl },
                       }}
                       hasListEntry={hasListEntry}
                       open={isDialogOpen}
@@ -268,30 +325,36 @@ export default function GameDetailsPage(): React.JSX.Element {
                 Information
               </h3>
               <div className="space-y-3">
-                <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
-                  <span className="text-muted-foreground">Format</span>
-                  <span className="font-medium text-foreground">Game</span>
-                </div>
-                <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
-                  <span className="text-muted-foreground">Status</span>
-                  <span className="font-medium text-foreground capitalize">
-                    {game.status?.toLowerCase()}
-                  </span>
-                </div>
-                {game.startDate && (
+                {formattedReleaseDate && (
                   <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
                     <span className="text-muted-foreground">Release Date</span>
                     <span className="font-medium text-foreground">
-                      {game.startDate.year}-{String(game.startDate.month).padStart(2, "0")}-{String(game.startDate.day).padStart(2, "0")}
+                      {formattedReleaseDate}
                     </span>
                   </div>
                 )}
-                {game.studios && game.studios.length > 0 && (
+                {game.developers && game.developers.length > 0 && (
                   <div className="flex flex-col gap-1 text-sm border-b border-border/50 pb-2">
                     <span className="text-muted-foreground">Developer</span>
                     <span className="font-medium text-foreground">
-                      {game.studios.map((s) => s.name).join(", ")}
+                      {game.developers.join(", ")}
                     </span>
+                  </div>
+                )}
+                {game.publishers && game.publishers.length > 0 && (
+                  <div className="flex flex-col gap-1 text-sm border-b border-border/50 pb-2">
+                    <span className="text-muted-foreground">Publisher</span>
+                    <span className="font-medium text-foreground">
+                      {game.publishers.join(", ")}
+                    </span>
+                  </div>
+                )}
+                {game.esrbRating && (
+                  <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
+                    <span className="text-muted-foreground">ESRB Rating</span>
+                    <Badge variant="outline" className="text-xs px-2 py-0.5">
+                      {game.esrbRating}
+                    </Badge>
                   </div>
                 )}
                 {platforms.length > 0 && (
@@ -299,7 +362,11 @@ export default function GameDetailsPage(): React.JSX.Element {
                     <span className="text-muted-foreground">Platforms</span>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {platforms.map((p, idx) => (
-                        <Badge key={idx} variant="outline" className="text-[10px]">
+                        <Badge
+                          key={idx}
+                          variant="outline"
+                          className="text-[10px]"
+                        >
                           {p}
                         </Badge>
                       ))}
@@ -308,6 +375,28 @@ export default function GameDetailsPage(): React.JSX.Element {
                 )}
               </div>
             </div>
+
+            {/* External Links */}
+            {(game.rawgId || game.slug) && (
+              <div className="bg-card/65 border border-border/40 backdrop-blur-xl rounded-2xl p-5">
+                <h4 className="font-semibold text-xs tracking-wide text-muted-foreground uppercase mb-3">
+                  External Links
+                </h4>
+                <div className="flex flex-col gap-2">
+                  {game.slug && (
+                    <a
+                      href={`https://rawg.io/games/${game.slug}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-between text-xs bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border/40 px-3 py-2 rounded-xl transition-all"
+                    >
+                      <span className="font-medium">RAWG.io</span>
+                      <ExternalLink className="size-3 text-muted-foreground" />
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
           </motion.div>
 
           {/* Right Column - Info */}
@@ -315,8 +404,36 @@ export default function GameDetailsPage(): React.JSX.Element {
             {/* Header */}
             <motion.div variants={itemVariants} className="space-y-2">
               <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">
-                {game.title.english || game.title.romaji}
+                {displayTitle}
               </h1>
+              {game.titleNative && (
+                <p className="text-xs text-muted-foreground italic">
+                  Also known as: {game.titleNative}
+                </p>
+              )}
+            </motion.div>
+
+            {/* Quick Info Badges */}
+            <motion.div
+              variants={itemVariants}
+              className="flex flex-wrap gap-3"
+            >
+              {releaseYear && (
+                <div className="bg-card/45 border border-border/30 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2">
+                  <Calendar className="size-4 text-primary" />
+                  <span className="text-sm font-semibold text-foreground">
+                    {releaseYear}
+                  </span>
+                </div>
+              )}
+              {game.esrbRating && (
+                <Badge
+                  variant="outline"
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-muted-foreground"
+                >
+                  {game.esrbRating}
+                </Badge>
+              )}
             </motion.div>
 
             {/* Stats Dashboard */}
@@ -324,24 +441,55 @@ export default function GameDetailsPage(): React.JSX.Element {
               variants={itemVariants}
               className="grid grid-cols-2 sm:grid-cols-3 gap-4"
             >
-              <div className="bg-card/45 border border-border/30 backdrop-blur-md p-4 rounded-xl flex flex-col gap-1">
-                <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-semibold">
-                  <Star className="size-3.5 text-primary fill-primary/20" />
-                  <span>Metacritic</span>
+              {game.metacritic && (
+                <div className="bg-card/45 border border-border/30 backdrop-blur-md p-4 rounded-xl flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-semibold">
+                    <Star className="size-3.5 text-primary fill-primary/20" />
+                    <span>Metacritic</span>
+                  </div>
+                  <span className="text-xl font-extrabold text-primary">
+                    {game.metacritic}
+                  </span>
                 </div>
-                <span className="text-xl font-extrabold text-primary">
-                  {game.averageScore ? `${game.averageScore}%` : "N/A"}
-                </span>
-              </div>
-              <div className="bg-card/45 border border-border/30 backdrop-blur-md p-4 rounded-xl flex flex-col gap-1">
-                <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-semibold">
-                  <TrendingUp className="size-3.5 text-primary" />
-                  <span>RAWG Members</span>
+              )}
+              {game.averageScore && (
+                <div className="bg-card/45 border border-border/30 backdrop-blur-md p-4 rounded-xl flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-semibold">
+                    <Star className="size-3.5 text-primary fill-primary/20" />
+                    <span>Average Score</span>
+                  </div>
+                  <span className="text-xl font-extrabold text-primary">
+                    {game.averageScore}%
+                  </span>
                 </div>
-                <span className="text-xl font-extrabold text-primary">
-                  {game.popularity ? game.popularity.toLocaleString() : "N/A"}
-                </span>
-              </div>
+              )}
+              {game.rating && (
+                <div className="bg-card/45 border border-border/30 backdrop-blur-md p-4 rounded-xl flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-semibold">
+                    <Star className="size-3.5 text-primary fill-primary/20" />
+                    <span>RAWG Rating</span>
+                  </div>
+                  <span className="text-xl font-extrabold text-primary">
+                    {game.rating} / 5
+                    {game.ratingsCount && (
+                      <span className="text-xs text-muted-foreground font-normal ml-1">
+                        ({game.ratingsCount.toLocaleString()})
+                      </span>
+                    )}
+                  </span>
+                </div>
+              )}
+              {game.popularity && (
+                <div className="bg-card/45 border border-border/30 backdrop-blur-md p-4 rounded-xl flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-semibold">
+                    <TrendingUp className="size-3.5 text-primary" />
+                    <span>RAWG Members</span>
+                  </div>
+                  <span className="text-xl font-extrabold text-primary">
+                    {game.popularity.toLocaleString()}
+                  </span>
+                </div>
+              )}
             </motion.div>
 
             {/* Description */}
@@ -349,11 +497,12 @@ export default function GameDetailsPage(): React.JSX.Element {
               variants={itemVariants}
               className="bg-card/30 border border-border/20 backdrop-blur-sm p-6 rounded-2xl"
             >
-              <h3 className="text-base font-bold text-foreground mb-3">About</h3>
-              <div
-                className="prose prose-neutral dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-sm prose-p:my-2 prose-a:text-primary hover:prose-a:text-primary transition-colors"
-                dangerouslySetInnerHTML={{ __html: game.description }}
-              />
+              <h3 className="text-base font-bold text-foreground mb-3">
+                About
+              </h3>
+              <div className="prose prose-neutral dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-sm prose-p:my-2 prose-a:text-primary hover:prose-a:text-primary transition-colors">
+                <p>{game.description}</p>
+              </div>
             </motion.div>
 
             {/* Genres */}
@@ -362,7 +511,11 @@ export default function GameDetailsPage(): React.JSX.Element {
                 <h3 className="text-base font-bold text-foreground">Genres</h3>
                 <div className="flex flex-wrap gap-2">
                   {cleanGenres.map((genre) => (
-                    <Badge key={genre} variant="secondary" className="rounded-xl px-3 py-1 text-xs">
+                    <Badge
+                      key={genre}
+                      variant="secondary"
+                      className="rounded-xl px-3 py-1 text-xs"
+                    >
                       {genre}
                     </Badge>
                   ))}

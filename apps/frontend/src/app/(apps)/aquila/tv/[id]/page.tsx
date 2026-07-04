@@ -17,22 +17,27 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
-  const title = tv.title.english || tv.title.romaji || "TV Show Details";
+  const title =
+    tv.titleEnglish ??
+    tv.titleRomaji ??
+    tv.title?.english ??
+    tv.title?.romaji ??
+    "TV Show Details";
   const description = cleanDescription(tv.description, 160);
-  const image = tv.coverImage.extraLarge || tv.coverImage.large;
+  const image =
+    typeof tv.coverImage === "string"
+      ? tv.coverImage
+      : (tv.coverImage?.extraLarge ?? tv.coverImage?.large ?? "");
+  const keywords: string[] = Array.isArray(tv.genres) ? tv.genres : [];
 
   return {
     title: `Aquila > TV > ${title}`,
     description,
+    keywords,
     openGraph: {
       title,
       description,
-      images: [
-        {
-          url: image,
-          alt: title,
-        },
-      ],
+      images: image ? [{ url: image, alt: title }] : [],
       type: "video.tv_show",
       siteName: "Aquila",
     },
@@ -40,7 +45,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       card: "summary_large_image",
       title,
       description,
-      images: [image],
+      images: image ? [image] : [],
     },
   };
 }

@@ -39,7 +39,7 @@ export default function BrowsePage(): React.JSX.Element {
 
   const { data: rawData, error, isLoading } = useSWR<any>(
     trimmedQuery
-      ? `${process.env.NEXT_PUBLIC_API_URL}/${mediaType}/search?name=${encodeURIComponent(trimmedQuery)}`
+      ? `${process.env.NEXT_PUBLIC_API_URL}/${mediaType}/search/${encodeURIComponent(trimmedQuery)}`
       : null,
     fetcher
   );
@@ -213,7 +213,7 @@ export default function BrowsePage(): React.JSX.Element {
     }
   }, [type]);
 
-  const handleDeleteOpenedItem = useCallback(async (id: string): Promise<void> => {
+  const handleDeleteOpenedItem = useCallback(async (id: string | number): Promise<void> => {
     try {
       await deleteRecentlyOpened(type, id);
       const updated = await getRecentlyOpened(type);

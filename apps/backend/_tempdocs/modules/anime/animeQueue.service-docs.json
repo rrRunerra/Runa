@@ -1,0 +1,119 @@
+{
+  "type": "service",
+  "serviceName": "AnimeQueueService",
+  "serviceCode": "AeQeSve-",
+
+  "dependedOn": "animeRepository",
+
+  "privateVars": [
+    {
+      "name": "logger",
+      "type": "Logger",
+      "description": "Logger instance scoped to AnimeQueueService",
+      "readOnly": true
+    },
+    {
+      "name": "moduleCode",
+      "type": "string",
+      "description": "Prefix for rrCodes",
+      "readOnly": true
+    },
+    {
+      "name": "jobQueue",
+      "type": "Subject<number>",
+      "description": "RxJS Subject used as the job queue for anime sync requests",
+      "readOnly": true
+    },
+    {
+      "name": "processing",
+      "type": "Set<number>",
+      "description": "Set of anilistIds currently being processed to prevent duplicate jobs",
+      "readOnly": true
+    },
+    {
+      "name": "animeRepository",
+      "type": "AnimeRepository",
+      "description": "Repository used to upsert fetched anime data",
+      "readOnly": true
+    }
+  ],
+
+  "functions": [
+    {
+      "name": "onModuleInit",
+      "type": "synch",
+      "access": "public",
+      "params": [],
+      "description": "Initializes the queue processor when the module starts",
+      "returnValues": ["void"],
+      "exceptions": null
+    },
+    {
+      "name": "addJob",
+      "type": "synch",
+      "access": "public",
+      "params": [
+        {
+          "name": "anilistId",
+          "type": "number",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Adds an anilistId to the processing queue if it is not already being processed",
+      "returnValues": ["void"],
+      "exceptions": null
+    },
+    {
+      "name": "processQueue",
+      "type": "synch",
+      "access": "private",
+      "params": [],
+      "description": "Subscribes to the job queue with mergeMap (concurrency 1), processing one sync job at a time with error handling and deduplication",
+      "returnValues": ["void"],
+      "exceptions": null
+    },
+    {
+      "name": "syncAnimeFromAniList",
+      "type": "async",
+      "access": "private",
+      "params": [
+        {
+          "name": "anilistId",
+          "type": "number",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Fetches anime data from AniList and upserts it into the repository",
+      "returnValues": ["Promise<void>"],
+      "exceptions": null
+    },
+    {
+      "name": "fetchFromAniList",
+      "type": "async",
+      "access": "private",
+      "params": [
+        {
+          "name": "anilistId",
+          "type": "number",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Fetches detailed anime data from AniList GraphQL with retry logic (5 retries, exponential backoff) for rate limiting and network errors. Maps the response to the repository upsert shape",
+      "returnValues": ["Promise<any | null>"],
+      "exceptions": [
+        {
+          "name": "rrInternalServerErrorException",
+          "rrCode": "AeQeSve-FFANLRR001",
+          "message": "Failed to fetch from AniList: No response received",
+          "statusCode": 500
+        },
+        {
+          "name": "rrInternalServerErrorException",
+          "rrCode": "AeQeSve-AAE002",
+          "message": "AniList API error: ${aniListRes.status}",
+          "statusCode": 500
+        }
+      ]
+    }
+  ]
+}

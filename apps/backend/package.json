@@ -23,6 +23,7 @@
     "db:assign-admin": "dotenvx run -f ../../.env -- ts-node -r tsconfig-paths/register src/scripts/assign-admin.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1078.0",
     "@nestjs/common": "^11.1.27",
     "@nestjs/core": "^11.1.27",
     "@nestjs/platform-express": "^11.1.27",
@@ -57,6 +58,7 @@
     "@nestjs/cli": "^11.0.23",
     "@nestjs/schematics": "^11.1.0",
     "@nestjs/testing": "^11.1.27",
+    "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.6",
     "@types/jest": "^29.5.14",
     "@types/mailparser": "^3.4.6",

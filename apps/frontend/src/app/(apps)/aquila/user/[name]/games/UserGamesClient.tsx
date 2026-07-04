@@ -108,7 +108,7 @@ export default function UserGamesPage() {
 
   useEffect(() => {
     if (username) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/${username}`)
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${username}`)
         .then(async (res) => await res.json())
         .then((data) => setUserData(data))
         .catch((err) => console.error("Failed to fetch user data", err));
@@ -208,7 +208,6 @@ export default function UserGamesPage() {
     }
   }, [
     username,
-    session?.accessToken,
     debouncedSearch,
     activeList,
     filters.format,

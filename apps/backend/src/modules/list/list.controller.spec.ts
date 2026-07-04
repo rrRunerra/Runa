@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ListController } from './list.controller';
 import { ListService } from './list.service';
-import { DualAuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { Reflector } from '@nestjs/core';
 
 describe('ListController', () => {
@@ -39,7 +39,7 @@ describe('ListController', () => {
     toggleSeasonWatched: jest.fn(),
   };
 
-  const mockDualAuthGuard = {
+  const mockAuthGuard = {
     canActivate: jest.fn().mockReturnValue(true),
   };
 
@@ -53,8 +53,8 @@ describe('ListController', () => {
         Reflector,
       ],
     })
-      .overrideGuard(DualAuthGuard)
-      .useValue(mockDualAuthGuard)
+      .overrideGuard(AuthGuard)
+      .useValue(mockAuthGuard)
       .compile();
 
     controller = module.get<ListController>(ListController);
@@ -70,7 +70,16 @@ describe('ListController', () => {
       const mockReq = { user: { username: 'viewer' } };
       mockListService.getAnimeList.mockResolvedValue([]);
 
-      const result = await controller.getAnimeList('testuser', mockReq, '10', '0', 'WATCHING', 'search', 'TV', 'score');
+      const result = await controller.getAnimeList(
+        'testuser',
+        mockReq,
+        '10',
+        '0',
+        'WATCHING',
+        'search',
+        'TV',
+        'score',
+      );
 
       expect(service.getAnimeList).toHaveBeenCalledWith('testuser', 'viewer', {
         limit: 10,
@@ -88,7 +97,10 @@ describe('ListController', () => {
     it('should save anime list entry', async () => {
       const mockReq = { user: { username: 'testuser' } };
       const body = { animeId: 1, progress: 10 };
-      mockListService.upsertAnimeList.mockResolvedValue({ success: true, message: 'Saved' });
+      mockListService.upsertAnimeList.mockResolvedValue({
+        success: true,
+        message: 'Saved',
+      });
 
       const result = await controller.saveAnimeListEntry(mockReq, body);
 
@@ -100,7 +112,10 @@ describe('ListController', () => {
   describe('deleteAnimeListEntry', () => {
     it('should delete anime list entry', async () => {
       const mockReq = { user: { username: 'testuser' } };
-      mockListService.deleteAnimeList.mockResolvedValue({ success: true, message: 'Deleted' });
+      mockListService.deleteAnimeList.mockResolvedValue({
+        success: true,
+        message: 'Deleted',
+      });
 
       const result = await controller.deleteAnimeListEntry('1', mockReq);
 
@@ -117,7 +132,12 @@ describe('ListController', () => {
 
       const result = await controller.incrementProgress(mockReq, body);
 
-      expect(service.incrementProgress).toHaveBeenCalledWith('testuser', 'anime', 1, 1);
+      expect(service.incrementProgress).toHaveBeenCalledWith(
+        'testuser',
+        'anime',
+        1,
+        1,
+      );
       expect(result).toEqual({ success: true });
     });
   });
@@ -130,7 +150,12 @@ describe('ListController', () => {
 
       const result = await controller.toggleEpisode('123', mockReq, body);
 
-      expect(service.toggleEpisodeWatched).toHaveBeenCalledWith('testuser', 123, 1, 2);
+      expect(service.toggleEpisodeWatched).toHaveBeenCalledWith(
+        'testuser',
+        123,
+        1,
+        2,
+      );
       expect(result).toEqual({ success: true });
     });
   });

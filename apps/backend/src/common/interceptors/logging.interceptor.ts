@@ -1,54 +1,59 @@
-import { CallHandler, ExecutionContext, Injectable, NestInterceptor, Logger, HttpException } from '@nestjs/common';
+import {
+  CallHandler,
+  ExecutionContext,
+  Injectable,
+  NestInterceptor,
+  Logger,
+  HttpException,
+} from '@nestjs/common';
 import { Request, Response } from 'express';
-import { Observable } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { Observable, throwError } from 'rxjs';
+import { catchError, finalize } from 'rxjs/operators';
 
 @Injectable()
 export class LoggingInterceptor implements NestInterceptor {
-  private readonly logger: Logger = new Logger('API');
+  private readonly logger = new Logger('API');
+  private readonly devMode =
+    process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'dev';
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
-    const isDev: boolean = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'dev';
-    if (!isDev) {
+    if (!this.devMode) {
       return next.handle();
     }
 
-    const httpContext = context.switchToHttp();
-    const request = httpContext.getRequest<Request>();
-    const response = httpContext.getResponse<Response>();
-    const method: string = request.method;
-    const url: string = request.url;
-    const startTime: number = Date.now();
+    const http = context.switchToHttp();
+    const req = http.getRequest<Request>();
+    const res = http.getResponse<Response>();
+
+    const { method, originalUrl } = req;
+    const start = Date.now();
+
+    this.logger.log(`[Start] ${method} ${originalUrl}`);
 
     return next.handle().pipe(
-      tap({
-        next: (): void => {
-          const duration: number = Date.now() - startTime;
-          const statusCode: number = response.statusCode;
-          this.logger.log(`[Debug] ${method} ${url} ${statusCode} - ${duration}ms`);
-        },
-        error: (err: unknown): void => {
-          const duration: number = Date.now() - startTime;
-          let statusCode = 500;
-          
-          if (err instanceof HttpException) {
-            statusCode = err.getStatus();
-          } else if (err && typeof err === 'object') {
-            if ('status' in err && typeof (err as { status: unknown }).status === 'number') {
-              statusCode = (err as { status: number }).status;
-            } else if ('statusCode' in err && typeof (err as { statusCode: unknown }).statusCode === 'number') {
-              statusCode = (err as { statusCode: number }).statusCode;
-            }
-          }
-          
-          const errorMessage: string = err instanceof Error ? err.message : String(err);
-          const logMsg = `[Debug] ${method} ${url} ${statusCode} - ${duration}ms - Error: ${errorMessage}`;
-          if (statusCode >= 500) {
-            this.logger.error(logMsg);
-          } else {
-            this.logger.warn(logMsg);
-          }
-        },
+      catchError((err: unknown) => {
+        const status =
+          err instanceof HttpException
+            ? err.getStatus()
+            : typeof err === 'object' &&
+                err !== null &&
+                'statusCode' in err &&
+                typeof (err as { statusCode?: unknown }).statusCode === 'number'
+              ? (err as { statusCode: number }).statusCode
+              : 500;
+
+        const message = err instanceof Error ? err.message : String(err);
+        this.logger.error(
+          `[Error] ${method} ${originalUrl} ${status} - ${message}`,
+        );
+
+        return throwError(() => err);
+      }),
+      finalize(() => {
+        const duration = Date.now() - start;
+        this.logger.log(
+          `[End] ${method} ${originalUrl} ${res.statusCode} - ${duration}ms`,
+        );
       }),
     );
   }

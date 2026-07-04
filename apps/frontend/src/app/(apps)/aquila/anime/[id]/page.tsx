@@ -6,7 +6,9 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { id } = await params;
   const anime = await getMediaDetails("anime", id);
 
@@ -17,22 +19,27 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
-  const title = anime.title.english || anime.title.romaji || "Anime Details";
+  const title =
+    anime.titleEnglish ??
+    anime.titleRomaji ??
+    anime.title?.english ??
+    anime.title?.romaji ??
+    "Anime Details";
   const description = cleanDescription(anime.description, 160);
-  const image = anime.coverImage.extraLarge || anime.coverImage.large;
+  const image =
+    typeof anime.coverImage === "string"
+      ? anime.coverImage
+      : (anime.coverImage?.extraLarge ?? anime.coverImage?.large ?? "");
+  const keywords: string[] = Array.isArray(anime.genres) ? anime.genres : [];
 
   return {
     title: `Aquila > Anime > ${title}`,
     description,
+    keywords,
     openGraph: {
       title,
       description,
-      images: [
-        {
-          url: image,
-          alt: title,
-        },
-      ],
+      images: image ? [{ url: image, alt: title }] : [],
       type: "video.other",
       siteName: "Aquila",
     },
@@ -40,15 +47,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       card: "summary_large_image",
       title,
       description,
-      images: [image],
+      images: image ? [image] : [],
     },
   };
 }
 
 export default async function Page({ params }: PageProps) {
-  // We resolve params on the server side in Next 15+, and then we render the client-side component.
-  // The client-side component can read params using useParams() from next/navigation,
-  // or we can pass it down if needed. Since the original component uses useParams(),
-  // it will continue to work perfectly out-of-the-box.
   return <AnimeDetailsPage />;
 }

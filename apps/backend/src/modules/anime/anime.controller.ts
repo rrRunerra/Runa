@@ -1,50 +1,39 @@
-import { Controller, Param, UseGuards, Get, Query, Post, Req, ForbiddenException, HttpException, HttpStatus } from '@nestjs/common';
+import { Controller, Param, UseGuards, Get, Post } from '@nestjs/common';
 import { AnimeService } from './anime.service';
-import { DualAuthGuard } from '../../common/guards/auth.guard';
+import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { Public } from 'src/common/decorators/public.decorator';
-import { AnimeSearchEntity } from './entities/anime-search.entity';
-import { AnimeEntity } from './entities/anime.entity';
-import { AquilaBitField } from '@runa/permissions';
-import { CacheService } from '../../providers/cache/cache.service';
+import type { AnimeSearchEntity, AnimeEntity } from './anime.entities';
+import { AquilaFlags } from '@runa/permissions';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { Permissions } from 'src/common/decorators/permissions.decorator';
+import { AnimeDetailDto, SearchAnimeDto, AnimeRefreshDto } from './anime.dto';
 
 @Controller('anime')
-@UseGuards(DualAuthGuard)
+@UseGuards(AuthGuard, PermissionsGuard)
 export class AnimeController {
-  constructor(
-    private readonly animeService: AnimeService,
-    private readonly cacheService: CacheService,
-  ) {}
+  constructor(private readonly animeService: AnimeService) {}
+
+  private readonly moduleCode: string = 'AeCtr-';
 
   @Public()
-  @Get('search')
-  async search(@Query() query: { name: string }): Promise<AnimeSearchEntity> {
-    return this.animeService.search(query.name);
+  @Get('search/:name')
+  async search(@Param() params: SearchAnimeDto): Promise<AnimeSearchEntity[]> {
+    return this.animeService.search(params.name);
   }
 
   @Public()
-  @Get('details/:id')
-  async getAnime(@Param('id') id: string): Promise<AnimeEntity> {
-    return this.animeService.getAnime(parseInt(id));
+  @Get(':id')
+  async animeDetail(
+    @Param() params: AnimeDetailDto,
+  ): Promise<AnimeEntity | undefined> {
+    return await this.animeService.getAnime(params.id);
   }
 
-  @Post('refresh/:id')
-  async refreshAnime(@Param('id') id: string, @Req() req: any): Promise<AnimeEntity> {
-    const bitfield = AquilaBitField.fromRaw(req.user.permissions);
-    if (!bitfield.has('MEDIA_REFRESH')) {
-      throw new ForbiddenException('You do not have permission to refresh media');
-    }
-
-    const cooldownKey = `cooldown:refresh:anime:${id}`;
-    const onCooldown = await this.cacheService.get(cooldownKey);
-    if (onCooldown) {
-      throw new HttpException(
-        'This media was refreshed recently. Please wait before refreshing again.',
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
-    }
-
-    const result = await this.animeService.getAnime(parseInt(id), true);
-    await this.cacheService.set(cooldownKey, true, 60);
-    return result;
+  @Post(':id/refresh')
+  @Permissions([AquilaFlags.MEDIA_REFRESH])
+  async refreshAnime(
+    @Param() params: AnimeRefreshDto,
+  ): Promise<AnimeEntity | undefined | null> {
+    return await this.animeService.refreshAnime(params.id);
   }
 }

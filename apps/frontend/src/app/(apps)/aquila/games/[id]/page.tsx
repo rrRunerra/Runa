@@ -6,7 +6,9 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { id } = await params;
   const game = await getMediaDetails("games", id);
 
@@ -17,22 +19,26 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
-  const title = game.title.english || game.title.romaji || "Game Details";
+  const title = game.titleString ?? "Game Details";
   const description = cleanDescription(game.description, 160);
-  const image = game.coverImage.extraLarge || game.coverImage.large;
+  const image =
+    typeof game.coverImage === "string" ? game.coverImage : "";
+  const bannerImage =
+    typeof game.backgroundImage === "string" ? game.backgroundImage : image;
+  const keywords: string[] = Array.isArray(game.genres) ? game.genres : [];
 
   return {
     title: `Aquila > Game > ${title}`,
     description,
+    keywords,
     openGraph: {
       title,
       description,
-      images: [
-        {
-          url: image,
-          alt: title,
-        },
-      ],
+      images: bannerImage
+        ? [{ url: bannerImage, alt: title }]
+        : image
+          ? [{ url: image, alt: title }]
+          : [],
       type: "website",
       siteName: "Aquila",
     },
@@ -40,7 +46,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       card: "summary_large_image",
       title,
       description,
-      images: [image],
+      images: bannerImage ? [bannerImage] : image ? [image] : [],
     },
   };
 }

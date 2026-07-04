@@ -43,7 +43,7 @@ export const RrPrivacySettingsTab = ({
     mutate: refetchPrivacy,
   } = useSWR<any>(
     session?.accessToken
-      ? [`${process.env.NEXT_PUBLIC_API_URL}/user/privacy`, session.accessToken]
+      ? [`${process.env.NEXT_PUBLIC_API_URL}/users/me/privacy`, session.accessToken]
       : null,
     fetcher,
   );
@@ -72,7 +72,7 @@ export const RrPrivacySettingsTab = ({
     setIsSubmitting(true);
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/user/privacy`,
+        `${process.env.NEXT_PUBLIC_API_URL}/users/me/privacy`,
         {
           method: "PUT",
           headers: {

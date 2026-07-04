@@ -42,7 +42,9 @@ export default function Page() {
   const [selectedDeviceId, setSelectedDeviceId] = useState("");
 
   // Login Code States
-  const [loginCodeState, setLoginCodeState] = useState<"none" | "generating" | "code" | "error">("none");
+  const [loginCodeState, setLoginCodeState] = useState<
+    "none" | "generating" | "code" | "error"
+  >("none");
   const [generatedCode, setGeneratedCode] = useState<string>("");
   const pollingRef = React.useRef<NodeJS.Timeout | null>(null);
 
@@ -135,7 +137,7 @@ export default function Page() {
 
       // Call register API
       const registerRes = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/user/device/register`,
+        `${process.env.NEXT_PUBLIC_API_URL}/users/me/devices`,
         {
           method: "POST",
           headers: {
@@ -193,7 +195,7 @@ export default function Page() {
 
       // 1. Fetch E2EE keys status from server
       const getRes = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/user/e2e-keys`,
+        `${process.env.NEXT_PUBLIC_API_URL}/users/me/e2ee-keys`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -228,7 +230,7 @@ export default function Page() {
 
         // Upload to server
         const putRes = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/user/e2e-keys`,
+          `${process.env.NEXT_PUBLIC_API_URL}/users/me/e2ee-keys`,
           {
             method: "PUT",
             headers: {
@@ -275,7 +277,7 @@ export default function Page() {
       const publicKeyBase64 =
         e2eKeys.userPublicKey ||
         // For the new-key branch, userPublicKey was just uploaded — re-read from server
-        (await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/e2e-keys`, {
+        (await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me/e2ee-keys`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         })
           .then((r) => r.json())
@@ -558,7 +560,10 @@ export default function Page() {
     });
 
     if (res?.error) {
-      console.error("[Login] MFA completeLoginWithSuccessToken signIn credentials error:", res.error);
+      console.error(
+        "[Login] MFA completeLoginWithSuccessToken signIn credentials error:",
+        res.error,
+      );
       setMessage(`❌ Session establishment failed: ${res.error}`);
       setLoading(false);
     } else if (res?.ok) {
@@ -669,12 +674,15 @@ export default function Page() {
     }
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login-code/generate`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/login-code/generate`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
         },
-      });
+      );
 
       if (!res.ok) {
         throw new Error("Failed to generate code");
@@ -707,7 +715,9 @@ export default function Page() {
 
     pollingRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login-code/status?code=${code}`);
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/auth/login-code/status?code=${code}`,
+        );
         if (!res.ok) return;
 
         const data = await res.json();

@@ -1,0 +1,128 @@
+{
+  "type": "service",
+  "serviceName": "GameQueueService",
+  "serviceCode": "GeQeSve-",
+
+  "dependedOn": "gameRepository",
+
+  "privateVars": [
+    {
+      "name": "logger",
+      "type": "Logger",
+      "description": "Logger instance scoped to GameQueueService",
+      "readOnly": true
+    },
+    {
+      "name": "moduleCode",
+      "type": "string",
+      "description": "Prefix for rrCodes",
+      "readOnly": true
+    },
+    {
+      "name": "jobQueue",
+      "type": "Subject<number>",
+      "description": "RxJS Subject used as a job queue for game sync requests",
+      "readOnly": true
+    },
+    {
+      "name": "processing",
+      "type": "Set<number>",
+      "description": "Set of game IDs currently being processed to prevent duplicate jobs",
+      "readOnly": true
+    },
+    {
+      "name": "gameRepository",
+      "type": "GameRepository",
+      "description": "Repository used to upsert game records after syncing",
+      "readOnly": true
+    }
+  ],
+
+  "functions": [
+    {
+      "name": "onModuleInit",
+      "type": "synch",
+      "access": "public",
+      "params": [],
+      "description": "Initializes the queue processing pipeline on module startup",
+      "returnValues": ["void"],
+      "exceptions": null
+    },
+    {
+      "name": "addJob",
+      "type": "synch",
+      "access": "public",
+      "params": [
+        {
+          "name": "id",
+          "type": "number",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Adds a game ID to the sync queue if it is not already being processed",
+      "returnValues": ["void"],
+      "exceptions": null
+    },
+    {
+      "name": "getApiKey",
+      "type": "synch",
+      "access": "private",
+      "params": [],
+      "description": "Retrieves the RAWG_API_KEY from environment variables",
+      "returnValues": ["string"],
+      "exceptions": null
+    },
+    {
+      "name": "processQueue",
+      "type": "synch",
+      "access": "private",
+      "params": [],
+      "description": "Subscribes to the job queue with concurrent processing (max 3) and processes game sync jobs",
+      "returnValues": ["void"],
+      "exceptions": null
+    },
+    {
+      "name": "syncGameFromRawg",
+      "type": "async",
+      "access": "private",
+      "params": [
+        {
+          "name": "id",
+          "type": "number",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Fetches game data from RAWG and upserts the record in the repository",
+      "returnValues": ["Promise<void>"],
+      "exceptions": null
+    },
+    {
+      "name": "fetchFromRawg",
+      "type": "async",
+      "access": "private",
+      "params": [
+        {
+          "name": "id",
+          "type": "number",
+          "typeLib": "typescript"
+        }
+      ],
+      "description": "Fetches detailed game data from RAWG API for queue sync, returns null on failure",
+      "returnValues": ["Promise<Media | null>"],
+      "exceptions": [
+        {
+          "name": "rrInternalServerErrorException",
+          "rrCode": "GeQeSve-RAKIND001",
+          "message": "RAWG_API_KEY is not defined",
+          "statusCode": 500
+        },
+        {
+          "name": "rrInternalServerErrorException",
+          "rrCode": "GeQeSve-RDFF001",
+          "message": "RAWG detail fetch failed: ${res.status}",
+          "statusCode": 500
+        }
+      ]
+    }
+  ]
+}

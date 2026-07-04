@@ -72,7 +72,7 @@ const RrMediaCardComponent = ({
     <>
       <div className="group relative flex flex-col w-full bg-card hover:bg-accent/5 rounded-2xl border border-border/40 hover:border-primary/30 transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5">
         {/* Poster Image Container */}
-        <div className="relative aspect-2/3 w-full rounded-t-2xl overflow-hidden bg-muted">
+        <div className="relative aspect-[2/3] w-full rounded-t-2xl overflow-hidden bg-muted">
           <Link
             href={href}
             prefetch={false}

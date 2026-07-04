@@ -10,14 +10,15 @@ import RrLapplandImageNotFound from "../rrImages/rrLapplandImageNotFound";
 
 export interface RrBrowseCardProps {
   item: {
-    id: string;
-    title: {
+    id: string | number;
+    title: string | {
       romaji: string;
       english?: string;
     };
-    coverImage?: {
+    secondaryTitle?: string | null;
+    coverImage?: string | {
       large: string;
-    };
+    } | null;
     isAdult?: boolean;
   };
   type: string;
@@ -31,10 +32,10 @@ const RrBrowseCardComponent = ({
   onDelete,
   onClick,
 }: RrBrowseCardProps): React.JSX.Element => {
-  const primaryTitle = item.title.english || item.title.romaji;
-  const secondaryTitle = item.title.english ? item.title.romaji : null;
+  const primaryTitle = typeof item.title === "string" ? item.title : (item.title?.english || item.title?.romaji || "");
+  const secondaryTitle = typeof item.title === "string" ? (item.secondaryTitle || null) : (item.title?.english ? item.title.romaji : null);
   const safeType = ["anime", "manga", "movies", "tv", "games", "books"].includes(type) ? type : "anime";
-  const safeId = encodeURIComponent(item.id);
+  const safeId = encodeURIComponent(item.id.toString());
 
   return (
     <motion.div
@@ -77,7 +78,15 @@ const RrBrowseCardComponent = ({
         className="flex flex-col gap-2 h-full"
       >
         <div className="relative aspect-3/4 w-full overflow-hidden rounded-xl bg-muted shadow-xs group-hover:shadow-md border border-border/50 transition-all">
-          {item.coverImage?.large ? (
+          {typeof item.coverImage === "string" ? (
+            <Image
+              src={item.coverImage}
+              alt={primaryTitle}
+              fill
+              className="object-cover transition-transform duration-500 group-hover:scale-105"
+              sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw"
+            />
+          ) : item.coverImage?.large ? (
             <Image
               src={item.coverImage.large}
               alt={primaryTitle}
