@@ -57,7 +57,7 @@ export async function getMediaDetails(type: string, id: string): Promise<Media |
   else if (apiType === "games") apiType = "game";
 
   try {
-    const res = await fetch(`${API_URL}/${apiType}/details/${id}`, {
+    const res = await fetch(`${API_URL}/${apiType}/${id}`, {
       next: { revalidate: 3600 },
     });
     if (!res.ok) return null;
@@ -73,7 +73,7 @@ export async function getMediaDetails(type: string, id: string): Promise<Media |
  */
 export async function getUserProfile(username: string): Promise<UserProfile | null> {
   try {
-    const res = await fetch(`${API_URL}/user/${username}`, {
+    const res = await fetch(`${API_URL}/users/${username}`, {
       next: { revalidate: 3600 },
     });
     if (!res.ok) return null;

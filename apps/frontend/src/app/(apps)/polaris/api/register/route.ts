@@ -18,7 +18,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const res = await fetch(`${API_URL}/user/create`, {
+  const res = await fetch(`${API_URL}/users`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

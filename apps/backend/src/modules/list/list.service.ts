@@ -2052,7 +2052,7 @@ export class ListService {
       where: {
         username_bookId: {
           username: username.toLowerCase(),
-          bookId,
+          bookId: parseInt(bookId, 10),
         },
       },
     });
@@ -2089,7 +2089,7 @@ export class ListService {
         where: {
           username_bookId: {
             username: username.toLowerCase(),
-            bookId: body.bookId,
+            bookId: parseInt(body.bookId, 10),
           },
         },
         update: {
@@ -2103,7 +2103,7 @@ export class ListService {
         },
         create: {
           username: username.toLowerCase(),
-          bookId: body.bookId,
+          bookId: parseInt(body.bookId, 10),
           status: body.status,
           chapters: body.chapters,
           volumes: body.volumes,
@@ -2141,7 +2141,7 @@ export class ListService {
         where: {
           username_bookId: {
             username: username.toLowerCase(),
-            bookId,
+            bookId: parseInt(bookId, 10),
           },
         },
       });

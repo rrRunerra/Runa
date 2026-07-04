@@ -56,10 +56,28 @@ export class MangaRepository {
         id,
       },
       include: {
-        mangaCharacters: true,
-        mangaMangaRelations: true,
-        mangaRelatedMangaRelations: true,
-        mangaStudios: true,
+        mangaCharacters: {
+          include: {
+            character: true,
+          },
+        },
+        mangaMangaRelations: {
+          include: {
+            relatedAnime: true,
+            relatedManga: true,
+          },
+        },
+        mangaRelatedMangaRelations: {
+          include: {
+            anime: true,
+            manga: true,
+          },
+        },
+        mangaStudios: {
+          include: {
+            studio: true,
+          },
+        },
       },
     });
 

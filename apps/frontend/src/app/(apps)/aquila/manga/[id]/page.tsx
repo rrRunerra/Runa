@@ -17,9 +17,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
-  const title = manga.title.english || manga.title.romaji || "Manga Details";
+  const title = manga.titleEnglish ?? manga.titleRomaji ?? manga.titleString ?? manga.title?.english ?? manga.title?.romaji ?? "Manga Details";
   const description = cleanDescription(manga.description, 160);
-  const image = manga.coverImage.extraLarge || manga.coverImage.large;
+  const image = typeof manga.coverImage === "string" ? manga.coverImage : (manga.coverImageLarge ?? manga.coverImage?.extraLarge ?? manga.coverImage?.large ?? "");
 
   return {
     title: `Aquila > Manga > ${title}`,

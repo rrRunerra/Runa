@@ -25,14 +25,15 @@ export interface MediaSectionProps {
 }
 
 export interface SearchResult {
-  id: string;
-  title: {
+  id: string | number;
+  title: string | {
     romaji: string;
-    english: string;
+    english?: string;
   };
-  coverImage: {
+  secondaryTitle?: string | null;
+  coverImage?: string | {
     large: string;
-  };
+  } | null;
   format: string;
   status: string;
   isAdult: boolean;
@@ -99,7 +100,7 @@ export interface MediaExternalLink {
 }
 
 export interface Media {
-  id: string;
+  id: string | number;
   title: {
     romaji: string;
     english?: string;
@@ -137,6 +138,29 @@ export interface Media {
   chapters?: number;
   volumes?: number;
   source?: string;
+
+  // Flat API properties mapping compatibility
+  titleEnglish?: string | null;
+  titleRomaji?: string | null;
+  titleNative?: string | null;
+  titleString?: string | null;
+  coverImageLarge?: string | null;
+  backgroundImage?: string | null;
+  animeCharacters?: any[];
+  mangaCharacters?: any[];
+  animeRelations?: any[];
+  relatedAnimeRelations?: any[];
+  mangaMangaRelations?: any[];
+  mangaRelatedMangaRelations?: any[];
+  released?: string | null;
+  releasedYear?: number | null;
+  releasedMonth?: number | null;
+  releasedDay?: number | null;
+  developers?: string[];
+  platforms?: string[];
+  authors?: string[];
+  artists?: string[];
+  publishers?: string[];
   tags?: { id: string; name: string; rank?: number }[];
   averageScore?: number;
   popularity?: number;

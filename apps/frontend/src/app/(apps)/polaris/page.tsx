@@ -49,7 +49,7 @@ export default function Dash() {
 
   const { data: bookmarks = [], mutate } = useSWR<Bookmark[]>(
     session?.accessToken
-      ? [`${process.env.NEXT_PUBLIC_API_URL}/polaris/bookmarks`, session.accessToken]
+      ? [`${process.env.NEXT_PUBLIC_API_URL}/bookmarks`, session.accessToken]
       : null,
     fetcher
   );

@@ -1,5 +1,6 @@
-import { MangaFormat, MangaStatus } from '@runa/database';
-import type { RelationEntity, MediaTag, CharacterEntity, StudioEntity } from '../anime/anime.entities';
+// Copied from backend module for frontend type safety
+import { AnimeFormat, AnimeStatus } from '@runa/database';
+import type { RelationEntity, MediaTag, CharacterEntity, StudioEntity } from './anime.entities';
 
 export interface MangaCharacterEntity {
   mangaId: number;
@@ -21,8 +22,8 @@ export interface MangaSearchEntity {
   title: string;
   secondaryTitle: string | null;
   coverImage: string | null;
-  format: MangaFormat;
-  status: MangaStatus;
+  format: AnimeFormat;
+  status: AnimeStatus;
   isAdult: boolean;
   averageScore: number | null;
 }
@@ -48,8 +49,8 @@ export interface MangaEntity {
   genres: string[];
   tags: MediaTag[] | null;
   source: string | null;
-  format: MangaFormat;
-  status: MangaStatus;
+  format: AnimeFormat;
+  status: AnimeStatus;
   isAdult: boolean | null;
   averageScore: number | null;
   favourites: number | null;

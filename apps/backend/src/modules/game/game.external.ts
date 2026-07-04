@@ -208,7 +208,7 @@ export class GameExternal {
         titleNative: game.name_original || null,
         slug: game.slug || null,
         coverImage: game.background_image || null,
-        backgroundImage: game.background_image_additional || null,
+        backgroundImage: game.background_image || game.background_image_additional || null,
         description,
         releasedYear: released.releasedYear,
         releasedMonth: released.releasedMonth,

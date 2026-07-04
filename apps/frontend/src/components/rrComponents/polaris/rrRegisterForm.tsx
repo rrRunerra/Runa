@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Eye, EyeOff, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { RESERVED_KEYWORDS } from "@/lib/rrReservedKeywords";
 import RrLapplandWelcomeImage from "../rrImages/rrLapplandWelcomeImage";
+import RrLapplandRateLimit from "../rrImages/rrLapplandRateLimit";
 import RrLapplandRegisterBothTaken from "../rrImages/rrLapplandRegisterBothTaken";
 import RrLapplandRegisterUsernameTaken from "../rrImages/rrLapplandRegisterUsernameTaken";
 import RrLapplandRegisterEmailTaken from "../rrImages/rrLapplandRegisterEmailTaken";
@@ -379,7 +380,14 @@ export function RrRegisterForm({
               let ActiveComponent: React.ComponentType<any>;
               let stateKey: string;
 
-              if (message?.toLowerCase().includes("success")) {
+              if (
+                message?.toLowerCase().includes("too many requests") ||
+                message?.toLowerCase().includes("throttled") ||
+                message?.toLowerCase().includes("rate limit")
+              ) {
+                ActiveComponent = RrLapplandRateLimit;
+                stateKey = "rate-limited";
+              } else if (message?.toLowerCase().includes("success")) {
                 ActiveComponent = RrLapplandWelcomeImage;
                 stateKey = "success";
               } else if (isUsernameError && isEmailError) {

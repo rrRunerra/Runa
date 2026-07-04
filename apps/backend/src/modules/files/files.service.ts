@@ -76,7 +76,7 @@ export class FilesService {
       });
     }
 
-    return { url: `${this.cdnUrl}/${key}` };
+    return { url: `${this.cdnUrl}/${this.publicBucket}/${key}` };
   }
 
   // ---------------------------------------------------------------------------
@@ -206,8 +206,8 @@ export class FilesService {
   deleteFileByUrl(url: string | null | undefined): void {
     if (!url) return;
 
-    // Extract the S3 key from the CDN URL: <cdnUrl>/<key>
-    const prefix = `${this.cdnUrl}/`;
+    // Extract the S3 key from the CDN URL: <cdnUrl>/<bucket>/<key>
+    const prefix = `${this.cdnUrl}/${this.publicBucket}/`;
     if (!url.startsWith(prefix)) return;
     const key = url.slice(prefix.length);
 

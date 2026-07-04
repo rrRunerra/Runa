@@ -56,10 +56,28 @@ export class AnimeRepository {
         id,
       },
       include: {
-        animeCharacters: true,
-        animeRelations: true,
-        animeStudios: true,
-        relatedAnimeRelations: true,
+        animeCharacters: {
+          include: {
+            character: true,
+          },
+        },
+        animeRelations: {
+          include: {
+            relatedAnime: true,
+            relatedManga: true,
+          },
+        },
+        animeStudios: {
+          include: {
+            studio: true,
+          },
+        },
+        relatedAnimeRelations: {
+          include: {
+            anime: true,
+            manga: true,
+          },
+        },
       },
     });
 

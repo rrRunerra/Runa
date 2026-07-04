@@ -1,3 +1,4 @@
+// Copied from backend module for frontend type safety
 import { AnimeFormat, AnimeStatus } from '@runa/database';
 
 // Shared sub-entity types (used by both anime and manga)
@@ -45,8 +46,6 @@ export interface StudioEntity {
   siteUrl: string | null;
 }
 
-import type { MangaEntity } from '../manga/manga.entities';
-
 export interface AnimeCharacterEntity {
   animeId: number;
   characterId: number;
@@ -70,9 +69,9 @@ export interface RelationEntity {
   relatedMangaId: number | null;
   relationType: string | null;
   relatedAnime?: AnimeEntity;
-  relatedManga?: MangaEntity;
+  relatedManga?: any; // MangaEntity not imported here
   anime?: AnimeEntity;
-  manga?: MangaEntity;
+  manga?: any; // MangaEntity not imported here
 }
 
 export interface AnimeSearchEntity {

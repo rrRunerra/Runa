@@ -71,7 +71,7 @@ export const RrAccountSettingsTab = ({
   const { data: profileData } = useSWR<any>(
     session?.user?.username && session?.accessToken
       ? [
-          `${process.env.NEXT_PUBLIC_API_URL}/user/${session.user.username}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/users/${session.user.username}`,
           session.accessToken,
         ]
       : null,
@@ -177,7 +177,7 @@ export const RrAccountSettingsTab = ({
         const formData = new FormData();
         formData.append("file", avatarFile);
 
-        const uploadData = await apiMutate(`${process.env.NEXT_PUBLIC_API_URL}/media/upload`, "POST", formData);
+        const uploadData = await apiMutate(`${process.env.NEXT_PUBLIC_API_URL}/public/upload`, "POST", formData);
         finalAvatarUrl = uploadData.url;
       }
 
@@ -185,7 +185,7 @@ export const RrAccountSettingsTab = ({
         const formData = new FormData();
         formData.append("file", bannerFile);
 
-        const uploadData = await apiMutate(`${process.env.NEXT_PUBLIC_API_URL}/media/upload`, "POST", formData);
+        const uploadData = await apiMutate(`${process.env.NEXT_PUBLIC_API_URL}/public/upload`, "POST", formData);
         finalBannerUrl = uploadData.url;
       }
 
@@ -193,7 +193,7 @@ export const RrAccountSettingsTab = ({
         const formData = new FormData();
         formData.append("file", sidebarCardBackgroundFile);
 
-        const uploadData = await apiMutate(`${process.env.NEXT_PUBLIC_API_URL}/media/upload`, "POST", formData);
+        const uploadData = await apiMutate(`${process.env.NEXT_PUBLIC_API_URL}/public/upload`, "POST", formData);
         finalBackgroundUrl = uploadData.url;
       }
 
@@ -216,7 +216,7 @@ export const RrAccountSettingsTab = ({
       }
 
       const updateData = await apiMutate(
-        `${process.env.NEXT_PUBLIC_API_URL}/user/update`,
+        `${process.env.NEXT_PUBLIC_API_URL}/users/me`,
         "PUT",
         updatePayload
       );
@@ -231,7 +231,7 @@ export const RrAccountSettingsTab = ({
       const bioChanged = bio !== (profileSettings?.bio || "");
       if (bioChanged) {
         await apiMutate(
-          `${process.env.NEXT_PUBLIC_API_URL}/user/settings`,
+          `${process.env.NEXT_PUBLIC_API_URL}/users/me/settings`,
           "PUT",
           {
             profileSettings: {

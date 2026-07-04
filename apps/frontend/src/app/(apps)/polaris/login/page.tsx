@@ -137,7 +137,7 @@ export default function Page() {
 
       // Call register API
       const registerRes = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/user/device/register`,
+        `${process.env.NEXT_PUBLIC_API_URL}/users/me/devices`,
         {
           method: "POST",
           headers: {
@@ -195,7 +195,7 @@ export default function Page() {
 
       // 1. Fetch E2EE keys status from server
       const getRes = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/user/e2e-keys`,
+        `${process.env.NEXT_PUBLIC_API_URL}/users/me/e2ee-keys`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -230,7 +230,7 @@ export default function Page() {
 
         // Upload to server
         const putRes = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/user/e2e-keys`,
+          `${process.env.NEXT_PUBLIC_API_URL}/users/me/e2ee-keys`,
           {
             method: "PUT",
             headers: {
@@ -277,7 +277,7 @@ export default function Page() {
       const publicKeyBase64 =
         e2eKeys.userPublicKey ||
         // For the new-key branch, userPublicKey was just uploaded — re-read from server
-        (await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/e2e-keys`, {
+        (await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me/e2ee-keys`, {
           headers: { Authorization: `Bearer ${accessToken}` },
         })
           .then((r) => r.json())
