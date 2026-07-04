@@ -415,6 +415,43 @@ export function RrNotificationsModal({
     }
   };
 
+  const handleMarkAllRead = async () => {
+    if (!session?.accessToken) return;
+    const pendingNotifs = notifications.filter(
+      (n) => n.status === "PENDING",
+    );
+    if (pendingNotifs.length === 0) return;
+
+    try {
+      await Promise.all(
+        pendingNotifs.map(async (n) => {
+          await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/notifications/${n.id}/status`,
+            {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${session.accessToken}`,
+              },
+              body: JSON.stringify({ status: "READ" }),
+            },
+          );
+        }),
+      );
+      
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.status === "PENDING"
+            ? { ...n, status: "READ" as NotificationStatus }
+            : n,
+        ),
+      );
+      toast.success("All notifications marked as read");
+    } catch {
+      toast.error("Failed to mark some notifications as read");
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!session?.accessToken) return;
     try {
@@ -623,6 +660,17 @@ export function RrNotificationsModal({
                 </SelectContent>
               </Select>
 
+              {unreadCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleMarkAllRead}
+                  className="h-8 text-[10px] font-bold text-primary hover:text-primary hover:bg-primary/10 transition-all cursor-pointer"
+                >
+                  Mark All Read
+                </Button>
+              )}
+
               {notifications.length > 0 && (
                 <Button
                   variant="ghost"
@@ -719,17 +767,33 @@ export function RrNotificationsModal({
                       </div>
 
                       {!isActionable && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(n.id);
-                          }}
-                          className="size-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer shrink-0 transition-colors"
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {isPending && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDismiss(n.id);
+                              }}
+                              className="size-8 rounded-lg text-muted-foreground hover:text-primary hover:bg-primary/10 cursor-pointer shrink-0 transition-colors"
+                              title="Mark as read"
+                            >
+                              <CheckCircle className="size-4" />
+                            </Button>
+                          )}
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(n.id);
+                            }}
+                            className="size-8 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer shrink-0 transition-colors"
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
                       )}
                     </div>
 
