@@ -489,24 +489,9 @@ export class ListController {
 
   // ─────────────────────────── RADARR/SONARR ───────────────────────────
 
-  @Get(['radarr/api/v3/movie', 'api/v3/movie'])
+  @Get('*api/v3/movie')
   public async getRadarrMovieList(@Req() req: any): Promise<any[]> {
     return this.listService.getRadarrMovieList(req.user.username);
-  }
-
-  @Get(['radarr/api/v3/qualityprofile', 'api/v3/qualityprofile'])
-  public getRadarrQualityProfiles(): any[] {
-    return [
-      {
-        id: 1,
-        name: 'Any',
-      },
-    ];
-  }
-
-  @Get(['sonarr/api/v3/series', 'api/v3/series'])
-  public async getSonarrSeriesListCombined(@Req() req: any): Promise<any[]> {
-    return this.listService.fetchSonarrSeries(req.user.username, true, true);
   }
 
   @Get('sonarr/tv/api/v3/series')
@@ -519,13 +504,13 @@ export class ListController {
     return this.listService.fetchSonarrSeries(req.user.username, false, true);
   }
 
-  @Get([
-    'sonarr/api/v3/qualityprofile',
-    'api/v3/qualityprofile',
-    'sonarr/tv/api/v3/qualityprofile',
-    'sonarr/anime/api/v3/qualityprofile',
-  ])
-  public getSonarrQualityProfiles(): any[] {
+  @Get('*api/v3/series')
+  public async getSonarrSeriesListCombined(@Req() req: any): Promise<any[]> {
+    return this.listService.fetchSonarrSeries(req.user.username, true, true);
+  }
+
+  @Get('*api/v3/qualityprofile')
+  public getQualityProfiles(): any[] {
     return [
       {
         id: 1,

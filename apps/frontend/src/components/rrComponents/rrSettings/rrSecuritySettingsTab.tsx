@@ -673,12 +673,13 @@ export const RrSecuritySettingsTab = ({
         </div>
       </div>
 
-      {/* Session Management Section */}
-      <div className="flex flex-col gap-4 pt-4 border-t border-border text-left">
-        <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-          Active Session
-        </h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Session & Device Management Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-border text-left items-start">
+        {/* Left Column: Active Session */}
+        <div className="flex flex-col gap-4">
+          <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+            Active Session
+          </h4>
           {/* Session Token Refresh Card */}
           <Card className="flex flex-col justify-between relative overflow-hidden text-left">
             <CardHeader>
@@ -743,70 +744,70 @@ export const RrSecuritySettingsTab = ({
             </CardFooter>
           </Card>
         </div>
-      </div>
 
-      {/* Device Management Section */}
-      <div className="flex flex-col gap-4 pt-4 border-t border-border text-left">
-        <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-          Connected Devices
-        </h4>
+        {/* Right Column: Connected Devices */}
+        <div className="flex flex-col gap-4">
+          <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+            Connected Devices
+          </h4>
 
-        {/* Link Device via Code Card */}
-        <Card className="border border-border rounded-2xl bg-card shadow-sm">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-primary/10 shrink-0">
-                <Key className="size-4 text-primary" />
+          {/* Link Device via Code Card */}
+          <Card className="border border-border rounded-2xl bg-card shadow-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-primary/10 shrink-0">
+                  <Key className="size-4 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-semibold text-foreground">
+                    Link a New Device
+                  </CardTitle>
+                  <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                    Enter the 10-digit code shown on the device you want to authorize
+                  </CardDescription>
+                </div>
               </div>
-              <div>
-                <CardTitle className="text-sm font-semibold text-foreground">
-                  Link a New Device
-                </CardTitle>
-                <CardDescription className="text-xs text-muted-foreground mt-0.5">
-                  Enter the 10-digit code shown on the device you want to authorize
-                </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2">
+                <Input
+                  id="link-device-code"
+                  placeholder="e.g. 1234567890"
+                  value={linkCodeInput}
+                  onChange={(e) => setLinkCodeInput(e.target.value.replace(/[^0-9\s-]/g, "").slice(0, 12))}
+                  disabled={isLinking}
+                  className="h-9 text-sm font-mono tracking-widest rounded-xl bg-background border-input"
+                  maxLength={12}
+                />
+                <Button
+                  onClick={handleLinkDevice}
+                  disabled={isLinking || linkCodeInput.replace(/[\s-]/g, "").length !== 10}
+                  className="h-9 px-4 text-xs font-semibold rounded-xl shrink-0"
+                >
+                  {isLinking ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    "Authorize"
+                  )}
+                </Button>
               </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-2">
-              <Input
-                id="link-device-code"
-                placeholder="e.g. 1234567890"
-                value={linkCodeInput}
-                onChange={(e) => setLinkCodeInput(e.target.value.replace(/[^0-9\s-]/g, "").slice(0, 12))}
-                disabled={isLinking}
-                className="h-9 text-sm font-mono tracking-widest rounded-xl bg-background border-input"
-                maxLength={12}
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-1 gap-4">
+            {devices.map((device) => (
+              <RrDeviceItem
+                key={device.id}
+                device={device}
+                onRevoke={handleRevokeDevice}
               />
-              <Button
-                onClick={handleLinkDevice}
-                disabled={isLinking || linkCodeInput.replace(/[\s-]/g, "").length !== 10}
-                className="h-9 px-4 text-xs font-semibold rounded-xl shrink-0"
-              >
-                {isLinking ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : (
-                  "Authorize"
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {devices.map((device) => (
-            <RrDeviceItem
-              key={device.id}
-              device={device}
-              onRevoke={handleRevokeDevice}
-            />
-          ))}
-          {devices.length === 0 && (
-            <div className="col-span-full p-6 text-center rounded-2xl border border-dashed border-border text-xs text-muted-foreground">
-              No registered devices found.
-            </div>
-          )}
+            ))}
+            {devices.length === 0 && (
+              <div className="col-span-full p-6 text-center rounded-2xl border border-dashed border-border text-xs text-muted-foreground">
+                No registered devices found.
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

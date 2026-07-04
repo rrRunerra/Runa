@@ -103,7 +103,7 @@ export const RrApiKeysTab = ({
     isLoading: loading,
     mutate: refetch,
   } = useSWR<ApiKeyEntry[]>(
-    session?.accessToken ? [`${process.env.NEXT_PUBLIC_API_URL}/api-key`, session.accessToken] : null,
+    session?.accessToken ? [`${process.env.NEXT_PUBLIC_API_URL}/users/me/api-keys`, session.accessToken] : null,
     fetcher
   );
 
@@ -112,7 +112,7 @@ export const RrApiKeysTab = ({
 
     setIsCreating(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api-key`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me/api-keys`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -147,7 +147,7 @@ export const RrApiKeysTab = ({
       setConfirmDeleteId(null);
 
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api-key/${id}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me/api-keys/${id}`, {
           method: "DELETE",
           headers: {
             Authorization: `Bearer ${session.accessToken}`,
@@ -178,13 +178,11 @@ export const RrApiKeysTab = ({
       setConfirmRegenerateId(null);
 
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api-key`, {
-          method: "PUT",
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me/api-keys/${id}/regenerate`, {
+          method: "POST",
           headers: {
-            "Content-Type": "application/json",
             Authorization: `Bearer ${session.accessToken}`,
           },
-          body: JSON.stringify({ id }),
         });
         if (!res.ok) {
           const errJson = await res.json().catch(() => null);
