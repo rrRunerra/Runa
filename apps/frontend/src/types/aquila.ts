@@ -167,5 +167,4 @@ export interface Media {
   retailPriceCurrency?: string | null;
   maturityRating?: string | null;
   publisher?: string | null;
-  artists?: string[] | null;
 }
