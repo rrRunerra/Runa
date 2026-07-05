@@ -4,8 +4,8 @@ import { auth } from "@runa/auth";
 import { prisma, Prisma } from "@runa/database";
 import { hasPermission, BitField, LynxFlags } from "@runa/permissions";
 
+import type { FieldConfig } from "../lib/dbSchemaUtils";
 import {
-  FieldConfig,
   getModelSchema,
   getPrismaModel,
   parseFields,
