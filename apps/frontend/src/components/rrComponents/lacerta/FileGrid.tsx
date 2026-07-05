@@ -29,7 +29,7 @@ interface FileGridProps {
   onToggleVault: (item: RenderFileItem) => void;
   onDelete: (item: RenderFileItem) => void;
   onCreateFolder: (name: string) => void;
-  onCreateDoc: (type: "doc" | "sheet" | "note" | "slide") => void;
+  onCreateDoc: (type: "doc" | "sheet" | "note" | "slide" | "canvas") => void;
   onUploadFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
   isSharedTab: boolean;
   onLockE2ee?: () => void;
@@ -318,6 +318,16 @@ export default function FileGrid({
                     >
                       <FileText className="h-3.5 w-3.5 text-emerald-500" />
                       Spreadsheet (.ods)
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsNewDropdownOpen(false);
+                        onCreateDoc("canvas");
+                      }}
+                      className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
+                    >
+                      <Grid3X3 className="h-3.5 w-3.5 text-indigo-500" />
+                      Spatial Canvas (.canvas)
                     </button>
                     <button
                       onClick={() => {

@@ -31,6 +31,7 @@ import BuiltinDocEditor from "@/components/rrComponents/lacerta/BuiltinDocEditor
 import BuiltinSheetEditor from "@/components/rrComponents/lacerta/BuiltinSheetEditor";
 import TextEditor from "@/components/rrComponents/lacerta/TextEditor";
 import MediaGallerySlider from "@/components/rrComponents/lacerta/MediaGallerySlider";
+import CanvasEditor from "@/components/rrComponents/lacerta/CanvasEditor";
 
 import { RenderFileItem } from "@/components/rrComponents/lacerta/FileCard";
 
@@ -86,6 +87,8 @@ export default function LacertaPage({
   const [activeDocEditorContent, setActiveDocEditorContent] = useState<string>("");
   const [activeSheetEditorFile, setActiveSheetEditorFile] = useState<any | null>(null);
   const [activeSheetEditorContent, setActiveSheetEditorContent] = useState<string>("");
+  const [activeCanvasEditorFile, setActiveCanvasEditorFile] = useState<any | null>(null);
+  const [activeCanvasEditorContent, setActiveCanvasEditorContent] = useState<string>("");
 
   // Gallery slider states
   const [galleryFiles, setGalleryFiles] = useState<any[]>([]);
@@ -260,15 +263,17 @@ export default function LacertaPage({
   };
 
   // Create new document/spreadsheet file directly in-app
-  const handleCreateDoc = async (type: "doc" | "sheet" | "note" | "slide") => {
+  const handleCreateDoc = async (type: "doc" | "sheet" | "note" | "slide" | "canvas") => {
     if (!userPublicKey || !session?.accessToken) return;
-    const label = type === "doc" ? "document" : type === "sheet" ? "spreadsheet" : type === "slide" ? "presentation" : "note";
+    const label = type === "doc" ? "document" : type === "sheet" ? "spreadsheet" : type === "slide" ? "presentation" : type === "canvas" ? "canvas" : "note";
     const namePrompt = prompt(`Enter ${label} name:`);
     if (!namePrompt || !namePrompt.trim()) return;
 
     const name = namePrompt.trim();
-    const ext = type === "doc" ? ".odt" : type === "sheet" ? ".ods" : type === "slide" ? ".odp" : ".txt";
-    const mime = type === "doc"
+    const ext = type === "canvas" ? ".canvas" : type === "doc" ? ".odt" : type === "sheet" ? ".ods" : type === "slide" ? ".odp" : ".txt";
+    const mime = type === "canvas"
+      ? "application/vnd.jsoncanvas"
+      : type === "doc"
       ? "application/vnd.oasis.opendocument.text"
       : type === "sheet"
       ? "application/vnd.oasis.opendocument.spreadsheet"
@@ -284,7 +289,7 @@ export default function LacertaPage({
       const encType = await encryptMetadataString(mime, fileKey);
       const wrappedKey = await wrapFileKeyForUser(rawKeyStr, userPublicKey);
 
-      const emptyData = type === "sheet" ? "{}" : "";
+      const emptyData = type === "sheet" ? "{}" : type === "canvas" ? '{"nodes":[],"edges":[]}' : "";
       const encoder = new TextEncoder();
       const encBuffer = await encryptFileBuffer(encoder.encode(emptyData).buffer, fileKey);
 
@@ -344,6 +349,9 @@ export default function LacertaPage({
         setGalleryFiles(mediaFiles);
         setGalleryInitialIndex(idx >= 0 ? idx : 0);
         setIsGalleryOpen(true);
+      } else if (mime.includes("jsoncanvas") || item.name.endsWith(".canvas")) {
+        setActiveCanvasEditorFile(item);
+        setActiveCanvasEditorContent(textContent);
       } else if (mime.includes("spreadsheet")) {
         setActiveSheetEditorFile(item);
         setActiveSheetEditorContent(textContent);
@@ -566,6 +574,20 @@ export default function LacertaPage({
           }}
           file={activeSheetEditorFile}
           initialContent={activeSheetEditorContent}
+          accessToken={session?.accessToken || ""}
+          onSaveSuccess={mutate}
+        />
+      )}
+
+      {activeCanvasEditorFile && (
+        <CanvasEditor
+          isOpen={!!activeCanvasEditorFile}
+          onClose={() => {
+            setActiveCanvasEditorFile(null);
+            setActiveCanvasEditorContent("");
+          }}
+          file={activeCanvasEditorFile}
+          initialContent={activeCanvasEditorContent}
           accessToken={session?.accessToken || ""}
           onSaveSuccess={mutate}
         />

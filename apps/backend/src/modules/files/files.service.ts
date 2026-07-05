@@ -242,7 +242,7 @@ export class FilesService {
 
   async updateLaceraFileContent(
     id: string,
-    userId: string,
+    userId: string | undefined,
     file: Express.Multer.File,
     size: number,
   ) {
@@ -253,8 +253,10 @@ export class FilesService {
       });
     }
 
-    const isShared = record.shares.some(s => s.userId === userId);
-    if (record.userId !== userId && !isShared) {
+    const isOwner = userId ? record.userId === userId : false;
+    const isShared = userId ? record.shares.some((s) => s.userId === userId) : false;
+
+    if (!isOwner && !isShared && !record.isPublic) {
       throw new rrForbiddenException(`${this.moduleCode}YDNAHTA007`, {
         message: 'You do not have access to edit this file',
       });

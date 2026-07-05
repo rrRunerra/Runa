@@ -963,4 +963,71 @@ html.dark[data-theme="apotheosis"] {
       min-height: 48px;
     }
   }
+}
+
+/* Tiptap Code Block Syntax Highlighting (Monokai-ish Dark Theme) */
+pre code {
+  @apply font-mono block overflow-x-auto p-4 rounded-lg bg-slate-950 text-slate-200 border border-slate-800 text-xs;
+}
+
+.hljs-comment,
+.hljs-quote {
+  @apply text-slate-500 italic;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-addition {
+  @apply text-rose-500 font-bold;
+}
+
+.hljs-number,
+.hljs-string,
+.hljs-meta,
+.hljs-regexp,
+.hljs-attribute {
+  @apply text-emerald-400;
+}
+
+.hljs-type,
+.hljs-built_in,
+.hljs-class,
+.hljs-title {
+  @apply text-blue-400;
+}
+
+.hljs-symbol,
+.hljs-bullet,
+.hljs-link {
+  @apply text-amber-500;
+}
+
+.hljs-function,
+.hljs-section {
+  @apply text-violet-400;
+}
+
+.hljs-name,
+.hljs-attr {
+  @apply text-rose-400;
+}
+
+.hljs-params {
+  @apply text-slate-200;
+}
+
+.hljs-punctuation {
+  @apply text-slate-400;
+}
+
+/* Prevent Tiptap images from overflowing card boundaries */
+.ProseMirror img {
+  @apply max-w-full! h-auto! rounded-lg block my-2 mx-auto;
+}
+
+/* Sticky note text adjustments for legibility on yellow background */
+.bg-amber-50\/95 .ProseMirror,
+.bg-amber-100 .ProseMirror,
+[class*="bg-amber-"] .ProseMirror {
+  @apply text-amber-950!;
 }

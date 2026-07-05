@@ -232,9 +232,10 @@ export class FilesController {
   }
 
   // ---------------------------------------------------------------------------
-  // PUT /lacerta/:id — authenticated, overwrite content
+  // PUT /lacerta/:id — owner or public (guest saves)
   // ---------------------------------------------------------------------------
 
+  @Public()
   @Put('files/lacerta/:id')
   @UseInterceptors(
     FileInterceptor('file', {
@@ -247,17 +248,23 @@ export class FilesController {
     @Body('size') sizeStr: string,
     @Req() req: ExtendedRequest,
   ) {
-    const userId = req.user?.id;
-    if (!userId) {
-      throw new rrUnauthorizedException(`${this.moduleCode}UA010`, {
-        message: 'Unauthenticated',
-      });
-    }
-
     if (!file) {
       throw new rrBadRequestException(`${this.moduleCode}FIR003`, {
         message: 'File is required',
       });
+    }
+
+    let userId: string | undefined = undefined;
+    const authHeader = req.headers['authorization'];
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      try {
+        const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET);
+        const { payload } = await jwtVerify(token, secret);
+        userId = payload.sub;
+      } catch (err) {
+        // Invalid or expired token, keep userId undefined
+      }
     }
 
     const size = sizeStr ? parseInt(sizeStr, 10) : file.size;
