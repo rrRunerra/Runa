@@ -280,6 +280,7 @@ export default function TiptapNode({
     ],
     content: content,
     editable: editable,
+    immediatelyRender: false,
     onUpdate({ editor }) {
       onChange(editor.getHTML());
     },

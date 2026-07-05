@@ -20,6 +20,15 @@ import {
   Table as TableIcon,
   Image as ImageIcon,
   BarChart2,
+  FileText,
+  ShieldAlert,
+  Smile,
+  AlertCircle,
+  Heading,
+  Network,
+  FileDown,
+  StickyNote,
+  MessageSquare,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -40,8 +49,22 @@ import {
   encryptFileBuffer,
   encryptMetadataString,
   decryptMetadataString,
+  decryptFileBuffer,
+  unwrapFileKeyForUser,
+  importRawKey,
 } from "@/lib/lacertaCrypto";
 import TiptapNode from "./TiptapNode";
+import RrCanvasCardContent from "./canvas-cards/rrCanvasCardContent";
+import RrCanvasImageInsertModal from "./rrCanvasImageInsertModal";
+import RrCanvasVideoInsertModal from "./rrCanvasVideoInsertModal";
+import RrCanvasGifInsertModal from "./rrCanvasGifInsertModal";
+import RrCanvasFileInsertModal from "./rrCanvasFileInsertModal";
+import RrCanvasPublicShareWarningModal from "./rrCanvasPublicShareWarningModal";
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
+import { useRRe2ee } from "@/components/Providers/rrE2eeProvider";
+import { Video, Film, ExternalLink, Download, Check } from "lucide-react";
+import mermaid from "mermaid";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -59,7 +82,22 @@ import { cn } from "@/lib/utils";
 // -----------------------------------------------------------------------------
 // Canvas Types
 // -----------------------------------------------------------------------------
-export type CanvasNodeType = "text" | "drawing" | "graph" | "image" | "table";
+export type CanvasNodeType =
+  | "text"
+  | "drawing"
+  | "graph"
+  | "image"
+  | "table"
+  | "mermaid"
+  | "uml"
+  | "gif"
+  | "video"
+  | "file"
+  | "emoji"
+  | "pdf"
+  | "callout"
+  | "annotation"
+  | "group";
 
 export interface Point {
   x: number;
@@ -90,6 +128,24 @@ export interface CanvasNode {
   cardStyle?: "document" | "sticky" | "header";
   imageUrl?: string;
   tableData?: string[][];
+
+  // Custom Card Properties
+  mermaidCode?: string;
+  gifUrl?: string;
+  videoUrl?: string;
+  lacertaFileId?: string;
+  lacertaFileName?: string;
+  lacertaFileSize?: number;
+  lacertaFileType?: string;
+  lacertaFileKey?: string;
+  lacertaWrappedKey?: string;
+  lacertaFileDecryptionKey?: string;
+
+  // New Custom Properties
+  emoji?: string;
+  calloutType?: "info" | "warning" | "success" | "error";
+  annotationPointer?: { x: number; y: number };
+  lockPosition?: boolean;
 }
 
 export interface CanvasEdge {
@@ -213,7 +269,27 @@ export default function CanvasEditor({
   // Node manipulation states
   const [nodes, setNodes] = useState<CanvasNode[]>([]);
   const [edges, setEdges] = useState<CanvasEdge[]>([]);
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
+  const selectedNodeId = selectedNodeIds[selectedNodeIds.length - 1] || null;
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+
+  // Lasso rectangle selection state
+  const [selectionBox, setSelectionBox] = useState<{
+    startX: number;
+    startY: number;
+    currentX: number;
+    currentY: number;
+  } | null>(null);
+
+  // Dragging group child nodes binding state
+  const [dragGroupChildren, setDragGroupChildren] = useState<
+    { id: string; initialX: number; initialY: number }[]
+  >([]);
+
+  // Dragging multi-selected nodes state
+  const [dragMultiNodes, setDragMultiNodes] = useState<
+    { id: string; initialX: number; initialY: number }[]
+  >([]);
 
   // Dragging node
   const [dragNodeId, setDragNodeId] = useState<string | null>(null);
@@ -223,6 +299,10 @@ export default function CanvasEditor({
     y: 0,
   });
 
+  // Dragging Annotation Pointer tip
+  const [dragAnnotationPointerNodeId, setDragAnnotationPointerNodeId] =
+    useState<string | null>(null);
+
   // Resizing node
   const [resizeNodeId, setResizeNodeId] = useState<string | null>(null);
   const [resizeStart, setResizeStart] = useState<Point>({ x: 0, y: 0 });
@@ -230,14 +310,6 @@ export default function CanvasEditor({
     w: number;
     h: number;
   }>({ w: 0, h: 0 });
-
-  // Drawing Card settings (active draw colors and width settings)
-  const [activeDrawColor, setActiveDrawColor] = useState<string>("var(--primary)");
-  const [activeDrawWidth, setActiveDrawWidth] = useState<number>(4);
-  const [activeBrushType, setActiveBrushType] = useState<"pencil" | "calligraphy" | "highlighter" | "dashed" | "dotted">("pencil");
-  const [isErasing, setIsErasing] = useState<boolean>(false);
-  const [eraserCoords, setEraserCoords] = useState<Point | null>(null);
-  const [drawingStroke, setDrawingStroke] = useState<Stroke | null>(null);
 
   // Connector drawing state
   const [connecting, setConnecting] = useState<{
@@ -271,12 +343,93 @@ export default function CanvasEditor({
     x: number;
     y: number;
   } | null>(null);
-  const [imageUrl, setImageUrl] = useState<string>("");
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Save states
+  // New features dialog states
+  const { privateKey } = useRRe2ee();
+  const [videoPrompt, setVideoPrompt] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [gifPrompt, setGifPrompt] = useState<{ x: number; y: number } | null>(
+    null,
+  );
+  const [filePrompt, setFilePrompt] = useState<{
+    x: number;
+    y: number;
+    embedType: "file" | "pdf";
+  } | null>(null);
+  const [pendingFileShare, setPendingFileShare] = useState<{
+    type: "image" | "file" | "pdf";
+    fileObj: any;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  // Fetch and decrypt Lacerta files for embedding selection
+  const { data: rawFiles, isLoading: rawFilesLoading } = useSWR<any[]>(
+    accessToken && isOpen
+      ? [`${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/list`, accessToken]
+      : null,
+    fetcher,
+  );
+  const [decryptedLacertaFiles, setDecryptedLacertaFiles] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!rawFiles || !privateKey) {
+      setDecryptedLacertaFiles([]);
+      return;
+    }
+    const decryptAll = async () => {
+      const list: any[] = [];
+      for (const f of rawFiles) {
+        try {
+          if (f.isTrash || f.isFolder) continue;
+
+          // Decrypt symmetric file key using recipient's private key
+          const rawKeyStr = await unwrapFileKeyForUser(
+            f.wrappedKey,
+            privateKey,
+          );
+          const fileKey = await importRawKey(rawKeyStr);
+
+          // Decrypt name and mimetype
+          let decryptedName = f.name;
+          try {
+            decryptedName = await decryptMetadataString(f.name, fileKey);
+          } catch {}
+
+          let decryptedType = f.type;
+          try {
+            decryptedType = await decryptMetadataString(f.type, fileKey);
+          } catch {}
+
+          list.push({
+            ...f,
+            name: decryptedName,
+            type: decryptedType,
+            decryptedKey: fileKey,
+            rawFileKey: rawKeyStr,
+          });
+        } catch (err) {
+          console.error(
+            "Failed to decrypt file metadata inside CanvasEditor:",
+            f.id,
+            err,
+          );
+        }
+      }
+      setDecryptedLacertaFiles(list);
+    };
+    decryptAll();
+  }, [rawFiles, privateKey]);
+
   const [isSaving, setIsSaving] = useState<boolean>(false);
-  const [isDirty, setIsDirty] = useState<boolean>(false);
+  const [isDirty, setIsDirtyState] = useState<boolean>(false);
+  const isDirtyRef = useRef<boolean>(false);
+  const setIsDirty = (val: boolean) => {
+    setIsDirtyState(val);
+    isDirtyRef.current = val;
+  };
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const isSyncingRef = useRef<boolean>(false); // prevent broadcast loop
@@ -357,7 +510,8 @@ export default function CanvasEditor({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape" || e.code === "Escape") {
-        setSelectedNodeId(null);
+        setSelectedNodeIds([]);
+        setSelectedEdgeId(null);
         if (document.activeElement instanceof HTMLElement) {
           document.activeElement.blur();
         }
@@ -376,20 +530,33 @@ export default function CanvasEditor({
           document.activeElement?.tagName === "INPUT" ||
           document.activeElement?.tagName === "TEXTAREA" ||
           (document.activeElement as HTMLElement)?.isContentEditable;
-        if (!isEditing && selectedNodeId) {
-          // Delete selected node and its connections
-          setNodes((prev) => prev.filter((n) => n.id !== selectedNodeId));
-          setEdges((prev) =>
-            prev.filter(
-              (edge) =>
-                edge.fromNode !== selectedNodeId &&
-                edge.toNode !== selectedNodeId,
-            ),
-          );
-          setSelectedNodeId(null);
-          setIsDirty(true);
+        if (!isEditing) {
+          if (selectedNodeIds.length > 0) {
+            setNodes((prev) =>
+              prev.filter((n) => !selectedNodeIds.includes(n.id)),
+            );
+            setEdges((prev) =>
+              prev.filter(
+                (edge) =>
+                  !selectedNodeIds.includes(edge.fromNode) &&
+                  !selectedNodeIds.includes(edge.toNode),
+              ),
+            );
+            setSelectedNodeIds([]);
+            setIsDirty(true);
+          } else if (selectedEdgeId) {
+            setEdges((prev) =>
+              prev.filter((edge) => edge.id !== selectedEdgeId),
+            );
+            setSelectedEdgeId(null);
+            setIsDirty(true);
+          }
         }
-      } else if (e.shiftKey && selectedNodeId && ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
+      } else if (
+        e.shiftKey &&
+        selectedNodeId &&
+        ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)
+      ) {
         const isEditing =
           document.activeElement?.tagName === "INPUT" ||
           document.activeElement?.tagName === "TEXTAREA" ||
@@ -403,11 +570,13 @@ export default function CanvasEditor({
               let nextW = n.width;
               let nextH = n.height;
               if (e.key === "ArrowRight") nextW += resizeAmount;
-              if (e.key === "ArrowLeft") nextW = Math.max(220, nextW - resizeAmount);
+              if (e.key === "ArrowLeft")
+                nextW = Math.max(220, nextW - resizeAmount);
               if (e.key === "ArrowDown") nextH += resizeAmount;
-              if (e.key === "ArrowUp") nextH = Math.max(160, nextH - resizeAmount);
+              if (e.key === "ArrowUp")
+                nextH = Math.max(160, nextH - resizeAmount);
               return { ...n, width: nextW, height: nextH };
-            })
+            }),
           );
           setIsDirty(true);
         }
@@ -710,6 +879,109 @@ export default function CanvasEditor({
     }
   };
 
+  const saveCanvasSilently = async () => {
+    console.log(
+      "saveCanvasSilently starting... file:",
+      file?.id,
+      "isSaving:",
+      isSaving,
+    );
+    if (!file?.decryptedKey || isSaving) {
+      console.warn(
+        "saveCanvasSilently aborted: no decrypted key or already saving",
+      );
+      return;
+    }
+
+    try {
+      const canvasState = { nodes, edges };
+      console.log(
+        "saveCanvasSilently: encrypting canvas state...",
+        canvasState,
+      );
+      const encoder = new TextEncoder();
+      const rawBuffer = encoder.encode(JSON.stringify(canvasState)).buffer;
+
+      // Encrypt file content
+      const encryptedBuffer = await encryptFileBuffer(
+        rawBuffer,
+        file.decryptedKey,
+      );
+
+      // Encrypt name and mimetype for metadata
+      const encName = await encryptMetadataString(file.name, file.decryptedKey);
+      const encType = await encryptMetadataString(
+        "application/vnd.jsoncanvas",
+        file.decryptedKey,
+      );
+
+      const formData = new FormData();
+      const blob = new Blob([encryptedBuffer], {
+        type: "application/octet-stream",
+      });
+      formData.append("file", blob, file.name);
+      formData.append("wrappedKey", file.wrappedKey || "");
+      formData.append("name", encName);
+      formData.append("size", blob.size.toString());
+      formData.append("type", encType);
+      if (file.parentId) {
+        formData.append("parentId", file.parentId);
+      }
+
+      const headers: any = {};
+      if (accessToken) {
+        headers.Authorization = `Bearer ${accessToken}`;
+      }
+
+      console.log("saveCanvasSilently: submitting PUT to server...");
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${file.id}`,
+        {
+          method: "PUT",
+          headers,
+          body: formData,
+        },
+      );
+
+      console.log("saveCanvasSilently: response status:", res.status);
+      if (!res.ok) {
+        throw new Error(`Server returned status ${res.status}`);
+      }
+
+      console.log("saveCanvasSilently successful! Mutating parent...");
+      setIsDirty(false);
+      isDirtyRef.current = false;
+      onSaveSuccess();
+    } catch (err) {
+      console.error("Silent autosave failed:", err);
+    }
+  };
+
+  // Auto-save on card selection change (focus change / deselect)
+  const prevSelectedNodeIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    console.log(
+      "Autosave effect run - selected:",
+      selectedNodeId,
+      "prev:",
+      prevSelectedNodeIdRef.current,
+      "isDirty:",
+      isDirtyRef.current,
+    );
+    if (
+      prevSelectedNodeIdRef.current !== null &&
+      selectedNodeId !== prevSelectedNodeIdRef.current
+    ) {
+      if (isDirtyRef.current) {
+        console.log(
+          `Focus change autosave triggered! prev: ${prevSelectedNodeIdRef.current}, current: ${selectedNodeId}`,
+        );
+        saveCanvasSilently();
+      }
+    }
+    prevSelectedNodeIdRef.current = selectedNodeId;
+  }, [selectedNodeId]);
+
   // -----------------------------------------------------------------------------
   // Viewport Handlers: Zoom, Pan, MouseMove Cursors
   // -----------------------------------------------------------------------------
@@ -727,8 +999,8 @@ export default function CanvasEditor({
                 width: Math.max(220, n.width + resizeDelta),
                 height: Math.max(160, n.height + resizeDelta),
               }
-            : n
-        )
+            : n,
+        ),
       );
       setIsDirty(true);
       return;
@@ -760,18 +1032,28 @@ export default function CanvasEditor({
 
     // Left-click on canvas background deselects any active card (similar to Escape)
     if (isBackgroundClicked && e.button === 0) {
-      setSelectedNodeId(null);
+      setSelectedNodeIds([]);
+      setSelectedEdgeId(null);
       if (document.activeElement instanceof HTMLElement) {
         document.activeElement.blur();
+      }
+
+      if (!isSpacePressed && containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        const localX = (e.clientX - rect.left - pan.x) / zoom;
+        const localY = (e.clientY - rect.top - pan.y) / zoom;
+        setSelectionBox({
+          startX: localX,
+          startY: localY,
+          currentX: localX,
+          currentY: localY,
+        });
+        return;
       }
     }
 
     // Start panning if space pressed OR middle click OR empty canvas background clicked
-    if (
-      isSpacePressed ||
-      e.button === 1 ||
-      isBackgroundClicked
-    ) {
+    if (isSpacePressed || e.button === 1 || isBackgroundClicked) {
       e.preventDefault();
       setIsPanning(true);
       setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
@@ -793,6 +1075,29 @@ export default function CanvasEditor({
       const localX = (e.clientX - rect.left - pan.x) / zoom;
       const localY = (e.clientY - rect.top - pan.y) / zoom;
 
+      // Update lasso selection box
+      if (selectionBox) {
+        const nextBox = { ...selectionBox, currentX: localX, currentY: localY };
+        setSelectionBox(nextBox);
+
+        const x1 = Math.min(nextBox.startX, localX);
+        const x2 = Math.max(nextBox.startX, localX);
+        const y1 = Math.min(nextBox.startY, localY);
+        const y2 = Math.max(nextBox.startY, localY);
+
+        const inside = nodes
+          .filter((n) => {
+            const nX1 = n.x;
+            const nX2 = n.x + n.width;
+            const nY1 = n.y;
+            const nY2 = n.y + n.height;
+            return nX1 < x2 && nX2 > x1 && nY1 < y2 && nY2 > y1;
+          })
+          .map((n) => n.id);
+        setSelectedNodeIds(inside);
+        return;
+      }
+
       // Broadcast cursor move to socket collaborators (throttled to 50ms to prevent flooding)
       if (socket) {
         const now = Date.now();
@@ -811,15 +1116,35 @@ export default function CanvasEditor({
         const dx = (e.clientX - dragStart.x) / zoom;
         const dy = (e.clientY - dragStart.y) / zoom;
         setNodes((prev) =>
-          prev.map((n) =>
-            n.id === dragNodeId
-              ? {
-                  ...n,
-                  x: dragNodeInitialPos.x + dx,
-                  y: dragNodeInitialPos.y + dy,
-                }
-              : n,
-          ),
+          prev.map((n) => {
+            // 1. Multi-node dragging
+            const dragMulti = dragMultiNodes.find((c) => c.id === n.id);
+            if (dragMulti) {
+              return {
+                ...n,
+                x: dragMulti.initialX + dx,
+                y: dragMulti.initialY + dy,
+              };
+            }
+            // 2. Single node fallback
+            if (n.id === dragNodeId) {
+              return {
+                ...n,
+                x: dragNodeInitialPos.x + dx,
+                y: dragNodeInitialPos.y + dy,
+              };
+            }
+            // 3. Child of dragged group
+            const dragChild = dragGroupChildren.find((c) => c.id === n.id);
+            if (dragChild) {
+              return {
+                ...n,
+                x: dragChild.initialX + dx,
+                y: dragChild.initialY + dy,
+              };
+            }
+            return n;
+          }),
         );
         setIsDirty(true);
       }
@@ -842,6 +1167,24 @@ export default function CanvasEditor({
         setIsDirty(true);
       }
 
+      // Update annotation pointer dragging
+      if (dragAnnotationPointerNodeId) {
+        setNodes((prev) =>
+          prev.map((n) =>
+            n.id === dragAnnotationPointerNodeId
+              ? {
+                  ...n,
+                  annotationPointer: {
+                    x: localX - n.x,
+                    y: localY - n.y,
+                  },
+                }
+              : n,
+          ),
+        );
+        setIsDirty(true);
+      }
+
       // Update active connection connector guide line
       if (connecting) {
         setConnectingCursor({ x: localX, y: localY });
@@ -850,10 +1193,23 @@ export default function CanvasEditor({
   };
 
   const handleMouseUp = () => {
+    const wasDraggingOrResizing =
+      dragNodeId !== null ||
+      resizeNodeId !== null ||
+      dragAnnotationPointerNodeId !== null;
     setIsPanning(false);
     setDragNodeId(null);
     setResizeNodeId(null);
+    setDragAnnotationPointerNodeId(null);
     setConnecting(null);
+    setSelectionBox(null);
+    setDragGroupChildren([]);
+    setDragMultiNodes([]);
+
+    if (wasDraggingOrResizing && isDirtyRef.current) {
+      console.log("Drag/resize/pointer end autosave triggered!");
+      saveCanvasSilently();
+    }
   };
 
   // -----------------------------------------------------------------------------
@@ -879,7 +1235,7 @@ export default function CanvasEditor({
     };
 
     setNodes((prev) => [...prev, newNode]);
-    setSelectedNodeId(newNode.id);
+    setSelectedNodeIds([newNode.id]);
     setIsDirty(true);
   };
 
@@ -891,29 +1247,49 @@ export default function CanvasEditor({
     cardStyle?: "document" | "sticky" | "header",
     imageUrl?: string,
     tableData?: string[][],
+    extraProps?: Partial<CanvasNode>,
   ) => {
-    const defaultWidth =
-      type === "text"
-        ? cardStyle === "sticky"
-          ? 240
-          : 300
-        : type === "image"
-          ? 320
-          : type === "table"
-            ? 380
-            : 340;
-    const defaultHeight =
-      type === "text"
-        ? cardStyle === "sticky"
-          ? 240
-          : cardStyle === "header"
-            ? 80
-            : 220
-        : type === "image"
-          ? 240
-          : type === "table"
-            ? 220
-            : 250;
+    let defaultWidth = 340;
+    let defaultHeight = 250;
+
+    if (type === "text") {
+      defaultWidth = cardStyle === "sticky" ? 240 : 300;
+      defaultHeight =
+        cardStyle === "sticky" ? 240 : cardStyle === "header" ? 80 : 220;
+    } else if (type === "image") {
+      defaultWidth = 320;
+      defaultHeight = 240;
+    } else if (type === "table") {
+      defaultWidth = 380;
+      defaultHeight = 220;
+    } else if (type === "mermaid" || type === "uml") {
+      defaultWidth = 380;
+      defaultHeight = 280;
+    } else if (type === "video") {
+      defaultWidth = 400;
+      defaultHeight = 280;
+    } else if (type === "gif") {
+      defaultWidth = 260;
+      defaultHeight = 240;
+    } else if (type === "file") {
+      defaultWidth = 280;
+      defaultHeight = 120;
+    } else if (type === "emoji") {
+      defaultWidth = 160;
+      defaultHeight = 160;
+    } else if (type === "pdf") {
+      defaultWidth = 440;
+      defaultHeight = 560;
+    } else if (type === "callout") {
+      defaultWidth = 380;
+      defaultHeight = 150;
+    } else if (type === "annotation") {
+      defaultWidth = 260;
+      defaultHeight = 160;
+    } else if (type === "group") {
+      defaultWidth = 500;
+      defaultHeight = 360;
+    }
 
     const newNode: CanvasNode = {
       id: `node-${Date.now()}`,
@@ -943,6 +1319,7 @@ export default function CanvasEditor({
               ["Cell 3", "Cell 4"],
             ]
           : undefined,
+      ...extraProps,
     };
 
     if (type === "graph") {
@@ -957,10 +1334,36 @@ export default function CanvasEditor({
         { name: "C", value: 45 },
         { name: "D", value: 90 },
       ];
+    } else if (type === "mermaid") {
+      newNode.mermaidCode =
+        initialText ||
+        "graph TD\n    A[Start] --> B(Process)\n    B --> C{Decision}\n    C -- Yes --> D[Result 1]\n    C -- No --> E[Result 2]";
+    } else if (type === "uml") {
+      newNode.mermaidCode =
+        initialText ||
+        "classDiagram\n    class Animal {\n        +String name\n        +makeSound()\n    }\n    class Dog {\n        +bark()\n    }\n    Animal <|-- Dog";
+    } else if (type === "emoji") {
+      newNode.emoji = "🎯";
+    } else if (type === "callout") {
+      newNode.calloutType = "info";
+      newNode.text = "<p>Callout alert...</p>";
+    } else if (type === "annotation") {
+      newNode.annotationPointer = { x: -60, y: -60 };
+      newNode.text = "<p>Pointer annotation...</p>";
+      newNode.color = "blue";
+    } else if (type === "group") {
+      newNode.text = "Group";
+      newNode.color = "slate";
     }
 
-    setNodes((prev) => [...prev, newNode]);
-    setSelectedNodeId(newNode.id);
+    setNodes((prev) => {
+      // Groups go to front of list so they render first (behind other cards)
+      if (type === "group") {
+        return [newNode, ...prev];
+      }
+      return [...prev, newNode];
+    });
+    setSelectedNodeIds([newNode.id]);
     setIsDirty(true);
   };
 
@@ -994,20 +1397,58 @@ export default function CanvasEditor({
     setEdges((prev) =>
       prev.filter((edge) => edge.fromNode !== id && edge.toNode !== id),
     );
-    if (selectedNodeId === id) setSelectedNodeId(null);
+    if (selectedNodeIds.includes(id)) setSelectedNodeIds([]);
     setIsDirty(true);
   };
 
   const startDragNode = (e: React.MouseEvent, node: CanvasNode) => {
     e.stopPropagation();
-    if (isSpacePressed) return; // ignore dragging if panning
-    
-    // If card is already selected, prevent dragging unless Ctrl or Meta key is held down
-    if (selectedNodeId === node.id && !e.ctrlKey && !e.metaKey) {
+    if (isSpacePressed) return;
+    if (node.lockPosition) return; // locked cards cannot be dragged
+
+    const isShift = e.shiftKey;
+    if (isShift) {
+      // Toggle node in selection
+      setSelectedNodeIds((prev) =>
+        prev.includes(node.id)
+          ? prev.filter((id) => id !== node.id)
+          : [...prev, node.id],
+      );
       return;
     }
 
-    setSelectedNodeId(node.id);
+    // If this node is part of multi-selection, drag all selected nodes together
+    const isInMulti =
+      selectedNodeIds.length > 1 && selectedNodeIds.includes(node.id);
+    if (isInMulti) {
+      const multiInitial = nodes
+        .filter((n) => selectedNodeIds.includes(n.id) && !n.lockPosition)
+        .map((n) => ({ id: n.id, initialX: n.x, initialY: n.y }));
+      setDragMultiNodes(multiInitial);
+      setDragNodeId(node.id);
+      setDragStart({ x: e.clientX, y: e.clientY });
+      setDragNodeInitialPos({ x: node.x, y: node.y });
+      return;
+    }
+
+    // When dragging a group frame, bind all contained child nodes
+    if (node.type === "group") {
+      const groupChildren = nodes
+        .filter(
+          (n) =>
+            n.id !== node.id &&
+            !n.lockPosition &&
+            n.x >= node.x &&
+            n.x + n.width <= node.x + node.width &&
+            n.y >= node.y &&
+            n.y + n.height <= node.y + node.height,
+        )
+        .map((n) => ({ id: n.id, initialX: n.x, initialY: n.y }));
+      setDragGroupChildren(groupChildren);
+    }
+
+    setSelectedNodeIds([node.id]);
+    setSelectedEdgeId(null);
     setDragNodeId(node.id);
     setDragStart({ x: e.clientX, y: e.clientY });
     setDragNodeInitialPos({ x: node.x, y: node.y });
@@ -1019,6 +1460,12 @@ export default function CanvasEditor({
     setResizeNodeId(node.id);
     setResizeStart({ x: e.clientX, y: e.clientY });
     setResizeInitialSize({ w: node.width, h: node.height });
+  };
+
+  const startDragAnnotationPointer = (e: React.MouseEvent, nodeId: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setDragAnnotationPointerNodeId(nodeId);
   };
 
   const startConnecting = (
@@ -1075,178 +1522,91 @@ export default function CanvasEditor({
   };
 
   // -----------------------------------------------------------------------------
-  // Drawing Canvas Node Handlers
+  // Layering, Lock, and Align Helpers
   // -----------------------------------------------------------------------------
-  const getLocalDrawingCoords = (
-    e: React.MouseEvent<SVGSVGElement> | React.TouchEvent<SVGSVGElement>,
-    node: CanvasNode,
-  ): Point | null => {
-    const target = e.currentTarget;
-    const rect = target.getBoundingClientRect();
-    let clientX: number;
-    let clientY: number;
-
-    if ("touches" in e) {
-      if (e.touches.length === 0) return null;
-      clientX = e.touches[0].clientX;
-      clientY = e.touches[0].clientY;
-    } else {
-      clientX = e.clientX;
-      clientY = e.clientY;
-    }
-
-    // Convert screen coordinates to node-local coordinates (taking zoom into account)
-    return {
-      x: (clientX - rect.left) / zoom,
-      y: (clientY - rect.top) / zoom,
-    };
-  };
-
-  const eraseLinesAtCoords = (coords: Point, node: CanvasNode) => {
-    // Eraser size scales with selected brush width (minimum 12px, maximum 60px)
-    const ERASE_RADIUS = Math.min(60, Math.max(12, activeDrawWidth * 1.6));
-    const lines = node.lines || [];
-    let linesChanged = false;
-    const newLines: Stroke[] = [];
-
-    for (const line of lines) {
-      const segments: Point[][] = [];
-      let currentSegment: Point[] = [];
-
-      for (const p of line.points) {
-        const dist = Math.hypot(p.x - coords.x, p.y - coords.y);
-        const isErased = dist <= ERASE_RADIUS;
-
-        if (isErased) {
-          if (currentSegment.length > 0) {
-            segments.push(currentSegment);
-            currentSegment = [];
-          }
-          linesChanged = true;
-        } else {
-          currentSegment.push(p);
-        }
-      }
-
-      if (currentSegment.length > 0) {
-        segments.push(currentSegment);
-      }
-
-      // Convert segments back into strokes
-      for (const seg of segments) {
-        if (seg.length > 0) {
-          newLines.push({
-            ...line,
-            points: seg,
-          });
-        }
-      }
-    }
-
-    if (linesChanged) {
-      setNodes((prev) =>
-        prev.map((n) => (n.id === node.id ? { ...n, lines: newLines } : n)),
-      );
-      setIsDirty(true);
-    }
-  };
-
-  const handleDrawingStart = (
-    e: React.MouseEvent<SVGSVGElement> | React.TouchEvent<SVGSVGElement>,
-    node: CanvasNode,
-  ) => {
-    e.stopPropagation();
-
-    // Check for middle click (button === 1) to erase instead of draw
-    if ("button" in e && e.button === 1) {
-      e.preventDefault();
-      setIsErasing(true);
-      const coords = getLocalDrawingCoords(e, node);
-      if (coords) {
-        setEraserCoords(coords);
-        eraseLinesAtCoords(coords, node);
-      }
-      return;
-    }
-
-    const coords = getLocalDrawingCoords(e, node);
-    if (!coords) return;
-
-    let dasharray: string | undefined = undefined;
-    let opacity: number | undefined = undefined;
-    let cap: "round" | "square" | "butt" = "round";
-
-    if (activeBrushType === "dashed") {
-      dasharray = "8 8";
-    } else if (activeBrushType === "dotted") {
-      dasharray = "1 8";
-    } else if (activeBrushType === "highlighter") {
-      opacity = 0.45;
-      cap = "square";
-    } else if (activeBrushType === "calligraphy") {
-      opacity = 0.85;
-      cap = "square";
-    }
-
-    setDrawingStroke({
-      points: [coords],
-      color: activeDrawColor,
-      width: activeDrawWidth,
-      dasharray,
-      opacity,
-      cap,
+  const bringToFront = (id: string) => {
+    setNodes((prev) => {
+      const idx = prev.findIndex((n) => n.id === id);
+      if (idx === -1) return prev;
+      const updated = [...prev];
+      const [node] = updated.splice(idx, 1);
+      updated.push(node);
+      return updated;
     });
+    setIsDirty(true);
   };
 
-  const handleDrawingMove = (
-    e: React.MouseEvent<SVGSVGElement> | React.TouchEvent<SVGSVGElement>,
-    node: CanvasNode,
-  ) => {
-    e.stopPropagation();
-
-    // Handle active eraser operation
-    if (isErasing || ("buttons" in e && e.buttons === 4)) {
-      if ("preventDefault" in e) e.preventDefault();
-      const coords = getLocalDrawingCoords(e, node);
-      if (coords) {
-        setEraserCoords(coords);
-        eraseLinesAtCoords(coords, node);
-      }
-      return;
-    }
-
-    if (!drawingStroke) return;
-    const coords = getLocalDrawingCoords(e, node);
-    if (!coords) return;
-
-    setDrawingStroke({
-      ...drawingStroke,
-      points: [...drawingStroke.points, coords],
+  const sendToBack = (id: string) => {
+    setNodes((prev) => {
+      const idx = prev.findIndex((n) => n.id === id);
+      if (idx === -1) return prev;
+      const updated = [...prev];
+      const [node] = updated.splice(idx, 1);
+      // Insert after all group nodes so it stays above group frames
+      const firstNonGroup = updated.findIndex((n) => n.type !== "group");
+      updated.splice(firstNonGroup === -1 ? 0 : firstNonGroup, 0, node);
+      return updated;
     });
+    setIsDirty(true);
   };
 
-  const handleDrawingEnd = (node: CanvasNode) => {
-    if (isErasing) {
-      setIsErasing(false);
-      setEraserCoords(null);
-      return;
-    }
-    if (drawingStroke && drawingStroke.points.length > 1) {
-      const nodeLines = node.lines || [];
-      setNodes((prev) =>
-        prev.map((n) =>
-          n.id === node.id ? { ...n, lines: [...nodeLines, drawingStroke] } : n,
-        ),
-      );
-      setIsDirty(true);
-    }
-    setDrawingStroke(null);
-  };
-
-  const handleDrawingClear = (e: React.MouseEvent, nodeId: string) => {
-    e.stopPropagation();
+  const toggleLock = (id: string) => {
     setNodes((prev) =>
-      prev.map((n) => (n.id === nodeId ? { ...n, lines: [] } : n)),
+      prev.map((n) =>
+        n.id === id ? { ...n, lockPosition: !n.lockPosition } : n,
+      ),
+    );
+    setIsDirty(true);
+  };
+
+  const alignNodes = (
+    direction: "left" | "right" | "top" | "bottom" | "center-h" | "center-v",
+  ) => {
+    if (selectedNodeIds.length < 2) return;
+    const selected = nodes.filter(
+      (n) => selectedNodeIds.includes(n.id) && !n.lockPosition,
+    );
+    if (selected.length < 2) return;
+
+    let anchor: number;
+    if (direction === "left") anchor = Math.min(...selected.map((n) => n.x));
+    else if (direction === "right")
+      anchor = Math.max(...selected.map((n) => n.x + n.width));
+    else if (direction === "top")
+      anchor = Math.min(...selected.map((n) => n.y));
+    else if (direction === "bottom")
+      anchor = Math.max(...selected.map((n) => n.y + n.height));
+    else if (direction === "center-h")
+      anchor =
+        (Math.min(...selected.map((n) => n.x)) +
+          Math.max(...selected.map((n) => n.x + n.width))) /
+        2;
+    else
+      anchor =
+        (Math.min(...selected.map((n) => n.y)) +
+          Math.max(...selected.map((n) => n.y + n.height))) /
+        2;
+
+    setNodes((prev) =>
+      prev.map((n) => {
+        if (!selectedNodeIds.includes(n.id) || n.lockPosition) return n;
+        switch (direction) {
+          case "left":
+            return { ...n, x: anchor };
+          case "right":
+            return { ...n, x: anchor - n.width };
+          case "top":
+            return { ...n, y: anchor };
+          case "bottom":
+            return { ...n, y: anchor - n.height };
+          case "center-h":
+            return { ...n, x: anchor - n.width / 2 };
+          case "center-v":
+            return { ...n, y: anchor - n.height / 2 };
+          default:
+            return n;
+        }
+      }),
     );
     setIsDirty(true);
   };
@@ -1300,31 +1660,66 @@ export default function CanvasEditor({
     else if (edge.toSide === "top") cp2y -= dy;
 
     const pathD = `M ${start.x} ${start.y} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${end.x} ${end.y}`;
+    const isSelected = selectedEdgeId === edge.id;
+    const midX = (start.x + end.x) / 2;
+    const midY = (start.y + end.y) / 2;
 
     return (
       <g key={edge.id} className="group/edge">
-        {/* Hover area */}
+        {/* Selection highlight halo */}
+        {isSelected && (
+          <path
+            d={pathD}
+            fill="none"
+            stroke="var(--primary)"
+            strokeWidth={6}
+            strokeLinecap="round"
+            opacity={0.25}
+            className="pointer-events-none"
+          />
+        )}
+        {/* Wide invisible hit area */}
         <path
           d={pathD}
           fill="none"
           stroke="transparent"
           strokeWidth={15}
           className="cursor-pointer"
-          onClick={() => {
-            setEdges((prev) => prev.filter((e) => e.id !== edge.id));
-            setIsDirty(true);
+          onClick={(e) => {
+            e.stopPropagation();
+            setSelectedEdgeId(isSelected ? null : edge.id);
+            setSelectedNodeIds([]);
           }}
         />
         {/* Rendered line */}
         <path
           d={pathD}
           fill="none"
-          stroke="var(--color-edge, #6366f1)"
-          strokeWidth={2}
+          strokeWidth={isSelected ? 2.5 : 2}
           strokeLinecap="round"
-          className="stroke-indigo-400 dark:stroke-indigo-600 transition-colors pointer-events-none group-hover/edge:stroke-rose-500"
+          className={
+            isSelected
+              ? "stroke-primary pointer-events-none"
+              : "stroke-indigo-400 dark:stroke-indigo-600 transition-colors pointer-events-none group-hover/edge:stroke-primary/80"
+          }
           markerEnd="url(#arrow)"
         />
+        {/* Delete button at midpoint – visible when selected */}
+        {isSelected && (
+          <foreignObject x={midX - 12} y={midY - 12} width={24} height={24}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setEdges((prev) => prev.filter((ed) => ed.id !== edge.id));
+                setSelectedEdgeId(null);
+                setIsDirty(true);
+              }}
+              className="w-6 h-6 rounded-full bg-destructive text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform text-xs font-bold leading-none"
+            >
+              ×
+            </button>
+          </foreignObject>
+        )}
       </g>
     );
   };
@@ -1438,6 +1833,42 @@ export default function CanvasEditor({
             </div>
           </div>
 
+          {/* Align Tools Toolbar – visible when 2+ nodes are selected */}
+          {selectedNodeIds.length > 1 && (
+            <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 bg-popover/95 backdrop-blur border border-border rounded-xl shadow-xl px-2 py-1.5 pointer-events-auto">
+              <span className="text-[10px] text-muted-foreground font-semibold px-1 pr-2 border-r border-border">
+                {selectedNodeIds.length} selected
+              </span>
+              {(
+                [
+                  { dir: "left" as const, label: "⇤", title: "Align Left" },
+                  {
+                    dir: "center-h" as const,
+                    label: "↔",
+                    title: "Center Horizontally",
+                  },
+                  { dir: "right" as const, label: "⇥", title: "Align Right" },
+                  { dir: "top" as const, label: "⇡", title: "Align Top" },
+                  {
+                    dir: "center-v" as const,
+                    label: "↕",
+                    title: "Center Vertically",
+                  },
+                  { dir: "bottom" as const, label: "⇣", title: "Align Bottom" },
+                ] as const
+              ).map(({ dir, label, title }) => (
+                <button
+                  key={dir}
+                  title={title}
+                  onClick={() => alignNodes(dir)}
+                  className="w-7 h-7 rounded-lg hover:bg-accent text-foreground text-sm font-semibold flex items-center justify-center transition-colors"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Infinite Canvas Window */}
           <div
             ref={containerRef}
@@ -1498,6 +1929,44 @@ export default function CanvasEditor({
                   {/* Saved edges */}
                   {edges.map((edge) => renderConnector(edge))}
 
+                  {/* Annotation pointers */}
+                  {nodes
+                    .filter((n) => n.type === "annotation")
+                    .map((n) => {
+                      const pointer = n.annotationPointer || { x: -60, y: -60 };
+                      const targetX = n.x + pointer.x;
+                      const targetY = n.y + pointer.y;
+                      const sourceX = n.x + n.width / 2;
+                      const sourceY = n.y + n.height / 2;
+
+                      return (
+                        <g key={`annotation-line-${n.id}`}>
+                          {/* Outer glow line */}
+                          <line
+                            x1={sourceX}
+                            y1={sourceY}
+                            x2={targetX}
+                            y2={targetY}
+                            stroke="var(--primary)"
+                            strokeWidth={3}
+                            strokeLinecap="round"
+                            opacity={0.4}
+                          />
+                          {/* Inner line with marker */}
+                          <line
+                            x1={sourceX}
+                            y1={sourceY}
+                            x2={targetX}
+                            y2={targetY}
+                            stroke="var(--primary)"
+                            strokeWidth={1.5}
+                            strokeLinecap="round"
+                            markerEnd="url(#arrow)"
+                          />
+                        </g>
+                      );
+                    })}
+
                   {/* Temporary edge drawing guide line */}
                   {connecting && (
                     <line
@@ -1521,694 +1990,341 @@ export default function CanvasEditor({
                       markerEnd="url(#arrow)"
                     />
                   )}
+
+                  {/* Lasso selection box overlay */}
+                  {selectionBox && (
+                    <rect
+                      x={Math.min(selectionBox.startX, selectionBox.currentX)}
+                      y={Math.min(selectionBox.startY, selectionBox.currentY)}
+                      width={Math.abs(
+                        selectionBox.currentX - selectionBox.startX,
+                      )}
+                      height={Math.abs(
+                        selectionBox.currentY - selectionBox.startY,
+                      )}
+                      fill="var(--primary)"
+                      fillOpacity={0.05}
+                      stroke="var(--primary)"
+                      strokeWidth={1.5 / zoom}
+                      strokeDasharray={`${6 / zoom} ${4 / zoom}`}
+                      rx={4 / zoom}
+                      className="pointer-events-none"
+                    />
+                  )}
                 </svg>
 
-                {/* Render Nodes */}
-                {nodes.map((node) => {
-                  const preset =
-                    COLOR_PRESETS.find((p) => p.name === node.color) ||
-                    COLOR_PRESETS[0];
+                {/* Render Nodes (groups first so they render behind other cards) */}
+                {[...nodes]
+                  .sort((a, b) => {
+                    if (a.type === "group" && b.type !== "group") return -1;
+                    if (a.type !== "group" && b.type === "group") return 1;
+                    return 0;
+                  })
+                  .map((node) => {
+                    const preset =
+                      COLOR_PRESETS.find((p) => p.name === node.color) ||
+                      COLOR_PRESETS[0];
 
-                  return (
-                    <React.Fragment key={node.id}>
-                      <div
-                        data-card-id={node.id}
-                        onMouseDown={(e) => startDragNode(e, node)}
-                        className={(() => {
-                          let cls = `absolute flex flex-col overflow-hidden pointer-events-auto group transition-all `;
-                          if (node.cardStyle === "header") {
-                            cls += cn(
-                              "border-0 bg-transparent shadow-none",
-                              selectedNodeId === node.id
-                                ? "ring-1 ring-primary/50"
-                                : "",
+                    return (
+                      <React.Fragment key={node.id}>
+                        {/* Draggable Pointer Target Handle for Annotations */}
+                        {node.type === "annotation" &&
+                          selectedNodeId === node.id && (
+                            <div
+                              onMouseDown={(e) =>
+                                startDragAnnotationPointer(e, node.id)
+                              }
+                              className="absolute w-5 h-5 rounded-full bg-primary border-2 border-white shadow-lg cursor-crosshair z-50 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform pointer-events-auto"
+                              style={{
+                                left:
+                                  node.x +
+                                  (node.annotationPointer?.x ?? -60) -
+                                  10,
+                                top:
+                                  node.y +
+                                  (node.annotationPointer?.y ?? -60) -
+                                  10,
+                              }}
+                            >
+                              <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                            </div>
+                          )}
+
+                        <div
+                          data-card-id={node.id}
+                          onMouseDown={(e) => startDragNode(e, node)}
+                          className={(() => {
+                            const isSelected = selectedNodeIds.includes(
+                              node.id,
                             );
-                          } else if (node.cardStyle === "sticky") {
-                            cls += cn(
-                              "rounded-lg border bg-warning/8 text-foreground shadow-xl transition-all",
-                              selectedNodeId === node.id
-                                ? "border-t-[6px] border-t-warning border-warning/40 ring-2 ring-primary shadow-lg"
-                                : "border-transparent hover:border-t-[6px] hover:border-t-warning hover:border-warning/40 hover:shadow-md",
-                            );
-                          } else {
-                            // Standard card styling
-                            cls += cn(
-                              "rounded-2xl border bg-card text-card-foreground shadow-xl transition-all",
-                              preset.bg,
-                              selectedNodeId === node.id
-                                ? cn("ring-2 ring-primary shadow-lg", preset.border)
-                                : "border-transparent hover:border-border hover:shadow-md",
-                            );
-                          }
-                          return cls;
-                        })()}
-                      style={{
-                        left: node.x,
-                        top: node.y,
-                        width: node.width,
-                        height: node.height,
-                      }}
-                    >
-                      {/* Card Content Area */}
-                      <div
-                        className={cn(
-                          "flex-1 w-full h-full overflow-hidden flex flex-col",
-                          node.cardStyle === "sticky"
-                            ? "bg-warning/5 text-foreground"
-                            : node.cardStyle === "header"
-                              ? "bg-transparent text-foreground font-extrabold text-xl"
-                              : "bg-card/50 backdrop-blur-md",
-                        )}
-                      >
-                        {node.type === "text" ? (
+                            let cls = `absolute flex flex-col overflow-hidden pointer-events-auto group transition-all `;
+                            if (node.type === "group") {
+                              cls += cn(
+                                "rounded-2xl border-2 border-dashed",
+                                isSelected
+                                  ? "border-primary/60 bg-primary/3"
+                                  : `${preset.border} bg-transparent hover:bg-primary/2`,
+                              );
+                            } else if (node.cardStyle === "header") {
+                              cls += cn(
+                                "border-0 bg-transparent shadow-none",
+                                isSelected ? "ring-1 ring-primary/50" : "",
+                              );
+                            } else if (node.cardStyle === "sticky") {
+                              cls += cn(
+                                "rounded-lg border bg-warning/8 text-foreground shadow-xl transition-all",
+                                isSelected
+                                  ? "border-t-[6px] border-t-warning border-warning/40 ring-2 ring-primary shadow-lg"
+                                  : "border-transparent hover:border-t-[6px] hover:border-t-warning hover:border-warning/40 hover:shadow-md",
+                              );
+                            } else {
+                              // Standard card styling
+                              cls += cn(
+                                "rounded-2xl border bg-card text-card-foreground shadow-xl transition-all",
+                                preset.bg,
+                                isSelected
+                                  ? cn(
+                                      "ring-2 ring-primary shadow-lg",
+                                      preset.border,
+                                    )
+                                  : "border-transparent hover:border-border hover:shadow-md",
+                              );
+                            }
+                            if (node.lockPosition) cls += " cursor-not-allowed";
+                            return cls;
+                          })()}
+                          style={{
+                            left: node.x,
+                            top: node.y,
+                            width: node.width,
+                            height: node.height,
+                            zIndex: node.type === "group" ? 0 : undefined,
+                          }}
+                        >
+                          {/* Card Content Area */}
                           <div
-                            className="flex-1 w-full h-full overflow-hidden"
-                            onMouseDown={(e) => {
-                              if (!e.ctrlKey && !e.metaKey) e.stopPropagation();
-                            }}
+                            className={cn(
+                              "flex-1 w-full h-full overflow-hidden flex flex-col",
+                              node.cardStyle === "sticky"
+                                ? "bg-warning/5 text-foreground"
+                                : node.cardStyle === "header"
+                                  ? "bg-transparent text-foreground font-extrabold text-xl"
+                                  : "bg-card/50 backdrop-blur-md",
+                            )}
                           >
-                            <TiptapNode
-                              content={node.text || ""}
-                              onChange={(html) => handleTextChange(node.id, html)}
-                            />
-                          </div>
-                        ) : node.type === "image" ? (
-                          // Dedicated Image Card rendering
-                          <div
-                            className="relative w-full h-full flex flex-col bg-slate-950/50"
-                            onMouseDown={(e) => {
-                              if (!e.ctrlKey && !e.metaKey) e.stopPropagation();
-                            }}
-                          >
-                            {node.imageUrl ? (
-                              <img
-                                src={node.imageUrl}
-                                alt="Spatial Image"
-                                className="w-full h-full object-contain select-none pointer-events-none"
-                              />
-                            ) : (
-                              <div className="flex-1 flex flex-col items-center justify-center text-slate-500 gap-2">
-                                <ImageIcon className="h-8 w-8 text-slate-700" />
-                                <span className="text-[10px] font-semibold">
-                                  No Image Loaded
-                                </span>
+                            {node.type === "text" ? (
+                              <div
+                                className="flex-1 w-full h-full overflow-hidden"
+                                onMouseDown={(e) => {
+                                  if (!e.ctrlKey && !e.metaKey)
+                                    e.stopPropagation();
+                                }}
+                              >
+                                <TiptapNode
+                                  content={node.text || ""}
+                                  onChange={(html) =>
+                                    handleTextChange(node.id, html)
+                                  }
+                                />
                               </div>
+                            ) : (
+                              <RrCanvasCardContent
+                                node={node}
+                                selected={selectedNodeId === node.id}
+                                accessToken={accessToken}
+                                zoom={zoom}
+                                onNodeUpdate={(updates) => {
+                                  setNodes((prev) =>
+                                    prev.map((n) =>
+                                      n.id === node.id
+                                        ? { ...n, ...updates }
+                                        : n,
+                                    ),
+                                  );
+                                  setIsDirty(true);
+                                }}
+                              />
                             )}
                           </div>
-                        ) : node.type === "table" ? (
-                          // Custom Table Card rendering
-                          <div
-                            className="relative w-full h-full flex flex-col p-3 text-foreground bg-card/65 overflow-hidden"
-                            onMouseDown={(e) => {
-                              if (!e.ctrlKey && !e.metaKey) e.stopPropagation();
-                            }}
-                          >
-                            <div className="flex items-center justify-between border-b border-border pb-1.5 mb-1.5 shrink-0">
-                              <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
-                                Spreadsheet Grid
-                              </span>
-                              <div className="flex gap-1.5">
-                                <button
-                                  onClick={() => {
-                                    setNodes((prev) =>
-                                      prev.map((n) => {
-                                        if (n.id !== node.id) return n;
-                                        const current = n.tableData || [
-                                          ["", ""],
-                                        ];
-                                        const cols = current[0]?.length || 2;
-                                        return {
-                                          ...n,
-                                          tableData: [
-                                            ...current,
-                                            Array(cols).fill(""),
-                                          ],
-                                        };
-                                      }),
-                                    );
-                                    setIsDirty(true);
-                                  }}
-                                  className="px-1.5 py-0.5 bg-muted hover:bg-muted/80 rounded text-[8px] font-bold text-primary transition-all active:scale-95"
-                                >
-                                  + Row
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setNodes((prev) =>
-                                      prev.map((n) => {
-                                        if (n.id !== node.id) return n;
-                                        const current = n.tableData || [
-                                          ["", ""],
-                                        ];
-                                        return {
-                                          ...n,
-                                          tableData: current.map((row) => [
-                                            ...row,
-                                            "",
-                                          ]),
-                                        };
-                                      }),
-                                    );
-                                    setIsDirty(true);
-                                  }}
-                                  className="px-1.5 py-0.5 bg-muted hover:bg-muted/80 rounded text-[8px] font-bold text-success transition-all active:scale-95"
-                                >
-                                  + Col
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setNodes((prev) =>
-                                      prev.map((n) => {
-                                        if (n.id !== node.id) return n;
-                                        const current = n.tableData || [
-                                          ["", ""],
-                                        ];
-                                        if (current.length <= 1) return n;
-                                        return {
-                                          ...n,
-                                          tableData: current.slice(0, -1),
-                                        };
-                                      }),
-                                    );
-                                    setIsDirty(true);
-                                  }}
-                                  className="px-1.5 py-0.5 bg-muted hover:bg-muted/80 rounded text-[8px] font-bold text-destructive transition-all active:scale-95"
-                                >
-                                  - Row
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setNodes((prev) =>
-                                      prev.map((n) => {
-                                        if (n.id !== node.id) return n;
-                                        const current = n.tableData || [
-                                          ["", ""],
-                                        ];
-                                        if ((current[0]?.length || 0) <= 1)
-                                          return n;
-                                        return {
-                                          ...n,
-                                          tableData: current.map((row) =>
-                                            row.slice(0, -1),
-                                          ),
-                                        };
-                                      }),
-                                    );
-                                    setIsDirty(true);
-                                  }}
-                                  className="px-1.5 py-0.5 bg-muted hover:bg-muted/80 rounded text-[8px] font-bold text-warning transition-all active:scale-95"
-                                >
-                                  - Col
-                                </button>
-                              </div>
-                            </div>
 
-                            <div className="flex-1 overflow-auto min-h-0">
-                              <table className="w-full border-collapse border border-border text-[10px]">
-                                <tbody>
-                                  {(node.tableData || [["", ""]]).map(
-                                    (row, rIdx) => (
-                                      <tr
-                                        key={rIdx}
-                                        className="border-b border-border hover:bg-muted/30 transition-colors"
+                          {/* Resizing Anchor (Bottom-Right) */}
+                          <div
+                            onMouseDown={(e) => startResizeNode(e, node)}
+                            className="absolute bottom-1 right-1 w-3.5 h-3.5 cursor-se-resize flex items-center justify-center text-slate-600 hover:text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Maximize2 className="h-2.5 w-2.5 rotate-90" />
+                          </div>
+
+                          {/* Drag-Connector Ports (Visible on hover) */}
+                          <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                            <div
+                              onMouseDown={(e) =>
+                                startConnecting(e, node.id, "top")
+                              }
+                              onMouseUp={(e) =>
+                                completeConnection(e, node.id, "top")
+                              }
+                              className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1.5 w-3.5 h-3.5 rounded-full border border-indigo-400 bg-indigo-500 cursor-crosshair pointer-events-auto hover:scale-125 hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center"
+                            />
+                            <div
+                              onMouseDown={(e) =>
+                                startConnecting(e, node.id, "right")
+                              }
+                              onMouseUp={(e) =>
+                                completeConnection(e, node.id, "right")
+                              }
+                              className="absolute right-0 top-1/2 translate-x-1.5 -translate-y-1/2 w-3.5 h-3.5 rounded-full border border-indigo-400 bg-indigo-500 cursor-crosshair pointer-events-auto hover:scale-125 hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center"
+                            />
+                            <div
+                              onMouseDown={(e) =>
+                                startConnecting(e, node.id, "bottom")
+                              }
+                              onMouseUp={(e) =>
+                                completeConnection(e, node.id, "bottom")
+                              }
+                              className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1.5 w-3.5 h-3.5 rounded-full border border-indigo-400 bg-indigo-500 cursor-crosshair pointer-events-auto hover:scale-125 hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center"
+                            />
+                            <div
+                              onMouseDown={(e) =>
+                                startConnecting(e, node.id, "left")
+                              }
+                              onMouseUp={(e) =>
+                                completeConnection(e, node.id, "left")
+                              }
+                              className="absolute left-0 top-1/2 -translate-x-1.5 -translate-y-1/2 w-3.5 h-3.5 rounded-full border border-indigo-400 bg-indigo-500 cursor-crosshair pointer-events-auto hover:scale-125 hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Chart Settings Floating Panel */}
+                        {node.type === "graph" &&
+                          selectedNodeId === node.id && (
+                            <div
+                              className="absolute z-30 bg-popover border border-border text-popover-foreground rounded-2xl shadow-2xl p-4 flex flex-col pointer-events-auto transition-all w-[260px]"
+                              style={{
+                                left: node.x + node.width + 12,
+                                top: node.y,
+                                height: node.height,
+                              }}
+                              onMouseDown={(e) => e.stopPropagation()}
+                            >
+                              <div className="flex items-center justify-between border-b border-border pb-2 mb-2 shrink-0">
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                                  Chart Settings
+                                </span>
+                                <div className="flex gap-1">
+                                  {(["bar", "line", "pie"] as const).map(
+                                    (t) => (
+                                      <button
+                                        key={t}
+                                        type="button"
+                                        onClick={() => {
+                                          setNodes((prev) =>
+                                            prev.map((n) =>
+                                              n.id === node.id
+                                                ? { ...n, graphType: t }
+                                                : n,
+                                            ),
+                                          );
+                                          setIsDirty(true);
+                                        }}
+                                        className={cn(
+                                          "px-2 py-0.5 rounded text-[9px] font-bold transition-all uppercase",
+                                          node.graphType === t
+                                            ? "bg-primary text-primary-foreground"
+                                            : "bg-muted hover:bg-muted/80 text-muted-foreground",
+                                        )}
                                       >
-                                        {row.map((cell, cIdx) => (
-                                          <td
-                                            key={cIdx}
-                                            className="border-r border-border p-0.5"
-                                          >
-                                            <input
-                                              type="text"
-                                              value={cell}
-                                              onChange={(e) => {
-                                                const val = e.target.value;
-                                                setNodes((prev) =>
-                                                  prev.map((n) => {
-                                                    if (n.id !== node.id)
-                                                      return n;
-                                                    const nextTable = (
-                                                      n.tableData || [["", ""]]
-                                                    ).map((r, ri) =>
-                                                      r.map((c, ci) =>
-                                                        ri === rIdx &&
-                                                        ci === cIdx
-                                                          ? val
-                                                          : c,
-                                                      ),
-                                                    );
-                                                    return {
-                                                      ...n,
-                                                      tableData: nextTable,
-                                                    };
-                                                  }),
-                                                );
-                                                setIsDirty(true);
-                                              }}
-                                              className="w-full bg-transparent border-0 px-1 py-0.5 text-[9px] text-foreground focus:outline-none focus:bg-muted font-medium"
-                                            />
-                                          </td>
-                                        ))}
-                                      </tr>
+                                        {t}
+                                      </button>
                                     ),
                                   )}
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
-                        ) : node.type === "graph" ? (
-                          // Interactive Chart Renderer
-                          <div
-                            className="relative w-full h-full flex flex-col p-3 text-foreground bg-card/65"
-                            onMouseDown={(e) => {
-                              if (!e.ctrlKey && !e.metaKey) e.stopPropagation();
-                            }}
-                          >
-                            <div className="flex-1 w-full min-h-0 text-muted-foreground">
-                              <ResponsiveContainer width="100%" height="100%">
-                                {node.graphType === "line" ? (
-                                  <LineChart
-                                    data={node.graphData || []}
-                                    margin={{
-                                      top: 5,
-                                      right: 10,
-                                      left: -32,
-                                      bottom: 0,
-                                    }}
-                                  >
-                                    <XAxis
-                                      dataKey="name"
-                                      stroke="var(--muted-foreground)"
-                                      fontSize={8}
-                                      tickLine={false}
-                                      axisLine={false}
-                                    />
-                                    <YAxis
-                                      stroke="var(--muted-foreground)"
-                                      fontSize={8}
-                                      tickLine={false}
-                                      axisLine={false}
-                                    />
-                                    <Tooltip
-                                      contentStyle={{
-                                        background: "var(--popover)",
-                                        border: "1px solid var(--border)",
-                                        borderRadius: "var(--radius)",
-                                        fontSize: "9px",
-                                        color: "var(--popover-foreground)",
-                                      }}
-                                    />
-                                    <Line
-                                      type="monotone"
-                                      dataKey="value"
-                                      stroke="var(--primary)"
-                                      strokeWidth={2}
-                                      dot={{ r: 2 }}
-                                      activeDot={{ r: 4 }}
-                                    />
-                                  </LineChart>
-                                ) : node.graphType === "pie" ? (
-                                  <PieChart>
-                                    <Tooltip
-                                      contentStyle={{
-                                        background: "var(--popover)",
-                                        border: "1px solid var(--border)",
-                                        borderRadius: "var(--radius)",
-                                        fontSize: "9px",
-                                        color: "var(--popover-foreground)",
-                                      }}
-                                    />
-                                    <Pie
-                                      data={node.graphData || []}
-                                      dataKey="value"
-                                      nameKey="name"
-                                      cx="50%"
-                                      cy="50%"
-                                      outerRadius={42}
-                                      fill="var(--primary)"
-                                      label={({ name, percent }) =>
-                                        `${name} ${(((percent ?? 0) * 100)).toFixed(0)}%`
-                                      }
-                                      labelLine={false}
-                                      style={{
-                                        fontSize: "7px",
-                                        fill: "var(--muted-foreground)",
-                                      }}
-                                    >
-                                      {(node.graphData || []).map(
-                                        (entry, index) => {
-                                          const colors = [
-                                            "var(--primary)",
-                                            "var(--success)",
-                                            "var(--warning)",
-                                            "var(--destructive)",
-                                            "var(--muted-foreground)",
-                                          ];
-                                          return (
-                                            <Cell
-                                              key={`cell-${index}`}
-                                              fill={
-                                                colors[index % colors.length]
-                                              }
-                                            />
-                                          );
-                                        },
-                                      )}
-                                    </Pie>
-                                  </PieChart>
-                                ) : (
-                                  <BarChart
-                                    data={node.graphData || []}
-                                    margin={{
-                                      top: 5,
-                                      right: 10,
-                                      left: -32,
-                                      bottom: 0,
-                                    }}
-                                  >
-                                    <XAxis
-                                      dataKey="name"
-                                      stroke="var(--muted-foreground)"
-                                      fontSize={8}
-                                      tickLine={false}
-                                      axisLine={false}
-                                    />
-                                    <YAxis
-                                      stroke="var(--muted-foreground)"
-                                      fontSize={8}
-                                      tickLine={false}
-                                      axisLine={false}
-                                    />
-                                    <Tooltip
-                                      contentStyle={{
-                                        background: "var(--popover)",
-                                        border: "1px solid var(--border)",
-                                        borderRadius: "var(--radius)",
-                                        fontSize: "9px",
-                                        color: "var(--popover-foreground)",
-                                      }}
-                                    />
-                                    <Bar
-                                      dataKey="value"
-                                      fill="var(--primary)"
-                                      radius={[3, 3, 0, 0]}
-                                    />
-                                  </BarChart>
-                                )}
-                              </ResponsiveContainer>
-                            </div>
-                          </div>
-                        ) : (
-                          // Whiteboard Sketchpad Renderer
-                          <div
-                            className="relative w-full h-full flex flex-col"
-                            onMouseDown={(e) => {
-                              if (!e.ctrlKey && !e.metaKey) e.stopPropagation();
-                            }}
-                          >
-                            <div className="flex items-center justify-between px-3 py-1.5 bg-muted/10 border-b border-border shrink-0 text-[10px]" onMouseDown={(e) => { if (!e.ctrlKey && !e.metaKey) e.stopPropagation(); }}>
-                              <span className="font-semibold text-muted-foreground">
-                                Sketchpad
-                              </span>
-                              
-                              <div className="flex items-center gap-3">
-                                {/* Drawing Color Presets */}
-                                <div className="flex items-center gap-1">
-                                  {[
-                                    { color: "var(--primary)", label: "Primary" },
-                                    { color: "#3b82f6", label: "Blue" },
-                                    { color: "var(--success)", label: "Green" },
-                                    { color: "var(--warning)", label: "Orange" },
-                                    { color: "var(--destructive)", label: "Red" },
-                                    { color: "var(--foreground)", label: "Text" }
-                                  ].map((c) => (
-                                    <button
-                                      key={c.color}
-                                      onClick={() => setActiveDrawColor(c.color)}
-                                      className={cn(
-                                        "w-3 h-3 rounded-full border border-border/40 transition-all active:scale-90",
-                                        activeDrawColor === c.color ? "ring-2 ring-primary scale-110" : ""
-                                      )}
-                                      style={{ backgroundColor: c.color.startsWith("var") ? `var(${c.color.match(/\(([^)]+)\)/)?.[1] || ""})` : c.color }}
-                                      title={c.label}
-                                    />
-                                  ))}
-                                  
-                                  {/* Custom Color Button with Picker */}
-                                  <div 
-                                    className={cn(
-                                      "relative w-3 h-3 rounded-full border border-border/40 cursor-pointer transition-all active:scale-90 flex items-center justify-center",
-                                      !["var(--primary)", "#3b82f6", "var(--success)", "var(--warning)", "var(--destructive)", "var(--foreground)"].includes(activeDrawColor) ? "ring-2 ring-primary scale-110" : ""
-                                    )}
-                                    style={{ 
-                                      backgroundColor: !["var(--primary)", "#3b82f6", "var(--success)", "var(--warning)", "var(--destructive)", "var(--foreground)"].includes(activeDrawColor) ? activeDrawColor : "transparent"
-                                    }}
-                                    title="Custom Color"
-                                  >
-                                    {["var(--primary)", "#3b82f6", "var(--success)", "var(--warning)", "var(--destructive)", "var(--foreground)"].includes(activeDrawColor) && (
-                                      <Palette className="w-2 h-2 text-muted-foreground" />
-                                    )}
-                                    <input
-                                      type="color"
-                                      value={activeDrawColor.startsWith("var") ? "#6366f1" : activeDrawColor}
-                                      onChange={(e) => setActiveDrawColor(e.target.value)}
-                                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                                    />
-                                  </div>
                                 </div>
-
-                                {/* Size Slider */}
-                                <div className="flex items-center gap-1.5 text-muted-foreground">
-                                  <span className="text-[8px] font-medium min-w-[20px] text-right">{activeDrawWidth}px</span>
-                                  <input
-                                    type="range"
-                                    min="1"
-                                    max="40"
-                                    value={activeDrawWidth}
-                                    onChange={(e) => setActiveDrawWidth(Number(e.target.value))}
-                                    className="w-14 h-1 bg-muted rounded-lg appearance-none cursor-pointer accent-primary"
-                                    title="Brush Size"
-                                  />
-                                </div>
-
-                                {/* Brush Type Selector */}
-                                <select
-                                  value={activeBrushType}
-                                  onChange={(e) => setActiveBrushType(e.target.value as any)}
-                                  className="bg-background border border-border rounded px-1.5 py-0.5 text-[8px] font-medium text-foreground focus:outline-none cursor-pointer"
-                                >
-                                  <option value="pencil">✏️ Pencil</option>
-                                  <option value="calligraphy">✒️ Calligraphy</option>
-                                  <option value="highlighter">🖍️ Highlighter</option>
-                                  <option value="dashed">➖ Dashed</option>
-                                  <option value="dotted">💬 Dotted</option>
-                                </select>
-
-                                <button
-                                  onClick={(e) => handleDrawingClear(e, node.id)}
-                                  className="px-2 py-0.5 bg-destructive/10 text-destructive hover:bg-destructive/15 rounded text-[9px] font-medium transition-all"
-                                >
-                                  Clear
-                                </button>
                               </div>
-                            </div>
-                            <svg
-                              className={cn(
-                                "flex-1 w-full h-full bg-muted/5 touch-none select-none",
-                                isErasing ? "cursor-cell" : "cursor-crosshair"
-                              )}
-                              onMouseDown={(e) => {
-                                e.stopPropagation();
-                                setSelectedNodeId(node.id);
-                                handleDrawingStart(e, node);
-                              }}
-                              onMouseMove={(e) => handleDrawingMove(e, node)}
-                              onMouseUp={() => handleDrawingEnd(node)}
-                              onMouseLeave={() => handleDrawingEnd(node)}
-                              onTouchStart={(e) => {
-                                e.stopPropagation();
-                                setSelectedNodeId(node.id);
-                                handleDrawingStart(e, node);
-                              }}
-                              onTouchMove={(e) => handleDrawingMove(e, node)}
-                              onTouchEnd={() => handleDrawingEnd(node)}
-                            >
-                              {/* Saved sketches */}
-                              {(node.lines || []).map((l, i) => (
-                                <path
-                                  key={i}
-                                  d={`M ${l.points.map((p) => `${p.x} ${p.y}`).join(" L ")}`}
-                                  fill="none"
-                                  stroke={l.color}
-                                  strokeWidth={l.width}
-                                  strokeDasharray={l.dasharray}
-                                  strokeOpacity={l.opacity}
-                                  strokeLinecap={l.cap || "round"}
-                                  strokeLinejoin="round"
-                                />
-                              ))}
-                              {/* Real-time drawing line preview */}
-                              {drawingStroke && selectedNodeId === node.id && (
-                                <path
-                                  d={`M ${drawingStroke.points.map((p) => `${p.x} ${p.y}`).join(" L ")}`}
-                                  fill="none"
-                                  stroke={drawingStroke.color}
-                                  strokeWidth={drawingStroke.width}
-                                  strokeDasharray={drawingStroke.dasharray}
-                                  strokeOpacity={drawingStroke.opacity}
-                                  strokeLinecap={drawingStroke.cap || "round"}
-                                  strokeLinejoin="round"
-                                />
-                              )}
 
-                              {/* Real-time eraser preview outline */}
-                              {isErasing && eraserCoords && selectedNodeId === node.id && (
-                                <circle
-                                  cx={eraserCoords.x}
-                                  cy={eraserCoords.y}
-                                  r={Math.min(60, Math.max(12, activeDrawWidth * 1.6))}
-                                  fill="rgba(239, 68, 68, 0.12)"
-                                  stroke="rgba(239, 68, 68, 0.75)"
-                                  strokeWidth={1.2}
-                                  strokeDasharray="3 2"
-                                  pointerEvents="none"
-                                />
-                              )}
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Resizing Anchor (Bottom-Right) */}
-                      <div
-                        onMouseDown={(e) => startResizeNode(e, node)}
-                        className="absolute bottom-1 right-1 w-3.5 h-3.5 cursor-se-resize flex items-center justify-center text-slate-600 hover:text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Maximize2 className="h-2.5 w-2.5 rotate-90" />
-                      </div>
-
-                      {/* Drag-Connector Ports (Visible on hover) */}
-                      <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                        <div
-                          onMouseDown={(e) =>
-                            startConnecting(e, node.id, "top")
-                          }
-                          onMouseUp={(e) =>
-                            completeConnection(e, node.id, "top")
-                          }
-                          className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1.5 w-3.5 h-3.5 rounded-full border border-indigo-400 bg-indigo-500 cursor-crosshair pointer-events-auto hover:scale-125 hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center"
-                        />
-                        <div
-                          onMouseDown={(e) =>
-                            startConnecting(e, node.id, "right")
-                          }
-                          onMouseUp={(e) =>
-                            completeConnection(e, node.id, "right")
-                          }
-                          className="absolute right-0 top-1/2 translate-x-1.5 -translate-y-1/2 w-3.5 h-3.5 rounded-full border border-indigo-400 bg-indigo-500 cursor-crosshair pointer-events-auto hover:scale-125 hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center"
-                        />
-                        <div
-                          onMouseDown={(e) =>
-                            startConnecting(e, node.id, "bottom")
-                          }
-                          onMouseUp={(e) =>
-                            completeConnection(e, node.id, "bottom")
-                          }
-                          className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1.5 w-3.5 h-3.5 rounded-full border border-indigo-400 bg-indigo-500 cursor-crosshair pointer-events-auto hover:scale-125 hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center"
-                        />
-                        <div
-                          onMouseDown={(e) =>
-                            startConnecting(e, node.id, "left")
-                          }
-                          onMouseUp={(e) =>
-                            completeConnection(e, node.id, "left")
-                          }
-                          className="absolute left-0 top-1/2 -translate-x-1.5 -translate-y-1/2 w-3.5 h-3.5 rounded-full border border-indigo-400 bg-indigo-500 cursor-crosshair pointer-events-auto hover:scale-125 hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Chart Settings Floating Panel */}
-                      {node.type === "graph" && selectedNodeId === node.id && (
-                        <div
-                          className="absolute z-30 bg-popover border border-border text-popover-foreground rounded-2xl shadow-2xl p-4 flex flex-col pointer-events-auto transition-all w-[260px]"
-                          style={{
-                            left: node.x + node.width + 12,
-                            top: node.y,
-                            height: node.height,
-                          }}
-                          onMouseDown={(e) => e.stopPropagation()}
-                        >
-                          <div className="flex items-center justify-between border-b border-border pb-2 mb-2 shrink-0">
-                            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                              Chart Settings
-                            </span>
-                            <div className="flex gap-1">
-                              {(["bar", "line", "pie"] as const).map((t) => (
-                                <button
-                                  key={t}
-                                  type="button"
-                                  onClick={() => {
-                                    setNodes((prev) =>
-                                      prev.map((n) =>
-                                        n.id === node.id ? { ...n, graphType: t } : n,
-                                      ),
-                                    );
-                                    setIsDirty(true);
-                                  }}
-                                  className={cn(
-                                    "px-2 py-0.5 rounded text-[9px] font-bold transition-all uppercase",
-                                    node.graphType === t
-                                      ? "bg-primary text-primary-foreground"
-                                      : "bg-muted hover:bg-muted/80 text-muted-foreground",
-                                  )}
-                                >
-                                  {t}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Editor list */}
-                          <div className="flex-1 overflow-y-auto pr-1">
-                            <div className="flex flex-col gap-1.5">
-                              {(node.graphData || []).map((row, idx) => (
-                                <div key={idx} className="flex gap-1.5 items-center">
-                                  <input
-                                    type="text"
-                                    value={row.name}
-                                    onChange={(e) => {
-                                      const val = e.target.value;
-                                      setNodes((prev) =>
-                                        prev.map((n) => {
-                                          if (n.id !== node.id) return n;
-                                          const nextData = [...(n.graphData || [])];
-                                          nextData[idx] = { ...nextData[idx], name: val };
-                                          return { ...n, graphData: nextData };
-                                        }),
-                                      );
-                                      setIsDirty(true);
-                                    }}
-                                    className="flex-1 bg-background border border-border rounded px-2 py-1 text-[9px] text-foreground focus:outline-none focus:border-primary font-medium"
-                                    placeholder="Label"
-                                  />
-                                  <input
-                                    type="number"
-                                    value={row.value}
-                                    onChange={(e) => {
-                                      const val = Number(e.target.value);
-                                      setNodes((prev) =>
-                                        prev.map((n) => {
-                                          if (n.id !== node.id) return n;
-                                          const nextData = [...(n.graphData || [])];
-                                          nextData[idx] = { ...nextData[idx], value: val };
-                                          return { ...n, graphData: nextData };
-                                        }),
-                                      );
-                                      setIsDirty(true);
-                                    }}
-                                    className="w-16 bg-background border border-border rounded px-2 py-1 text-[9px] text-foreground focus:outline-none focus:border-primary font-medium"
-                                    placeholder="Value"
-                                  />
+                              {/* Editor list */}
+                              <div className="flex-1 overflow-y-auto pr-1">
+                                <div className="flex flex-col gap-1.5">
+                                  {(node.graphData || []).map((row, idx) => (
+                                    <div
+                                      key={idx}
+                                      className="flex gap-1.5 items-center"
+                                    >
+                                      <input
+                                        type="text"
+                                        value={row.name}
+                                        onChange={(e) => {
+                                          const val = e.target.value;
+                                          setNodes((prev) =>
+                                            prev.map((n) => {
+                                              if (n.id !== node.id) return n;
+                                              const nextData = [
+                                                ...(n.graphData || []),
+                                              ];
+                                              nextData[idx] = {
+                                                ...nextData[idx],
+                                                name: val,
+                                              };
+                                              return {
+                                                ...n,
+                                                graphData: nextData,
+                                              };
+                                            }),
+                                          );
+                                          setIsDirty(true);
+                                        }}
+                                        className="flex-1 bg-background border border-border rounded px-2 py-1 text-[9px] text-foreground focus:outline-none focus:border-primary font-medium"
+                                        placeholder="Label"
+                                      />
+                                      <input
+                                        type="number"
+                                        value={row.value}
+                                        onChange={(e) => {
+                                          const val = Number(e.target.value);
+                                          setNodes((prev) =>
+                                            prev.map((n) => {
+                                              if (n.id !== node.id) return n;
+                                              const nextData = [
+                                                ...(n.graphData || []),
+                                              ];
+                                              nextData[idx] = {
+                                                ...nextData[idx],
+                                                value: val,
+                                              };
+                                              return {
+                                                ...n,
+                                                graphData: nextData,
+                                              };
+                                            }),
+                                          );
+                                          setIsDirty(true);
+                                        }}
+                                        className="w-16 bg-background border border-border rounded px-2 py-1 text-[9px] text-foreground focus:outline-none focus:border-primary font-medium"
+                                        placeholder="Value"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setNodes((prev) =>
+                                            prev.map((n) => {
+                                              if (n.id !== node.id) return n;
+                                              return {
+                                                ...n,
+                                                graphData: (
+                                                  n.graphData || []
+                                                ).filter((_, i) => i !== idx),
+                                              };
+                                            }),
+                                          );
+                                          setIsDirty(true);
+                                        }}
+                                        className="p-1 hover:bg-destructive/10 text-destructive hover:text-destructive rounded transition-all"
+                                        title="Delete Row"
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </button>
+                                    </div>
+                                  ))}
                                   <button
                                     type="button"
                                     onClick={() => {
@@ -2217,50 +2333,100 @@ export default function CanvasEditor({
                                           if (n.id !== node.id) return n;
                                           return {
                                             ...n,
-                                            graphData: (n.graphData || []).filter((_, i) => i !== idx),
+                                            graphData: [
+                                              ...(n.graphData || []),
+                                              {
+                                                name: `Item ${String.fromCharCode(65 + (n.graphData || []).length)}`,
+                                                value: 50,
+                                              },
+                                            ],
                                           };
                                         }),
                                       );
                                       setIsDirty(true);
                                     }}
-                                    className="p-1 hover:bg-destructive/10 text-destructive hover:text-destructive rounded transition-all"
-                                    title="Delete Row"
+                                    className="mt-1 text-[9px] font-semibold text-primary hover:text-primary/80 flex items-center justify-center gap-1 py-1.5 border border-dashed border-border hover:border-muted-foreground/35 rounded transition-all"
                                   >
-                                    <Trash2 className="h-3 w-3" />
+                                    <Plus className="h-3 w-3" /> Add Data Row
                                   </button>
                                 </div>
-                              ))}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setNodes((prev) =>
-                                    prev.map((n) => {
-                                      if (n.id !== node.id) return n;
-                                      return {
-                                        ...n,
-                                        graphData: [
-                                          ...(n.graphData || []),
-                                          {
-                                            name: `Item ${String.fromCharCode(65 + (n.graphData || []).length)}`,
-                                            value: 50,
-                                          },
-                                        ],
-                                      };
-                                    }),
-                                  );
-                                  setIsDirty(true);
-                                }}
-                                className="mt-1 text-[9px] font-semibold text-primary hover:text-primary/80 flex items-center justify-center gap-1 py-1.5 border border-dashed border-border hover:border-muted-foreground/35 rounded transition-all"
-                              >
-                                <Plus className="h-3 w-3" /> Add Data Row
-                              </button>
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
+                          )}
+
+                        {/* Mermaid / UML Settings Floating Panel */}
+                        {(node.type === "mermaid" || node.type === "uml") &&
+                          selectedNodeId === node.id && (
+                            <div
+                              className="absolute z-30 bg-popover border border-border text-popover-foreground rounded-2xl shadow-2xl p-4 flex flex-col pointer-events-auto transition-all w-[320px]"
+                              style={{
+                                left: node.x + node.width + 12,
+                                top: node.y,
+                                height: node.height,
+                              }}
+                              onMouseDown={(e) => e.stopPropagation()}
+                            >
+                              <div className="flex items-center justify-between border-b border-border pb-2 mb-2 shrink-0">
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                                  {node.type === "mermaid"
+                                    ? "Mermaid Diagram Code"
+                                    : "UML Diagram Code"}
+                                </span>
+                              </div>
+                              <div className="flex-1 flex flex-col min-h-0">
+                                <textarea
+                                  value={node.mermaidCode || ""}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setNodes((prev) =>
+                                      prev.map((n) =>
+                                        n.id === node.id
+                                          ? { ...n, mermaidCode: val }
+                                          : n,
+                                      ),
+                                    );
+                                    setIsDirty(true);
+                                  }}
+                                  className="flex-1 w-full bg-background border border-border rounded-lg p-3 font-mono text-[10px] text-slate-300 focus:outline-none focus:border-primary resize-none leading-relaxed"
+                                  placeholder={
+                                    node.type === "mermaid"
+                                      ? "graph TD..."
+                                      : "classDiagram..."
+                                  }
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Tab") {
+                                      e.preventDefault();
+                                      const start =
+                                        e.currentTarget.selectionStart;
+                                      const end = e.currentTarget.selectionEnd;
+                                      const val = e.currentTarget.value;
+                                      const updated =
+                                        val.substring(0, start) +
+                                        "    " +
+                                        val.substring(end);
+                                      setNodes((prev) =>
+                                        prev.map((n) =>
+                                          n.id === node.id
+                                            ? { ...n, mermaidCode: updated }
+                                            : n,
+                                        ),
+                                      );
+                                      setTimeout(() => {
+                                        if (e.currentTarget) {
+                                          e.currentTarget.selectionStart =
+                                            e.currentTarget.selectionEnd =
+                                              start + 4;
+                                        }
+                                      }, 0);
+                                    }
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                      </React.Fragment>
+                    );
+                  })}
 
                 {/* Collaborator Cursor Pointers */}
                 {collaborators.map((c) => {
@@ -2353,156 +2519,53 @@ export default function CanvasEditor({
             </div>
           )}
 
-          {/* Image Insertion Dialog Prompt */}
-          {imagePrompt && (
-            <div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 select-text"
-              onMouseDown={(e) => e.stopPropagation()}
-              onMouseUp={(e) => e.stopPropagation()}
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => e.stopPropagation()}
-            >
-              <div
-                className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-xl flex flex-col select-text"
-                onMouseDown={(e) => e.stopPropagation()}
-                onMouseUp={(e) => e.stopPropagation()}
-                onClick={(e) => e.stopPropagation()}
-                onKeyDown={(e) => e.stopPropagation()}
-              >
-                <h3 className="text-sm font-bold text-card-foreground">
-                  Insert Image
-                </h3>
-                <p className="text-[11px] text-muted-foreground leading-normal mt-1 mb-4">
-                  Enter an external image URL, or choose a local file from your
-                  device to embed as an E2EE base64 image.
-                </p>
+          {/* Insertion and Warning Modals */}
+          <RrCanvasImageInsertModal
+            isOpen={imagePrompt !== null}
+            onClose={() => setImagePrompt(null)}
+            x={imagePrompt?.x ?? 0}
+            y={imagePrompt?.y ?? 0}
+            decryptedLacertaFiles={decryptedLacertaFiles}
+            canvasFile={file}
+            createNodeAtPos={createNodeAtPos}
+            setPendingFileShare={setPendingFileShare}
+          />
 
-                <div className="flex flex-col gap-3">
-                  <div>
-                    <label className="text-[10px] font-bold text-muted-foreground block mb-1">
-                      IMAGE URL
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="https://example.com/image.png"
-                      value={imageUrl}
-                      onChange={(e) => setImageUrl(e.target.value)}
-                      className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary transition-all font-medium"
-                    />
-                  </div>
+          <RrCanvasVideoInsertModal
+            isOpen={videoPrompt !== null}
+            onClose={() => setVideoPrompt(null)}
+            x={videoPrompt?.x ?? 0}
+            y={videoPrompt?.y ?? 0}
+            createNodeAtPos={createNodeAtPos}
+          />
 
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-px bg-border" />
-                    <span className="text-[9px] font-bold text-muted-foreground uppercase">
-                      OR
-                    </span>
-                    <div className="flex-1 h-px bg-border" />
-                  </div>
+          <RrCanvasGifInsertModal
+            isOpen={gifPrompt !== null}
+            onClose={() => setGifPrompt(null)}
+            x={gifPrompt?.x ?? 0}
+            y={gifPrompt?.y ?? 0}
+            createNodeAtPos={createNodeAtPos}
+          />
 
-                  <div>
-                    <label className="text-[10px] font-bold text-muted-foreground block mb-1">
-                      UPLOAD LOCAL FILE
-                    </label>
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      accept="image/*"
-                      onChange={(e) => {
-                        const fileObj = e.target.files?.[0];
-                        if (fileObj) {
-                          const reader = new FileReader();
-                          reader.onload = (event) => {
-                            const img = new window.Image();
-                            img.onload = () => {
-                              // Create canvas to scale down
-                              const canvas = document.createElement("canvas");
-                              const MAX_WIDTH = 800;
-                              const MAX_HEIGHT = 800;
-                              let width = img.width;
-                              let height = img.height;
+          <RrCanvasFileInsertModal
+            isOpen={filePrompt !== null}
+            onClose={() => setFilePrompt(null)}
+            x={filePrompt?.x ?? 0}
+            y={filePrompt?.y ?? 0}
+            embedType={filePrompt?.embedType ?? "file"}
+            decryptedLacertaFiles={decryptedLacertaFiles}
+            canvasFile={file}
+            createNodeAtPos={createNodeAtPos}
+            setPendingFileShare={setPendingFileShare}
+          />
 
-                              if (width > height) {
-                                if (width > MAX_WIDTH) {
-                                  height = Math.round(
-                                    (height * MAX_WIDTH) / width,
-                                  );
-                                  width = MAX_WIDTH;
-                                }
-                              } else {
-                                if (height > MAX_HEIGHT) {
-                                  width = Math.round(
-                                    (width * MAX_HEIGHT) / height,
-                                  );
-                                  height = MAX_HEIGHT;
-                                }
-                              }
-
-                              canvas.width = width;
-                              canvas.height = height;
-                              const ctx = canvas.getContext("2d");
-                              if (ctx) {
-                                ctx.drawImage(img, 0, 0, width, height);
-                                const compressedBase64 = canvas.toDataURL(
-                                  "image/jpeg",
-                                  0.75,
-                                ); // compress to JPEG at 75% quality
-                                createNodeAtPos(
-                                  "image",
-                                  imagePrompt.x,
-                                  imagePrompt.y,
-                                  undefined,
-                                  undefined,
-                                  compressedBase64,
-                                );
-                              }
-                              setImagePrompt(null);
-                              setImageUrl("");
-                            };
-                            img.src = event.target?.result as string;
-                          };
-                          reader.readAsDataURL(fileObj);
-                        }
-                      }}
-                      className="w-full text-xs text-muted-foreground file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-muted file:text-foreground hover:file:bg-muted/80 file:cursor-pointer"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2 mt-6">
-                  <button
-                    onClick={() => {
-                      setImagePrompt(null);
-                      setImageUrl("");
-                    }}
-                    className="px-3 py-1.5 bg-muted hover:bg-muted/80 rounded-lg text-xs font-semibold text-muted-foreground transition-all active:scale-98"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (imageUrl.trim()) {
-                        createNodeAtPos(
-                          "image",
-                          imagePrompt.x,
-                          imagePrompt.y,
-                          undefined,
-                          undefined,
-                          imageUrl.trim(),
-                        );
-                        setImagePrompt(null);
-                        setImageUrl("");
-                      } else {
-                        toast.error("Please enter a URL or select a file");
-                      }
-                    }}
-                    className="px-4 py-1.5 bg-primary hover:bg-primary/90 rounded-lg text-xs font-semibold text-primary-foreground transition-all shadow-sm active:scale-98"
-                  >
-                    Insert URL
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          <RrCanvasPublicShareWarningModal
+            isOpen={pendingFileShare !== null}
+            onClose={() => setPendingFileShare(null)}
+            pendingFileShare={pendingFileShare}
+            accessToken={accessToken}
+            createNodeAtPos={createNodeAtPos}
+          />
         </div>
       </ContextMenuTrigger>
 
@@ -2561,8 +2624,138 @@ export default function CanvasEditor({
               </ContextMenuPortal>
             </ContextMenuSub>
 
+            {/* Change Sticker option for Emoji nodes */}
+            {nodes.find((n) => n.id === rightClickedNodeId)?.type ===
+              "emoji" && (
+              <ContextMenuSub>
+                <ContextMenuSubTrigger className="focus:bg-accent focus:text-accent-foreground cursor-pointer text-xs font-semibold px-3 py-2">
+                  <Smile className="h-3.5 w-3.5 mr-2 text-warning" />
+                  Change Sticker
+                </ContextMenuSubTrigger>
+                <ContextMenuPortal>
+                  <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-[120px]">
+                    {["🎯", "👍", "🔥", "❤️", "🚀", "💡", "⚠️", "🎉"].map(
+                      (emoji) => (
+                        <ContextMenuItem
+                          key={emoji}
+                          onClick={() => {
+                            setNodes((prev) =>
+                              prev.map((n) =>
+                                n.id === rightClickedNodeId
+                                  ? { ...n, emoji }
+                                  : n,
+                              ),
+                            );
+                            setIsDirty(true);
+                          }}
+                          className="focus:bg-accent focus:text-accent-foreground cursor-pointer flex items-center px-3 py-1.5 text-xs font-semibold"
+                        >
+                          <span className="text-base mr-2">{emoji}</span>
+                          <span>Sticker</span>
+                        </ContextMenuItem>
+                      ),
+                    )}
+                  </ContextMenuSubContent>
+                </ContextMenuPortal>
+              </ContextMenuSub>
+            )}
+
+            {/* Change Callout style option for Callout nodes */}
+            {nodes.find((n) => n.id === rightClickedNodeId)?.type ===
+              "callout" && (
+              <ContextMenuSub>
+                <ContextMenuSubTrigger className="focus:bg-accent focus:text-accent-foreground cursor-pointer text-xs font-semibold px-3 py-2">
+                  <AlertCircle className="h-3.5 w-3.5 mr-2 text-rose-500" />
+                  Callout Style
+                </ContextMenuSubTrigger>
+                <ContextMenuPortal>
+                  <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-[120px]">
+                    {[
+                      {
+                        type: "info",
+                        colorClass: "text-blue-500",
+                        label: "Info",
+                      },
+                      {
+                        type: "warning",
+                        colorClass: "text-amber-500",
+                        label: "Warning",
+                      },
+                      {
+                        type: "success",
+                        colorClass: "text-emerald-500",
+                        label: "Success",
+                      },
+                      {
+                        type: "error",
+                        colorClass: "text-rose-500",
+                        label: "Danger",
+                      },
+                    ].map((style) => (
+                      <ContextMenuItem
+                        key={style.type}
+                        onClick={() => {
+                          setNodes((prev) =>
+                            prev.map((n) =>
+                              n.id === rightClickedNodeId
+                                ? { ...n, calloutType: style.type as any }
+                                : n,
+                            ),
+                          );
+                          setIsDirty(true);
+                        }}
+                        className="focus:bg-accent focus:text-accent-foreground cursor-pointer flex items-center px-3 py-1.5 text-xs font-semibold"
+                      >
+                        <span
+                          className={cn(
+                            "w-2 h-2 rounded-full mr-2 bg-current",
+                            style.colorClass,
+                          )}
+                        />
+                        <span>{style.label}</span>
+                      </ContextMenuItem>
+                    ))}
+                  </ContextMenuSubContent>
+                </ContextMenuPortal>
+              </ContextMenuSub>
+            )}
+
+            <ContextMenuSeparator className="bg-border" />
+            <ContextMenuSub>
+              <ContextMenuSubTrigger className="focus:bg-accent focus:text-accent-foreground cursor-pointer text-xs font-semibold px-3 py-2">
+                <Maximize2 className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+                Arrange
+              </ContextMenuSubTrigger>
+              <ContextMenuPortal>
+                <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-[160px]">
+                  <ContextMenuItem
+                    onClick={() => bringToFront(rightClickedNodeId!)}
+                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
+                  >
+                    Bring to Front
+                  </ContextMenuItem>
+                  <ContextMenuItem
+                    onClick={() => sendToBack(rightClickedNodeId!)}
+                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
+                  >
+                    Send to Back
+                  </ContextMenuItem>
+                  <ContextMenuSeparator className="bg-border/30" />
+                  <ContextMenuItem
+                    onClick={() => toggleLock(rightClickedNodeId!)}
+                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
+                  >
+                    {nodes.find((n) => n.id === rightClickedNodeId)
+                      ?.lockPosition
+                      ? "🔓 Unlock Position"
+                      : "🔒 Lock Position"}
+                  </ContextMenuItem>
+                </ContextMenuSubContent>
+              </ContextMenuPortal>
+            </ContextMenuSub>
+
             <ContextMenuItem
-              onClick={() => handleNodeDelete(rightClickedNodeId)}
+              onClick={() => handleNodeDelete(rightClickedNodeId!)}
               className="focus:bg-destructive/10 text-destructive focus:text-destructive cursor-pointer text-xs font-semibold px-3 py-2"
             >
               <Trash2 className="h-3.5 w-3.5 mr-2" />
@@ -2581,7 +2774,12 @@ export default function CanvasEditor({
                 Insert
               </ContextMenuSubTrigger>
               <ContextMenuPortal>
-                <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-[170px]">
+                <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-[190px] max-h-[420px] overflow-y-auto no-scrollbar">
+                  {/* Category: Text & Notes */}
+                  <ContextMenuLabel className="text-[9px] font-bold text-muted-foreground px-3 py-1 uppercase tracking-wider">
+                    Text & Notes
+                  </ContextMenuLabel>
+                  <ContextMenuSeparator className="bg-border/30" />
                   <ContextMenuItem
                     onClick={() =>
                       createNodeAtPos(
@@ -2592,7 +2790,7 @@ export default function CanvasEditor({
                         "document",
                       )
                     }
-                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-2 text-xs font-semibold"
+                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
                     <Type className="h-3.5 w-3.5 mr-2 text-primary" />
                     Document Card
@@ -2607,9 +2805,9 @@ export default function CanvasEditor({
                         "sticky",
                       )
                     }
-                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-2 text-xs font-semibold"
+                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
-                    <Plus className="h-3.5 w-3.5 mr-2 text-warning" />
+                    <StickyNote className="h-3.5 w-3.5 mr-2 text-amber-500" />
                     Sticky Note
                   </ContextMenuItem>
                   <ContextMenuItem
@@ -2622,11 +2820,115 @@ export default function CanvasEditor({
                         "header",
                       )
                     }
-                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-2 text-xs font-semibold"
+                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
-                    <Plus className="h-3.5 w-3.5 mr-2 text-primary" />
+                    <Heading className="h-3.5 w-3.5 mr-2 text-indigo-400" />
                     Floating Title
                   </ContextMenuItem>
+                  <ContextMenuItem
+                    onClick={() =>
+                      createNodeAtPos(
+                        "callout",
+                        rightClickPosition.x,
+                        rightClickPosition.y,
+                      )
+                    }
+                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
+                  >
+                    <AlertCircle className="h-3.5 w-3.5 mr-2 text-rose-500" />
+                    Callout Card
+                  </ContextMenuItem>
+                  <ContextMenuItem
+                    onClick={() =>
+                      createNodeAtPos(
+                        "annotation",
+                        rightClickPosition.x,
+                        rightClickPosition.y,
+                      )
+                    }
+                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
+                  >
+                    <MessageSquare className="h-3.5 w-3.5 mr-2 text-primary" />
+                    Annotation Card
+                  </ContextMenuItem>
+
+                  <ContextMenuSeparator className="bg-border" />
+
+                  {/* Category: Media & Embeds */}
+                  <ContextMenuLabel className="text-[9px] font-bold text-muted-foreground px-3 py-1 uppercase tracking-wider">
+                    Media & Embeds
+                  </ContextMenuLabel>
+                  <ContextMenuSeparator className="bg-border/30" />
+                  <ContextMenuItem
+                    onClick={() =>
+                      setImagePrompt({
+                        x: rightClickPosition.x,
+                        y: rightClickPosition.y,
+                      })
+                    }
+                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
+                  >
+                    <ImageIcon className="h-3.5 w-3.5 mr-2 text-blue-500" />
+                    Image Card
+                  </ContextMenuItem>
+                  <ContextMenuItem
+                    onClick={() =>
+                      setGifPrompt({
+                        x: rightClickPosition.x,
+                        y: rightClickPosition.y,
+                      })
+                    }
+                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
+                  >
+                    <Film className="h-3.5 w-3.5 mr-2 text-pink-400" />
+                    GIF Card
+                  </ContextMenuItem>
+                  <ContextMenuItem
+                    onClick={() =>
+                      setVideoPrompt({
+                        x: rightClickPosition.x,
+                        y: rightClickPosition.y,
+                      })
+                    }
+                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
+                  >
+                    <Video className="h-3.5 w-3.5 mr-2 text-rose-500" />
+                    Video Card
+                  </ContextMenuItem>
+                  <ContextMenuItem
+                    onClick={() =>
+                      setFilePrompt({
+                        x: rightClickPosition.x,
+                        y: rightClickPosition.y,
+                        embedType: "pdf",
+                      })
+                    }
+                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
+                  >
+                    <FileDown className="h-3.5 w-3.5 mr-2 text-purple-400" />
+                    PDF Document Card
+                  </ContextMenuItem>
+                  <ContextMenuItem
+                    onClick={() =>
+                      setFilePrompt({
+                        x: rightClickPosition.x,
+                        y: rightClickPosition.y,
+                        embedType: "file",
+                      })
+                    }
+                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
+                  >
+                    <FileText className="h-3.5 w-3.5 mr-2 text-emerald-500" />
+                    Lacerta Vault File
+                  </ContextMenuItem>
+
+                  <ContextMenuSeparator className="bg-border" />
+
+                  {/* Category: Diagrams & Stickers */}
+                  <ContextMenuLabel className="text-[9px] font-bold text-muted-foreground px-3 py-1 uppercase tracking-wider">
+                    Diagrams & Stickers
+                  </ContextMenuLabel>
+                  <ContextMenuSeparator className="bg-border/30" />
                   <ContextMenuItem
                     onClick={() =>
                       createNodeAtPos(
@@ -2635,23 +2937,71 @@ export default function CanvasEditor({
                         rightClickPosition.y,
                       )
                     }
-                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-2 text-xs font-semibold"
+                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
                     <Paintbrush className="h-3.5 w-3.5 mr-2 text-success" />
                     Whiteboard Sketchpad
                   </ContextMenuItem>
                   <ContextMenuItem
                     onClick={() =>
-                      setImagePrompt({
-                        x: rightClickPosition.x,
-                        y: rightClickPosition.y,
-                      })
+                      createNodeAtPos(
+                        "mermaid",
+                        rightClickPosition.x,
+                        rightClickPosition.y,
+                      )
                     }
-                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-2 text-xs font-semibold"
+                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
-                    <ImageIcon className="h-3.5 w-3.5 mr-2 text-primary" />
-                    Image Card
+                    <Sparkles className="h-3.5 w-3.5 mr-2 text-pink-500" />
+                    Mermaid Diagram
                   </ContextMenuItem>
+                  <ContextMenuItem
+                    onClick={() =>
+                      createNodeAtPos(
+                        "uml",
+                        rightClickPosition.x,
+                        rightClickPosition.y,
+                      )
+                    }
+                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
+                  >
+                    <Network className="h-3.5 w-3.5 mr-2 text-purple-500" />
+                    UML Card
+                  </ContextMenuItem>
+                  <ContextMenuItem
+                    onClick={() =>
+                      createNodeAtPos(
+                        "emoji",
+                        rightClickPosition.x,
+                        rightClickPosition.y,
+                      )
+                    }
+                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
+                  >
+                    <Smile className="h-3.5 w-3.5 mr-2 text-amber-400" />
+                    Emoji Sticker
+                  </ContextMenuItem>
+                  <ContextMenuItem
+                    onClick={() =>
+                      createNodeAtPos(
+                        "group",
+                        rightClickPosition.x,
+                        rightClickPosition.y,
+                      )
+                    }
+                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
+                  >
+                    <Users className="h-3.5 w-3.5 mr-2 text-indigo-400" />
+                    Group Frame
+                  </ContextMenuItem>
+
+                  <ContextMenuSeparator className="bg-border" />
+
+                  {/* Category: Data & Analytics */}
+                  <ContextMenuLabel className="text-[9px] font-bold text-muted-foreground px-3 py-1 uppercase tracking-wider">
+                    Data & Analytics
+                  </ContextMenuLabel>
+                  <ContextMenuSeparator className="bg-border/30" />
                   <ContextMenuItem
                     onClick={() =>
                       createNodeAtPos(
@@ -2661,7 +3011,7 @@ export default function CanvasEditor({
                         "<pre><code>// Write your code here...\nconsole.log('Hello World!');</code></pre>",
                       )
                     }
-                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-2 text-xs font-semibold"
+                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
                     <Code className="h-3.5 w-3.5 mr-2 text-destructive" />
                     Code Block
@@ -2675,7 +3025,7 @@ export default function CanvasEditor({
                         '<ul data-type="taskList"><li data-checked="false">Task 1</li><li data-checked="false">Task 2</li></ul>',
                       )
                     }
-                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-2 text-xs font-semibold"
+                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
                     <CheckSquare className="h-3.5 w-3.5 mr-2 text-warning" />
                     Tasks List
@@ -2688,7 +3038,7 @@ export default function CanvasEditor({
                         rightClickPosition.y,
                       )
                     }
-                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-2 text-xs font-semibold"
+                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
                     <TableIcon className="h-3.5 w-3.5 mr-2 text-success" />
                     Table Card
@@ -2701,7 +3051,7 @@ export default function CanvasEditor({
                         rightClickPosition.y,
                       )
                     }
-                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-2 text-xs font-semibold"
+                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
                     <BarChart2 className="h-3.5 w-3.5 mr-2 text-primary" />
                     Interactive Graph

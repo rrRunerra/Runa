@@ -7,12 +7,8 @@ Json canvas and in that canvas add Tiptap for images, drawing, markdown shortcut
 Planned
 ![[Pasted image 20260705151159.png]]
 
-mermaid support,
-embed gifs (prob klipy idk)
-embed videos (by link)
-UML support
-embed files from lacerta (add support to select image too in image card)
-somehow fix auto save
+somehow fix auto save ( auto save when exiting card, or when stopped dragging), just dont disconnect the websocket
+
 
 
 ![[Pasted image 20260705151603.png]]

@@ -15,6 +15,7 @@ import {
   Grid3X3,
   ArrowLeft,
   Key,
+  Sparkles,
 } from "lucide-react";
 import FileCard, { RenderFileItem } from "./FileCard";
 
@@ -29,7 +30,7 @@ interface FileGridProps {
   onToggleVault: (item: RenderFileItem) => void;
   onDelete: (item: RenderFileItem) => void;
   onCreateFolder: (name: string) => void;
-  onCreateDoc: (type: "doc" | "sheet" | "note" | "slide" | "canvas") => void;
+  onCreateDoc: (type: "doc" | "sheet" | "note" | "slide" | "canvas" | "mermaid" | "uml") => void;
   onUploadFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
   isSharedTab: boolean;
   onLockE2ee?: () => void;
@@ -338,6 +339,26 @@ export default function FileGrid({
                     >
                       <FileText className="h-3.5 w-3.5 text-amber-500" />
                       Presentation (.odp)
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsNewDropdownOpen(false);
+                        onCreateDoc("mermaid");
+                      }}
+                      className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
+                    >
+                      <Sparkles className="h-3.5 w-3.5 text-pink-500" />
+                      Mermaid Diagram (.mermaid)
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsNewDropdownOpen(false);
+                        onCreateDoc("uml");
+                      }}
+                      className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
+                    >
+                      <Sparkles className="h-3.5 w-3.5 text-purple-500" />
+                      UML Diagram (.uml)
                     </button>
                   </div>
                 )}

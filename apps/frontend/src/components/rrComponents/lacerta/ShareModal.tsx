@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Link2, UserPlus, Check, Copy, Trash2, X, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
-import { wrapFileKeyForUser } from "@/lib/lacertaCrypto";
+import { wrapFileKeyForUser, decryptFileBuffer, importRawKey } from "@/lib/lacertaCrypto";
 import { useSession } from "next-auth/react";
 
 interface SharedUser {
@@ -209,6 +209,9 @@ export default function ShareModal({
   const handleTogglePublic = async () => {
     if (!session?.accessToken) return;
     try {
+      const isAboutToBePublic = !file.isPublic;
+
+      // 1. Perform visibility update on the parent canvas file
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${file.key}/visibility`,
         {
@@ -217,6 +220,72 @@ export default function ShareModal({
         }
       );
       if (!res.ok) throw new Error("Failed to update visibility.");
+
+      // 2. If it is a .canvas file and is being made public, sync visibility of embedded files
+      if (isAboutToBePublic && file.name.endsWith(".canvas") && rawFileKey) {
+        toast.info("Syncing visibility of embedded vault assets...");
+        try {
+          const downloadRes = await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${file.key}`,
+            {
+              headers: { Authorization: `Bearer ${session.accessToken}` },
+            }
+          );
+          if (downloadRes.ok) {
+            const encBuffer = await downloadRes.arrayBuffer();
+            const fileKey = await importRawKey(rawFileKey);
+            const decBuffer = await decryptFileBuffer(encBuffer, fileKey);
+            const decText = new TextDecoder().decode(decBuffer);
+            const canvasData = JSON.parse(decText);
+            const nodes = canvasData.nodes || [];
+
+            // Find all embedded files (they have lacertaFileKey)
+            const embeddedFileKeys = new Set<string>();
+            for (const node of nodes) {
+              if (node.lacertaFileKey) {
+                embeddedFileKeys.add(node.lacertaFileKey);
+              }
+            }
+
+            // Sync visibility for each embedded file
+            for (const embeddedKey of embeddedFileKeys) {
+              try {
+                // To check if it's already public, we find it in allItems or fetch its metadata
+                const matchedItem = allItems?.find((item) => item.key === embeddedKey);
+                
+                let shouldToggle = false;
+                if (matchedItem) {
+                  shouldToggle = !matchedItem.isPublic;
+                } else {
+                  // Fallback: fetch metadata to see if it is public
+                  const metaRes = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${embeddedKey}/metadata`,
+                    { headers: { Authorization: `Bearer ${session.accessToken}` } }
+                  );
+                  if (metaRes.ok) {
+                    const meta = await metaRes.json();
+                    shouldToggle = !meta.isPublic;
+                  }
+                }
+
+                if (shouldToggle) {
+                  await fetch(
+                    `${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${embeddedKey}/visibility`,
+                    {
+                      method: "PATCH",
+                      headers: { Authorization: `Bearer ${session.accessToken}` },
+                    }
+                  );
+                }
+              } catch (nodeErr) {
+                console.error("Failed to sync visibility for asset key:", embeddedKey, nodeErr);
+              }
+            }
+          }
+        } catch (syncErr) {
+          console.error("Failed to sync visibility of embedded canvas assets:", syncErr);
+        }
+      }
 
       toast.success("File visibility updated successfully.");
       onUpdate();

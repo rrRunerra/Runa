@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Folder, FileText, Grid3X3, Image as ImageIcon, Video, File, MoreVertical, Share2, Trash2, Download, ArrowUpRight, Shield, ShieldAlert, RefreshCw, FolderClosed } from "lucide-react";
+import { Folder, FileText, Grid3X3, Image as ImageIcon, Video, File, MoreVertical, Share2, Trash2, Download, ArrowUpRight, Shield, ShieldAlert, RefreshCw, FolderClosed, Sparkles } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 
 interface SharedUser {
@@ -75,6 +75,8 @@ export default function FileCard({
     if (mime.startsWith("video/")) return <Video className="h-10 w-10 text-rose-500" />;
     if (mime.includes("spreadsheet") || mime.includes("csv")) return <Grid3X3 className="h-10 w-10 text-emerald-500" />;
     if (mime.includes("document") || mime.includes("word") || mime.includes("odt")) return <FileText className="h-10 w-10 text-indigo-500" />;
+    if (mime.includes("mermaid") || item.name.endsWith(".mermaid")) return <Sparkles className="h-10 w-10 text-pink-500" />;
+    if (mime.includes("uml") || item.name.endsWith(".uml")) return <Sparkles className="h-10 w-10 text-purple-500" />;
     return <File className="h-10 w-10 text-slate-400" />;
   };
 

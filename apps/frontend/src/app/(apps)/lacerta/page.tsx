@@ -32,6 +32,8 @@ import BuiltinSheetEditor from "@/components/rrComponents/lacerta/BuiltinSheetEd
 import TextEditor from "@/components/rrComponents/lacerta/TextEditor";
 import MediaGallerySlider from "@/components/rrComponents/lacerta/MediaGallerySlider";
 import CanvasEditor from "@/components/rrComponents/lacerta/CanvasEditor";
+import MermaidEditor from "@/components/rrComponents/lacerta/MermaidEditor";
+import UmlEditor from "@/components/rrComponents/lacerta/UmlEditor";
 
 import { RenderFileItem } from "@/components/rrComponents/lacerta/FileCard";
 
@@ -89,6 +91,10 @@ export default function LacertaPage({
   const [activeSheetEditorContent, setActiveSheetEditorContent] = useState<string>("");
   const [activeCanvasEditorFile, setActiveCanvasEditorFile] = useState<any | null>(null);
   const [activeCanvasEditorContent, setActiveCanvasEditorContent] = useState<string>("");
+  const [activeMermaidEditorFile, setActiveMermaidEditorFile] = useState<any | null>(null);
+  const [activeMermaidEditorContent, setActiveMermaidEditorContent] = useState<string>("");
+  const [activeUmlEditorFile, setActiveUmlEditorFile] = useState<any | null>(null);
+  const [activeUmlEditorContent, setActiveUmlEditorContent] = useState<string>("");
 
   // Gallery slider states
   const [galleryFiles, setGalleryFiles] = useState<any[]>([]);
@@ -263,23 +269,54 @@ export default function LacertaPage({
   };
 
   // Create new document/spreadsheet file directly in-app
-  const handleCreateDoc = async (type: "doc" | "sheet" | "note" | "slide" | "canvas") => {
+  const handleCreateDoc = async (type: "doc" | "sheet" | "note" | "slide" | "canvas" | "mermaid" | "uml") => {
     if (!userPublicKey || !session?.accessToken) return;
-    const label = type === "doc" ? "document" : type === "sheet" ? "spreadsheet" : type === "slide" ? "presentation" : type === "canvas" ? "canvas" : "note";
+    const label =
+      type === "doc"
+        ? "document"
+        : type === "sheet"
+          ? "spreadsheet"
+          : type === "slide"
+            ? "presentation"
+            : type === "canvas"
+              ? "canvas"
+              : type === "mermaid"
+                ? "Mermaid Diagram"
+                : type === "uml"
+                  ? "UML Diagram"
+                  : "note";
     const namePrompt = prompt(`Enter ${label} name:`);
     if (!namePrompt || !namePrompt.trim()) return;
 
     const name = namePrompt.trim();
-    const ext = type === "canvas" ? ".canvas" : type === "doc" ? ".odt" : type === "sheet" ? ".ods" : type === "slide" ? ".odp" : ".txt";
-    const mime = type === "canvas"
-      ? "application/vnd.jsoncanvas"
-      : type === "doc"
-      ? "application/vnd.oasis.opendocument.text"
-      : type === "sheet"
-      ? "application/vnd.oasis.opendocument.spreadsheet"
-      : type === "slide"
-      ? "application/vnd.oasis.opendocument.presentation"
-      : "text/plain";
+    const ext =
+      type === "canvas"
+        ? ".canvas"
+        : type === "doc"
+          ? ".odt"
+          : type === "sheet"
+            ? ".ods"
+            : type === "slide"
+              ? ".odp"
+              : type === "mermaid"
+                ? ".mermaid"
+                : type === "uml"
+                  ? ".uml"
+                  : ".txt";
+    const mime =
+      type === "canvas"
+        ? "application/vnd.jsoncanvas"
+        : type === "doc"
+          ? "application/vnd.oasis.opendocument.text"
+          : type === "sheet"
+            ? "application/vnd.oasis.opendocument.spreadsheet"
+            : type === "slide"
+              ? "application/vnd.oasis.opendocument.presentation"
+              : type === "mermaid"
+                ? "application/mermaid"
+                : type === "uml"
+                  ? "application/uml"
+                  : "text/plain";
 
     try {
       const fileKey = await generateFileKey();
@@ -289,9 +326,20 @@ export default function LacertaPage({
       const encType = await encryptMetadataString(mime, fileKey);
       const wrappedKey = await wrapFileKeyForUser(rawKeyStr, userPublicKey);
 
-      const emptyData = type === "sheet" ? "{}" : type === "canvas" ? '{"nodes":[],"edges":[]}' : "";
+      let emptyData = "";
+      if (type === "sheet") {
+        emptyData = "{}";
+      } else if (type === "canvas" || type === "uml") {
+        emptyData = '{"nodes":[],"edges":[]}';
+      } else if (type === "mermaid") {
+        emptyData = "graph TD\n    A[Start] --> B(Process)\n    B --> C{Decision}\n    C -- Yes --> D[Result 1]\n    C -- No --> E[Result 2]";
+      }
+
       const encoder = new TextEncoder();
-      const encBuffer = await encryptFileBuffer(encoder.encode(emptyData).buffer, fileKey);
+      const encBuffer = await encryptFileBuffer(
+        encoder.encode(emptyData).buffer,
+        fileKey,
+      );
 
       const formData = new FormData();
       const blob = new Blob([encBuffer], { type: "application/octet-stream" });
@@ -303,11 +351,14 @@ export default function LacertaPage({
       if (currentFolderId) formData.append("parentId", currentFolderId);
       if (currentTab === "vault") formData.append("isVault", "true");
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/upload`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${session.accessToken}` },
-        body: formData,
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/upload`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${session.accessToken}` },
+          body: formData,
+        },
+      );
 
       if (!res.ok) throw new Error("Failed to create file");
 
@@ -358,6 +409,12 @@ export default function LacertaPage({
       } else if (mime.includes("document") || mime.includes("word") || mime.includes("odt")) {
         setActiveDocEditorFile(item);
         setActiveDocEditorContent(textContent);
+      } else if (mime.includes("mermaid") || item.name.endsWith(".mermaid")) {
+        setActiveMermaidEditorFile(item);
+        setActiveMermaidEditorContent(textContent);
+      } else if (mime.includes("uml") || item.name.endsWith(".uml")) {
+        setActiveUmlEditorFile(item);
+        setActiveUmlEditorContent(textContent);
       } else {
         // Fallback to text/markdown editor
         setActiveTextEditorFile(item);
@@ -588,6 +645,34 @@ export default function LacertaPage({
           }}
           file={activeCanvasEditorFile}
           initialContent={activeCanvasEditorContent}
+          accessToken={session?.accessToken || ""}
+          onSaveSuccess={mutate}
+        />
+      )}
+
+      {activeMermaidEditorFile && (
+        <MermaidEditor
+          isOpen={!!activeMermaidEditorFile}
+          onClose={() => {
+            setActiveMermaidEditorFile(null);
+            setActiveMermaidEditorContent("");
+          }}
+          file={activeMermaidEditorFile}
+          initialContent={activeMermaidEditorContent}
+          accessToken={session?.accessToken || ""}
+          onSaveSuccess={mutate}
+        />
+      )}
+
+      {activeUmlEditorFile && (
+        <UmlEditor
+          isOpen={!!activeUmlEditorFile}
+          onClose={() => {
+            setActiveUmlEditorFile(null);
+            setActiveUmlEditorContent("");
+          }}
+          file={activeUmlEditorFile}
+          initialContent={activeUmlEditorContent}
           accessToken={session?.accessToken || ""}
           onSaveSuccess={mutate}
         />
