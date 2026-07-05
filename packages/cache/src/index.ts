@@ -4,6 +4,9 @@ export interface Cache {
   get<T>(key: string): Promise<T | null>;
   set<T>(key: string, value: T, ttlSeconds?: number): Promise<void>;
   del(key: string): Promise<void>;
+  keys(pattern?: string): Promise<string[]>;
+  ttl(key: string): Promise<number>;
+  flush(): Promise<void>;
   disconnect?(): Promise<void>;
 }
 
@@ -27,6 +30,39 @@ export class MemoryCache implements Cache {
 
   public async del(key: string): Promise<void> {
     this.store.delete(key);
+  }
+
+  public async keys(pattern?: string): Promise<string[]> {
+    const allKeys = Array.from(this.store.keys());
+    const activeKeys: string[] = [];
+    for (const key of allKeys) {
+      const item = this.store.get(key);
+      if (item && (item.expiresAt === null || Date.now() <= item.expiresAt)) {
+        activeKeys.push(key);
+      } else if (item) {
+        this.store.delete(key);
+      }
+    }
+    if (pattern) {
+      const regexPattern = new RegExp("^" + pattern.replace(/\*/g, ".*") + "$");
+      return activeKeys.filter((key) => regexPattern.test(key));
+    }
+    return activeKeys;
+  }
+
+  public async ttl(key: string): Promise<number> {
+    const item = this.store.get(key);
+    if (!item) return -2;
+    if (item.expiresAt !== null && Date.now() > item.expiresAt) {
+      this.store.delete(key);
+      return -2;
+    }
+    if (item.expiresAt === null) return -1;
+    return Math.round((item.expiresAt - Date.now()) / 1000);
+  }
+
+  public async flush(): Promise<void> {
+    this.store.clear();
   }
 }
 
@@ -65,6 +101,18 @@ export class RedisCache implements Cache {
 
   public async del(key: string): Promise<void> {
     await this.client.del(key);
+  }
+
+  public async keys(pattern: string = "*"): Promise<string[]> {
+    return this.client.keys(pattern);
+  }
+
+  public async ttl(key: string): Promise<number> {
+    return this.client.ttl(key);
+  }
+
+  public async flush(): Promise<void> {
+    await this.client.flushdb();
   }
 
   public async disconnect(): Promise<void> {
@@ -148,6 +196,48 @@ export class FallbackCache implements Cache {
 
   public async disconnect(): Promise<void> {
     await this.redis.disconnect();
+  }
+
+  public async keys(pattern?: string): Promise<string[]> {
+    if (this.isRedisOffline) {
+      return this.memory.keys(pattern);
+    }
+    try {
+      return await this.redis.keys(pattern);
+    } catch (err: unknown) {
+      this.isRedisOffline = true;
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[CACHE] Redis keys failed, falling back to In-Memory cache. Error: ${msg}`);
+      return this.memory.keys(pattern);
+    }
+  }
+
+  public async ttl(key: string): Promise<number> {
+    if (this.isRedisOffline) {
+      return this.memory.ttl(key);
+    }
+    try {
+      return await this.redis.ttl(key);
+    } catch (err: unknown) {
+      this.isRedisOffline = true;
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[CACHE] Redis ttl failed, falling back to In-Memory cache. Error: ${msg}`);
+      return this.memory.ttl(key);
+    }
+  }
+
+  public async flush(): Promise<void> {
+    if (this.isRedisOffline) {
+      return this.memory.flush();
+    }
+    try {
+      await this.redis.flush();
+    } catch (err: unknown) {
+      this.isRedisOffline = true;
+      const msg = err instanceof Error ? err.message : String(err);
+      console.warn(`[CACHE] Redis flush failed, falling back to In-Memory cache. Error: ${msg}`);
+      await this.memory.flush();
+    }
   }
 }
 
