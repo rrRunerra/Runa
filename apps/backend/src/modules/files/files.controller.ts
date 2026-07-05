@@ -3,6 +3,8 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
+  Put,
   Param,
   Req,
   Res,
@@ -22,6 +24,7 @@ import {
   rrUnauthorizedException,
 } from 'src/providers/error';
 import type { ExtendedRequest } from '../../common/guards/auth/auth.types';
+import { jwtVerify } from 'jose';
 
 import { FilesService } from './files.service';
 import type {
@@ -102,27 +105,57 @@ export class FilesController {
   }
 
   // ---------------------------------------------------------------------------
-  // GET /lacerta/:file — owner or public
+  // GET /lacerta/list — authenticated
   // ---------------------------------------------------------------------------
 
-  @Public()
-  @Get('lacerta/*path')
-  async getLaceraFile(
-    @Param('path') file: string,
+  @Get('files/lacerta/list')
+  async listLaceraFiles(@Req() req: ExtendedRequest) {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new rrUnauthorizedException(`${this.moduleCode}UA004`, {
+        message: 'Unauthenticated',
+      });
+    }
+    return this.filesService.listLaceraFiles(userId);
+  }
+
+  // ---------------------------------------------------------------------------
+  // POST /lacerta/folder — authenticated, folder creation
+  // ---------------------------------------------------------------------------
+
+  @Post('files/lacerta/folder')
+  async createLaceraFolder(
+    @Body('name') name: string,
+    @Body('wrappedKey') wrappedKey: string,
+    @Body('parentId') parentId: string,
+    @Body('isVault') isVault: boolean,
     @Req() req: ExtendedRequest,
-    @Res() res: Response,
-  ): Promise<void> {
-    const stream = await this.filesService.getLaceraFile(file, req.user?.id);
-    res.setHeader('Content-Type', 'application/octet-stream');
-    res.setHeader('Cache-Control', 'no-store');
-    stream.pipe(res);
+  ) {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new rrUnauthorizedException(`${this.moduleCode}UA005`, {
+        message: 'Unauthenticated',
+      });
+    }
+    if (!name || !wrappedKey) {
+      throw new rrBadRequestException(`${this.moduleCode}FLD001`, {
+        message: 'Name and wrappedKey are required',
+      });
+    }
+    return this.filesService.createLaceraFolder(
+      userId,
+      name,
+      wrappedKey,
+      parentId,
+      isVault,
+    );
   }
 
   // ---------------------------------------------------------------------------
   // POST /lacerta/upload — authenticated, any binary
   // ---------------------------------------------------------------------------
 
-  @Post('lacerta/upload')
+  @Post('files/lacerta/upload')
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
@@ -131,6 +164,11 @@ export class FilesController {
   async uploadLaceraFile(
     @UploadedFile() file: Express.Multer.File,
     @Body('wrappedKey') wrappedKey: string,
+    @Body('name') name: string,
+    @Body('size') sizeStr: string,
+    @Body('type') type: string,
+    @Body('parentId') parentId: string,
+    @Body('isVault') isVaultStr: string,
     @Req() req: ExtendedRequest,
   ): Promise<UploadLaceraEntity> {
     if (!file) {
@@ -139,9 +177,9 @@ export class FilesController {
       });
     }
 
-    if (!wrappedKey) {
+    if (!wrappedKey || !name) {
       throw new rrBadRequestException(`${this.moduleCode}WKIR001`, {
-        message: 'wrappedKey is required',
+        message: 'wrappedKey and name are required',
       });
     }
 
@@ -152,16 +190,201 @@ export class FilesController {
       });
     }
 
-    return this.filesService.uploadLaceraFile(file, userId, wrappedKey);
+    const size = sizeStr ? parseInt(sizeStr, 10) : file.size;
+    const isVault = isVaultStr === 'true';
+
+    return this.filesService.uploadLaceraFile(
+      file,
+      userId,
+      wrappedKey,
+      name,
+      size,
+      type || file.mimetype,
+      parentId,
+      isVault,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // PATCH /lacerta/:id/metadata — authenticated
+  // ---------------------------------------------------------------------------
+
+  @Patch('files/lacerta/:id/metadata')
+  async updateLaceraMetadata(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      name?: string;
+      parentId?: string | null;
+      isTrash?: boolean;
+      isVault?: boolean;
+      isPublic?: boolean;
+    },
+    @Req() req: ExtendedRequest,
+  ) {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new rrUnauthorizedException(`${this.moduleCode}UA006`, {
+        message: 'Unauthenticated',
+      });
+    }
+    return this.filesService.updateLaceraMetadata(id, userId, body);
+  }
+
+  // ---------------------------------------------------------------------------
+  // PUT /lacerta/:id — authenticated, overwrite content
+  // ---------------------------------------------------------------------------
+
+  @Put('files/lacerta/:id')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+    }),
+  )
+  async updateLaceraFileContent(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+    @Body('size') sizeStr: string,
+    @Req() req: ExtendedRequest,
+  ) {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new rrUnauthorizedException(`${this.moduleCode}UA010`, {
+        message: 'Unauthenticated',
+      });
+    }
+
+    if (!file) {
+      throw new rrBadRequestException(`${this.moduleCode}FIR003`, {
+        message: 'File is required',
+      });
+    }
+
+    const size = sizeStr ? parseInt(sizeStr, 10) : file.size;
+    return this.filesService.updateLaceraFileContent(id, userId, file, size);
+  }
+
+  // ---------------------------------------------------------------------------
+  // DELETE /lacerta/:id — authenticated
+  // ---------------------------------------------------------------------------
+
+  @Delete('files/lacerta/:id')
+  async deleteLaceraFile(
+    @Param('id') id: string,
+    @Req() req: ExtendedRequest,
+  ) {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new rrUnauthorizedException(`${this.moduleCode}UA007`, {
+        message: 'Unauthenticated',
+      });
+    }
+    await this.filesService.deleteLaceraFile(id, userId);
+    return { success: true };
+  }
+
+  // ---------------------------------------------------------------------------
+  // POST /lacerta/:id/share — authenticated
+  // ---------------------------------------------------------------------------
+
+  @Post('files/lacerta/:id/share')
+  async shareLaceraFile(
+    @Param('id') id: string,
+    @Body('recipientId') recipientId: string,
+    @Body('wrappedKey') wrappedKey: string,
+    @Req() req: ExtendedRequest,
+  ) {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new rrUnauthorizedException(`${this.moduleCode}UA008`, {
+        message: 'Unauthenticated',
+      });
+    }
+    if (!recipientId || !wrappedKey) {
+      throw new rrBadRequestException(`${this.moduleCode}SHR001`, {
+        message: 'recipientId and wrappedKey are required',
+      });
+    }
+    return this.filesService.shareLaceraFile(
+      id,
+      userId,
+      recipientId,
+      wrappedKey,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // DELETE /lacerta/:id/share/:recipientId — authenticated
+  // ---------------------------------------------------------------------------
+
+  @Delete('files/lacerta/:id/share/:recipientId')
+  async unshareLaceraFile(
+    @Param('id') id: string,
+    @Param('recipientId') recipientId: string,
+    @Req() req: ExtendedRequest,
+  ) {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new rrUnauthorizedException(`${this.moduleCode}UA009`, {
+        message: 'Unauthenticated',
+      });
+    }
+    await this.filesService.unshareLaceraFile(id, userId, recipientId);
+    return { success: true };
+  }
+
+  // ---------------------------------------------------------------------------
+  // GET /lacerta/:file — owner or public, wildcard must be last
+  // ---------------------------------------------------------------------------
+
+  @Public()
+  @Get('files/lacerta/:id/metadata')
+  async getLaceraFileMetadata(
+    @Param('id') id: string,
+  ): Promise<{ id: string; name: string; size: number | null; type: string | null; isPublic: boolean }> {
+    return this.filesService.getLaceraFileMetadata(id);
+  }
+
+  // ---------------------------------------------------------------------------
+  // GET /lacerta/:file — owner or public, wildcard must be last
+  // ---------------------------------------------------------------------------
+
+  @Public()
+  @Get('files/lacerta/*path')
+  async getLaceraFile(
+    @Param('path') file: string | string[],
+    @Req() req: ExtendedRequest,
+    @Res() res: Response,
+  ): Promise<void> {
+    const fileKey = Array.isArray(file) ? file.join('/') : file;
+
+    // Manually parse JWT token if provided (since @Public() skips global AuthGuard user population)
+    let userId: string | undefined = undefined;
+    const authHeader = req.headers['authorization'];
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      try {
+        const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET);
+        const { payload } = await jwtVerify(token, secret);
+        userId = payload.sub;
+      } catch (err) {
+        // Invalid or expired token, keep userId undefined
+      }
+    }
+
+    const stream = await this.filesService.getLaceraFile(fileKey, userId);
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Cache-Control', 'no-store');
+    stream.pipe(res);
   }
 
   // ---------------------------------------------------------------------------
   // PATCH /lacerta/:file/visibility — owner only
   // ---------------------------------------------------------------------------
 
-  @Patch('lacerta/*path/visibility')
+  @Patch('files/lacerta/*path/visibility')
   async toggleLaceraVisibility(
-    @Param('path') file: string,
+    @Param('path') file: string | string[],
     @Req() req: ExtendedRequest,
   ): Promise<LaceraVisibilityEntity> {
     const userId = req.user?.id;
@@ -171,6 +394,7 @@ export class FilesController {
       });
     }
 
-    return this.filesService.toggleLaceraVisibility(file, userId);
+    const fileKey = Array.isArray(file) ? file.join('/') : file;
+    return this.filesService.toggleLaceraVisibility(fileKey, userId);
   }
 }

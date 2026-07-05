@@ -39,6 +39,7 @@ model User {
     devices                  Device[]
     notifications            Notification[]
     laceraFiles              LaceraFile[]
+    laceraShares             LaceraShare[]
 
     // MFA Configuration Fields
     totpSecret      String?
@@ -64,10 +65,37 @@ model LaceraFile {
     wrappedKey String
     createdAt  DateTime @default(now())
 
-    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+    isFolder   Boolean  @default(false)
+    name       String   // Encrypted name (AES-GCM base64 format)
+    size       Int?     // Size of file (optional, folders have null)
+    type       String?  // Encrypted mime-type
+    parentId   String?  // Folder hierarchy parent
+    isTrash    Boolean  @default(false)
+    isVault    Boolean  @default(false)
+
+    user       User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+    parent     LaceraFile?   @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+    children   LaceraFile[]  @relation("FolderHierarchy")
+    shares     LaceraShare[] @relation("FileShares")
 
     @@index([userId])
     @@index([key])
+    @@index([parentId])
+}
+
+model LaceraShare {
+    id         String   @id @default(nanoid())
+    fileId     String
+    userId     String   // Recipient user ID
+    wrappedKey String   // Symmetric key wrapped with recipient's public key
+    createdAt  DateTime @default(now())
+
+    file       LaceraFile @relation("FileShares", fields: [fileId], references: [id], onDelete: Cascade)
+    user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([fileId, userId])
+    @@index([userId])
+    @@index([fileId])
 }
 
 model Passkey {

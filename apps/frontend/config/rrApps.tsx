@@ -60,7 +60,6 @@ export const rrApps: rrApp[] = [
     icon: <Archive className="size-4" />,
     description: "Cloud storage",
     descriptionShort: "Storage",
-    permissions: [LacertaFlags.VIEW],
   },
 
   {

@@ -80,6 +80,38 @@ export class FilesService {
   }
 
   // ---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // Lacerta listings
+  // ---------------------------------------------------------------------------
+
+  async listLaceraFiles(userId: string) {
+    return this.filesRepository.listLaceraFiles(userId);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Lacerta folder creation
+  // ---------------------------------------------------------------------------
+
+  async createLaceraFolder(
+    userId: string,
+    name: string,
+    wrappedKey: string,
+    parentId?: string,
+    isVault?: boolean,
+  ) {
+    const key = `folder-${userId}/${crypto.randomUUID()}`;
+    return this.filesRepository.createLaceraFile({
+      key,
+      userId,
+      wrappedKey,
+      name,
+      parentId: parentId || undefined,
+      isFolder: true,
+      isVault: isVault ?? false,
+    });
+  }
+
+  // ---------------------------------------------------------------------------
   // Lacerta uploads
   // ---------------------------------------------------------------------------
 
@@ -87,6 +119,11 @@ export class FilesService {
     file: Express.Multer.File,
     userId: string,
     wrappedKey: string,
+    name: string,
+    size: number,
+    type: string,
+    parentId?: string,
+    isVault?: boolean,
   ): Promise<UploadLaceraEntity> {
     const key = `${userId}/${crypto.randomUUID()}`;
 
@@ -107,7 +144,17 @@ export class FilesService {
       });
     }
 
-    await this.filesRepository.createLaceraFile({ key, userId, wrappedKey });
+    await this.filesRepository.createLaceraFile({
+      key,
+      userId,
+      wrappedKey,
+      name,
+      size,
+      type,
+      parentId: parentId || undefined,
+      isFolder: false,
+      isVault: isVault ?? false,
+    });
 
     return { key };
   }
@@ -133,7 +180,7 @@ export class FilesService {
   }
 
   // ---------------------------------------------------------------------------
-  // Lacerta file retrieval
+  // Lacerta file retrieval (routed through server, streams from S3)
   // ---------------------------------------------------------------------------
 
   async getLaceraFile(
@@ -148,7 +195,9 @@ export class FilesService {
       });
     }
 
-    if (!record.isPublic && record.userId !== requestingUserId) {
+    const isShared = record.shares.some(s => s.userId === requestingUserId);
+
+    if (!record.isPublic && record.userId !== requestingUserId && !isShared) {
       throw new rrForbiddenException(`${this.moduleCode}YDNAHTA001`, {
         message: 'You do not have access to this file',
       });
@@ -169,9 +218,109 @@ export class FilesService {
     }
   }
 
+  async getLaceraFileMetadata(id: string) {
+    const file = await this.filesRepository.findLaceraFileById(id);
+    if (!file) {
+      throw new rrNotFoundException(`${this.moduleCode}LNF008`, {
+        message: 'File not found',
+      });
+    }
+    if (!file.isPublic) {
+      throw new rrForbiddenException(`${this.moduleCode}YDNAHTA006`, {
+        message: 'This file is private',
+      });
+    }
+    return {
+      id: file.id,
+      name: file.name,
+      size: file.size,
+      type: file.type,
+      key: file.key,
+      isPublic: file.isPublic,
+    };
+  }
+
+  async updateLaceraFileContent(
+    id: string,
+    userId: string,
+    file: Express.Multer.File,
+    size: number,
+  ) {
+    const record = await this.filesRepository.findLaceraFileById(id);
+    if (!record) {
+      throw new rrNotFoundException(`${this.moduleCode}LNF009`, {
+        message: 'File not found',
+      });
+    }
+
+    const isShared = record.shares.some(s => s.userId === userId);
+    if (record.userId !== userId && !isShared) {
+      throw new rrForbiddenException(`${this.moduleCode}YDNAHTA007`, {
+        message: 'You do not have access to edit this file',
+      });
+    }
+
+    try {
+      await this.s3.send(
+        new PutObjectCommand({
+          Bucket: this.lacertaBucket,
+          Key: record.key,
+          Body: file.buffer,
+          ContentType: 'application/octet-stream',
+          ContentLength: file.size,
+        }),
+      );
+    } catch (err: unknown) {
+      this.logger.error('Failed to update S3 object content', err);
+      throw new rrInternalServerErrorException(`${this.moduleCode}FTULF002`, {
+        message: 'Failed to update file content',
+      });
+    }
+
+    return this.filesRepository.updateLaceraMetadata(id, { size });
+  }
+
   // ---------------------------------------------------------------------------
-  // Lacerta visibility toggle
+  // Lacerta metadata updates & visibility toggle
   // ---------------------------------------------------------------------------
+
+  async updateLaceraMetadata(
+    id: string,
+    userId: string,
+    data: {
+      name?: string;
+      parentId?: string | null;
+      isTrash?: boolean;
+      isVault?: boolean;
+      isPublic?: boolean;
+    },
+  ) {
+    const record = await this.filesRepository.findLaceraFileById(id);
+    if (!record) {
+      throw new rrNotFoundException(`${this.moduleCode}LNF004`, {
+        message: 'File not found',
+      });
+    }
+    if (record.userId !== userId) {
+      throw new rrForbiddenException(`${this.moduleCode}YDNAHTA002`, {
+        message: 'You do not have permission to modify this file',
+      });
+    }
+    const updated = await this.filesRepository.updateLaceraMetadata(id, data);
+
+    if (data.isTrash !== undefined && record.isFolder) {
+      const descendants = await this.filesRepository.findLaceraDescendants(id);
+      if (descendants.length > 0) {
+        const descendantIds = descendants.map((d) => d.id);
+        await this.filesRepository.updateLaceraFilesTrashState(
+          descendantIds,
+          data.isTrash,
+        );
+      }
+    }
+
+    return updated;
+  }
 
   async toggleLaceraVisibility(
     key: string,
@@ -197,6 +346,96 @@ export class FilesService {
     );
 
     return { key: updated.key, isPublic: updated.isPublic };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Lacerta sharing controls
+  // ---------------------------------------------------------------------------
+
+  async shareLaceraFile(
+    id: string,
+    userId: string,
+    recipientId: string,
+    wrappedKey: string,
+  ) {
+    const record = await this.filesRepository.findLaceraFileById(id);
+    if (!record) {
+      throw new rrNotFoundException(`${this.moduleCode}LNF006`, {
+        message: 'File not found',
+      });
+    }
+    if (record.userId !== userId) {
+      throw new rrForbiddenException(`${this.moduleCode}YDNAHTA004`, {
+        message: 'You do not have permission to share this file',
+      });
+    }
+
+    return this.filesRepository.createLaceraShare({
+      fileId: id,
+      userId: recipientId,
+      wrappedKey,
+    });
+  }
+
+  async unshareLaceraFile(
+    id: string,
+    userId: string,
+    recipientId: string,
+  ) {
+    const record = await this.filesRepository.findLaceraFileById(id);
+    if (!record) {
+      throw new rrNotFoundException(`${this.moduleCode}LNF007`, {
+        message: 'File not found',
+      });
+    }
+    if (record.userId !== userId) {
+      throw new rrForbiddenException(`${this.moduleCode}YDNAHTA005`, {
+        message: 'You do not have permission to modify shares for this file',
+      });
+    }
+
+    await this.filesRepository.deleteLaceraShare(id, recipientId);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Lacerta file deletion
+  // ---------------------------------------------------------------------------
+
+  async deleteLaceraFile(id: string, userId: string): Promise<void> {
+    const record = await this.filesRepository.findLaceraFileById(id);
+    if (!record) {
+      throw new rrNotFoundException(`${this.moduleCode}LNF005`, {
+        message: 'File not found',
+      });
+    }
+    if (record.userId !== userId) {
+      throw new rrForbiddenException(`${this.moduleCode}YDNAHTA003`, {
+        message: 'You do not have permission to delete this file',
+      });
+    }
+
+    const targetsToDelete: any[] = [record];
+    if (record.isFolder) {
+      const descendants = await this.filesRepository.findLaceraDescendants(id);
+      targetsToDelete.push(...descendants);
+    }
+
+    for (const target of targetsToDelete) {
+      if (!target.isFolder) {
+        try {
+          await this.s3.send(
+            new DeleteObjectCommand({
+              Bucket: this.lacertaBucket,
+              Key: target.key,
+            }),
+          );
+        } catch (err: unknown) {
+          this.logger.warn(`Failed to delete S3 object for key ${target.key}:`, err);
+        }
+      }
+    }
+
+    await this.filesRepository.deleteLaceraFileById(id);
   }
 
   // ---------------------------------------------------------------------------

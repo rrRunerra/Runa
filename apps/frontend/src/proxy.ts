@@ -25,6 +25,7 @@ const PUBLIC_ROUTES: string[] = [
   "/lynx",
   "/polaris/tos",
   "/polaris/privacy",
+  "/lacerta/share"
 ];
 
 interface RouteGuard {

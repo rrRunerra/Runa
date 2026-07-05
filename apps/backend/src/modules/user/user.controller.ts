@@ -271,6 +271,23 @@ export class UserController {
     };
   }
 
+  @Get(':username/public-key')
+  async getPublicKeyByUsername(
+    @Param('username') username: string,
+  ): Promise<{ id: string; username: string; userPublicKey: string | null }> {
+    const user = await this.usersService.findByUsername(username);
+    if (!user) {
+      throw new rrNotFoundException(`${this.moduleCode}UNF099`, {
+        message: `User ${username} not found`,
+      });
+    }
+    return {
+      id: user.id,
+      username: user.username,
+      userPublicKey: user.userPublicKey,
+    };
+  }
+
   @Public()
   @Get(':username')
   async findOne(@Param() params: UsernameParamDto): Promise<UserProfileEntity> {
