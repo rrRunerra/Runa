@@ -63,6 +63,8 @@ import RrCanvasPublicShareWarningModal from "./rrCanvasPublicShareWarningModal";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import { useRRe2ee } from "@/components/Providers/rrE2eeProvider";
+import { useSession } from "next-auth/react";
+import UserProfileCard, { UserProfileInfo } from "./UserProfileCard";
 import { Video, Film, ExternalLink, Download, Check } from "lucide-react";
 import mermaid from "mermaid";
 import {
@@ -249,6 +251,92 @@ const COLOR_PRESETS = [
   },
 ];
 
+const CURSOR_COLORS = [
+  { text: "text-emerald-400", fill: "fill-emerald-400", bg: "bg-emerald-600 border-emerald-500 text-emerald-foreground" },
+  { text: "text-blue-400", fill: "fill-blue-400", bg: "bg-blue-600 border-blue-500 text-blue-foreground" },
+  { text: "text-rose-400", fill: "fill-rose-400", bg: "bg-rose-600 border-rose-500 text-rose-foreground" },
+  { text: "text-amber-400", fill: "fill-amber-400", bg: "bg-amber-600 border-amber-500 text-amber-foreground" },
+  { text: "text-purple-400", fill: "fill-purple-400", bg: "bg-purple-600 border-purple-500 text-purple-foreground" },
+  { text: "text-teal-400", fill: "fill-teal-400", bg: "bg-teal-600 border-teal-500 text-teal-foreground" },
+  { text: "text-pink-400", fill: "fill-pink-400", bg: "bg-pink-600 border-pink-500 text-pink-foreground" },
+  { text: "text-indigo-400", fill: "fill-indigo-400", bg: "bg-indigo-600 border-indigo-500 text-indigo-foreground" },
+];
+
+const getCollaboratorColor = (identifier: string) => {
+  let hash = 0;
+  for (let i = 0; i < identifier.length; i++) {
+    hash = identifier.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % CURSOR_COLORS.length;
+  return CURSOR_COLORS[index];
+};
+
+function CollaboratorProfileTrigger({
+  userId,
+  username,
+  accessToken,
+  isMe = false,
+}: {
+  userId: string;
+  username: string;
+  accessToken: string;
+  isMe?: boolean;
+}) {
+  const [profile, setProfile] = useState<UserProfileInfo | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleMouseEnter = async () => {
+    if (profile || loading) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${username}`, {
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setProfile({
+          id: data.id,
+          username: data.username,
+          email: data.email || `${data.username}@runerra.org`,
+          displayName: data.displayName,
+          avatarUrl: data.avatarUrl,
+          bannerUrl: data.bannerUrl,
+          bio: data.profileSettings?.bio || "",
+        });
+      }
+    } catch (err) {
+      console.error("Failed to load collaborator profile:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div onMouseEnter={handleMouseEnter}>
+      {profile ? (
+        <UserProfileCard user={profile}>
+          <button className="w-full text-left flex items-center justify-between p-1.5 rounded-lg hover:bg-muted/60 transition-colors text-xs font-semibold text-foreground">
+            <span className="truncate flex items-center gap-1.5">
+              <span className={cn("w-1.5 h-1.5 rounded-full", isMe ? "bg-primary" : "bg-success")} />
+              {profile.displayName || profile.username} {isMe && "(You)"}
+            </span>
+          </button>
+        </UserProfileCard>
+      ) : (
+        <button
+          disabled={loading}
+          className="w-full text-left flex items-center justify-between p-1.5 rounded-lg hover:bg-muted/60 transition-colors text-xs font-semibold text-foreground"
+        >
+          <span className="truncate flex items-center gap-1.5">
+            <span className={cn("w-1.5 h-1.5 rounded-full animate-pulse", isMe ? "bg-primary" : "bg-success")} />
+            {username} {isMe && "(You)"} {loading && "..."}
+          </span>
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function CanvasEditor({
   isOpen,
   onClose,
@@ -259,6 +347,7 @@ export default function CanvasEditor({
   guestMode = false,
   decryptionKeyStr = null,
 }: CanvasEditorProps): React.JSX.Element | null {
+  const { data: session } = useSession();
   // Canvas viewport states
   const [pan, setPan] = useState<Point>({ x: 100, y: 100 });
   const [zoom, setZoom] = useState<number>(1);
@@ -338,6 +427,25 @@ export default function CanvasEditor({
     null,
   );
 
+  // Online Collaborators Dropdown States
+  const [showOnlineDropdown, setShowOnlineDropdown] = useState<boolean>(false);
+  const onlineDropdownRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        onlineDropdownRef.current &&
+        !onlineDropdownRef.current.contains(e.target as Node)
+      ) {
+        setShowOnlineDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   // Image insertion dialog state
   const [imagePrompt, setImagePrompt] = useState<{
     x: number;
@@ -381,13 +489,20 @@ export default function CanvasEditor({
     }
     const decryptAll = async () => {
       const list: any[] = [];
+      const currentUserId = session?.user?.id;
       for (const f of rawFiles) {
         try {
           if (f.isTrash || f.isFolder) continue;
 
+          const isOwner = f.userId === currentUserId;
+          const shareRecord = f.shares?.find((s: any) => s.userId === currentUserId);
+          const wrappedKeyToUse = isOwner ? f.wrappedKey : (shareRecord ? shareRecord.wrappedKey : null);
+
+          if (!wrappedKeyToUse) continue;
+
           // Decrypt symmetric file key using recipient's private key
           const rawKeyStr = await unwrapFileKeyForUser(
-            f.wrappedKey,
+            wrappedKeyToUse,
             privateKey,
           );
           const fileKey = await importRawKey(rawKeyStr);
@@ -421,7 +536,7 @@ export default function CanvasEditor({
       setDecryptedLacertaFiles(list);
     };
     decryptAll();
-  }, [rawFiles, privateKey]);
+  }, [rawFiles, privateKey, session?.user?.id]);
 
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isDirty, setIsDirtyState] = useState<boolean>(false);
@@ -1789,26 +1904,91 @@ export default function CanvasEditor({
             </div>
 
             {/* Action controls & Collaborators */}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1.5 bg-muted/50 px-2.5 py-1 rounded-full border border-border text-[10px] text-muted-foreground">
-                <Users className="h-3 w-3 text-muted-foreground" />
-                <span className="font-semibold text-foreground">
-                  {collaborators.length + 1} online
-                </span>
-                <div className="flex items-center -space-x-1.5 ml-1">
-                  <div className="h-4.5 w-4.5 rounded-full bg-primary border border-background flex items-center justify-center font-bold text-[8px] text-primary-foreground">
-                    You
-                  </div>
-                  {collaborators.map((c) => (
-                    <div
-                      key={c.socketId}
-                      className="h-4.5 w-4.5 rounded-full bg-success border border-background flex items-center justify-center font-bold text-[8px] text-success-foreground uppercase"
-                      title={c.username}
-                    >
-                      {c.username.substring(0, 1)}
+            <div className="flex items-center gap-4 relative" ref={onlineDropdownRef}>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowOnlineDropdown((prev) => !prev)}
+                  className="flex items-center gap-1.5 bg-muted/50 hover:bg-muted/80 px-2.5 py-1 rounded-full border border-border text-[10px] text-muted-foreground transition-colors cursor-pointer select-none"
+                >
+                  <Users className="h-3 w-3 text-muted-foreground" />
+                  <span className="font-semibold text-foreground">
+                    {collaborators.length + 1} online
+                  </span>
+                  <div className="flex items-center -space-x-1.5 ml-1">
+                    <div className="h-4.5 w-4.5 rounded-full bg-primary border border-background flex items-center justify-center font-bold text-[8px] text-primary-foreground">
+                      You
                     </div>
-                  ))}
-                </div>
+                    {collaborators.map((c) => {
+                      const color = getCollaboratorColor(c.userId || c.socketId || c.username);
+                      return (
+                        <div
+                          key={c.socketId}
+                          className={cn("h-4.5 w-4.5 rounded-full border border-background flex items-center justify-center font-bold text-[8px] text-white uppercase", color.bg.split(' ')[0])}
+                          title={c.username}
+                        >
+                          {c.username.substring(0, 1)}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </button>
+
+                {showOnlineDropdown && (
+                  <div className="absolute right-0 mt-2 w-56 rounded-xl border border-border bg-popover text-popover-foreground shadow-xl p-2 z-50 flex flex-col gap-1">
+                    <div className="text-[9px] uppercase font-bold text-muted-foreground tracking-wider px-2.5 py-1.5 border-b border-border/30">
+                      Collaborators
+                    </div>
+
+                    {/* The current user */}
+                    <div className="px-1.5 py-1">
+                      {session?.user?.username ? (
+                        <CollaboratorProfileTrigger
+                          userId={session.user.id}
+                          username={session.user.username}
+                          accessToken={accessToken}
+                          isMe={true}
+                        />
+                      ) : (
+                        <div className="w-full flex items-center justify-between p-1.5 text-xs text-muted-foreground font-semibold">
+                          <span className="truncate flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
+                            {guestName || "Guest"} (You)
+                          </span>
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase">
+                            Guest
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Online Collaborators */}
+                    {collaborators.map((c) => {
+                      const isGuest = !c.userId;
+                      return (
+                        <div key={c.socketId} className="px-1.5 py-0.5">
+                          {isGuest ? (
+                            <div className="w-full flex items-center justify-between p-1.5 text-xs text-muted-foreground font-semibold">
+                              <span className="truncate flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
+                                {c.username}
+                              </span>
+                              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase">
+                                Guest
+                              </span>
+                            </div>
+                          ) : (
+                            <CollaboratorProfileTrigger
+                              userId={c.userId!}
+                              username={c.username}
+                              accessToken={accessToken}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-2">
@@ -2431,6 +2611,7 @@ export default function CanvasEditor({
                 {/* Collaborator Cursor Pointers */}
                 {collaborators.map((c) => {
                   if (!c.cursor) return null;
+                  const color = getCollaboratorColor(c.userId || c.socketId || c.username);
                   return (
                     <div
                       key={c.socketId}
@@ -2442,11 +2623,11 @@ export default function CanvasEditor({
                     >
                       <svg
                         viewBox="0 0 24 24"
-                        className="w-4 h-4 text-emerald-400 fill-current drop-shadow-md"
+                        className={cn("w-4 h-4 fill-current drop-shadow-md", color.text)}
                       >
                         <path d="M0 0 L16 12 L9 13.5 L16 22 L13 23 L6.5 15 L0 20 Z" />
                       </svg>
-                      <div className="absolute top-4 left-3 px-2 py-0.5 bg-emerald-600 border border-emerald-500 text-white text-[8px] font-bold rounded shadow whitespace-nowrap">
+                      <div className={cn("absolute top-4 left-3 px-2 py-0.5 border text-white text-[8px] font-bold rounded shadow whitespace-nowrap", color.bg)}>
                         {c.username}
                       </div>
                     </div>

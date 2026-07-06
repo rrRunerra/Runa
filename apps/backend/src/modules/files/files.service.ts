@@ -8,6 +8,7 @@ import {
 import { Readable } from 'stream';
 import * as crypto from 'crypto';
 import * as path from 'path';
+import * as bcrypt from 'bcrypt';
 
 import {
   rrNotFoundException,
@@ -218,8 +219,29 @@ export class FilesService {
     }
   }
 
+  /**
+   * Directly stream a lacerta file from S3 by its storage key.
+   * Caller is responsible for access checks — this method ONLY fetches from S3.
+   * Returns null if the object does not exist (never throws HttpException).
+   */
+  async getLaceraFileStreamDirect(key: string): Promise<Readable | null> {
+    try {
+      const response = await this.s3.send(
+        new GetObjectCommand({
+          Bucket: this.lacertaBucket,
+          Key: key,
+        }),
+      );
+      return response.Body as Readable;
+    } catch (err: unknown) {
+      this.logger.warn(`[S3] Object not found for key="${key}": ${String(err)}`);
+      return null;
+    }
+  }
+
   async getLaceraFileMetadata(id: string) {
     const file = await this.filesRepository.findLaceraFileById(id);
+
     if (!file) {
       throw new rrNotFoundException(`${this.moduleCode}LNF008`, {
         message: 'File not found',
@@ -254,11 +276,16 @@ export class FilesService {
     }
 
     const isOwner = userId ? record.userId === userId : false;
-    const isShared = userId ? record.shares.some((s) => s.userId === userId) : false;
+    const shareRecord = userId ? record.shares.find((s) => s.userId === userId) : null;
 
-    if (!isOwner && !isShared && !record.isPublic) {
+    let hasEditAccess = isOwner || record.isPublic;
+    if (shareRecord) {
+      hasEditAccess = shareRecord.allowEdit;
+    }
+
+    if (!hasEditAccess) {
       throw new rrForbiddenException(`${this.moduleCode}YDNAHTA007`, {
-        message: 'You do not have access to edit this file',
+        message: 'You do not have edit access to this file',
       });
     }
 
@@ -359,6 +386,7 @@ export class FilesService {
     userId: string,
     recipientId: string,
     wrappedKey: string,
+    allowEdit?: boolean,
   ) {
     const record = await this.filesRepository.findLaceraFileById(id);
     if (!record) {
@@ -376,6 +404,7 @@ export class FilesService {
       fileId: id,
       userId: recipientId,
       wrappedKey,
+      allowEdit: allowEdit ?? true,
     });
   }
 
@@ -457,5 +486,45 @@ export class FilesService {
       .catch((err: unknown) => {
         this.logger.warn(`Failed to delete file ${key}:`, err);
       });
+  }
+
+  async hasVaultPin(userId: string): Promise<boolean> {
+    const hash = await this.filesRepository.findUserVaultPinHash(userId);
+    return !!hash;
+  }
+
+  async setupVaultPin(userId: string, pin: string): Promise<void> {
+    const hash = await bcrypt.hash(pin, 10);
+    await this.filesRepository.updateUserVaultPinHash(userId, hash);
+  }
+
+  async verifyVaultPin(userId: string, pin: string): Promise<boolean> {
+    const hash = await this.filesRepository.findUserVaultPinHash(userId);
+    if (!hash) return false;
+    return bcrypt.compare(pin, hash);
+  }
+
+
+
+  async resetVault(userId: string): Promise<void> {
+    const vaultFiles = await this.filesRepository.findUserVaultFiles(userId);
+
+    for (const file of vaultFiles) {
+      if (!file.isFolder) {
+        try {
+          await this.s3.send(
+            new DeleteObjectCommand({
+              Bucket: this.lacertaBucket,
+              Key: file.key,
+            })
+          );
+        } catch (err: unknown) {
+          this.logger.warn(`Failed to delete S3 object for vault key ${file.key}:`, err);
+        }
+      }
+    }
+
+    await this.filesRepository.deleteUserVaultFiles(userId);
+    await this.filesRepository.updateUserVaultPinHash(userId, null);
   }
 }

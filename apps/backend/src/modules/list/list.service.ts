@@ -2863,10 +2863,10 @@ export class ListService {
       },
       select: {
         id: true,
-        tvdbId: true,
         connections: true,
         movie: {
           select: {
+            tvdbId: true,
             titleEnglish: true,
             titleRomaji: true,
           },
@@ -2887,7 +2887,7 @@ export class ListService {
         imdbId = connectionsObj.imdbId;
       } else {
         // Resolve dynamically from TVDB API
-        const remoteIds = await this.movieService.getRemoteIds(entry.tvdbId);
+        const remoteIds = await this.movieService.getRemoteIds(entry.movie.tvdbId);
         if (remoteIds) {
           tmdbId = remoteIds.tmdbId;
           imdbId = remoteIds.imdbId;
@@ -2946,9 +2946,9 @@ export class ListService {
           status: 'PLANNING',
         },
         select: {
-          tvdbId: true,
           tv: {
             select: {
+              tvdbId: true,
               titleEnglish: true,
               titleRomaji: true,
             },
@@ -2961,7 +2961,7 @@ export class ListService {
           entry.tv.titleEnglish || entry.tv.titleRomaji || 'Unknown TV Show';
         resultList.push({
           title,
-          tvdbId: entry.tvdbId,
+          tvdbId: entry.tv.tvdbId,
           year: 0,
           monitored: true,
           seasons: [],

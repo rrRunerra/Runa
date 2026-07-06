@@ -268,6 +268,100 @@ export class AuthService {
       user.email,
       'Runa - Verification Code',
       `Your login verification code is: ${code}. This code is valid for 5 minutes.`,
+      `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #09090b; color: #fafafa; padding: 48px 24px; text-align: center; border-radius: 16px; max-width: 520px; margin: 0 auto; border: 1px solid #27272a;">
+  <div style="margin-bottom: 32px;">
+    <h2 style="font-size: 24px; font-weight: 800; letter-spacing: 0.1em; color: #ffffff; margin: 0; text-transform: uppercase;">Polaris</h2>
+    <div style="font-size: 11px; color: #a1a1aa; letter-spacing: 0.2em; text-transform: uppercase; margin-top: 4px;">Account Security</div>
+  </div>
+  
+  <div style="background-color: #18181b; border: 1px solid #27272a; padding: 32px; border-radius: 12px; margin-bottom: 32px;">
+    <h3 style="font-size: 18px; font-weight: 700; margin-top: 0; margin-bottom: 12px; color: #ffffff;">Login Verification Code</h3>
+    <p style="font-size: 14px; color: #a1a1aa; line-height: 1.6; margin-bottom: 24px;">
+      Use the verification code below to complete your Multi-Factor Authentication and sign in to Polaris.
+    </p>
+    
+    <div style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 36px; font-weight: 800; letter-spacing: 0.25em; color: #3b82f6; background-color: #09090b; border: 1px solid #27272a; padding: 16px 24px; border-radius: 8px; display: inline-block; margin-bottom: 24px;">
+      ${code}
+    </div>
+    
+    <p style="font-size: 12px; color: #71717a; margin: 0;">
+      This code is valid for <strong>5 minutes</strong>.
+    </p>
+  </div>
+  
+  <div style="font-size: 12px; color: #71717a; line-height: 1.5; text-align: left; max-width: 440px; margin: 0 auto;">
+    <p style="margin-bottom: 8px;"><strong>Security notice:</strong> If you did not request this code, please ignore this email or contact support if you suspect unauthorized access.</p>
+    <p style="margin: 0; text-align: center; font-size: 11px; margin-top: 24px; color: #52525b;">&copy; ${new Date().getFullYear()} Runa. All rights reserved.</p>
+  </div>
+</div>`
+    );
+
+    return { success: true };
+  }
+
+  public async sendMfaRecoveryCode(
+    tempToken: string,
+  ): Promise<{ success: boolean }> {
+    let tokenPayload: MfaTokenPayload | null = null;
+    try {
+      const result = await jwtVerify(tempToken, this.secret, {
+        algorithms: ['HS256'],
+      });
+      tokenPayload = result.payload;
+    } catch {
+      throw new rrUnauthorizedException(`${this.moduleCode}IOEMT004`, {
+        message: 'Invalid or expired MFA token',
+      });
+    }
+
+    if (tokenPayload.type !== 'mfa_pending' || !tokenPayload.sub) {
+      throw new rrUnauthorizedException(`${this.moduleCode}IMT004`, {
+        message: 'Invalid MFA token',
+      });
+    }
+
+    const user = await this.prisma.client.user.findUnique({
+      where: { id: tokenPayload.sub },
+    });
+    if (!user) {
+      throw new rrUnauthorizedException(`${this.moduleCode}UNF005`, {
+        message: 'User not found',
+      });
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    await this.cacheService.set(`mfa-recovery-code:${user.id}`, code, 300);
+
+    await this.mailService.sendMail(
+      user.email,
+      'Runa - Account Recovery',
+      `Your account recovery verification code is: ${code}. Enter this code to bypass MFA and complete your login. This code is valid for 5 minutes.`,
+      `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #09090b; color: #fafafa; padding: 48px 24px; text-align: center; border-radius: 16px; max-width: 520px; margin: 0 auto; border: 1px solid #27272a;">
+  <div style="margin-bottom: 32px;">
+    <h2 style="font-size: 24px; font-weight: 800; letter-spacing: 0.1em; color: #ffffff; margin: 0; text-transform: uppercase;">Polaris</h2>
+    <div style="font-size: 11px; color: #a1a1aa; letter-spacing: 0.2em; text-transform: uppercase; margin-top: 4px;">Account Security</div>
+  </div>
+  
+  <div style="background-color: #18181b; border: 1px solid #27272a; padding: 32px; border-radius: 12px; margin-bottom: 32px;">
+    <h3 style="font-size: 18px; font-weight: 700; margin-top: 0; margin-bottom: 12px; color: #ffffff;">Account Recovery Code</h3>
+    <p style="font-size: 14px; color: #a1a1aa; line-height: 1.6; margin-bottom: 24px;">
+      Use the verification code below to bypass Multi-Factor Authentication and access your Runa account.
+    </p>
+    
+    <div style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 36px; font-weight: 800; letter-spacing: 0.25em; color: #3b82f6; background-color: #09090b; border: 1px solid #27272a; padding: 16px 24px; border-radius: 8px; display: inline-block; margin-bottom: 24px;">
+      ${code}
+    </div>
+    
+    <p style="font-size: 12px; color: #71717a; margin: 0;">
+      This code is valid for <strong>5 minutes</strong>.
+    </p>
+  </div>
+  
+  <div style="font-size: 12px; color: #71717a; line-height: 1.5; text-align: left; max-width: 440px; margin: 0 auto;">
+    <p style="margin-bottom: 8px;"><strong>Security notice:</strong> If you did not request this code, someone else may be trying to access your account. Please log in immediately and update your password.</p>
+    <p style="margin: 0; text-align: center; font-size: 11px; margin-top: 24px; color: #52525b;">&copy; ${new Date().getFullYear()} Runa. All rights reserved.</p>
+  </div>
+</div>`
     );
 
     return { success: true };
@@ -417,7 +511,7 @@ export class AuthService {
       const cachedCode = await this.cacheService.get<string>(
         `mfa-email-code:${userId}`,
       );
-      isVerified = cachedCode === code;
+      isVerified = cachedCode !== null && String(cachedCode) === code;
       if (isVerified) {
         await this.cacheService.del(`mfa-email-code:${userId}`);
       }
@@ -429,9 +523,21 @@ export class AuthService {
       const cachedCode = await this.cacheService.get<string>(
         `mfa-device-code:${userId}`,
       );
-      isVerified = cachedCode === code;
+      isVerified = cachedCode !== null && String(cachedCode) === code;
       if (isVerified) {
         await this.cacheService.del(`mfa-device-code:${userId}`);
+      }
+    } else if (method === 'recovery') {
+      if (!code)
+        throw new rrBadRequestException(`${this.moduleCode}VCIR005`, {
+          message: 'Verification code is required',
+        });
+      const cachedCode = await this.cacheService.get<string>(
+        `mfa-recovery-code:${userId}`,
+      );
+      isVerified = cachedCode !== null && String(cachedCode) === code;
+      if (isVerified) {
+        await this.cacheService.del(`mfa-recovery-code:${userId}`);
       }
     } else if (method === 'backup') {
       if (user.backupCodes.length === 0) {

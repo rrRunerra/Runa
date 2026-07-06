@@ -103,6 +103,10 @@ steps:
         from_secret: LYNX_API_URL
       rrLynxKey:
         from_secret: rrLynxKey
+      NEXT_PUBLIC_ONLYOFFICE_URL:
+        from_secret: NEXT_PUBLIC_ONLYOFFICE_URL
+      NEXT_PUBLIC_ONLYOFFICE_API_URL:
+        from_secret: NEXT_PUBLIC_ONLYOFFICE_API_URL
     commands:
       - rm -f .env
       - printf "INTERNAL_API_KEY=%s\n" "$INTERNAL_API_KEY" >> .env
@@ -152,6 +156,8 @@ steps:
       - printf "RUSTFS_PUBLIC_BUCKET=%s\n" "$RUSTFS_PUBLIC_BUCKET" >> .env
       - printf "RUSTFS_LACERTA_BUCKET=%s\n" "$RUSTFS_LACERTA_BUCKET" >> .env
       - printf "FILES_CDN_URL=%s\n" "$FILES_CDN_URL" >> .env
+      - printf "NEXT_PUBLIC_ONLYOFFICE_URL=%s\n" "$NEXT_PUBLIC_ONLYOFFICE_URL" >> .env
+      - printf "NEXT_PUBLIC_ONLYOFFICE_API_URL=%s\n" "$NEXT_PUBLIC_ONLYOFFICE_API_URL" >> .env
       - docker compose build
       - docker compose build
       - docker compose up -d

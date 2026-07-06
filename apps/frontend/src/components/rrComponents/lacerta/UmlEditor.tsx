@@ -19,7 +19,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
-import { encryptFileBuffer, encryptMetadataString } from "@/lib/lacertaCrypto";
+import { encryptFileBuffer, encryptMetadataString, generateFileKey, exportRawKey, wrapFileKeyForUser } from "@/lib/lacertaCrypto";
 import { cn } from "@/lib/utils";
 
 interface UmlFileItem {
@@ -29,6 +29,8 @@ interface UmlFileItem {
   decryptedKey: CryptoKey | null;
   wrappedKey?: string;
   parentId?: string | null;
+  isVault?: boolean;
+  type?: string | null;
 }
 
 interface UmlEditorProps {
@@ -38,6 +40,8 @@ interface UmlEditorProps {
   initialContent: string;
   accessToken: string;
   onSaveSuccess: () => void;
+  isReadOnly?: boolean;
+  userPublicKey?: string | null;
 }
 
 interface UmlNode {
@@ -85,6 +89,8 @@ export default function UmlEditor({
   initialContent,
   accessToken,
   onSaveSuccess,
+  isReadOnly = false,
+  userPublicKey = null,
 }: UmlEditorProps): React.JSX.Element | null {
   const [nodes, setNodes] = useState<UmlNode[]>([]);
   const [edges, setEdges] = useState<UmlEdge[]>([]);
@@ -128,48 +134,75 @@ export default function UmlEditor({
   if (!isOpen || !file) return null;
 
   const handleSave = async () => {
-    if (!file.decryptedKey) return;
     setIsSaving(true);
     try {
+      let fileKey = file.decryptedKey;
+      let wrappedKey = file.wrappedKey || "";
+
+      if (isReadOnly) {
+        if (!userPublicKey) {
+          throw new Error("Unable to save copy: user cryptographic keys not loaded.");
+        }
+        // Generate new key for the copy
+        const newFileKey = await generateFileKey();
+        const rawKeyStr = await exportRawKey(newFileKey);
+        wrappedKey = await wrapFileKeyForUser(rawKeyStr, userPublicKey);
+        fileKey = newFileKey;
+      }
+
+      if (!fileKey) {
+        throw new Error("File key not found. Unlock E2EE storage first.");
+      }
+
       const dataStr = JSON.stringify({ nodes, edges });
       const encoder = new TextEncoder();
       const rawBuffer = encoder.encode(dataStr).buffer;
 
       // Encrypt file & metadata
-      const encryptedBuffer = await encryptFileBuffer(
-        rawBuffer,
-        file.decryptedKey,
-      );
-      const encName = await encryptMetadataString(file.name, file.decryptedKey);
-      const encType = await encryptMetadataString(
-        "application/uml",
-        file.decryptedKey,
-      );
+      const encryptedBuffer = await encryptFileBuffer(rawBuffer, fileKey);
+      const encName = await encryptMetadataString(file.name, fileKey);
+      const encType = await encryptMetadataString("application/uml", fileKey);
 
       const formData = new FormData();
       const blob = new Blob([encryptedBuffer], {
         type: "application/octet-stream",
       });
       formData.append("file", blob, file.name);
-      formData.append("wrappedKey", file.wrappedKey || "");
+      formData.append("wrappedKey", wrappedKey);
       formData.append("name", encName);
       formData.append("size", blob.size.toString());
       formData.append("type", encType);
-      if (file.parentId) {
-        formData.append("parentId", file.parentId);
+
+      if (isReadOnly) {
+        if (file.parentId) {
+          formData.append("parentId", file.parentId);
+        }
+        if (file.isVault) {
+          formData.append("isVault", "true");
+        }
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/upload`,
+          {
+            method: "POST",
+            headers: { Authorization: `Bearer ${accessToken}` },
+            body: formData,
+          }
+        );
+        if (!res.ok) throw new Error("Failed to save copy to server.");
+        toast.success(`Successfully saved copy of ${file.name} to your files!`);
+      } else {
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${file.id}`,
+          {
+            method: "PUT",
+            headers: { Authorization: `Bearer ${accessToken}` },
+            body: formData,
+          },
+        );
+        if (!res.ok) throw new Error("Failed to save changes.");
+        toast.success("UML Diagram saved successfully!");
       }
 
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${file.id}`,
-        {
-          method: "PUT",
-          headers: { Authorization: `Bearer ${accessToken}` },
-          body: formData,
-        },
-      );
-      if (!res.ok) throw new Error("Failed to save changes.");
-
-      toast.success("UML Diagram saved successfully!");
       setHasUnsavedChanges(false);
       onSaveSuccess();
     } catch (err: any) {
@@ -351,7 +384,7 @@ export default function UmlEditor({
             ) : (
               <Save className="h-3.5 w-3.5" />
             )}
-            Save Diagram
+            {isReadOnly ? "Save Copy" : "Save Diagram"}
           </button>
         </div>
       </header>

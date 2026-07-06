@@ -6,7 +6,7 @@ import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import { useSession } from "next-auth/react";
 import { useRRe2ee } from "@/components/Providers/rrE2eeProvider";
-import { Lock, Unlock, ShieldAlert, Loader2, FolderClosed, FileText, Grid3X3, Plus, Upload, FolderPlus } from "lucide-react";
+import { Lock, Unlock, ShieldAlert, Loader2, FolderClosed, FileText, Grid3X3, Plus, Upload, FolderPlus, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -34,8 +34,64 @@ import MediaGallerySlider from "@/components/rrComponents/lacerta/MediaGallerySl
 import CanvasEditor from "@/components/rrComponents/lacerta/CanvasEditor";
 import MermaidEditor from "@/components/rrComponents/lacerta/MermaidEditor";
 import UmlEditor from "@/components/rrComponents/lacerta/UmlEditor";
+import OnlyOfficeEditor from "@/components/rrComponents/lacerta/OnlyOfficeEditor";
+import {
+  BLANK_DOCX,
+  BLANK_XLSX,
+  BLANK_PPTX,
+  BLANK_ODT,
+  BLANK_ODS,
+  BLANK_ODP
+} from "@/lib/officeTemplates";
 
 import { RenderFileItem } from "@/components/rrComponents/lacerta/FileCard";
+
+const downloadAndDecryptFileWithProgress = async (
+  key: string,
+  decryptedKey: CryptoKey,
+  accessToken: string,
+  onProgress?: (percent: number) => void
+): Promise<ArrayBuffer> => {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${key}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!res.ok) throw new Error("Download failed");
+
+  const contentLength = res.headers.get("content-length");
+  const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
+  
+  if (!res.body || totalBytes === 0) {
+    const buffer = await res.arrayBuffer();
+    if (onProgress) onProgress(100);
+    return decryptFileBuffer(buffer, decryptedKey);
+  }
+
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let receivedBytes = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value) {
+      chunks.push(value);
+      receivedBytes += value.length;
+      if (onProgress && totalBytes > 0) {
+        onProgress(Math.round((receivedBytes / totalBytes) * 100));
+      }
+    }
+  }
+
+  const concatenated = new Uint8Array(receivedBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    concatenated.set(chunk, offset);
+    offset += chunk.length;
+  }
+
+  return decryptFileBuffer(concatenated.buffer, decryptedKey);
+};
+
 
 export default function LacertaPage({
   tab = "files",
@@ -66,7 +122,11 @@ export default function LacertaPage({
 
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
 
+  // Background uploads tracking
+  const [uploadQueue, setUploadQueue] = useState<any[]>([]);
+
   // Decrypted items states
+
   const [decryptedFiles, setDecryptedFiles] = useState<any[]>([]);
   const [isDecrypting, setIsDecrypting] = useState<boolean>(false);
 
@@ -75,6 +135,8 @@ export default function LacertaPage({
   const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
   const [isVaultAuthOpen, setIsVaultAuthOpen] = useState<boolean>(false);
   const [isVaultUnlocked, setIsVaultUnlocked] = useState<boolean>(false);
+  const [fileToDelete, setFileToDelete] = useState<RenderFileItem | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
   useEffect(() => {
     if (currentTab === "vault" && !isVaultUnlocked) {
@@ -95,6 +157,13 @@ export default function LacertaPage({
   const [activeMermaidEditorContent, setActiveMermaidEditorContent] = useState<string>("");
   const [activeUmlEditorFile, setActiveUmlEditorFile] = useState<any | null>(null);
   const [activeUmlEditorContent, setActiveUmlEditorContent] = useState<string>("");
+  const [activeOnlyOfficeFile, setActiveOnlyOfficeFile] = useState<any | null>(null);
+
+  // File creation modal states
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
+  const [createType, setCreateType] = useState<"doc" | "sheet" | "note" | "slide" | "canvas" | "mermaid" | "uml" | null>(null);
+  const [createName, setCreateName] = useState<string>("");
+  const [createFormat, setCreateFormat] = useState<string>("");
 
   // Gallery slider states
   const [galleryFiles, setGalleryFiles] = useState<any[]>([]);
@@ -185,55 +254,100 @@ export default function LacertaPage({
     setCurrentFolderId(null);
   };
 
-  // Upload file flow
+  // Upload file flow (runs in the background via XHR)
   const handleUploadFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const filesList = e.target.files;
     if (!filesList || filesList.length === 0 || !userPublicKey || !session?.accessToken) return;
 
-    const fileToUpload = filesList[0];
-    const uploadToast = toast.loading(`Encrypting and uploading ${fileToUpload.name}...`);
+    // Convert FileList to array and process each file in the background
+    Array.from(filesList).forEach(async (fileToUpload) => {
+      const taskId = `${fileToUpload.name}-${Date.now()}-${Math.random()}`;
+      
+      // 1. Add to upload queue
+      setUploadQueue((prev) => [
+        ...prev,
+        { id: taskId, name: fileToUpload.name, progress: 0, status: "encrypting" },
+      ]);
 
-    try {
-      // 1. Generate random file symmetric key
-      const fileKey = await generateFileKey();
-      const rawKeyStr = await exportRawKey(fileKey);
+      try {
+        // 2. Generate random file symmetric key
+        const fileKey = await generateFileKey();
+        const rawKeyStr = await exportRawKey(fileKey);
 
-      // 2. Encrypt filename and mimetype
-      const encName = await encryptMetadataString(fileToUpload.name, fileKey);
-      const encType = await encryptMetadataString(fileToUpload.type || "application/octet-stream", fileKey);
+        // 3. Encrypt metadata
+        const encName = await encryptMetadataString(fileToUpload.name, fileKey);
+        const encType = await encryptMetadataString(fileToUpload.type || "application/octet-stream", fileKey);
 
-      // 3. Encrypt file binary buffer
-      const rawBuffer = await fileToUpload.arrayBuffer();
-      const encBuffer = await encryptFileBuffer(rawBuffer, fileKey);
+        // 4. Encrypt file binary buffer
+        const rawBuffer = await fileToUpload.arrayBuffer();
+        const encBuffer = await encryptFileBuffer(rawBuffer, fileKey);
 
-      // 4. Wrap file key with user's public key (ECIES)
-      const wrappedKey = await wrapFileKeyForUser(rawKeyStr, userPublicKey);
+        // 5. Wrap key
+        const wrappedKey = await wrapFileKeyForUser(rawKeyStr, userPublicKey);
 
-      // 5. Post to server
-      const formData = new FormData();
-      const blob = new Blob([encBuffer], { type: "application/octet-stream" });
-      formData.append("file", blob, fileToUpload.name);
-      formData.append("wrappedKey", wrappedKey);
-      formData.append("name", encName);
-      formData.append("size", blob.size.toString());
-      formData.append("type", encType);
-      if (currentFolderId) formData.append("parentId", currentFolderId);
-      if (currentTab === "vault") formData.append("isVault", "true");
+        // Update queue status
+        setUploadQueue((prev) =>
+          prev.map((t) => (t.id === taskId ? { ...t, status: "uploading" } : t))
+        );
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/upload`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${session.accessToken}` },
-        body: formData,
-      });
+        // 6. XHR Upload
+        const formData = new FormData();
+        const blob = new Blob([encBuffer], { type: "application/octet-stream" });
+        formData.append("file", blob, fileToUpload.name);
+        formData.append("wrappedKey", wrappedKey);
+        formData.append("name", encName);
+        formData.append("size", blob.size.toString());
+        formData.append("type", encType);
+        if (currentFolderId) formData.append("parentId", currentFolderId);
+        if (currentTab === "vault") formData.append("isVault", "true");
 
-      if (!res.ok) throw new Error("Server upload failed");
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/upload`);
+        xhr.setRequestHeader("Authorization", `Bearer ${session.accessToken}`);
 
-      toast.success(`${fileToUpload.name} uploaded E2EE securely!`, { id: uploadToast });
-      mutate();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to encrypt/upload file", { id: uploadToast });
-    }
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const percent = Math.round((event.loaded / event.total) * 100);
+            setUploadQueue((prev) =>
+              prev.map((t) => (t.id === taskId ? { ...t, progress: percent } : t))
+            );
+          }
+        };
+
+        const uploadPromise = new Promise<void>((resolve, reject) => {
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve();
+            } else {
+              reject(new Error(`Upload failed with status ${xhr.status}`));
+            }
+          };
+          xhr.onerror = () => reject(new Error("Network error during upload"));
+        });
+
+        xhr.send(formData);
+        await uploadPromise;
+
+        // 7. Success
+        setUploadQueue((prev) =>
+          prev.map((t) => (t.id === taskId ? { ...t, status: "completed", progress: 100 } : t))
+        );
+        toast.success(`${fileToUpload.name} uploaded securely!`);
+        mutate();
+
+        // Remove from list after a delay
+        setTimeout(() => {
+          setUploadQueue((prev) => prev.filter((t) => t.id !== taskId));
+        }, 5000);
+      } catch (err: any) {
+        setUploadQueue((prev) =>
+          prev.map((t) => (t.id === taskId ? { ...t, status: "error", errorMsg: err.message || "Failed" } : t))
+        );
+        toast.error(`Upload failed: ${fileToUpload.name}`);
+      }
+    });
   };
+
 
   // Create folder flow
   const handleCreateFolder = async (name: string) => {
@@ -269,81 +383,90 @@ export default function LacertaPage({
   };
 
   // Create new document/spreadsheet file directly in-app
-  const handleCreateDoc = async (type: "doc" | "sheet" | "note" | "slide" | "canvas" | "mermaid" | "uml") => {
-    if (!userPublicKey || !session?.accessToken) return;
-    const label =
-      type === "doc"
-        ? "document"
-        : type === "sheet"
-          ? "spreadsheet"
-          : type === "slide"
-            ? "presentation"
-            : type === "canvas"
-              ? "canvas"
-              : type === "mermaid"
-                ? "Mermaid Diagram"
-                : type === "uml"
-                  ? "UML Diagram"
-                  : "note";
-    const namePrompt = prompt(`Enter ${label} name:`);
-    if (!namePrompt || !namePrompt.trim()) return;
+  const handleCreateDoc = (type: "doc" | "sheet" | "note" | "slide" | "canvas" | "mermaid" | "uml") => {
+    setCreateType(type);
+    setCreateName("");
+    if (type === "doc") setCreateFormat(".docx");
+    else if (type === "sheet") setCreateFormat(".xlsx");
+    else if (type === "slide") setCreateFormat(".pptx");
+    else setCreateFormat("");
+    setIsCreateModalOpen(true);
+  };
 
-    const name = namePrompt.trim();
-    const ext =
-      type === "canvas"
-        ? ".canvas"
-        : type === "doc"
-          ? ".odt"
-          : type === "sheet"
-            ? ".ods"
-            : type === "slide"
-              ? ".odp"
-              : type === "mermaid"
-                ? ".mermaid"
-                : type === "uml"
-                  ? ".uml"
-                  : ".txt";
-    const mime =
-      type === "canvas"
-        ? "application/vnd.jsoncanvas"
-        : type === "doc"
-          ? "application/vnd.oasis.opendocument.text"
-          : type === "sheet"
-            ? "application/vnd.oasis.opendocument.spreadsheet"
-            : type === "slide"
-              ? "application/vnd.oasis.opendocument.presentation"
-              : type === "mermaid"
-                ? "application/mermaid"
-                : type === "uml"
-                  ? "application/uml"
-                  : "text/plain";
+  const submitCreateDoc = async () => {
+    if (!createName.trim()) {
+      toast.error("Please enter a file name");
+      return;
+    }
+    if (!userPublicKey || !session?.accessToken) return;
+
+    setIsCreateModalOpen(false);
+    const baseName = createName.trim();
+    const type = createType!;
+    
+    // Resolve extension
+    const ext = createFormat || (
+      type === "canvas" ? ".canvas" :
+      type === "mermaid" ? ".mermaid" :
+      type === "uml" ? ".uml" :
+      ".txt"
+    );
+
+    // Resolve mime type
+    let mime = "text/plain";
+    if (type === "canvas") mime = "application/vnd.jsoncanvas";
+    else if (type === "mermaid") mime = "application/mermaid";
+    else if (type === "uml") mime = "application/uml";
+    else if (ext === ".docx") mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+    else if (ext === ".xlsx") mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    else if (ext === ".pptx") mime = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+    else if (ext === ".odt") mime = "application/vnd.oasis.opendocument.text";
+    else if (ext === ".ods") mime = "application/vnd.oasis.opendocument.spreadsheet";
+    else if (ext === ".odp") mime = "application/vnd.oasis.opendocument.presentation";
+
+    const createToast = toast.loading(`Creating ${baseName}${ext}...`);
 
     try {
+      // Generate E2EE key
       const fileKey = await generateFileKey();
       const rawKeyStr = await exportRawKey(fileKey);
 
-      const encName = await encryptMetadataString(name + ext, fileKey);
+      const encName = await encryptMetadataString(baseName + ext, fileKey);
       const encType = await encryptMetadataString(mime, fileKey);
       const wrappedKey = await wrapFileKeyForUser(rawKeyStr, userPublicKey);
 
-      let emptyData = "";
-      if (type === "sheet") {
-        emptyData = "{}";
-      } else if (type === "canvas" || type === "uml") {
-        emptyData = '{"nodes":[],"edges":[]}';
-      } else if (type === "mermaid") {
-        emptyData = "graph TD\n    A[Start] --> B(Process)\n    B --> C{Decision}\n    C -- Yes --> D[Result 1]\n    C -- No --> E[Result 2]";
+      // Resolve initial data
+      let rawData: ArrayBuffer;
+      if (ext === ".docx") {
+        rawData = Uint8Array.from(atob(BLANK_DOCX), c => c.charCodeAt(0)).buffer;
+      } else if (ext === ".xlsx") {
+        rawData = Uint8Array.from(atob(BLANK_XLSX), c => c.charCodeAt(0)).buffer;
+      } else if (ext === ".pptx") {
+        rawData = Uint8Array.from(atob(BLANK_PPTX), c => c.charCodeAt(0)).buffer;
+      } else if (ext === ".odt") {
+        rawData = Uint8Array.from(atob(BLANK_ODT), c => c.charCodeAt(0)).buffer;
+      } else if (ext === ".ods") {
+        rawData = Uint8Array.from(atob(BLANK_ODS), c => c.charCodeAt(0)).buffer;
+      } else if (ext === ".odp") {
+        rawData = Uint8Array.from(atob(BLANK_ODP), c => c.charCodeAt(0)).buffer;
+      } else {
+        let emptyText = "";
+        if (type === "sheet") {
+          emptyText = "{}";
+        } else if (type === "canvas" || type === "uml") {
+          emptyText = '{"nodes":[],"edges":[]}';
+        } else if (type === "mermaid") {
+          emptyText = "graph TD\n    A[Start] --> B(Process)\n    B --> C{Decision}\n    C -- Yes --> D[Result 1]\n    C -- No --> E[Result 2]";
+        }
+        rawData = new TextEncoder().encode(emptyText).buffer;
       }
 
-      const encoder = new TextEncoder();
-      const encBuffer = await encryptFileBuffer(
-        encoder.encode(emptyData).buffer,
-        fileKey,
-      );
+      // Encrypt contents
+      const encBuffer = await encryptFileBuffer(rawData, fileKey);
 
       const formData = new FormData();
       const blob = new Blob([encBuffer], { type: "application/octet-stream" });
-      formData.append("file", blob, name + ext);
+      formData.append("file", blob, baseName + ext);
       formData.append("wrappedKey", wrappedKey);
       formData.append("name", encName);
       formData.append("size", blob.size.toString());
@@ -362,10 +485,10 @@ export default function LacertaPage({
 
       if (!res.ok) throw new Error("Failed to create file");
 
-      toast.success(`Created E2EE ${type} successfully!`);
+      toast.success(`Created E2EE ${baseName}${ext} successfully!`, { id: createToast });
       mutate();
     } catch (err: any) {
-      toast.error(err.message || "Failed to create doc");
+      toast.error(err.message || "Failed to create doc", { id: createToast });
     }
   };
 
@@ -377,30 +500,89 @@ export default function LacertaPage({
     }
 
     if (!item.decryptedKey || !session?.accessToken) return;
-    const downloadToast = toast.loading(`Decrypting ${item.name} for edit...`);
+
+    const mime = item.type || "";
+
+    const isVideo =
+      mime.startsWith("video/") ||
+      item.name.endsWith(".mp4") ||
+      item.name.endsWith(".mkv") ||
+      item.name.endsWith(".webm") ||
+      item.name.endsWith(".ogg") ||
+      item.name.endsWith(".mov");
+    if (isVideo) return;
+
+    const isOfficeFile =
+      mime.includes("document") ||
+      mime.includes("word") ||
+      mime.includes("odt") ||
+      mime.includes("spreadsheet") ||
+      mime.includes("sheet") ||
+      mime.includes("ods") ||
+      mime.includes("presentation") ||
+      mime.includes("slide") ||
+      mime.includes("odp") ||
+      item.name.endsWith(".docx") ||
+      item.name.endsWith(".xlsx") ||
+      item.name.endsWith(".pptx") ||
+      item.name.endsWith(".odt") ||
+      item.name.endsWith(".ods") ||
+      item.name.endsWith(".odp");
+
+    if (isOfficeFile) {
+      setActiveOnlyOfficeFile(item);
+      return;
+    }
+
+    const isMediaFile =
+      mime.startsWith("image/") ||
+      mime.startsWith("audio/") ||
+      item.name.endsWith(".mp3") ||
+      item.name.endsWith(".wav") ||
+      item.name.endsWith(".flac") ||
+      item.name.endsWith(".m4a") ||
+      item.name.endsWith(".aac");
+
+    if (isMediaFile) {
+      // Open media gallery slideshow immediately without downloading/decrypting in the parent
+      const mediaFiles = filteredFiles.filter((f) => {
+        const fMime = f.type || "";
+        return (
+          fMime.startsWith("image/") ||
+          fMime.startsWith("audio/") ||
+          f.name.endsWith(".mp3") ||
+          f.name.endsWith(".wav") ||
+          f.name.endsWith(".flac") ||
+          f.name.endsWith(".m4a") ||
+          f.name.endsWith(".aac")
+        );
+      });
+      const idx = mediaFiles.findIndex((f) => f.id === item.id);
+      setGalleryFiles(mediaFiles);
+      setGalleryInitialIndex(idx >= 0 ? idx : 0);
+      setIsGalleryOpen(true);
+      return;
+    }
+
+    const downloadToast = toast.loading(`Decrypting ${item.name} for edit... (0%)`);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${item.key}`, {
-        headers: { Authorization: `Bearer ${session.accessToken}` },
-      });
-      if (!res.ok) throw new Error("Failed to download file content");
-
-      const encryptedBuffer = await res.arrayBuffer();
-      const decryptedBuffer = await decryptFileBuffer(encryptedBuffer, item.decryptedKey);
+      const decryptedBuffer = await downloadAndDecryptFileWithProgress(
+        item.key,
+        item.decryptedKey,
+        session.accessToken,
+        (percent) => {
+          toast.loading(`Decrypting ${item.name} for edit... (${percent}%)`, { id: downloadToast });
+        }
+      );
       const decoder = new TextDecoder();
       const textContent = decoder.decode(decryptedBuffer);
 
       toast.dismiss(downloadToast);
 
       const mime = item.type || "";
-      if (mime.startsWith("image/") || mime.startsWith("video/")) {
-        // Open media gallery slideshow
-        const mediaFiles = filteredFiles.filter((f) => f.type?.startsWith("image/") || f.type?.startsWith("video/"));
-        const idx = mediaFiles.findIndex((f) => f.id === item.id);
-        setGalleryFiles(mediaFiles);
-        setGalleryInitialIndex(idx >= 0 ? idx : 0);
-        setIsGalleryOpen(true);
-      } else if (mime.includes("jsoncanvas") || item.name.endsWith(".canvas")) {
+      if (mime.includes("jsoncanvas") || item.name.endsWith(".canvas")) {
+
         setActiveCanvasEditorFile(item);
         setActiveCanvasEditorContent(textContent);
       } else if (mime.includes("spreadsheet")) {
@@ -428,15 +610,16 @@ export default function LacertaPage({
   // Download file flow (decrypted locally, saved to download folder)
   const handleDownloadFile = async (item: RenderFileItem) => {
     if (!item.decryptedKey || !session?.accessToken) return;
-    const downloadToast = toast.loading(`Downloading & decrypting ${item.name}...`);
+    const downloadToast = toast.loading(`Downloading & decrypting ${item.name}... (0%)`);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${item.key}`, {
-        headers: { Authorization: `Bearer ${session.accessToken}` },
-      });
-      if (!res.ok) throw new Error("Download failed");
-
-      const encryptedBuffer = await res.arrayBuffer();
-      const decryptedBuffer = await decryptFileBuffer(encryptedBuffer, item.decryptedKey);
+      const decryptedBuffer = await downloadAndDecryptFileWithProgress(
+        item.key,
+        item.decryptedKey,
+        session.accessToken,
+        (percent) => {
+          toast.loading(`Downloading & decrypting ${item.name}... (${percent}%)`, { id: downloadToast });
+        }
+      );
 
       const blob = new Blob([decryptedBuffer], { type: item.type || "application/octet-stream" });
       const url = URL.createObjectURL(blob);
@@ -452,6 +635,63 @@ export default function LacertaPage({
       toast.success(`${item.name} downloaded successfully!`, { id: downloadToast });
     } catch (err: any) {
       toast.error(err.message || "Download failed", { id: downloadToast });
+    }
+  };
+
+
+  // Save a copy of shared file locally under user's own account
+  const handleSaveCopy = async (item: RenderFileItem) => {
+    if (!item.decryptedKey || !userPublicKey || !session?.accessToken) return;
+    const copyToast = toast.loading(`Creating a copy of ${item.name}...`);
+    try {
+      // 1. Download and decrypt current file content
+      const downloadRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${item.key}`, {
+        headers: { Authorization: `Bearer ${session.accessToken}` },
+      });
+      if (!downloadRes.ok) throw new Error("Failed to download source file content");
+
+      const encryptedBuffer = await downloadRes.arrayBuffer();
+      const decryptedBuffer = await decryptFileBuffer(encryptedBuffer, item.decryptedKey);
+
+      // 2. Generate a new symmetric key for the copy
+      const fileKey = await generateFileKey();
+      const rawKeyStr = await exportRawKey(fileKey);
+
+      // 3. Encrypt name and type using the new key
+      const encName = await encryptMetadataString(item.name, fileKey);
+      const encType = await encryptMetadataString(item.type || "application/octet-stream", fileKey);
+
+      // 4. Encrypt the file content with the new key
+      const encBuffer = await encryptFileBuffer(decryptedBuffer, fileKey);
+
+      // 5. Wrap the new key for current user (this recipient)
+      const wrappedKey = await wrapFileKeyForUser(rawKeyStr, userPublicKey);
+
+      // 6. Post to server as a new file (owned by current user)
+      const formData = new FormData();
+      const blob = new Blob([encBuffer], { type: "application/octet-stream" });
+      formData.append("file", blob, item.name);
+      formData.append("wrappedKey", wrappedKey);
+      formData.append("name", encName);
+      formData.append("size", blob.size.toString());
+      formData.append("type", encType);
+      
+      // Save it under root or current folder
+      if (currentFolderId) formData.append("parentId", currentFolderId);
+      if (currentTab === "vault") formData.append("isVault", "true");
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/upload`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.accessToken}` },
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Failed to save copy to server");
+
+      toast.success(`Successfully saved copy of ${item.name} to your files!`, { id: copyToast });
+      mutate();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to save copy", { id: copyToast });
     }
   };
 
@@ -497,20 +737,30 @@ export default function LacertaPage({
     }
   };
 
-  // Permanent delete
-  const handleDeleteForever = async (item: RenderFileItem) => {
-    if (!session?.accessToken || !confirm(`Permanently delete "${item.name}"? This action is irreversible.`)) return;
+  // Permanent delete — opens confirm modal (replaces window.confirm which gets suppressed)
+  const handleDeleteForever = (item: RenderFileItem) => {
+    setFileToDelete(item);
+  };
+
+  const confirmDeleteForever = async () => {
+    if (!fileToDelete || !session?.accessToken) return;
+    setIsDeleting(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${item.id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${fileToDelete.id}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${session.accessToken}` },
       });
-      if (!res.ok) throw new Error("Delete failed");
-
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.message || `Delete failed (${res.status})`);
+      }
       toast.success("File deleted permanently.");
+      setFileToDelete(null);
       mutate();
     } catch (err: any) {
       toast.error(err.message || "Delete failed");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -566,6 +816,7 @@ export default function LacertaPage({
           onUploadFile={handleUploadFile}
           isSharedTab={currentTab === "shared"}
           onLockE2ee={lockE2ee}
+          onSaveCopy={handleSaveCopy}
         />
       )}
 
@@ -591,6 +842,7 @@ export default function LacertaPage({
           router.push("/lacerta");
         }}
         onAuthenticate={handleVaultAuth}
+        accessToken={session?.accessToken || ""}
       />
 
       {/* Editors */}
@@ -636,6 +888,102 @@ export default function LacertaPage({
         />
       )}
 
+      {activeOnlyOfficeFile && (
+        <OnlyOfficeEditor
+          isOpen={!!activeOnlyOfficeFile}
+          onClose={() => {
+            setActiveOnlyOfficeFile(null);
+          }}
+          file={activeOnlyOfficeFile}
+          fileKey={activeOnlyOfficeFile.rawFileKey}
+          accessToken={session?.accessToken || ""}
+          onSaveSuccess={mutate}
+        />
+      )}
+
+      {/* Create File Modal */}
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl animate-in zoom-in duration-150">
+            <h3 className="text-sm font-bold text-foreground mb-4">
+              Create New {createType === "doc" ? "Document" : createType === "sheet" ? "Spreadsheet" : createType === "slide" ? "Presentation" : createType}
+            </h3>
+            
+            <div className="space-y-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-semibold text-muted-foreground">File Name</label>
+                <input
+                  type="text"
+                  value={createName}
+                  onChange={(e) => setCreateName(e.target.value)}
+                  placeholder="Enter name"
+                  className="bg-muted/10 border border-border rounded-lg px-3 py-2 text-xs text-foreground placeholder-muted-foreground/60 w-full"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") submitCreateDoc();
+                  }}
+                />
+              </div>
+
+              {(createType === "doc" || createType === "sheet" || createType === "slide") && (
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-semibold text-muted-foreground">File Format</label>
+                  <select
+                    value={createFormat}
+                    onChange={(e) => setCreateFormat(e.target.value)}
+                    className="bg-card border border-border rounded-lg px-3 py-2 text-xs text-foreground outline-none w-full"
+                  >
+                    {createType === "doc" && (
+                      <>
+                        <option value=".docx">Microsoft Word (.docx)</option>
+                        <option value=".odt">OpenDocument Text (.odt)</option>
+                      </>
+                    )}
+                    {createType === "sheet" && (
+                      <>
+                        <option value=".xlsx">Microsoft Excel (.xlsx)</option>
+                        <option value=".ods">OpenDocument Spreadsheet (.ods)</option>
+                      </>
+                    )}
+                    {createType === "slide" && (
+                      <>
+                        <option value=".pptx">Microsoft PowerPoint (.pptx)</option>
+                        <option value=".odp">OpenDocument Presentation (.odp)</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+              )}
+
+              <div className="bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-lg flex items-start gap-2.5">
+                <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">E2EE Active</span>
+                  <span className="text-[10px] text-muted-foreground leading-normal">
+                    This file is encrypted locally in your browser. Real-time collaboration is supported via in-memory secure key exchange.
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end items-center gap-2 mt-6">
+              <button
+                onClick={() => setIsCreateModalOpen(false)}
+                className="px-3.5 py-1.5 border border-border hover:bg-muted/10 rounded-lg text-xs font-semibold text-foreground transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitCreateDoc}
+                className="px-3.5 py-1.5 bg-primary hover:bg-primary/95 text-primary-foreground text-xs font-semibold rounded-lg transition-all shadow-md"
+              >
+                Create File
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeCanvasEditorFile && (
         <CanvasEditor
           isOpen={!!activeCanvasEditorFile}
@@ -661,6 +1009,13 @@ export default function LacertaPage({
           initialContent={activeMermaidEditorContent}
           accessToken={session?.accessToken || ""}
           onSaveSuccess={mutate}
+          isReadOnly={
+            activeMermaidEditorFile
+              ? activeMermaidEditorFile.userId !== session?.user?.id &&
+                !activeMermaidEditorFile.shares?.find((s: any) => s.userId === session?.user?.id)?.allowEdit
+              : false
+          }
+          userPublicKey={userPublicKey}
         />
       )}
 
@@ -675,6 +1030,13 @@ export default function LacertaPage({
           initialContent={activeUmlEditorContent}
           accessToken={session?.accessToken || ""}
           onSaveSuccess={mutate}
+          isReadOnly={
+            activeUmlEditorFile
+              ? activeUmlEditorFile.userId !== session?.user?.id &&
+                !activeUmlEditorFile.shares?.find((s: any) => s.userId === session?.user?.id)?.allowEdit
+              : false
+          }
+          userPublicKey={userPublicKey}
         />
       )}
 
@@ -691,6 +1053,85 @@ export default function LacertaPage({
           accessToken={session?.accessToken || ""}
         />
       )}
+      {/* Permanent delete confirmation modal */}
+      {fileToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-2xl border border-destructive/30 bg-card p-6 shadow-2xl animate-in zoom-in duration-150">
+            <h3 className="text-sm font-bold text-foreground mb-1">Delete Forever?</h3>
+            <p className="text-xs text-muted-foreground mb-1">
+              This will permanently delete:
+            </p>
+            <p className="text-xs font-semibold text-foreground bg-muted/20 rounded-lg px-3 py-2 mb-4 truncate">
+              {fileToDelete.name}
+            </p>
+            <p className="text-xs text-destructive/80 mb-5">
+              This action is irreversible. The file will be removed from storage permanently.
+            </p>
+            <div className="flex justify-end items-center gap-2">
+              <button
+                onClick={() => setFileToDelete(null)}
+                disabled={isDeleting}
+                className="px-3.5 py-1.5 border border-border hover:bg-muted/10 rounded-lg text-xs font-semibold text-foreground transition-all disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeleteForever}
+                disabled={isDeleting}
+                className="px-3.5 py-1.5 bg-destructive hover:bg-destructive/90 text-destructive-foreground text-xs font-semibold rounded-lg transition-all shadow-md disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {isDeleting ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                Delete Forever
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Background Uploads HUD */}
+      {uploadQueue.length > 0 && (
+        <div className="fixed bottom-4 right-4 z-50 w-80 bg-neutral-950/90 border border-neutral-800 text-white rounded-xl shadow-2xl p-4 flex flex-col gap-3 max-h-72 overflow-y-auto animate-in slide-in-from-bottom-5 duration-300">
+          <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
+            <span className="text-xs font-bold tracking-wide uppercase text-neutral-400">Uploads ({uploadQueue.length})</span>
+            <button
+              onClick={() => setUploadQueue((prev) => prev.filter((t) => t.status === "uploading"))}
+              className="text-[10px] text-neutral-500 hover:text-white transition-colors"
+            >
+              Clear Finished
+            </button>
+          </div>
+          <div className="flex flex-col gap-2">
+            {uploadQueue.map((task) => (
+              <div key={task.id} className="flex flex-col gap-1.5 p-2 bg-neutral-900/50 border border-neutral-800/40 rounded-lg">
+                <div className="flex items-center justify-between text-xs gap-2">
+                  <span className="font-semibold truncate max-w-[180px]" title={task.name}>
+                    {task.name}
+                  </span>
+                  <span className="text-[10px] text-neutral-400 shrink-0 font-medium">
+                    {task.status === "encrypting" && "Encrypting..."}
+                    {task.status === "uploading" && `${task.progress}%`}
+                    {task.status === "completed" && <span className="text-emerald-400 font-semibold">Done</span>}
+                    {task.status === "error" && <span className="text-rose-400 font-semibold">Error</span>}
+                  </span>
+                </div>
+                {task.status === "uploading" && (
+                  <div className="w-full bg-neutral-800 rounded-full h-1.5 overflow-hidden">
+                    <div
+                      className="bg-primary h-full transition-all duration-300 rounded-full"
+                      style={{ width: `${task.progress}%` }}
+                    />
+                  </div>
+                )}
+                {task.errorMsg && (
+                  <span className="text-[9px] text-rose-400/80 leading-none truncate">
+                    {task.errorMsg}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

@@ -2,6 +2,8 @@
 
 import React from "react";
 import { FileText } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { wrapFileKeyForUser } from "@/lib/lacertaCrypto";
 import { CanvasNodeType, CanvasNode } from "./CanvasEditor";
 
 interface RrCanvasFileInsertModalProps {
@@ -36,6 +38,79 @@ export default function RrCanvasFileInsertModal({
   createNodeAtPos,
   setPendingFileShare,
 }: RrCanvasFileInsertModalProps) {
+  const { data: session } = useSession();
+
+  const shareFileWithCanvasCollaborators = async (f: any) => {
+    if (!session?.accessToken || !canvasFile) return;
+
+    const currentUserId = session.user?.id;
+    const collaboratorsToShareWith: { id: string; userPublicKey: string; username: string }[] = [];
+
+    // 1. Owner
+    if (canvasFile.userId && canvasFile.userId !== currentUserId) {
+      const ownerPublicKey = canvasFile.user?.userPublicKey;
+      if (ownerPublicKey) {
+        const isAlreadyShared = f.shares?.some((s: any) => s.userId === canvasFile.userId);
+        if (!isAlreadyShared) {
+          collaboratorsToShareWith.push({
+            id: canvasFile.userId,
+            userPublicKey: ownerPublicKey,
+            username: canvasFile.user?.username || "owner",
+          });
+        }
+      }
+    }
+
+    // 2. Shares
+    if (canvasFile.shares && Array.isArray(canvasFile.shares)) {
+      for (const share of canvasFile.shares) {
+        if (share.userId && share.userId !== currentUserId) {
+          const recipientPublicKey = share.user?.userPublicKey;
+          if (recipientPublicKey) {
+            const isAlreadyShared = f.shares?.some((s: any) => s.userId === share.userId);
+            if (!isAlreadyShared) {
+              collaboratorsToShareWith.push({
+                id: share.userId,
+                userPublicKey: recipientPublicKey,
+                username: share.user?.username || "collaborator",
+              });
+            }
+          }
+        }
+      }
+    }
+
+    if (collaboratorsToShareWith.length === 0) return;
+
+    for (const collab of collaboratorsToShareWith) {
+      try {
+        const recipientWrappedKey = await wrapFileKeyForUser(
+          f.rawFileKey,
+          collab.userPublicKey
+        );
+
+        await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${f.id}/share`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.accessToken}`,
+            },
+            body: JSON.stringify({
+              recipientId: collab.id,
+              wrappedKey: recipientWrappedKey,
+              allowEdit: true,
+            }),
+          }
+        );
+        console.log(`Successfully shared embedded file ${f.name} with collaborator @${collab.username}`);
+      } catch (err) {
+        console.error(`Failed to share embedded file ${f.name} with collaborator @${collab.username}:`, err);
+      }
+    }
+  };
+
   if (!isOpen) return null;
 
   const filteredFiles = decryptedLacertaFiles.filter((f) => {
@@ -84,6 +159,8 @@ export default function RrCanvasFileInsertModal({
                     onClose();
                     return;
                   }
+
+                  shareFileWithCanvasCollaborators(f);
 
                   createNodeAtPos(
                     embedType,

@@ -45,6 +45,7 @@ export default function TextEditor({
   const [content, setContent] = useState<string>("");
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+  const [showExitConfirm, setShowExitConfirm] = useState<boolean>(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -52,6 +53,19 @@ export default function TextEditor({
       setHasUnsavedChanges(false);
     }
   }, [isOpen, initialContent]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [hasUnsavedChanges]);
 
   if (!isOpen || !file) return null;
 
@@ -76,7 +90,10 @@ export default function TextEditor({
 
       // 3. Encrypt metadata name & type
       const encName = await encryptMetadataString(file.name, file.decryptedKey);
-      const encType = await encryptMetadataString("text/plain", file.decryptedKey);
+      const encType = await encryptMetadataString(
+        "text/plain",
+        file.decryptedKey,
+      );
 
       // 4. Upload to server
       const formData = new FormData();
@@ -181,41 +198,6 @@ export default function TextEditor({
     textarea.focus();
   };
 
-  // Simple Markdown Parser for Preview
-  const parseMarkdown = (markdown: string) => {
-    if (!markdown)
-      return "<p class='text-muted-foreground text-xs'>Type something to preview...</p>";
-    return markdown
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(
-        /^# (.*$)/gim,
-        "<h1 class='text-2xl font-bold border-b pb-2 mb-4 mt-2'>$1</h1>",
-      )
-      .replace(
-        /^## (.*$)/gim,
-        "<h2 class='text-xl font-bold mb-3 mt-4'>$1</h2>",
-      )
-      .replace(/^\* (.*$)/gim, "<li class='list-disc list-inside ml-2'>$1</li>")
-      .replace(/\*\*(.*)\*\*/gim, "<strong>$1</strong>")
-      .replace(/\*(.*)\*/gim, "<em>$1</em>")
-      .replace(
-        /`(.*)`/gim,
-        "<code class='bg-muted px-1.5 py-0.5 rounded text-xs'>$1</code>",
-      )
-      .replace(
-        /\[(.*?)\]\((.*?)\)/gim,
-        "<a href='$2' target='_blank' class='text-primary underline hover:opacity-80'>$1</a>",
-      )
-      .split("\n\n")
-      .map((p) => {
-        if (p.trim().startsWith("<h") || p.trim().startsWith("<li")) return p;
-        return `<p class='text-sm leading-relaxed mb-3'>${p.replace(/\n/g, "<br />")}</p>`;
-      })
-      .join("");
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-background">
       {/* Top Navigation */}
@@ -223,13 +205,10 @@ export default function TextEditor({
         <div className="flex items-center gap-3">
           <button
             onClick={() => {
-              if (
-                hasUnsavedChanges &&
-                !confirm(
-                  "You have unsaved changes. Are you sure you want to exit?",
-                )
-              )
+              if (hasUnsavedChanges) {
+                setShowExitConfirm(true);
                 return;
+              }
               onClose();
             }}
             className="p-1.5 border border-border hover:bg-muted/10 rounded-lg text-muted-foreground hover:text-foreground transition-all"
@@ -248,9 +227,12 @@ export default function TextEditor({
 
         <div className="flex items-center gap-2">
           {hasUnsavedChanges && (
-            <span className="text-xs text-muted-foreground mr-2 italic">
-              Unsaved changes
-            </span>
+            <button
+              onClick={() => setShowExitConfirm(true)}
+              className="px-3.5 py-1.5 border border-destructive/20 hover:bg-destructive/10 text-destructive font-semibold rounded-lg text-xs transition-all mr-1"
+            >
+              Exit without saving
+            </button>
           )}
           <button
             onClick={handleSave}
@@ -315,24 +297,47 @@ export default function TextEditor({
       </div>
 
       {/* Workspace */}
-      <div className="flex-1 flex min-h-0 overflow-hidden divide-x divide-border">
+      <div className="flex-1 flex min-h-0 overflow-hidden">
         {/* Editor Area */}
         <textarea
           id="editor-textarea"
           value={content}
           onChange={handleTextChange}
-          placeholder="Start typing in Markdown..."
-          className="flex-1 h-full bg-transparent resize-none p-6 text-sm font-mono leading-relaxed text-foreground placeholder-muted-foreground/60 outline-none focus:outline-none"
+          placeholder="Start typing..."
+          className="w-full h-full bg-transparent resize-none p-6 text-sm font-mono leading-relaxed text-foreground placeholder-muted-foreground/60 outline-none focus:outline-none"
         />
-
-        {/* Live Preview Area */}
-        <div className="flex-1 h-full p-6 overflow-y-auto no-scrollbar bg-muted/5">
-          <div
-            className="prose prose-sm dark:prose-invert text-foreground"
-            dangerouslySetInnerHTML={{ __html: parseMarkdown(content) }}
-          />
-        </div>
       </div>
+
+      {showExitConfirm && (
+        <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl animate-in zoom-in duration-150">
+            <h3 className="text-sm font-bold text-foreground mb-1">
+              Discard Changes?
+            </h3>
+            <p className="text-xs text-muted-foreground mb-4">
+              You have unsaved changes. Are you sure you want to exit without
+              saving?
+            </p>
+            <div className="flex justify-end items-center gap-2">
+              <button
+                onClick={() => setShowExitConfirm(false)}
+                className="px-3.5 py-1.5 border border-border hover:bg-muted/10 rounded-lg text-xs font-semibold text-foreground transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setShowExitConfirm(false);
+                  onClose();
+                }}
+                className="px-3.5 py-1.5 bg-destructive hover:bg-destructive/90 text-destructive-foreground text-xs font-semibold rounded-lg transition-all shadow-md"
+              >
+                Discard & Exit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

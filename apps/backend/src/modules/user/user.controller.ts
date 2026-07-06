@@ -8,6 +8,7 @@ import {
   Put,
   Delete,
   Req,
+  Query,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { User } from '@runa/database';
@@ -269,6 +270,14 @@ export class UserController {
       avatarUrl: user.avatarUrl,
       bannerUrl: user.bannerUrl,
     };
+  }
+
+  @Get()
+  async findAll(
+    @Req() req: ExtendedRequest,
+    @Query('q') query: string,
+  ): Promise<UserSearchEntity[]> {
+    return this.usersService.searchUsers(req.user!.id, query);
   }
 
   @Get(':username/public-key')

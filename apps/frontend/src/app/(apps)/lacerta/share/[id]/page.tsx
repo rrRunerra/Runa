@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Download, Loader2, File, CheckCircle2, ShieldCheck, Play, ArrowLeft, Grid3X3 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import CanvasEditor from "@/components/rrComponents/lacerta/CanvasEditor";
+import OnlyOfficeEditor from "@/components/rrComponents/lacerta/OnlyOfficeEditor";
 
 import {
   importRawKey,
@@ -16,6 +18,7 @@ import {
 export default function LacertaSharePage(): React.JSX.Element {
   const params = useParams();
   const fileId = params.id as string;
+  const { data: session } = useSession();
 
   const [loading, setLoading] = useState<boolean>(true);
   const [decrypting, setDecrypting] = useState<boolean>(false);
@@ -26,6 +29,7 @@ export default function LacertaSharePage(): React.JSX.Element {
   const [rawKeyStr, setRawKeyStr] = useState<string | null>(null);
 
   const [showCanvasEditor, setShowCanvasEditor] = useState<boolean>(false);
+  const [showOfficeEditor, setShowOfficeEditor] = useState<boolean>(false);
   const [canvasContent, setCanvasContent] = useState<string>("");
   const [decryptedKey, setDecryptedKey] = useState<CryptoKey | null>(null);
 
@@ -227,6 +231,29 @@ export default function LacertaSharePage(): React.JSX.Element {
                 )}
                 {decrypting ? "Decrypting..." : "Open Collaborative Canvas"}
               </button>
+            ) : decryptedType.includes("document") ||
+              decryptedType.includes("word") ||
+              decryptedType.includes("odt") ||
+              decryptedType.includes("spreadsheet") ||
+              decryptedType.includes("sheet") ||
+              decryptedType.includes("ods") ||
+              decryptedType.includes("presentation") ||
+              decryptedType.includes("slide") ||
+              decryptedType.includes("odp") ||
+              decryptedName.endsWith(".docx") ||
+              decryptedName.endsWith(".xlsx") ||
+              decryptedName.endsWith(".pptx") ||
+              decryptedName.endsWith(".odt") ||
+              decryptedName.endsWith(".ods") ||
+              decryptedName.endsWith(".odp") ? (
+              <button
+                onClick={() => setShowOfficeEditor(true)}
+                disabled={decrypting}
+                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 text-white font-semibold rounded-lg text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-98"
+              >
+                <Play className="h-4 w-4" />
+                Open Collaborative Editor
+              </button>
             ) : (
               <button
                 onClick={handleDecryptAndDownload}
@@ -286,6 +313,21 @@ export default function LacertaSharePage(): React.JSX.Element {
           accessToken=""
           onSaveSuccess={() => {}}
           guestMode={true}
+        />
+      )}
+      {showOfficeEditor && fileMeta && rawKeyStr && (
+        <OnlyOfficeEditor
+          isOpen={showOfficeEditor}
+          onClose={() => setShowOfficeEditor(false)}
+          file={{
+            id: fileMeta.id,
+            name: decryptedName || "shared.document",
+            type: decryptedType || null,
+            updatedAt: fileMeta.updatedAt || new Date().toISOString(),
+          }}
+          fileKey={rawKeyStr}
+          accessToken={session?.accessToken || ""}
+          onSaveSuccess={() => {}}
         />
       )}
     </div>

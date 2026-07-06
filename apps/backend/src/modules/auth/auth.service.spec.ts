@@ -13,9 +13,15 @@ jest.mock('bcrypt', () => ({
   compare: jest.fn(),
 }));
 
-jest.mock('../../common/utils/crypto', () => ({
+jest.mock('@runa/crypto/server', () => ({
   decrypt: jest.fn().mockReturnValue('decrypted-secret-key'),
   encrypt: jest.fn().mockReturnValue('encrypted:secret:key'),
+}));
+
+jest.mock('@runa/crypto/node', () => ({
+  generateDataKey: jest.fn().mockReturnValue(Buffer.from('mock-data-key')),
+  encryptWithDataKey: jest.fn().mockReturnValue('mock-encrypted-message'),
+  encryptDataKeyForUser: jest.fn().mockReturnValue('mock-encrypted-key-payload'),
 }));
 
 describe('AuthService', () => {
@@ -85,6 +91,7 @@ describe('AuthService', () => {
         passwordHash: 'hashed-pw',
         permissions: [1],
         passkeys: [],
+        devices: [],
         totpEnabled: false,
         emailMfaEnabled: false,
       };
@@ -94,12 +101,16 @@ describe('AuthService', () => {
 
       const result = await service.login({ identifier: 'testuser', password: 'password' });
 
-      expect(result.token).toBe('mocked-jwt-token');
-      expect(result.user.id).toBe('user-1');
+      if ('token' in result) {
+        expect(result.token).toBe('mocked-jwt-token');
+        expect(result.user.id).toBe('user-1');
+      } else {
+        throw new Error('Expected AuthResponseEntity, got MfaRequiredEntity');
+      }
     });
 
     it('should throw UnauthorizedException on incorrect password', async () => {
-      const mockUser = { id: 'user-1', passwordHash: 'hash', passkeys: [] };
+      const mockUser = { id: 'user-1', passwordHash: 'hash', passkeys: [], devices: [] };
       mockPrismaClient.user.findFirst.mockResolvedValue(mockUser);
       (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
@@ -113,6 +124,7 @@ describe('AuthService', () => {
         username: 'testuser',
         passwordHash: 'hashed-pw',
         passkeys: [],
+        devices: [],
         totpEnabled: true,
         emailMfaEnabled: false,
         backupCodes: [],
@@ -127,6 +139,7 @@ describe('AuthService', () => {
         mfaRequired: true,
         allowedMethods: ['totp'],
         tempToken: 'mocked-jwt-token',
+        devices: [],
       });
     });
 
@@ -140,8 +153,12 @@ describe('AuthService', () => {
 
       const result = await service.login({ mfaSuccessToken: 'valid-success-token' });
 
-      expect(result.token).toBe('mocked-jwt-token');
-      expect(result.user.id).toBe('user-1');
+      if ('token' in result) {
+        expect(result.token).toBe('mocked-jwt-token');
+        expect(result.user.id).toBe('user-1');
+      } else {
+        throw new Error('Expected AuthResponseEntity, got MfaRequiredEntity');
+      }
     });
   });
 
@@ -191,6 +208,51 @@ describe('AuthService', () => {
 
       expect(result.success).toBe(true);
       expect(cacheService.del).toHaveBeenCalledWith('mfa-email-code:user-1');
+    });
+
+    it('should verify Email MFA code successfully when cached code is a number', async () => {
+      (jwtVerify as jest.Mock).mockResolvedValue({
+        payload: { type: 'mfa_pending', sub: 'user-1' },
+      });
+
+      const mockUser = { id: 'user-1', emailMfaEnabled: true, passkeys: [] };
+      mockPrismaClient.user.findUnique.mockResolvedValue(mockUser);
+      mockCacheService.get.mockResolvedValue(654321);
+
+      const result = await service.verifyMfa('temp-token', 'email', '654321');
+
+      expect(result.success).toBe(true);
+      expect(cacheService.del).toHaveBeenCalledWith('mfa-email-code:user-1');
+    });
+
+    it('should verify Device Notification MFA code successfully when cached code is a string', async () => {
+      (jwtVerify as jest.Mock).mockResolvedValue({
+        payload: { type: 'mfa_pending', sub: 'user-1' },
+      });
+
+      const mockUser = { id: 'user-1', passkeys: [] };
+      mockPrismaClient.user.findUnique.mockResolvedValue(mockUser);
+      mockCacheService.get.mockResolvedValue('987654');
+
+      const result = await service.verifyMfa('temp-token', 'device_notification', '987654');
+
+      expect(result.success).toBe(true);
+      expect(cacheService.del).toHaveBeenCalledWith('mfa-device-code:user-1');
+    });
+
+    it('should verify Device Notification MFA code successfully when cached code is a number', async () => {
+      (jwtVerify as jest.Mock).mockResolvedValue({
+        payload: { type: 'mfa_pending', sub: 'user-1' },
+      });
+
+      const mockUser = { id: 'user-1', passkeys: [] };
+      mockPrismaClient.user.findUnique.mockResolvedValue(mockUser);
+      mockCacheService.get.mockResolvedValue(987654);
+
+      const result = await service.verifyMfa('temp-token', 'device_notification', '987654');
+
+      expect(result.success).toBe(true);
+      expect(cacheService.del).toHaveBeenCalledWith('mfa-device-code:user-1');
     });
 
     it('should verify backup code successfully', async () => {
@@ -244,7 +306,17 @@ describe('AuthService', () => {
         authenticationInfo: { newCounter: 5 },
       });
 
-      const result = await service.verifyPasskeyLogin('testuser', { id: 'key-id', response: {} });
+      const result = await service.verifyPasskeyLogin('testuser', {
+        id: 'key-id',
+        rawId: 'key-id',
+        response: {
+          clientDataJSON: 'mock-client-data',
+          authenticatorData: 'mock-authenticator-data',
+          signature: 'mock-signature',
+        },
+        type: 'public-key',
+        clientExtensionResults: {},
+      });
 
       expect(mockPrismaClient.passkey.update).toHaveBeenCalledWith({
         where: { id: 'key-id' },

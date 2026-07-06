@@ -30,11 +30,12 @@ export default function Page() {
     Array<"totp" | "email" | "passkey" | "backup" | "device_notification">
   >([]);
   const [activeMfaMethod, setActiveMfaMethod] = useState<
-    "totp" | "email" | "passkey" | "backup" | "device_notification" | null
+    "totp" | "email" | "passkey" | "backup" | "device_notification" | "recovery" | null
   >(null);
   const [tempToken, setTempToken] = useState("");
   const [mfaCode, setMfaCode] = useState("");
   const [emailCodeSent, setEmailCodeSent] = useState(false);
+  const [recoveryCodeSent, setRecoveryCodeSent] = useState(false);
   const [deviceCodeSent, setDeviceCodeSent] = useState(false);
   const [devices, setDevices] = useState<{ id: string; deviceName: string }[]>(
     [],
@@ -434,6 +435,35 @@ export default function Page() {
     }
   };
 
+  const sendRecoveryOtp = async (token: string) => {
+    setLoading(true);
+    setMessage("");
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/mfa/send-recovery-code`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tempToken: token }),
+        },
+      );
+      if (res.ok) {
+        setRecoveryCodeSent(true);
+        setActiveMfaMethod("recovery");
+        setMessage("✉️ Account recovery code sent to your email.");
+      } else {
+        const data = await res.json();
+        setMessage(
+          `❌ ${data.message || "Failed to send recovery email."}`,
+        );
+      }
+    } catch {
+      setMessage("❌ Failed to contact mail server.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const sendDeviceNotification = async (token: string, deviceId: string) => {
     if (!deviceId) return;
     setLoading(true);
@@ -661,6 +691,8 @@ export default function Page() {
       triggerPasskeyMfa(tempToken);
     } else if (method === "email" && !emailCodeSent) {
       sendEmailOtp(tempToken);
+    } else if (method === "recovery") {
+      sendRecoveryOtp(tempToken);
     }
   };
 
@@ -804,6 +836,8 @@ export default function Page() {
           tempToken={tempToken}
           sendEmailOtp={sendEmailOtp}
           emailCodeSent={emailCodeSent}
+          sendRecoveryOtp={sendRecoveryOtp}
+          recoveryCodeSent={recoveryCodeSent}
           devices={devices}
           selectedDeviceId={selectedDeviceId}
           setSelectedDeviceId={setSelectedDeviceId}
