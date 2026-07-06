@@ -77,8 +77,7 @@ export default function OnlyOfficeEditor({
     if (!isOpen || !file) return;
 
     let isMounted = true;
-    const onlyOfficeUrl =
-      process.env.NEXT_PUBLIC_ONLYOFFICE_URL || "http://localhost:8080";
+    const onlyOfficeUrl = process.env.NEXT_PUBLIC_ONLYOFFICE_URL;
     const scriptUrl = `${onlyOfficeUrl}/web-apps/apps/api/documents/api.js`;
 
     const initEditor = async () => {
@@ -110,15 +109,18 @@ export default function OnlyOfficeEditor({
         // Resolve user identity for ONLYOFFICE
         // Try to extract user info from the JWT access token
         let userId = `guest-${Math.random().toString(36).substr(2, 9)}`;
-        let userName = guestUserDisplayName || `Guest ${Math.floor(1000 + Math.random() * 9000)}`;
+        let userName =
+          guestUserDisplayName ||
+          `Guest ${Math.floor(1000 + Math.random() * 9000)}`;
         if (accessToken) {
           try {
-            const payload = JSON.parse(atob(accessToken.split('.')[1]));
-            userId = payload.sub || payload.id || 'user';
-            userName = payload.name || payload.username || payload.email || 'User';
+            const payload = JSON.parse(atob(accessToken.split(".")[1]));
+            userId = payload.sub || payload.id || "user";
+            userName =
+              payload.name || payload.username || payload.email || "User";
           } catch {
-            userId = 'user';
-            userName = 'User';
+            userId = "user";
+            userName = "User";
           }
         }
 
@@ -127,7 +129,9 @@ export default function OnlyOfficeEditor({
         // Using a static key (e.g. file.id) causes the session to be marked
         // "finalized" after the first save, making the doc uneditable afterwards.
         // All users see the same updatedAtMs from the DB → same key → same session.
-        const updatedAtMs = file.updatedAt ? new Date(file.updatedAt).getTime() : 0;
+        const updatedAtMs = file.updatedAt
+          ? new Date(file.updatedAt).getTime()
+          : 0;
         const fileVersionKey = `${file.id}_${updatedAtMs}`;
 
         const tokenQuery = accessToken
