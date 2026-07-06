@@ -62,6 +62,16 @@ export class AuthController {
   }
 
   @Public()
+  @Post('mfa/send-recovery-code')
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @HttpCode(HttpStatus.OK)
+  async sendMfaRecoveryCode(
+    @Body('tempToken') tempToken: string,
+  ): Promise<{ success: boolean }> {
+    return this.authService.sendMfaRecoveryCode(tempToken);
+  }
+
+  @Public()
   @Post('mfa/device/send')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)

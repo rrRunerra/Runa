@@ -41,10 +41,24 @@ export default function MediaGallerySlider({
   const [currentIndex, setCurrentIndex] = useState<number>(initialIndex);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [percent, setPercent] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [zoom, setZoom] = useState<number>(1);
 
   const slideshowTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const blobCacheRef = useRef<Map<string, string>>(new Map());
+
+  // Revoke all blob URLs when modal is closed/unmounted
+  useEffect(() => {
+    return () => {
+      blobCacheRef.current.forEach((url) => {
+        if (url.startsWith("blob:")) {
+          URL.revokeObjectURL(url);
+        }
+      });
+      blobCacheRef.current.clear();
+    };
+  }, []);
 
   useEffect(() => {
     setCurrentIndex(initialIndex);
@@ -57,41 +71,84 @@ export default function MediaGallerySlider({
     if (!file.decryptedKey) return;
 
     let active = true;
-    setLoading(true);
+    const abortController = new AbortController();
     setZoom(1);
 
-    // Revoke previous blob URL
-    if (blobUrl) {
-      URL.revokeObjectURL(blobUrl);
-      setBlobUrl(null);
+    // Clear current preview to show loader
+    setBlobUrl(null);
+
+    // Check if we already have the decrypted URL cached (either blob or stream URL)
+    const cachedUrl = blobCacheRef.current.get(file.key);
+    if (cachedUrl) {
+      setBlobUrl(cachedUrl);
+      setLoading(false);
+      return;
     }
+
+    setLoading(true);
+
 
     const fetchAndDecrypt = async () => {
       try {
+        setPercent(0);
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${file.key}`,
-          { headers: { Authorization: `Bearer ${accessToken}` } },
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+            signal: abortController.signal,
+          },
         );
         if (!res.ok) throw new Error("Failed to download media file.");
 
-        const encryptedBuffer = await res.arrayBuffer();
-        if (!active) return;
+        const contentLength = res.headers.get("content-length");
+        const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
 
-        const decryptedBuffer = await decryptFileBuffer(
-          encryptedBuffer,
-          file.decryptedKey!,
-        );
+        let decryptedBuffer: ArrayBuffer;
+        if (res.body && totalBytes > 0) {
+          const reader = res.body.getReader();
+          const chunks: Uint8Array[] = [];
+          let receivedBytes = 0;
 
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            if (!active) return;
+            if (value) {
+              chunks.push(value);
+              receivedBytes += value.length;
+              setPercent(Math.round((receivedBytes / totalBytes) * 100));
+            }
+          }
+
+          const concatenated = new Uint8Array(receivedBytes);
+          let offset = 0;
+          for (const chunk of chunks) {
+            concatenated.set(chunk, offset);
+            offset += chunk.length;
+          }
+          decryptedBuffer = await decryptFileBuffer(concatenated.buffer, file.decryptedKey!);
+        } else {
+          const encryptedBuffer = await res.arrayBuffer();
+          if (!active) return;
+          decryptedBuffer = await decryptFileBuffer(encryptedBuffer, file.decryptedKey!);
+          setPercent(100);
+        }
+
+        const resolvedMimeType = getMimeType(file.name, file.type);
         const blob = new Blob([decryptedBuffer], {
-          type: file.type || "image/jpeg",
+          type: resolvedMimeType,
         });
         const url = URL.createObjectURL(blob);
 
         if (active) {
+          blobCacheRef.current.set(file.key, url);
           setBlobUrl(url);
           setLoading(false);
         }
       } catch (err: any) {
+        if (err.name === "AbortError") {
+          return;
+        }
         console.error(err);
         if (active) {
           toast.error("Failed to decrypt media file.");
@@ -104,6 +161,7 @@ export default function MediaGallerySlider({
 
     return () => {
       active = false;
+      abortController.abort();
     };
   }, [currentIndex, isOpen]);
 
@@ -123,6 +181,27 @@ export default function MediaGallerySlider({
 
   if (!isOpen) return null;
 
+const getMimeType = (fileName: string, mimeType: string | null): string => {
+  if (mimeType && mimeType !== "application/octet-stream" && mimeType !== "octet-stream") {
+    return mimeType;
+  }
+  const ext = fileName.split(".").pop()?.toLowerCase();
+  switch (ext) {
+    case "mp3": return "audio/mpeg";
+    case "wav": return "audio/wav";
+    case "flac": return "audio/flac";
+    case "m4a": return "audio/x-m4a";
+    case "aac": return "audio/aac";
+    case "png": return "image/png";
+    case "jpg":
+    case "jpeg": return "image/jpeg";
+    case "gif": return "image/gif";
+    case "webp": return "image/webp";
+    case "svg": return "image/svg+xml";
+    default: return mimeType || "application/octet-stream";
+  }
+};
+
   const handleNext = () => {
     setCurrentIndex((prev) => (prev + 1) % files.length);
   };
@@ -132,7 +211,9 @@ export default function MediaGallerySlider({
   };
 
   const currentFile = files[currentIndex];
-  const isVideo = currentFile?.type?.startsWith("video/");
+  const resolvedMime = getMimeType(currentFile?.name || "", currentFile?.type || null);
+  const isVideo = false; // Video playback disabled
+  const isAudio = resolvedMime.startsWith("audio/");
 
   const handleDownload = () => {
     if (!blobUrl || !currentFile) return;
@@ -143,6 +224,13 @@ export default function MediaGallerySlider({
     a.click();
     a.remove();
   };
+
+  const isVideoOrAudio = isAudio;
+
+  const getMediaUrl = (file: GalleryFileItem) => {
+    return blobUrl;
+  };
+
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-black/95 select-none">
@@ -218,7 +306,7 @@ export default function MediaGallerySlider({
           <div className="flex flex-col items-center gap-3 text-white">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
             <span className="text-xs text-white/60">
-              Decrypting in browser...
+              Decrypting in browser... {percent > 0 ? `(${percent}%)` : ""}
             </span>
           </div>
         ) : (
@@ -234,6 +322,21 @@ export default function MediaGallerySlider({
                   autoPlay
                   className="rounded-lg shadow-2xl max-w-full max-h-full object-contain"
                 />
+              ) : isAudio ? (
+                <div className="flex flex-col items-center justify-center p-8 bg-black/45 rounded-2xl border border-white/10 shadow-2xl max-w-md w-full gap-4 animate-in zoom-in-95 duration-200">
+                  <div className="h-16 w-16 rounded-full bg-primary/15 border border-primary/20 flex items-center justify-center text-primary shadow-lg shadow-primary/5">
+                    <Play className="h-6 w-6 animate-pulse" />
+                  </div>
+                  <span className="text-xs font-bold text-white/90 text-center truncate max-w-[280px]" title={currentFile?.name}>
+                    {currentFile?.name}
+                  </span>
+                  <audio
+                    src={blobUrl}
+                    controls
+                    autoPlay
+                    className="w-full mt-2"
+                  />
+                </div>
               ) : (
                 <img
                   src={blobUrl}

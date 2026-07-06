@@ -2,10 +2,12 @@
 
 import { Folder, Lock, Share2, Trash2 } from "lucide-react";
 import { SidebarConfig } from "@/types/SidebarConfig";
+import { RunaFlags } from "@runa/permissions";
 
 export const getLacertaSidebarConfig = (): SidebarConfig => [
   {
     section: "#$Phone",
+    permissions: [RunaFlags.LOGGED_IN],
     items: [
       {
         label: "My Files",
@@ -43,6 +45,7 @@ export const getLacertaSidebarConfig = (): SidebarConfig => [
   },
   {
     section: "Storage",
+    permissions: [RunaFlags.LOGGED_IN],
     items: [
       {
         label: "My Files",

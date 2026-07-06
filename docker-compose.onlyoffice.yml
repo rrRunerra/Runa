@@ -1,0 +1,39 @@
+version: '3.8'
+
+networks:
+  Runerra:
+    external: true
+
+services:
+  onlyoffice-document-server:
+    image: onlyoffice/documentserver:latest
+    container_name: onlyoffice-document-server
+    ports:
+      - "8082:80"
+    environment:
+      # Disable JWT verification for simpler local development and integration
+      - JWT_ENABLED=false
+      # If you want to enable JWT verification, uncomment the lines below:
+      # - JWT_ENABLED=true
+      # - JWT_SECRET=your_jwt_secret_here
+      # - JWT_HEADER=Authorization
+      # - JWT_IN_BODY=true
+
+      # Allow ONLYOFFICE to request backend endpoints using self-signed certificates or HTTP
+      - USE_UNAUTHORIZED_STORAGE=true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - onlyoffice_data:/var/lib/onlyoffice
+      - onlyoffice_log:/var/log/onlyoffice
+      - onlyoffice_cache:/var/spool/onlyoffice
+      - ./onlyoffice/local.json:/etc/onlyoffice/documentserver/local.json
+    restart: always
+    networks:
+      Runerra:
+        ipv4_address: 172.20.0.200
+
+volumes:
+  onlyoffice_data:
+  onlyoffice_log:
+  onlyoffice_cache:

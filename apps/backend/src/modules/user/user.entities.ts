@@ -22,6 +22,9 @@ export interface UserSearchEntity {
   displayName: string | null;
   avatarUrl: string | null;
   bannerUrl: string | null;
+  email?: string;
+  createdAt?: Date;
+  userPublicKey?: string | null;
 }
 
 // --- TOTP Setup ---

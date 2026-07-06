@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { Folder, FileText, Grid3X3, Image as ImageIcon, Video, File, MoreVertical, Share2, Trash2, Download, ArrowUpRight, Shield, ShieldAlert, RefreshCw, FolderClosed } from "lucide-react";
+import { Folder, FileText, Grid3X3, Image as ImageIcon, Video, File, MoreVertical, Share2, Trash2, Download, ArrowUpRight, Shield, ShieldAlert, RefreshCw, FolderClosed, Sparkles, Copy } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import UserProfileCard from "./UserProfileCard";
 
 interface SharedUser {
   id: string;
@@ -30,7 +31,13 @@ export interface RenderFileItem {
   userId: string;
   parentId: string | null;
   user: {
+    id: string;
     username: string;
+    email: string;
+    displayName?: string | null;
+    avatarUrl?: string | null;
+    bannerUrl?: string | null;
+    createdAt?: string | Date;
   };
   shares: LaceraFileShare[];
   decryptedKey?: CryptoKey | null;
@@ -46,7 +53,10 @@ interface FileCardProps {
   onToggleTrash: (item: RenderFileItem) => void;
   onToggleVault: (item: RenderFileItem) => void;
   onDelete: (item: RenderFileItem) => void;
+  onSaveCopy?: (item: RenderFileItem) => void;
   isSharedTab: boolean;
+  isSelected?: boolean;
+  onToggleSelect?: () => void;
 }
 
 export default function FileCard({
@@ -57,7 +67,10 @@ export default function FileCard({
   onToggleTrash,
   onToggleVault,
   onDelete,
+  onSaveCopy,
   isSharedTab,
+  isSelected = false,
+  onToggleSelect,
 }: FileCardProps): React.JSX.Element {
   const formatSize = (bytes: number | null) => {
     if (bytes === null) return "--";
@@ -75,13 +88,29 @@ export default function FileCard({
     if (mime.startsWith("video/")) return <Video className="h-10 w-10 text-rose-500" />;
     if (mime.includes("spreadsheet") || mime.includes("csv")) return <Grid3X3 className="h-10 w-10 text-emerald-500" />;
     if (mime.includes("document") || mime.includes("word") || mime.includes("odt")) return <FileText className="h-10 w-10 text-indigo-500" />;
+    if (mime.includes("mermaid") || item.name.endsWith(".mermaid")) return <Sparkles className="h-10 w-10 text-pink-500" />;
+    if (mime.includes("uml") || item.name.endsWith(".uml")) return <Sparkles className="h-10 w-10 text-purple-500" />;
     return <File className="h-10 w-10 text-slate-400" />;
   };
 
   return (
     <div
       onDoubleClick={() => onOpen(item)}
-      className="group relative flex flex-col p-4 rounded-xl border border-border/80 bg-card/30 hover:bg-card/60 active:scale-[0.99] transition-all select-none cursor-pointer shadow-sm hover:shadow-md"
+      onClick={(e) => {
+        if (
+          (e.target as HTMLElement).closest("button") ||
+          (e.target as HTMLElement).closest(".popover-trigger") ||
+          (e.target as HTMLElement).closest("[role='menuitem']")
+        ) {
+          return;
+        }
+        onToggleSelect?.();
+      }}
+      className={`group relative flex flex-col p-4 rounded-xl border transition-all select-none cursor-pointer shadow-sm hover:shadow-md active:scale-[0.99] ${
+        isSelected
+          ? "border-primary bg-primary/10 hover:bg-primary/15"
+          : "border-border/80 bg-card/30 hover:bg-card/60"
+      }`}
     >
       {/* Top Details & Context Action */}
       <div className="flex items-start justify-between">
@@ -100,6 +129,15 @@ export default function FileCard({
               <ArrowUpRight className="h-3.5 w-3.5" />
               Open
             </DropdownMenuItem>
+            {isSharedTab && onSaveCopy && (
+              <>
+                <DropdownMenuItem onClick={() => onSaveCopy(item)} className="cursor-pointer text-xs focus:bg-accent font-semibold gap-2">
+                  <Copy className="h-3.5 w-3.5" />
+                  Save a Copy
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-border" />
+              </>
+            )}
             {!item.isFolder && (
               <DropdownMenuItem onClick={() => onDownload(item)} className="cursor-pointer text-xs focus:bg-accent font-semibold gap-2">
                 <Download className="h-3.5 w-3.5" />
@@ -144,7 +182,13 @@ export default function FileCard({
         <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground">
           <span>{item.isFolder ? "Folder" : formatSize(item.size)}</span>
           <span className="truncate max-w-[80px]">
-            {isSharedTab ? `@${item.user?.username || "shared"}` : new Date(item.createdAt).toLocaleDateString()}
+            {isSharedTab && item.user ? (
+              <UserProfileCard user={item.user}>
+                @{item.user.username}
+              </UserProfileCard>
+            ) : (
+              new Date(item.createdAt).toLocaleDateString()
+            )}
           </span>
         </div>
       </div>

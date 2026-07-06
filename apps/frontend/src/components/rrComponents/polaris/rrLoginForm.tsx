@@ -62,9 +62,10 @@ export interface rrLoginFormProps {
     | "passkey"
     | "backup"
     | "device_notification"
+    | "recovery"
     | null;
   setActiveMfaMethod: (
-    val: "totp" | "email" | "passkey" | "backup" | "device_notification" | null,
+    val: "totp" | "email" | "passkey" | "backup" | "device_notification" | "recovery" | null,
   ) => void;
   mfaMethods: Array<
     "totp" | "email" | "passkey" | "backup" | "device_notification"
@@ -73,11 +74,13 @@ export interface rrLoginFormProps {
   setMfaCode: (val: string) => void;
   onVerifyMfa: (e: React.FormEvent) => void;
   onSelectMfaMethod: (
-    method: "totp" | "email" | "passkey" | "backup" | "device_notification",
+    method: "totp" | "email" | "passkey" | "backup" | "device_notification" | "recovery",
   ) => void;
   tempToken: string;
   sendEmailOtp: (token: string) => void;
   emailCodeSent: boolean;
+  sendRecoveryOtp: (token: string) => void;
+  recoveryCodeSent: boolean;
   devices?: { id: string; deviceName: string }[];
   selectedDeviceId?: string;
   setSelectedDeviceId?: (val: string) => void;
@@ -116,6 +119,8 @@ export function RrLoginForm({
   tempToken,
   sendEmailOtp,
   emailCodeSent,
+  sendRecoveryOtp,
+  recoveryCodeSent,
   devices = [],
   selectedDeviceId = "",
   setSelectedDeviceId = () => {},
@@ -149,6 +154,13 @@ export function RrLoginForm({
       message.toLowerCase().includes("response") ||
       message.toLowerCase().includes("invalid") ||
       message.toLowerCase().includes("fail"));
+  const isRecoveryError =
+    hasError &&
+    activeMfaMethod === "recovery" &&
+    (message.toLowerCase().includes("code") ||
+      message.toLowerCase().includes("response") ||
+      message.toLowerCase().includes("invalid") ||
+      message.toLowerCase().includes("fail"));
   const isBackupError =
     hasError &&
     activeMfaMethod === "backup" &&
@@ -169,14 +181,18 @@ export function RrLoginForm({
   }, [resendCooldown]);
 
   React.useEffect(() => {
-    if (emailCodeSent || deviceCodeSent) {
+    if (emailCodeSent || deviceCodeSent || recoveryCodeSent) {
       setResendCooldown(60);
     }
-  }, [emailCodeSent, deviceCodeSent]);
+  }, [emailCodeSent, deviceCodeSent, recoveryCodeSent]);
 
   const handleResendEmail = () => {
     if (resendCooldown > 0 || loading) return;
-    sendEmailOtp(tempToken);
+    if (activeMfaMethod === "recovery") {
+      sendRecoveryOtp(tempToken);
+    } else {
+      sendEmailOtp(tempToken);
+    }
     setResendCooldown(60);
   };
 
@@ -825,6 +841,78 @@ export function RrLoginForm({
                     </form>
                   )}
 
+                  {activeMfaMethod === "recovery" && (
+                    <form
+                      onSubmit={onVerifyMfa}
+                      className="flex flex-col gap-4"
+                    >
+                      <div className="flex flex-col items-center gap-1.5 text-center">
+                        <Mail className="size-6 text-yellow-400" />
+                        <Label
+                          htmlFor="mfa-recovery-code"
+                          className={cn(
+                            "text-xs font-bold transition-colors",
+                            isRecoveryError
+                              ? "text-destructive font-bold"
+                              : "text-foreground",
+                          )}
+                        >
+                          {isRecoveryError
+                            ? message.replace("❌", "").trim()
+                            : "Account Recovery Code"}
+                        </Label>
+                        <p className="text-[10px] text-muted-foreground">
+                          Enter the 6-digit recovery code sent to your email to bypass MFA.
+                        </p>
+                      </div>
+                      <Input
+                        id="mfa-recovery-code"
+                        type="text"
+                        maxLength={6}
+                        value={mfaCode}
+                        onChange={(e) => {
+                          if (message) setMessage("");
+                          setMfaCode(e.target.value.replace(/\D/g, ""));
+                        }}
+                        placeholder="e.g. 123456"
+                        className={cn(
+                          "h-12 bg-background border-input rounded-xl text-center font-bold tracking-widest text-lg font-mono text-foreground focus-visible:ring-primary/20 transition-colors",
+                          isRecoveryError &&
+                            "border-destructive/80 focus-visible:border-destructive focus-visible:ring-destructive/20",
+                        )}
+                        autoFocus
+                        disabled={loading}
+                      />
+                      <div className="flex gap-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={handleResendEmail}
+                          disabled={loading || resendCooldown > 0}
+                          className="flex-1 h-10 rounded-lg border border-border hover:bg-accent text-accent-foreground text-xs font-semibold hover:text-foreground transition-colors"
+                        >
+                          {resendCooldown > 0
+                            ? `Resend in ${resendCooldown}s`
+                            : "Resend Email"}
+                        </Button>
+                        <Button
+                          type="submit"
+                          disabled={mfaCode.length !== 6 || loading}
+                          className="flex-1 h-10 shadow-md font-semibold"
+                        >
+                          {loading ? "Verifying..." : "Verify"}
+                        </Button>
+                      </div>
+                      {hasError &&
+                        !isRecoveryError &&
+                        !message.includes("Account recovery code sent") && (
+                          <p className="text-xs text-destructive font-medium text-center">
+                            {message.replace("❌", "").trim()}
+                          </p>
+                        )}
+                    </form>
+                  )}
+
                   {activeMfaMethod === "backup" && (
                     <form
                       onSubmit={onVerifyMfa}
@@ -915,6 +1003,16 @@ export function RrLoginForm({
                     </div>
                   )}
 
+                  {activeMfaMethod !== "recovery" && (
+                    <button
+                      type="button"
+                      onClick={() => onSelectMfaMethod("recovery")}
+                      className="text-xs text-primary hover:underline transition-all cursor-pointer mx-auto pt-1 font-semibold block"
+                    >
+                      Lost access? Restore account via email
+                    </button>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => setMfaRequired(false)}
@@ -960,8 +1058,8 @@ export function RrLoginForm({
                     ActiveComponent = RrLapplandTOTP;
                     stateKey = "mfa-totp";
                   }
-                } else if (activeMfaMethod === "email") {
-                  if (isEmailError) {
+                } else if (activeMfaMethod === "email" || activeMfaMethod === "recovery") {
+                  if (isEmailError || isRecoveryError) {
                     ActiveComponent = RrLapplandEmailError;
                     stateKey = "mfa-email-error";
                   } else {

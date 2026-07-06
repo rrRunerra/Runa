@@ -32,6 +32,7 @@ import type {
   E2eeKeysEntity,
   SuccessEntity,
   UserProfileEntity,
+  UserSearchEntity,
   ApiKeyEntity,
   ApiKeyCreatedEntity,
   DeleteSuccessEntity,
@@ -576,7 +577,7 @@ export class UserService {
     const cachedCode = await this.cacheService.get<string>(
       `pending-email-mfa:${userId}`,
     );
-    if (!cachedCode || cachedCode !== code) {
+    if (!cachedCode || String(cachedCode) !== code) {
       throw new rrBadRequestException(`${this.moduleCode}IOEVC001`, {
         message: 'Invalid or expired verification code',
       });
@@ -1116,5 +1117,15 @@ export class UserService {
 
     const { plain, hashed } = await this.generateBackupCodesRaw();
     return { backupCodes: plain, hashedBackupCodes: hashed };
+  }
+
+  async searchUsers(
+    currentUserId: string,
+    query: string,
+  ): Promise<UserSearchEntity[]> {
+    if (!query || query.trim().length < 1) {
+      return [];
+    }
+    return this.userRepository.searchUsers(currentUserId, query.trim());
   }
 }

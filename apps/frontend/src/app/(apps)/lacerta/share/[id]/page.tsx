@@ -2,9 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { Download, Loader2, File, CheckCircle2, ShieldCheck, Play, ArrowLeft } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { Download, Loader2, File, CheckCircle2, ShieldCheck, Play, ArrowLeft, Grid3X3 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import CanvasEditor from "@/components/rrComponents/lacerta/CanvasEditor";
+import OnlyOfficeEditor from "@/components/rrComponents/lacerta/OnlyOfficeEditor";
 
 import {
   importRawKey,
@@ -15,6 +18,7 @@ import {
 export default function LacertaSharePage(): React.JSX.Element {
   const params = useParams();
   const fileId = params.id as string;
+  const { data: session } = useSession();
 
   const [loading, setLoading] = useState<boolean>(true);
   const [decrypting, setDecrypting] = useState<boolean>(false);
@@ -23,6 +27,11 @@ export default function LacertaSharePage(): React.JSX.Element {
   const [decryptedType, setDecryptedType] = useState<string>("");
   const [decryptedBlobUrl, setDecryptedBlobUrl] = useState<string | null>(null);
   const [rawKeyStr, setRawKeyStr] = useState<string | null>(null);
+
+  const [showCanvasEditor, setShowCanvasEditor] = useState<boolean>(false);
+  const [showOfficeEditor, setShowOfficeEditor] = useState<boolean>(false);
+  const [canvasContent, setCanvasContent] = useState<string>("");
+  const [decryptedKey, setDecryptedKey] = useState<CryptoKey | null>(null);
 
   useEffect(() => {
     // 1. Get raw key from URL hash fragment
@@ -108,6 +117,34 @@ export default function LacertaSharePage(): React.JSX.Element {
     }
   };
 
+  const handleOpenCanvas = async () => {
+    if (!fileMeta || !rawKeyStr) return;
+    setDecrypting(true);
+    const loadToast = toast.loading("Decrypting and loading canvas...");
+    try {
+      // 1. Fetch encrypted binary file from server
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${fileMeta.key}`);
+      if (!res.ok) throw new Error("Download from S3 failed.");
+
+      const encryptedBuffer = await res.arrayBuffer();
+
+      // 2. Import file key and decrypt
+      const fileKey = await importRawKey(rawKeyStr);
+      setDecryptedKey(fileKey);
+
+      const decryptedBuffer = await decryptFileBuffer(encryptedBuffer, fileKey);
+      const text = new TextDecoder().decode(decryptedBuffer);
+
+      setCanvasContent(text);
+      setShowCanvasEditor(true);
+      toast.success("Canvas decrypted successfully!", { id: loadToast });
+    } catch (err: any) {
+      toast.error(err.message || "Failed to load canvas.", { id: loadToast });
+    } finally {
+      setDecrypting(false);
+    }
+  };
+
   const formatSize = (bytes: number | null) => {
     if (bytes === null) return "--";
     if (bytes === 0) return "0 Bytes";
@@ -181,18 +218,56 @@ export default function LacertaSharePage(): React.JSX.Element {
               </div>
             )}
 
-            <button
-              onClick={handleDecryptAndDownload}
-              disabled={decrypting}
-              className="w-full py-2.5 bg-primary hover:bg-primary/95 text-primary-foreground font-semibold rounded-lg text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-98"
-            >
-              {decrypting ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4" />
-              )}
-              {decrypting ? "Decrypting..." : "Decrypt & Download"}
-            </button>
+            {decryptedType.includes("jsoncanvas") || decryptedName.endsWith(".canvas") ? (
+              <button
+                onClick={handleOpenCanvas}
+                disabled={decrypting}
+                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 text-white font-semibold rounded-lg text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-98"
+              >
+                {decrypting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Grid3X3 className="h-4 w-4" />
+                )}
+                {decrypting ? "Decrypting..." : "Open Collaborative Canvas"}
+              </button>
+            ) : decryptedType.includes("document") ||
+              decryptedType.includes("word") ||
+              decryptedType.includes("odt") ||
+              decryptedType.includes("spreadsheet") ||
+              decryptedType.includes("sheet") ||
+              decryptedType.includes("ods") ||
+              decryptedType.includes("presentation") ||
+              decryptedType.includes("slide") ||
+              decryptedType.includes("odp") ||
+              decryptedName.endsWith(".docx") ||
+              decryptedName.endsWith(".xlsx") ||
+              decryptedName.endsWith(".pptx") ||
+              decryptedName.endsWith(".odt") ||
+              decryptedName.endsWith(".ods") ||
+              decryptedName.endsWith(".odp") ? (
+              <button
+                onClick={() => setShowOfficeEditor(true)}
+                disabled={decrypting}
+                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 text-white font-semibold rounded-lg text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-98"
+              >
+                <Play className="h-4 w-4" />
+                Open Collaborative Editor
+              </button>
+            ) : (
+              <button
+                onClick={handleDecryptAndDownload}
+                disabled={decrypting}
+                className="w-full py-2.5 bg-primary hover:bg-primary/95 text-primary-foreground font-semibold rounded-lg text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-98"
+              >
+                {decrypting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                {decrypting ? "Decrypting..." : "Decrypt & Download"}
+              </button>
+            )}
           </div>
         ) : (
           <div className="mt-6 w-full">
@@ -218,6 +293,43 @@ export default function LacertaSharePage(): React.JSX.Element {
           Back to Lacerta Storage
         </Link>
       </div>
+      {showCanvasEditor && fileMeta && (
+        <CanvasEditor
+          isOpen={showCanvasEditor}
+          onClose={() => {
+            setShowCanvasEditor(false);
+            setCanvasContent("");
+          }}
+          file={{
+            id: fileMeta.id,
+            name: decryptedName || "shared.canvas",
+            key: fileMeta.key,
+            decryptedKey: decryptedKey,
+            wrappedKey: "",
+            parentId: null,
+            isPublic: fileMeta.isPublic,
+          }}
+          initialContent={canvasContent}
+          accessToken=""
+          onSaveSuccess={() => {}}
+          guestMode={true}
+        />
+      )}
+      {showOfficeEditor && fileMeta && rawKeyStr && (
+        <OnlyOfficeEditor
+          isOpen={showOfficeEditor}
+          onClose={() => setShowOfficeEditor(false)}
+          file={{
+            id: fileMeta.id,
+            name: decryptedName || "shared.document",
+            type: decryptedType || null,
+            updatedAt: fileMeta.updatedAt || new Date().toISOString(),
+          }}
+          fileKey={rawKeyStr}
+          accessToken={session?.accessToken || ""}
+          onSaveSuccess={() => {}}
+        />
+      )}
     </div>
   );
 }

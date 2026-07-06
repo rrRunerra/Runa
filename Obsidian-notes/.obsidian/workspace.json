@@ -4,17 +4,21 @@
     "type": "split",
     "children": [
       {
-        "id": "4a205ed7d0a2ea76",
+        "id": "3c44cd2ca5be2478",
         "type": "tabs",
         "children": [
           {
-            "id": "82058646d97b8be6",
+            "id": "48572e3ffdbac6f3",
             "type": "leaf",
             "state": {
-              "type": "empty",
-              "state": {},
+              "type": "markdown",
+              "state": {
+                "file": "Lacerta.md",
+                "mode": "source",
+                "source": false
+              },
               "icon": "lucide-file",
-              "title": "New tab"
+              "title": "Lacerta"
             }
           }
         ]
@@ -74,8 +78,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300,
-    "collapsed": true
+    "width": 300
   },
   "right": {
     "id": "2b1d9ebf8bccf6bb",
@@ -180,11 +183,19 @@
       "bases:Create new base": false
     }
   },
-  "active": "82058646d97b8be6",
+  "active": "48572e3ffdbac6f3",
   "lastOpenFiles": [
-    "ADR-001-E2EE-core-design.md",
-    "E2EE-glossary.md",
+    "Pasted image 20260705151609.png",
+    "Pasted image 20260705151606.png",
+    "Pasted image 20260705151604.png",
+    "Pasted image 20260705151603.png",
+    "Pasted image 20260705151159.png",
+    "Untitled.canvas",
+    "Lacerta.md",
     "api-routes.canvas",
-    "Untitled.md"
+    "E2EE-glossary.md",
+    "ADR-001-E2EE-core-design.md",
+    "ADR-002-Background-Email-Sync.md",
+    "api-documentation.md"
   ]
 }

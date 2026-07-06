@@ -6,13 +6,18 @@ import {
   Delete,
   Put,
   Param,
+  Query,
   Req,
   Res,
+  HttpStatus,
+  HttpCode,
+  Logger,
   UseGuards,
   UseInterceptors,
   UploadedFile,
   Body,
 } from '@nestjs/common';
+import * as crypto from 'crypto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import type { Response } from 'express';
@@ -27,11 +32,35 @@ import type { ExtendedRequest } from '../../common/guards/auth/auth.types';
 import { jwtVerify } from 'jose';
 
 import { FilesService } from './files.service';
+import { FilesRepository } from './files.repository';
 import type {
   UploadPublicEntity,
   UploadLaceraEntity,
   LaceraVisibilityEntity,
 } from './files.entity';
+
+// ---------------------------------------------------------------------------
+// OnlyOffice E2EE crypto helpers
+// ---------------------------------------------------------------------------
+function decryptFileBuffer(encryptedBuffer: Buffer, keyBuffer: Buffer): Buffer {
+  if (encryptedBuffer.length < 28) throw new Error('Encrypted buffer too short');
+  const iv = encryptedBuffer.subarray(0, 12);
+  const tag = encryptedBuffer.subarray(12, 28);
+  const ciphertext = encryptedBuffer.subarray(28);
+  const decipher = crypto.createDecipheriv('aes-256-gcm', keyBuffer, iv);
+  decipher.setAuthTag(tag);
+  return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+}
+
+function encryptFileBuffer(plaintextBuffer: Buffer, keyBuffer: Buffer): Buffer {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv('aes-256-gcm', keyBuffer, iv);
+  const ciphertext = Buffer.concat([cipher.update(plaintextBuffer), cipher.final()]);
+  const tag = cipher.getAuthTag();
+  const out = Buffer.alloc(12 + 16 + ciphertext.length);
+  iv.copy(out, 0); tag.copy(out, 12); ciphertext.copy(out, 28);
+  return out;
+}
 
 const FOUR_MB = 4 * 1024 * 1024;
 
@@ -48,8 +77,13 @@ const ALLOWED_IMAGE_TYPES = new Set([
 @UseGuards(AuthGuard)
 export class FilesController {
   private readonly moduleCode = 'FsCtr-';
+  private readonly logger = new Logger(FilesController.name);
+  private readonly ooSecret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET);
 
-  constructor(private readonly filesService: FilesService) {}
+  constructor(
+    private readonly filesService: FilesService,
+    private readonly filesRepository: FilesRepository,
+  ) {}
 
   // ---------------------------------------------------------------------------
   // GET /public/:file — public, no auth
@@ -117,6 +151,74 @@ export class FilesController {
       });
     }
     return this.filesService.listLaceraFiles(userId);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Secure Vault management endpoints
+  // ---------------------------------------------------------------------------
+
+  @Get('files/lacerta/vault/status')
+  async getVaultStatus(@Req() req: ExtendedRequest) {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new rrUnauthorizedException(`${this.moduleCode}VAULT001`, {
+        message: 'Unauthenticated',
+      });
+    }
+    const hasPin = await this.filesService.hasVaultPin(userId);
+    return { hasPin };
+  }
+
+  @Post('files/lacerta/vault/setup')
+  async setupVaultPin(
+    @Req() req: ExtendedRequest,
+    @Body('pin') pin: string,
+  ) {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new rrUnauthorizedException(`${this.moduleCode}VAULT002`, {
+        message: 'Unauthenticated',
+      });
+    }
+    if (!pin || pin.length !== 6 || !/^\d+$/.test(pin)) {
+      throw new rrBadRequestException(`${this.moduleCode}VAULT003`, {
+        message: 'PIN must be a 6-digit number',
+      });
+    }
+    await this.filesService.setupVaultPin(userId, pin);
+    return { success: true };
+  }
+
+  @Post('files/lacerta/vault/verify')
+  async verifyVaultPin(
+    @Req() req: ExtendedRequest,
+    @Body('pin') pin: string,
+  ) {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new rrUnauthorizedException(`${this.moduleCode}VAULT004`, {
+        message: 'Unauthenticated',
+      });
+    }
+    if (!pin) {
+      throw new rrBadRequestException(`${this.moduleCode}VAULT005`, {
+        message: 'PIN is required',
+      });
+    }
+    const success = await this.filesService.verifyVaultPin(userId, pin);
+    return { success };
+  }
+
+  @Delete('files/lacerta/vault/reset')
+  async resetVault(@Req() req: ExtendedRequest) {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new rrUnauthorizedException(`${this.moduleCode}VAULT006`, {
+        message: 'Unauthenticated',
+      });
+    }
+    await this.filesService.resetVault(userId);
+    return { success: true };
   }
 
   // ---------------------------------------------------------------------------
@@ -232,9 +334,10 @@ export class FilesController {
   }
 
   // ---------------------------------------------------------------------------
-  // PUT /lacerta/:id — authenticated, overwrite content
+  // PUT /lacerta/:id — owner or public (guest saves)
   // ---------------------------------------------------------------------------
 
+  @Public()
   @Put('files/lacerta/:id')
   @UseInterceptors(
     FileInterceptor('file', {
@@ -247,17 +350,23 @@ export class FilesController {
     @Body('size') sizeStr: string,
     @Req() req: ExtendedRequest,
   ) {
-    const userId = req.user?.id;
-    if (!userId) {
-      throw new rrUnauthorizedException(`${this.moduleCode}UA010`, {
-        message: 'Unauthenticated',
-      });
-    }
-
     if (!file) {
       throw new rrBadRequestException(`${this.moduleCode}FIR003`, {
         message: 'File is required',
       });
+    }
+
+    let userId: string | undefined = undefined;
+    const authHeader = req.headers['authorization'];
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      try {
+        const secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET);
+        const { payload } = await jwtVerify(token, secret);
+        userId = payload.sub;
+      } catch (err) {
+        // Invalid or expired token, keep userId undefined
+      }
     }
 
     const size = sizeStr ? parseInt(sizeStr, 10) : file.size;
@@ -292,6 +401,7 @@ export class FilesController {
     @Param('id') id: string,
     @Body('recipientId') recipientId: string,
     @Body('wrappedKey') wrappedKey: string,
+    @Body('allowEdit') allowEdit: boolean,
     @Req() req: ExtendedRequest,
   ) {
     const userId = req.user?.id;
@@ -310,6 +420,7 @@ export class FilesController {
       userId,
       recipientId,
       wrappedKey,
+      allowEdit,
     );
   }
 
@@ -332,6 +443,131 @@ export class FilesController {
     await this.filesService.unshareLaceraFile(id, userId, recipientId);
     return { success: true };
   }
+
+  // ---------------------------------------------------------------------------
+  // OnlyOffice E2EE — download (decrypt on-the-fly) — MUST be before wildcard
+  // ---------------------------------------------------------------------------
+
+  @Public()
+  @Get('files/lacerta/onlyoffice/download/:id')
+  async onlyofficeDownload(
+    @Param('id') id: string,
+    @Query('token') token: string | undefined,
+    @Query('fileKey') fileKey: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    this.logger.log(`[OO-DL] id="${id}" hasToken=${!!token} hasFileKey=${!!fileKey}`);
+
+    if (!fileKey) {
+      res.status(HttpStatus.BAD_REQUEST).json({ message: 'fileKey required' });
+      return;
+    }
+
+    const file = await this.filesRepository.findLaceraFileById(id);
+    if (!file) {
+      this.logger.warn(`[OO-DL] File not found in DB: id="${id}"`);
+      res.status(HttpStatus.NOT_FOUND).json({ message: 'File not found' });
+      return;
+    }
+    this.logger.log(`[OO-DL] Found file key="${file.key}" userId="${file.userId}"`);
+
+    let hasAccess = false;
+    let userId: string | undefined;
+    if (token) {
+      try {
+        const { payload } = await jwtVerify(token, this.ooSecret);
+        userId = payload.sub;
+        if (userId) {
+          const isOwner = file.userId === userId;
+          const isShared = file.shares.some((s: any) => s.userId === userId);
+          this.logger.log(`[OO-DL] JWT userId="${userId}" isOwner=${isOwner} isShared=${isShared}`);
+          if (isOwner || isShared) hasAccess = true;
+        }
+      } catch (err: any) {
+        this.logger.warn(`[OO-DL] JWT verify failed: ${err.message}`);
+      }
+    }
+    if (!hasAccess && file.isPublic) hasAccess = true;
+    if (!hasAccess) {
+      res.status(HttpStatus.FORBIDDEN).json({ message: 'Forbidden' });
+      return;
+    }
+
+    try {
+      const stream = await this.filesService.getLaceraFileStreamDirect(file.key);
+      if (!stream) {
+        this.logger.error(`[OO-DL] S3 object missing for key="${file.key}"`);
+        res.status(HttpStatus.NOT_FOUND).json({ message: 'File data not found in storage' });
+        return;
+      }
+      this.logger.log(`[OO-DL] Got S3 stream, reading...`);
+      const chunks: Buffer[] = [];
+      for await (const chunk of stream) chunks.push(Buffer.from(chunk));
+      const encryptedBuffer = Buffer.concat(chunks);
+      this.logger.log(`[OO-DL] Read ${encryptedBuffer.length} bytes, decrypting...`);
+      const keyBuffer = Buffer.from(fileKey, 'base64url');
+      const decrypted = decryptFileBuffer(encryptedBuffer, keyBuffer);
+      this.logger.log(`[OO-DL] Decrypted to ${decrypted.length} bytes, sending.`);
+      res.setHeader('Content-Type', 'application/octet-stream');
+      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.name)}"`);
+      res.send(decrypted);
+    } catch (err: any) {
+      this.logger.error(`[OO-DL] Error: ${err.message}`, err.stack);
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ message: 'Failed to process document' });
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // OnlyOffice E2EE — callback (save edited file back to S3) — MUST be before wildcard
+  // ---------------------------------------------------------------------------
+
+  @Public()
+  @Post('files/lacerta/onlyoffice/callback/:id')
+  @HttpCode(200)
+  async onlyofficeCallback(
+    @Param('id') id: string,
+    @Query('token') token: string | undefined,
+    @Query('fileKey') fileKey: string,
+    @Body() body: any,
+  ): Promise<{ error: number; message?: string }> {
+    if (body.status !== 2 && body.status !== 6) return { error: 0 };
+    if (!fileKey) return { error: 1, message: 'fileKey required' };
+
+    const file = await this.filesRepository.findLaceraFileById(id);
+    if (!file) return { error: 1, message: 'File not found' };
+
+    let hasAccess = false;
+    let userId: string | undefined;
+    if (token) {
+      try {
+        const { payload } = await jwtVerify(token, this.ooSecret);
+        userId = payload.sub;
+        if (userId) {
+          const isOwner = file.userId === userId;
+          const isShared = file.shares.some((s: any) => s.userId === userId);
+          if (isOwner || isShared) hasAccess = true;
+        }
+      } catch { /* invalid token */ }
+    }
+    if (!hasAccess && file.isPublic) hasAccess = true;
+    if (!hasAccess) return { error: 1, message: 'Forbidden' };
+
+    try {
+      const downloadRes = await fetch(body.url);
+      if (!downloadRes.ok) throw new Error(`OnlyOffice download failed: ${downloadRes.statusText}`);
+      const plaintextBuffer = Buffer.from(await downloadRes.arrayBuffer());
+      const keyBuffer = Buffer.from(fileKey, 'base64url');
+      const encryptedBuffer = encryptFileBuffer(plaintextBuffer, keyBuffer);
+      await this.filesService.updateLaceraFileContent(id, userId, { buffer: encryptedBuffer, size: encryptedBuffer.length, mimetype: file.type } as any, encryptedBuffer.length);
+      this.logger.log(`[OO-CB] Saved document id="${id}"`);
+      return { error: 0 };
+    } catch (err: any) {
+      this.logger.error(`[OO-CB] Error: ${err.message}`, err.stack);
+      return { error: 1, message: 'Failed to save file' };
+    }
+  }
+
+
 
   // ---------------------------------------------------------------------------
   // GET /lacerta/:file — owner or public, wildcard must be last

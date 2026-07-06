@@ -374,4 +374,39 @@ export class UserRepository {
       where: { id },
     });
   }
+
+  async searchUsers(
+    currentUserId: string,
+    query: string,
+  ): Promise<{
+    id: string;
+    username: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+    bannerUrl: string | null;
+    email: string;
+    createdAt: Date;
+    userPublicKey: string | null;
+  }[]> {
+    return this.prisma.client.user.findMany({
+      where: {
+        id: { not: currentUserId },
+        OR: [
+          { username: { contains: query.toLowerCase(), mode: 'insensitive' } },
+          { displayName: { contains: query, mode: 'insensitive' } },
+        ],
+      },
+      select: {
+        id: true,
+        username: true,
+        displayName: true,
+        avatarUrl: true,
+        bannerUrl: true,
+        email: true,
+        createdAt: true,
+        userPublicKey: true,
+      },
+      take: 10,
+    });
+  }
 }

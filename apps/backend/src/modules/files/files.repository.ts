@@ -56,6 +56,10 @@ export class FilesRepository {
             username: true,
             email: true,
             userPublicKey: true,
+            displayName: true,
+            avatarUrl: true,
+            bannerUrl: true,
+            createdAt: true,
           },
         },
         shares: {
@@ -66,6 +70,10 @@ export class FilesRepository {
                 username: true,
                 email: true,
                 userPublicKey: true,
+                displayName: true,
+                avatarUrl: true,
+                bannerUrl: true,
+                createdAt: true,
               },
             },
           },
@@ -106,6 +114,7 @@ export class FilesRepository {
     fileId: string;
     userId: string;
     wrappedKey: string;
+    allowEdit?: boolean;
   }) {
     return this.prisma.client.laceraShare.create({ data });
   }
@@ -148,6 +157,37 @@ export class FilesRepository {
     return this.prisma.client.laceraFile.updateMany({
       where: { id: { in: ids } },
       data: { isTrash },
+    });
+  }
+
+  async findUserVaultPinHash(userId: string): Promise<string | null> {
+    const user = await this.prisma.client.user.findUnique({
+      where: { id: userId },
+      select: { vaultPinHash: true },
+    });
+    return user?.vaultPinHash ?? null;
+  }
+
+  async updateUserVaultPinHash(userId: string, hash: string | null): Promise<void> {
+    await this.prisma.client.user.update({
+      where: { id: userId },
+      data: { vaultPinHash: hash },
+    });
+  }
+
+  async deleteUserVaultFiles(userId: string): Promise<void> {
+    await this.prisma.client.laceraFile.deleteMany({
+      where: {
+        userId,
+        isVault: true,
+      },
+    });
+  }
+
+  async findUserVaultFiles(userId: string): Promise<{ key: string; isFolder: boolean }[]> {
+    return this.prisma.client.laceraFile.findMany({
+      where: { userId, isVault: true },
+      select: { key: true, isFolder: true },
     });
   }
 }

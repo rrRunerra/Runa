@@ -85,6 +85,10 @@ describe('UserService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    mockCacheService.get.mockReset();
+    mockCacheService.get.mockResolvedValue(null);
+    mockCacheService.set.mockReset();
+    mockCacheService.del.mockReset();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -351,6 +355,19 @@ describe('UserService', () => {
         passkeys: [],
       });
       mockCacheService.get.mockResolvedValue('654321');
+
+      const backupCodes = await service.enableEmailMfa('user-1', '654321');
+
+      expect(backupCodes.length).toBe(10);
+      expect(mockPrismaClient.user.update).toHaveBeenCalled();
+    });
+
+    it('should enable email mfa when cached code is a number', async () => {
+      mockPrismaClient.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        passkeys: [],
+      });
+      mockCacheService.get.mockResolvedValue(654321);
 
       const backupCodes = await service.enableEmailMfa('user-1', '654321');
 
