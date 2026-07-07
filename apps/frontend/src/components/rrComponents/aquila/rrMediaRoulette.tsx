@@ -108,7 +108,7 @@ export function RrMediaRoulette({
         typePath = mediaType;
         break;
     }
-    return `/aquila/user/${username}/${typePath}`;
+    return `/aquila/${typePath}`;
   }, [username, activeMediaType]);
 
   const [loading, setLoading] = useState(false);
@@ -120,9 +120,28 @@ export function RrMediaRoulette({
   const [winningItem, setWinningItem] = useState<RrMediaEntry | null>(null);
 
   // Dynamic centering measurement
-  const containerRef = useRef<HTMLDivElement>(null);
-  const pointerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
+
+  const containerRef = useCallback((node: HTMLDivElement | null) => {
+    if (resizeObserverRef.current) {
+      resizeObserverRef.current.disconnect();
+      resizeObserverRef.current = null;
+    }
+
+    if (node !== null) {
+      const observer = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const width =
+            entry.borderBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
+          setContainerWidth(width || node.offsetWidth);
+        }
+      });
+      observer.observe(node);
+      resizeObserverRef.current = observer;
+      setContainerWidth(node.offsetWidth);
+    }
+  }, []);
 
   // Easing coordinate control
   const x = useMotionValue(0);
@@ -179,24 +198,7 @@ export function RrMediaRoulette({
       });
   }, [isOpen, username, activeMediaType, session?.accessToken, x]);
 
-  // Adjust container width measurement when dialog opens
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleResize = (): void => {
-      if (containerRef.current) {
-        setContainerWidth(containerRef.current.offsetWidth);
-      }
-    };
-
-    // Delay slightly to ensure dialog is rendered and dimensions are stable
-    const timer = setTimeout(handleResize, 150);
-
-    window.addEventListener("resize", handleResize);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener("resize", handleResize);
-    };
-  }, [isOpen]);
+  // Measured dynamically via ResizeObserver on the container ref callback
 
   const handleSpin = useCallback((): void => {
     if (items.length === 0 || stage === "spinning") return;
@@ -233,10 +235,12 @@ export function RrMediaRoulette({
 
     // Calculate centering offset
     // Target position aligns winner in the exact center of container
+    // Accounting for the pl-4 padding-left (16px) on motion.div
     const baseTarget = -(
       WIN_INDEX * STEP +
       CARD_WIDTH / 2 -
-      containerWidth / 2
+      containerWidth / 2 +
+      16
     );
     // Slight random offset (within 60% of card size) so pointer lands at slightly different spots
     const randomOffset = (Math.random() - 0.5) * (CARD_WIDTH * 0.6);
