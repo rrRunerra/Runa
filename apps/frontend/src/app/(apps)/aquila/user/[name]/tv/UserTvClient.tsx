@@ -41,7 +41,13 @@ const itemVariants = {
   },
 } as const;
 
-const TV_PRIORITY_STATUSES = ["Watching", "Completed", "Dropped", "Planning"];
+const TV_PRIORITY_STATUSES = [
+  "Watching",
+  "On Hold",
+  "Completed",
+  "Dropped",
+  "Planning",
+];
 
 const SORT_OPTIONS = [
   { label: "Title", value: "title" },
@@ -227,7 +233,7 @@ export default function UserTvPage() {
     document.title = `Aquila > User > ${userData?.displayName || userData?.username} > TV List`;
   }, [userData]);
 
-  const lists = ["All", "Watching", "Completed", "Dropped", "Planning"];
+  const lists = ["All", "Watching", "On Hold", "Completed", "Dropped", "Planning"];
 
   return (
     <motion.div
@@ -320,7 +326,9 @@ export default function UserTvPage() {
 
             <RrMediaListDisplay
               lists={
-                activeList === "All" ? ["Watching", "Completed"] : [activeList]
+                activeList === "All"
+                  ? ["Watching", "On Hold", "Completed", "Dropped", "Planning"]
+                  : [activeList]
               }
               data={tvList}
               displayType={displayType}

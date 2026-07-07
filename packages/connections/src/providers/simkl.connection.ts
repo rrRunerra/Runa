@@ -148,6 +148,7 @@ export default class SimklConnection extends BaseConnection {
         simklStatus = "completed";
         break;
       case "PAUSED":
+      case "ON_HOLD":
         simklStatus = "hold";
         break;
       case "DROPPED":
@@ -280,6 +281,7 @@ export default class SimklConnection extends BaseConnection {
         simklStatus = "completed";
         break;
       case "PAUSED":
+      case "ON_HOLD":
         simklStatus = "hold";
         break;
       case "DROPPED":
@@ -402,6 +404,7 @@ export default class SimklConnection extends BaseConnection {
         simklStatus = "completed";
         break;
       case "PAUSED":
+      case "ON_HOLD":
         simklStatus = "hold";
         break;
       case "DROPPED":

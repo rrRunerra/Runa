@@ -43,10 +43,10 @@ const itemVariants = {
 
 const MANGA_PRIORITY_STATUSES = [
   "Reading",
+  "On Hold",
   "Completed",
   "Dropped",
   "Planning",
-  "On Hold",
 ];
 
 const SORT_OPTIONS = [
@@ -236,10 +236,10 @@ export default function UserMangaPage() {
   const lists = [
     "All",
     "Reading",
+    "On Hold",
     "Completed",
     "Dropped",
     "Planning",
-    "On Hold",
   ];
 
   return (
@@ -333,7 +333,9 @@ export default function UserMangaPage() {
 
             <RrMediaListDisplay
               lists={
-                activeList === "All" ? ["Reading", "Completed"] : [activeList]
+                activeList === "All"
+                  ? ["Reading", "On Hold", "Completed", "Dropped", "Planning"]
+                  : [activeList]
               }
               data={mangaList}
               displayType={displayType}

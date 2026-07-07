@@ -43,9 +43,10 @@ const itemVariants = {
 
 const ANIME_PRIORITY_STATUSES = [
   "Watching",
+  "On Hold",
   "Completed",
-  "Planning",
   "Dropped",
+  "Planning",
 ];
 
 const SORT_OPTIONS = [
@@ -232,7 +233,7 @@ export default function UserAnimePage() {
     document.title = `Aquila > User > ${userData?.displayName || userData?.username} > Anime List`;
   }, [userData]);
 
-  const lists = ["All", "Watching", "Completed", "Dropped", "Planning"];
+  const lists = ["All", "Watching", "On Hold", "Completed", "Dropped", "Planning"];
 
   return (
     <motion.div
@@ -326,8 +327,8 @@ export default function UserAnimePage() {
             <RrMediaListDisplay
               lists={
                 activeList === "All"
-                  ? ["Watching", "Completed TV"]
-                  : [activeList === "Completed" ? "Completed TV" : activeList]
+                  ? ["Watching", "On Hold", "Completed", "Dropped", "Planning"]
+                  : [activeList]
               }
               data={animeList}
               displayType={displayType}

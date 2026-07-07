@@ -319,7 +319,11 @@ export default function UserMoviesPage() {
             </header>
 
             <RrMediaListDisplay
-              lists={[activeList === "All" ? "Completed" : activeList]}
+              lists={
+                activeList === "All"
+                  ? ["Completed", "Dropped", "Planning"]
+                  : [activeList]
+              }
               data={moviesList}
               displayType={displayType}
               filters={{}}

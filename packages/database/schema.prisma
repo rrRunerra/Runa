@@ -722,6 +722,7 @@ enum TvListStatus {
     WATCHING
     PLANNING
     COMPLETED
+    ON_HOLD
     DROPPED
 }
 

@@ -43,10 +43,10 @@ const itemVariants = {
 
 const BOOKS_PRIORITY_STATUSES = [
   "Reading",
+  "On Hold",
   "Completed",
   "Dropped",
   "Planning",
-  "On Hold",
 ];
 
 const SORT_OPTIONS = [
@@ -236,10 +236,10 @@ export default function UserBooksPage() {
   const lists = [
     "All",
     "Reading",
+    "On Hold",
     "Completed",
     "Dropped",
     "Planning",
-    "On Hold",
   ];
 
   return (
@@ -332,7 +332,11 @@ export default function UserBooksPage() {
             </header>
 
             <RrMediaListDisplay
-              lists={[activeList === "All" ? "Reading" : activeList]}
+              lists={
+                activeList === "All"
+                  ? ["Reading", "On Hold", "Completed", "Dropped", "Planning"]
+                  : [activeList]
+              }
               data={bookList}
               displayType={displayType}
               filters={{}}

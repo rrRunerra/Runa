@@ -70,47 +70,48 @@ export function RrMediaEditGeneralFields({
       case "anime":
         return [
           { value: "WATCHING", label: "Watching" },
-          { value: "PLANNING", label: "Plan to Watch" },
-          { value: "COMPLETED", label: "Completed" },
           { value: "ON_HOLD", label: "On Hold" },
+          { value: "COMPLETED", label: "Completed" },
           { value: "DROPPED", label: "Dropped" },
+          { value: "PLANNING", label: "Plan to Watch" },
         ];
       case "manga":
         return [
           { value: "READING", label: "Reading" },
-          { value: "PLANNING", label: "Plan to Read" },
-          { value: "COMPLETED", label: "Completed" },
           { value: "ON_HOLD", label: "On Hold" },
+          { value: "COMPLETED", label: "Completed" },
           { value: "DROPPED", label: "Dropped" },
+          { value: "PLANNING", label: "Plan to Read" },
         ];
       case "tv":
         return [
           { value: "WATCHING", label: "Watching" },
-          { value: "PLANNING", label: "Plan to Watch" },
+          { value: "ON_HOLD", label: "On Hold" },
           { value: "COMPLETED", label: "Completed" },
           { value: "DROPPED", label: "Dropped" },
+          { value: "PLANNING", label: "Plan to Watch" },
         ];
       case "movie":
         return [
-          { value: "PLANNING", label: "Plan to Watch" },
           { value: "COMPLETED", label: "Completed" },
           { value: "DROPPED", label: "Dropped" },
+          { value: "PLANNING", label: "Plan to Watch" },
         ];
       case "game":
         return [
           { value: "PLAYING", label: "Playing" },
-          { value: "PLANNING", label: "Plan to Play" },
-          { value: "COMPLETED", label: "Completed" },
           { value: "ON_HOLD", label: "On Hold" },
+          { value: "COMPLETED", label: "Completed" },
           { value: "DROPPED", label: "Dropped" },
+          { value: "PLANNING", label: "Plan to Play" },
         ];
       case "book":
         return [
           { value: "READING", label: "Reading" },
-          { value: "PLANNING", label: "Plan to Read" },
-          { value: "COMPLETED", label: "Completed" },
           { value: "ON_HOLD", label: "On Hold" },
+          { value: "COMPLETED", label: "Completed" },
           { value: "DROPPED", label: "Dropped" },
+          { value: "PLANNING", label: "Plan to Read" },
         ];
       default:
         return [];

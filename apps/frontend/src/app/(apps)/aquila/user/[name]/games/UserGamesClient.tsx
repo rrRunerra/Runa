@@ -43,10 +43,10 @@ const itemVariants = {
 
 const GAMES_PRIORITY_STATUSES = [
   "Playing",
+  "On Hold",
   "Completed",
   "Dropped",
   "Planning",
-  "On Hold",
 ];
 
 const SORT_OPTIONS = [
@@ -236,10 +236,10 @@ export default function UserGamesPage() {
   const lists = [
     "All",
     "Playing",
+    "On Hold",
     "Completed",
     "Dropped",
     "Planning",
-    "On Hold",
   ];
 
   return (
@@ -332,7 +332,11 @@ export default function UserGamesPage() {
             </header>
 
             <RrMediaListDisplay
-              lists={[activeList === "All" ? "Playing" : activeList]}
+              lists={
+                activeList === "All"
+                  ? ["Playing", "On Hold", "Completed", "Dropped", "Planning"]
+                  : [activeList]
+              }
               data={gameList}
               displayType={displayType}
               filters={{}}

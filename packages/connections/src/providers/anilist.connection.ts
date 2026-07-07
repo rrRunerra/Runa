@@ -165,7 +165,7 @@ export default class AnilistConnection extends BaseConnection {
         `,
         variables: {
           mediaId: providerId,
-          status: data.status === "WATCHING" ? "CURRENT" : data.status,
+          status: (data.status === "WATCHING" || data.status === "ON_HOLD") ? "CURRENT" : data.status,
           progress: data.progress,
           score: data.score,
           startedAt: data.startDate
@@ -253,7 +253,7 @@ export default class AnilistConnection extends BaseConnection {
         `,
         variables: {
           mediaId: providerId,
-          status: data.status === "READING" ? "CURRENT" : data.status,
+          status: (data.status === "READING" || data.status === "ON_HOLD") ? "CURRENT" : data.status,
           progress: data.chapters,
           progressVolumes: data.volumes,
           score: data.score,

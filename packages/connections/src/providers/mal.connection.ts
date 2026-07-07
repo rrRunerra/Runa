@@ -213,6 +213,7 @@ export default class MalConnection extends BaseConnection {
         malStatusMapped = "completed";
         break;
       case "PAUSED":
+      case "ON_HOLD":
         malStatusMapped = "on_hold";
         break;
       case "DROPPED":
