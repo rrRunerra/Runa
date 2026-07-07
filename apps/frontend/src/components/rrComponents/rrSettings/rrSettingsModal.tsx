@@ -41,6 +41,7 @@ import { RrConnectionsTab } from "./rrConnectionsTab";
 import { RrSidebarSettingsTab } from "./rrSidebarSettingsTab";
 import { RrMailSettingsTab } from "./rrMailSettingsTab";
 import { RrApiKeysTab } from "./rrApiKeysTab";
+import { RrListsTab } from "./rrListsTab";
 
 type rrCategory =
   | "account"
@@ -49,7 +50,8 @@ type rrCategory =
   | "sidebar"
   | "security"
   | "mailAccounts"
-  | "apiKeys";
+  | "apiKeys"
+  | "lists";
 
 export interface rrSettingsDialogProps {
   open: boolean;
@@ -89,23 +91,31 @@ export function SettingsDialog({
         case "apiKeys":
           setActiveCategory("apiKeys");
           break;
+        case "lists":
+          setActiveCategory("lists");
+          break;
         default:
           setActiveCategory("account");
       }
     }
   }, [open, isPegasus]);
 
-  const navItems: { id: rrCategory; name: string; icon: React.ElementType }[] = settingsNavConfig
-    .filter((item) => {
-      if (item.id === "mailAccounts" && !isPegasus) return false;
-      if (item.id === "sidebar" && !isMobile) return false;
-      return true;
-    })
-    .map((item) => ({
-      id: item.id as rrCategory,
-      name: item.label,
-      icon: item.icon,
-    }));
+  const navItems: { id: rrCategory; name: string; icon: React.ElementType }[] =
+    settingsNavConfig
+      .filter((item) => {
+        if (item.id === "sidebar" && !isMobile) return false;
+        if (
+          item.visibleOn &&
+          !item.visibleOn.some((route) => pathname.startsWith(route))
+        )
+          return false;
+        return true;
+      })
+      .map((item) => ({
+        id: item.id as rrCategory,
+        name: item.label,
+        icon: item.icon,
+      }));
 
   const mobileDockItems = navItems.map((item) => ({
     label: item.name,
@@ -213,6 +223,12 @@ export function SettingsDialog({
                   )}
                   {activeCategory === "apiKeys" && (
                     <RrApiKeysTab onOpenChange={onOpenChange} />
+                  )}
+                  {activeCategory === "lists" && (
+                    <RrListsTab
+                      onOpenChange={onOpenChange}
+                      setActiveCategory={setActiveCategory}
+                    />
                   )}
                 </motion.div>
               </AnimatePresence>

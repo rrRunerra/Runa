@@ -17,6 +17,11 @@ import { ListExternal } from './list.external';
 import ListEntity from './list.entities';
 import { MovieService } from '../movie/movie.service';
 import { TvService } from '../tv/tv.service';
+import { AnimeService } from '../anime/anime.service';
+import { MangaService } from '../manga/manga.service';
+import { GameService } from '../game/game.service';
+import { BookService } from '../book/book.service';
+import { NotificationService } from '../notification/notification.service';
 
 export interface ListQueryOptions {
   limit?: number;
@@ -35,7 +40,7 @@ class AnimeMappingCache {
   private static mappings: Map<number, number> | null = null;
   private static lastFetched = 0;
   private static isFetching = false;
-
+ 
   public static async getTvdbId(anilistId: number): Promise<number | null> {
     const now = Date.now();
     if (
@@ -76,6 +81,11 @@ export class ListService {
     private readonly statsService: StatsService,
     private readonly movieService: MovieService,
     private readonly tvService: TvService,
+    private readonly animeService: AnimeService,
+    private readonly mangaService: MangaService,
+    private readonly gameService: GameService,
+    private readonly bookService: BookService,
+    private readonly notificationService: NotificationService,
   ) {}
 
   private readonly logger = new Logger(ListService.name);
@@ -3041,5 +3051,482 @@ export class ListService {
     }
 
     return resultList;
+  }
+
+  public async exportRrList(username: string, types: string[]): Promise<any> {
+    const exportData: any = { version: '1.0' };
+    const normalizedUsername = username.toLowerCase();
+
+    if (types.includes('anime')) {
+      const entries = await this.prisma.client.aquilaAnimeUserList.findMany({
+        where: { username: normalizedUsername },
+        include: { anime: true },
+      });
+      exportData.anime = entries.map((entry) => ({
+        status: entry.status,
+        progress: entry.progress,
+        score: entry.score,
+        notes: entry.notes,
+        rewatched: entry.rewatched,
+        private: entry.private,
+        startDate: entry.startDate,
+        endDate: entry.endDate,
+        connections: entry.connections,
+        media: {
+          anilistId: entry.anime.anilistId,
+          malId: entry.anime.malId,
+          titleRomaji: entry.anime.titleRomaji,
+          titleEnglish: entry.anime.titleEnglish,
+          coverImageLarge: entry.anime.coverImageLarge,
+        },
+      }));
+    }
+
+    if (types.includes('manga')) {
+      const entries = await this.prisma.client.aquilaMangaUserList.findMany({
+        where: { username: normalizedUsername },
+        include: { manga: true },
+      });
+      exportData.manga = entries.map((entry) => ({
+        status: entry.status,
+        chapters: entry.chapters,
+        volumes: entry.volumes,
+        score: entry.score,
+        notes: entry.notes,
+        reread: entry.reread,
+        private: entry.private,
+        startDate: entry.startDate,
+        endDate: entry.endDate,
+        connections: entry.connections,
+        media: {
+          anilistId: entry.manga.anilistId,
+          malId: entry.manga.malId,
+          titleRomaji: entry.manga.titleRomaji,
+          titleEnglish: entry.manga.titleEnglish,
+          coverImageLarge: entry.manga.coverImageLarge,
+        },
+      }));
+    }
+
+    if (types.includes('tv')) {
+      const entries = await this.prisma.client.aquilaTvUserList.findMany({
+        where: { username: normalizedUsername },
+        include: { tv: true, watchedEpisodes: true },
+      });
+      exportData.tv = entries.map((entry) => ({
+        status: entry.status,
+        score: entry.score,
+        notes: entry.notes,
+        rewatched: entry.rewatched,
+        private: entry.private,
+        startDate: entry.startDate,
+        endDate: entry.endDate,
+        connections: entry.connections,
+        episodes: entry.watchedEpisodes.map((ep) => ({
+          seasonNum: ep.seasonNum,
+          episodeNum: ep.episodeNum,
+        })),
+        media: {
+          tvdbId: entry.tv.tvdbId,
+          titleRomaji: entry.tv.titleRomaji,
+          titleEnglish: entry.tv.titleEnglish,
+          coverImage: entry.tv.coverImage,
+        },
+      }));
+    }
+
+    if (types.includes('movie')) {
+      const entries = await this.prisma.client.aquilaMovieUserList.findMany({
+        where: { username: normalizedUsername },
+        include: { movie: true },
+      });
+      exportData.movie = entries.map((entry) => ({
+        status: entry.status,
+        score: entry.score,
+        notes: entry.notes,
+        rewatched: entry.rewatched,
+        private: entry.private,
+        startDate: entry.startDate,
+        endDate: entry.endDate,
+        connections: entry.connections,
+        media: {
+          tvdbId: entry.movie.tvdbId,
+          titleRomaji: entry.movie.titleRomaji,
+          titleEnglish: entry.movie.titleEnglish,
+          coverImage: entry.movie.coverImage,
+        },
+      }));
+    }
+
+    if (types.includes('game')) {
+      const entries = await this.prisma.client.aquilaGameUserList.findMany({
+        where: { username: normalizedUsername },
+        include: { game: true },
+      });
+      exportData.game = entries.map((entry) => ({
+        status: entry.status,
+        progress: entry.progress,
+        score: entry.score,
+        notes: entry.notes,
+        private: entry.private,
+        startDate: entry.startDate,
+        endDate: entry.endDate,
+        media: {
+          rawgId: entry.game.rawgId,
+          titleString: entry.game.titleString,
+          coverImage: entry.game.coverImage,
+        },
+      }));
+    }
+
+    if (types.includes('book')) {
+      const entries = await this.prisma.client.aquilaBookUserList.findMany({
+        where: { username: normalizedUsername },
+        include: { book: true },
+      });
+      exportData.book = entries.map((entry) => ({
+        status: entry.status,
+        chapters: entry.chapters,
+        volumes: entry.volumes,
+        score: entry.score,
+        notes: entry.notes,
+        private: entry.private,
+        startDate: entry.startDate,
+        endDate: entry.endDate,
+        media: {
+          googleBookId: entry.book.googleBookId,
+          titleString: entry.book.titleString,
+          coverImage: entry.book.coverImage,
+        },
+      }));
+    }
+
+    return exportData;
+  }
+
+  public async exportMalXml(username: string, type: 'anime' | 'manga'): Promise<string> {
+    const normalizedUsername = username.toLowerCase();
+    const formatDateForMal = (ts?: number | null) => {
+      if (!ts) return '0000-00-00';
+      const d = new Date(ts * 1000);
+      if (isNaN(d.getTime())) return '0000-00-00';
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+
+    if (type === 'anime') {
+      const entries = await this.prisma.client.aquilaAnimeUserList.findMany({
+        where: { username: normalizedUsername },
+        include: { anime: true },
+      });
+
+      const mapStatusToMal = (s: string) => {
+        switch (s) {
+          case 'WATCHING': return 'Watching';
+          case 'COMPLETED': return 'Completed';
+          case 'ON_HOLD': return 'On-Hold';
+          case 'DROPPED': return 'Dropped';
+          case 'PLANNING': return 'Plan to Watch';
+          default: return 'Plan to Watch';
+        }
+      };
+
+      let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<myanimelist>\n';
+      xml += '  <myinfo>\n';
+      xml += '    <user_id>0</user_id>\n';
+      xml += `    <user_name>${username}</user_name>\n`;
+      xml += '    <user_export_type>1</user_export_type>\n';
+      xml += '  </myinfo>\n';
+
+      for (const entry of entries) {
+        if (!entry.anime) continue;
+        const malId = entry.anime.malId || entry.anime.anilistId || '';
+        const title = entry.anime.titleEnglish || entry.anime.titleRomaji || '';
+        const malStatus = mapStatusToMal(entry.status);
+        const startDateFormatted = formatDateForMal(entry.startDate);
+        const endDateFormatted = formatDateForMal(entry.endDate);
+
+        xml += '  <anime>\n';
+        xml += `    <series_animedb_id>${malId}</series_animedb_id>\n`;
+        xml += `    <series_title><![CDATA[${title}]]></series_title>\n`;
+        xml += `    <my_id>0</my_id>\n`;
+        xml += `    <my_watched_episodes>${entry.progress || 0}</my_watched_episodes>\n`;
+        xml += `    <my_start_date>${startDateFormatted}</my_start_date>\n`;
+        xml += `    <my_finish_date>${endDateFormatted}</my_finish_date>\n`;
+        xml += `    <my_score>${entry.score || 0}</my_score>\n`;
+        xml += `    <my_status>${malStatus}</my_status>\n`;
+        xml += `    <my_comments><![CDATA[${entry.notes || ''}]]></my_comments>\n`;
+        xml += `    <my_times_watched>${entry.rewatched || 0}</my_times_watched>\n`;
+        xml += `    <update_on_import>1</update_on_import>\n`;
+        xml += '  </anime>\n';
+      }
+      xml += '</myanimelist>\n';
+      return xml;
+    } else {
+      const entries = await this.prisma.client.aquilaMangaUserList.findMany({
+        where: { username: normalizedUsername },
+        include: { manga: true },
+      });
+
+      const mapStatusToMal = (s: string) => {
+        switch (s) {
+          case 'READING': return 'Reading';
+          case 'COMPLETED': return 'Completed';
+          case 'ON_HOLD': return 'On-Hold';
+          case 'DROPPED': return 'Dropped';
+          case 'PLANNING': return 'Plan to Read';
+          default: return 'Plan to Read';
+        }
+      };
+
+      let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<myanimelist>\n';
+      xml += '  <myinfo>\n';
+      xml += '    <user_id>0</user_id>\n';
+      xml += `    <user_name>${username}</user_name>\n`;
+      xml += '    <user_export_type>2</user_export_type>\n';
+      xml += '  </myinfo>\n';
+
+      for (const entry of entries) {
+        if (!entry.manga) continue;
+        const malId = entry.manga.malId || entry.manga.anilistId || '';
+        const title = entry.manga.titleEnglish || entry.manga.titleRomaji || '';
+        const malStatus = mapStatusToMal(entry.status);
+        const startDateFormatted = formatDateForMal(entry.startDate);
+        const endDateFormatted = formatDateForMal(entry.endDate);
+
+        xml += '  <manga>\n';
+        xml += `    <series_mangadb_id>${malId}</series_mangadb_id>\n`;
+        xml += `    <series_title><![CDATA[${title}]]></series_title>\n`;
+        xml += `    <my_id>0</my_id>\n`;
+        xml += `    <my_read_chapters>${entry.chapters || 0}</my_read_chapters>\n`;
+        xml += `    <my_read_volumes>${entry.volumes || 0}</my_read_volumes>\n`;
+        xml += `    <my_start_date>${startDateFormatted}</my_start_date>\n`;
+        xml += `    <my_finish_date>${endDateFormatted}</my_finish_date>\n`;
+        xml += `    <my_score>${entry.score || 0}</my_score>\n`;
+        xml += `    <my_status>${malStatus}</my_status>\n`;
+        xml += `    <my_comments><![CDATA[${entry.notes || ''}]]></my_comments>\n`;
+        xml += `    <my_times_read>${entry.reread || 0}</my_times_read>\n`;
+        xml += `    <update_on_import>1</update_on_import>\n`;
+        xml += '  </manga>\n';
+      }
+      xml += '</myanimelist>\n';
+      return xml;
+    }
+  }
+
+  public async startImport(username: string, payload: any): Promise<{ success: boolean; message: string }> {
+    const userId = await this.getUserId(username);
+    void this.importRrListInBackground(userId, username, payload);
+    return { success: true, message: 'Import started in the background.' };
+  }
+
+  private async importRrListInBackground(userId: string, username: string, payload: any): Promise<void> {
+    this.logger.log(`Starting background list import for user ${username}`);
+    let successCount = 0;
+    let failureCount = 0;
+
+    // 1. Anime
+    if (payload.anime && Array.isArray(payload.anime)) {
+      for (const item of payload.anime) {
+        try {
+          if (!item.media || (!item.media.anilistId && !item.media.malId)) {
+            failureCount++;
+            continue;
+          }
+          const anilistId = item.media.anilistId ?? item.media.malId;
+          const media = await this.animeService.ensureAnime(
+            anilistId,
+            item.media.malId,
+            item.media.titleRomaji || item.media.titleEnglish,
+            item.media.coverImageLarge,
+          );
+          await this.upsertAnimeList(username, {
+            animeId: media.id,
+            status: item.status,
+            progress: item.progress,
+            score: item.score,
+            startDate: item.startDate,
+            endDate: item.endDate,
+            notes: item.notes,
+            rewatched: item.rewatched,
+            connections: item.connections,
+          });
+          successCount++;
+        } catch (err) {
+          this.logger.error(`Import anime entry failed for user ${username}:`, err);
+          failureCount++;
+        }
+      }
+    }
+
+    // 2. Manga
+    if (payload.manga && Array.isArray(payload.manga)) {
+      for (const item of payload.manga) {
+        try {
+          if (!item.media || (!item.media.anilistId && !item.media.malId)) {
+            failureCount++;
+            continue;
+          }
+          const anilistId = item.media.anilistId ?? item.media.malId;
+          const media = await this.mangaService.ensureManga(
+            anilistId,
+            item.media.malId,
+            item.media.titleRomaji || item.media.titleEnglish,
+            item.media.coverImageLarge,
+          );
+          await this.upsertMangaList(username, {
+            mangaId: media.id,
+            status: item.status,
+            chapters: item.chapters,
+            volumes: item.volumes,
+            score: item.score,
+            startDate: item.startDate,
+            endDate: item.endDate,
+            notes: item.notes,
+            reread: item.reread,
+            connections: item.connections,
+          });
+          successCount++;
+        } catch (err) {
+          this.logger.error(`Import manga entry failed for user ${username}:`, err);
+          failureCount++;
+        }
+      }
+    }
+
+    // 3. TV
+    if (payload.tv && Array.isArray(payload.tv)) {
+      for (const item of payload.tv) {
+        try {
+          if (!item.media || !item.media.tvdbId) {
+            failureCount++;
+            continue;
+          }
+          const media = await this.tvService.ensureTv(
+            item.media.tvdbId,
+            item.media.titleEnglish || item.media.titleRomaji,
+            item.media.coverImage,
+          );
+          await this.upsertTvList(username, {
+            tvId: media.id,
+            status: item.status,
+            score: item.score,
+            startDate: item.startDate,
+            endDate: item.endDate,
+            notes: item.notes,
+            rewatched: item.rewatched,
+            connections: item.connections,
+            episodes: item.episodes,
+          });
+          successCount++;
+        } catch (err) {
+          this.logger.error(`Import TV entry failed for user ${username}:`, err);
+          failureCount++;
+        }
+      }
+    }
+
+    // 4. Movie
+    if (payload.movie && Array.isArray(payload.movie)) {
+      for (const item of payload.movie) {
+        try {
+          if (!item.media || !item.media.tvdbId) {
+            failureCount++;
+            continue;
+          }
+          const media = await this.movieService.ensureMovie(
+            item.media.tvdbId,
+            item.media.titleEnglish || item.media.titleRomaji,
+            item.media.coverImage,
+          );
+          await this.upsertMovieList(username, {
+            movieId: media.id,
+            status: item.status,
+            score: item.score,
+            startDate: item.startDate,
+            endDate: item.endDate,
+            notes: item.notes,
+            rewatched: item.rewatched,
+            connections: item.connections,
+          });
+          successCount++;
+        } catch (err) {
+          this.logger.error(`Import Movie entry failed for user ${username}:`, err);
+          failureCount++;
+        }
+      }
+    }
+
+    // 5. Game
+    if (payload.game && Array.isArray(payload.game)) {
+      for (const item of payload.game) {
+        try {
+          if (!item.media || !item.media.rawgId) {
+            failureCount++;
+            continue;
+          }
+          const media = await this.gameService.ensureGame(
+            item.media.rawgId,
+            item.media.titleString,
+            item.media.coverImage,
+          );
+          await this.upsertGameList(username, {
+            gameId: media.id,
+            status: item.status,
+            progress: item.progress,
+            score: item.score,
+            startDate: item.startDate,
+            endDate: item.endDate,
+            notes: item.notes,
+          });
+          successCount++;
+        } catch (err) {
+          this.logger.error(`Import Game entry failed for user ${username}:`, err);
+          failureCount++;
+        }
+      }
+    }
+
+    // 6. Book
+    if (payload.book && Array.isArray(payload.book)) {
+      for (const item of payload.book) {
+        try {
+          if (!item.media || !item.media.googleBookId) {
+            failureCount++;
+            continue;
+          }
+          const media = await this.bookService.ensureBook(
+            item.media.googleBookId,
+            item.media.titleString,
+            item.media.coverImage,
+          );
+          await this.upsertBookList(username, {
+            bookId: String(media.id),
+            status: item.status,
+            chapters: item.chapters,
+            volumes: item.volumes,
+            score: item.score,
+            startDate: item.startDate,
+            endDate: item.endDate,
+            notes: item.notes,
+          });
+          successCount++;
+        } catch (err) {
+          this.logger.error(`Import Book entry failed for user ${username}:`, err);
+          failureCount++;
+        }
+      }
+    }
+
+    this.logger.log(`Completed list import for user ${username}. Success: ${successCount}, Failed: ${failureCount}`);
+
+    try {
+      await this.notificationService.create(userId, {
+        title: 'Media Lists Import Complete',
+        message: `Successfully imported ${successCount} entries (${failureCount} failed).`,
+        type: 'INFO' as any,
+      });
+    } catch (notifErr) {
+      this.logger.error(`Failed to send list import notification for user ${username}:`, notifErr);
+    }
   }
 }

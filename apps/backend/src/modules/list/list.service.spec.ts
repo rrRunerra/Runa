@@ -4,6 +4,13 @@ import { ListService } from './list.service';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { StatsService } from '../stats/stats.service';
 import { ListExternal } from './list.external';
+import { MovieService } from '../movie/movie.service';
+import { TvService } from '../tv/tv.service';
+import { AnimeService } from '../anime/anime.service';
+import { MangaService } from '../manga/manga.service';
+import { GameService } from '../game/game.service';
+import { BookService } from '../book/book.service';
+import { NotificationService } from '../notification/notification.service';
 
 // Mock database $Enums and prisma client
 jest.mock('@runa/database', () => ({
@@ -144,6 +151,28 @@ describe('ListService', () => {
     recalculate: jest.fn(),
   };
 
+  const mockMovieService = {
+    ensureMovie: jest.fn().mockResolvedValue({ id: 1 }),
+  };
+  const mockTvService = {
+    ensureTv: jest.fn().mockResolvedValue({ id: 1 }),
+  };
+  const mockAnimeService = {
+    ensureAnime: jest.fn().mockResolvedValue({ id: 1 }),
+  };
+  const mockMangaService = {
+    ensureManga: jest.fn().mockResolvedValue({ id: 1 }),
+  };
+  const mockGameService = {
+    ensureGame: jest.fn().mockResolvedValue({ id: 1 }),
+  };
+  const mockBookService = {
+    ensureBook: jest.fn().mockResolvedValue({ id: 1 }),
+  };
+  const mockNotificationService = {
+    create: jest.fn().mockResolvedValue({}),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
 
@@ -153,6 +182,13 @@ describe('ListService', () => {
         { provide: PrismaService, useValue: mockPrisma },
         { provide: ListExternal, useValue: mockConnectionsManager },
         { provide: StatsService, useValue: mockStatsService },
+        { provide: MovieService, useValue: mockMovieService },
+        { provide: TvService, useValue: mockTvService },
+        { provide: AnimeService, useValue: mockAnimeService },
+        { provide: MangaService, useValue: mockMangaService },
+        { provide: GameService, useValue: mockGameService },
+        { provide: BookService, useValue: mockBookService },
+        { provide: NotificationService, useValue: mockNotificationService },
       ],
     }).compile();
 
@@ -389,7 +425,7 @@ describe('ListService', () => {
       mockPrismaClient.aquilaMovieUserList.upsert.mockResolvedValue({});
 
       const result = await service.upsertMovieList('testuser', {
-        tvdbId: 1,
+        movieId: 1,
         status: $Enums.MovieListStatus.COMPLETED,
         updateConnection: true,
         connections: { mal: 300 },
@@ -450,7 +486,7 @@ describe('ListService', () => {
       });
 
       const result = await service.upsertTvList('testuser', {
-        tvdbId: 1,
+        tvId: 1,
         status: $Enums.TvListStatus.WATCHING,
         updateConnection: true,
         connections: { mal: 400 },

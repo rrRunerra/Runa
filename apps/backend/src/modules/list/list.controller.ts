@@ -518,4 +518,29 @@ export class ListController {
       },
     ];
   }
+
+  @Get('/export/rrlist')
+  public async exportRrList(
+    @Req() req: any,
+    @Query('types') types: string,
+  ): Promise<any> {
+    const listTypes = types ? types.split(',') : [];
+    return this.listService.exportRrList(req.user.username, listTypes);
+  }
+
+  @Get('/export/mal')
+  public async exportMalXml(
+    @Req() req: any,
+    @Query('type') type: 'anime' | 'manga',
+  ): Promise<string> {
+    return this.listService.exportMalXml(req.user.username, type);
+  }
+
+  @Post('/import/rrlist')
+  public async importRrList(
+    @Req() req: any,
+    @Body() body: any,
+  ): Promise<{ success: boolean; message: string }> {
+    return this.listService.startImport(req.user.username, body);
+  }
 }
