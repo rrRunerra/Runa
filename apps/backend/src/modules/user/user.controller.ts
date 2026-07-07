@@ -350,7 +350,12 @@ export class UserController {
     @Req() req: ExtendedRequest,
     @Body() body: CreateApiKeyDto,
   ): Promise<ApiKeyCreatedEntity> {
-    return this.usersService.createApiKey(req.user!.id, body.name);
+    return this.usersService.createApiKey(
+      req.user!.id,
+      body.name,
+      body.expiresInDays,
+      body.app,
+    );
   }
 
   @Post('me/api-keys/:id/regenerate')

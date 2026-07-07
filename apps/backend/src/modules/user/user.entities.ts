@@ -89,19 +89,23 @@ export interface SuccessEntity {
 export interface ApiKeyEntity {
   id: string;
   name: string;
+  app: string;
   createdAt: Date;
   lastUsedAt: Date | null;
+  expiresAt: Date | null;
   truncatedKey: string;
 }
 
 export interface ApiKeyCreatedEntity {
   id: string;
   name: string;
+  app: string;
   keyPrefix: string;
   keyHash: string;
   userId: string;
   createdAt: Date;
   lastUsedAt: Date | null;
+  expiresAt: Date | null;
   key: string;
 }
 

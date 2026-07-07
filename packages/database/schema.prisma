@@ -120,7 +120,9 @@ model ApiKey {
     keyHash    String
     keyPrefix  String
     name       String
+    app        String    @default("Polaris")
     lastUsedAt DateTime?
+    expiresAt  DateTime?
     userId     String
     user       User      @relation(fields: [userId], references: [id])
 

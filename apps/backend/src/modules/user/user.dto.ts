@@ -10,6 +10,8 @@ import {
   MaxLength,
   IsUUID,
   Matches,
+  IsInt,
+  Min,
 } from 'class-validator';
 
 // --- User Creation ---
@@ -206,6 +208,15 @@ export class CreateApiKeyDto {
   @IsNotEmpty({ message: 'CeAKdto-NMNBE001: Name must not be empty' })
   @MaxLength(64, { message: 'CeAKdto-NMBALTC001: Name must be at most 64 characters long' })
   name!: string;
+
+  @IsInt({ message: 'CeAKdto-EIDBAI001: Expiration in days must be an integer' })
+  @Min(1, { message: 'CeAKdto-EIDBM001: Expiration in days must be at least 1' })
+  @IsOptional()
+  expiresInDays?: number | null;
+
+  @IsString({ message: 'CeAKdto-ABAS001: App must be a string' })
+  @IsOptional()
+  app?: string;
 }
 
 export class RegenerateApiKeyDto {

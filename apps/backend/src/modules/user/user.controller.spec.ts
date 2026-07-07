@@ -409,7 +409,12 @@ describe('UserController', () => {
 
       const result = await controller.createApiKey(req, createDto);
 
-      expect(service.createApiKey).toHaveBeenCalledWith('user-123', 'New Key');
+      expect(service.createApiKey).toHaveBeenCalledWith(
+        'user-123',
+        'New Key',
+        undefined,
+        undefined,
+      );
       expect(result).toBe(expectedResult);
     });
   });

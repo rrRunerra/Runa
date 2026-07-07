@@ -88,6 +88,7 @@ describe('AuthGuard', () => {
         const mockRecord = {
           id: 'key-id',
           keyHash: 'hashed-key',
+          expiresAt: null,
           user: {
             id: 'user-id',
             username: 'testuser',
@@ -110,13 +111,47 @@ describe('AuthGuard', () => {
         });
         expect(prisma.apiKey.findFirst).toHaveBeenCalledWith({
           where: { keyPrefix: apiKey.slice(0, 16) },
-          include: { user: true },
+          select: {
+            keyHash: true,
+            id: true,
+            lastUsedAt: true,
+            expiresAt: true,
+            user: {
+              select: {
+                id: true,
+                username: true,
+                permissions: true,
+              },
+            },
+          },
         });
         expect(bcrypt.compare).toHaveBeenCalledWith(apiKey, 'hashed-key');
         expect(prisma.apiKey.update).toHaveBeenCalledWith({
           where: { id: 'key-id' },
           data: expect.any(Object),
         });
+      });
+
+      it('should throw UnauthorizedException if API key is expired', async () => {
+        const apiKey = 'testapikey1234567890';
+        const context = createMockContext({ 'x-api-key': apiKey });
+
+        const mockRecord = {
+          id: 'key-id',
+          keyHash: 'hashed-key',
+          expiresAt: new Date(Date.now() - 1000), // expired 1s ago
+          user: {
+            id: 'user-id',
+            username: 'testuser',
+            permissions: [1, 2],
+          },
+        };
+
+        (prisma.apiKey.findFirst as jest.Mock).mockResolvedValue(mockRecord);
+
+        await expect(guard.canActivate(context)).rejects.toThrow(
+          new UnauthorizedException('API Key expired'),
+        );
       });
 
       it('should throw UnauthorizedException if API key prefix is not found', async () => {
@@ -236,7 +271,7 @@ describe('AuthGuard', () => {
         });
 
         await expect(guard.canActivate(context)).rejects.toThrow(
-          new UnauthorizedException('Token expired due to password change'),
+          new UnauthorizedException('Token expired due to a password change'),
         );
       });
     });

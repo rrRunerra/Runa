@@ -473,7 +473,7 @@ describe('UserService', () => {
   // ---------------------------------------------------------------------------
 
   describe('createApiKey', () => {
-    it('should generate, hash, and save a new API key', async () => {
+    it('should generate, hash, and save a new API key without expiration', async () => {
       const mockSavedKey = {
         id: 'key-123',
         name: 'Production Key',
@@ -481,6 +481,7 @@ describe('UserService', () => {
         keyHash: 'mock-hash',
         userId: 'user-456',
         createdAt: new Date(),
+        expiresAt: null,
       };
 
       mockPrismaClient.apiKey.create.mockResolvedValue(mockSavedKey);
@@ -491,14 +492,45 @@ describe('UserService', () => {
       expect(mockPrismaClient.apiKey.create).toHaveBeenCalledWith({
         data: {
           name: 'Production Key',
+          app: 'Polaris',
           keyPrefix: expect.any(String),
           keyHash: 'hashed-mock-key',
+          expiresAt: null,
           user: { connect: { id: 'user-456' } },
         },
       });
       expect(bcrypt.hash).toHaveBeenCalled();
       expect(result.id).toBe('key-123');
       expect(result.key).toBeDefined();
+    });
+
+    it('should generate, hash, and save a new API key with expiration', async () => {
+      const mockSavedKey = {
+        id: 'key-123',
+        name: 'Expiring Key',
+        keyPrefix: 'mock-prefix',
+        keyHash: 'mock-hash',
+        userId: 'user-456',
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      };
+
+      mockPrismaClient.apiKey.create.mockResolvedValue(mockSavedKey);
+      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-mock-key');
+
+      const result = await service.createApiKey('user-456', 'Expiring Key', 7);
+
+      expect(mockPrismaClient.apiKey.create).toHaveBeenCalledWith({
+        data: {
+          name: 'Expiring Key',
+          app: 'Polaris',
+          keyPrefix: expect.any(String),
+          keyHash: 'hashed-mock-key',
+          expiresAt: expect.any(Date),
+          user: { connect: { id: 'user-456' } },
+        },
+      });
+      expect(result.id).toBe('key-123');
     });
   });
 
@@ -508,9 +540,11 @@ describe('UserService', () => {
         {
           id: 'key-1',
           name: 'Key 1',
+          app: 'Polaris',
           keyPrefix: 'prefix1234567890',
           createdAt: new Date(),
           lastUsedAt: null,
+          expiresAt: null,
         },
       ];
 
@@ -526,8 +560,10 @@ describe('UserService', () => {
         {
           id: 'key-1',
           name: 'Key 1',
+          app: 'Polaris',
           createdAt: mockKeys[0].createdAt,
           lastUsedAt: null,
+          expiresAt: null,
           truncatedKey: 'prefix1234567890...',
         },
       ]);
@@ -548,6 +584,9 @@ describe('UserService', () => {
         id: 'key-1',
         userId: 'user-456',
         name: 'Key 1',
+        app: 'Polaris',
+        createdAt: new Date(),
+        expiresAt: null,
       };
       mockPrismaClient.apiKey.findFirst.mockResolvedValue(existingKey);
 
@@ -557,6 +596,8 @@ describe('UserService', () => {
         name: 'Key 1',
         keyPrefix: 'new-prefix',
         keyHash: 'new-hash',
+        createdAt: existingKey.createdAt,
+        expiresAt: null,
       };
       mockPrismaClient.apiKey.update.mockResolvedValue(updatedKey);
       (bcrypt.hash as jest.Mock).mockResolvedValue('new-hashed-mock-key');
@@ -572,9 +613,55 @@ describe('UserService', () => {
           keyHash: 'new-hashed-mock-key',
           keyPrefix: expect.any(String),
           lastUsedAt: null,
+          expiresAt: null,
         },
       });
       expect(result.key).toBeDefined();
+    });
+
+    it('should reset expiration relative to original duration upon regeneration', async () => {
+      const originalCreatedAt = new Date('2026-07-01T00:00:00Z');
+      const originalExpiresAt = new Date('2026-07-31T00:00:00Z'); // 30 days duration
+
+      const existingKey = {
+        id: 'key-1',
+        userId: 'user-456',
+        name: 'Key 1',
+        app: 'Polaris',
+        createdAt: originalCreatedAt,
+        expiresAt: originalExpiresAt,
+      };
+      mockPrismaClient.apiKey.findFirst.mockResolvedValue(existingKey);
+
+      const updatedKey = {
+        id: 'key-1',
+        userId: 'user-456',
+        name: 'Key 1',
+        keyPrefix: 'new-prefix',
+        keyHash: 'new-hash',
+        createdAt: originalCreatedAt,
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      };
+      mockPrismaClient.apiKey.update.mockResolvedValue(updatedKey);
+      (bcrypt.hash as jest.Mock).mockResolvedValue('new-hashed-mock-key');
+
+      const result = await service.regenerateApiKey('key-1', 'user-456');
+
+      expect(mockPrismaClient.apiKey.update).toHaveBeenCalledWith({
+        where: { id: 'key-1' },
+        data: {
+          keyHash: 'new-hashed-mock-key',
+          keyPrefix: expect.any(String),
+          lastUsedAt: null,
+          expiresAt: expect.any(Date),
+        },
+      });
+      expect(result.key).toBeDefined();
+
+      const lastUpdateArgs = mockPrismaClient.apiKey.update.mock.calls[0][0].data;
+      const expectedDiff = 30 * 24 * 60 * 60 * 1000;
+      const durationMs = lastUpdateArgs.expiresAt.getTime() - Date.now();
+      expect(Math.abs(durationMs - expectedDiff)).toBeLessThan(5000);
     });
   });
 

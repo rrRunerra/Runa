@@ -990,15 +990,27 @@ export class UserService {
   public async createApiKey(
     userId: string,
     name: string,
+    expiresInDays?: number | null,
+    app?: string,
   ): Promise<ApiKeyCreatedEntity> {
-    const rawKey = crypto.randomBytes(32).toString('hex');
+    const cleanApp = app || 'Polaris';
+    const appPrefix = `${cleanApp.toLowerCase()}_`;
+    const rawKey = appPrefix + crypto.randomBytes(32).toString('hex');
     const keyPrefix = rawKey.slice(0, 16);
     const keyHash = await bcrypt.hash(rawKey, 10);
 
+    let expiresAt: Date | null = null;
+    if (expiresInDays && expiresInDays > 0) {
+      expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + expiresInDays);
+    }
+
     const apiKey = await this.userRepository.createApiKey({
       name,
+      app: cleanApp,
       keyPrefix,
       keyHash,
+      expiresAt,
       user: { connect: { id: userId } },
     });
 
@@ -1014,8 +1026,10 @@ export class UserService {
     return keys.map((key) => ({
       id: key.id,
       name: key.name,
+      app: key.app,
       createdAt: key.createdAt,
       lastUsedAt: key.lastUsedAt,
+      expiresAt: key.expiresAt,
       truncatedKey: `${key.keyPrefix}...`,
     }));
   }
@@ -1035,14 +1049,22 @@ export class UserService {
       });
     }
 
-    const rawKey = crypto.randomBytes(32).toString('hex');
+    const appPrefix = `${existing.app.toLowerCase()}_`;
+    const rawKey = appPrefix + crypto.randomBytes(32).toString('hex');
     const keyPrefix = rawKey.slice(0, 16);
     const keyHash = await bcrypt.hash(rawKey, 10);
+
+    let expiresAt: Date | null = null;
+    if (existing.expiresAt) {
+      const durationMs = existing.expiresAt.getTime() - existing.createdAt.getTime();
+      expiresAt = new Date(Date.now() + durationMs);
+    }
 
     const updated = await this.userRepository.updateApiKey(id, {
       keyHash,
       keyPrefix,
       lastUsedAt: null,
+      expiresAt,
     });
 
     return {
