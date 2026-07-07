@@ -46,8 +46,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
-import useSWR from "swr";
-import { fetcher } from "@/lib/fetcher";
+import { useBookmarks } from "@/hooks/useBookmarks";
 import { REFERENCE_CONSTELLATIONS } from "@/lib/constellations";
 import { StarMap } from "../stars/StarMap";
 
@@ -123,35 +122,17 @@ export function RrConstellationBuilderModal({
     null,
   );
 
-  // Sync bookmarks using useSWR
-  const { data: fetchedBookmarks, mutate: refetchBookmarks } = useSWR<Bookmark[]>(
-    session?.accessToken && open
-      ? [`${process.env.NEXT_PUBLIC_API_URL}/bookmarks`, session.accessToken]
-      : null,
-    fetcher,
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      revalidateIfStale: false,
-    }
-  );
+  // Sync bookmarks using useBookmarks
+  const { bookmarks: fetchedBookmarksRaw, mutate: refetchBookmarks } = useBookmarks({
+    enabled: !!(session?.accessToken && open),
+  });
+  const fetchedBookmarks = fetchedBookmarksRaw as unknown as Bookmark[];
 
   useEffect(() => {
     if (fetchedBookmarks) {
       setBookmarks(fetchedBookmarks);
     }
   }, [fetchedBookmarks]);
-
-  // Refetch bookmarks on change events
-  useEffect(() => {
-    const handleChanged = () => {
-      refetchBookmarks();
-    };
-    window.addEventListener("runa-bookmarks-changed", handleChanged);
-    return () => {
-      window.removeEventListener("runa-bookmarks-changed", handleChanged);
-    };
-  }, [refetchBookmarks]);
 
   // Mutation states
   const [isSaving, setIsSaving] = useState<boolean>(false);

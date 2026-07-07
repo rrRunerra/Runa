@@ -11,9 +11,8 @@ import { RrConstellationBuilderModal } from "@/components/rrComponents/rrConstel
 import { rrApps } from "@/../config/rrApps";
 import { hasPermission } from "@runa/permissions";
 import type { Constellation } from "@/types/constellation";
+import { useBookmarks } from "@/hooks/useBookmarks";
 import { Sparkles, Star } from "lucide-react";
-import useSWR from "swr";
-import { fetcher } from "@/lib/fetcher";
 import { Button } from "@/components/ui/button";
 
 const GREETINGS = ["Hey", "Hi", "Hello", "Greetings", "Hiya", "Welcome"];
@@ -47,23 +46,8 @@ export default function Dash() {
     document.title = "Polaris > Dashboard";
   }, []);
 
-  const { data: bookmarks = [], mutate } = useSWR<Bookmark[]>(
-    session?.accessToken
-      ? [`${process.env.NEXT_PUBLIC_API_URL}/bookmarks`, session.accessToken]
-      : null,
-    fetcher,
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      revalidateIfStale: false,
-    }
-  );
-
-  useEffect(() => {
-    if (!isBuilderOpen) {
-      mutate();
-    }
-  }, [isBuilderOpen, mutate]);
+  const { bookmarks: fetchedBookmarksRaw, mutate } = useBookmarks();
+  const bookmarks = (fetchedBookmarksRaw || []) as unknown as Bookmark[];
 
   useEffect(() => {
     let resizeObserver: ResizeObserver | null = null;

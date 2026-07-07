@@ -5,8 +5,7 @@ import Link from "next/link";
 import { Session } from "next-auth";
 import { ChevronsUpDown, Bookmark, Loader2 } from "lucide-react";
 
-import useSWR from "swr";
-import { fetcher } from "@/lib/fetcher";
+import { useBookmarks } from "@/hooks/useBookmarks";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -20,13 +19,6 @@ import { SidebarMenuButton, useSidebar } from "../ui/sidebar";
 import Image from "next/image";
 import { getSafeImageUrl } from "@/lib/inputValidation";
 import { hasPermission } from "@runa/permissions";
-
-interface BookmarkItem {
-  name: string;
-  redirect: string;
-  icon?: string;
-  description?: string;
-}
 
 export default function RrAppMenu({
   session,
@@ -46,32 +38,12 @@ export default function RrAppMenu({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const {
-    data: bookmarks,
-    isLoading: loading,
+    bookmarks,
+    loading,
     mutate: refetch,
-  } = useSWR<BookmarkItem[]>(
-    session && isMenuOpen
-      ? [`${process.env.NEXT_PUBLIC_API_URL}/bookmarks`, session.accessToken]
-      : null,
-    fetcher,
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      revalidateIfStale: false,
-    }
-  );
-
-  useEffect(() => {
-    const handleChanged = (): void => {
-      if (isMenuOpen) {
-        refetch();
-      }
-    };
-    window.addEventListener("runa-bookmarks-changed", handleChanged);
-    return () => {
-      window.removeEventListener("runa-bookmarks-changed", handleChanged);
-    };
-  }, [isMenuOpen, refetch]);
+  } = useBookmarks({
+    enabled: !!(session && isMenuOpen),
+  });
 
   // Sync active app based on route
   useEffect(() => {
