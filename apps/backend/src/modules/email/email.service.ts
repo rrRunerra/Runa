@@ -9,11 +9,11 @@ import * as nodemailer from 'nodemailer';
 import { ImapFlow } from 'imapflow';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { CacheService } from '../../providers/cache/cache.service';
-import { encrypt, decrypt } from '@runa/crypto/server';
+import { encrypt as encryptServer, decrypt } from '@runa/crypto/server';
 import {
   generateDataKey,
-  encryptWithDataKey,
-  encryptDataKeyForUser,
+  encrypt,
+  wrapKey,
 } from '@runa/crypto/node';
 import { EmailAccountDto, SendEmailDto, SaveDraftDto } from './email.dto';
 import { NotificationGateway } from '../notification/notification.gateway';
@@ -164,7 +164,7 @@ export class EmailService {
 
   async addEmailAccount(username: string, data: EmailAccountDto): Promise<any> {
     const rawPassword = data.password || '';
-    const encryptedPassword = encrypt(rawPassword);
+    const encryptedPassword = encryptServer(rawPassword);
     const iv = encryptedPassword.split(':')[0];
 
     return await this.prisma.client.userEmailAccount.create({
@@ -235,7 +235,7 @@ export class EmailService {
     };
 
     if (data.password) {
-      const encrypted = encrypt(data.password);
+      const encrypted = encryptServer(data.password);
       updateData.encryptedPassword = encrypted;
       updateData.encryptionIv = encrypted.split(':')[0];
     }
@@ -1079,18 +1079,18 @@ export class EmailService {
     if (userRecord && userRecord.userPublicKey) {
       try {
         const dataKey = generateDataKey();
-        subject = encryptWithDataKey(subject, dataKey);
-        bodyText = encryptWithDataKey(bodyText, dataKey);
-        bodyHtml = encryptWithDataKey(bodyHtml, dataKey);
+        subject = encrypt(subject, dataKey);
+        bodyText = encrypt(bodyText, dataKey);
+        bodyHtml = encrypt(bodyHtml, dataKey);
 
-        if (toVal) toVal = encryptWithDataKey(toVal, dataKey);
-        if (fromVal) fromVal = encryptWithDataKey(fromVal, dataKey);
-        if (ccVal) ccVal = encryptWithDataKey(ccVal, dataKey);
-        if (bccVal) bccVal = encryptWithDataKey(bccVal, dataKey);
+        if (toVal) toVal = encrypt(toVal, dataKey);
+        if (fromVal) fromVal = encrypt(fromVal, dataKey);
+        if (ccVal) ccVal = encrypt(ccVal, dataKey);
+        if (bccVal) bccVal = encrypt(bccVal, dataKey);
 
-        encryptedKey = encryptDataKeyForUser(
-          userRecord.userPublicKey,
+        encryptedKey = wrapKey(
           dataKey,
+          userRecord.userPublicKey,
         ) as any;
       } catch (encErr) {
         this.logger.error(`E2EE encryption failed for sent email:`, encErr);
@@ -1180,18 +1180,18 @@ export class EmailService {
     if (userRecord && userRecord.userPublicKey) {
       try {
         const dataKey = generateDataKey();
-        subject = encryptWithDataKey(subject, dataKey);
-        bodyText = encryptWithDataKey(bodyText, dataKey);
-        bodyHtml = encryptWithDataKey(bodyHtml, dataKey);
+        subject = encrypt(subject, dataKey);
+        bodyText = encrypt(bodyText, dataKey);
+        bodyHtml = encrypt(bodyHtml, dataKey);
 
-        if (toVal) toVal = encryptWithDataKey(toVal, dataKey);
-        if (fromVal) fromVal = encryptWithDataKey(fromVal, dataKey);
-        if (ccVal) ccVal = encryptWithDataKey(ccVal, dataKey);
-        if (bccVal) bccVal = encryptWithDataKey(bccVal, dataKey);
+        if (toVal) toVal = encrypt(toVal, dataKey);
+        if (fromVal) fromVal = encrypt(fromVal, dataKey);
+        if (ccVal) ccVal = encrypt(ccVal, dataKey);
+        if (bccVal) bccVal = encrypt(bccVal, dataKey);
 
-        encryptedKey = encryptDataKeyForUser(
-          userRecord.userPublicKey,
+        encryptedKey = wrapKey(
           dataKey,
+          userRecord.userPublicKey,
         ) as any;
       } catch (encErr) {
         this.logger.error(`E2EE encryption failed for draft email:`, encErr);
@@ -1316,11 +1316,11 @@ export class EmailService {
     if (user && user.userPublicKey) {
       try {
         const dataKey = generateDataKey();
-        if (subject) subject = encryptWithDataKey(subject, dataKey);
-        bodyText = encryptWithDataKey(bodyText, dataKey);
-        encryptedKey = encryptDataKeyForUser(
-          user.userPublicKey,
+        if (subject) subject = encrypt(subject, dataKey);
+        bodyText = encrypt(bodyText, dataKey);
+        encryptedKey = wrapKey(
           dataKey,
+          user.userPublicKey,
         ) as any;
       } catch (encErr) {
         this.logger.error(`Canned response encryption failed:`, encErr);
@@ -1363,11 +1363,11 @@ export class EmailService {
     if (user && user.userPublicKey) {
       try {
         const dataKey = generateDataKey();
-        if (subject) subject = encryptWithDataKey(subject, dataKey);
-        bodyText = encryptWithDataKey(bodyText, dataKey);
-        encryptedKey = encryptDataKeyForUser(
-          user.userPublicKey,
+        if (subject) subject = encrypt(subject, dataKey);
+        bodyText = encrypt(bodyText, dataKey);
+        encryptedKey = wrapKey(
           dataKey,
+          user.userPublicKey,
         ) as any;
       } catch (encErr) {
         this.logger.error(`Canned response update encryption failed:`, encErr);

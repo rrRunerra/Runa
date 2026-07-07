@@ -44,7 +44,7 @@ import {
 import { Button } from "../ui/button";
 import { SettingsDialog } from "./rrSettings/rrSettingsModal";
 import { RrAppearanceModal } from "./rrAppearanceModal";
-import { useRRe2ee } from "@/components/Providers/rrE2eeProvider";
+import { useRRCrypto } from "@/hooks/useRRCrypto";
 
 export default function RrUserMenu({ session }: { session: Session | null }) {
   const { unreadCount } = useNotificationAndBookmarks();
@@ -60,7 +60,7 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
 
   const { isMobile } = useSidebar();
   const { isE2eeUnlocked, isKeysExist, lockE2ee, setShowUnlockDialog } =
-    useRRe2ee();
+    useRRCrypto();
 
   useEffect(() => {
     const handleOpenSettings = (e: Event) => {

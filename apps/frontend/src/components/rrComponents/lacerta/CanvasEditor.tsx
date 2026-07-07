@@ -62,7 +62,7 @@ import RrCanvasFileInsertModal from "./rrCanvasFileInsertModal";
 import RrCanvasPublicShareWarningModal from "./rrCanvasPublicShareWarningModal";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
-import { useRRe2ee } from "@/components/Providers/rrE2eeProvider";
+import { useRRCrypto } from "@/hooks/useRRCrypto";
 import { useSession } from "next-auth/react";
 import UserProfileCard, { UserProfileInfo } from "./UserProfileCard";
 import { Video, Film, ExternalLink, Download, Check } from "lucide-react";
@@ -453,7 +453,7 @@ export default function CanvasEditor({
   } | null>(null);
 
   // New features dialog states
-  const { privateKey } = useRRe2ee();
+  const { privateKey } = useRRCrypto();
   const [videoPrompt, setVideoPrompt] = useState<{
     x: number;
     y: number;

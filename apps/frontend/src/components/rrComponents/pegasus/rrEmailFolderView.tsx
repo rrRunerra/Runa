@@ -10,7 +10,7 @@ import React, {
 import { useSession } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useRRe2ee } from "@/components/Providers/rrE2eeProvider";
+import { useRRCrypto } from "@/hooks/useRRCrypto";
 import { useRRSidebar } from "@/hooks/useRRSidebar";
 import { marked } from "marked";
 
@@ -105,7 +105,7 @@ export default function RrEmailFolderView({
   const [showShortcutsFooter, setShowShortcutsFooter] = useState<boolean>(true);
   const audioContextRef = useRef<AudioContext | null>(null);
 
-  const { getPrivateKey } = useRRe2ee();
+  const { getPrivateKey, unwrapKey, decrypt } = useRRCrypto();
   const [accounts, setAccounts] = useState<any[]>([]);
 
   const adjustUnreadBadge = useCallback(
@@ -180,44 +180,40 @@ export default function RrEmailFolderView({
   const decryptMessageObj = useCallback(
     async (msg: Message): Promise<Message> => {
       if (!msg.encryptedKey) return msg;
-      const privKey = await getPrivateKey();
-      if (!privKey) return msg;
 
       try {
-        const { decryptEmailDataKey, decryptEmailString } =
-          await import("@runa/crypto/browser");
-        const dataKey = await decryptEmailDataKey(msg.encryptedKey, privKey);
+        const dataKey = await unwrapKey(msg.encryptedKey);
 
         let decryptedSubject = msg.subject;
         try {
-          decryptedSubject = await decryptEmailString(msg.subject, dataKey);
+          decryptedSubject = await decrypt(msg.subject, dataKey);
         } catch {}
 
         let decryptedFrom = msg.from;
         try {
           decryptedFrom = msg.from
-            ? await decryptEmailString(msg.from, dataKey)
+            ? await decrypt(msg.from, dataKey)
             : msg.from;
         } catch {}
 
         let decryptedTo = msg.to;
         try {
           decryptedTo = msg.to
-            ? await decryptEmailString(msg.to, dataKey)
+            ? await decrypt(msg.to, dataKey)
             : msg.to;
         } catch {}
 
         let decryptedCc = msg.cc;
         try {
           decryptedCc = msg.cc
-            ? await decryptEmailString(msg.cc, dataKey)
+            ? await decrypt(msg.cc, dataKey)
             : msg.cc;
         } catch {}
 
         const decryptedAttachments = await Promise.all(
           (msg.attachments || []).map(async (att) => {
             try {
-              const decFilename = await decryptEmailString(
+              const decFilename = await decrypt(
                 att.filename,
                 dataKey,
               );
@@ -241,51 +237,47 @@ export default function RrEmailFolderView({
         return msg;
       }
     },
-    [getPrivateKey],
+    [unwrapKey, decrypt],
   );
 
   const decryptDetailedMessageObj = useCallback(
     async (msg: DetailedMessage): Promise<DetailedMessage> => {
       if (!msg.encryptedKey) return msg;
-      const privKey = await getPrivateKey();
-      if (!privKey) return msg;
 
       try {
-        const { decryptEmailDataKey, decryptEmailString } =
-          await import("@runa/crypto/browser");
-        const dataKey = await decryptEmailDataKey(msg.encryptedKey, privKey);
+        const dataKey = await unwrapKey(msg.encryptedKey);
 
         let decryptedSubject = msg.subject;
         try {
-          decryptedSubject = await decryptEmailString(msg.subject, dataKey);
+          decryptedSubject = await decrypt(msg.subject, dataKey);
         } catch {}
 
         let decryptedFrom = msg.from;
         try {
           decryptedFrom = msg.from
-            ? await decryptEmailString(msg.from, dataKey)
+            ? await decrypt(msg.from, dataKey)
             : msg.from;
         } catch {}
 
         let decryptedTo = msg.to;
         try {
           decryptedTo = msg.to
-            ? await decryptEmailString(msg.to, dataKey)
+            ? await decrypt(msg.to, dataKey)
             : msg.to;
         } catch {}
 
         let decryptedCc = msg.cc;
         try {
           decryptedCc = msg.cc
-            ? await decryptEmailString(msg.cc, dataKey)
+            ? await decrypt(msg.cc, dataKey)
             : msg.cc;
         } catch {}
 
-        const decryptedBodyText = await decryptEmailString(
+        const decryptedBodyText = await decrypt(
           msg.bodyText,
           dataKey,
         );
-        const decryptedBodyHtml = await decryptEmailString(
+        const decryptedBodyHtml = await decrypt(
           msg.bodyHtml,
           dataKey,
         );
@@ -293,7 +285,7 @@ export default function RrEmailFolderView({
         const decryptedAttachments = await Promise.all(
           (msg.attachments || []).map(async (att) => {
             try {
-              const decFilename = await decryptEmailString(
+              const decFilename = await decrypt(
                 att.filename,
                 dataKey,
               );
@@ -319,7 +311,7 @@ export default function RrEmailFolderView({
         return msg;
       }
     },
-    [getPrivateKey],
+    [unwrapKey, decrypt],
   );
 
   // Fetch accounts list
@@ -785,16 +777,8 @@ export default function RrEmailFolderView({
 
       if (detailedMessage?.encryptedKey) {
         try {
-          const privKey = await getPrivateKey();
-          if (privKey) {
-            const { decryptEmailDataKey, decryptEmailBuffer } =
-              await import("@runa/crypto/browser");
-            const dataKey = await decryptEmailDataKey(
-              detailedMessage.encryptedKey,
-              privKey,
-            );
-            finalBuffer = await decryptEmailBuffer(finalBuffer, dataKey);
-          }
+          const dataKey = await unwrapKey(detailedMessage.encryptedKey);
+          finalBuffer = await decrypt(finalBuffer, dataKey);
         } catch (decErr) {
           console.error(
             "Failed to decrypt attachment content on download:",

@@ -3,7 +3,14 @@
  * Uses native browser SubtleCrypto APIs (ECDH P-256 & AES-GCM).
  */
 
-const AES_GCM = ["AES", "GCM"].join("-");
+const AES_GCM = "AES-GCM";
+
+export interface EncryptedKeyPayload {
+  ephemeralPublicKey: string;
+  iv: string;
+  tag: string;
+  ciphertext: string;
+}
 
 // Helper to convert ArrayBuffer to Base64url
 export function bufferToBase64Url(buffer: ArrayBuffer): string {
@@ -100,7 +107,158 @@ export async function importPublicKey(base64UrlKey: string): Promise<CryptoKey> 
 }
 
 /**
- * Encrypts a message (or Master Key) using AES-GCM
+ * Imports a raw Base64url AES-GCM key into a CryptoKey
+ */
+export async function importRawKey(base64UrlKey: string): Promise<CryptoKey> {
+  const buffer = base64UrlToBuffer(base64UrlKey);
+  return window.crypto.subtle.importKey(
+    'raw',
+    buffer,
+    { name: AES_GCM },
+    true,
+    ['encrypt', 'decrypt']
+  );
+}
+
+const bufToHex = (buf: ArrayBuffer): string =>
+  Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+
+const hexToBuf = (hex: string): ArrayBuffer => {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < hex.length; i += 2) {
+    bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
+  }
+  return bytes.buffer;
+};
+
+/**
+ * Unified Encrypt supporting string, ArrayBuffer, and objects.
+ * Accepts CryptoKey or base64url raw key string.
+ */
+export async function encrypt(data: string, key: CryptoKey | string): Promise<string>;
+export async function encrypt(data: ArrayBuffer, key: CryptoKey | string): Promise<ArrayBuffer>;
+export async function encrypt(data: Record<string, any> | any[], key: CryptoKey | string): Promise<string>;
+export async function encrypt(data: any, key: CryptoKey | string): Promise<string | ArrayBuffer> {
+  let cryptoKey: CryptoKey;
+  if (typeof key === 'string') {
+    cryptoKey = await importRawKey(key);
+  } else {
+    cryptoKey = key;
+  }
+
+  if (data instanceof ArrayBuffer) {
+    const iv = window.crypto.getRandomValues(new Uint8Array(12));
+    const encrypted = await window.crypto.subtle.encrypt(
+      { name: AES_GCM, iv },
+      cryptoKey,
+      data
+    );
+    const encryptedBytes = new Uint8Array(encrypted);
+    const ciphertext = encryptedBytes.slice(0, encryptedBytes.length - 16);
+    const tag = encryptedBytes.slice(encryptedBytes.length - 16);
+
+    const final = new Uint8Array(12 + 16 + ciphertext.length);
+    final.set(iv, 0);
+    final.set(tag, 12);
+    final.set(ciphertext, 28);
+    return final.buffer;
+  }
+
+  const text = typeof data === 'string' ? data : JSON.stringify(data);
+  const encoder = new TextEncoder();
+  const plaintextBuffer = encoder.encode(text);
+  const iv = window.crypto.getRandomValues(new Uint8Array(12));
+  const encrypted = await window.crypto.subtle.encrypt(
+    { name: AES_GCM, iv },
+    cryptoKey,
+    plaintextBuffer
+  );
+
+  const encryptedBytes = new Uint8Array(encrypted);
+  const ciphertext = encryptedBytes.slice(0, encryptedBytes.length - 16);
+  const tag = encryptedBytes.slice(encryptedBytes.length - 16);
+
+  return `${bufToHex(iv.buffer)}:${bufToHex(ciphertext.buffer)}:${bufToHex(tag.buffer)}`;
+}
+
+/**
+ * Unified Decrypt supporting string, ArrayBuffer, and JSON payloads.
+ * Accepts single or multiple CryptoKey or base64url raw key strings.
+ */
+export async function decrypt(data: string, key: CryptoKey | string | (CryptoKey | string)[]): Promise<any>;
+export async function decrypt(data: ArrayBuffer, key: CryptoKey | string | (CryptoKey | string)[]): Promise<ArrayBuffer>;
+export async function decrypt(data: any, key: CryptoKey | string | (CryptoKey | string)[]): Promise<any> {
+  const keys = Array.isArray(key) ? key : [key];
+  let lastError: any = null;
+
+  for (const k of keys) {
+    try {
+      let cryptoKey: CryptoKey;
+      if (typeof k === 'string') {
+        cryptoKey = await importRawKey(k);
+      } else {
+        cryptoKey = k;
+      }
+
+      if (data instanceof ArrayBuffer) {
+        if (data.byteLength < 28) {
+          throw new Error('Invalid encrypted buffer format');
+        }
+        const iv = data.slice(0, 12);
+        const tag = data.slice(12, 28);
+        const ciphertext = data.slice(28);
+
+        const ciphertextWithTag = new Uint8Array(ciphertext.byteLength + tag.byteLength);
+        ciphertextWithTag.set(new Uint8Array(ciphertext), 0);
+        ciphertextWithTag.set(new Uint8Array(tag), ciphertext.byteLength);
+
+        return await window.crypto.subtle.decrypt(
+          { name: AES_GCM, iv: new Uint8Array(iv) },
+          cryptoKey,
+          ciphertextWithTag
+        );
+      }
+
+      if (typeof data === 'string') {
+        const parts = data.split(':');
+        if (parts.length !== 3) {
+          throw new Error('Invalid encrypted text format');
+        }
+        const iv = new Uint8Array(hexToBuf(parts[0]));
+        const ciphertext = new Uint8Array(hexToBuf(parts[1]));
+        const tag = new Uint8Array(hexToBuf(parts[2]));
+
+        const combined = new Uint8Array(ciphertext.length + tag.length);
+        combined.set(ciphertext, 0);
+        combined.set(tag, ciphertext.length);
+
+        const decrypted = await window.crypto.subtle.decrypt(
+          { name: AES_GCM, iv },
+          cryptoKey,
+          combined
+        );
+
+        const text = new TextDecoder().decode(decrypted);
+        try {
+          return JSON.parse(text);
+        } catch {
+          return text;
+        }
+      }
+
+      throw new Error('Unsupported data type for decryption');
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  throw lastError || new Error('Decryption failed with all provided keys');
+}
+
+/**
+ * Raw encryption/decryption functions to preserve compatibility for private E2EE key storage.
  */
 export async function encryptData(plaintext: string, key: CryptoKey): Promise<{ ciphertext: string; iv: string }> {
   const encoder = new TextEncoder();
@@ -122,9 +280,6 @@ export async function encryptData(plaintext: string, key: CryptoKey): Promise<{ 
   };
 }
 
-/**
- * Decrypts data using AES-GCM
- */
 export async function decryptData(ciphertextBase64: string, ivBase64: string, key: CryptoKey): Promise<string> {
   const encryptedBuffer = base64UrlToBuffer(ciphertextBase64);
   const ivBuffer = base64UrlToBuffer(ivBase64);
@@ -144,8 +299,6 @@ export async function decryptData(ciphertextBase64: string, ivBase64: string, ke
 
 /**
  * Encrypts the Master Key for a target device using ECDH key agreement.
- * Performs a DH exchange between the sender's device private key and the receiver's device public key,
- * derives an AES key, and encrypts the master key payload.
  */
 export async function encryptMasterKeyForDevice(
   masterKeyHexOrBase64: string,
@@ -154,7 +307,6 @@ export async function encryptMasterKeyForDevice(
 ): Promise<{ ciphertext: string; iv: string }> {
   const targetPublicKey = await importPublicKey(targetDevicePublicKeyBase64);
 
-  // Derive shared symmetric key
   const sharedKey = await window.crypto.subtle.deriveKey(
     {
       name: 'ECDH',
@@ -169,7 +321,6 @@ export async function encryptMasterKeyForDevice(
     ['encrypt']
   );
 
-  // Encrypt the master key material
   return encryptData(masterKeyHexOrBase64, sharedKey);
 }
 
@@ -184,7 +335,6 @@ export async function decryptMasterKeyFromDevice(
 ): Promise<string> {
   const senderPublicKey = await importPublicKey(senderPublicKeyBase64);
 
-  // Derive shared symmetric key
   const sharedKey = await window.crypto.subtle.deriveKey(
     {
       name: 'ECDH',
@@ -203,30 +353,25 @@ export async function decryptMasterKeyFromDevice(
 }
 
 /**
- * Decrypts the symmetric email data key using the user's private ECDH key
+ * Unified asymmetric key wrapping for E2EE hybrid encryption.
  */
-export async function decryptEmailDataKey(
-  payload: { ephemeralPublicKey: string; iv: string; tag: string; ciphertext: string },
-  privateKey: CryptoKey
-): Promise<CryptoKey> {
-  const serverPubKeyBuf = base64UrlToBuffer(payload.ephemeralPublicKey);
-  const serverPublicKey = await window.crypto.subtle.importKey(
-    'raw',
-    serverPubKeyBuf,
-    {
-      name: 'ECDH',
-      namedCurve: 'P-256'
-    },
+export async function wrapKey(
+  rawKey: string | CryptoKey,
+  recipientPublicKeyStr: string | CryptoKey
+): Promise<EncryptedKeyPayload> {
+  const recipientPublicKey = typeof recipientPublicKeyStr === 'string'
+    ? await importPublicKey(recipientPublicKeyStr)
+    : recipientPublicKeyStr;
+
+  const ephemeralKeyPair = await window.crypto.subtle.generateKey(
+    { name: 'ECDH', namedCurve: 'P-256' },
     true,
-    []
+    ['deriveKey', 'deriveBits']
   );
 
   const sharedSecretBits = await window.crypto.subtle.deriveBits(
-    {
-      name: 'ECDH',
-      public: serverPublicKey
-    },
-    privateKey,
+    { name: 'ECDH', public: recipientPublicKey },
+    ephemeralKeyPair.privateKey,
     256
   );
 
@@ -235,96 +380,106 @@ export async function decryptEmailDataKey(
   const wrappingKey = await window.crypto.subtle.importKey(
     'raw',
     aesKeyBuffer,
-    { name: 'AES-GCM' },
+    { name: AES_GCM },
     false,
-    ['decrypt']
+    ['encrypt']
   );
 
-  const ciphertextBuf = base64UrlToBuffer(payload.ciphertext);
-  const ivBuf = base64UrlToBuffer(payload.iv);
-  const tagBuf = base64UrlToBuffer(payload.tag);
+  let rawKeyBuffer: ArrayBuffer;
+  if (typeof rawKey === 'string') {
+    rawKeyBuffer = base64UrlToBuffer(rawKey);
+  } else {
+    rawKeyBuffer = await window.crypto.subtle.exportKey('raw', rawKey);
+  }
 
-  const ciphertextWithTag = new Uint8Array(ciphertextBuf.byteLength + tagBuf.byteLength);
-  ciphertextWithTag.set(new Uint8Array(ciphertextBuf), 0);
-  ciphertextWithTag.set(new Uint8Array(tagBuf), ciphertextBuf.byteLength);
+  const iv = window.crypto.getRandomValues(new Uint8Array(12));
 
-  const rawDataKey = await window.crypto.subtle.decrypt(
-    {
-      name: 'AES-GCM',
-      iv: new Uint8Array(ivBuf)
-    },
+  const encrypted = await window.crypto.subtle.encrypt(
+    { name: AES_GCM, iv },
     wrappingKey,
-    ciphertextWithTag
+    rawKeyBuffer
   );
 
-  return window.crypto.subtle.importKey(
-    'raw',
-    rawDataKey,
-    { name: 'AES-GCM' },
-    false,
-    ['decrypt']
-  );
-}
+  const encryptedBytes = new Uint8Array(encrypted);
+  const ciphertext = encryptedBytes.slice(0, encryptedBytes.length - 16);
+  const tag = encryptedBytes.slice(encryptedBytes.length - 16);
 
-/**
- * Decrypts a string that was encrypted on the server in "iv:ciphertext:tag" (hex) format
- */
-export async function decryptEmailString(encryptedText: string, dataKey: CryptoKey): Promise<string> {
-  const parts = encryptedText.split(':');
-  if (parts.length !== 3) {
-    throw new Error('Invalid encrypted email text format');
-  }
+  const exportedEphemeralPub = await window.crypto.subtle.exportKey('raw', ephemeralKeyPair.publicKey);
 
-  const hexToBuf = (hex: string) => {
-    const bytes = new Uint8Array(hex.length / 2);
-    for (let i = 0; i < hex.length; i += 2) {
-      bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
-    }
-    return bytes.buffer;
+  return {
+    ephemeralPublicKey: bufferToBase64Url(exportedEphemeralPub),
+    iv: bufferToBase64Url(iv.buffer),
+    tag: bufferToBase64Url(tag.buffer),
+    ciphertext: bufferToBase64Url(ciphertext.buffer),
   };
-
-  const iv = hexToBuf(parts[0]);
-  const ciphertext = hexToBuf(parts[1]);
-  const tag = hexToBuf(parts[2]);
-
-  const ciphertextWithTag = new Uint8Array(ciphertext.byteLength + tag.byteLength);
-  ciphertextWithTag.set(new Uint8Array(ciphertext), 0);
-  ciphertextWithTag.set(new Uint8Array(tag), ciphertext.byteLength);
-
-  const decrypted = await window.crypto.subtle.decrypt(
-    {
-      name: 'AES-GCM',
-      iv: new Uint8Array(iv)
-    },
-    dataKey,
-    ciphertextWithTag
-  );
-
-  return new TextDecoder().decode(decrypted);
 }
 
 /**
- * Decrypts a buffer that was encrypted on the server in "[iv (12B) | tag (16B) | ciphertext]" format
+ * Unified asymmetric key unwrapping. Supports single or multiple private keys.
  */
-export async function decryptEmailBuffer(encryptedBuffer: ArrayBuffer, dataKey: CryptoKey): Promise<ArrayBuffer> {
-  if (encryptedBuffer.byteLength < 28) {
-    throw new Error('Invalid encrypted email buffer format');
+export async function unwrapKey(
+  wrappedKey: EncryptedKeyPayload | string,
+  privateKey: CryptoKey | CryptoKey[]
+): Promise<CryptoKey> {
+  const payload: EncryptedKeyPayload = typeof wrappedKey === 'string'
+    ? JSON.parse(wrappedKey)
+    : wrappedKey;
+
+  const privateKeys = Array.isArray(privateKey) ? privateKey : [privateKey];
+  let lastError: any = null;
+
+  for (const privKey of privateKeys) {
+    try {
+      const ephemeralPubBuf = base64UrlToBuffer(payload.ephemeralPublicKey);
+      const ephemeralPublicKey = await window.crypto.subtle.importKey(
+        'raw',
+        ephemeralPubBuf,
+        { name: 'ECDH', namedCurve: 'P-256' },
+        true,
+        []
+      );
+
+      const sharedSecretBits = await window.crypto.subtle.deriveBits(
+        { name: 'ECDH', public: ephemeralPublicKey },
+        privKey,
+        256
+      );
+
+      const aesKeyBuffer = await window.crypto.subtle.digest('SHA-256', sharedSecretBits);
+
+      const wrappingKey = await window.crypto.subtle.importKey(
+        'raw',
+        aesKeyBuffer,
+        { name: AES_GCM },
+        false,
+        ['decrypt']
+      );
+
+      const ciphertextBuf = base64UrlToBuffer(payload.ciphertext);
+      const ivBuf = base64UrlToBuffer(payload.iv);
+      const tagBuf = base64UrlToBuffer(payload.tag);
+
+      const ciphertextWithTag = new Uint8Array(ciphertextBuf.byteLength + tagBuf.byteLength);
+      ciphertextWithTag.set(new Uint8Array(ciphertextBuf), 0);
+      ciphertextWithTag.set(new Uint8Array(tagBuf), ciphertextBuf.byteLength);
+
+      const rawDecryptedKey = await window.crypto.subtle.decrypt(
+        { name: AES_GCM, iv: new Uint8Array(ivBuf) },
+        wrappingKey,
+        ciphertextWithTag
+      );
+
+      return await window.crypto.subtle.importKey(
+        'raw',
+        rawDecryptedKey,
+        { name: AES_GCM },
+        true,
+        ['encrypt', 'decrypt']
+      );
+    } catch (err) {
+      lastError = err;
+    }
   }
 
-  const iv = encryptedBuffer.slice(0, 12);
-  const tag = encryptedBuffer.slice(12, 28);
-  const ciphertext = encryptedBuffer.slice(28);
-
-  const ciphertextWithTag = new Uint8Array(ciphertext.byteLength + tag.byteLength);
-  ciphertextWithTag.set(new Uint8Array(ciphertext), 0);
-  ciphertextWithTag.set(new Uint8Array(tag), ciphertext.byteLength);
-
-  return window.crypto.subtle.decrypt(
-    {
-      name: 'AES-GCM',
-      iv: new Uint8Array(iv)
-    },
-    dataKey,
-    ciphertextWithTag
-  );
+  throw lastError || new Error('Failed to unwrap key with all provided private keys');
 }

@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { useRRe2ee } from "@/components/Providers/rrE2eeProvider";
+import { useRRCrypto } from "@/hooks/useRRCrypto";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -36,7 +36,7 @@ interface AttachmentItem {
 export default function RrAttachmentManager(): React.JSX.Element {
   const { data: session } = useSession();
   const router = useRouter();
-  const { getPrivateKey } = useRRe2ee();
+  const { getPrivateKey, unwrapKey, decrypt } = useRRCrypto();
 
   const [loading, setLoading] = useState<boolean>(true);
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
@@ -83,9 +83,6 @@ export default function RrAttachmentManager(): React.JSX.Element {
 
       const allFetched: AttachmentItem[] = [];
       const privateKey = await getPrivateKey();
-      const cryptoBrowser = privateKey
-        ? await import("@runa/crypto/browser")
-        : null;
 
       // 2. Fetch inbox, sent, and archive messages for each account
       const folders = ["inbox", "sent", "archive"];
@@ -107,23 +104,14 @@ export default function RrAttachmentManager(): React.JSX.Element {
               let fromSender = msg.from || "";
               let dataKey: any = null;
 
-              if (msg.encryptedKey && cryptoBrowser && privateKey) {
+              if (msg.encryptedKey && privateKey) {
                 try {
-                  dataKey = await cryptoBrowser.decryptEmailDataKey(
-                    msg.encryptedKey,
-                    privateKey,
-                  );
+                  dataKey = await unwrapKey(msg.encryptedKey);
                   try {
-                    subject = await cryptoBrowser.decryptEmailString(
-                      msg.subject,
-                      dataKey,
-                    );
+                    subject = await decrypt(msg.subject, dataKey);
                   } catch {}
                   try {
-                    fromSender = await cryptoBrowser.decryptEmailString(
-                      msg.from,
-                      dataKey,
-                    );
+                    fromSender = await decrypt(msg.from, dataKey);
                   } catch {}
                 } catch (e) {
                   console.error(
@@ -135,9 +123,9 @@ export default function RrAttachmentManager(): React.JSX.Element {
 
               for (const att of msg.attachments) {
                 let filename = att.filename;
-                if (msg.encryptedKey && cryptoBrowser && dataKey) {
+                if (msg.encryptedKey && dataKey) {
                   try {
-                    filename = await cryptoBrowser.decryptEmailString(
+                    filename = await decrypt(
                       att.filename,
                       dataKey,
                     );
@@ -196,16 +184,8 @@ export default function RrAttachmentManager(): React.JSX.Element {
 
       if (item.encryptedKey) {
         try {
-          const privKey = await getPrivateKey();
-          if (privKey) {
-            const { decryptEmailDataKey, decryptEmailBuffer } =
-              await import("@runa/crypto/browser");
-            const dataKey = await decryptEmailDataKey(
-              item.encryptedKey,
-              privKey,
-            );
-            finalBuffer = await decryptEmailBuffer(finalBuffer, dataKey);
-          }
+          const dataKey = await unwrapKey(item.encryptedKey);
+          finalBuffer = await decrypt(finalBuffer, dataKey);
         } catch (decErr) {
           console.error(
             "Failed to decrypt attachment content on download:",

@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { useRRe2ee } from "@/components/Providers/rrE2eeProvider";
+import { useRRCrypto } from "@/hooks/useRRCrypto";
 
 export function RrUnlockSecureStorageModal() {
   const { data: session } = useSession();
@@ -23,7 +23,7 @@ export function RrUnlockSecureStorageModal() {
     isKeysExist,
     isE2eeUnlocked,
     unlockE2ee,
-  } = useRRe2ee();
+  } = useRRCrypto();
 
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);

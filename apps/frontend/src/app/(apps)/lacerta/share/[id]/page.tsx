@@ -11,9 +11,8 @@ import OnlyOfficeEditor from "@/components/rrComponents/lacerta/OnlyOfficeEditor
 
 import {
   importRawKey,
-  decryptMetadataString,
-  decryptFileBuffer,
-} from "@/lib/lacertaCrypto";
+  decrypt,
+} from "@runa/crypto/browser";
 
 export default function LacertaSharePage(): React.JSX.Element {
   const params = useParams();
@@ -49,9 +48,8 @@ export default function LacertaSharePage(): React.JSX.Element {
         // If we have a key in the URL, decrypt the metadata now
         if (rawKey) {
           try {
-            const fileKey = await importRawKey(rawKey);
-            const decName = await decryptMetadataString(meta.name, fileKey);
-            const decType = await decryptMetadataString(meta.type || "", fileKey);
+            const decName = await decrypt(meta.name, rawKey);
+            const decType = await decrypt(meta.type || "", rawKey);
             setDecryptedName(decName);
             setDecryptedType(decType);
           } catch (decErr) {
@@ -93,8 +91,7 @@ export default function LacertaSharePage(): React.JSX.Element {
       const encryptedBuffer = await res.arrayBuffer();
 
       // 2. Import file key and decrypt
-      const fileKey = await importRawKey(rawKeyStr);
-      const decryptedBuffer = await decryptFileBuffer(encryptedBuffer, fileKey);
+      const decryptedBuffer = await decrypt(encryptedBuffer, rawKeyStr);
 
       // 3. Create blob URL
       const blob = new Blob([decryptedBuffer], { type: decryptedType || "application/octet-stream" });
@@ -132,7 +129,7 @@ export default function LacertaSharePage(): React.JSX.Element {
       const fileKey = await importRawKey(rawKeyStr);
       setDecryptedKey(fileKey);
 
-      const decryptedBuffer = await decryptFileBuffer(encryptedBuffer, fileKey);
+      const decryptedBuffer = await decrypt(encryptedBuffer, fileKey);
       const text = new TextDecoder().decode(decryptedBuffer);
 
       setCanvasContent(text);

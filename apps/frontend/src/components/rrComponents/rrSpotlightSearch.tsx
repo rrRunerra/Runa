@@ -41,7 +41,7 @@ import {
 import React from "react";
 import { RrMediaRoulette } from "@/components/rrComponents/aquila/rrMediaRoulette";
 import { useRRSidebar } from "@/hooks/useRRSidebar";
-import { useRRe2ee } from "@/components/Providers/rrE2eeProvider";
+import { useRRCrypto } from "@/hooks/useRRCrypto";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { toast } from "sonner";
@@ -105,7 +105,7 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
   const { setBaseTheme } = useBaseTheme();
   const { sidebarConfig } = useRRSidebar();
   const { toggleSidebar } = useSidebar();
-  const { isE2eeUnlocked, setShowUnlockDialog } = useRRe2ee();
+  const { isE2eeUnlocked, setShowUnlockDialog } = useRRCrypto();
 
   const { clipboardHistory, openPreview, openParameters } = useSpotlight();
 

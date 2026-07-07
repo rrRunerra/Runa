@@ -28,9 +28,11 @@ jest.mock('imapflow', () => {
 
 jest.mock('@runa/crypto/node', () => ({
   generateDataKey: jest.fn(() => Buffer.from('mockKey')),
-  encryptWithDataKey: jest.fn((text) => `enc:${text}`),
-  encryptBufferWithDataKey: jest.fn((buf) => buf),
-  encryptDataKeyForUser: jest.fn(() => 'mockEncKey'),
+  encrypt: jest.fn((data) => {
+    if (Buffer.isBuffer(data)) return data;
+    return `enc:${data}`;
+  }),
+  wrapKey: jest.fn(() => 'mockEncKey'),
 }));
 
 jest.mock('@runa/crypto/server', () => ({

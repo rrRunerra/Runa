@@ -11,8 +11,8 @@ import { MailService } from '../../providers/mail/mail.service';
 import { decrypt } from '@runa/crypto/server';
 import {
   generateDataKey,
-  encryptWithDataKey,
-  encryptDataKeyForUser,
+  encrypt,
+  wrapKey,
 } from '@runa/crypto/node';
 import { verify } from 'otplib';
 import bcrypt from 'bcrypt';
@@ -405,14 +405,14 @@ export class AuthService {
     await this.cacheService.set(`mfa-device-code:${userId}`, code, 300); // 5 min TTL
 
     const dataKey = generateDataKey();
-    const encryptedMessage = encryptWithDataKey(
+    const encryptedMessage = encrypt(
       `Your login verification code is: ${code}`,
       dataKey,
     );
-    const encryptedTitle = encryptWithDataKey('Device Login Request', dataKey);
-    const encryptedKeyPayload = encryptDataKeyForUser(
-      device.identityKey,
+    const encryptedTitle = encrypt('Device Login Request', dataKey);
+    const encryptedKeyPayload = wrapKey(
       dataKey,
+      device.identityKey,
     );
 
     await this.prisma.client.notification.create({

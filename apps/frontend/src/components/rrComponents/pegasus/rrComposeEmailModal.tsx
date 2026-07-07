@@ -57,7 +57,7 @@ import {
 } from "@/components/ui/select";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useRRe2ee } from "@/components/Providers/rrE2eeProvider";
+import { useRRCrypto } from "@/hooks/useRRCrypto";
 import { marked } from "marked";
 import { cn } from "@/lib/utils";
 
@@ -102,7 +102,7 @@ export function RrComposeEmailModal({
   onOpenChange: setControlledOpen,
 }: RrComposeEmailModalProps): React.JSX.Element {
   const { data: session } = useSession();
-  const { getPrivateKey } = useRRe2ee();
+  const { getPrivateKey, unwrapKey, decrypt } = useRRCrypto();
   const [internalOpen, setInternalOpen] = useState<boolean>(false);
 
   const isControlled = controlledOpen !== undefined;
@@ -267,29 +267,17 @@ export function RrComposeEmailModal({
             ? data
             : [];
           const privateKey = await getPrivateKey();
-          const cryptoBrowser = privateKey
-            ? await import("@runa/crypto/browser")
-            : null;
 
           const decrypted = await Promise.all(
             rawTemplates.map(async (tmpl) => {
-              if (tmpl.encryptedKey && cryptoBrowser && privateKey) {
+              if (tmpl.encryptedKey && privateKey) {
                 try {
-                  const dataKey = await cryptoBrowser.decryptEmailDataKey(
-                    tmpl.encryptedKey,
-                    privateKey,
-                  );
+                  const dataKey = await unwrapKey(tmpl.encryptedKey);
                   let decSubject = tmpl.subject;
                   if (tmpl.subject) {
-                    decSubject = await cryptoBrowser.decryptEmailString(
-                      tmpl.subject,
-                      dataKey,
-                    );
+                    decSubject = await decrypt(tmpl.subject, dataKey);
                   }
-                  const decBody = await cryptoBrowser.decryptEmailString(
-                    tmpl.bodyText,
-                    dataKey,
-                  );
+                  const decBody = await decrypt(tmpl.bodyText, dataKey);
                   return { ...tmpl, subject: decSubject, bodyText: decBody };
                 } catch (e) {
                   console.error("Canned response decryption failed:", e);

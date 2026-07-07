@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { useRRe2ee } from "@/components/Providers/rrE2eeProvider";
+import { useRRCrypto } from "@/hooks/useRRCrypto";
 import { SpotlightParameter } from "../rrComponents/rrSpotlight/BaseSpotlightFeature";
 import {
   Dialog,
@@ -40,7 +40,7 @@ export function useSpotlight(): SpotlightContextType {
 
 export function RrSpotlightProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
   const { data: session } = useSession();
-  const { isE2eeUnlocked } = useRRe2ee();
+  const { isE2eeUnlocked } = useRRCrypto();
   const [clipboardHistory, setClipboardHistory] = useState<string[]>([]);
 
   // Preview dialog state

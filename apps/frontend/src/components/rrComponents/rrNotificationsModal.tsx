@@ -51,7 +51,7 @@ import {
   exportPublicKey,
   generateKeyPair,
 } from "@runa/crypto/browser";
-import { useRRe2ee } from "@/components/Providers/rrE2eeProvider";
+import { useRRCrypto } from "@/hooks/useRRCrypto";
 import { fetcher } from "@/lib/fetcher";
 import { cn } from "@/lib/utils";
 
@@ -127,7 +127,7 @@ export function RrNotificationsModal({
 }: NotificationsModalProps) {
   const { data: session } = useSession();
   const router = useRouter();
-  const { getPrivateKey } = useRRe2ee();
+  const { getPrivateKey, unwrapKey, decrypt } = useRRCrypto();
 
   const [notifications, setNotifications] = useState<
     (Notification & { _decryptionFailed?: boolean })[]
@@ -169,18 +169,16 @@ export function RrNotificationsModal({
       }
 
       try {
-        const { decryptEmailDataKey, decryptEmailString } =
-          await import("@runa/crypto/browser");
-        const dataKey = await decryptEmailDataKey(meta.encryptedKey, privKey);
+        const dataKey = await unwrapKey(meta.encryptedKey);
 
         let decryptedTitle = n.title;
         try {
-          decryptedTitle = await decryptEmailString(n.title, dataKey);
+          decryptedTitle = await decrypt(n.title, dataKey);
         } catch {}
 
         let decryptedMessage = n.message;
         try {
-          decryptedMessage = await decryptEmailString(n.message, dataKey);
+          decryptedMessage = await decrypt(n.message, dataKey);
         } catch {}
 
         return {

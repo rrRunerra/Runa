@@ -20,8 +20,11 @@ jest.mock('@runa/crypto/server', () => ({
 
 jest.mock('@runa/crypto/node', () => ({
   generateDataKey: jest.fn().mockReturnValue(Buffer.from('mock-data-key')),
-  encryptWithDataKey: jest.fn().mockReturnValue('mock-encrypted-message'),
-  encryptDataKeyForUser: jest.fn().mockReturnValue('mock-encrypted-key-payload'),
+  encrypt: jest.fn((data) => {
+    if (Buffer.isBuffer(data)) return data;
+    return 'mock-encrypted-message';
+  }),
+  wrapKey: jest.fn().mockReturnValue('mock-encrypted-key-payload'),
 }));
 
 describe('AuthService', () => {

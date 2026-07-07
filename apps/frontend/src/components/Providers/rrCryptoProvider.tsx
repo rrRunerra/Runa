@@ -16,7 +16,7 @@ import { saveKey, loadKey, removeKey } from "@/lib/indexeddb";
 
 // --- Context & Types ---
 
-interface RRe2eeContextValue {
+export interface RrCryptoContextValue {
   isE2eeUnlocked: boolean;
   isKeysExist: boolean;
   privateKey: CryptoKey | null;
@@ -27,19 +27,19 @@ interface RRe2eeContextValue {
   unlockE2ee: (password: string) => Promise<void>;
 }
 
-const RRe2eeContext = createContext<RRe2eeContextValue | null>(null);
+const RrCryptoContext = createContext<RrCryptoContextValue | null>(null);
 
-export function useRRe2ee() {
-  const context = useContext(RRe2eeContext);
+export function useRrCryptoContext() {
+  const context = useContext(RrCryptoContext);
   if (!context) {
-    throw new Error("useRRe2ee must be used within an RRe2eeProvider");
+    throw new Error("useRrCryptoContext must be used within an RrCryptoProvider");
   }
   return context;
 }
 
 // --- Provider ---
 
-export function RrE2eeProvider({ children }: { children: React.ReactNode }) {
+export function RrCryptoProvider({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
 
   const [isE2eeUnlocked, setIsE2eeUnlocked] = useState<boolean>(false);
@@ -300,7 +300,7 @@ export function RrE2eeProvider({ children }: { children: React.ReactNode }) {
   }, [privateKey, session?.user?.username]);
 
   return (
-    <RRe2eeContext.Provider
+    <RrCryptoContext.Provider
       value={{
         isE2eeUnlocked,
         isKeysExist,
@@ -313,6 +313,6 @@ export function RrE2eeProvider({ children }: { children: React.ReactNode }) {
       }}
     >
       {children}
-    </RRe2eeContext.Provider>
+    </RrCryptoContext.Provider>
   );
 }

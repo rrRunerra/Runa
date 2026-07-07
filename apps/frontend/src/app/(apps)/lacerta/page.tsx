@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import { useSession } from "next-auth/react";
-import { useRRe2ee } from "@/components/Providers/rrE2eeProvider";
+import { useRRCrypto } from "@/hooks/useRRCrypto";
 import { Lock, Unlock, ShieldAlert, Loader2, FolderClosed, FileText, Grid3X3, Plus, Upload, FolderPlus, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
@@ -99,7 +99,7 @@ export default function LacertaPage({
   tab?: LacertaTab;
 }): React.JSX.Element {
   const { data: session } = useSession();
-  const { isE2eeUnlocked, privateKey, setShowUnlockDialog, lockE2ee } = useRRe2ee();
+  const { isE2eeUnlocked, privateKey, setShowUnlockDialog, lockE2ee } = useRRCrypto();
 
   const [userPublicKey, setUserPublicKey] = useState<string | null>(null);
 

@@ -6,9 +6,8 @@ import { PrismaService } from '../../providers/database/prisma.service';
 import { decrypt } from '@runa/crypto/server';
 import {
   generateDataKey,
-  encryptWithDataKey,
-  encryptBufferWithDataKey,
-  encryptDataKeyForUser,
+  encrypt,
+  wrapKey,
 } from '@runa/crypto/node';
 import { NotificationGateway } from '../notification/notification.gateway';
 
@@ -217,18 +216,18 @@ export class EmailSyncService {
               if (user && user.userPublicKey) {
                 try {
                   dataKey = generateDataKey();
-                  subject = encryptWithDataKey(subject, dataKey);
-                  bodyText = encryptWithDataKey(bodyText, dataKey);
-                  bodyHtml = encryptWithDataKey(bodyHtml, dataKey);
+                  subject = encrypt(subject, dataKey);
+                  bodyText = encrypt(bodyText, dataKey);
+                  bodyHtml = encrypt(bodyHtml, dataKey);
 
-                  if (fromStr) fromStr = encryptWithDataKey(fromStr, dataKey);
-                  if (toStr) toStr = encryptWithDataKey(toStr, dataKey);
-                  if (ccStr) ccStr = encryptWithDataKey(ccStr, dataKey);
-                  if (bccStr) bccStr = encryptWithDataKey(bccStr, dataKey);
+                  if (fromStr) fromStr = encrypt(fromStr, dataKey);
+                  if (toStr) toStr = encrypt(toStr, dataKey);
+                  if (ccStr) ccStr = encrypt(ccStr, dataKey);
+                  if (bccStr) bccStr = encrypt(bccStr, dataKey);
 
-                  encryptedKey = encryptDataKeyForUser(
-                    user.userPublicKey,
+                  encryptedKey = wrapKey(
                     dataKey,
+                    user.userPublicKey,
                   ) as any;
                 } catch (encErr) {
                   this.logger.error(
@@ -292,8 +291,8 @@ export class EmailSyncService {
 
                     if (dataKey && encryptedKey) {
                       try {
-                        notifTitle = encryptWithDataKey(notifTitle, dataKey);
-                        notifMessage = encryptWithDataKey(
+                        notifTitle = encrypt(notifTitle, dataKey);
+                        notifMessage = encrypt(
                           `New email from ${parsed.from ? parsed.from.text : ''}`,
                           dataKey,
                         );
@@ -358,8 +357,8 @@ export class EmailSyncService {
 
                   if (dataKey) {
                     try {
-                      filename = encryptWithDataKey(filename, dataKey);
-                      content = encryptBufferWithDataKey(content, dataKey);
+                      filename = encrypt(filename, dataKey);
+                      content = encrypt(content, dataKey);
                     } catch (attachEncErr) {
                       this.logger.error(
                         `Attachment E2EE encryption failed for UID ${msg.uid}:`,

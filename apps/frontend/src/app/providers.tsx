@@ -8,7 +8,7 @@ import { ThemeProvider } from "next-themes";
 import RrSpotlightSearch from "@/components/rrComponents/rrSpotlightSearch";
 import { RrUnlockSecureStorageModal } from "@/components/rrComponents/rrUnlockSecureStorageModal";
 
-import { RrE2eeProvider } from "@/components/Providers/rrE2eeProvider";
+import { RrCryptoProvider } from "@/components/Providers/rrCryptoProvider";
 import { RrThemeProvider } from "@/components/Providers/rrThemeProvider";
 import { RrSpotlightProvider } from "@/components/Providers/rrSpotlightProvider";
 import { RrNotificationAndBookmarksProvider } from "@/components/Providers/rrNotificationAndBookmarksProvider";
@@ -16,7 +16,7 @@ import { RrNotificationAndBookmarksProvider } from "@/components/Providers/rrNot
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
-      <RrE2eeProvider>
+      <RrCryptoProvider>
         <RrNotificationAndBookmarksProvider>
           <RrSpotlightProvider>
             <RrThemeProvider>
@@ -39,7 +39,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             </RrThemeProvider>
           </RrSpotlightProvider>
         </RrNotificationAndBookmarksProvider>
-      </RrE2eeProvider>
+      </RrCryptoProvider>
     </SessionProvider>
   );
 }

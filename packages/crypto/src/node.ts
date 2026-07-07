@@ -3,6 +3,13 @@ import * as crypto from 'crypto';
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12;
 
+export interface EncryptedKeyPayload {
+  ephemeralPublicKey: string;
+  iv: string;
+  tag: string;
+  ciphertext: string;
+}
+
 function base64UrlToBuffer(base64url: string): Buffer {
   let base64 = base64url.replace(/-/g, '+').replace(/_/g, '/');
   while (base64.length % 4) {
@@ -18,72 +25,119 @@ function bufferToBase64Url(buffer: Buffer): string {
     .replace(/=+$/, '');
 }
 
-export interface EncryptedKeyPayload {
-  ephemeralPublicKey: string;
-  iv: string;
-  tag: string;
-  ciphertext: string;
-}
-
 /**
- * Generates a random 256-bit symmetric data key for a single email message
+ * Generates a random 256-bit symmetric data key
  */
 export function generateDataKey(): Buffer {
   return crypto.randomBytes(32);
 }
 
 /**
- * Encrypts a plaintext string using the symmetric data key with AES-256-GCM
+ * Unified Node Encrypt supporting string, Buffer, and objects.
+ * Accepts Buffer or base64url raw key string.
  */
-export function encryptWithDataKey(text: string, dataKey: Buffer): string {
+export function encrypt(data: string, key: Buffer | string): string;
+export function encrypt(data: Buffer, key: Buffer | string): Buffer;
+export function encrypt(data: Record<string, any> | any[], key: Buffer | string): string;
+export function encrypt(data: any, key: Buffer | string): string | Buffer {
+  const useKey = typeof key === 'string' ? base64UrlToBuffer(key) : key;
+
+  if (Buffer.isBuffer(data)) {
+    const iv = crypto.randomBytes(IV_LENGTH);
+    const cipher = crypto.createCipheriv(ALGORITHM, useKey, iv);
+    const ciphertext = Buffer.concat([cipher.update(data), cipher.final()]);
+    const tag = cipher.getAuthTag();
+    return Buffer.concat([iv, tag, ciphertext]);
+  }
+
+  const text = typeof data === 'string' ? data : JSON.stringify(data);
   const iv = crypto.randomBytes(IV_LENGTH);
-  const cipher = crypto.createCipheriv(ALGORITHM, dataKey, iv);
-  
+  const cipher = crypto.createCipheriv(ALGORITHM, useKey, iv);
   let encrypted = cipher.update(text, 'utf8', 'hex');
   encrypted += cipher.final('hex');
-  
   const tag = cipher.getAuthTag();
-  
-  // Format: iv:ciphertext:tag
   return `${iv.toString('hex')}:${encrypted}:${tag.toString('hex')}`;
 }
 
 /**
- * Encrypts a binary buffer using the symmetric data key with AES-256-GCM
+ * Unified Node Decrypt supporting string, Buffer, and JSON payloads.
+ * Accepts single or multiple Buffer or base64url raw key strings.
  */
-export function encryptBufferWithDataKey(buffer: Buffer, dataKey: Buffer): Buffer {
-  const iv = crypto.randomBytes(IV_LENGTH);
-  const cipher = crypto.createCipheriv(ALGORITHM, dataKey, iv);
-  
-  const ciphertext = Buffer.concat([cipher.update(buffer), cipher.final()]);
-  const tag = cipher.getAuthTag();
-  
-  // Format: iv(12B) | tag(16B) | ciphertext
-  return Buffer.concat([iv, tag, ciphertext]);
+export function decrypt(data: string, key: Buffer | string | (Buffer | string)[]): any;
+export function decrypt(data: Buffer, key: Buffer | string | (Buffer | string)[]): Buffer;
+export function decrypt(data: any, key: Buffer | string | (Buffer | string)[]): any {
+  const keys = Array.isArray(key) ? key : [key];
+  let lastError: any = null;
+
+  for (const k of keys) {
+    try {
+      const useKey = typeof k === 'string' ? base64UrlToBuffer(k) : k;
+
+      if (Buffer.isBuffer(data)) {
+        if (data.length < 28) {
+          throw new Error('Invalid encrypted buffer format');
+        }
+        const iv = data.subarray(0, 12);
+        const tag = data.subarray(12, 28);
+        const ciphertext = data.subarray(28);
+
+        const decipher = crypto.createDecipheriv(ALGORITHM, useKey, iv);
+        decipher.setAuthTag(tag);
+        return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+      }
+
+      if (typeof data === 'string') {
+        const parts = data.split(':');
+        if (parts.length !== 3) {
+          throw new Error('Invalid encrypted text format');
+        }
+        const iv = Buffer.from(parts[0], 'hex');
+        const encrypted = Buffer.from(parts[1], 'hex');
+        const tag = Buffer.from(parts[2], 'hex');
+
+        const decipher = crypto.createDecipheriv(ALGORITHM, useKey, iv);
+        decipher.setAuthTag(tag);
+
+        let decrypted = decipher.update(encrypted).toString('utf8');
+        decrypted += decipher.final().toString('utf8');
+
+        try {
+          return JSON.parse(decrypted);
+        } catch {
+          return decrypted;
+        }
+      }
+
+      throw new Error('Unsupported data type for decryption');
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  throw lastError || new Error('Decryption failed with all provided keys');
 }
 
 /**
- * Encrypts the symmetric email data key for a user's public ECDH key (via ECDH key agreement)
+ * Unified asymmetric key wrapping for E2EE hybrid encryption in Node.
  */
-export function encryptDataKeyForUser(userPublicKeyBase64Url: string, dataKey: Buffer): EncryptedKeyPayload {
-  const userPublicKeyBuf = base64UrlToBuffer(userPublicKeyBase64Url);
+export function wrapKey(
+  rawKey: Buffer | string,
+  recipientPublicKeyBase64Url: string
+): EncryptedKeyPayload {
+  const userPublicKeyBuf = base64UrlToBuffer(recipientPublicKeyBase64Url);
 
-  // Generate server ephemeral ECDH keypair on prime256v1 (P-256)
   const serverEcdh = crypto.createECDH('prime256v1');
   serverEcdh.generateKeys();
   const ephemeralPublicKey = serverEcdh.getPublicKey();
 
-  // Perform ECDH agreement
   const sharedSecret = serverEcdh.computeSecret(userPublicKeyBuf);
-
-  // Derive AES wrapping key using SHA-256
   const aesKey = crypto.createHash('sha256').update(sharedSecret).digest();
 
-  // Encrypt the email data key with the derived key
+  const useRawKey = typeof rawKey === 'string' ? base64UrlToBuffer(rawKey) : rawKey;
+
   const iv = crypto.randomBytes(IV_LENGTH);
   const cipher = crypto.createCipheriv(ALGORITHM, aesKey, iv);
-  
-  const ciphertext = Buffer.concat([cipher.update(dataKey), cipher.final()]);
+  const ciphertext = Buffer.concat([cipher.update(useRawKey), cipher.final()]);
   const tag = cipher.getAuthTag();
 
   return {
@@ -92,4 +146,45 @@ export function encryptDataKeyForUser(userPublicKeyBase64Url: string, dataKey: B
     tag: bufferToBase64Url(tag),
     ciphertext: bufferToBase64Url(ciphertext)
   };
+}
+
+/**
+ * Unified asymmetric key unwrapping in Node. Supports single or multiple private keys.
+ */
+export function unwrapKey(
+  wrappedKey: EncryptedKeyPayload | string,
+  privateKey: Buffer | Buffer[] | string | string[]
+): Buffer {
+  const payload: EncryptedKeyPayload = typeof wrappedKey === 'string'
+    ? JSON.parse(wrappedKey)
+    : wrappedKey;
+
+  const pKeys = Array.isArray(privateKey) ? privateKey : [privateKey];
+  let lastError: any = null;
+
+  for (const privKey of pKeys) {
+    try {
+      const usePrivKey = typeof privKey === 'string' ? base64UrlToBuffer(privKey) : privKey;
+      const ephemeralPublicKeyBuf = base64UrlToBuffer(payload.ephemeralPublicKey);
+
+      const clientEcdh = crypto.createECDH('prime256v1');
+      clientEcdh.setPrivateKey(usePrivKey);
+
+      const sharedSecret = clientEcdh.computeSecret(ephemeralPublicKeyBuf);
+      const aesKey = crypto.createHash('sha256').update(sharedSecret).digest();
+
+      const ivBuf = base64UrlToBuffer(payload.iv);
+      const ciphertextBuf = base64UrlToBuffer(payload.ciphertext);
+      const tagBuf = base64UrlToBuffer(payload.tag);
+
+      const decipher = crypto.createDecipheriv(ALGORITHM, aesKey, ivBuf);
+      decipher.setAuthTag(tagBuf);
+
+      return Buffer.concat([decipher.update(ciphertextBuf), decipher.final()]);
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  throw lastError || new Error('Failed to unwrap key with all provided private keys');
 }
