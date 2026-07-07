@@ -30,9 +30,7 @@ import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "../ui/sidebar";
 import Link from "next/link";
-import { io, Socket } from "socket.io-client";
-import useSWR from "swr";
-import { fetcher } from "@/lib/fetcher";
+import { useNotificationAndBookmarks } from "@/components/Providers/rrNotificationAndBookmarksProvider";
 import { Badge } from "../ui/badge";
 import { RrConstellationBuilderModal } from "./rrConstellationBuilderModal";
 import { RrNotificationsModal } from "./rrNotificationsModal";
@@ -49,7 +47,7 @@ import { RrAppearanceModal } from "./rrAppearanceModal";
 import { useRRe2ee } from "@/components/Providers/rrE2eeProvider";
 
 export default function RrUserMenu({ session }: { session: Session | null }) {
-  const [unreadCount, setUnreadCount] = useState(0);
+  const { unreadCount } = useNotificationAndBookmarks();
 
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -63,106 +61,6 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
   const { isMobile } = useSidebar();
   const { isE2eeUnlocked, isKeysExist, lockE2ee, setShowUnlockDialog } =
     useRRe2ee();
-
-  const { data: notificationsData, mutate: refetchNotifications } = useSWR<
-    any[]
-  >(
-    session?.accessToken
-      ? [
-          `${process.env.NEXT_PUBLIC_API_URL}/notifications`,
-          session.accessToken,
-        ]
-      : null,
-    fetcher,
-    {
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      revalidateIfStale: false,
-    }
-  );
-
-  useEffect(() => {
-    if (notificationsData) {
-      const activeDeviceId =
-        typeof window !== "undefined"
-          ? localStorage.getItem("runa_device_id")
-          : null;
-      const pendingCount = notificationsData.filter((n: any) => {
-        if (n.status !== "PENDING") return false;
-        if (n.metadata?.targetDeviceId) {
-          return n.metadata.targetDeviceId === activeDeviceId;
-        }
-        return true;
-      }).length;
-      setUnreadCount(pendingCount);
-    }
-  }, [notificationsData]);
-
-  useEffect(() => {
-    if (!session?.accessToken) return;
-
-    const wsUrl =
-      process.env.NEXT_PUBLIC_API_URL ||
-      (typeof window !== "undefined" ? window.location.origin : "");
-    const socket: Socket = io(`${wsUrl}/notifications`, {
-      query: { token: session.accessToken },
-      transports: ["websocket"],
-    });
-
-    const handleCreated = (newNotification: any) => {
-      const activeDeviceId =
-        typeof window !== "undefined"
-          ? localStorage.getItem("runa_device_id")
-          : null;
-      if (
-        newNotification.metadata?.targetDeviceId &&
-        newNotification.metadata.targetDeviceId !== activeDeviceId
-      ) {
-        return;
-      }
-      refetchNotifications();
-    };
-
-    const handleUpdated = () => {
-      refetchNotifications();
-    };
-
-    const handleDelete = () => {
-      refetchNotifications();
-    };
-
-    const handleCleared = () => {
-      refetchNotifications();
-    };
-
-    const handleEmailNew = (data: any) => {
-      window.dispatchEvent(new CustomEvent("runa-email-new", { detail: data }));
-      window.dispatchEvent(new Event("runa-sidebar-changed"));
-    };
-
-    const handleBookmarkUpdated = () => {
-      window.dispatchEvent(new Event("runa-bookmarks-changed"));
-    };
-
-    const handleBookmarkDeleted = () => {
-      window.dispatchEvent(new Event("runa-bookmarks-changed"));
-    };
-
-    socket.on("notification:created", handleCreated);
-    socket.on("notification:updated", handleUpdated);
-    socket.on("notification:deleted", handleDelete);
-    socket.on("notifications:cleared", handleCleared);
-    socket.on("email:new", handleEmailNew);
-    socket.on("bookmark:updated", handleBookmarkUpdated);
-    socket.on("bookmark:deleted", handleBookmarkDeleted);
-
-    return () => {
-      socket.off("email:new", handleEmailNew);
-      socket.off("bookmark:updated", handleBookmarkUpdated);
-      socket.off("bookmark:deleted", handleBookmarkDeleted);
-      socket.disconnect();
-    };
-  }, [session?.accessToken, refetchNotifications]);
 
   useEffect(() => {
     const handleOpenSettings = (e: Event) => {

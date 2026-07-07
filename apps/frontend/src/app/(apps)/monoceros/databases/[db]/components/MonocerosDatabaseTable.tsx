@@ -21,6 +21,7 @@ import {
   createMonocerosDbRecord,
   updateMonocerosDbRecord,
   deleteMonocerosDbRecord,
+  deleteManyMonocerosDbRecords,
 } from "@/actions/monocerosDbActions";
 import { FieldConfig } from "@/actions/databaseActions";
 
@@ -30,6 +31,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableHeader,
@@ -67,9 +69,11 @@ export default function MonocerosDatabaseTable({
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
   const [isViewJsonOpen, setIsViewJsonOpen] = useState(false);
 
   const [selectedRecord, setSelectedRecord] = useState<any | null>(null);
+  const [selectedIds, setSelectedIds] = useState<unknown[]>([]);
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [jsonViewerContent, setJsonViewerContent] = useState<any>(null);
 
@@ -80,6 +84,7 @@ export default function MonocerosDatabaseTable({
   // Load schema and records
   const loadData = async () => {
     setIsLoading(true);
+    setSelectedIds([]);
     try {
       const sch = await getMonocerosDbSchema(db);
       setSchema(sch);
@@ -245,6 +250,27 @@ export default function MonocerosDatabaseTable({
     });
   };
 
+  // Submit bulk deleting
+  const handleBulkDeleteSubmit = () => {
+    if (selectedIds.length === 0) return;
+
+    startTransition(async () => {
+      try {
+        await deleteManyMonocerosDbRecords(db, selectedIds);
+        toast.success(
+          `Successfully deleted ${selectedIds.length} ${
+            selectedIds.length === 1 ? "record" : "records"
+          }!`
+        );
+        setSelectedIds([]);
+        setIsBulkDeleteOpen(false);
+        loadData();
+      } catch (err: any) {
+        toast.error(err.message || "Failed to delete records.");
+      }
+    });
+  };
+
   const handleOpenDelete = (record: any) => {
     setSelectedRecord(record);
     setIsDeleteOpen(true);
@@ -358,25 +384,55 @@ export default function MonocerosDatabaseTable({
         </div>
       </div>
 
-      {/* Top action bar */}
-      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-card/40 border border-border/50 p-4 rounded-xl backdrop-blur-sm">
-        <div className="relative w-full sm:max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-          <Input
-            placeholder="Search records..."
-            className="pl-9 h-9"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
+      {/* Top action bar / Selection banner */}
+      <div className="relative overflow-hidden flex flex-col sm:flex-row gap-4 items-center justify-between bg-card/40 border border-border/50 p-4 rounded-xl backdrop-blur-sm min-h-[66px]">
+        {selectedIds.length > 0 ? (
+          <div className="flex items-center justify-between w-full animate-in fade-in slide-in-from-top-1 duration-200">
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium text-foreground">
+                <span className="font-semibold text-primary">{selectedIds.length}</span>{" "}
+                {selectedIds.length === 1 ? "record" : "records"} selected
+              </span>
+              <Button
+                variant="link"
+                size="sm"
+                className="h-8 px-2 text-muted-foreground hover:text-foreground text-xs"
+                onClick={() => setSelectedIds([])}
+              >
+                Clear Selection
+              </Button>
+            </div>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="gap-2 shadow-md h-9 px-4 font-semibold"
+              onClick={() => setIsBulkDeleteOpen(true)}
+            >
+              <Trash2 className="size-4" />
+              Delete Selected
+            </Button>
+          </div>
+        ) : (
+          <>
+            <div className="relative w-full sm:max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+              <Input
+                placeholder="Search records..."
+                className="pl-9 h-9"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
 
-        <Button
-          onClick={handleOpenAdd}
-          className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg shadow-md hover:scale-[1.02] transition-all flex items-center justify-center gap-2 h-9 px-4 text-sm"
-        >
-          <Plus className="size-4" />
-          Add Record
-        </Button>
+            <Button
+              onClick={handleOpenAdd}
+              className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg shadow-md hover:scale-[1.02] transition-all flex items-center justify-center gap-2 h-9 px-4 text-sm"
+            >
+              <Plus className="size-4" />
+              Add Record
+            </Button>
+          </>
+        )}
       </div>
 
       {/* Main Table view */}
@@ -391,6 +447,34 @@ export default function MonocerosDatabaseTable({
           <Table>
             <TableHeader className="bg-muted/30 border-b border-border/50">
               <TableRow>
+                <TableHead className="w-[48px] py-3.5 px-4">
+                  <Checkbox
+                    checked={
+                      filteredRecords.length > 0 &&
+                      (filteredRecords.every((rec) => selectedIds.includes(rec[pkField.name]))
+                        ? true
+                        : filteredRecords.some((rec) => selectedIds.includes(rec[pkField.name]))
+                        ? "indeterminate"
+                        : false)
+                    }
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        const newIds = [...selectedIds];
+                        filteredRecords.forEach((rec) => {
+                          const id = rec[pkField.name];
+                          if (!newIds.includes(id)) {
+                            newIds.push(id);
+                          }
+                        });
+                        setSelectedIds(newIds);
+                      } else {
+                        const filteredIds = filteredRecords.map((rec) => rec[pkField.name]);
+                        setSelectedIds(selectedIds.filter((id) => !filteredIds.includes(id)));
+                      }
+                    }}
+                    aria-label="Select all"
+                  />
+                </TableHead>
                 {schema.map((field) => (
                   <TableHead
                     key={field.name}
@@ -412,45 +496,64 @@ export default function MonocerosDatabaseTable({
             </TableHeader>
             <TableBody>
               {filteredRecords.length > 0 ? (
-                filteredRecords.map((record, idx) => (
-                  <TableRow
-                    key={record[pkField.name] || idx}
-                    className="hover:bg-muted/10 transition-colors"
-                  >
-                    {schema.map((field) => (
-                      <TableCell
-                        key={field.name}
-                        className="py-3 px-4 font-mono"
-                      >
-                        {renderCellContent(record[field.name], field.type)}
+                filteredRecords.map((record, idx) => {
+                  const isRowSelected = selectedIds.includes(record[pkField.name]);
+                  return (
+                    <TableRow
+                      key={record[pkField.name] || idx}
+                      className={`hover:bg-muted/10 transition-colors ${
+                        isRowSelected ? "bg-primary/[0.04] hover:bg-primary/[0.06]" : ""
+                      }`}
+                    >
+                      <TableCell className="py-3 px-4">
+                        <Checkbox
+                          checked={isRowSelected}
+                          onCheckedChange={(checked) => {
+                            const id = record[pkField.name];
+                            if (checked) {
+                              setSelectedIds([...selectedIds, id]);
+                            } else {
+                              setSelectedIds(selectedIds.filter((item) => item !== id));
+                            }
+                          }}
+                          aria-label={`Select row ${record[pkField.name]}`}
+                        />
                       </TableCell>
-                    ))}
-                    <TableCell className="py-3 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="size-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                          onClick={() => handleOpenEdit(record)}
+                      {schema.map((field) => (
+                        <TableCell
+                          key={field.name}
+                          className="py-3 px-4 font-mono"
                         >
-                          <Edit2 className="size-3.5" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="size-8 rounded-lg text-red-500 hover:text-red-600 hover:bg-red-500/5"
-                          onClick={() => handleOpenDelete(record)}
-                        >
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                          {renderCellContent(record[field.name], field.type)}
+                        </TableCell>
+                      ))}
+                      <TableCell className="py-3 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="size-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                            onClick={() => handleOpenEdit(record)}
+                          >
+                            <Edit2 className="size-3.5" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="size-8 rounded-lg text-red-500 hover:text-red-600 hover:bg-red-500/5"
+                            onClick={() => handleOpenDelete(record)}
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={schema.length + 1}
+                    colSpan={schema.length + 2}
                     className="h-48 text-center text-muted-foreground"
                   >
                     No records found in this table.
@@ -778,6 +881,31 @@ export default function MonocerosDatabaseTable({
             >
               {isPending && <Loader2 className="size-4 animate-spin mr-1.5" />}
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Records Confirmation Modal */}
+      <Dialog open={isBulkDeleteOpen} onOpenChange={setIsBulkDeleteOpen}>
+        <DialogContent className="max-w-md bg-card border border-border shadow-2xl rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-red-500">Delete Selected Records?</DialogTitle>
+            <DialogDescription className="pt-2">
+              Are you sure you want to delete <span className="font-semibold text-foreground">{selectedIds.length}</span> selected {selectedIds.length === 1 ? "record" : "records"}? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setIsBulkDeleteOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBulkDeleteSubmit}
+              disabled={isPending}
+            >
+              {isPending && <Loader2 className="size-4 animate-spin mr-1.5" />}
+              Delete Selected
             </Button>
           </DialogFooter>
         </DialogContent>

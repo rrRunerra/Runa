@@ -35,15 +35,12 @@ export default function RrAppMenu({
   }, [session]);
 
   const [activeApp, setActiveApp] = useState<rrApp>(rrApps[0]);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const {
     bookmarks,
     loading,
     mutate: refetch,
-  } = useBookmarks({
-    enabled: !!(session && isMenuOpen),
-  });
+  } = useBookmarks();
 
   // Sync active app based on route
   useEffect(() => {
@@ -59,7 +56,7 @@ export default function RrAppMenu({
   }, [visibleApps, session]);
 
   return (
-    <DropdownMenu onOpenChange={setIsMenuOpen}>
+    <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <SidebarMenuButton
           size="lg"

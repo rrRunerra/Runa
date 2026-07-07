@@ -124,3 +124,24 @@ export async function deleteMonocerosDbRecord(modelName: string, id: any): Promi
     where: { [pkField.name]: parsedId },
   });
 }
+
+export async function deleteManyMonocerosDbRecords(
+  modelName: string,
+  ids: unknown[]
+): Promise<Prisma.BatchPayload> {
+  const session = await auth();
+  if (!session || !hasPermission(session.user.permissions, RunaFlags.ADMINISTRATOR)) {
+    throw new Error("Unauthorized");
+  }
+
+  const dbModel = getPrismaModel(modelName);
+  const schema = getModelSchema(modelName);
+  const pkField = schema?.find((f) => f.isPk) || { name: "id", type: "string" };
+
+  const parsedIds = ids.map((id) => (pkField.type === "number" ? Number(id) : id));
+
+  return dbModel.deleteMany({
+    where: { [pkField.name]: { in: parsedIds } },
+  });
+}
+
