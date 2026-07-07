@@ -1,6 +1,8 @@
 import { Metadata } from "next";
 import UserTvShowsPage from "./UserTvClient";
 import { getUserProfile } from "@/lib/metadata";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@runa/auth";
 
 interface PageProps {
   params: Promise<{ name: string }>;
@@ -49,5 +51,26 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function Page({ params }: PageProps) {
-  return <UserTvShowsPage />;
+  const { name } = await params;
+  const session = await getServerSession(authOptions);
+
+  const headers: HeadersInit = {};
+  if (session?.accessToken) {
+    headers["Authorization"] = `Bearer ${session.accessToken}`;
+  }
+
+  let initialData = null;
+  try {
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/list/tv/user/${name}?limit=30&offset=0&status=Watching&sort=last_updated`,
+      { headers, next: { revalidate: 0 } }
+    );
+    if (res.ok) {
+      initialData = await res.json();
+    }
+  } catch (e) {
+    console.error("Failed to fetch initial TV list data on server", e);
+  }
+
+  return <UserTvShowsPage initialData={initialData} />;
 }

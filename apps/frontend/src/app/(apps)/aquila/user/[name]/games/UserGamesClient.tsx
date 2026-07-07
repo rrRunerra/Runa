@@ -57,7 +57,7 @@ const SORT_OPTIONS = [
   { label: "Last Added", value: "last_added" },
 ];
 
-export default function UserGamesPage() {
+export default function UserGamesPage({ initialData }: { initialData?: any }) {
   const params = useParams();
   const username = params.name as string;
   const { data: session } = useSession();
@@ -99,15 +99,30 @@ export default function UserGamesPage() {
     }
   );
 
-  const [gameList, setGameList] = useState<MediaEntry[]>([]);
+  const [gameList, setGameList] = useState<MediaEntry[]>(initialData?.entries || []);
   const [isPrivate, setIsPrivate] = useState(false);
-  const [offset, setOffset] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
+
+  const getInitialPriorityState = () => {
+    if (!initialData) {
+      return { index: 0, offset: 0, hasMore: true };
+    }
+    const len = initialData.entries?.length || 0;
+    if (len < 30) {
+      return { index: 1, offset: 0, hasMore: true };
+    } else {
+      return { index: 0, offset: len, hasMore: true };
+    }
+  };
+
+  const initialPState = getInitialPriorityState();
+  const [offset, setOffset] = useState(initialData ? initialData.entries?.length || 0 : 0);
+  const [hasMore, setHasMore] = useState(initialPState.hasMore);
   const [loading, setLoading] = useState(false);
-  const [counts, setCounts] = useState<Record<string, number>>({});
-  const [priorityIdx, setPriorityIdx] = useState(0);
-  const [priorityOff, setPriorityOff] = useState(0);
+  const [counts, setCounts] = useState<Record<string, number>>(initialData?.counts || {});
+  const [priorityIdx, setPriorityIdx] = useState(initialPState.index);
+  const [priorityOff, setPriorityOff] = useState(initialPState.offset);
   const isFetchingRef = useRef(false);
+  const isInitialMountRef = useRef(true);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -198,12 +213,18 @@ export default function UserGamesPage() {
         console.error("Failed to fetch games list", err);
       })
       .finally(() => {
-        setLoading(false);
-        isFetchingRef.current = false;
+        if (!signal?.aborted) {
+          setLoading(false);
+          isFetchingRef.current = false;
+        }
       });
   };
 
   useEffect(() => {
+    if (isInitialMountRef.current && initialData) {
+      isInitialMountRef.current = false;
+      return;
+    }
     const controller = new AbortController();
     setPriorityIdx(0);
     setPriorityOff(0);
