@@ -2,7 +2,7 @@
 
 import React from "react";
 import { FileText, Download, ExternalLink } from "lucide-react";
-import { importRawKey, decryptFileBuffer } from "@/lib/lacertaCrypto";
+import { importRawKey, decrypt } from "@runa/crypto/browser";
 import { toast } from "sonner";
 import { CanvasNode } from "../CanvasEditor";
 
@@ -31,7 +31,7 @@ export default function RrCanvasFileCard({ node, accessToken }: RrCanvasFileCard
         node.lacertaFileDecryptionKey || node.lacertaFileKey;
       if (!decryptionKeyToUse) throw new Error("No decryption key present");
       const fileKey = await importRawKey(decryptionKeyToUse);
-      const decBuf = await decryptFileBuffer(encBuf, fileKey);
+      const decBuf = await decrypt(encBuf, fileKey);
       const blob = new Blob([decBuf], {
         type: node.lacertaFileType || "application/octet-stream",
       });

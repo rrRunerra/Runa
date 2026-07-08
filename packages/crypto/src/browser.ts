@@ -483,3 +483,22 @@ export async function unwrapKey(
 
   throw lastError || new Error('Failed to unwrap key with all provided private keys');
 }
+
+/**
+ * Helper to generate a random 256-bit AES-GCM key.
+ */
+export async function generateFileKey(): Promise<CryptoKey> {
+  return window.crypto.subtle.generateKey(
+    { name: "AES-GCM", length: 256 },
+    true,
+    ["encrypt", "decrypt"]
+  );
+}
+
+/**
+ * Export a CryptoKey to raw Base64url format.
+ */
+export async function exportRawKey(key: CryptoKey): Promise<string> {
+  const raw = await window.crypto.subtle.exportKey("raw", key);
+  return bufferToBase64Url(raw);
+}

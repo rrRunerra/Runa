@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link2, UserPlus, Check, Copy, Trash2, X, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
-import { wrapFileKeyForUser, decryptFileBuffer, importRawKey } from "@/lib/lacertaCrypto";
+import { wrapKey, decrypt, importRawKey } from "@runa/crypto/browser";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import UserProfileCard, { UserProfileInfo } from "./UserProfileCard";
@@ -175,9 +175,8 @@ export default function ShareModal({
         const targetRawKey = target.rawFileKey || (target.id === file.id ? rawFileKey : null);
         if (!targetRawKey) continue;
 
-        const recipientWrappedKey = await wrapFileKeyForUser(
-          targetRawKey,
-          recipient.userPublicKey
+        const recipientWrappedKey = JSON.stringify(
+          await wrapKey(targetRawKey, recipient.userPublicKey)
         );
 
         const shareRes = await fetch(
@@ -306,7 +305,7 @@ export default function ShareModal({
           if (downloadRes.ok) {
             const encBuffer = await downloadRes.arrayBuffer();
             const fileKey = await importRawKey(rawFileKey);
-            const decBuffer = await decryptFileBuffer(encBuffer, fileKey);
+            const decBuffer = await decrypt(encBuffer, fileKey);
             const decText = new TextDecoder().decode(decBuffer);
             const canvasData = JSON.parse(decText);
             const nodes = canvasData.nodes || [];

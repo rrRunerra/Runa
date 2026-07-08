@@ -4,6 +4,15 @@ import React, { useState } from "react";
 import { Folder, FileText, Grid3X3, Image as ImageIcon, Video, File, MoreVertical, Share2, Trash2, Download, ArrowUpRight, Shield, ShieldAlert, RefreshCw, FolderClosed, Sparkles, Copy } from "lucide-react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import UserProfileCard from "./UserProfileCard";
+import { RrLapplandDocument } from "../rrImages/rrLapplandDocument";
+import { RrLapplandSpreadsheet } from "../rrImages/rrLapplandSpreadsheet";
+import { RrLapplandPresentation } from "../rrImages/rrLapplandPresentation";
+import { RrLapplandTextFile } from "../rrImages/rrLapplandTextFile";
+import { RrLapplandCanvas } from "../rrImages/rrLapplandCanvas";
+import { RrLapplandMermaid } from "../rrImages/rrLapplandMermaid";
+import { RrLapplandUml } from "../rrImages/rrLapplandUml";
+import { RrLapplandFolder } from "../rrImages/rrLapplandFolder";
+import { RrLapplandPlaceholderFile } from "../rrImages/rrLapplandPlaceholderFile";
 
 interface SharedUser {
   id: string;
@@ -82,15 +91,38 @@ export default function FileCard({
   };
 
   const getIcon = () => {
-    if (item.isFolder) return <FolderClosed className="h-10 w-10 text-amber-500 fill-amber-500/10" />;
+    if (item.isFolder) {
+      return <RrLapplandFolder className="h-24 w-24 text-amber-500 dark:text-amber-400" />;
+    }
     const mime = item.type || "";
-    if (mime.startsWith("image/")) return <ImageIcon className="h-10 w-10 text-sky-500" />;
-    if (mime.startsWith("video/")) return <Video className="h-10 w-10 text-rose-500" />;
-    if (mime.includes("spreadsheet") || mime.includes("csv")) return <Grid3X3 className="h-10 w-10 text-emerald-500" />;
-    if (mime.includes("document") || mime.includes("word") || mime.includes("odt")) return <FileText className="h-10 w-10 text-indigo-500" />;
-    if (mime.includes("mermaid") || item.name.endsWith(".mermaid")) return <Sparkles className="h-10 w-10 text-pink-500" />;
-    if (mime.includes("uml") || item.name.endsWith(".uml")) return <Sparkles className="h-10 w-10 text-purple-500" />;
-    return <File className="h-10 w-10 text-slate-400" />;
+    if (mime.startsWith("image/")) return <ImageIcon className="h-18 w-18 text-sky-500" />;
+    if (mime.startsWith("video/")) return <Video className="h-18 w-18 text-rose-500" />;
+
+    const parts = item.name.split(".");
+    const ext = parts.length > 1 ? parts.pop()!.toLowerCase() : "";
+
+    if (["xlsx", "xls", "ods", "csv"].includes(ext)) {
+      return <RrLapplandSpreadsheet className="h-24 w-24 text-green-600 dark:text-green-400" />;
+    }
+    if (["docx", "doc", "odt", "rtf"].includes(ext)) {
+      return <RrLapplandDocument className="h-24 w-24 text-blue-600 dark:text-blue-400" />;
+    }
+    if (["pptx", "ppt", "odp"].includes(ext)) {
+      return <RrLapplandPresentation className="h-24 w-24 text-orange-600 dark:text-orange-400" />;
+    }
+    if (["txt", "md", "json", "js", "ts", "tsx", "jsx", "css", "html", "yaml", "yml", "ini", "conf", "log"].includes(ext) || mime.startsWith("text/")) {
+      return <RrLapplandTextFile className="h-24 w-24 text-slate-600 dark:text-slate-300" />;
+    }
+    if (ext === "canvas") {
+      return <RrLapplandCanvas className="h-24 w-24 text-violet-600 dark:text-violet-400" />;
+    }
+    if (ext === "mermaid") {
+      return <RrLapplandMermaid className="h-24 w-24 text-teal-600 dark:text-teal-400" />;
+    }
+    if (ext === "uml") {
+      return <RrLapplandUml className="h-24 w-24 text-indigo-600 dark:text-indigo-400" />;
+    }
+    return <RrLapplandPlaceholderFile className="h-24 w-24 text-slate-400 dark:text-slate-500" />;
   };
 
   return (
@@ -106,25 +138,21 @@ export default function FileCard({
         }
         onToggleSelect?.();
       }}
-      className={`group relative flex flex-col p-4 rounded-xl border transition-all select-none cursor-pointer shadow-sm hover:shadow-md active:scale-[0.99] ${
+      className={`group relative flex flex-col rounded-xl border overflow-hidden transition-all select-none cursor-pointer shadow-sm hover:shadow-md active:scale-[0.99] h-[164px] ${
         isSelected
-          ? "border-primary bg-primary/10 hover:bg-primary/15"
-          : "border-border/80 bg-card/30 hover:bg-card/60"
+          ? "border-primary bg-primary/5 hover:bg-primary/10"
+          : "border-border/60 bg-card/25 hover:bg-card/45"
       }`}
     >
-      {/* Top Details & Context Action */}
-      <div className="flex items-start justify-between">
-        <div className="p-2 bg-muted/10 rounded-lg border border-border/40 shrink-0">
-          {getIcon()}
-        </div>
-
+      {/* Action Menu button (absolute positioned top-right) */}
+      <div className="absolute top-1.5 right-1.5 z-10">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="p-1 hover:bg-muted/25 rounded text-muted-foreground hover:text-foreground transition-all shrink-0">
-              <MoreVertical className="h-4 w-4" />
+            <button className="p-1 bg-background/60 hover:bg-background/80 backdrop-blur-sm rounded-lg text-muted-foreground hover:text-foreground transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 data-[state=open]:opacity-100 shadow-sm shrink-0">
+              <MoreVertical className="h-3.5 w-3.5" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="bg-popover border-border w-40" align="end">
+          <DropdownMenuContent className="bg-popover border-border w-40" side="right" align="start" sideOffset={8}>
             <DropdownMenuItem onClick={() => onOpen(item)} className="cursor-pointer text-xs focus:bg-accent font-semibold gap-2">
               <ArrowUpRight className="h-3.5 w-3.5" />
               Open
@@ -174,14 +202,24 @@ export default function FileCard({
         </DropdownMenu>
       </div>
 
-      {/* Title & Info */}
-      <div className="mt-4 flex flex-col min-w-0">
+      {/* Top half: Icon Area */}
+      <div className="flex-1 flex items-center justify-center bg-muted/10 group-hover:bg-muted/15 transition-all">
+        {getIcon()}
+      </div>
+
+      {/* Thin colored bar underneath the icon section */}
+      <div className={`h-[3px] w-full transition-colors ${
+        isSelected ? "bg-primary" : "bg-border/30 group-hover:bg-border/60"
+      }`} />
+
+      {/* Bottom half: Details Area */}
+      <div className="p-3 bg-card/65 flex flex-col gap-0.5 min-w-0 text-left">
         <span className="text-xs font-bold text-foreground truncate" title={item.name}>
           {item.name}
         </span>
-        <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground">
+        <div className="flex items-center justify-between text-[10px] text-muted-foreground/80 mt-0.5 w-full">
           <span>{item.isFolder ? "Folder" : formatSize(item.size)}</span>
-          <span className="truncate max-w-[80px]">
+          <span className="truncate max-w-[80px] text-right">
             {isSharedTab && item.user ? (
               <UserProfileCard user={item.user}>
                 @{item.user.username}
@@ -193,19 +231,42 @@ export default function FileCard({
         </div>
       </div>
 
-      {/* Share/Lock Badge Overlay */}
-      <div className="absolute bottom-2 right-2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-        {item.shares && item.shares.length > 0 && (
-          <div className="p-1 rounded bg-indigo-500/10 border border-indigo-500/20 text-indigo-400" title={`Shared with ${item.shares.length} users`}>
-            <Share2 className="h-3 w-3" />
-          </div>
-        )}
-        {item.isVault && (
-          <div className="p-1 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400" title="Secure Vault Storage">
+      {/* Shared/Public Badge Overlay (Always visible in top-left) */}
+      {(() => {
+        const isPublic = item.isPublic;
+        const isShared = item.shares && item.shares.length > 0;
+        if (isPublic && isShared) {
+          return (
+            <div className="absolute top-1.5 left-1.5 z-10 p-1 rounded-lg bg-rose-500/15 border border-rose-500/25 text-rose-400 shadow-sm" title="Public & Shared File">
+              <Share2 className="h-3 w-3" />
+            </div>
+          );
+        }
+        if (isPublic) {
+          return (
+            <div className="absolute top-1.5 left-1.5 z-10 p-1 rounded-lg bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 shadow-sm" title="Public File">
+              <Share2 className="h-3 w-3" />
+            </div>
+          );
+        }
+        if (isShared) {
+          return (
+            <div className="absolute top-1.5 left-1.5 z-10 p-1 rounded-lg bg-violet-500/15 border border-violet-500/25 text-violet-400 shadow-sm" title={`Shared with ${item.shares.length} users`}>
+              <Share2 className="h-3 w-3" />
+            </div>
+          );
+        }
+        return null;
+      })()}
+
+      {/* Secure Vault Badge Overlay */}
+      {item.isVault && (
+        <div className="absolute bottom-2 right-2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="p-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400" title="Secure Vault Storage">
             <Shield className="h-3 w-3" />
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

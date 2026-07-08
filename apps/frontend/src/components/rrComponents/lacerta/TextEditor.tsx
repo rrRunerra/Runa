@@ -14,7 +14,7 @@ import {
   Check,
 } from "lucide-react";
 import { toast } from "sonner";
-import { encryptFileBuffer, encryptMetadataString } from "@/lib/lacertaCrypto";
+import { encrypt } from "@runa/crypto/browser";
 
 interface TextFileItem {
   id: string;
@@ -83,14 +83,14 @@ export default function TextEditor({
       const rawBuffer = encoder.encode(content).buffer;
 
       // 2. Encrypt buffer
-      const encryptedBuffer = await encryptFileBuffer(
+      const encryptedBuffer = await encrypt(
         rawBuffer,
         file.decryptedKey,
       );
 
       // 3. Encrypt metadata name & type
-      const encName = await encryptMetadataString(file.name, file.decryptedKey);
-      const encType = await encryptMetadataString(
+      const encName = await encrypt(file.name, file.decryptedKey);
+      const encType = await encrypt(
         "text/plain",
         file.decryptedKey,
       );

@@ -29,6 +29,15 @@ import {
 import FileCard, { RenderFileItem } from "./FileCard";
 import FileRow from "./FileRow";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RrLapplandDocument } from "../rrImages/rrLapplandDocument";
+import { RrLapplandSpreadsheet } from "../rrImages/rrLapplandSpreadsheet";
+import { RrLapplandPresentation } from "../rrImages/rrLapplandPresentation";
+import { RrLapplandTextFile } from "../rrImages/rrLapplandTextFile";
+import { RrLapplandCanvas } from "../rrImages/rrLapplandCanvas";
+import { RrLapplandMermaid } from "../rrImages/rrLapplandMermaid";
+import { RrLapplandUml } from "../rrImages/rrLapplandUml";
+import { RrLapplandFolder } from "../rrImages/rrLapplandFolder";
+import { RrLapplandPlaceholderFile } from "../rrImages/rrLapplandPlaceholderFile";
 
 interface FileGridProps {
   items: RenderFileItem[];
@@ -80,6 +89,9 @@ export default function FileGrid({
   const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] =
     useState<boolean>(false);
   const [isBulkDeleting, setIsBulkDeleting] = useState<boolean>(false);
+  const [isCreateFolderModalOpen, setIsCreateFolderModalOpen] =
+    useState<boolean>(false);
+  const [newFolderName, setNewFolderName] = useState<string>("");
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -237,9 +249,15 @@ export default function FileGrid({
   const totalSize = sortedItems.reduce((acc, i) => acc + (i.size || 0), 0);
 
   const handleCreateFolderPrompt = () => {
-    const name = prompt("Enter folder name:");
-    if (name && name.trim()) {
-      onCreateFolder(name.trim());
+    setNewFolderName("");
+    setIsCreateFolderModalOpen(true);
+  };
+
+  const handleCreateFolderConfirm = () => {
+    if (newFolderName && newFolderName.trim()) {
+      onCreateFolder(newFolderName.trim());
+      setIsCreateFolderModalOpen(false);
+      setNewFolderName("");
     }
   };
 
@@ -523,7 +541,7 @@ export default function FileGrid({
                       }}
                       className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
                     >
-                      <FolderPlus className="h-3.5 w-3.5 text-muted-foreground" />
+                      <RrLapplandFolder className="h-5 w-5 text-amber-500 dark:text-amber-400" />
                       New Folder
                     </button>
                     <div className="h-px bg-border my-1" />
@@ -534,18 +552,18 @@ export default function FileGrid({
                       }}
                       className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
                     >
-                      <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                      Text File (.txt)
+                      <RrLapplandTextFile className="h-5 w-5 text-slate-600 dark:text-slate-300" />
+                      Text File
                     </button>
-                    <button
+                     <button
                       onClick={() => {
                         setIsNewDropdownOpen(false);
                         onCreateDoc("doc");
                       }}
                       className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
                     >
-                      <FileText className="h-3.5 w-3.5 text-primary" />
-                      Word Document (.docx / .odt)
+                      <RrLapplandDocument className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                      Word Document
                     </button>
                     <button
                       onClick={() => {
@@ -554,8 +572,8 @@ export default function FileGrid({
                       }}
                       className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
                     >
-                      <FileText className="h-3.5 w-3.5 text-emerald-500" />
-                      Spreadsheet (.xlsx / .ods)
+                      <RrLapplandSpreadsheet className="h-5 w-5 text-green-600 dark:text-green-400" />
+                      Spreadsheet
                     </button>
                     <button
                       onClick={() => {
@@ -564,8 +582,8 @@ export default function FileGrid({
                       }}
                       className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
                     >
-                      <Grid3X3 className="h-3.5 w-3.5 text-indigo-500" />
-                      Spatial Canvas (.canvas)
+                      <RrLapplandCanvas className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                      Spatial Canvas
                     </button>
                     <button
                       onClick={() => {
@@ -574,8 +592,8 @@ export default function FileGrid({
                       }}
                       className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
                     >
-                      <FileText className="h-3.5 w-3.5 text-amber-500" />
-                      Presentation (.pptx / .odp)
+                      <RrLapplandPresentation className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                      Presentation
                     </button>
                     <button
                       onClick={() => {
@@ -584,8 +602,8 @@ export default function FileGrid({
                       }}
                       className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
                     >
-                      <Sparkles className="h-3.5 w-3.5 text-pink-500" />
-                      Mermaid Diagram (.mermaid)
+                      <RrLapplandMermaid className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+                      Mermaid Diagram
                     </button>
                     <button
                       onClick={() => {
@@ -594,8 +612,8 @@ export default function FileGrid({
                       }}
                       className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
                     >
-                      <Sparkles className="h-3.5 w-3.5 text-purple-500" />
-                      UML Diagram (.uml)
+                      <RrLapplandUml className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                      UML Diagram
                     </button>
                   </div>
                 )}
@@ -653,7 +671,7 @@ export default function FileGrid({
       <div className="flex-1 overflow-y-auto no-scrollbar min-h-0">
         {sortedItems.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center p-8 border border-dashed border-border/60 rounded-2xl bg-card/5">
-            <FolderClosed className="h-12 w-12 text-muted-foreground/40 mb-3" />
+            <RrLapplandFolder className="h-16 w-16 text-amber-500/40 dark:text-amber-400/30 mb-3" />
             <span className="text-xs font-semibold text-muted-foreground">
               This folder is empty
             </span>
@@ -662,7 +680,7 @@ export default function FileGrid({
             </span>
           </div>
         ) : viewMode === "grid" ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-4">
             {sortedItems.map((item) => (
               <FileCard
                 key={item.id}
@@ -803,6 +821,49 @@ export default function FileGrid({
                   <Loader2 className="h-3 w-3 animate-spin" />
                 ) : null}
                 Delete Permanently
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Folder Modal */}
+      {isCreateFolderModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl animate-in zoom-in duration-150">
+            <h3 className="text-sm font-bold text-foreground mb-1">
+              Create New Folder
+            </h3>
+            <p className="text-xs text-muted-foreground mb-4">
+              Enter a name for your new encrypted folder.
+            </p>
+            <input
+              type="text"
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              placeholder="Folder name"
+              className="w-full bg-muted/20 border border-border rounded-xl px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary mb-5"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleCreateFolderConfirm();
+                } else if (e.key === "Escape") {
+                  setIsCreateFolderModalOpen(false);
+                }
+              }}
+            />
+            <div className="flex justify-end items-center gap-2">
+              <button
+                onClick={() => setIsCreateFolderModalOpen(false)}
+                className="px-3.5 py-1.5 border border-border hover:bg-muted/10 rounded-lg text-xs font-semibold text-foreground transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateFolderConfirm}
+                className="px-3.5 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold rounded-lg transition-all shadow-md active:scale-98"
+              >
+                Create
               </button>
             </div>
           </div>

@@ -3,7 +3,7 @@
 import React from "react";
 import { FileText } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { wrapFileKeyForUser } from "@/lib/lacertaCrypto";
+import { wrapKey } from "@runa/crypto/browser";
 import { CanvasNodeType, CanvasNode } from "./CanvasEditor";
 
 interface RrCanvasFileInsertModalProps {
@@ -84,9 +84,8 @@ export default function RrCanvasFileInsertModal({
 
     for (const collab of collaboratorsToShareWith) {
       try {
-        const recipientWrappedKey = await wrapFileKeyForUser(
-          f.rawFileKey,
-          collab.userPublicKey
+        const recipientWrappedKey = JSON.stringify(
+          await wrapKey(f.rawFileKey, collab.userPublicKey)
         );
 
         await fetch(

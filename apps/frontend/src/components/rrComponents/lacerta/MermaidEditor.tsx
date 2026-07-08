@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { ArrowLeft, Save, Loader2, Play } from "lucide-react";
 import { toast } from "sonner";
-import { encryptFileBuffer, encryptMetadataString, generateFileKey, exportRawKey, wrapFileKeyForUser } from "@/lib/lacertaCrypto";
+import { encrypt, generateFileKey, exportRawKey, wrapKey } from "@runa/crypto/browser";
 import mermaid from "mermaid";
 
 // Initialize Mermaid with safe/clean styling
@@ -114,7 +114,7 @@ export default function MermaidEditor({
         // Generate new key for the copy
         const newFileKey = await generateFileKey();
         const rawKeyStr = await exportRawKey(newFileKey);
-        wrappedKey = await wrapFileKeyForUser(rawKeyStr, userPublicKey);
+        wrappedKey = JSON.stringify(await wrapKey(rawKeyStr, userPublicKey));
         fileKey = newFileKey;
       }
 
@@ -126,9 +126,9 @@ export default function MermaidEditor({
       const rawBuffer = encoder.encode(content).buffer;
 
       // Encrypt file & metadata
-      const encryptedBuffer = await encryptFileBuffer(rawBuffer, fileKey);
-      const encName = await encryptMetadataString(file.name, fileKey);
-      const encType = await encryptMetadataString("application/mermaid", fileKey);
+      const encryptedBuffer = await encrypt(rawBuffer, fileKey);
+      const encName = await encrypt(file.name, fileKey);
+      const encType = await encrypt("application/mermaid", fileKey);
 
       const formData = new FormData();
       const blob = new Blob([encryptedBuffer], { type: "application/octet-stream" });

@@ -19,7 +19,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
-import { encryptFileBuffer, encryptMetadataString, generateFileKey, exportRawKey, wrapFileKeyForUser } from "@/lib/lacertaCrypto";
+import { encrypt, generateFileKey, exportRawKey, wrapKey } from "@runa/crypto/browser";
 import { cn } from "@/lib/utils";
 
 interface UmlFileItem {
@@ -146,7 +146,7 @@ export default function UmlEditor({
         // Generate new key for the copy
         const newFileKey = await generateFileKey();
         const rawKeyStr = await exportRawKey(newFileKey);
-        wrappedKey = await wrapFileKeyForUser(rawKeyStr, userPublicKey);
+        wrappedKey = JSON.stringify(await wrapKey(rawKeyStr, userPublicKey));
         fileKey = newFileKey;
       }
 
@@ -159,9 +159,9 @@ export default function UmlEditor({
       const rawBuffer = encoder.encode(dataStr).buffer;
 
       // Encrypt file & metadata
-      const encryptedBuffer = await encryptFileBuffer(rawBuffer, fileKey);
-      const encName = await encryptMetadataString(file.name, fileKey);
-      const encType = await encryptMetadataString("application/uml", fileKey);
+      const encryptedBuffer = await encrypt(rawBuffer, fileKey);
+      const encName = await encrypt(file.name, fileKey);
+      const encType = await encrypt("application/uml", fileKey);
 
       const formData = new FormData();
       const blob = new Blob([encryptedBuffer], {

@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { ArrowLeft, Save, Loader2, Grid3X3, Plus, Trash, Download } from "lucide-react";
 import { toast } from "sonner";
-import { encryptFileBuffer, encryptMetadataString } from "@/lib/lacertaCrypto";
+import { encrypt } from "@runa/crypto/browser";
 
 interface SheetFileItem {
   id: string;
@@ -126,11 +126,11 @@ export default function BuiltinSheetEditor({
       const rawBuffer = encoder.encode(stringData).buffer;
 
       // Encrypt file
-      const encryptedBuffer = await encryptFileBuffer(rawBuffer, file.decryptedKey);
+      const encryptedBuffer = await encrypt(rawBuffer, file.decryptedKey);
 
       // S3 post upload form
-      const encName = await encryptMetadataString(file.name, file.decryptedKey);
-      const encType = await encryptMetadataString("application/vnd.oasis.opendocument.spreadsheet", file.decryptedKey);
+      const encName = await encrypt(file.name, file.decryptedKey);
+      const encType = await encrypt("application/vnd.oasis.opendocument.spreadsheet", file.decryptedKey);
 
       const formData = new FormData();
       const blob = new Blob([encryptedBuffer], { type: "application/octet-stream" });

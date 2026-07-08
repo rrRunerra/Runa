@@ -5,7 +5,7 @@ import { Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useSession } from "next-auth/react";
-import { wrapFileKeyForUser } from "@/lib/lacertaCrypto";
+import { wrapKey } from "@runa/crypto/browser";
 import { CanvasNodeType, CanvasNode } from "./CanvasEditor";
 
 interface RrCanvasImageInsertModalProps {
@@ -89,9 +89,8 @@ export default function RrCanvasImageInsertModal({
 
     for (const collab of collaboratorsToShareWith) {
       try {
-        const recipientWrappedKey = await wrapFileKeyForUser(
-          f.rawFileKey,
-          collab.userPublicKey
+        const recipientWrappedKey = JSON.stringify(
+          await wrapKey(f.rawFileKey, collab.userPublicKey)
         );
 
         await fetch(

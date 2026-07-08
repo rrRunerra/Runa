@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Loader2, ShieldAlert, Image as ImageIcon } from "lucide-react";
-import { importRawKey, decryptFileBuffer } from "@/lib/lacertaCrypto";
+import { importRawKey, decrypt } from "@runa/crypto/browser";
 import { CanvasNode } from "../CanvasEditor";
 
 interface RrCanvasImageCardProps {
@@ -48,7 +48,7 @@ export default function RrCanvasImageCard({ node, accessToken }: RrCanvasImageCa
           node.lacertaFileDecryptionKey || node.lacertaFileKey;
         if (!keyToImport) throw new Error("No decryption key present");
         const fileKey = await importRawKey(keyToImport);
-        const decBuffer = await decryptFileBuffer(encBuffer, fileKey);
+        const decBuffer = await decrypt(encBuffer, fileKey);
 
         if (!active) return;
         const blob = new Blob([decBuffer], {

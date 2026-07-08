@@ -13,7 +13,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { decryptFileBuffer } from "@/lib/lacertaCrypto";
+import { decrypt } from "@runa/crypto/browser";
 
 interface GalleryFileItem {
   id: string;
@@ -126,11 +126,11 @@ export default function MediaGallerySlider({
             concatenated.set(chunk, offset);
             offset += chunk.length;
           }
-          decryptedBuffer = await decryptFileBuffer(concatenated.buffer, file.decryptedKey!);
+          decryptedBuffer = await decrypt(concatenated.buffer, file.decryptedKey!);
         } else {
           const encryptedBuffer = await res.arrayBuffer();
           if (!active) return;
-          decryptedBuffer = await decryptFileBuffer(encryptedBuffer, file.decryptedKey!);
+          decryptedBuffer = await decrypt(encryptedBuffer, file.decryptedKey!);
           setPercent(100);
         }
 

@@ -43,17 +43,54 @@ const getFileExtension = (filename: string): string => {
   return parts.length > 1 ? parts.pop()!.toLowerCase() : "";
 };
 
-const getDocumentType = (ext: string): "word" | "cell" | "slide" => {
+const getDocumentType = (
+  ext: string,
+): "word" | "cell" | "slide" | "pdf" | "diagram" => {
   switch (ext) {
+    // Spreadsheets
     case "xls":
     case "xlsx":
     case "ods":
     case "csv":
+    case "xlsm":
+    case "xlsb":
+    case "numbers":
       return "cell";
+    // Presentations
     case "ppt":
     case "pptx":
     case "odp":
+    case "ppsx":
+    case "potx":
+    case "keynote":
+    case "key":
       return "slide";
+    // PDF and related
+    case "pdf":
+    case "xps":
+    case "oxps":
+    case "djvu":
+      return "pdf";
+    // Diagrams / Visio
+    case "vsdx":
+    case "vsdm":
+    case "vssm":
+    case "vssx":
+    case "vstm":
+    case "vstx":
+    case "vsd":
+      return "diagram";
+    // Documents
+    case "doc":
+    case "docx":
+    case "odt":
+    case "rtf":
+    case "txt":
+    case "html":
+    case "epub":
+    case "pages":
+    case "hwp":
+    case "hwpx":
     default:
       return "word";
   }

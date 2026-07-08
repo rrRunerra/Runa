@@ -17,7 +17,7 @@ import {
   Download,
 } from "lucide-react";
 import { toast } from "sonner";
-import { encryptFileBuffer, encryptMetadataString } from "@/lib/lacertaCrypto";
+import { encrypt } from "@runa/crypto/browser";
 
 interface DocFileItem {
   id: string;
@@ -98,14 +98,14 @@ export default function BuiltinDocEditor({
       const rawBuffer = encoder.encode(contentToSave).buffer;
 
       // Encrypt file
-      const encryptedBuffer = await encryptFileBuffer(
+      const encryptedBuffer = await encrypt(
         rawBuffer,
         file.decryptedKey,
       );
 
       // S3 post upload form
-      const encName = await encryptMetadataString(file.name, file.decryptedKey);
-      const encType = await encryptMetadataString("application/vnd.oasis.opendocument.text", file.decryptedKey);
+      const encName = await encrypt(file.name, file.decryptedKey);
+      const encType = await encrypt("application/vnd.oasis.opendocument.text", file.decryptedKey);
 
       const formData = new FormData();
       const blob = new Blob([encryptedBuffer], {

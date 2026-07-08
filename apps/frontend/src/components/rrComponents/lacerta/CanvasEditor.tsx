@@ -46,13 +46,11 @@ import {
 import { toast } from "sonner";
 import { io, Socket } from "socket.io-client";
 import {
-  encryptFileBuffer,
-  encryptMetadataString,
-  decryptMetadataString,
-  decryptFileBuffer,
-  unwrapFileKeyForUser,
-  importRawKey,
-} from "@/lib/lacertaCrypto";
+  encrypt,
+  decrypt,
+  unwrapKey,
+  exportRawKey,
+} from "@runa/crypto/browser";
 import TiptapNode from "./TiptapNode";
 import RrCanvasCardContent from "./canvas-cards/rrCanvasCardContent";
 import RrCanvasImageInsertModal from "./rrCanvasImageInsertModal";
@@ -501,21 +499,21 @@ export default function CanvasEditor({
           if (!wrappedKeyToUse) continue;
 
           // Decrypt symmetric file key using recipient's private key
-          const rawKeyStr = await unwrapFileKeyForUser(
+          const fileKey = await unwrapKey(
             wrappedKeyToUse,
             privateKey,
           );
-          const fileKey = await importRawKey(rawKeyStr);
+          const rawKeyStr = await exportRawKey(fileKey);
 
           // Decrypt name and mimetype
           let decryptedName = f.name;
           try {
-            decryptedName = await decryptMetadataString(f.name, fileKey);
+            decryptedName = await decrypt(f.name, fileKey);
           } catch {}
 
           let decryptedType = f.type;
           try {
-            decryptedType = await decryptMetadataString(f.type, fileKey);
+            decryptedType = await decrypt(f.type, fileKey);
           } catch {}
 
           list.push({
@@ -559,7 +557,7 @@ export default function CanvasEditor({
       const cryptoKey = file?.decryptedKey;
       if (!cryptoKey) return null;
       try {
-        return await encryptMetadataString(JSON.stringify(payload), cryptoKey);
+        return await encrypt(payload, cryptoKey);
       } catch (err) {
         console.error("Failed to encrypt socket payload:", err);
         return null;
@@ -573,8 +571,8 @@ export default function CanvasEditor({
       const cryptoKey = file?.decryptedKey;
       if (!cryptoKey) return null;
       try {
-        const jsonStr = await decryptMetadataString(encryptedText, cryptoKey);
-        return JSON.parse(jsonStr);
+        const result = await decrypt(encryptedText, cryptoKey);
+        return typeof result === "string" ? JSON.parse(result) : result;
       } catch (err) {
         console.error("Failed to decrypt socket payload:", err);
         return null;
@@ -939,14 +937,14 @@ export default function CanvasEditor({
       const rawBuffer = encoder.encode(JSON.stringify(canvasState)).buffer;
 
       // Encrypt file content
-      const encryptedBuffer = await encryptFileBuffer(
+      const encryptedBuffer = await encrypt(
         rawBuffer,
         file.decryptedKey,
       );
 
       // Encrypt name and mimetype for metadata
-      const encName = await encryptMetadataString(file.name, file.decryptedKey);
-      const encType = await encryptMetadataString(
+      const encName = await encrypt(file.name, file.decryptedKey);
+      const encType = await encrypt(
         "application/vnd.jsoncanvas",
         file.decryptedKey,
       );
@@ -1018,14 +1016,14 @@ export default function CanvasEditor({
       const rawBuffer = encoder.encode(JSON.stringify(canvasState)).buffer;
 
       // Encrypt file content
-      const encryptedBuffer = await encryptFileBuffer(
+      const encryptedBuffer = await encrypt(
         rawBuffer,
         file.decryptedKey,
       );
 
       // Encrypt name and mimetype for metadata
-      const encName = await encryptMetadataString(file.name, file.decryptedKey);
-      const encType = await encryptMetadataString(
+      const encName = await encrypt(file.name, file.decryptedKey);
+      const encType = await encrypt(
         "application/vnd.jsoncanvas",
         file.decryptedKey,
       );

@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import CanvasEditor from "@/components/rrComponents/lacerta/CanvasEditor";
 import OnlyOfficeEditor from "@/components/rrComponents/lacerta/OnlyOfficeEditor";
+import { isOnlyOfficeFile } from "@/lib/onlyoffice";
 
 import {
   importRawKey,
@@ -228,21 +229,7 @@ export default function LacertaSharePage(): React.JSX.Element {
                 )}
                 {decrypting ? "Decrypting..." : "Open Collaborative Canvas"}
               </button>
-            ) : decryptedType.includes("document") ||
-              decryptedType.includes("word") ||
-              decryptedType.includes("odt") ||
-              decryptedType.includes("spreadsheet") ||
-              decryptedType.includes("sheet") ||
-              decryptedType.includes("ods") ||
-              decryptedType.includes("presentation") ||
-              decryptedType.includes("slide") ||
-              decryptedType.includes("odp") ||
-              decryptedName.endsWith(".docx") ||
-              decryptedName.endsWith(".xlsx") ||
-              decryptedName.endsWith(".pptx") ||
-              decryptedName.endsWith(".odt") ||
-              decryptedName.endsWith(".ods") ||
-              decryptedName.endsWith(".odp") ? (
+            ) : isOnlyOfficeFile(decryptedName, decryptedType) ? (
               <button
                 onClick={() => setShowOfficeEditor(true)}
                 disabled={decrypting}

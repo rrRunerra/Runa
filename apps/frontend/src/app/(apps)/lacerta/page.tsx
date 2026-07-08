@@ -10,16 +10,13 @@ import { Lock, Unlock, ShieldAlert, Loader2, FolderClosed, FileText, Grid3X3, Pl
 import { toast } from "sonner";
 
 import {
+  encrypt,
+  decrypt,
+  wrapKey,
+  unwrapKey,
   generateFileKey,
   exportRawKey,
-  importRawKey,
-  wrapFileKeyForUser,
-  unwrapFileKeyForUser,
-  encryptMetadataString,
-  decryptMetadataString,
-  encryptFileBuffer,
-  decryptFileBuffer,
-} from "@/lib/lacertaCrypto";
+} from "@runa/crypto/browser";
 
 // Import local components
 import FileGrid from "@/components/rrComponents/lacerta/FileGrid";
@@ -45,6 +42,7 @@ import {
 } from "@/lib/officeTemplates";
 
 import { RenderFileItem } from "@/components/rrComponents/lacerta/FileCard";
+import { isOnlyOfficeFile } from "@/lib/onlyoffice";
 
 const downloadAndDecryptFileWithProgress = async (
   key: string,
@@ -63,7 +61,7 @@ const downloadAndDecryptFileWithProgress = async (
   if (!res.body || totalBytes === 0) {
     const buffer = await res.arrayBuffer();
     if (onProgress) onProgress(100);
-    return decryptFileBuffer(buffer, decryptedKey);
+    return decrypt(buffer, decryptedKey);
   }
 
   const reader = res.body.getReader();
@@ -89,7 +87,7 @@ const downloadAndDecryptFileWithProgress = async (
     offset += chunk.length;
   }
 
-  return decryptFileBuffer(concatenated.buffer, decryptedKey);
+  return decrypt(concatenated.buffer, decryptedKey);
 };
 
 
@@ -197,13 +195,14 @@ export default function LacertaPage({
           if (!wrappedKeyToUse) continue;
 
           // Decrypt symmetric file key using recipient's private ECDH key
-          const rawKeyStr = await unwrapFileKeyForUser(wrappedKeyToUse, privateKey);
-          const fileKey = await importRawKey(rawKeyStr);
+          // Decrypt symmetric file key using recipient's private ECDH key
+          const fileKey = await unwrapKey(wrappedKeyToUse, privateKey);
+          const rawKeyStr = await exportRawKey(fileKey);
 
           // Decrypt name and mimetype
           let decryptedName = file.name;
           try {
-            decryptedName = await decryptMetadataString(file.name, fileKey);
+            decryptedName = await decrypt(file.name, fileKey);
           } catch (nameErr) {
             console.warn(`File ${file.id} name is not encrypted or failed to decrypt:`, file.name, nameErr);
           }
@@ -211,7 +210,7 @@ export default function LacertaPage({
           let decryptedType = file.isFolder ? null : file.type;
           if (file.type && !file.isFolder) {
             try {
-              decryptedType = await decryptMetadataString(file.type, fileKey);
+              decryptedType = await decrypt(file.type, fileKey);
             } catch (typeErr) {
               console.warn(`File ${file.id} type is not encrypted or failed to decrypt:`, file.type, typeErr);
             }
@@ -275,15 +274,15 @@ export default function LacertaPage({
         const rawKeyStr = await exportRawKey(fileKey);
 
         // 3. Encrypt metadata
-        const encName = await encryptMetadataString(fileToUpload.name, fileKey);
-        const encType = await encryptMetadataString(fileToUpload.type || "application/octet-stream", fileKey);
+        const encName = await encrypt(fileToUpload.name, fileKey);
+        const encType = await encrypt(fileToUpload.type || "application/octet-stream", fileKey);
 
         // 4. Encrypt file binary buffer
         const rawBuffer = await fileToUpload.arrayBuffer();
-        const encBuffer = await encryptFileBuffer(rawBuffer, fileKey);
+        const encBuffer = await encrypt(rawBuffer, fileKey);
 
         // 5. Wrap key
-        const wrappedKey = await wrapFileKeyForUser(rawKeyStr, userPublicKey);
+        const wrappedKey = JSON.stringify(await wrapKey(rawKeyStr, userPublicKey));
 
         // Update queue status
         setUploadQueue((prev) =>
@@ -356,8 +355,8 @@ export default function LacertaPage({
       const fileKey = await generateFileKey();
       const rawKeyStr = await exportRawKey(fileKey);
 
-      const encName = await encryptMetadataString(name, fileKey);
-      const wrappedKey = await wrapFileKeyForUser(rawKeyStr, userPublicKey);
+      const encName = await encrypt(name, fileKey);
+      const wrappedKey = JSON.stringify(await wrapKey(rawKeyStr, userPublicKey));
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/folder`, {
         method: "POST",
@@ -418,11 +417,27 @@ export default function LacertaPage({
     else if (type === "mermaid") mime = "application/mermaid";
     else if (type === "uml") mime = "application/uml";
     else if (ext === ".docx") mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-    else if (ext === ".xlsx") mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-    else if (ext === ".pptx") mime = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+    else if (ext === ".doc") mime = "application/msword";
     else if (ext === ".odt") mime = "application/vnd.oasis.opendocument.text";
+    else if (ext === ".rtf") mime = "application/rtf";
+    else if (ext === ".txt") mime = "text/plain";
+    else if (ext === ".html") mime = "text/html";
+    else if (ext === ".epub") mime = "application/epub+zip";
+    else if (ext === ".pages") mime = "application/x-iwork-pages-sffpages";
+    else if (ext === ".hwp") mime = "application/x-hwp";
+    else if (ext === ".xlsx") mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    else if (ext === ".xls") mime = "application/vnd.ms-excel";
+    else if (ext === ".xlsm") mime = "application/vnd.ms-excel.sheet.macroEnabled.12";
+    else if (ext === ".xlsb") mime = "application/vnd.ms-excel.sheet.binary.macroEnabled.12";
     else if (ext === ".ods") mime = "application/vnd.oasis.opendocument.spreadsheet";
+    else if (ext === ".csv") mime = "text/csv";
+    else if (ext === ".numbers") mime = "application/x-iwork-numbers-sffnumbers";
+    else if (ext === ".pptx") mime = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+    else if (ext === ".ppt") mime = "application/vnd.ms-powerpoint";
     else if (ext === ".odp") mime = "application/vnd.oasis.opendocument.presentation";
+    else if (ext === ".ppsx") mime = "application/vnd.openxmlformats-officedocument.presentationml.slideshow";
+    else if (ext === ".potx") mime = "application/vnd.openxmlformats-officedocument.presentationml.template";
+    else if (ext === ".key" || ext === ".keynote") mime = "application/x-iwork-keynote-sffkey";
 
     const createToast = toast.loading(`Creating ${baseName}${ext}...`);
 
@@ -431,9 +446,9 @@ export default function LacertaPage({
       const fileKey = await generateFileKey();
       const rawKeyStr = await exportRawKey(fileKey);
 
-      const encName = await encryptMetadataString(baseName + ext, fileKey);
-      const encType = await encryptMetadataString(mime, fileKey);
-      const wrappedKey = await wrapFileKeyForUser(rawKeyStr, userPublicKey);
+      const encName = await encrypt(baseName + ext, fileKey);
+      const encType = await encrypt(mime, fileKey);
+      const wrappedKey = JSON.stringify(await wrapKey(rawKeyStr, userPublicKey));
 
       // Resolve initial data
       let rawData: ArrayBuffer;
@@ -462,7 +477,7 @@ export default function LacertaPage({
       }
 
       // Encrypt contents
-      const encBuffer = await encryptFileBuffer(rawData, fileKey);
+      const encBuffer = await encrypt(rawData, fileKey);
 
       const formData = new FormData();
       const blob = new Blob([encBuffer], { type: "application/octet-stream" });
@@ -512,22 +527,7 @@ export default function LacertaPage({
       item.name.endsWith(".mov");
     if (isVideo) return;
 
-    const isOfficeFile =
-      mime.includes("document") ||
-      mime.includes("word") ||
-      mime.includes("odt") ||
-      mime.includes("spreadsheet") ||
-      mime.includes("sheet") ||
-      mime.includes("ods") ||
-      mime.includes("presentation") ||
-      mime.includes("slide") ||
-      mime.includes("odp") ||
-      item.name.endsWith(".docx") ||
-      item.name.endsWith(".xlsx") ||
-      item.name.endsWith(".pptx") ||
-      item.name.endsWith(".odt") ||
-      item.name.endsWith(".ods") ||
-      item.name.endsWith(".odp");
+    const isOfficeFile = isOnlyOfficeFile(item.name, mime);
 
     if (isOfficeFile) {
       setActiveOnlyOfficeFile(item);
@@ -651,21 +651,21 @@ export default function LacertaPage({
       if (!downloadRes.ok) throw new Error("Failed to download source file content");
 
       const encryptedBuffer = await downloadRes.arrayBuffer();
-      const decryptedBuffer = await decryptFileBuffer(encryptedBuffer, item.decryptedKey);
+      const decryptedBuffer = await decrypt(encryptedBuffer, item.decryptedKey);
 
       // 2. Generate a new symmetric key for the copy
       const fileKey = await generateFileKey();
       const rawKeyStr = await exportRawKey(fileKey);
 
       // 3. Encrypt name and type using the new key
-      const encName = await encryptMetadataString(item.name, fileKey);
-      const encType = await encryptMetadataString(item.type || "application/octet-stream", fileKey);
+      const encName = await encrypt(item.name, fileKey);
+      const encType = await encrypt(item.type || "application/octet-stream", fileKey);
 
       // 4. Encrypt the file content with the new key
-      const encBuffer = await encryptFileBuffer(decryptedBuffer, fileKey);
+      const encBuffer = await encrypt(decryptedBuffer, fileKey);
 
       // 5. Wrap the new key for current user (this recipient)
-      const wrappedKey = await wrapFileKeyForUser(rawKeyStr, userPublicKey);
+      const wrappedKey = JSON.stringify(await wrapKey(rawKeyStr, userPublicKey));
 
       // 6. Post to server as a new file (owned by current user)
       const formData = new FormData();
@@ -936,49 +936,62 @@ export default function LacertaPage({
                     {createType === "doc" && (
                       <>
                         <option value=".docx">Microsoft Word (.docx)</option>
+                        <option value=".doc">Legacy Word (.doc)</option>
                         <option value=".odt">OpenDocument Text (.odt)</option>
+                        <option value=".rtf">Rich Text Format (.rtf)</option>
+                        <option value=".txt">Plain Text (.txt)</option>
+                        <option value=".html">HTML Document (.html)</option>
+                        <option value=".epub">E-book (.epub)</option>
+                        <option value=".pages">Apple Pages (.pages)</option>
+                        <option value=".hwp">Hancom Word (.hwp)</option>
                       </>
                     )}
                     {createType === "sheet" && (
                       <>
                         <option value=".xlsx">Microsoft Excel (.xlsx)</option>
+                        <option value=".xls">Legacy Excel (.xls)</option>
+                        <option value=".xlsm">Excel Macro-Enabled (.xlsm)</option>
+                        <option value=".xlsb">Excel Binary (.xlsb)</option>
                         <option value=".ods">OpenDocument Spreadsheet (.ods)</option>
+                        <option value=".csv">Comma Separated Values (.csv)</option>
+                        <option value=".numbers">Apple Numbers (.numbers)</option>
                       </>
                     )}
                     {createType === "slide" && (
                       <>
                         <option value=".pptx">Microsoft PowerPoint (.pptx)</option>
+                        <option value=".ppt">Legacy PowerPoint (.ppt)</option>
                         <option value=".odp">OpenDocument Presentation (.odp)</option>
+                        <option value=".ppsx">PowerPoint Slideshow (.ppsx)</option>
+                        <option value=".potx">PowerPoint Template (.potx)</option>
+                        <option value=".key">Apple Keynote (.key)</option>
                       </>
                     )}
                   </select>
                 </div>
               )}
 
-              <div className="bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-lg flex items-start gap-2.5">
-                <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider">E2EE Active</span>
-                  <span className="text-[10px] text-muted-foreground leading-normal">
-                    This file is encrypted locally in your browser. Real-time collaboration is supported via in-memory secure key exchange.
-                  </span>
-                </div>
-              </div>
             </div>
 
-            <div className="flex justify-end items-center gap-2 mt-6">
-              <button
-                onClick={() => setIsCreateModalOpen(false)}
-                className="px-3.5 py-1.5 border border-border hover:bg-muted/10 rounded-lg text-xs font-semibold text-foreground transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={submitCreateDoc}
-                className="px-3.5 py-1.5 bg-primary hover:bg-primary/95 text-primary-foreground text-xs font-semibold rounded-lg transition-all shadow-md"
-              >
-                Create File
-              </button>
+            <div className="flex justify-between items-center mt-6">
+              <div className="flex items-center gap-1.5 text-emerald-500">
+                <ShieldCheck className="h-3.5 w-3.5" />
+                <span className="text-[11px] font-semibold">Encrypted</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsCreateModalOpen(false)}
+                  className="px-3.5 py-1.5 border border-border hover:bg-muted/10 rounded-lg text-xs font-semibold text-foreground transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={submitCreateDoc}
+                  className="px-3.5 py-1.5 bg-primary hover:bg-primary/95 text-primary-foreground text-xs font-semibold rounded-lg transition-all shadow-md active:scale-98"
+                >
+                  Create
+                </button>
+              </div>
             </div>
           </div>
         </div>
