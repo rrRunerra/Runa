@@ -1,18 +1,42 @@
 "use client";
 
 import React, { useState } from "react";
-import { Folder, FileText, Grid3X3, Image as ImageIcon, Video, File, MoreVertical, Share2, Trash2, Download, ArrowUpRight, Shield, ShieldAlert, RefreshCw, FolderClosed, Sparkles, Copy } from "lucide-react";
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import {
+  Folder,
+  FileText,
+  Grid3X3,
+  Image as ImageIcon,
+  Video,
+  File,
+  MoreVertical,
+  Share2,
+  Trash2,
+  Download,
+  ArrowUpRight,
+  Shield,
+  ShieldAlert,
+  RefreshCw,
+  FolderClosed,
+  Sparkles,
+  Copy,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import UserProfileCard from "./UserProfileCard";
-import { RrLapplandDocument } from "../rrImages/rrLapplandDocument";
-import { RrLapplandSpreadsheet } from "../rrImages/rrLapplandSpreadsheet";
-import { RrLapplandPresentation } from "../rrImages/rrLapplandPresentation";
-import { RrLapplandTextFile } from "../rrImages/rrLapplandTextFile";
-import { RrLapplandCanvas } from "../rrImages/rrLapplandCanvas";
-import { RrLapplandMermaid } from "../rrImages/rrLapplandMermaid";
-import { RrLapplandUml } from "../rrImages/rrLapplandUml";
-import { RrLapplandFolder } from "../rrImages/rrLapplandFolder";
-import { RrLapplandPlaceholderFile } from "../rrImages/rrLapplandPlaceholderFile";
+import RrLapplandDocument from "../rrImages/rrLapplandDocument";
+import RrLapplandSpreadsheet from "../rrImages/rrLapplandSpreadsheet";
+import RrLapplandPresentation from "../rrImages/rrLapplandPresentation";
+import RrLapplandTextFile from "../rrImages/rrLapplandTextFile";
+import RrLapplandCanvas from "../rrImages/rrLapplandCanvas";
+import RrLapplandMermaid from "../rrImages/rrLapplandMermaid";
+import RrLapplandUml from "../rrImages/rrLapplandUml";
+import RrLapplandFolder from "../rrImages/rrLapplandFolder";
+import RrLapplandPlaceholderFile from "../rrImages/rrLapplandPlaceholderFile";
 
 interface SharedUser {
   id: string;
@@ -92,37 +116,75 @@ export default function FileCard({
 
   const getIcon = () => {
     if (item.isFolder) {
-      return <RrLapplandFolder className="h-24 w-24 text-amber-500 dark:text-amber-400" />;
+      return (
+        <RrLapplandFolder className="h-24 w-24 text-amber-500 dark:text-amber-400" />
+      );
     }
     const mime = item.type || "";
-    if (mime.startsWith("image/")) return <ImageIcon className="h-18 w-18 text-sky-500" />;
-    if (mime.startsWith("video/")) return <Video className="h-18 w-18 text-rose-500" />;
+    if (mime.startsWith("image/"))
+      return <ImageIcon className="h-18 w-18 text-sky-500" />;
+    if (mime.startsWith("video/"))
+      return <Video className="h-18 w-18 text-rose-500" />;
 
     const parts = item.name.split(".");
     const ext = parts.length > 1 ? parts.pop()!.toLowerCase() : "";
 
     if (["xlsx", "xls", "ods", "csv"].includes(ext)) {
-      return <RrLapplandSpreadsheet className="h-24 w-24 text-green-600 dark:text-green-400" />;
+      return (
+        <RrLapplandSpreadsheet className="h-24 w-24 text-green-600 dark:text-green-400" />
+      );
     }
     if (["docx", "doc", "odt", "rtf"].includes(ext)) {
-      return <RrLapplandDocument className="h-24 w-24 text-blue-600 dark:text-blue-400" />;
+      return (
+        <RrLapplandDocument className="h-24 w-24 text-blue-600 dark:text-blue-400" />
+      );
     }
     if (["pptx", "ppt", "odp"].includes(ext)) {
-      return <RrLapplandPresentation className="h-24 w-24 text-orange-600 dark:text-orange-400" />;
+      return (
+        <RrLapplandPresentation className="h-24 w-24 text-orange-600 dark:text-orange-400" />
+      );
     }
-    if (["txt", "md", "json", "js", "ts", "tsx", "jsx", "css", "html", "yaml", "yml", "ini", "conf", "log"].includes(ext) || mime.startsWith("text/")) {
-      return <RrLapplandTextFile className="h-24 w-24 text-slate-600 dark:text-slate-300" />;
+    if (
+      [
+        "txt",
+        "md",
+        "json",
+        "js",
+        "ts",
+        "tsx",
+        "jsx",
+        "css",
+        "html",
+        "yaml",
+        "yml",
+        "ini",
+        "conf",
+        "log",
+      ].includes(ext) ||
+      mime.startsWith("text/")
+    ) {
+      return (
+        <RrLapplandTextFile className="h-24 w-24 text-slate-600 dark:text-slate-300" />
+      );
     }
     if (ext === "canvas") {
-      return <RrLapplandCanvas className="h-24 w-24 text-violet-600 dark:text-violet-400" />;
+      return (
+        <RrLapplandCanvas className="h-24 w-24 text-violet-600 dark:text-violet-400" />
+      );
     }
     if (ext === "mermaid") {
-      return <RrLapplandMermaid className="h-24 w-24 text-teal-600 dark:text-teal-400" />;
+      return (
+        <RrLapplandMermaid className="h-24 w-24 text-teal-600 dark:text-teal-400" />
+      );
     }
     if (ext === "uml") {
-      return <RrLapplandUml className="h-24 w-24 text-indigo-600 dark:text-indigo-400" />;
+      return (
+        <RrLapplandUml className="h-24 w-24 text-indigo-600 dark:text-indigo-400" />
+      );
     }
-    return <RrLapplandPlaceholderFile className="h-24 w-24 text-slate-400 dark:text-slate-500" />;
+    return (
+      <RrLapplandPlaceholderFile className="h-24 w-24 text-slate-400 dark:text-slate-500" />
+    );
   };
 
   return (
@@ -152,14 +214,25 @@ export default function FileCard({
               <MoreVertical className="h-3.5 w-3.5" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="bg-popover border-border w-40" side="right" align="start" sideOffset={8}>
-            <DropdownMenuItem onClick={() => onOpen(item)} className="cursor-pointer text-xs focus:bg-accent font-semibold gap-2">
+          <DropdownMenuContent
+            className="bg-popover border-border w-40"
+            side="right"
+            align="start"
+            sideOffset={8}
+          >
+            <DropdownMenuItem
+              onClick={() => onOpen(item)}
+              className="cursor-pointer text-xs focus:bg-accent font-semibold gap-2"
+            >
               <ArrowUpRight className="h-3.5 w-3.5" />
               Open
             </DropdownMenuItem>
             {isSharedTab && onSaveCopy && (
               <>
-                <DropdownMenuItem onClick={() => onSaveCopy(item)} className="cursor-pointer text-xs focus:bg-accent font-semibold gap-2">
+                <DropdownMenuItem
+                  onClick={() => onSaveCopy(item)}
+                  className="cursor-pointer text-xs focus:bg-accent font-semibold gap-2"
+                >
                   <Copy className="h-3.5 w-3.5" />
                   Save a Copy
                 </DropdownMenuItem>
@@ -167,23 +240,35 @@ export default function FileCard({
               </>
             )}
             {!item.isFolder && (
-              <DropdownMenuItem onClick={() => onDownload(item)} className="cursor-pointer text-xs focus:bg-accent font-semibold gap-2">
+              <DropdownMenuItem
+                onClick={() => onDownload(item)}
+                className="cursor-pointer text-xs focus:bg-accent font-semibold gap-2"
+              >
                 <Download className="h-3.5 w-3.5" />
                 Download
               </DropdownMenuItem>
             )}
             {!isSharedTab && (
               <>
-                <DropdownMenuItem onClick={() => onShare(item)} className="cursor-pointer text-xs focus:bg-accent font-semibold gap-2">
+                <DropdownMenuItem
+                  onClick={() => onShare(item)}
+                  className="cursor-pointer text-xs focus:bg-accent font-semibold gap-2"
+                >
                   <Share2 className="h-3.5 w-3.5" />
                   Share
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-border" />
-                <DropdownMenuItem onClick={() => onToggleVault(item)} className="cursor-pointer text-xs focus:bg-accent font-semibold gap-2">
+                <DropdownMenuItem
+                  onClick={() => onToggleVault(item)}
+                  className="cursor-pointer text-xs focus:bg-accent font-semibold gap-2"
+                >
                   <Shield className="h-3.5 w-3.5" />
                   {item.isVault ? "Remove Vault" : "Move to Vault"}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onToggleTrash(item)} className="cursor-pointer text-xs focus:bg-accent font-semibold gap-2">
+                <DropdownMenuItem
+                  onClick={() => onToggleTrash(item)}
+                  className="cursor-pointer text-xs focus:bg-accent font-semibold gap-2"
+                >
                   <Trash2 className="h-3.5 w-3.5" />
                   {item.isTrash ? "Restore" : "Send to Trash"}
                 </DropdownMenuItem>
@@ -192,7 +277,10 @@ export default function FileCard({
             {item.isTrash && (
               <>
                 <DropdownMenuSeparator className="bg-border" />
-                <DropdownMenuItem onClick={() => onDelete(item)} className="cursor-pointer text-xs text-destructive focus:bg-destructive/10 focus:text-destructive font-semibold gap-2">
+                <DropdownMenuItem
+                  onClick={() => onDelete(item)}
+                  className="cursor-pointer text-xs text-destructive focus:bg-destructive/10 focus:text-destructive font-semibold gap-2"
+                >
                   <Trash2 className="h-3.5 w-3.5" />
                   Delete Forever
                 </DropdownMenuItem>
@@ -208,13 +296,18 @@ export default function FileCard({
       </div>
 
       {/* Thin colored bar underneath the icon section */}
-      <div className={`h-[3px] w-full transition-colors ${
-        isSelected ? "bg-primary" : "bg-border/30 group-hover:bg-border/60"
-      }`} />
+      <div
+        className={`h-[3px] w-full transition-colors ${
+          isSelected ? "bg-primary" : "bg-border/30 group-hover:bg-border/60"
+        }`}
+      />
 
       {/* Bottom half: Details Area */}
       <div className="p-3 bg-card/65 flex flex-col gap-0.5 min-w-0 text-left">
-        <span className="text-xs font-bold text-foreground truncate" title={item.name}>
+        <span
+          className="text-xs font-bold text-foreground truncate"
+          title={item.name}
+        >
           {item.name}
         </span>
         <div className="flex items-center justify-between text-[10px] text-muted-foreground/80 mt-0.5 w-full">
@@ -237,21 +330,30 @@ export default function FileCard({
         const isShared = item.shares && item.shares.length > 0;
         if (isPublic && isShared) {
           return (
-            <div className="absolute top-1.5 left-1.5 z-10 p-1 rounded-lg bg-rose-500/15 border border-rose-500/25 text-rose-400 shadow-sm" title="Public & Shared File">
+            <div
+              className="absolute top-1.5 left-1.5 z-10 p-1 rounded-lg bg-rose-500/15 border border-rose-500/25 text-rose-400 shadow-sm"
+              title="Public & Shared File"
+            >
               <Share2 className="h-3 w-3" />
             </div>
           );
         }
         if (isPublic) {
           return (
-            <div className="absolute top-1.5 left-1.5 z-10 p-1 rounded-lg bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 shadow-sm" title="Public File">
+            <div
+              className="absolute top-1.5 left-1.5 z-10 p-1 rounded-lg bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 shadow-sm"
+              title="Public File"
+            >
               <Share2 className="h-3 w-3" />
             </div>
           );
         }
         if (isShared) {
           return (
-            <div className="absolute top-1.5 left-1.5 z-10 p-1 rounded-lg bg-violet-500/15 border border-violet-500/25 text-violet-400 shadow-sm" title={`Shared with ${item.shares.length} users`}>
+            <div
+              className="absolute top-1.5 left-1.5 z-10 p-1 rounded-lg bg-violet-500/15 border border-violet-500/25 text-violet-400 shadow-sm"
+              title={`Shared with ${item.shares.length} users`}
+            >
               <Share2 className="h-3 w-3" />
             </div>
           );
@@ -262,7 +364,10 @@ export default function FileCard({
       {/* Secure Vault Badge Overlay */}
       {item.isVault && (
         <div className="absolute bottom-2 right-2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          <div className="p-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400" title="Secure Vault Storage">
+          <div
+            className="p-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
+            title="Secure Vault Storage"
+          >
             <Shield className="h-3 w-3" />
           </div>
         </div>

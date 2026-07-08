@@ -1,4 +1,4 @@
-export function RrLapplandPresentation({
+export default function RrLapplandPresentation({
   ...props
 }: React.ComponentProps<"svg">) {
   return (

@@ -1,4 +1,6 @@
-export function RrLapplandUml({ ...props }: React.ComponentProps<"svg">) {
+export default function RrLapplandUml({
+  ...props
+}: React.ComponentProps<"svg">) {
   return (
     <svg
       version="1.0"

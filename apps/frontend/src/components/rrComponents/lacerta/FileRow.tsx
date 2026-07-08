@@ -28,15 +28,15 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { RenderFileItem } from "./FileCard";
 import UserProfileCard from "./UserProfileCard";
-import { RrLapplandDocument } from "../rrImages/rrLapplandDocument";
-import { RrLapplandSpreadsheet } from "../rrImages/rrLapplandSpreadsheet";
-import { RrLapplandPresentation } from "../rrImages/rrLapplandPresentation";
-import { RrLapplandTextFile } from "../rrImages/rrLapplandTextFile";
-import { RrLapplandCanvas } from "../rrImages/rrLapplandCanvas";
-import { RrLapplandMermaid } from "../rrImages/rrLapplandMermaid";
-import { RrLapplandUml } from "../rrImages/rrLapplandUml";
-import { RrLapplandFolder } from "../rrImages/rrLapplandFolder";
-import { RrLapplandPlaceholderFile } from "../rrImages/rrLapplandPlaceholderFile";
+import RrLapplandDocument from "../rrImages/rrLapplandDocument";
+import RrLapplandSpreadsheet from "../rrImages/rrLapplandSpreadsheet";
+import RrLapplandPresentation from "../rrImages/rrLapplandPresentation";
+import RrLapplandTextFile from "../rrImages/rrLapplandTextFile";
+import RrLapplandCanvas from "../rrImages/rrLapplandCanvas";
+import RrLapplandMermaid from "../rrImages/rrLapplandMermaid";
+import RrLapplandUml from "../rrImages/rrLapplandUml";
+import RrLapplandFolder from "../rrImages/rrLapplandFolder";
+import RrLapplandPlaceholderFile from "../rrImages/rrLapplandPlaceholderFile";
 
 interface FileRowProps {
   item: RenderFileItem;
@@ -76,7 +76,9 @@ export default function FileRow({
 
   const getIcon = () => {
     if (item.isFolder) {
-      return <RrLapplandFolder className="h-7 w-7 text-amber-500 dark:text-amber-400" />;
+      return (
+        <RrLapplandFolder className="h-7 w-7 text-amber-500 dark:text-amber-400" />
+      );
     }
     const mime = item.type || "";
     if (mime.startsWith("image/"))
@@ -88,27 +90,61 @@ export default function FileRow({
     const ext = parts.length > 1 ? parts.pop()!.toLowerCase() : "";
 
     if (["xlsx", "xls", "ods", "csv"].includes(ext)) {
-      return <RrLapplandSpreadsheet className="h-7 w-7 text-green-600 dark:text-green-400" />;
+      return (
+        <RrLapplandSpreadsheet className="h-7 w-7 text-green-600 dark:text-green-400" />
+      );
     }
     if (["docx", "doc", "odt", "rtf"].includes(ext)) {
-      return <RrLapplandDocument className="h-7 w-7 text-blue-600 dark:text-blue-400" />;
+      return (
+        <RrLapplandDocument className="h-7 w-7 text-blue-600 dark:text-blue-400" />
+      );
     }
     if (["pptx", "ppt", "odp"].includes(ext)) {
-      return <RrLapplandPresentation className="h-7 w-7 text-orange-600 dark:text-orange-400" />;
+      return (
+        <RrLapplandPresentation className="h-7 w-7 text-orange-600 dark:text-orange-400" />
+      );
     }
-    if (["txt", "md", "json", "js", "ts", "tsx", "jsx", "css", "html", "yaml", "yml", "ini", "conf", "log"].includes(ext) || mime.startsWith("text/")) {
-      return <RrLapplandTextFile className="h-7 w-7 text-slate-600 dark:text-slate-300" />;
+    if (
+      [
+        "txt",
+        "md",
+        "json",
+        "js",
+        "ts",
+        "tsx",
+        "jsx",
+        "css",
+        "html",
+        "yaml",
+        "yml",
+        "ini",
+        "conf",
+        "log",
+      ].includes(ext) ||
+      mime.startsWith("text/")
+    ) {
+      return (
+        <RrLapplandTextFile className="h-7 w-7 text-slate-600 dark:text-slate-300" />
+      );
     }
     if (ext === "canvas") {
-      return <RrLapplandCanvas className="h-7 w-7 text-violet-600 dark:text-violet-400" />;
+      return (
+        <RrLapplandCanvas className="h-7 w-7 text-violet-600 dark:text-violet-400" />
+      );
     }
     if (ext === "mermaid") {
-      return <RrLapplandMermaid className="h-7 w-7 text-teal-600 dark:text-teal-400" />;
+      return (
+        <RrLapplandMermaid className="h-7 w-7 text-teal-600 dark:text-teal-400" />
+      );
     }
     if (ext === "uml") {
-      return <RrLapplandUml className="h-7 w-7 text-indigo-600 dark:text-indigo-400" />;
+      return (
+        <RrLapplandUml className="h-7 w-7 text-indigo-600 dark:text-indigo-400" />
+      );
     }
-    return <RrLapplandPlaceholderFile className="h-7 w-7 text-slate-400 dark:text-slate-500" />;
+    return (
+      <RrLapplandPlaceholderFile className="h-7 w-7 text-slate-400 dark:text-slate-500" />
+    );
   };
 
   return (

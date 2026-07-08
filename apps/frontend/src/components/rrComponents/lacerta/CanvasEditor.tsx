@@ -58,6 +58,7 @@ import RrCanvasVideoInsertModal from "./rrCanvasVideoInsertModal";
 import RrCanvasGifInsertModal from "./rrCanvasGifInsertModal";
 import RrCanvasFileInsertModal from "./rrCanvasFileInsertModal";
 import RrCanvasPublicShareWarningModal from "./rrCanvasPublicShareWarningModal";
+import RrCanvasRrImageInsertModal from "./rrCanvasRrImageInsertModal";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import { useRRCrypto } from "@/hooks/useRRCrypto";
@@ -97,7 +98,8 @@ export type CanvasNodeType =
   | "pdf"
   | "callout"
   | "annotation"
-  | "group";
+  | "group"
+  | "rrImage";
 
 export interface Point {
   x: number;
@@ -146,16 +148,22 @@ export interface CanvasNode {
   calloutType?: "info" | "warning" | "success" | "error";
   annotationPointer?: { x: number; y: number };
   lockPosition?: boolean;
+
+  // rrImage card
+  rrImageId?: string; // SVG component key OR public image URL path
+  rrImageType?: "svg" | "image";
 }
 
 export interface CanvasEdge {
   id: string;
   fromNode: string;
-  fromSide: "top" | "right" | "bottom" | "left";
+  fromSide: "top" | "right" | "bottom" | "left" | "top-left" | "top-right" | "bottom-left" | "bottom-right";
   toNode: string;
-  toSide: "top" | "right" | "bottom" | "left";
+  toSide: "top" | "right" | "bottom" | "left" | "top-left" | "top-right" | "bottom-left" | "bottom-right";
   label?: string;
   color?: string;
+  arrowType?: "normal" | "association" | "composition" | "aggregation";
+  lineType?: "solid" | "dashed" | "dotted" | "dashed-dotted";
 }
 
 interface Collaborator {
@@ -192,72 +200,107 @@ const COLOR_PRESETS = [
     border: "border-border",
     bg: "bg-card/90",
     tag: "bg-muted text-muted-foreground",
+    text: "text-foreground",
   },
   {
     name: "blue",
-    border: "border-primary/30",
-    bg: "bg-primary/[0.03]",
+    border: "border-blue-500/50 dark:border-blue-400/40",
+    bg: "bg-blue-500/10 dark:bg-blue-400/5",
     tag: "bg-primary/10 text-primary",
+    text: "text-blue-500 dark:text-blue-400",
   },
   {
     name: "emerald",
-    border: "border-success/30",
-    bg: "bg-success/[0.03]",
+    border: "border-emerald-500/50 dark:border-emerald-400/40",
+    bg: "bg-emerald-500/10 dark:bg-emerald-400/5",
     tag: "bg-success/10 text-success",
-  },
-  {
-    name: "amber",
-    border: "border-warning/30",
-    bg: "bg-warning/[0.03]",
-    tag: "bg-warning/10 text-warning",
+    text: "text-emerald-500 dark:text-emerald-400",
   },
   {
     name: "rose",
-    border: "border-destructive/30",
-    bg: "bg-destructive/[0.03]",
+    border: "border-rose-500/50 dark:border-rose-400/40",
+    bg: "bg-rose-500/10 dark:bg-rose-400/5",
     tag: "bg-destructive/10 text-destructive",
+    text: "text-rose-500 dark:text-rose-400",
   },
   {
     name: "purple",
-    border: "border-purple-500/30 dark:border-purple-400/25",
-    bg: "bg-purple-500/[0.03] dark:bg-purple-400/[0.02]",
+    border: "border-purple-500/50 dark:border-purple-400/40",
+    bg: "bg-purple-500/10 dark:bg-purple-400/5",
     tag: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
+    text: "text-purple-500 dark:text-purple-400",
   },
   {
     name: "teal",
-    border: "border-teal-500/30 dark:border-teal-400/25",
-    bg: "bg-teal-500/[0.03] dark:bg-teal-400/[0.02]",
+    border: "border-teal-500/50 dark:border-teal-400/40",
+    bg: "bg-teal-500/10 dark:bg-teal-400/5",
     tag: "bg-teal-500/10 text-teal-600 dark:text-teal-400",
+    text: "text-teal-500 dark:text-teal-400",
   },
   {
     name: "fuchsia",
-    border: "border-fuchsia-500/30 dark:border-fuchsia-400/25",
-    bg: "bg-fuchsia-500/[0.03] dark:bg-fuchsia-400/[0.02]",
+    border: "border-fuchsia-500/50 dark:border-fuchsia-400/40",
+    bg: "bg-fuchsia-500/10 dark:bg-fuchsia-400/5",
     tag: "bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400",
+    text: "text-fuchsia-500 dark:text-fuchsia-400",
   },
   {
     name: "orange",
-    border: "border-orange-500/30 dark:border-orange-400/25",
-    bg: "bg-orange-500/[0.03] dark:bg-orange-400/[0.02]",
+    border: "border-orange-500/50 dark:border-orange-400/40",
+    bg: "bg-orange-500/10 dark:bg-orange-400/5",
     tag: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
+    text: "text-orange-500 dark:text-orange-400",
   },
   {
     name: "indigo",
-    border: "border-indigo-500/30 dark:border-indigo-400/25",
-    bg: "bg-indigo-500/[0.03] dark:bg-indigo-400/[0.02]",
+    border: "border-indigo-500/50 dark:border-indigo-400/40",
+    bg: "bg-indigo-500/10 dark:bg-indigo-400/5",
     tag: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
+    text: "text-indigo-500 dark:text-indigo-400",
   },
 ];
 
 const CURSOR_COLORS = [
-  { text: "text-emerald-400", fill: "fill-emerald-400", bg: "bg-emerald-600 border-emerald-500 text-emerald-foreground" },
-  { text: "text-blue-400", fill: "fill-blue-400", bg: "bg-blue-600 border-blue-500 text-blue-foreground" },
-  { text: "text-rose-400", fill: "fill-rose-400", bg: "bg-rose-600 border-rose-500 text-rose-foreground" },
-  { text: "text-amber-400", fill: "fill-amber-400", bg: "bg-amber-600 border-amber-500 text-amber-foreground" },
-  { text: "text-purple-400", fill: "fill-purple-400", bg: "bg-purple-600 border-purple-500 text-purple-foreground" },
-  { text: "text-teal-400", fill: "fill-teal-400", bg: "bg-teal-600 border-teal-500 text-teal-foreground" },
-  { text: "text-pink-400", fill: "fill-pink-400", bg: "bg-pink-600 border-pink-500 text-pink-foreground" },
-  { text: "text-indigo-400", fill: "fill-indigo-400", bg: "bg-indigo-600 border-indigo-500 text-indigo-foreground" },
+  {
+    text: "text-emerald-400",
+    fill: "fill-emerald-400",
+    bg: "bg-emerald-600 border-emerald-500 text-emerald-foreground",
+  },
+  {
+    text: "text-blue-400",
+    fill: "fill-blue-400",
+    bg: "bg-blue-600 border-blue-500 text-blue-foreground",
+  },
+  {
+    text: "text-rose-400",
+    fill: "fill-rose-400",
+    bg: "bg-rose-600 border-rose-500 text-rose-foreground",
+  },
+  {
+    text: "text-amber-400",
+    fill: "fill-amber-400",
+    bg: "bg-amber-600 border-amber-500 text-amber-foreground",
+  },
+  {
+    text: "text-purple-400",
+    fill: "fill-purple-400",
+    bg: "bg-purple-600 border-purple-500 text-purple-foreground",
+  },
+  {
+    text: "text-teal-400",
+    fill: "fill-teal-400",
+    bg: "bg-teal-600 border-teal-500 text-teal-foreground",
+  },
+  {
+    text: "text-pink-400",
+    fill: "fill-pink-400",
+    bg: "bg-pink-600 border-pink-500 text-pink-foreground",
+  },
+  {
+    text: "text-indigo-400",
+    fill: "fill-indigo-400",
+    bg: "bg-indigo-600 border-indigo-500 text-indigo-foreground",
+  },
 ];
 
 const getCollaboratorColor = (identifier: string) => {
@@ -287,9 +330,14 @@ function CollaboratorProfileTrigger({
     if (profile || loading) return;
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/${username}`, {
-        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/users/${username}`,
+        {
+          headers: accessToken
+            ? { Authorization: `Bearer ${accessToken}` }
+            : {},
+        },
+      );
       if (res.ok) {
         const data = await res.json();
         setProfile({
@@ -315,7 +363,12 @@ function CollaboratorProfileTrigger({
         <UserProfileCard user={profile}>
           <button className="w-full text-left flex items-center justify-between p-1.5 rounded-lg hover:bg-muted/60 transition-colors text-xs font-semibold text-foreground">
             <span className="truncate flex items-center gap-1.5">
-              <span className={cn("w-1.5 h-1.5 rounded-full", isMe ? "bg-primary" : "bg-success")} />
+              <span
+                className={cn(
+                  "w-1.5 h-1.5 rounded-full",
+                  isMe ? "bg-primary" : "bg-success",
+                )}
+              />
               {profile.displayName || profile.username} {isMe && "(You)"}
             </span>
           </button>
@@ -326,7 +379,12 @@ function CollaboratorProfileTrigger({
           className="w-full text-left flex items-center justify-between p-1.5 rounded-lg hover:bg-muted/60 transition-colors text-xs font-semibold text-foreground"
         >
           <span className="truncate flex items-center gap-1.5">
-            <span className={cn("w-1.5 h-1.5 rounded-full animate-pulse", isMe ? "bg-primary" : "bg-success")} />
+            <span
+              className={cn(
+                "w-1.5 h-1.5 rounded-full animate-pulse",
+                isMe ? "bg-primary" : "bg-success",
+              )}
+            />
             {username} {isMe && "(You)"} {loading && "..."}
           </span>
         </button>
@@ -401,7 +459,7 @@ export default function CanvasEditor({
   // Connector drawing state
   const [connecting, setConnecting] = useState<{
     fromNodeId: string;
-    side: "top" | "right" | "bottom" | "left";
+    side: CanvasEdge["fromSide"];
   } | null>(null);
   const [connectingCursor, setConnectingCursor] = useState<Point>({
     x: 0,
@@ -422,6 +480,9 @@ export default function CanvasEditor({
     y: 0,
   });
   const [rightClickedNodeId, setRightClickedNodeId] = useState<string | null>(
+    null,
+  );
+  const [rightClickedEdgeId, setRightClickedEdgeId] = useState<string | null>(
     null,
   );
 
@@ -464,6 +525,10 @@ export default function CanvasEditor({
     y: number;
     embedType: "file" | "pdf";
   } | null>(null);
+  const [rrImagePrompt, setRrImagePrompt] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
   const [pendingFileShare, setPendingFileShare] = useState<{
     type: "image" | "file" | "pdf";
     fileObj: any;
@@ -493,16 +558,19 @@ export default function CanvasEditor({
           if (f.isTrash || f.isFolder) continue;
 
           const isOwner = f.userId === currentUserId;
-          const shareRecord = f.shares?.find((s: any) => s.userId === currentUserId);
-          const wrappedKeyToUse = isOwner ? f.wrappedKey : (shareRecord ? shareRecord.wrappedKey : null);
+          const shareRecord = f.shares?.find(
+            (s: any) => s.userId === currentUserId,
+          );
+          const wrappedKeyToUse = isOwner
+            ? f.wrappedKey
+            : shareRecord
+              ? shareRecord.wrappedKey
+              : null;
 
           if (!wrappedKeyToUse) continue;
 
           // Decrypt symmetric file key using recipient's private key
-          const fileKey = await unwrapKey(
-            wrappedKeyToUse,
-            privateKey,
-          );
+          const fileKey = await unwrapKey(wrappedKeyToUse, privateKey);
           const rawKeyStr = await exportRawKey(fileKey);
 
           // Decrypt name and mimetype
@@ -937,10 +1005,7 @@ export default function CanvasEditor({
       const rawBuffer = encoder.encode(JSON.stringify(canvasState)).buffer;
 
       // Encrypt file content
-      const encryptedBuffer = await encrypt(
-        rawBuffer,
-        file.decryptedKey,
-      );
+      const encryptedBuffer = await encrypt(rawBuffer, file.decryptedKey);
 
       // Encrypt name and mimetype for metadata
       const encName = await encrypt(file.name, file.decryptedKey);
@@ -1016,10 +1081,7 @@ export default function CanvasEditor({
       const rawBuffer = encoder.encode(JSON.stringify(canvasState)).buffer;
 
       // Encrypt file content
-      const encryptedBuffer = await encrypt(
-        rawBuffer,
-        file.decryptedKey,
-      );
+      const encryptedBuffer = await encrypt(rawBuffer, file.decryptedKey);
 
       // Encrypt name and mimetype for metadata
       const encName = await encrypt(file.name, file.decryptedKey);
@@ -1105,15 +1167,19 @@ export default function CanvasEditor({
       // Resize the selected node
       const resizeDelta = e.deltaY < 0 ? 20 : -20;
       setNodes((prev) =>
-        prev.map((n) =>
-          n.id === selectedNodeId
-            ? {
-                ...n,
-                width: Math.max(220, n.width + resizeDelta),
-                height: Math.max(160, n.height + resizeDelta),
-              }
-            : n,
-        ),
+        prev.map((n) => {
+          if (n.id === selectedNodeId) {
+            const isRrImage = n.type === "rrImage";
+            const minW = isRrImage ? 10 : 220;
+            const minH = isRrImage ? 10 : 160;
+            return {
+              ...n,
+              width: Math.max(minW, n.width + resizeDelta),
+              height: Math.max(minH, n.height + resizeDelta),
+            };
+          }
+          return n;
+        }),
       );
       setIsDirty(true);
       return;
@@ -1267,15 +1333,19 @@ export default function CanvasEditor({
         const dx = (e.clientX - resizeStart.x) / zoom;
         const dy = (e.clientY - resizeStart.y) / zoom;
         setNodes((prev) =>
-          prev.map((n) =>
-            n.id === resizeNodeId
-              ? {
-                  ...n,
-                  width: Math.max(220, resizeInitialSize.w + dx),
-                  height: Math.max(160, resizeInitialSize.h + dy),
-                }
-              : n,
-          ),
+          prev.map((n) => {
+            if (n.id === resizeNodeId) {
+              const isRrImage = n.type === "rrImage";
+              const minW = isRrImage ? 10 : 220;
+              const minH = isRrImage ? 10 : 160;
+              return {
+                ...n,
+                width: Math.max(minW, resizeInitialSize.w + dx),
+                height: Math.max(minH, resizeInitialSize.h + dy),
+              };
+            }
+            return n;
+          }),
         );
         setIsDirty(true);
       }
@@ -1393,6 +1463,9 @@ export default function CanvasEditor({
     } else if (type === "pdf") {
       defaultWidth = 440;
       defaultHeight = 560;
+    } else if (type === "rrImage") {
+      defaultWidth = 320;
+      defaultHeight = 400;
     } else if (type === "callout") {
       defaultWidth = 380;
       defaultHeight = 150;
@@ -1421,7 +1494,7 @@ export default function CanvasEditor({
                 : "<p>Start typing here...</p>")
           : undefined,
       lines: type === "drawing" ? [] : undefined,
-      color: cardStyle === "sticky" ? "amber" : "slate",
+      color: cardStyle === "sticky" ? "orange" : "slate",
       cardStyle: type === "text" ? cardStyle || "document" : undefined,
       imageUrl: type === "image" ? imageUrl : undefined,
       tableData:
@@ -1492,11 +1565,17 @@ export default function CanvasEditor({
 
     const target = e.target as HTMLElement;
     const cardEl = target.closest("[data-card-id]");
+    const edgeId = target.getAttribute("data-edge-id");
     if (cardEl) {
       const cardId = cardEl.getAttribute("data-card-id");
       setRightClickedNodeId(cardId);
+      setRightClickedEdgeId(null);
+    } else if (edgeId) {
+      setRightClickedEdgeId(edgeId);
+      setRightClickedNodeId(null);
     } else {
       setRightClickedNodeId(null);
+      setRightClickedEdgeId(null);
     }
   };
 
@@ -1584,7 +1663,7 @@ export default function CanvasEditor({
   const startConnecting = (
     e: React.MouseEvent,
     nodeId: string,
-    side: "top" | "right" | "bottom" | "left",
+    side: CanvasEdge["fromSide"],
   ) => {
     e.stopPropagation();
     e.preventDefault();
@@ -1600,7 +1679,7 @@ export default function CanvasEditor({
   const completeConnection = (
     e: React.MouseEvent,
     toNodeId: string,
-    toSide: "top" | "right" | "bottom" | "left",
+    toSide: CanvasEdge["toSide"],
   ) => {
     e.stopPropagation();
     if (!connecting) return;
@@ -1728,7 +1807,7 @@ export default function CanvasEditor({
   // Connection Point Positioning Helpers
   // -----------------------------------------------------------------------------
   const getPortCoordinates = useCallback(
-    (nodeId: string, side: "top" | "right" | "bottom" | "left"): Point => {
+    (nodeId: string, side: CanvasEdge["fromSide"]): Point => {
       const node = nodes.find((n) => n.id === nodeId);
       if (!node) return { x: 0, y: 0 };
 
@@ -1741,6 +1820,14 @@ export default function CanvasEditor({
           return { x: node.x + node.width / 2, y: node.y + node.height };
         case "left":
           return { x: node.x, y: node.y + node.height / 2 };
+        case "top-left":
+          return { x: node.x, y: node.y };
+        case "top-right":
+          return { x: node.x + node.width, y: node.y };
+        case "bottom-left":
+          return { x: node.x, y: node.y + node.height };
+        case "bottom-right":
+          return { x: node.x + node.width, y: node.y + node.height };
       }
     },
     [nodes],
@@ -1766,16 +1853,34 @@ export default function CanvasEditor({
     else if (edge.fromSide === "left") cp1x -= dx;
     else if (edge.fromSide === "bottom") cp1y += dy;
     else if (edge.fromSide === "top") cp1y -= dy;
+    else if (edge.fromSide === "top-left") { cp1x -= dx; cp1y -= dy; }
+    else if (edge.fromSide === "top-right") { cp1x += dx; cp1y -= dy; }
+    else if (edge.fromSide === "bottom-left") { cp1x -= dx; cp1y += dy; }
+    else if (edge.fromSide === "bottom-right") { cp1x += dx; cp1y += dy; }
 
     if (edge.toSide === "right") cp2x += dx;
     else if (edge.toSide === "left") cp2x -= dx;
     else if (edge.toSide === "bottom") cp2y += dy;
     else if (edge.toSide === "top") cp2y -= dy;
+    else if (edge.toSide === "top-left") { cp2x -= dx; cp2y -= dy; }
+    else if (edge.toSide === "top-right") { cp2x += dx; cp2y -= dy; }
+    else if (edge.toSide === "bottom-left") { cp2x -= dx; cp2y += dy; }
+    else if (edge.toSide === "bottom-right") { cp2x += dx; cp2y += dy; }
 
     const pathD = `M ${start.x} ${start.y} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${end.x} ${end.y}`;
     const isSelected = selectedEdgeId === edge.id;
     const midX = (start.x + end.x) / 2;
     const midY = (start.y + end.y) / 2;
+
+    const strokeColor = edge.color || "var(--primary)";
+    const strokeDash =
+      edge.lineType === "dashed" ? "6,4" :
+      edge.lineType === "dotted" ? "2,3" :
+      edge.lineType === "dashed-dotted" ? "6,4,2,4" :
+      undefined;
+
+    const chosenArrow = edge.arrowType || "normal";
+    const mEnd = `url(#${chosenArrow})`;
 
     return (
       <g key={edge.id} className="group/edge">
@@ -1784,9 +1889,10 @@ export default function CanvasEditor({
           <path
             d={pathD}
             fill="none"
-            stroke="var(--primary)"
+            stroke={strokeColor}
             strokeWidth={6}
             strokeLinecap="round"
+            strokeDasharray={strokeDash}
             opacity={0.25}
             className="pointer-events-none"
           />
@@ -1797,7 +1903,8 @@ export default function CanvasEditor({
           fill="none"
           stroke="transparent"
           strokeWidth={15}
-          className="cursor-pointer"
+          data-edge-id={edge.id}
+          className="cursor-pointer pointer-events-auto"
           onClick={(e) => {
             e.stopPropagation();
             setSelectedEdgeId(isSelected ? null : edge.id);
@@ -1808,31 +1915,18 @@ export default function CanvasEditor({
         <path
           d={pathD}
           fill="none"
+          stroke={strokeColor}
           strokeWidth={isSelected ? 2.5 : 2}
           strokeLinecap="round"
+          strokeDasharray={strokeDash}
           className={
             isSelected
-              ? "stroke-primary pointer-events-none"
-              : "stroke-indigo-400 dark:stroke-indigo-600 transition-colors pointer-events-none group-hover/edge:stroke-primary/80"
+              ? "pointer-events-none"
+              : "transition-colors pointer-events-none"
           }
-          markerEnd="url(#arrow)"
+          style={{ color: strokeColor }}
+          markerEnd={mEnd}
         />
-        {/* Delete button at midpoint – visible when selected */}
-        {isSelected && (
-          <foreignObject x={midX - 12} y={midY - 12} width={24} height={24}>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setEdges((prev) => prev.filter((ed) => ed.id !== edge.id));
-                setSelectedEdgeId(null);
-                setIsDirty(true);
-              }}
-              className="w-6 h-6 rounded-full bg-destructive text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform text-xs font-bold leading-none"
-            >
-              ×
-            </button>
-          </foreignObject>
-        )}
       </g>
     );
   };
@@ -1902,7 +1996,10 @@ export default function CanvasEditor({
             </div>
 
             {/* Action controls & Collaborators */}
-            <div className="flex items-center gap-4 relative" ref={onlineDropdownRef}>
+            <div
+              className="flex items-center gap-4 relative"
+              ref={onlineDropdownRef}
+            >
               <div className="relative">
                 <button
                   type="button"
@@ -1918,11 +2015,16 @@ export default function CanvasEditor({
                       You
                     </div>
                     {collaborators.map((c) => {
-                      const color = getCollaboratorColor(c.userId || c.socketId || c.username);
+                      const color = getCollaboratorColor(
+                        c.userId || c.socketId || c.username,
+                      );
                       return (
                         <div
                           key={c.socketId}
-                          className={cn("h-4.5 w-4.5 rounded-full border border-background flex items-center justify-center font-bold text-[8px] text-white uppercase", color.bg.split(' ')[0])}
+                          className={cn(
+                            "h-4.5 w-4.5 rounded-full border border-background flex items-center justify-center font-bold text-[8px] text-white uppercase",
+                            color.bg.split(" ")[0],
+                          )}
                           title={c.username}
                         >
                           {c.username.substring(0, 1)}
@@ -2092,15 +2194,48 @@ export default function CanvasEditor({
                 <svg className="absolute overflow-visible pointer-events-none w-0 h-0 z-0">
                   <defs>
                     <marker
-                      id="arrow"
+                      id="normal"
                       viewBox="0 0 10 10"
-                      refX="6"
+                      refX="8"
                       refY="5"
                       markerWidth="6"
                       markerHeight="6"
                       orient="auto-start-reverse"
                     >
-                      <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--primary)" />
+                      <path d="M 0 1.5 L 8 5 L 0 8.5 Z" fill="currentColor" />
+                    </marker>
+                    <marker
+                      id="association"
+                      viewBox="0 0 10 10"
+                      refX="8"
+                      refY="5"
+                      markerWidth="6"
+                      markerHeight="6"
+                      orient="auto-start-reverse"
+                    >
+                      <path d="M 0 1.5 L 8 5 L 0 8.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </marker>
+                    <marker
+                      id="composition"
+                      viewBox="0 0 12 12"
+                      refX="10"
+                      refY="6"
+                      markerWidth="6"
+                      markerHeight="6"
+                      orient="auto-start-reverse"
+                    >
+                      <path d="M 0 6 L 5 2 L 10 6 L 5 10 Z" fill="currentColor" />
+                    </marker>
+                    <marker
+                      id="aggregation"
+                      viewBox="0 0 12 12"
+                      refX="10"
+                      refY="6"
+                      markerWidth="6"
+                      markerHeight="6"
+                      orient="auto-start-reverse"
+                    >
+                      <path d="M 0 6 L 5 2 L 10 6 L 5 10 Z" fill="var(--background)" stroke="currentColor" strokeWidth="1.5" />
                     </marker>
                   </defs>
 
@@ -2235,7 +2370,7 @@ export default function CanvasEditor({
                             const isSelected = selectedNodeIds.includes(
                               node.id,
                             );
-                            let cls = `absolute flex flex-col overflow-hidden pointer-events-auto group transition-all `;
+                            let cls = `absolute flex flex-col pointer-events-auto group transition-all `;
                             if (node.type === "group") {
                               cls += cn(
                                 "rounded-2xl border-2 border-dashed",
@@ -2243,9 +2378,10 @@ export default function CanvasEditor({
                                   ? "border-primary/60 bg-primary/3"
                                   : `${preset.border} bg-transparent hover:bg-primary/2`,
                               );
-                            } else if (node.cardStyle === "header") {
+                            } else if (node.cardStyle === "header" || node.type === "rrImage") {
                               cls += cn(
                                 "border-0 bg-transparent shadow-none",
+                                node.color?.startsWith("#") ? "" : preset.text,
                                 isSelected ? "ring-1 ring-primary/50" : "",
                               );
                             } else if (node.cardStyle === "sticky") {
@@ -2259,13 +2395,11 @@ export default function CanvasEditor({
                               // Standard card styling
                               cls += cn(
                                 "rounded-2xl border bg-card text-card-foreground shadow-xl transition-all",
-                                preset.bg,
+                                node.color?.startsWith("#") ? "" : preset.bg,
+                                node.color?.startsWith("#") ? "" : preset.border,
                                 isSelected
-                                  ? cn(
-                                      "ring-2 ring-primary shadow-lg",
-                                      preset.border,
-                                    )
-                                  : "border-transparent hover:border-border hover:shadow-md",
+                                  ? "ring-2 ring-primary shadow-lg"
+                                  : "hover:shadow-md",
                               );
                             }
                             if (node.lockPosition) cls += " cursor-not-allowed";
@@ -2277,6 +2411,15 @@ export default function CanvasEditor({
                             width: node.width,
                             height: node.height,
                             zIndex: node.type === "group" ? 0 : undefined,
+                            // Inline styles for custom hex colors
+                            ...(node.color && node.color.startsWith("#") ? (
+                              node.type === "rrImage" || node.cardStyle === "header" ? {
+                                color: node.color,
+                              } : {
+                                backgroundColor: `${node.color}1a`, // 10% opacity
+                                borderColor: `${node.color}80`, // 50% opacity
+                              }
+                            ) : {}),
                           }}
                         >
                           {/* Card Content Area */}
@@ -2284,10 +2427,12 @@ export default function CanvasEditor({
                             className={cn(
                               "flex-1 w-full h-full overflow-hidden flex flex-col",
                               node.cardStyle === "sticky"
-                                ? "bg-warning/5 text-foreground"
-                                : node.cardStyle === "header"
-                                  ? "bg-transparent text-foreground font-extrabold text-xl"
-                                  : "bg-card/50 backdrop-blur-md",
+                                ? "bg-warning/5 text-foreground rounded-lg"
+                                : node.type === "rrImage"
+                                  ? "bg-transparent rounded-2xl"
+                                  : node.cardStyle === "header"
+                                    ? "bg-transparent text-foreground font-extrabold text-xl"
+                                    : "bg-card/50 backdrop-blur-md rounded-2xl",
                             )}
                           >
                             {node.type === "text" ? (
@@ -2335,6 +2480,7 @@ export default function CanvasEditor({
 
                           {/* Drag-Connector Ports (Visible on hover) */}
                           <div className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                            {/* Sides */}
                             <div
                               onMouseDown={(e) =>
                                 startConnecting(e, node.id, "top")
@@ -2342,7 +2488,7 @@ export default function CanvasEditor({
                               onMouseUp={(e) =>
                                 completeConnection(e, node.id, "top")
                               }
-                              className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1.5 w-3.5 h-3.5 rounded-full border border-indigo-400 bg-indigo-500 cursor-crosshair pointer-events-auto hover:scale-125 hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center"
+                              className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 w-2 h-2 rounded-full border border-indigo-400 bg-indigo-500 cursor-crosshair pointer-events-auto hover:scale-125 hover:bg-emerald-500 transition-all shadow-sm flex items-center justify-center animate-in fade-in zoom-in duration-100"
                             />
                             <div
                               onMouseDown={(e) =>
@@ -2351,7 +2497,7 @@ export default function CanvasEditor({
                               onMouseUp={(e) =>
                                 completeConnection(e, node.id, "right")
                               }
-                              className="absolute right-0 top-1/2 translate-x-1.5 -translate-y-1/2 w-3.5 h-3.5 rounded-full border border-indigo-400 bg-indigo-500 cursor-crosshair pointer-events-auto hover:scale-125 hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center"
+                              className="absolute right-0 top-1/2 translate-x-1 -translate-y-1/2 w-2 h-2 rounded-full border border-indigo-400 bg-indigo-500 cursor-crosshair pointer-events-auto hover:scale-125 hover:bg-emerald-500 transition-all shadow-sm flex items-center justify-center animate-in fade-in zoom-in duration-100"
                             />
                             <div
                               onMouseDown={(e) =>
@@ -2360,7 +2506,7 @@ export default function CanvasEditor({
                               onMouseUp={(e) =>
                                 completeConnection(e, node.id, "bottom")
                               }
-                              className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1.5 w-3.5 h-3.5 rounded-full border border-indigo-400 bg-indigo-500 cursor-crosshair pointer-events-auto hover:scale-125 hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center"
+                              className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1 w-2 h-2 rounded-full border border-indigo-400 bg-indigo-500 cursor-crosshair pointer-events-auto hover:scale-125 hover:bg-emerald-500 transition-all shadow-sm flex items-center justify-center animate-in fade-in zoom-in duration-100"
                             />
                             <div
                               onMouseDown={(e) =>
@@ -2369,7 +2515,45 @@ export default function CanvasEditor({
                               onMouseUp={(e) =>
                                 completeConnection(e, node.id, "left")
                               }
-                              className="absolute left-0 top-1/2 -translate-x-1.5 -translate-y-1/2 w-3.5 h-3.5 rounded-full border border-indigo-400 bg-indigo-500 cursor-crosshair pointer-events-auto hover:scale-125 hover:bg-emerald-500 transition-all shadow-md flex items-center justify-center"
+                              className="absolute left-0 top-1/2 -translate-x-1 -translate-y-1/2 w-2 h-2 rounded-full border border-indigo-400 bg-indigo-500 cursor-crosshair pointer-events-auto hover:scale-125 hover:bg-emerald-500 transition-all shadow-sm flex items-center justify-center animate-in fade-in zoom-in duration-100"
+                            />
+
+                            {/* Corners */}
+                            <div
+                              onMouseDown={(e) =>
+                                startConnecting(e, node.id, "top-left")
+                              }
+                              onMouseUp={(e) =>
+                                completeConnection(e, node.id, "top-left")
+                              }
+                              className="absolute top-0 left-0 -translate-x-1 -translate-y-1 w-2 h-2 rounded-full border border-indigo-400 bg-indigo-500 cursor-crosshair pointer-events-auto hover:scale-125 hover:bg-emerald-500 transition-all shadow-sm flex items-center justify-center animate-in fade-in zoom-in duration-100"
+                            />
+                            <div
+                              onMouseDown={(e) =>
+                                startConnecting(e, node.id, "top-right")
+                              }
+                              onMouseUp={(e) =>
+                                completeConnection(e, node.id, "top-right")
+                              }
+                              className="absolute top-0 right-0 translate-x-1 -translate-y-1 w-2 h-2 rounded-full border border-indigo-400 bg-indigo-500 cursor-crosshair pointer-events-auto hover:scale-125 hover:bg-emerald-500 transition-all shadow-sm flex items-center justify-center animate-in fade-in zoom-in duration-100"
+                            />
+                            <div
+                              onMouseDown={(e) =>
+                                startConnecting(e, node.id, "bottom-left")
+                              }
+                              onMouseUp={(e) =>
+                                completeConnection(e, node.id, "bottom-left")
+                              }
+                              className="absolute bottom-0 left-0 -translate-x-1 translate-y-1 w-2 h-2 rounded-full border border-indigo-400 bg-indigo-500 cursor-crosshair pointer-events-auto hover:scale-125 hover:bg-emerald-500 transition-all shadow-sm flex items-center justify-center animate-in fade-in zoom-in duration-100"
+                            />
+                            <div
+                              onMouseDown={(e) =>
+                                startConnecting(e, node.id, "bottom-right")
+                              }
+                              onMouseUp={(e) =>
+                                completeConnection(e, node.id, "bottom-right")
+                              }
+                              className="absolute bottom-0 right-0 translate-x-1 translate-y-1 w-2 h-2 rounded-full border border-indigo-400 bg-indigo-500 cursor-crosshair pointer-events-auto hover:scale-125 hover:bg-emerald-500 transition-all shadow-sm flex items-center justify-center animate-in fade-in zoom-in duration-100"
                             />
                           </div>
                         </div>
@@ -2609,7 +2793,9 @@ export default function CanvasEditor({
                 {/* Collaborator Cursor Pointers */}
                 {collaborators.map((c) => {
                   if (!c.cursor) return null;
-                  const color = getCollaboratorColor(c.userId || c.socketId || c.username);
+                  const color = getCollaboratorColor(
+                    c.userId || c.socketId || c.username,
+                  );
                   return (
                     <div
                       key={c.socketId}
@@ -2621,11 +2807,19 @@ export default function CanvasEditor({
                     >
                       <svg
                         viewBox="0 0 24 24"
-                        className={cn("w-4 h-4 fill-current drop-shadow-md", color.text)}
+                        className={cn(
+                          "w-4 h-4 fill-current drop-shadow-md",
+                          color.text,
+                        )}
                       >
                         <path d="M0 0 L16 12 L9 13.5 L16 22 L13 23 L6.5 15 L0 20 Z" />
                       </svg>
-                      <div className={cn("absolute top-4 left-3 px-2 py-0.5 border text-white text-[8px] font-bold rounded shadow whitespace-nowrap", color.bg)}>
+                      <div
+                        className={cn(
+                          "absolute top-4 left-3 px-2 py-0.5 border text-white text-[8px] font-bold rounded shadow whitespace-nowrap",
+                          color.bg,
+                        )}
+                      >
                         {c.username}
                       </div>
                     </div>
@@ -2745,6 +2939,14 @@ export default function CanvasEditor({
             accessToken={accessToken}
             createNodeAtPos={createNodeAtPos}
           />
+
+          <RrCanvasRrImageInsertModal
+            isOpen={rrImagePrompt !== null}
+            onClose={() => setRrImagePrompt(null)}
+            x={rrImagePrompt?.x ?? 0}
+            y={rrImagePrompt?.y ?? 0}
+            createNodeAtPos={createNodeAtPos}
+          />
         </div>
       </ContextMenuTrigger>
 
@@ -2781,24 +2983,37 @@ export default function CanvasEditor({
                               ? "bg-primary"
                               : p.name === "emerald"
                                 ? "bg-success"
-                                : p.name === "amber"
-                                  ? "bg-warning"
-                                  : p.name === "rose"
-                                    ? "bg-destructive"
-                                    : p.name === "purple"
-                                      ? "bg-purple-500"
-                                      : p.name === "teal"
-                                        ? "bg-teal-500"
-                                        : p.name === "fuchsia"
-                                          ? "bg-fuchsia-500"
-                                          : p.name === "orange"
-                                            ? "bg-orange-500"
-                                            : "bg-indigo-500",
+                                : p.name === "rose"
+                                  ? "bg-destructive"
+                                  : p.name === "purple"
+                                    ? "bg-purple-500"
+                                    : p.name === "teal"
+                                      ? "bg-teal-500"
+                                      : p.name === "fuchsia"
+                                        ? "bg-fuchsia-500"
+                                        : p.name === "orange"
+                                          ? "bg-orange-500"
+                                          : "bg-indigo-500",
                         )}
                       />
                       <span className="capitalize">{p.name}</span>
                     </ContextMenuItem>
                   ))}
+                  <ContextMenuSeparator className="bg-border/30" />
+                  <div className="flex items-center justify-between px-3 py-1.5 text-[10px] font-semibold text-muted-foreground/80 hover:bg-accent/40 rounded transition-colors select-none relative">
+                    <span className="uppercase tracking-wider">Custom Color</span>
+                    <input
+                      type="color"
+                      value={(() => {
+                        const node = nodes.find((n) => n.id === rightClickedNodeId);
+                        return node?.color?.startsWith("#") ? node.color : "#3b82f6";
+                      })()}
+                      onChange={(e) =>
+                        handleNodeColorChange(rightClickedNodeId!, e.target.value)
+                      }
+                      className="w-5 h-5 rounded-md cursor-pointer border border-border bg-transparent p-0"
+                    />
+                  </div>
                 </ContextMenuSubContent>
               </ContextMenuPortal>
             </ContextMenuSub>
@@ -2837,6 +3052,26 @@ export default function CanvasEditor({
                   </ContextMenuSubContent>
                 </ContextMenuPortal>
               </ContextMenuSub>
+            )}
+
+            {/* Customize option for rrImage nodes */}
+            {nodes.find((n) => n.id === rightClickedNodeId)?.type ===
+              "rrImage" && (
+              <ContextMenuItem
+                onClick={() => {
+                  const node = nodes.find((n) => n.id === rightClickedNodeId);
+                  if (node) {
+                    setRrImagePrompt({
+                      x: node.x + node.width / 2,
+                      y: node.y + node.height / 2,
+                    });
+                  }
+                }}
+                className="focus:bg-accent focus:text-accent-foreground cursor-pointer text-xs font-semibold px-3 py-2"
+              >
+                <ImageIcon className="h-3.5 w-3.5 mr-2 text-violet-500" />
+                Change Image
+              </ContextMenuItem>
             )}
 
             {/* Change Callout style option for Callout nodes */}
@@ -2939,6 +3174,125 @@ export default function CanvasEditor({
             >
               <Trash2 className="h-3.5 w-3.5 mr-2" />
               Delete Card
+            </ContextMenuItem>
+          </>
+        ) : rightClickedEdgeId ? (
+          <>
+            <ContextMenuLabel className="text-[10px] uppercase font-bold tracking-wider px-3 py-2 text-muted-foreground/75">
+              Connector Actions
+            </ContextMenuLabel>
+            <ContextMenuSeparator className="bg-border" />
+
+            {/* Custom Color Selector */}
+            <div className="flex items-center justify-between px-3 py-1.5 text-[10px] font-semibold text-muted-foreground/80 hover:bg-accent/40 rounded transition-colors select-none relative">
+              <span className="uppercase tracking-wider">Custom Color</span>
+              <input
+                type="color"
+                value={(() => {
+                  const edge = edges.find((e) => e.id === rightClickedEdgeId);
+                  return edge?.color || "#6366f1";
+                })()}
+                onChange={(e) => {
+                  const color = e.target.value;
+                  setEdges((prev) =>
+                    prev.map((ed) => (ed.id === rightClickedEdgeId ? { ...ed, color } : ed))
+                  );
+                  setIsDirty(true);
+                }}
+                className="w-5 h-5 rounded-md cursor-pointer border border-border bg-transparent p-0"
+              />
+            </div>
+            <ContextMenuItem
+              onClick={() => {
+                setEdges((prev) =>
+                  prev.map((ed) => (ed.id === rightClickedEdgeId ? { ...ed, color: undefined } : ed))
+                );
+                setIsDirty(true);
+              }}
+              className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
+            >
+              Reset to Theme Color
+            </ContextMenuItem>
+            
+            <ContextMenuSeparator className="bg-border/30" />
+
+            {/* Line styles */}
+            <ContextMenuSub>
+              <ContextMenuSubTrigger className="focus:bg-accent focus:text-accent-foreground cursor-pointer text-xs font-semibold px-3 py-2">
+                Line Style
+              </ContextMenuSubTrigger>
+              <ContextMenuPortal>
+                <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-[120px]">
+                  {([
+                    { type: "solid" as const, label: "Solid" },
+                    { type: "dashed" as const, label: "Dashed" },
+                    { type: "dotted" as const, label: "Dotted" },
+                    { type: "dashed-dotted" as const, label: "Dashed & Dotted" },
+                  ] as const).map((t) => (
+                    <ContextMenuItem
+                      key={t.type}
+                      onClick={() => {
+                        setEdges((prev) =>
+                          prev.map((ed) => (ed.id === rightClickedEdgeId ? { ...ed, lineType: t.type } : ed))
+                        );
+                        setIsDirty(true);
+                      }}
+                      className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
+                    >
+                      <span>{t.label}</span>
+                      {(edges.find((ed) => ed.id === rightClickedEdgeId)?.lineType || "solid") === t.type && (
+                        <span className="ml-auto text-[8px]">✓</span>
+                      )}
+                    </ContextMenuItem>
+                  ))}
+                </ContextMenuSubContent>
+              </ContextMenuPortal>
+            </ContextMenuSub>
+
+            {/* Arrow Type */}
+            <ContextMenuSub>
+              <ContextMenuSubTrigger className="focus:bg-accent focus:text-accent-foreground cursor-pointer text-xs font-semibold px-3 py-2">
+                Arrow Type
+              </ContextMenuSubTrigger>
+              <ContextMenuPortal>
+                <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-[140px]">
+                  {([
+                    { type: "normal" as const, label: "Normal" },
+                    { type: "association" as const, label: "Association" },
+                    { type: "composition" as const, label: "Composition" },
+                    { type: "aggregation" as const, label: "Aggregation" },
+                  ] as const).map((t) => (
+                    <ContextMenuItem
+                      key={t.type}
+                      onClick={() => {
+                        setEdges((prev) =>
+                          prev.map((ed) => (ed.id === rightClickedEdgeId ? { ...ed, arrowType: t.type } : ed))
+                        );
+                        setIsDirty(true);
+                      }}
+                      className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
+                    >
+                      <span>{t.label}</span>
+                      {(edges.find((ed) => ed.id === rightClickedEdgeId)?.arrowType || "normal") === t.type && (
+                        <span className="ml-auto text-[8px]">✓</span>
+                      )}
+                    </ContextMenuItem>
+                  ))}
+                </ContextMenuSubContent>
+              </ContextMenuPortal>
+            </ContextMenuSub>
+
+            <ContextMenuSeparator className="bg-border" />
+            <ContextMenuItem
+              onClick={() => {
+                setEdges((prev) => prev.filter((ed) => ed.id !== rightClickedEdgeId));
+                setRightClickedEdgeId(null);
+                setIsDirty(true);
+              }}
+              className="focus:bg-destructive/10 text-destructive focus:text-destructive cursor-pointer text-xs font-semibold px-3 py-2"
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-2" />
+              Delete Connector
             </ContextMenuItem>
           </>
         ) : (
@@ -3049,6 +3403,18 @@ export default function CanvasEditor({
                   >
                     <ImageIcon className="h-3.5 w-3.5 mr-2 text-blue-500" />
                     Image Card
+                  </ContextMenuItem>
+                  <ContextMenuItem
+                    onClick={() =>
+                      setRrImagePrompt({
+                        x: rightClickPosition.x,
+                        y: rightClickPosition.y,
+                      })
+                    }
+                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
+                  >
+                    <ImageIcon className="h-3.5 w-3.5 mr-2 text-violet-500" />
+                    rrImage Card
                   </ContextMenuItem>
                   <ContextMenuItem
                     onClick={() =>

@@ -15,6 +15,7 @@ import RrCanvasPdfCard from "./rrCanvasPdfCard";
 import RrCanvasCalloutCard from "./rrCanvasCalloutCard";
 import RrCanvasAnnotationCard from "./rrCanvasAnnotationCard";
 import RrCanvasGroupCard from "./rrCanvasGroupCard";
+import RrCanvasRrImageCard from "./rrCanvasRrImageCard";
 import { CanvasNode } from "../CanvasEditor";
 
 interface RrCanvasCardContentProps {
@@ -61,6 +62,8 @@ export default function RrCanvasCardContent({
       return <RrCanvasAnnotationCard node={node} onNodeUpdate={onNodeUpdate} />;
     case "group":
       return <RrCanvasGroupCard node={node} selected={selected} onNodeUpdate={onNodeUpdate} />;
+    case "rrImage":
+      return <RrCanvasRrImageCard node={node} />;
     default:
       return null;
   }

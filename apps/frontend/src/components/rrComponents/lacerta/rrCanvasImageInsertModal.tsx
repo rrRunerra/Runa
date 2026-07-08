@@ -130,8 +130,24 @@ export default function RrCanvasImageInsertModal({
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const fileObj = e.target.files?.[0];
     if (fileObj) {
+      const isGif = fileObj.type === "image/gif" || fileObj.name.toLowerCase().endsWith(".gif");
       const reader = new FileReader();
       reader.onload = (event) => {
+        if (isGif) {
+          const gifDataUrl = event.target?.result as string;
+          createNodeAtPos(
+            "image",
+            x,
+            y,
+            undefined,
+            undefined,
+            gifDataUrl,
+          );
+          onClose();
+          setImageUrl("");
+          return;
+        }
+
         const img = new window.Image();
         img.onload = () => {
           const canvas = document.createElement("canvas");

@@ -1,4 +1,4 @@
-export function RrLapplandPlaceholderFile({
+export default function RrLapplandPlaceholderFile({
   ...props
 }: React.ComponentProps<"svg">) {
   return (

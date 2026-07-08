@@ -29,15 +29,14 @@ import {
 import FileCard, { RenderFileItem } from "./FileCard";
 import FileRow from "./FileRow";
 import { Checkbox } from "@/components/ui/checkbox";
-import { RrLapplandDocument } from "../rrImages/rrLapplandDocument";
-import { RrLapplandSpreadsheet } from "../rrImages/rrLapplandSpreadsheet";
-import { RrLapplandPresentation } from "../rrImages/rrLapplandPresentation";
-import { RrLapplandTextFile } from "../rrImages/rrLapplandTextFile";
-import { RrLapplandCanvas } from "../rrImages/rrLapplandCanvas";
-import { RrLapplandMermaid } from "../rrImages/rrLapplandMermaid";
-import { RrLapplandUml } from "../rrImages/rrLapplandUml";
-import { RrLapplandFolder } from "../rrImages/rrLapplandFolder";
-import { RrLapplandPlaceholderFile } from "../rrImages/rrLapplandPlaceholderFile";
+import RrLapplandDocument from "../rrImages/rrLapplandDocument";
+import RrLapplandSpreadsheet from "../rrImages/rrLapplandSpreadsheet";
+import RrLapplandPresentation from "../rrImages/rrLapplandPresentation";
+import RrLapplandTextFile from "../rrImages/rrLapplandTextFile";
+import RrLapplandCanvas from "../rrImages/rrLapplandCanvas";
+import RrLapplandMermaid from "../rrImages/rrLapplandMermaid";
+import RrLapplandUml from "../rrImages/rrLapplandUml";
+import RrLapplandFolder from "../rrImages/rrLapplandFolder";
 
 interface FileGridProps {
   items: RenderFileItem[];
@@ -555,7 +554,7 @@ export default function FileGrid({
                       <RrLapplandTextFile className="h-5 w-5 text-slate-600 dark:text-slate-300" />
                       Text File
                     </button>
-                     <button
+                    <button
                       onClick={() => {
                         setIsNewDropdownOpen(false);
                         onCreateDoc("doc");

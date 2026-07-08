@@ -107,6 +107,8 @@ steps:
         from_secret: NEXT_PUBLIC_ONLYOFFICE_URL
       NEXT_PUBLIC_ONLYOFFICE_API_URL:
         from_secret: NEXT_PUBLIC_ONLYOFFICE_API_URL
+      NEXT_PUBLIC_KLIPY_API_KEY:
+        from_secret: NEXT_PUBLIC_KLIPY_API_KEY
     commands:
       - rm -f .env
       - printf "INTERNAL_API_KEY=%s\n" "$INTERNAL_API_KEY" >> .env
@@ -158,6 +160,7 @@ steps:
       - printf "FILES_CDN_URL=%s\n" "$FILES_CDN_URL" >> .env
       - printf "NEXT_PUBLIC_ONLYOFFICE_URL=%s\n" "$NEXT_PUBLIC_ONLYOFFICE_URL" >> .env
       - printf "NEXT_PUBLIC_ONLYOFFICE_API_URL=%s\n" "$NEXT_PUBLIC_ONLYOFFICE_API_URL" >> .env
+      - printf "NEXT_PUBLIC_KLIPY_API_KEY=%s\n" "$NEXT_PUBLIC_KLIPY_API_KEY" >> .env
       - docker compose build
       - docker compose build
       - docker compose up -d

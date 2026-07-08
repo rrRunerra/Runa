@@ -1,4 +1,4 @@
-export function RrLapplandSpreadsheet({
+export default function RrLapplandSpreadsheet({
   ...props
 }: React.ComponentProps<"svg">) {
   return (

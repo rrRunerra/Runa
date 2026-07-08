@@ -1,4 +1,6 @@
-export function RrLapplandTextFile({ ...props }: React.ComponentProps<"svg">) {
+export default function RrLapplandTextFile({
+  ...props
+}: React.ComponentProps<"svg">) {
   return (
     <svg
       version="1.0"
