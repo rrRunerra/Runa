@@ -2316,7 +2316,7 @@ export class ListService {
       })[0];
 
       watchingList.push({
-        id: item.tvdbId,
+        id: item.tvId,
         title: item.tv.titleEnglish ?? item.tv.titleRomaji ?? '',
         score: item.score,
         progress: item.watchedEpisodes.length,

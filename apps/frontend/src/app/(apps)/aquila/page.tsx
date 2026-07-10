@@ -101,7 +101,7 @@ export default function AquilaHome(): React.JSX.Element {
 
   // Fetch watching list using standard SWR hook
   const {
-    data: watching = [],
+    data: rawWatching = [],
     isLoading: isSWRClassLoading,
     mutate,
   } = useSWR<MediaItem[]>(
@@ -117,6 +117,9 @@ export default function AquilaHome(): React.JSX.Element {
       revalidateOnReconnect: true,
     },
   );
+
+  // Filter out malformed entries that lack an id to prevent runtime crashes
+  const watching = rawWatching.filter((item) => item.id != null);
 
   useEffect(() => {
     const savedOrder = localStorage.getItem("aquila_category_order");

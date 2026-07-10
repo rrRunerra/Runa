@@ -207,7 +207,7 @@ const RrMediaCardComponent = ({
       {isOwner && isEditDialogOpen && (
         <RrMediaEditDialog
           media={{
-            id: item.id.toString(),
+            id: item.id?.toString() ?? "",
             type: item.type,
             title: { romaji: item.title },
             coverImage: { large: item.image },

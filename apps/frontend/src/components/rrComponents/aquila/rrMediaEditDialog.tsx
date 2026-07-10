@@ -848,6 +848,8 @@ export function RrMediaEditDialog({
               onExpandedSeasonNumChange={setExpandedSeasonNum}
               onToggleEpisode={handleToggleEpisode}
               onToggleSeason={handleToggleSeason}
+              listStatus={listStatus}
+              hasListEntry={hasListEntry}
             />
           </TabsContent>
         </Tabs>
