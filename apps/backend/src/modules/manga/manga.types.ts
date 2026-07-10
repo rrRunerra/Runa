@@ -60,6 +60,9 @@ export interface AniListMangaMedia {
     }[];
   } | null;
   characters: {
+    pageInfo?: {
+      hasNextPage: boolean;
+    };
     edges: {
       role: 'MAIN' | 'SUPPORTING' | 'BACKGROUND';
       node: AniListCharacterNode;

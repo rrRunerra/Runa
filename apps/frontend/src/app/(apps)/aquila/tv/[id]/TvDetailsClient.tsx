@@ -34,6 +34,9 @@ import { RrMediaEditDialog } from "@/components/rrComponents/aquila/rrMediaEditD
 import RrLapplandImageNotFound from "@/components/rrComponents/rrImages/rrLapplandImageNotFound";
 import { RrMediaRefreshButton } from "@/components/rrComponents/aquila/rrMediaRefreshButton";
 import { TvEntity } from "@/types/tv.entities";
+import { RrMediaInfoRow } from "@/components/rrComponents/aquila/details/rrMediaInfoRow";
+import { RrMediaDescription } from "@/components/rrComponents/aquila/details/rrMediaDescription";
+import { RrMediaGenres } from "@/components/rrComponents/aquila/details/rrMediaGenres";
 
 interface TvMedia extends Media {
   seasons: Season[];
@@ -417,64 +420,34 @@ export default function TvDetailsPage(): React.JSX.Element {
                 Information
               </h3>
               <div className="space-y-3">
-                <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
-                  <span className="text-muted-foreground">Episodes</span>
-                  <span className="font-medium text-foreground">
-                    {totalEpisodes}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
-                  <span className="text-muted-foreground">Seasons</span>
-                  <span className="font-medium text-foreground">
-                    {tv.seasons?.length}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
-                  <span className="text-muted-foreground">Status</span>
-                  <span className="font-medium text-foreground capitalize">
-                    {tv.status?.replace(/_/g, " ").toLowerCase()}
-                  </span>
-                </div>
-                {formattedFirstAired && (
-                  <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
-                    <span className="text-muted-foreground">First Aired</span>
-                    <span className="font-medium text-foreground">
-                      {formattedFirstAired}
-                    </span>
-                  </div>
-                )}
-                {tv.originalCountry && (
-                  <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
-                    <span className="text-muted-foreground">Country</span>
-                    <span className="font-medium text-foreground">
-                      {tv.originalCountry}
-                    </span>
-                  </div>
-                )}
-                {tv.originalLanguage && (
-                  <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
-                    <span className="text-muted-foreground">Language</span>
-                    <span className="font-medium text-foreground uppercase">
-                      {tv.originalLanguage}
-                    </span>
-                  </div>
-                )}
-                {tv.averageRuntime && (
-                  <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
-                    <span className="text-muted-foreground">Avg Runtime</span>
-                    <span className="font-medium text-foreground">
-                      {tv.averageRuntime} min
-                    </span>
-                  </div>
-                )}
-                {tv.contentRating && (
-                  <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
-                    <span className="text-muted-foreground">Rating</span>
-                    <Badge variant="outline" className="text-xs px-2 py-0.5">
-                      {tv.contentRating}
-                    </Badge>
-                  </div>
-                )}
+                <RrMediaInfoRow label="Episodes" value={totalEpisodes} />
+                <RrMediaInfoRow label="Seasons" value={tv.seasons?.length} />
+                <RrMediaInfoRow
+                  label="Status"
+                  value={tv.status?.replace(/_/g, " ").toLowerCase()}
+                  className="capitalize"
+                />
+                <RrMediaInfoRow label="First Aired" value={formattedFirstAired} />
+                <RrMediaInfoRow label="Country" value={tv.originalCountry} />
+                <RrMediaInfoRow
+                  label="Language"
+                  value={tv.originalLanguage}
+                  className="uppercase"
+                />
+                <RrMediaInfoRow
+                  label="Avg Runtime"
+                  value={tv.averageRuntime ? `${tv.averageRuntime} min` : null}
+                />
+                <RrMediaInfoRow
+                  label="Rating"
+                  value={
+                    tv.contentRating ? (
+                      <Badge variant="outline" className="text-xs px-2 py-0.5">
+                        {tv.contentRating}
+                      </Badge>
+                    ) : null
+                  }
+                />
               </div>
             </div>
 
@@ -668,35 +641,10 @@ export default function TvDetailsPage(): React.JSX.Element {
             )}
 
             {/* Description */}
-            <motion.div
-              variants={itemVariants}
-              className="bg-card/30 border border-border/20 backdrop-blur-sm p-6 rounded-2xl"
-            >
-              <h3 className="text-base font-bold text-foreground mb-3">
-                Synopsis
-              </h3>
-              <div className="prose prose-neutral dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-sm prose-p:my-2 prose-a:text-primary hover:prose-a:text-primary transition-colors">
-                <p>{tv.description}</p>
-              </div>
-            </motion.div>
+            <RrMediaDescription description={tv.description} />
 
             {/* Genres */}
-            {tv.genres && tv.genres.length > 0 && (
-              <motion.div variants={itemVariants} className="space-y-3">
-                <h3 className="text-base font-bold text-foreground">Genres</h3>
-                <div className="flex flex-wrap gap-2">
-                  {tv.genres.map((genre) => (
-                    <Badge
-                      key={genre}
-                      variant="secondary"
-                      className="rounded-xl px-3 py-1 text-xs"
-                    >
-                      {genre}
-                    </Badge>
-                  ))}
-                </div>
-              </motion.div>
-            )}
+            <RrMediaGenres genres={tv.genres} />
 
             {/* Cast */}
             {tv.characters && tv.characters.length > 0 && (

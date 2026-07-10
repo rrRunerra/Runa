@@ -85,7 +85,10 @@ export class AnimeExternal {
             }
           }
         }
-        characters(perPage: 25, sort: [ROLE, RELEVANCE, ID]) {
+        characters(page: 1, perPage: 25, sort: [ROLE, RELEVANCE, ID]) {
+          pageInfo {
+            hasNextPage
+          }
           edges {
             role
             node {
@@ -127,6 +130,44 @@ export class AnimeExternal {
         isAdult
         nextAiringEpisode { airingAt timeUntilAiring episode }
         updatedAt
+      }
+    }
+  `;
+
+  private readonly getCharactersQuery = `
+    query ($id: Int, $page: Int) {
+      Media(id: $id) {
+        characters(page: $page, perPage: 25, sort: [ROLE, RELEVANCE, ID]) {
+          pageInfo {
+            hasNextPage
+          }
+          edges {
+            role
+            node {
+              id
+              name {
+                first
+                middle
+                last
+                full
+                native
+                alternative
+                alternativeSpoiler
+              }
+              image { large }
+              description
+              gender
+              age
+              bloodType
+              dateOfBirth { year month day }
+            }
+            voiceActors(language: JAPANESE) {
+              id
+              name { full }
+              image { large }
+            }
+          }
+        }
       }
     }
   `;
@@ -261,7 +302,42 @@ export class AnimeExternal {
         });
       }
 
-      await this.upsertAnime(data.data.Media);
+      const media = data.data.Media;
+
+      // Fetch all pages of characters
+      if (media.characters?.pageInfo?.hasNextPage) {
+        let currentPage = 2;
+        let hasNextPage = true;
+
+        while (hasNextPage) {
+          const charData = (await this.fetchWithRateLimit(this.getCharactersQuery, {
+            id: anilistId,
+            page: currentPage,
+          })) as {
+            data: {
+              Media: {
+                characters: {
+                  pageInfo: { hasNextPage: boolean };
+                  edges: any[];
+                };
+              };
+            };
+          };
+
+          const newEdges = charData?.data?.Media?.characters?.edges || [];
+          if (media.characters.edges) {
+            media.characters.edges.push(...newEdges);
+          } else {
+            media.characters.edges = newEdges;
+          }
+
+          hasNextPage =
+            charData?.data?.Media?.characters?.pageInfo?.hasNextPage ?? false;
+          currentPage++;
+        }
+      }
+
+      await this.upsertAnime(media);
     } catch (error) {
       this.logger.error(
         `Failed to fetch anime ${anilistId} from AniList: ${error}`,
