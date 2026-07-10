@@ -85,6 +85,12 @@ steps:
         from_secret: SIMKL_CLIENT_SECRET
       NEXT_PUBLIC_SIMKL_CLIENT_ID:
         from_secret: NEXT_PUBLIC_SIMKL_CLIENT_ID
+      NEXT_PUBLIC_TRAKT_CLIENT_ID:
+        from_secret: NEXT_PUBLIC_TRAKT_CLIENT_ID
+      TRAKT_CLIENT_ID:
+        from_secret: TRAKT_CLIENT_ID
+      TRAKT_CLIENT_SECRET:
+        from_secret: TRAKT_CLIENT_SECRET
       GOOGLE_BOOKS_API_KEY:
         from_secret: GOOGLE_BOOKS_API_KEY
       RAWG_API_KEY:
@@ -141,6 +147,9 @@ steps:
       - printf "SIMKL_CLIENT_ID=%s\n" "$SIMKL_CLIENT_ID" >> .env
       - printf "SIMKL_CLIENT_SECRET=%s\n" "$SIMKL_CLIENT_SECRET" >> .env
       - printf "NEXT_PUBLIC_SIMKL_CLIENT_ID=%s\n" "$NEXT_PUBLIC_SIMKL_CLIENT_ID" >> .env
+      - printf "NEXT_PUBLIC_TRAKT_CLIENT_ID=%s\n" "$NEXT_PUBLIC_TRAKT_CLIENT_ID" >> .env
+      - printf "TRAKT_CLIENT_ID=%s\n" "$TRAKT_CLIENT_ID" >> .env
+      - printf "TRAKT_CLIENT_SECRET=%s\n" "$TRAKT_CLIENT_SECRET" >> .env
       - printf "GOOGLE_BOOKS_API_KEY=%s\n" "$GOOGLE_BOOKS_API_KEY" >> .env
       - printf "RAWG_API_KEY=%s\n" "$RAWG_API_KEY" >> .env
       - printf "PROD_LYNX_TOKEN=%s\n" "$PROD_LYNX_TOKEN" >> .env
