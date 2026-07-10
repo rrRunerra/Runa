@@ -13,6 +13,8 @@ export enum ConnectionProvider {
   ANILIST = 'ANILIST',
   MAL = 'MAL',
   SIMKL = 'SIMKL',
+  TRAKT = 'TRAKT',
+  DISCORD = 'DISCORD',
 }
 
 export class UpsertConnectionDto {

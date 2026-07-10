@@ -1,6 +1,5 @@
 import path from "path";
 import { glob } from "glob";
-import { pathToFileURL } from "url";
 import { ConnectionDependencies } from "./types.js";
 import { BaseConnection } from "./base-connection.js";
 import { ConnectionProvider } from "@runa/database";
@@ -44,22 +43,14 @@ export class ConnectionLoader {
       }
 
       try {
-        let module: any;
-        
-        // Multi-fallback import resolver to handle CJS (Jest), ESM, and Windows paths
-        try {
-          module = await import(absolutePath);
-        } catch (importErr) {
-          try {
-            const fileUrl = pathToFileURL(absolutePath).href;
-            module = await import(fileUrl);
-          } catch (urlImportErr) {
-            // Fallback for CommonJS context (like Jest with custom resolver)
-            module = require(absolutePath);
-          }
-        }
-
-        const ConnectionClass = module.default;
+        // Use require() in CJS context so all modules share the same module cache.
+        // Dynamic import() creates a separate ESM module instance, which breaks
+        // `instanceof BaseConnection` since the prototype chains differ.
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        let module: any = require(absolutePath);
+        // require() returns the module exports directly for CJS, but if it wraps
+        // an ESM default export we might get { default: Class }
+        const ConnectionClass = module.default ?? module;
 
         if (
           ConnectionClass && 

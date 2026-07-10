@@ -208,7 +208,7 @@ export function RrConnectionsTab({
     if (!session?.accessToken || connectionsLoading || connections.length === 0)
       return;
 
-    const importableProviders = ["anilist", "mal", "simkl"];
+    const importableProviders = ["anilist", "mal", "simkl", "trakt"];
     for (const conn of connections) {
       const providerId = conn.provider.toLowerCase();
       if (importableProviders.includes(providerId)) {

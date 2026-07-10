@@ -49,5 +49,6 @@ export function getConnectionProfileUrl(
   if (p === "anilist") return `https://anilist.co/user/${username}`;
   if (p === "mal") return `https://myanimelist.net/profile/${username}`;
   if (p === "simkl") return `https://simkl.com/profile/${username}`;
+  if (p === "trakt") return `https://trakt.tv/users/${username}`;
   return null;
 }

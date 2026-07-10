@@ -148,6 +148,50 @@ export const PROVIDERS_METADATA: ConnectionMetadata[] = [
     },
   },
   {
+    id: "trakt",
+    name: "Trakt",
+    description: "Sync your movies, TV shows, and anime watch progress in one place.",
+    url: "https://trakt.tv",
+    icon: "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/trakt.png",
+    accentColor: "bg-[#ed1c24]/10 border-[#ed1c24]/20 text-[#ed1c24] hover:bg-[#ed1c24]/20",
+    glowColor: "shadow-[#ed1c24]/10",
+    capabilities: [ConnectionCapability.ANIME, ConnectionCapability.MOVIES, ConnectionCapability.TV_SHOWS, ConnectionCapability.SHOWCASE],
+    primaryApp: "aquila",
+    async search(query: string, type: "ANIME" | "MANGA" | "MOVIES" | "TV_SHOWS"): Promise<ConnectionSearchResult[]> {
+      const clientId = typeof process !== "undefined" ? process.env.NEXT_PUBLIC_TRAKT_CLIENT_ID || process.env.TRAKT_CLIENT_ID || "" : "";
+      let path = "show";
+      if (type === "MOVIES") {
+        path = "movie";
+      } else if (type === "MANGA") {
+        return [];
+      }
+      const res = await fetch(
+        `https://api.trakt.tv/search/${path}?query=${encodeURIComponent(query)}`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "trakt-api-version": "2",
+            "trakt-api-key": clientId,
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Runa/1.0",
+          },
+        }
+      );
+      if (!res.ok) {
+        throw new Error(`Trakt search failed: ${res.status} ${res.statusText}`.trim());
+      }
+      const data = await res.json();
+      return (data || []).map((item: any) => {
+        const media = item.movie || item.show;
+        if (!media) return null;
+        return {
+          id: media.ids?.trakt?.toString() || "",
+          title: media.title,
+          format: item.type,
+        };
+      }).filter((x: any): x is ConnectionSearchResult => x !== null);
+    },
+  },
+  {
     id: "discord",
     name: "Discord",
     description: "Connect with your Discord account.",

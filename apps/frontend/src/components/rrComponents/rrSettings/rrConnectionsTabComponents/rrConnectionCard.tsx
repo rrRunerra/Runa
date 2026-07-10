@@ -154,7 +154,7 @@ export function RrConnectionCard({
         )}
         {isConnected ? (
           <>
-            {["anilist", "mal", "simkl"].includes(
+            {["anilist", "mal", "simkl", "trakt"].includes(
               provider.id.toLowerCase()
             ) && (
               <>

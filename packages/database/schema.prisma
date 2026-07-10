@@ -250,6 +250,7 @@ enum ConnectionProvider {
     MAL
     SIMKL
     DISCORD
+    TRAKT
 }
 
 enum LynxLogType {

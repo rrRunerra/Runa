@@ -44,6 +44,7 @@ export class ConnectionService implements OnModuleInit {
     private readonly notificationService: NotificationService,
   ) {}
 
+  // Module code identifier
   private readonly moduleCode = 'CnSve-';
 
   async onModuleInit(): Promise<void> {
@@ -54,6 +55,8 @@ export class ConnectionService implements OnModuleInit {
     });
 
     await this.loader.loadConnections();
+    console.log('[ConnectionLoader Debug] ConnectionProvider keys:', Object.keys(ConnectionProvider));
+    console.log('[ConnectionLoader Debug] Loaded connections:', Array.from(this.loader.getConnections().keys()));
   }
 
   private toProvider(value: string): ConnectionProvider {
@@ -66,10 +69,11 @@ export class ConnectionService implements OnModuleInit {
     return upper;
   }
 
+  
   public getConnectionInstance(providerId: string): any {
     const provider = this.loader.getConnection(this.toProvider(providerId));
     if (!provider) {
-      throw new rrBadRequestException(`${this.moduleCode}IP001`, {
+      throw new rrBadRequestException(`${this.moduleCode}IP002`, {
         message: `Invalid provider: ${providerId}`,
       });
     }
@@ -273,7 +277,7 @@ export class ConnectionService implements OnModuleInit {
     const key = `${username.toLowerCase()}:${providerId.toLowerCase()}`;
     const active = this.activeImports.get(key);
     if (active && active.status === 'processing') {
-      throw new rrBadRequestException(`${this.moduleCode}IAIP001`, {
+      throw new rrBadRequestException(`${this.moduleCode}IAIP003`, {
         message: 'Import already in progress',
       });
     }
