@@ -165,6 +165,18 @@ export class MovieExternal {
     movie: TvdbMovieExtended,
     translation: { name?: string; overview?: string } | null,
   ): Promise<void> {
+    const existing = await this.prisma.client.aquilaMovie.findUnique({
+      where: { tvdbId: movie.id },
+      select: { locked: true },
+    });
+
+    if (existing?.locked) {
+      this.logger.debug(
+        `Movie with TVDB ID ${movie.id} is locked, skipping upsert`,
+      );
+      return;
+    }
+
     const englishName = translation?.name || movie.name;
     const englishOverview = translation?.overview || movie.overview || '';
 

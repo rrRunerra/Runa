@@ -8,6 +8,7 @@ import {
   rrError,
   rrNotFoundException,
   rrTooManyRequestsException,
+  rrConflictException,
 } from 'src/providers/error';
 import type { AnimeSearchEntity, AnimeEntity } from './anime.entities';
 
@@ -328,6 +329,16 @@ describe('AnimeService', () => {
       });
 
       await expect(service.refreshAnime(1)).rejects.toThrow(rrError);
+    });
+
+    it('should throw rrConflictException when anime is locked', async () => {
+      mockCacheService.get.mockResolvedValue(null);
+      mockRepository.find.mockResolvedValue({
+        ...existingAnime,
+        locked: true,
+      });
+
+      await expect(service.refreshAnime(1)).rejects.toThrow(rrConflictException);
     });
 
     it('should fetch fresh data, bust cache, set cooldown, and return updated anime', async () => {

@@ -5,6 +5,7 @@ import {
   rrError,
   rrNotFoundException,
   rrTooManyRequestsException,
+  rrConflictException,
 } from 'src/providers/error';
 import { BookEntity, BookSearchEntity } from './book.entities';
 import { CacheService } from 'src/providers/cache/cache.service';
@@ -125,6 +126,12 @@ export class BookService {
     if (!existing) {
       throw new rrNotFoundException(`${this.moduleCode}BNFID001`, {
         message: 'Book not found in database',
+      });
+    }
+
+    if (existing.locked) {
+      throw new rrConflictException(`${this.moduleCode}LKD001`, {
+        message: 'Book is locked, cannot refresh',
       });
     }
 

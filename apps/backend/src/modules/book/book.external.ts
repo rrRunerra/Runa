@@ -225,6 +225,18 @@ export class BookExternal {
   }
 
   private async upsertBook(volume: GbooksVolume): Promise<void> {
+    const existing = await this.prisma.client.aquilaBook.findUnique({
+      where: { googleBookId: volume.id },
+      select: { locked: true },
+    });
+
+    if (existing?.locked) {
+      this.logger.debug(
+        `Book with Google Book ID ${volume.id} is locked, skipping upsert`,
+      );
+      return;
+    }
+
     const info = volume.volumeInfo || { title: '' };
     const saleInfo = volume.saleInfo || {};
 

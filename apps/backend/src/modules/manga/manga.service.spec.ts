@@ -8,6 +8,7 @@ import {
   rrError,
   rrNotFoundException,
   rrTooManyRequestsException,
+  rrConflictException,
 } from 'src/providers/error';
 import type { MangaSearchEntity, MangaEntity } from './manga.entities';
 
@@ -320,6 +321,16 @@ describe('MangaService', () => {
       });
 
       await expect(service.refreshManga(1)).rejects.toThrow(rrError);
+    });
+
+    it('should throw rrConflictException when manga is locked', async () => {
+      mockCacheService.get.mockResolvedValue(null);
+      mockRepository.find.mockResolvedValue({
+        ...existingManga,
+        locked: true,
+      });
+
+      await expect(service.refreshManga(1)).rejects.toThrow(rrConflictException);
     });
 
     it('should fetch fresh data, bust cache, set cooldown, and return updated manga', async () => {

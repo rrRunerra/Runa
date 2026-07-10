@@ -190,6 +190,18 @@ export class GameExternal {
   }
 
   private async upsertGame(game: RawgGameDetail): Promise<void> {
+    const existing = await this.prisma.client.aquilaGame.findUnique({
+      where: { rawgId: game.id },
+      select: { locked: true },
+    });
+
+    if (existing?.locked) {
+      this.logger.debug(
+        `Game with RAWG ID ${game.id} is locked, skipping upsert`,
+      );
+      return;
+    }
+
     const released = GameExternal.parseReleased(game.released);
     const description = GameExternal.cleanHtml(
       game.description_raw || game.description,

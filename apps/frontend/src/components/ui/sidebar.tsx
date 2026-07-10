@@ -119,6 +119,11 @@ function SidebarProvider({
     if (!isMobile) return;
 
     const handleTouchStart = (e: TouchEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('[data-block-sidebar-gesture="true"]')) {
+        return;
+      }
+
       // Reset triggered flag on every new touch sequence (when first finger hits or second finger hits)
       gestureState.current.gestureTriggered = false;
 
@@ -136,6 +141,11 @@ function SidebarProvider({
     };
 
     const handleTouchMove = (e: TouchEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('[data-block-sidebar-gesture="true"]')) {
+        return;
+      }
+
       if (gestureState.current.gestureTriggered) return;
 
       if (!openMobile) {

@@ -1395,6 +1395,221 @@ export default function CanvasEditor({
     }
   };
 
+  // Touch handlers for panning and moving/resizing on touch screens
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    const isBackgroundClicked =
+      e.target === containerRef.current ||
+      (e.target as HTMLElement).classList.contains("canvas-background");
+
+    if (isBackgroundClicked && e.touches.length === 1) {
+      setSelectedNodeIds([]);
+      setSelectedEdgeId(null);
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+
+      const touch = e.touches[0];
+      if (!isSpacePressed && containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        const localX = (touch.clientX - rect.left - pan.x) / zoom;
+        const localY = (touch.clientY - rect.top - pan.y) / zoom;
+        setSelectionBox({
+          startX: localX,
+          startY: localY,
+          currentX: localX,
+          currentY: localY,
+        });
+        return;
+      }
+    }
+
+    if (isSpacePressed || isBackgroundClicked) {
+      const touch = e.touches[0];
+      setIsPanning(true);
+      setPanStart({ x: touch.clientX - pan.x, y: touch.clientY - pan.y });
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    const touch = e.touches[0];
+    if (isPanning) {
+      setPan({
+        x: touch.clientX - panStart.x,
+        y: touch.clientY - panStart.y,
+      });
+      return;
+    }
+
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const localX = (touch.clientX - rect.left - pan.x) / zoom;
+      const localY = (touch.clientY - rect.top - pan.y) / zoom;
+
+      // Lasso selection box update
+      if (selectionBox) {
+        const nextBox = { ...selectionBox, currentX: localX, currentY: localY };
+        setSelectionBox(nextBox);
+
+        const x1 = Math.min(nextBox.startX, localX);
+        const x2 = Math.max(nextBox.startX, localX);
+        const y1 = Math.min(nextBox.startY, localY);
+        const y2 = Math.max(nextBox.startY, localY);
+
+        const inside = nodes
+          .filter((n) => {
+            const nX1 = n.x;
+            const nX2 = n.x + n.width;
+            const nY1 = n.y;
+            const nY2 = n.y + n.height;
+            return nX1 < x2 && nX2 > x1 && nY1 < y2 && nY2 > y1;
+          })
+          .map((n) => n.id);
+        setSelectedNodeIds(inside);
+        return;
+      }
+
+      // Dragging node position update
+      if (dragNodeId) {
+        if (e.cancelable) e.preventDefault();
+        const dx = (touch.clientX - dragStart.x) / zoom;
+        const dy = (touch.clientY - dragStart.y) / zoom;
+        setNodes((prev) =>
+          prev.map((n) => {
+            const dragMulti = dragMultiNodes.find((c) => c.id === n.id);
+            if (dragMulti) {
+              return {
+                ...n,
+                x: dragMulti.initialX + dx,
+                y: dragMulti.initialY + dy,
+              };
+            }
+            if (n.id === dragNodeId) {
+              return {
+                ...n,
+                x: dragNodeInitialPos.x + dx,
+                y: dragNodeInitialPos.y + dy,
+              };
+            }
+            const dragChild = dragGroupChildren.find((c) => c.id === n.id);
+            if (dragChild) {
+              return {
+                ...n,
+                x: dragChild.initialX + dx,
+                y: dragChild.initialY + dy,
+              };
+            }
+            return n;
+          }),
+        );
+        setIsDirty(true);
+      }
+
+      // Resizing node dimensions update
+      if (resizeNodeId) {
+        if (e.cancelable) e.preventDefault();
+        const dx = (touch.clientX - resizeStart.x) / zoom;
+        const dy = (touch.clientY - resizeStart.y) / zoom;
+        setNodes((prev) =>
+          prev.map((n) => {
+            if (n.id === resizeNodeId) {
+              const isRrImage = n.type === "rrImage";
+              const minW = isRrImage ? 10 : 220;
+              const minH = isRrImage ? 10 : 160;
+              return {
+                ...n,
+                width: Math.max(minW, resizeInitialSize.w + dx),
+                height: Math.max(minH, resizeInitialSize.h + dy),
+              };
+            }
+            return n;
+          }),
+        );
+        setIsDirty(true);
+      }
+
+      // Annotation pointer dragging update
+      if (dragAnnotationPointerNodeId) {
+        if (e.cancelable) e.preventDefault();
+        setNodes((prev) =>
+          prev.map((n) =>
+            n.id === dragAnnotationPointerNodeId
+              ? {
+                  ...n,
+                  annotationPointer: {
+                    x: localX - n.x,
+                    y: localY - n.y,
+                  },
+                }
+              : n,
+          ),
+        );
+        setIsDirty(true);
+      }
+
+      // Active connection connector guide line update
+      if (connecting) {
+        setConnectingCursor({ x: localX, y: localY });
+      }
+    }
+  };
+
+  const startDragNodeTouch = (e: React.TouchEvent, node: CanvasNode) => {
+    e.stopPropagation();
+    const touch = e.touches[0];
+    const isShift = e.shiftKey;
+    if (isShift) {
+      setSelectedNodeIds((prev) =>
+        prev.includes(node.id)
+          ? prev.filter((id) => id !== node.id)
+          : [...prev, node.id],
+      );
+      return;
+    }
+
+    const isInMulti =
+      selectedNodeIds.length > 1 && selectedNodeIds.includes(node.id);
+    if (isInMulti) {
+      const multiInitial = nodes
+        .filter((n) => selectedNodeIds.includes(n.id) && !n.lockPosition)
+        .map((n) => ({ id: n.id, initialX: n.x, initialY: n.y }));
+      setDragMultiNodes(multiInitial);
+      setDragNodeId(node.id);
+      setDragStart({ x: touch.clientX, y: touch.clientY });
+      setDragNodeInitialPos({ x: node.x, y: node.y });
+      return;
+    }
+
+    if (node.type === "group") {
+      const groupChildren = nodes
+        .filter(
+          (n) =>
+            n.id !== node.id &&
+            !n.lockPosition &&
+            n.x >= node.x &&
+            n.x + n.width <= node.x + node.width &&
+            n.y >= node.y &&
+            n.y + n.height <= node.y + node.height,
+        )
+        .map((n) => ({ id: n.id, initialX: n.x, initialY: n.y }));
+      setDragGroupChildren(groupChildren);
+    }
+
+    setSelectedNodeIds([node.id]);
+    setSelectedEdgeId(null);
+    setDragNodeId(node.id);
+    setDragStart({ x: touch.clientX, y: touch.clientY });
+    setDragNodeInitialPos({ x: node.x, y: node.y });
+  };
+
+  const startResizeNodeTouch = (e: React.TouchEvent, node: CanvasNode) => {
+    e.stopPropagation();
+    if (e.cancelable) e.preventDefault();
+    const touch = e.touches[0];
+    setResizeNodeId(node.id);
+    setResizeStart({ x: touch.clientX, y: touch.clientY });
+    setResizeInitialSize({ w: node.width, h: node.height });
+  };
+
   // -----------------------------------------------------------------------------
   // Node Creation, Color, Size, and Connection Handlers
   // -----------------------------------------------------------------------------
@@ -1959,7 +2174,7 @@ export default function CanvasEditor({
         className="w-full h-full"
         onContextMenu={handleContextMenu}
       >
-        <div className="fixed inset-0 z-50 flex flex-col bg-background text-foreground font-sans overflow-hidden select-none">
+        <div className="fixed inset-0 z-50 flex flex-col bg-background text-foreground font-sans overflow-hidden select-none" data-block-sidebar-gesture="true">
           {/* Top Banner Toolbar */}
           <div className="h-14 border-b border-border bg-card flex items-center justify-between px-6 shrink-0 z-10 shadow-sm">
             <div className="flex items-center gap-3">
@@ -2158,6 +2373,9 @@ export default function CanvasEditor({
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleMouseUp}
           >
             {/* SVG Dot grid background */}
             <div className="absolute inset-0 pointer-events-none canvas-background">
@@ -2365,7 +2583,9 @@ export default function CanvasEditor({
 
                         <div
                           data-card-id={node.id}
+                          data-block-sidebar={true}
                           onMouseDown={(e) => startDragNode(e, node)}
+                          onTouchStart={(e) => startDragNodeTouch(e, node)}
                           className={(() => {
                             const isSelected = selectedNodeIds.includes(
                               node.id,
@@ -2473,6 +2693,7 @@ export default function CanvasEditor({
                           {/* Resizing Anchor (Bottom-Right) */}
                           <div
                             onMouseDown={(e) => startResizeNode(e, node)}
+                            onTouchStart={(e) => startResizeNodeTouch(e, node)}
                             className="absolute bottom-1 right-1 w-3.5 h-3.5 cursor-se-resize flex items-center justify-center text-slate-600 hover:text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity"
                           >
                             <Maximize2 className="h-2.5 w-2.5 rotate-90" />

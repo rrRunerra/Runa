@@ -5,6 +5,7 @@ import {
   rrError,
   rrNotFoundException,
   rrTooManyRequestsException,
+  rrConflictException,
 } from 'src/providers/error';
 import { MovieEntity, MovieSearchEntity } from './movie.entities';
 import { CacheService } from 'src/providers/cache/cache.service';
@@ -128,6 +129,12 @@ export class MovieService {
     if (!existing) {
       throw new rrNotFoundException(`${this.moduleCode}MNFID001`, {
         message: 'Movie not found in database',
+      });
+    }
+
+    if (existing.locked) {
+      throw new rrConflictException(`${this.moduleCode}LKD001`, {
+        message: 'Movie is locked, cannot refresh',
       });
     }
 

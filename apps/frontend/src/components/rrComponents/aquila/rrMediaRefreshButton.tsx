@@ -28,7 +28,7 @@ export function RrMediaRefreshButton({
   // Check permission
   const canRefresh = hasPermission(
     session.data?.user?.permissions,
-    AquilaFlags.MEDIA_REFRESH
+    AquilaFlags.MEDIA_REFRESH,
   );
 
   useEffect(() => {
@@ -77,7 +77,7 @@ export function RrMediaRefreshButton({
 
     setLoading(true);
     const apiType = mediaType === "movie" ? "movie" : mediaType;
-    const url = `${process.env.NEXT_PUBLIC_API_URL}/${apiType}/refresh/${mediaId}`;
+    const url = `${process.env.NEXT_PUBLIC_API_URL}/${apiType}/${mediaId}/refresh`;
 
     const headers: HeadersInit = {
       "Content-Type": "application/json",
@@ -94,7 +94,7 @@ export function RrMediaRefreshButton({
 
       if (res.ok) {
         toast.success("Media successfully refreshed!");
-        
+
         // Set 60 seconds cooldown
         const expiry = Date.now() + 60000;
         localStorage.setItem(storageKey, expiry.toString());
@@ -132,7 +132,10 @@ export function RrMediaRefreshButton({
       {loading ? (
         <Loader2 className="size-4 animate-spin text-muted-foreground" />
       ) : (
-        <RefreshCw className={`size-4 ${cooldownRemaining > 0 ? "text-muted-foreground" : "text-primary"}`} aria-hidden="true" />
+        <RefreshCw
+          className={`size-4 ${cooldownRemaining > 0 ? "text-muted-foreground" : "text-primary"}`}
+          aria-hidden="true"
+        />
       )}
       <span>
         {cooldownRemaining > 0

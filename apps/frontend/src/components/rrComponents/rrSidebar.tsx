@@ -140,7 +140,7 @@ export default function RrSidebar({ sidebarConfig: initialSidebarConfig, ...prop
   return (
     <>
       <Sidebar variant="inset" {...props}>
-        <SidebarHeader>
+        <SidebarHeader className="hidden md:flex">
           <SidebarMenu>
             <SidebarMenuItem>
               <RrAppMenu session={session} />
@@ -307,7 +307,7 @@ export default function RrSidebar({ sidebarConfig: initialSidebarConfig, ...prop
               ))}
           </LayoutGroup>
         </SidebarContent>
-        <SidebarFooter>
+        <SidebarFooter className="hidden md:flex">
           <SidebarMenu>
             <RrUserMenu session={session} />
           </SidebarMenu>

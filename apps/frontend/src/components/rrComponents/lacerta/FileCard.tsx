@@ -37,6 +37,8 @@ import RrLapplandMermaid from "../rrImages/rrLapplandMermaid";
 import RrLapplandUml from "../rrImages/rrLapplandUml";
 import RrLapplandFolder from "../rrImages/rrLapplandFolder";
 import RrLapplandPlaceholderFile from "../rrImages/rrLapplandPlaceholderFile";
+import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
 
 interface SharedUser {
   id: string;
@@ -90,6 +92,7 @@ interface FileCardProps {
   isSharedTab: boolean;
   isSelected?: boolean;
   onToggleSelect?: () => void;
+  hasSelection?: boolean;
 }
 
 export default function FileCard({
@@ -104,7 +107,46 @@ export default function FileCard({
   isSharedTab,
   isSelected = false,
   onToggleSelect,
+  hasSelection = false,
 }: FileCardProps): React.JSX.Element {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const longPressTimer = React.useRef<NodeJS.Timeout | null>(null);
+  const touchStartPos = React.useRef<{ x: number; y: number } | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    touchStartPos.current = { x: touch.clientX, y: touch.clientY };
+
+    if (longPressTimer.current) clearTimeout(longPressTimer.current);
+    longPressTimer.current = setTimeout(() => {
+      setMenuOpen(true);
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+    }, 1000);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStartPos.current) return;
+    const touch = e.touches[0];
+    const dx = Math.abs(touch.clientX - touchStartPos.current.x);
+    const dy = Math.abs(touch.clientY - touchStartPos.current.y);
+    if (dx > 10 || dy > 10) {
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+        longPressTimer.current = null;
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    touchStartPos.current = null;
+  };
+
   const formatSize = (bytes: number | null) => {
     if (bytes === null) return "--";
     if (bytes === 0) return "0 Bytes";
@@ -190,25 +232,34 @@ export default function FileCard({
   return (
     <div
       onDoubleClick={() => onOpen(item)}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
       onClick={(e) => {
         if (
           (e.target as HTMLElement).closest("button") ||
           (e.target as HTMLElement).closest(".popover-trigger") ||
-          (e.target as HTMLElement).closest("[role='menuitem']")
+          (e.target as HTMLElement).closest("[role='menuitem']") ||
+          (e.target as HTMLElement).closest('[data-slot="checkbox"]')
         ) {
           return;
         }
-        onToggleSelect?.();
+        if (hasSelection) {
+          onToggleSelect?.();
+        } else {
+          onOpen(item);
+        }
       }}
       className={`group relative flex flex-col rounded-xl border overflow-hidden transition-all select-none cursor-pointer shadow-sm hover:shadow-md active:scale-[0.99] h-[164px] ${
         isSelected
-          ? "border-primary bg-primary/5 hover:bg-primary/10"
+          ? "border-primary bg-card/25 hover:bg-card/45 ring-1 ring-primary/30"
           : "border-border/60 bg-card/25 hover:bg-card/45"
       }`}
     >
       {/* Action Menu button (absolute positioned top-right) */}
       <div className="absolute top-1.5 right-1.5 z-10">
-        <DropdownMenu>
+        <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
           <DropdownMenuTrigger asChild>
             <button className="p-1 bg-background/60 hover:bg-background/80 backdrop-blur-sm rounded-lg text-muted-foreground hover:text-foreground transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 data-[state=open]:opacity-100 shadow-sm shrink-0">
               <MoreVertical className="h-3.5 w-3.5" />
@@ -220,6 +271,18 @@ export default function FileCard({
             align="start"
             sideOffset={8}
           >
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleSelect?.();
+              }}
+              className="cursor-pointer text-xs focus:bg-accent font-semibold gap-2"
+            >
+              <Checkbox checked={isSelected} onCheckedChange={onToggleSelect} />
+              <span>Select</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-border" />
+
             <DropdownMenuItem
               onClick={() => onOpen(item)}
               className="cursor-pointer text-xs focus:bg-accent font-semibold gap-2"
@@ -324,14 +387,14 @@ export default function FileCard({
         </div>
       </div>
 
-      {/* Shared/Public Badge Overlay (Always visible in top-left) */}
+      {/* Shared/Public Badge Overlay (Positioned in the top-left corner) */}
       {(() => {
         const isPublic = item.isPublic;
         const isShared = item.shares && item.shares.length > 0;
         if (isPublic && isShared) {
           return (
             <div
-              className="absolute top-1.5 left-1.5 z-10 p-1 rounded-lg bg-rose-500/15 border border-rose-500/25 text-rose-400 shadow-sm"
+              className="absolute top-2 left-2 z-10 p-1 rounded-lg bg-rose-500/15 border border-rose-500/25 text-rose-400 shadow-sm"
               title="Public & Shared File"
             >
               <Share2 className="h-3 w-3" />
@@ -341,7 +404,7 @@ export default function FileCard({
         if (isPublic) {
           return (
             <div
-              className="absolute top-1.5 left-1.5 z-10 p-1 rounded-lg bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 shadow-sm"
+              className="absolute top-2 left-2 z-10 p-1 rounded-lg bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 shadow-sm"
               title="Public File"
             >
               <Share2 className="h-3 w-3" />
@@ -351,7 +414,7 @@ export default function FileCard({
         if (isShared) {
           return (
             <div
-              className="absolute top-1.5 left-1.5 z-10 p-1 rounded-lg bg-violet-500/15 border border-violet-500/25 text-violet-400 shadow-sm"
+              className="absolute top-2 left-2 z-10 p-1 rounded-lg bg-violet-500/15 border border-violet-500/25 text-violet-400 shadow-sm"
               title={`Shared with ${item.shares.length} users`}
             >
               <Share2 className="h-3 w-3" />

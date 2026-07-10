@@ -5,6 +5,7 @@ import {
   rrError,
   rrNotFoundException,
   rrTooManyRequestsException,
+  rrConflictException,
 } from 'src/providers/error';
 import { AnimeEntity, AnimeSearchEntity } from './anime.entities';
 import { CacheService } from 'src/providers/cache/cache.service';
@@ -125,6 +126,12 @@ export class AnimeService {
     if (!existing.anilistId) {
       throw new rrError(`${this.moduleCode}AHNAICR001`, {
         message: 'Anime has no AniList ID, cannot refresh',
+      });
+    }
+
+    if (existing.locked) {
+      throw new rrConflictException(`${this.moduleCode}LKD001`, {
+        message: 'Anime is locked, cannot refresh',
       });
     }
 

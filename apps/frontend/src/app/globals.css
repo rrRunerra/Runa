@@ -941,29 +941,7 @@ html.dark[data-theme="apotheosis"] {
  * High-visibility focus rings for keyboard, D-pad, and remote navigation.
  * Uses :focus-visible so mouse users are not affected.
  */
-@layer utilities {
-  :focus-visible {
-    outline: 3px solid hsl(var(--ring, 265 89% 70%));
-    outline-offset: 3px;
-    border-radius: 6px;
-  }
 
-  /* Extra-large focus for TV / 10-foot UI (no fine pointer available) */
-  @media (pointer: coarse), (pointer: none) {
-    :focus-visible {
-      outline-width: 4px;
-      outline-offset: 5px;
-    }
-
-    /* Make interactive targets at least 48px tall for remote/D-pad comfort */
-    button,
-    a,
-    [role="button"],
-    [tabindex="0"] {
-      min-height: 48px;
-    }
-  }
-}
 
 /* Tiptap Code Block Syntax Highlighting (Monokai-ish Dark Theme) */
 pre code {
@@ -1030,4 +1008,4 @@ pre code {
 .bg-amber-100 .ProseMirror,
 [class*="bg-amber-"] .ProseMirror {
   @apply text-amber-950!;
-}
+}

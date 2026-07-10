@@ -4,7 +4,6 @@ const ONLYOFFICE_EXTENSIONS = new Set<string>([
   'doc',
   'odt',
   'rtf',
-  'txt',
   'html',
   'epub',
   'pages',

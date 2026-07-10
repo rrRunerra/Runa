@@ -5,6 +5,7 @@ import {
   rrError,
   rrNotFoundException,
   rrTooManyRequestsException,
+  rrConflictException,
 } from 'src/providers/error';
 import { GameEntity, GameSearchEntity } from './game.entities';
 import { CacheService } from 'src/providers/cache/cache.service';
@@ -126,6 +127,12 @@ export class GameService {
     if (!existing) {
       throw new rrNotFoundException(`${this.moduleCode}GNFID001`, {
         message: 'Game not found in database',
+      });
+    }
+
+    if (existing.locked) {
+      throw new rrConflictException(`${this.moduleCode}LKD001`, {
+        message: 'Game is locked, cannot refresh',
       });
     }
 

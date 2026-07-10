@@ -265,6 +265,78 @@ export default function UmlEditor({
     });
   };
 
+  // Touch Dragging Events
+  const handleNodeTouchStart = (e: React.TouchEvent, node: UmlNode) => {
+    e.stopPropagation();
+    setSelectedNodeId(node.id);
+    setDraggedNodeId(node.id);
+
+    const touch = e.touches[0];
+    setDragStartOffset({
+      x: touch.clientX - node.x,
+      y: touch.clientY - node.y,
+    });
+  };
+
+  const handleAnchorTouchStart = (
+    e: React.TouchEvent,
+    nodeId: string,
+    node: UmlNode,
+  ) => {
+    e.stopPropagation();
+    const centerX = node.x + node.width / 2;
+    const centerY = node.y + node.height / 2;
+    setActiveEdgeStart({ nodeId, x: centerX, y: centerY });
+  };
+
+  const handleCanvasTouchMove = (e: React.TouchEvent) => {
+    if (!canvasRef.current) return;
+    const touch = e.touches[0];
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = touch.clientX - rect.left;
+    const y = touch.clientY - rect.top;
+    setMousePos({ x, y });
+
+    if (draggedNodeId) {
+      if (e.cancelable) e.preventDefault();
+      const nx = touch.clientX - dragStartOffset.x;
+      const ny = touch.clientY - dragStartOffset.y;
+
+      setNodes((prev) =>
+        prev.map((n) =>
+          n.id === draggedNodeId
+            ? { ...n, x: Math.max(0, nx), y: Math.max(0, ny) }
+            : n,
+        ),
+      );
+      setHasUnsavedChanges(true);
+    }
+  };
+
+  const handleCanvasTouchEnd = (e: React.TouchEvent) => {
+    if (activeEdgeStart) {
+      const touch = e.changedTouches[0];
+      const elem = document.elementFromPoint(touch.clientX, touch.clientY);
+      const nodeElem = elem?.closest("[data-node-id]");
+      const targetNodeId = nodeElem?.getAttribute("data-node-id");
+      if (targetNodeId && targetNodeId !== activeEdgeStart.nodeId) {
+        const targetNode = nodes.find((n) => n.id === targetNodeId);
+        if (targetNode) {
+          const newEdge: UmlEdge = {
+            id: `edge-${Date.now()}`,
+            fromNode: activeEdgeStart.nodeId,
+            toNode: targetNode.id,
+            type: "association",
+          };
+          setEdges((prev) => [...prev, newEdge]);
+          setHasUnsavedChanges(true);
+        }
+      }
+    }
+    setDraggedNodeId(null);
+    setActiveEdgeStart(null);
+  };
+
   const handleCanvasMouseMove = (e: React.MouseEvent) => {
     if (!canvasRef.current) return;
     const rect = canvasRef.current.getBoundingClientRect();
@@ -347,7 +419,7 @@ export default function UmlEditor({
   const selectedNode = nodes.find((n) => n.id === selectedNodeId);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-background text-foreground select-none">
+    <div className="fixed inset-0 z-50 flex flex-col bg-background text-foreground select-none" data-block-sidebar-gesture="true">
       {/* Editor Header */}
       <header className="flex items-center justify-between px-6 py-4 border-b border-border bg-card/40 backdrop-blur-md shrink-0">
         <div className="flex items-center gap-3">
@@ -390,31 +462,31 @@ export default function UmlEditor({
       </header>
 
       {/* Main Workspace */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Sidebar Shapes */}
-        <aside className="w-56 border-r border-border bg-card/25 backdrop-blur-md p-4 flex flex-col gap-4 shrink-0 overflow-y-auto">
-          <div className="flex flex-col">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">
+        <aside className="w-full md:w-56 border-b md:border-b-0 md:border-r border-border bg-card/25 backdrop-blur-md p-3 md:p-4 flex flex-col shrink-0 overflow-y-auto max-h-[140px] md:max-h-none">
+          <div className="flex flex-col w-full">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5 md:mb-2">
               UML Shapes
             </span>
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-row md:flex-col gap-2 overflow-x-auto no-scrollbar pb-1 md:pb-0">
               {SHAPE_PRESETS.map((shape) => {
                 const Icon = shape.icon;
                 return (
                   <button
                     key={shape.type}
                     onClick={() => addNode(shape.type as any)}
-                    className="w-full flex items-center gap-2.5 px-3 py-2.5 bg-muted/15 border border-border/40 hover:bg-muted/30 rounded-xl text-left text-xs font-semibold text-foreground transition-all hover:translate-x-0.5 active:scale-98"
+                    className="flex-1 min-w-[110px] md:w-full flex items-center gap-2 px-2.5 py-1.5 md:py-2.5 bg-muted/15 border border-border/40 hover:bg-muted/30 rounded-xl text-left text-[11px] md:text-xs font-semibold text-foreground transition-all shrink-0 active:scale-98"
                   >
-                    <Icon className="h-4 w-4 text-primary" />
-                    {shape.label}
+                    <Icon className="h-3.5 w-3.5 text-primary shrink-0" />
+                    <span className="truncate">{shape.label}</span>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          <div className="mt-auto border-t border-border/40 pt-4 text-[10px] text-muted-foreground leading-normal flex flex-col gap-1">
+          <div className="mt-auto border-t border-border/40 pt-4 text-[10px] text-muted-foreground leading-normal flex-col gap-1 hidden md:flex">
             <span className="font-bold uppercase tracking-wider">
               Canvas Guide:
             </span>
@@ -432,6 +504,8 @@ export default function UmlEditor({
           ref={canvasRef}
           onMouseMove={handleCanvasMouseMove}
           onMouseUp={handleCanvasMouseUp}
+          onTouchMove={handleCanvasTouchMove}
+          onTouchEnd={handleCanvasTouchEnd}
           className="flex-1 relative bg-muted/5 overflow-hidden cursor-default select-none"
           style={{
             backgroundImage:
@@ -531,8 +605,10 @@ export default function UmlEditor({
             return (
               <div
                 key={node.id}
+                data-node-id={node.id}
                 onMouseDown={(e) => handleNodeMouseDown(e, node)}
                 onMouseUp={(e) => handleNodeMouseUp(e, node)}
+                onTouchStart={(e) => handleNodeTouchStart(e, node)}
                 style={{
                   left: node.x,
                   top: node.y,
@@ -549,6 +625,7 @@ export default function UmlEditor({
                 {/* Node Anchor Point (rendered in center for easy drag and drop connection) */}
                 <div
                   onMouseDown={(e) => handleAnchorMouseDown(e, node.id, node)}
+                  onTouchStart={(e) => handleAnchorTouchStart(e, node.id, node)}
                   className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-red-500 hover:bg-red-600 cursor-crosshair z-10"
                   title="Drag connection to another shape"
                 />

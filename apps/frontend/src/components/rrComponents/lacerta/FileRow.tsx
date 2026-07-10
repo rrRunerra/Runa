@@ -50,6 +50,7 @@ interface FileRowProps {
   onDelete: (item: RenderFileItem) => void;
   onSaveCopy?: (item: RenderFileItem) => void;
   isSharedTab: boolean;
+  hasSelection?: boolean;
 }
 
 export default function FileRow({
@@ -64,6 +65,7 @@ export default function FileRow({
   onDelete,
   onSaveCopy,
   isSharedTab,
+  hasSelection = false,
 }: FileRowProps): React.JSX.Element {
   const formatSize = (bytes: number | null) => {
     if (bytes === null) return "--";
@@ -155,12 +157,16 @@ export default function FileRow({
           (e.target as HTMLElement).closest("button") ||
           (e.target as HTMLElement).closest(".popover-trigger") ||
           (e.target as HTMLElement).closest("[role='menuitem']") ||
-          (e.target as HTMLElement).closest(".checkbox") ||
+          (e.target as HTMLElement).closest('[data-slot="checkbox"]') ||
           (e.target as HTMLElement).closest("a")
         ) {
           return;
         }
-        onToggleSelect();
+        if (hasSelection) {
+          onToggleSelect();
+        } else {
+          onOpen(item);
+        }
       }}
       className={`group border-b border-border/40 hover:bg-muted/10 transition-colors select-none cursor-pointer text-xs ${
         isSelected ? "bg-primary/5 hover:bg-primary/10" : ""

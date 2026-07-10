@@ -175,6 +175,18 @@ export class TvExternal {
     translation: { name?: string; overview?: string } | null,
     episodes: TvdbEpisode[],
   ): Promise<void> {
+    const existing = await this.prisma.client.aquilaTv.findUnique({
+      where: { tvdbId: series.id },
+      select: { locked: true },
+    });
+
+    if (existing?.locked) {
+      this.logger.debug(
+        `TV series with TVDB ID ${series.id} is locked, skipping upsert`,
+      );
+      return;
+    }
+
     const englishName = translation?.name || series.name;
     const englishOverview = translation?.overview || series.overview || '';
 

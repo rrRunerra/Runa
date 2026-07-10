@@ -5,6 +5,7 @@ import {
   rrError,
   rrNotFoundException,
   rrTooManyRequestsException,
+  rrConflictException,
 } from 'src/providers/error';
 import { TvEntity, TvSearchEntity } from './tv.entities';
 import { CacheService } from 'src/providers/cache/cache.service';
@@ -129,6 +130,12 @@ export class TvService {
     if (!existing.tvdbId) {
       throw new rrError(`${this.moduleCode}THNTVDB001`, {
         message: 'TV series has no TVDB ID, cannot refresh',
+      });
+    }
+
+    if (existing.locked) {
+      throw new rrConflictException(`${this.moduleCode}LKD001`, {
+        message: 'TV series is locked, cannot refresh',
       });
     }
 

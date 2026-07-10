@@ -32,8 +32,8 @@ export default function RrBottomDock({
   // If custom items are provided, render them
   if (customItems) {
     return (
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-background/80 backdrop-blur-xl border border-border/80 shadow-2xl w-[calc(100%-2rem)] max-w-sm select-none rounded-full overflow-hidden">
-        <div className="flex items-center overflow-x-auto no-scrollbar px-1 py-2 snap-x snap-mandatory w-full">
+      <div className="fixed bottom-3.5 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-background/80 backdrop-blur-xl border border-border/80 shadow-2xl w-[calc(100%-1.5rem)] sm:w-[calc(100%-2rem)] max-w-sm select-none rounded-full overflow-hidden">
+        <div className="flex items-center overflow-x-auto no-scrollbar px-1 py-1.5 sm:py-2 snap-x snap-mandatory w-full">
           {customItems.map((item) => (
             <div
               key={item.label}
@@ -64,7 +64,7 @@ export default function RrBottomDock({
   const item4 = items.find((i) => i.position === 4);
 
   const mapItem = (item?: SidebarItem) => {
-    if (!item) return <div className="min-w-[58px] min-h-[44px]" />;
+    if (!item) return <div className="min-w-[48px] sm:min-w-[58px] min-h-[38px] sm:min-h-[44px]" />;
     return (
       <RrDockItem
         key={item.href || item.label}
@@ -80,7 +80,7 @@ export default function RrBottomDock({
   };
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between gap-1 px-3 py-2 bg-background/80 backdrop-blur-xl border border-border/80 shadow-2xl w-[calc(100%-2rem)] max-w-sm md:hidden select-none rounded-full">
+    <div className="fixed bottom-3.5 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between gap-1 px-2 py-1.5 sm:px-3 sm:py-2 bg-background/80 backdrop-blur-xl border border-border/80 shadow-2xl w-[calc(100%-1.5rem)] sm:w-[calc(100%-2rem)] max-w-sm md:hidden select-none rounded-full">
       {/* Left items */}
       <div className="flex items-center gap-0.5 flex-1 justify-around">
         {mapItem(item1)}
@@ -93,10 +93,10 @@ export default function RrBottomDock({
           onClick={() => setOpenMobile(true)}
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.95 }}
-          className="flex items-center justify-center size-10.5 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 cursor-pointer shrink-0 mx-1.5"
+          className="flex items-center justify-center size-9 sm:size-10.5 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 cursor-pointer shrink-0 mx-1"
           aria-label="Toggle Navigation Drawer"
         >
-          <LayoutGrid className="size-4" />
+          <LayoutGrid className="size-3.5 sm:size-4" />
         </motion.button>
       )}
 
@@ -122,20 +122,20 @@ function RrDockItem({ item }: { item: DockItemData }): React.JSX.Element {
       )}
       <span
         className={cn(
-          "relative z-10 transition-transform duration-200",
+          "relative z-10 transition-transform duration-200 [&>svg]:size-3.5 sm:[&>svg]:size-4",
           item.isActive && "scale-105",
         )}
       >
         {item.icon}
       </span>
-      <span className="text-[9px] tracking-tight font-medium relative z-10 whitespace-nowrap truncate max-w-[64px] text-center">
+      <span className="text-[8px] sm:text-[9px] tracking-tight font-medium relative z-10 whitespace-nowrap truncate max-w-[48px] sm:max-w-[64px] text-center">
         {item.label}
       </span>
     </>
   );
 
   const buttonClass = cn(
-    "relative flex flex-col items-center justify-center gap-0.5 px-2.5 py-1.5 rounded-full transition-colors duration-200 min-w-[58px] min-h-[44px]",
+    "relative flex flex-col items-center justify-center gap-0.5 px-1.5 sm:px-2.5 py-1 sm:py-1.5 rounded-full transition-colors duration-200 min-w-[48px] sm:min-w-[58px] min-h-[38px] sm:min-h-[44px]",
     item.isActive
       ? "text-primary font-bold"
       : "text-muted-foreground/70 hover:text-foreground",

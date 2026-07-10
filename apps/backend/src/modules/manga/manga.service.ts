@@ -5,6 +5,7 @@ import { MangaQueueService } from './manga-queue.service';
 import { CacheService } from 'src/providers/cache/cache.service';
 import { MangaEntity, MangaSearchEntity } from './manga.entities';
 import {
+  rrConflictException,
   rrError,
   rrNotFoundException,
   rrTooManyRequestsException,
@@ -125,6 +126,12 @@ export class MangaService {
     if (!existing.anilistId) {
       throw new rrError(`${this.moduleCode}MHNAICR001`, {
         message: 'Manga has no AniList ID, cannot refresh',
+      });
+    }
+
+    if (existing.locked) {
+      throw new rrConflictException(`${this.moduleCode}LKD001`, {
+        message: 'Manga is locked, cannot refresh',
       });
     }
 

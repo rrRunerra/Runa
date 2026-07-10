@@ -359,6 +359,17 @@ export class MangaExternal {
   }
 
   private async upsertManga(item: AniListMangaMedia) {
+    const existing = await this.prisma.client.aquilaManga.findUnique({
+      where: { anilistId: item.id },
+    });
+
+    if (existing?.locked) {
+      this.logger.debug(
+        `Manga with AniList ID ${item.id} is locked, skipping upsert`,
+      );
+      return existing
+    }
+
     const manga = await this.prisma.client.aquilaManga.upsert({
       where: { anilistId: item.id },
       update: {
