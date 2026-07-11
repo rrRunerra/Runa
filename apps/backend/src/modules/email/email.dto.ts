@@ -27,7 +27,9 @@ export class EmailAccountDto {
   @IsOptional()
   loginEmail?: string | null;
 
-  @IsString({ message: 'ElAtDto-RTAMBAS001: Reply-to address must be a string' })
+  @IsString({
+    message: 'ElAtDto-RTAMBAS001: Reply-to address must be a string',
+  })
   @IsOptional()
   replyToAddress?: string | null;
 
@@ -39,7 +41,9 @@ export class EmailAccountDto {
   @IsOptional()
   signatureText?: string | null;
 
-  @IsBoolean({ message: 'ElAtDto-UHSMBB001: Use HTML signature must be a boolean' })
+  @IsBoolean({
+    message: 'ElAtDto-UHSMBB001: Use HTML signature must be a boolean',
+  })
   @IsOptional()
   useHtmlSignature?: boolean;
 

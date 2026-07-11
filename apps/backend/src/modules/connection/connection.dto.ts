@@ -18,7 +18,10 @@ export enum ConnectionProvider {
 }
 
 export class UpsertConnectionDto {
-  @IsEnum(ConnectionProvider, { message: 'UtCndto-PMBEOECP001: Provider must be one of enum ConnectionProvider' })
+  @IsEnum(ConnectionProvider, {
+    message:
+      'UtCndto-PMBEOECP001: Provider must be one of enum ConnectionProvider',
+  })
   @IsNotEmpty({ message: 'UtCndto-PMNBE001: Provider must not be empty' })
   provider!: string;
 
@@ -34,7 +37,10 @@ export class UpsertConnectionDto {
   @IsOptional()
   refreshToken?: string;
 
-  @IsDateString({}, { message: 'UtCndto-EAMBADS001: Expires at must be a date string' })
+  @IsDateString(
+    {},
+    { message: 'UtCndto-EAMBADS001: Expires at must be a date string' },
+  )
   @IsOptional()
   expiresAt?: string;
 
@@ -46,7 +52,10 @@ export class UpsertConnectionDto {
   @IsOptional()
   username?: string;
 
-  @IsEnum(ConnectionLinkedTo, { message: 'UtCndto-LTMBEOECL001: Linked to must be one of enum ConnectionLinkedTo' })
+  @IsEnum(ConnectionLinkedTo, {
+    message:
+      'UtCndto-LTMBEOECL001: Linked to must be one of enum ConnectionLinkedTo',
+  })
   @IsOptional()
   linkedTo?: ConnectionLinkedTo;
 

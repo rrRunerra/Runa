@@ -100,10 +100,18 @@ describe('TvService', () => {
       };
 
       (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({ json: jest.fn().mockResolvedValue(mockLoginResponse) })
-        .mockResolvedValueOnce({ json: jest.fn().mockResolvedValue(mockSearchError) })
-        .mockResolvedValueOnce({ json: jest.fn().mockResolvedValue(mockLoginResponse) })
-        .mockResolvedValueOnce({ json: jest.fn().mockResolvedValue(mockSearchSuccess) });
+        .mockResolvedValueOnce({
+          json: jest.fn().mockResolvedValue(mockLoginResponse),
+        })
+        .mockResolvedValueOnce({
+          json: jest.fn().mockResolvedValue(mockSearchError),
+        })
+        .mockResolvedValueOnce({
+          json: jest.fn().mockResolvedValue(mockLoginResponse),
+        })
+        .mockResolvedValueOnce({
+          json: jest.fn().mockResolvedValue(mockSearchSuccess),
+        });
 
       const result = await service.search('TvShowName');
       expect(result.length).toBe(1);
@@ -112,11 +120,17 @@ describe('TvService', () => {
 
   describe('getTv', () => {
     it('should throw error if ID format is invalid', async () => {
-      await expect(service.getTv('not-a-number')).rejects.toThrow('Invalid id format');
+      await expect(service.getTv('not-a-number')).rejects.toThrow(
+        'Invalid id format',
+      );
     });
 
     it('should return cached TV show if fresh and description is available', async () => {
-      const dbTv = { tvdbId: 123, description: 'Has description', updatedAt: new Date() };
+      const dbTv = {
+        tvdbId: 123,
+        description: 'Has description',
+        updatedAt: new Date(),
+      };
       mockTvRepository.findByTvdbId.mockResolvedValue(dbTv);
       const mappedMedia = { id: '123', title: { romaji: 'Cached TV' } };
       mockTvRepository.toMedia.mockReturnValue(mappedMedia);
@@ -143,12 +157,40 @@ describe('TvService', () => {
           originalLanguage: 'eng',
           artworks: [{ type: 1, image: 'banner-1' }],
           companies: [{ id: 1, name: 'HBO', companyType: { name: 'Network' } }],
-          characters: [{ id: 10, name: 'Protagonist', personName: 'Actor', image: 'c-img', peopleType: 'Actor' }],
-          trailers: [{ id: 1, name: 'Trailer', url: 'youtube.com/trailer', language: 'eng' }],
-          seasons: [{ id: 55, number: 1, type: { id: 1 }, nameTranslations: [], image: 'season-img' }],
+          characters: [
+            {
+              id: 10,
+              name: 'Protagonist',
+              personName: 'Actor',
+              image: 'c-img',
+              peopleType: 'Actor',
+            },
+          ],
+          trailers: [
+            {
+              id: 1,
+              name: 'Trailer',
+              url: 'youtube.com/trailer',
+              language: 'eng',
+            },
+          ],
+          seasons: [
+            {
+              id: 55,
+              number: 1,
+              type: { id: 1 },
+              nameTranslations: [],
+              image: 'season-img',
+            },
+          ],
         },
       };
-      const mockTransResponse = { data: { name: 'Translated English Name', overview: 'Translated overview' } };
+      const mockTransResponse = {
+        data: {
+          name: 'Translated English Name',
+          overview: 'Translated overview',
+        },
+      };
       const mockEpisodesResponse = {
         data: {
           episodes: [
@@ -166,10 +208,18 @@ describe('TvService', () => {
       };
 
       (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({ json: jest.fn().mockResolvedValue(mockLoginResponse) })
-        .mockResolvedValueOnce({ json: jest.fn().mockResolvedValue(mockSeriesResponse) })
-        .mockResolvedValueOnce({ json: jest.fn().mockResolvedValue(mockTransResponse) })
-        .mockResolvedValueOnce({ json: jest.fn().mockResolvedValue(mockEpisodesResponse) });
+        .mockResolvedValueOnce({
+          json: jest.fn().mockResolvedValue(mockLoginResponse),
+        })
+        .mockResolvedValueOnce({
+          json: jest.fn().mockResolvedValue(mockSeriesResponse),
+        })
+        .mockResolvedValueOnce({
+          json: jest.fn().mockResolvedValue(mockTransResponse),
+        })
+        .mockResolvedValueOnce({
+          json: jest.fn().mockResolvedValue(mockEpisodesResponse),
+        });
 
       const result = await service.getTv('123');
 
@@ -190,7 +240,9 @@ describe('TvService', () => {
 
       const mockLoginResponse = { data: { token: 'mock-token' } };
       (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({ json: jest.fn().mockResolvedValue(mockLoginResponse) })
+        .mockResolvedValueOnce({
+          json: jest.fn().mockResolvedValue(mockLoginResponse),
+        })
         .mockRejectedValue(new Error('TVDB offline'));
 
       const result = await service.getTv('123');
@@ -201,7 +253,9 @@ describe('TvService', () => {
       mockTvRepository.findByTvdbId.mockResolvedValue(null);
       const mockLoginResponse = { data: { token: 'mock-token' } };
       (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({ json: jest.fn().mockResolvedValue(mockLoginResponse) })
+        .mockResolvedValueOnce({
+          json: jest.fn().mockResolvedValue(mockLoginResponse),
+        })
         .mockRejectedValue(new Error('TVDB offline'));
 
       await expect(service.getTv('123')).rejects.toThrow(NotFoundException);
@@ -222,15 +276,27 @@ describe('TvService', () => {
       mockTvRepository.findByTvdbId.mockResolvedValue(null);
 
       const mockLoginResponse = { data: { token: 'mock-token' } };
-      const mockSeriesResponse = { data: { id: 123, name: 'Title', overview: 'Overview', seasons: [] } };
-      const mockTransResponse = { data: { name: 'Eng Title', overview: 'Eng Overview' } };
+      const mockSeriesResponse = {
+        data: { id: 123, name: 'Title', overview: 'Overview', seasons: [] },
+      };
+      const mockTransResponse = {
+        data: { name: 'Eng Title', overview: 'Eng Overview' },
+      };
       const mockEpisodesResponse = { data: { episodes: [] } };
 
       (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({ json: jest.fn().mockResolvedValue(mockLoginResponse) })
-        .mockResolvedValueOnce({ json: jest.fn().mockResolvedValue(mockSeriesResponse) })
-        .mockResolvedValueOnce({ json: jest.fn().mockResolvedValue(mockTransResponse) })
-        .mockResolvedValueOnce({ json: jest.fn().mockResolvedValue(mockEpisodesResponse) });
+        .mockResolvedValueOnce({
+          json: jest.fn().mockResolvedValue(mockLoginResponse),
+        })
+        .mockResolvedValueOnce({
+          json: jest.fn().mockResolvedValue(mockSeriesResponse),
+        })
+        .mockResolvedValueOnce({
+          json: jest.fn().mockResolvedValue(mockTransResponse),
+        })
+        .mockResolvedValueOnce({
+          json: jest.fn().mockResolvedValue(mockEpisodesResponse),
+        });
 
       const upserted = { tvdbId: 123, titleEnglish: 'Eng Title' };
       mockTvRepository.upsert.mockResolvedValue(upserted);
@@ -248,7 +314,9 @@ describe('TvService', () => {
 
       const mockLoginResponse = { data: { token: 'mock-token' } };
       (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({ json: jest.fn().mockResolvedValue(mockLoginResponse) })
+        .mockResolvedValueOnce({
+          json: jest.fn().mockResolvedValue(mockLoginResponse),
+        })
         .mockRejectedValue(new Error('TVDB offline'));
 
       const stub = { tvdbId: 123, titleRomaji: 'Stub Title' };

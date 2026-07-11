@@ -58,7 +58,9 @@ describe('BookService', () => {
       const result = await service.search('Mock');
 
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('https://www.googleapis.com/books/v1/volumes?q=Mock&maxResults=20'),
+        expect.stringContaining(
+          'https://www.googleapis.com/books/v1/volumes?q=Mock&maxResults=20',
+        ),
       );
       expect(result).toEqual([
         {
@@ -85,7 +87,7 @@ describe('BookService', () => {
     it('should return media from database on a fresh cache hit without calling fetch', async () => {
       const dbBook = { googleBookId: 'GB123', updatedAt: new Date() };
       mockBookRepository.findByGoogleBookId.mockResolvedValue(dbBook);
-      
+
       const mappedMedia = { id: 'GB123', title: { romaji: 'Cached Book' } };
       mockBookRepository.toMedia.mockReturnValue(mappedMedia);
 
@@ -138,7 +140,9 @@ describe('BookService', () => {
       expect(result.description).toBe('This is a description');
       expect(result.coverImage.large).toBe('https://covers.google.com/111.jpg');
       expect(result.genres).toEqual(['Fiction']);
-      expect(result.staff).toEqual([{ id: 'author-Author Name', name: 'Author Name', role: 'Author' }]);
+      expect(result.staff).toEqual([
+        { id: 'author-Author Name', name: 'Author Name', role: 'Author' },
+      ]);
       expect(result.pages).toBe(350);
       expect(result.averageRating).toBe(4.5);
       expect(result.previewLink).toBe('https://preview.google.com');
@@ -148,7 +152,9 @@ describe('BookService', () => {
     it('should throw BadRequestException for invalid id format', async () => {
       mockBookRepository.findByGoogleBookId.mockResolvedValue(null);
 
-      await expect(service.getBook('../passwd')).rejects.toThrow(BadRequestException);
+      await expect(service.getBook('../passwd')).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should throw NotFoundException if fetch fails and no record is in database', async () => {
@@ -163,7 +169,7 @@ describe('BookService', () => {
       mockBookRepository.findByGoogleBookId.mockResolvedValue(staleBook);
 
       (global.fetch as jest.Mock).mockRejectedValue(new Error('Fetch failed'));
-      
+
       const mappedMedia = { id: 'GB123', title: { romaji: 'Stale Book' } };
       mockBookRepository.toMedia.mockReturnValue(mappedMedia);
 

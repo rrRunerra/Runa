@@ -40,7 +40,7 @@ class AnimeMappingCache {
   private static mappings: Map<number, number> | null = null;
   private static lastFetched = 0;
   private static isFetching = false;
- 
+
   public static async getTvdbId(anilistId: number): Promise<number | null> {
     const now = Date.now();
     if (
@@ -2460,7 +2460,7 @@ export class ListService {
       const isCompleted =
         entry.anime.episodes && nextProgress >= entry.anime.episodes;
 
-      let connectionsData = entry.connections as any;
+      const connectionsData = entry.connections as any;
       let nextConnections = connectionsData;
       if (
         connectionsData &&
@@ -2535,7 +2535,7 @@ export class ListService {
       const isCompleted =
         entry.manga.chapters && nextProgress >= entry.manga.chapters;
 
-      let connectionsData = entry.connections as any;
+      const connectionsData = entry.connections as any;
       let nextConnections = connectionsData;
       if (
         connectionsData &&
@@ -2614,7 +2614,7 @@ export class ListService {
       );
 
       // Find the next count episodes to watch
-      let nextEps: { seasonNum: number; episodeNum: number }[] = [];
+      const nextEps: { seasonNum: number; episodeNum: number }[] = [];
 
       for (const season of seasons) {
         for (const ep of season.episodes) {
@@ -2897,7 +2897,9 @@ export class ListService {
         imdbId = connectionsObj.imdbId;
       } else {
         // Resolve dynamically from TVDB API
-        const remoteIds = await this.movieService.getRemoteIds(entry.movie.tvdbId);
+        const remoteIds = await this.movieService.getRemoteIds(
+          entry.movie.tvdbId,
+        );
         if (remoteIds) {
           tmdbId = remoteIds.tmdbId;
           imdbId = remoteIds.imdbId;
@@ -3204,7 +3206,10 @@ export class ListService {
     return exportData;
   }
 
-  public async exportMalXml(username: string, type: 'anime' | 'manga'): Promise<string> {
+  public async exportMalXml(
+    username: string,
+    type: 'anime' | 'manga',
+  ): Promise<string> {
     const normalizedUsername = username.toLowerCase();
     const formatDateForMal = (ts?: number | null) => {
       if (!ts) return '0000-00-00';
@@ -3221,12 +3226,18 @@ export class ListService {
 
       const mapStatusToMal = (s: string) => {
         switch (s) {
-          case 'WATCHING': return 'Watching';
-          case 'COMPLETED': return 'Completed';
-          case 'ON_HOLD': return 'On-Hold';
-          case 'DROPPED': return 'Dropped';
-          case 'PLANNING': return 'Plan to Watch';
-          default: return 'Plan to Watch';
+          case 'WATCHING':
+            return 'Watching';
+          case 'COMPLETED':
+            return 'Completed';
+          case 'ON_HOLD':
+            return 'On-Hold';
+          case 'DROPPED':
+            return 'Dropped';
+          case 'PLANNING':
+            return 'Plan to Watch';
+          default:
+            return 'Plan to Watch';
         }
       };
 
@@ -3269,12 +3280,18 @@ export class ListService {
 
       const mapStatusToMal = (s: string) => {
         switch (s) {
-          case 'READING': return 'Reading';
-          case 'COMPLETED': return 'Completed';
-          case 'ON_HOLD': return 'On-Hold';
-          case 'DROPPED': return 'Dropped';
-          case 'PLANNING': return 'Plan to Read';
-          default: return 'Plan to Read';
+          case 'READING':
+            return 'Reading';
+          case 'COMPLETED':
+            return 'Completed';
+          case 'ON_HOLD':
+            return 'On-Hold';
+          case 'DROPPED':
+            return 'Dropped';
+          case 'PLANNING':
+            return 'Plan to Read';
+          default:
+            return 'Plan to Read';
         }
       };
 
@@ -3313,13 +3330,20 @@ export class ListService {
     }
   }
 
-  public async startImport(username: string, payload: any): Promise<{ success: boolean; message: string }> {
+  public async startImport(
+    username: string,
+    payload: any,
+  ): Promise<{ success: boolean; message: string }> {
     const userId = await this.getUserId(username);
     void this.importRrListInBackground(userId, username, payload);
     return { success: true, message: 'Import started in the background.' };
   }
 
-  private async importRrListInBackground(userId: string, username: string, payload: any): Promise<void> {
+  private async importRrListInBackground(
+    userId: string,
+    username: string,
+    payload: any,
+  ): Promise<void> {
     this.logger.log(`Starting background list import for user ${username}`);
     let successCount = 0;
     let failureCount = 0;
@@ -3352,7 +3376,10 @@ export class ListService {
           });
           successCount++;
         } catch (err) {
-          this.logger.error(`Import anime entry failed for user ${username}:`, err);
+          this.logger.error(
+            `Import anime entry failed for user ${username}:`,
+            err,
+          );
           failureCount++;
         }
       }
@@ -3387,7 +3414,10 @@ export class ListService {
           });
           successCount++;
         } catch (err) {
-          this.logger.error(`Import manga entry failed for user ${username}:`, err);
+          this.logger.error(
+            `Import manga entry failed for user ${username}:`,
+            err,
+          );
           failureCount++;
         }
       }
@@ -3419,7 +3449,10 @@ export class ListService {
           });
           successCount++;
         } catch (err) {
-          this.logger.error(`Import TV entry failed for user ${username}:`, err);
+          this.logger.error(
+            `Import TV entry failed for user ${username}:`,
+            err,
+          );
           failureCount++;
         }
       }
@@ -3450,7 +3483,10 @@ export class ListService {
           });
           successCount++;
         } catch (err) {
-          this.logger.error(`Import Movie entry failed for user ${username}:`, err);
+          this.logger.error(
+            `Import Movie entry failed for user ${username}:`,
+            err,
+          );
           failureCount++;
         }
       }
@@ -3480,7 +3516,10 @@ export class ListService {
           });
           successCount++;
         } catch (err) {
-          this.logger.error(`Import Game entry failed for user ${username}:`, err);
+          this.logger.error(
+            `Import Game entry failed for user ${username}:`,
+            err,
+          );
           failureCount++;
         }
       }
@@ -3511,22 +3550,30 @@ export class ListService {
           });
           successCount++;
         } catch (err) {
-          this.logger.error(`Import Book entry failed for user ${username}:`, err);
+          this.logger.error(
+            `Import Book entry failed for user ${username}:`,
+            err,
+          );
           failureCount++;
         }
       }
     }
 
-    this.logger.log(`Completed list import for user ${username}. Success: ${successCount}, Failed: ${failureCount}`);
+    this.logger.log(
+      `Completed list import for user ${username}. Success: ${successCount}, Failed: ${failureCount}`,
+    );
 
     try {
       await this.notificationService.create(userId, {
         title: 'Media Lists Import Complete',
         message: `Successfully imported ${successCount} entries (${failureCount} failed).`,
-        type: 'INFO' as any,
+        type: 'INFO',
       });
     } catch (notifErr) {
-      this.logger.error(`Failed to send list import notification for user ${username}:`, notifErr);
+      this.logger.error(
+        `Failed to send list import notification for user ${username}:`,
+        notifErr,
+      );
     }
   }
 }

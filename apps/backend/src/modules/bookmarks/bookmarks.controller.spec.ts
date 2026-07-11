@@ -58,7 +58,10 @@ describe('BookmarksController', () => {
 
       const result = await controller.createOrUpdateBookmark(mockReq, dto);
 
-      expect(service.createOrUpdateBookmark).toHaveBeenCalledWith('user-123', dto);
+      expect(service.createOrUpdateBookmark).toHaveBeenCalledWith(
+        'user-123',
+        dto,
+      );
       expect(result.id).toBe('b-1');
     });
 

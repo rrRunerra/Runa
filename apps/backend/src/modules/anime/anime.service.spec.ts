@@ -338,7 +338,9 @@ describe('AnimeService', () => {
         locked: true,
       });
 
-      await expect(service.refreshAnime(1)).rejects.toThrow(rrConflictException);
+      await expect(service.refreshAnime(1)).rejects.toThrow(
+        rrConflictException,
+      );
     });
 
     it('should fetch fresh data, bust cache, set cooldown, and return updated anime', async () => {

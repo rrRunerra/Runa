@@ -1,4 +1,9 @@
-import { CallHandler, ExecutionContext, Logger, HttpException } from '@nestjs/common';
+import {
+  CallHandler,
+  ExecutionContext,
+  Logger,
+  HttpException,
+} from '@nestjs/common';
 import { LoggingInterceptor } from './logging.interceptor';
 import { of, throwError } from 'rxjs';
 
@@ -47,12 +52,16 @@ describe('LoggingInterceptor', () => {
     });
 
     it('should log execution time for successful requests', (done: jest.DoneCallback) => {
-      const loggerSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+      const loggerSpy = jest
+        .spyOn(Logger.prototype, 'log')
+        .mockImplementation();
 
       interceptor.intercept(mockExecutionContext, mockCallHandler).subscribe({
         next: () => {
           expect(loggerSpy).toHaveBeenCalled();
-          expect(loggerSpy.mock.calls[0][0]).toContain('[Debug] GET /test-url 200');
+          expect(loggerSpy.mock.calls[0][0]).toContain(
+            '[Debug] GET /test-url 200',
+          );
           loggerSpy.mockRestore();
           done();
         },
@@ -60,16 +69,24 @@ describe('LoggingInterceptor', () => {
     });
 
     it('should log execution time and error for failed requests', (done: jest.DoneCallback) => {
-      const loggerErrorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+      const loggerErrorSpy = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation();
       const mockError: Error = new Error('Test error');
-      mockCallHandler.handle = jest.fn().mockReturnValue(throwError(() => mockError));
+      mockCallHandler.handle = jest
+        .fn()
+        .mockReturnValue(throwError(() => mockError));
 
       interceptor.intercept(mockExecutionContext, mockCallHandler).subscribe({
         error: (err: unknown) => {
           expect(err).toBe(mockError);
           expect(loggerErrorSpy).toHaveBeenCalled();
-          expect(loggerErrorSpy.mock.calls[0][0]).toContain('[Debug] GET /test-url 500');
-          expect(loggerErrorSpy.mock.calls[0][0]).toContain('Error: Test error');
+          expect(loggerErrorSpy.mock.calls[0][0]).toContain(
+            '[Debug] GET /test-url 500',
+          );
+          expect(loggerErrorSpy.mock.calls[0][0]).toContain(
+            'Error: Test error',
+          );
           loggerErrorSpy.mockRestore();
           done();
         },
@@ -77,15 +94,21 @@ describe('LoggingInterceptor', () => {
     });
 
     it('should log status code from HttpException', (done: jest.DoneCallback) => {
-      const loggerErrorSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+      const loggerErrorSpy = jest
+        .spyOn(Logger.prototype, 'error')
+        .mockImplementation();
       const mockHttpError: HttpException = new HttpException('Forbidden', 403);
-      mockCallHandler.handle = jest.fn().mockReturnValue(throwError(() => mockHttpError));
+      mockCallHandler.handle = jest
+        .fn()
+        .mockReturnValue(throwError(() => mockHttpError));
 
       interceptor.intercept(mockExecutionContext, mockCallHandler).subscribe({
         error: (err: unknown) => {
           expect(err).toBe(mockHttpError);
           expect(loggerErrorSpy).toHaveBeenCalled();
-          expect(loggerErrorSpy.mock.calls[0][0]).toContain('[Debug] GET /test-url 403');
+          expect(loggerErrorSpy.mock.calls[0][0]).toContain(
+            '[Debug] GET /test-url 403',
+          );
           expect(loggerErrorSpy.mock.calls[0][0]).toContain('Error: Forbidden');
           loggerErrorSpy.mockRestore();
           done();
@@ -106,7 +129,9 @@ describe('LoggingInterceptor', () => {
     });
 
     it('should pass through without logging', (done: jest.DoneCallback) => {
-      const loggerSpy = jest.spyOn(Logger.prototype, 'log').mockImplementation();
+      const loggerSpy = jest
+        .spyOn(Logger.prototype, 'log')
+        .mockImplementation();
 
       interceptor.intercept(mockExecutionContext, mockCallHandler).subscribe({
         next: (val: unknown) => {

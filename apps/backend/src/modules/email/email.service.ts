@@ -10,11 +10,7 @@ import { ImapFlow } from 'imapflow';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { CacheService } from '../../providers/cache/cache.service';
 import { encrypt as encryptServer, decrypt } from '@runa/crypto/server';
-import {
-  generateDataKey,
-  encrypt,
-  wrapKey,
-} from '@runa/crypto/node';
+import { generateDataKey, encrypt, wrapKey } from '@runa/crypto/node';
 import { EmailAccountDto, SendEmailDto, SaveDraftDto } from './email.dto';
 import { NotificationGateway } from '../notification/notification.gateway';
 
@@ -812,11 +808,13 @@ export class EmailService {
     const uids = messages.map((m) => m.uid);
 
     // Sync remote deletion to IMAP server in the background
-    this.deleteRemoteMessages(account, [{ folder: 'trash', uids }]).catch((remoteErr) => {
-      this.logger.error(
-        `Background remote sync empty trash failed: ${remoteErr instanceof Error ? remoteErr.message : String(remoteErr)}`,
-      );
-    });
+    this.deleteRemoteMessages(account, [{ folder: 'trash', uids }]).catch(
+      (remoteErr) => {
+        this.logger.error(
+          `Background remote sync empty trash failed: ${remoteErr instanceof Error ? remoteErr.message : String(remoteErr)}`,
+        );
+      },
+    );
 
     await this.prisma.client.emailMessage.deleteMany({
       where: {
@@ -1088,10 +1086,7 @@ export class EmailService {
         if (ccVal) ccVal = encrypt(ccVal, dataKey);
         if (bccVal) bccVal = encrypt(bccVal, dataKey);
 
-        encryptedKey = wrapKey(
-          dataKey,
-          userRecord.userPublicKey,
-        ) as any;
+        encryptedKey = wrapKey(dataKey, userRecord.userPublicKey) as any;
       } catch (encErr) {
         this.logger.error(`E2EE encryption failed for sent email:`, encErr);
       }
@@ -1151,7 +1146,8 @@ export class EmailService {
       : account.emailAddress;
 
     const escapedBodyHtml =
-      data.html || (data.body ? escapeHtml(data.body).replace(/\n/g, '<br />') : '');
+      data.html ||
+      (data.body ? escapeHtml(data.body).replace(/\n/g, '<br />') : '');
 
     // Determine the next local UID for the drafts folder
     const lastDraftMessage = await this.prisma.client.emailMessage.findFirst({
@@ -1189,10 +1185,7 @@ export class EmailService {
         if (ccVal) ccVal = encrypt(ccVal, dataKey);
         if (bccVal) bccVal = encrypt(bccVal, dataKey);
 
-        encryptedKey = wrapKey(
-          dataKey,
-          userRecord.userPublicKey,
-        ) as any;
+        encryptedKey = wrapKey(dataKey, userRecord.userPublicKey) as any;
       } catch (encErr) {
         this.logger.error(`E2EE encryption failed for draft email:`, encErr);
       }
@@ -1318,10 +1311,7 @@ export class EmailService {
         const dataKey = generateDataKey();
         if (subject) subject = encrypt(subject, dataKey);
         bodyText = encrypt(bodyText, dataKey);
-        encryptedKey = wrapKey(
-          dataKey,
-          user.userPublicKey,
-        ) as any;
+        encryptedKey = wrapKey(dataKey, user.userPublicKey) as any;
       } catch (encErr) {
         this.logger.error(`Canned response encryption failed:`, encErr);
       }
@@ -1365,10 +1355,7 @@ export class EmailService {
         const dataKey = generateDataKey();
         if (subject) subject = encrypt(subject, dataKey);
         bodyText = encrypt(bodyText, dataKey);
-        encryptedKey = wrapKey(
-          dataKey,
-          user.userPublicKey,
-        ) as any;
+        encryptedKey = wrapKey(dataKey, user.userPublicKey) as any;
       } catch (encErr) {
         this.logger.error(`Canned response update encryption failed:`, encErr);
       }

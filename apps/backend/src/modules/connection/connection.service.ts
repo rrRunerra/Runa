@@ -55,8 +55,14 @@ export class ConnectionService implements OnModuleInit {
     });
 
     await this.loader.loadConnections();
-    console.log('[ConnectionLoader Debug] ConnectionProvider keys:', Object.keys(ConnectionProvider));
-    console.log('[ConnectionLoader Debug] Loaded connections:', Array.from(this.loader.getConnections().keys()));
+    console.log(
+      '[ConnectionLoader Debug] ConnectionProvider keys:',
+      Object.keys(ConnectionProvider),
+    );
+    console.log(
+      '[ConnectionLoader Debug] Loaded connections:',
+      Array.from(this.loader.getConnections().keys()),
+    );
   }
 
   private toProvider(value: string): ConnectionProvider {
@@ -69,7 +75,6 @@ export class ConnectionService implements OnModuleInit {
     return upper;
   }
 
-  
   public getConnectionInstance(providerId: string): any {
     const provider = this.loader.getConnection(this.toProvider(providerId));
     if (!provider) {
@@ -137,11 +142,7 @@ export class ConnectionService implements OnModuleInit {
           : [];
       capabilitiesFilter = rawCaps
         .map((cap) => cap.trim().toUpperCase() as ConnectionCapability)
-        .filter((cap) =>
-          Object.values(ConnectionCapability).includes(
-            cap as ConnectionCapability,
-          ),
-        );
+        .filter((cap) => Object.values(ConnectionCapability).includes(cap));
     }
 
     if (capabilitiesFilter && capabilitiesFilter.length > 0) {
@@ -150,7 +151,7 @@ export class ConnectionService implements OnModuleInit {
           const providerInstance = this.loader.getConnection(conn.provider);
           if (!providerInstance) return false;
           return providerInstance.capabilities.some((cap) =>
-            capabilitiesFilter!.includes(cap),
+            capabilitiesFilter.includes(cap),
           );
         } catch {
           return false;
@@ -853,10 +854,14 @@ export class ConnectionService implements OnModuleInit {
         );
       }
     } catch (error: any) {
-      const isRateLimit = error.message?.includes('Too Many Requests') || error.message?.includes('429');
+      const isRateLimit =
+        error.message?.includes('Too Many Requests') ||
+        error.message?.includes('429');
 
       if (isRateLimit) {
-        console.warn(`Background import rate limited for user ${username}: ${error.message}`);
+        console.warn(
+          `Background import rate limited for user ${username}: ${error.message}`,
+        );
         this.activeImports.set(key, {
           total: 0,
           processed: 0,
@@ -872,7 +877,8 @@ export class ConnectionService implements OnModuleInit {
           if (user) {
             await this.notificationService.create(user.id, {
               title: 'AniList Import Rate Limited',
-              message: 'The import process was rate limited by AniList. Please try again later.',
+              message:
+                'The import process was rate limited by AniList. Please try again later.',
               type: 'INFO',
             });
           }

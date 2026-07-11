@@ -80,7 +80,7 @@ export class GameExternal {
     for (const tag of tags) {
       record[tag.slug] = tag.name;
     }
-    return record as unknown as Prisma.InputJsonValue;
+    return record;
   }
 
   public async search(query: string): Promise<GameSearchEntity[]> {
@@ -144,7 +144,7 @@ export class GameExternal {
             status: item.released ? 'RELEASED' : 'TBA',
             isAdult,
             averageScore: item.metacritic ?? null,
-          } as GameSearchEntity;
+          };
         }),
       );
 
@@ -220,7 +220,8 @@ export class GameExternal {
         titleNative: game.name_original || null,
         slug: game.slug || null,
         coverImage: game.background_image || null,
-        backgroundImage: game.background_image || game.background_image_additional || null,
+        backgroundImage:
+          game.background_image || game.background_image_additional || null,
         description,
         releasedYear: released.releasedYear,
         releasedMonth: released.releasedMonth,

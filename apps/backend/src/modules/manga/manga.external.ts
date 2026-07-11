@@ -304,10 +304,13 @@ export class MangaExternal {
         let hasNextPage = true;
 
         while (hasNextPage) {
-          const charData = (await this.fetchWithRateLimit(this.getCharactersQuery, {
-            id: anilistId,
-            page: currentPage,
-          })) as {
+          const charData = (await this.fetchWithRateLimit(
+            this.getCharactersQuery,
+            {
+              id: anilistId,
+              page: currentPage,
+            },
+          )) as {
             data: {
               Media: {
                 characters: {
@@ -443,7 +446,7 @@ export class MangaExternal {
       this.logger.debug(
         `Manga with AniList ID ${item.id} is locked, skipping upsert`,
       );
-      return existing
+      return existing;
     }
 
     const manga = await this.prisma.client.aquilaManga.upsert({

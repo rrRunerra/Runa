@@ -109,7 +109,7 @@ describe('MangaQueueService', () => {
       await new Promise((resolve) => process.nextTick(resolve));
 
       // Resolve the first search
-      resolveSearch!(mockSearchResults);
+      resolveSearch(mockSearchResults);
       await new Promise((resolve) => process.nextTick(resolve));
 
       // External should only be called once despite adding the same search twice

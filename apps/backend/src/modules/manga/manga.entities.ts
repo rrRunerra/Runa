@@ -1,5 +1,10 @@
 import { MangaFormat, MangaStatus } from '@runa/database';
-import type { RelationEntity, MediaTag, CharacterEntity, StudioEntity } from '../anime/anime.entities';
+import type {
+  RelationEntity,
+  MediaTag,
+  CharacterEntity,
+  StudioEntity,
+} from '../anime/anime.entities';
 
 export interface MangaCharacterEntity {
   mangaId: number;

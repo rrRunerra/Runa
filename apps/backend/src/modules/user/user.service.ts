@@ -395,7 +395,7 @@ export class UserService {
     }
 
     const updated = await this.userRepository.updateUser(userId, {
-      profileSettings: dto.profileSettings as Prisma.JsonObject,
+      profileSettings: dto.profileSettings,
     });
 
     await this.cacheService.del(`user:profile:${user.username}`);
@@ -747,7 +747,7 @@ export class UserService {
         id: credentialID,
         publicKey: Buffer.from(credentialPublicKey).toString('base64url'),
         counter,
-        transports: (transports as string[]) ?? body.response?.transports ?? [],
+        transports: transports ?? body.response?.transports ?? [],
         name: name ?? 'Passkey',
         user: { connect: { id: user.id } },
       },
@@ -1056,7 +1056,8 @@ export class UserService {
 
     let expiresAt: Date | null = null;
     if (existing.expiresAt) {
-      const durationMs = existing.expiresAt.getTime() - existing.createdAt.getTime();
+      const durationMs =
+        existing.expiresAt.getTime() - existing.createdAt.getTime();
       expiresAt = new Date(Date.now() + durationMs);
     }
 

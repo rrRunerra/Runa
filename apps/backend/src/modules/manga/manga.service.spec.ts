@@ -330,7 +330,9 @@ describe('MangaService', () => {
         locked: true,
       });
 
-      await expect(service.refreshManga(1)).rejects.toThrow(rrConflictException);
+      await expect(service.refreshManga(1)).rejects.toThrow(
+        rrConflictException,
+      );
     });
 
     it('should fetch fresh data, bust cache, set cooldown, and return updated manga', async () => {

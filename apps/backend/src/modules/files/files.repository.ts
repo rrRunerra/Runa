@@ -44,10 +44,7 @@ export class FilesRepository {
   async listLaceraFiles(userId: string) {
     return this.prisma.client.laceraFile.findMany({
       where: {
-        OR: [
-          { userId },
-          { shares: { some: { userId } } },
-        ],
+        OR: [{ userId }, { shares: { some: { userId } } }],
       },
       include: {
         user: {
@@ -168,7 +165,10 @@ export class FilesRepository {
     return user?.vaultPinHash ?? null;
   }
 
-  async updateUserVaultPinHash(userId: string, hash: string | null): Promise<void> {
+  async updateUserVaultPinHash(
+    userId: string,
+    hash: string | null,
+  ): Promise<void> {
     await this.prisma.client.user.update({
       where: { id: userId },
       data: { vaultPinHash: hash },
@@ -184,7 +184,9 @@ export class FilesRepository {
     });
   }
 
-  async findUserVaultFiles(userId: string): Promise<{ key: string; isFolder: boolean }[]> {
+  async findUserVaultFiles(
+    userId: string,
+  ): Promise<{ key: string; isFolder: boolean }[]> {
     return this.prisma.client.laceraFile.findMany({
       where: { userId, isVault: true },
       select: { key: true, isFolder: true },

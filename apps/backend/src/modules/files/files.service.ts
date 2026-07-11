@@ -196,7 +196,7 @@ export class FilesService {
       });
     }
 
-    const isShared = record.shares.some(s => s.userId === requestingUserId);
+    const isShared = record.shares.some((s) => s.userId === requestingUserId);
 
     if (!record.isPublic && record.userId !== requestingUserId && !isShared) {
       throw new rrForbiddenException(`${this.moduleCode}YDNAHTA001`, {
@@ -234,7 +234,9 @@ export class FilesService {
       );
       return response.Body as Readable;
     } catch (err: unknown) {
-      this.logger.warn(`[S3] Object not found for key="${key}": ${String(err)}`);
+      this.logger.warn(
+        `[S3] Object not found for key="${key}": ${String(err)}`,
+      );
       return null;
     }
   }
@@ -276,7 +278,9 @@ export class FilesService {
     }
 
     const isOwner = userId ? record.userId === userId : false;
-    const shareRecord = userId ? record.shares.find((s) => s.userId === userId) : null;
+    const shareRecord = userId
+      ? record.shares.find((s) => s.userId === userId)
+      : null;
 
     let hasEditAccess = isOwner || record.isPublic;
     if (shareRecord) {
@@ -408,11 +412,7 @@ export class FilesService {
     });
   }
 
-  async unshareLaceraFile(
-    id: string,
-    userId: string,
-    recipientId: string,
-  ) {
+  async unshareLaceraFile(id: string, userId: string, recipientId: string) {
     const record = await this.filesRepository.findLaceraFileById(id);
     if (!record) {
       throw new rrNotFoundException(`${this.moduleCode}LNF007`, {
@@ -461,7 +461,10 @@ export class FilesService {
             }),
           );
         } catch (err: unknown) {
-          this.logger.warn(`Failed to delete S3 object for key ${target.key}:`, err);
+          this.logger.warn(
+            `Failed to delete S3 object for key ${target.key}:`,
+            err,
+          );
         }
       }
     }
@@ -504,8 +507,6 @@ export class FilesService {
     return bcrypt.compare(pin, hash);
   }
 
-
-
   async resetVault(userId: string): Promise<void> {
     const vaultFiles = await this.filesRepository.findUserVaultFiles(userId);
 
@@ -516,10 +517,13 @@ export class FilesService {
             new DeleteObjectCommand({
               Bucket: this.lacertaBucket,
               Key: file.key,
-            })
+            }),
           );
         } catch (err: unknown) {
-          this.logger.warn(`Failed to delete S3 object for vault key ${file.key}:`, err);
+          this.logger.warn(
+            `Failed to delete S3 object for vault key ${file.key}:`,
+            err,
+          );
         }
       }
     }

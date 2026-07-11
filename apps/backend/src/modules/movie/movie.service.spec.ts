@@ -100,10 +100,18 @@ describe('MovieService', () => {
       };
 
       (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({ json: jest.fn().mockResolvedValue(mockLoginResponse) }) // 1st login
-        .mockResolvedValueOnce({ json: jest.fn().mockResolvedValue(mockSearchError) })   // 1st search fails
-        .mockResolvedValueOnce({ json: jest.fn().mockResolvedValue(mockLoginResponse) }) // 2nd login (re-auth)
-        .mockResolvedValueOnce({ json: jest.fn().mockResolvedValue(mockSearchSuccess) }); // retry search succeeds
+        .mockResolvedValueOnce({
+          json: jest.fn().mockResolvedValue(mockLoginResponse),
+        }) // 1st login
+        .mockResolvedValueOnce({
+          json: jest.fn().mockResolvedValue(mockSearchError),
+        }) // 1st search fails
+        .mockResolvedValueOnce({
+          json: jest.fn().mockResolvedValue(mockLoginResponse),
+        }) // 2nd login (re-auth)
+        .mockResolvedValueOnce({
+          json: jest.fn().mockResolvedValue(mockSearchSuccess),
+        }); // retry search succeeds
 
       const result = await service.search('MovieName');
       expect(result.length).toBe(1);
@@ -112,11 +120,17 @@ describe('MovieService', () => {
 
   describe('getMovie', () => {
     it('should throw error if ID is NaN', async () => {
-      await expect(service.getMovie('not-a-number')).rejects.toThrow('Invalid id format');
+      await expect(service.getMovie('not-a-number')).rejects.toThrow(
+        'Invalid id format',
+      );
     });
 
     it('should return cached movie if fresh and description is available', async () => {
-      const dbMovie = { tvdbId: 123, description: 'Has description', updatedAt: new Date() };
+      const dbMovie = {
+        tvdbId: 123,
+        description: 'Has description',
+        updatedAt: new Date(),
+      };
       mockMovieRepository.findByTvdbId.mockResolvedValue(dbMovie);
       const mappedMedia = { id: '123', title: { romaji: 'Cached Movie' } };
       mockMovieRepository.toMedia.mockReturnValue(mappedMedia);
@@ -143,16 +157,41 @@ describe('MovieService', () => {
           originalLanguage: 'eng',
           artworks: [{ type: 16, image: 'banner-16' }],
           studios: [{ id: 1, name: 'Paramount' }],
-          characters: [{ name: 'Protagonist', personName: 'Actor', image: 'c-img', peopleType: 'Actor' }],
-          trailers: [{ id: 1, name: 'Teaser', url: 'youtube.com/teaser', language: 'eng' }],
+          characters: [
+            {
+              name: 'Protagonist',
+              personName: 'Actor',
+              image: 'c-img',
+              peopleType: 'Actor',
+            },
+          ],
+          trailers: [
+            {
+              id: 1,
+              name: 'Teaser',
+              url: 'youtube.com/teaser',
+              language: 'eng',
+            },
+          ],
         },
       };
-      const mockTransResponse = { data: { name: 'Translated English Name', overview: 'Translated overview' } };
+      const mockTransResponse = {
+        data: {
+          name: 'Translated English Name',
+          overview: 'Translated overview',
+        },
+      };
 
       (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({ json: jest.fn().mockResolvedValue(mockLoginResponse) })
-        .mockResolvedValueOnce({ json: jest.fn().mockResolvedValue(mockMovieResponse) })
-        .mockResolvedValueOnce({ json: jest.fn().mockResolvedValue(mockTransResponse) });
+        .mockResolvedValueOnce({
+          json: jest.fn().mockResolvedValue(mockLoginResponse),
+        })
+        .mockResolvedValueOnce({
+          json: jest.fn().mockResolvedValue(mockMovieResponse),
+        })
+        .mockResolvedValueOnce({
+          json: jest.fn().mockResolvedValue(mockTransResponse),
+        });
 
       const result = await service.getMovie('123');
 
@@ -172,7 +211,9 @@ describe('MovieService', () => {
 
       const mockLoginResponse = { data: { token: 'mock-token' } };
       (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({ json: jest.fn().mockResolvedValue(mockLoginResponse) })
+        .mockResolvedValueOnce({
+          json: jest.fn().mockResolvedValue(mockLoginResponse),
+        })
         .mockRejectedValue(new Error('TVDB offline'));
 
       const result = await service.getMovie('123');
@@ -183,7 +224,9 @@ describe('MovieService', () => {
       mockMovieRepository.findByTvdbId.mockResolvedValue(null);
       const mockLoginResponse = { data: { token: 'mock-token' } };
       (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({ json: jest.fn().mockResolvedValue(mockLoginResponse) })
+        .mockResolvedValueOnce({
+          json: jest.fn().mockResolvedValue(mockLoginResponse),
+        })
         .mockRejectedValue(new Error('TVDB offline'));
 
       await expect(service.getMovie('123')).rejects.toThrow(NotFoundException);
@@ -204,13 +247,23 @@ describe('MovieService', () => {
       mockMovieRepository.findByTvdbId.mockResolvedValue(null);
 
       const mockLoginResponse = { data: { token: 'mock-token' } };
-      const mockMovieResponse = { data: { id: 123, name: 'Title', overview: 'Overview' } };
-      const mockTransResponse = { data: { name: 'Eng Title', overview: 'Eng Overview' } };
+      const mockMovieResponse = {
+        data: { id: 123, name: 'Title', overview: 'Overview' },
+      };
+      const mockTransResponse = {
+        data: { name: 'Eng Title', overview: 'Eng Overview' },
+      };
 
       (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({ json: jest.fn().mockResolvedValue(mockLoginResponse) })
-        .mockResolvedValueOnce({ json: jest.fn().mockResolvedValue(mockMovieResponse) })
-        .mockResolvedValueOnce({ json: jest.fn().mockResolvedValue(mockTransResponse) });
+        .mockResolvedValueOnce({
+          json: jest.fn().mockResolvedValue(mockLoginResponse),
+        })
+        .mockResolvedValueOnce({
+          json: jest.fn().mockResolvedValue(mockMovieResponse),
+        })
+        .mockResolvedValueOnce({
+          json: jest.fn().mockResolvedValue(mockTransResponse),
+        });
 
       const upserted = { tvdbId: 123, titleEnglish: 'Eng Title' };
       mockMovieRepository.upsert.mockResolvedValue(upserted);
@@ -228,7 +281,9 @@ describe('MovieService', () => {
 
       const mockLoginResponse = { data: { token: 'mock-token' } };
       (global.fetch as jest.Mock)
-        .mockResolvedValueOnce({ json: jest.fn().mockResolvedValue(mockLoginResponse) })
+        .mockResolvedValueOnce({
+          json: jest.fn().mockResolvedValue(mockLoginResponse),
+        })
         .mockRejectedValue(new Error('TVDB offline'));
 
       const stub = { tvdbId: 123, titleRomaji: 'Stub Title' };

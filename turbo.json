@@ -14,7 +14,10 @@
       "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },
     "lint": {
-      "dependsOn": ["^lint"]
+      "dependsOn": ["^lint"],
+      "cache": true,
+      "persistent": false,
+      "outputs": []
     },
     "check-types": {
       "dependsOn": ["^check-types"]

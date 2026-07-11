@@ -2,7 +2,7 @@ import { Injectable, OnModuleDestroy } from '@nestjs/common';
 import { createCacheClient, Cache } from '@runa/cache';
 
 @Injectable()
-export class CacheService implements  OnModuleDestroy {
+export class CacheService implements OnModuleDestroy {
   private readonly client: Cache = createCacheClient();
 
   async get<T>(key: string): Promise<T | null> {

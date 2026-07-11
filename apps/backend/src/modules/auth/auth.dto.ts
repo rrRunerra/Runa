@@ -9,7 +9,9 @@ export class LoginAuthDto {
   @IsOptional()
   password?: string;
 
-  @IsString({ message: 'LnAhDto-MSTMBAS001: Mfa success token must be a string' })
+  @IsString({
+    message: 'LnAhDto-MSTMBAS001: Mfa success token must be a string',
+  })
   @IsOptional()
   mfaSuccessToken?: string;
 

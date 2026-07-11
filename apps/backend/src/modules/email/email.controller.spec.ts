@@ -70,18 +70,24 @@ describe('EmailController', () => {
 
       const result = await controller.getEmailAccounts(mockReq);
 
-      expect(mockEmailService.getEmailAccounts).toHaveBeenCalledWith('john_doe');
+      expect(mockEmailService.getEmailAccounts).toHaveBeenCalledWith(
+        'john_doe',
+      );
       expect(result).toEqual([]);
     });
   });
 
   describe('fetchEmailAutoconfig', () => {
     it('should fetch autoconfig for domain', async () => {
-      mockEmailService.fetchEmailAutoconfig.mockResolvedValue({ imapHost: 'imap.test.com' });
+      mockEmailService.fetchEmailAutoconfig.mockResolvedValue({
+        imapHost: 'imap.test.com',
+      });
 
       const result = await controller.fetchEmailAutoconfig('test.com');
 
-      expect(mockEmailService.fetchEmailAutoconfig).toHaveBeenCalledWith('test.com');
+      expect(mockEmailService.fetchEmailAutoconfig).toHaveBeenCalledWith(
+        'test.com',
+      );
       expect(result.imapHost).toBe('imap.test.com');
     });
   });

@@ -19,9 +19,7 @@ describe('AuthController', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
-      providers: [
-        { provide: AuthService, useValue: mockAuthService },
-      ],
+      providers: [{ provide: AuthService, useValue: mockAuthService }],
     }).compile();
 
     controller = module.get<AuthController>(AuthController);
@@ -59,12 +57,20 @@ describe('AuthController', () => {
 
   describe('verifyMfa', () => {
     it('should call authService.verifyMfa and return success token', async () => {
-      const expectedResponse = { success: true, mfaSuccessToken: 'success-token' };
+      const expectedResponse = {
+        success: true,
+        mfaSuccessToken: 'success-token',
+      };
       mockAuthService.verifyMfa.mockResolvedValue(expectedResponse);
 
       const result = await controller.verifyMfa('temp-token', 'totp', '123456');
 
-      expect(service.verifyMfa).toHaveBeenCalledWith('temp-token', 'totp', '123456', undefined);
+      expect(service.verifyMfa).toHaveBeenCalledWith(
+        'temp-token',
+        'totp',
+        '123456',
+        undefined,
+      );
       expect(result).toBe(expectedResponse);
     });
   });
@@ -72,7 +78,9 @@ describe('AuthController', () => {
   describe('generatePasskeyLoginOptions', () => {
     it('should call authService.generatePasskeyLoginOptions', async () => {
       const expectedResponse = { options: {}, userId: 'user-1' };
-      mockAuthService.generatePasskeyLoginOptions.mockResolvedValue(expectedResponse);
+      mockAuthService.generatePasskeyLoginOptions.mockResolvedValue(
+        expectedResponse,
+      );
 
       const result = await controller.generatePasskeyLoginOptions('user');
 
@@ -86,9 +94,13 @@ describe('AuthController', () => {
       const expectedResponse = { token: 'jwt', user: {} as any };
       mockAuthService.verifyPasskeyLogin.mockResolvedValue(expectedResponse);
 
-      const result = await controller.verifyPasskeyLogin('user', { response: 'mock' });
+      const result = await controller.verifyPasskeyLogin('user', {
+        response: 'mock',
+      });
 
-      expect(service.verifyPasskeyLogin).toHaveBeenCalledWith('user', { response: 'mock' });
+      expect(service.verifyPasskeyLogin).toHaveBeenCalledWith('user', {
+        response: 'mock',
+      });
       expect(result).toBe(expectedResponse);
     });
   });

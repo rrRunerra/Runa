@@ -31,7 +31,7 @@ export class BookmarksService {
     let result: BookmarkEntity;
 
     if (existing) {
-      result = await this.prisma.client.polarisUserBookMarks.update({
+      result = (await this.prisma.client.polarisUserBookMarks.update({
         where: { id: existing.id },
         data: {
           description: dto.description,
@@ -42,9 +42,9 @@ export class BookmarksService {
           connectionColor: dto.connectionColor || null,
           starColor: dto.starColor || null,
         },
-      }) as unknown as BookmarkEntity;
+      })) as unknown as BookmarkEntity;
     } else {
-      result = await this.prisma.client.polarisUserBookMarks.create({
+      result = (await this.prisma.client.polarisUserBookMarks.create({
         data: {
           userId,
           name: dto.name,
@@ -56,7 +56,7 @@ export class BookmarksService {
           connectionColor: dto.connectionColor || null,
           starColor: dto.starColor || null,
         },
-      }) as unknown as BookmarkEntity;
+      })) as unknown as BookmarkEntity;
     }
 
     // Bust bookmarks cache for user
@@ -73,10 +73,10 @@ export class BookmarksService {
     const cached = await this.cache.get<BookmarkEntity[]>(cacheKey);
     if (cached) return cached;
 
-    const bookmarks = await this.prisma.client.polarisUserBookMarks.findMany({
+    const bookmarks = (await this.prisma.client.polarisUserBookMarks.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
-    }) as unknown as BookmarkEntity[];
+    })) as unknown as BookmarkEntity[];
 
     await this.cache.set(cacheKey, bookmarks, 300); // 5 min TTL
     return bookmarks;

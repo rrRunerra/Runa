@@ -153,7 +153,7 @@ export class StatsRepository {
           },
         },
       },
-    }) as unknown as AnimeListEntry[];
+    });
   }
 
   public async findMangaList(username: string): Promise<MangaListEntry[]> {
@@ -173,7 +173,7 @@ export class StatsRepository {
           },
         },
       },
-    }) as unknown as MangaListEntry[];
+    });
   }
 
   public async findTvList(username: string): Promise<TvListEntry[]> {
@@ -208,7 +208,7 @@ export class StatsRepository {
           },
         },
       },
-    }) as unknown as MovieListEntry[];
+    });
   }
 
   public async findGameList(username: string): Promise<GameListEntry[]> {
@@ -225,7 +225,7 @@ export class StatsRepository {
           },
         },
       },
-    }) as unknown as GameListEntry[];
+    });
   }
 
   public async findBookList(username: string): Promise<BookListEntry[]> {
@@ -242,6 +242,6 @@ export class StatsRepository {
           },
         },
       },
-    }) as unknown as BookListEntry[];
+    });
   }
 }

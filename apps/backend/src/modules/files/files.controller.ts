@@ -43,7 +43,8 @@ import type {
 // OnlyOffice E2EE crypto helpers
 // ---------------------------------------------------------------------------
 function decryptFileBuffer(encryptedBuffer: Buffer, keyBuffer: Buffer): Buffer {
-  if (encryptedBuffer.length < 28) throw new Error('Encrypted buffer too short');
+  if (encryptedBuffer.length < 28)
+    throw new Error('Encrypted buffer too short');
   const iv = encryptedBuffer.subarray(0, 12);
   const tag = encryptedBuffer.subarray(12, 28);
   const ciphertext = encryptedBuffer.subarray(28);
@@ -55,10 +56,15 @@ function decryptFileBuffer(encryptedBuffer: Buffer, keyBuffer: Buffer): Buffer {
 function encryptFileBuffer(plaintextBuffer: Buffer, keyBuffer: Buffer): Buffer {
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv('aes-256-gcm', keyBuffer, iv);
-  const ciphertext = Buffer.concat([cipher.update(plaintextBuffer), cipher.final()]);
+  const ciphertext = Buffer.concat([
+    cipher.update(plaintextBuffer),
+    cipher.final(),
+  ]);
   const tag = cipher.getAuthTag();
   const out = Buffer.alloc(12 + 16 + ciphertext.length);
-  iv.copy(out, 0); tag.copy(out, 12); ciphertext.copy(out, 28);
+  iv.copy(out, 0);
+  tag.copy(out, 12);
+  ciphertext.copy(out, 28);
   return out;
 }
 
@@ -78,7 +84,9 @@ const ALLOWED_IMAGE_TYPES = new Set([
 export class FilesController {
   private readonly moduleCode = 'FsCtr-';
   private readonly logger = new Logger(FilesController.name);
-  private readonly ooSecret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET);
+  private readonly ooSecret = new TextEncoder().encode(
+    process.env.NEXTAUTH_SECRET,
+  );
 
   constructor(
     private readonly filesService: FilesService,
@@ -170,10 +178,7 @@ export class FilesController {
   }
 
   @Post('files/lacerta/vault/setup')
-  async setupVaultPin(
-    @Req() req: ExtendedRequest,
-    @Body('pin') pin: string,
-  ) {
+  async setupVaultPin(@Req() req: ExtendedRequest, @Body('pin') pin: string) {
     const userId = req.user?.id;
     if (!userId) {
       throw new rrUnauthorizedException(`${this.moduleCode}VAULT002`, {
@@ -190,10 +195,7 @@ export class FilesController {
   }
 
   @Post('files/lacerta/vault/verify')
-  async verifyVaultPin(
-    @Req() req: ExtendedRequest,
-    @Body('pin') pin: string,
-  ) {
+  async verifyVaultPin(@Req() req: ExtendedRequest, @Body('pin') pin: string) {
     const userId = req.user?.id;
     if (!userId) {
       throw new rrUnauthorizedException(`${this.moduleCode}VAULT004`, {
@@ -378,10 +380,7 @@ export class FilesController {
   // ---------------------------------------------------------------------------
 
   @Delete('files/lacerta/:id')
-  async deleteLaceraFile(
-    @Param('id') id: string,
-    @Req() req: ExtendedRequest,
-  ) {
+  async deleteLaceraFile(@Param('id') id: string, @Req() req: ExtendedRequest) {
     const userId = req.user?.id;
     if (!userId) {
       throw new rrUnauthorizedException(`${this.moduleCode}UA007`, {
@@ -456,7 +455,9 @@ export class FilesController {
     @Query('fileKey') fileKey: string,
     @Res() res: Response,
   ): Promise<void> {
-    this.logger.log(`[OO-DL] id="${id}" hasToken=${!!token} hasFileKey=${!!fileKey}`);
+    this.logger.log(
+      `[OO-DL] id="${id}" hasToken=${!!token} hasFileKey=${!!fileKey}`,
+    );
 
     if (!fileKey) {
       res.status(HttpStatus.BAD_REQUEST).json({ message: 'fileKey required' });
@@ -469,7 +470,9 @@ export class FilesController {
       res.status(HttpStatus.NOT_FOUND).json({ message: 'File not found' });
       return;
     }
-    this.logger.log(`[OO-DL] Found file key="${file.key}" userId="${file.userId}"`);
+    this.logger.log(
+      `[OO-DL] Found file key="${file.key}" userId="${file.userId}"`,
+    );
 
     let hasAccess = false;
     let userId: string | undefined;
@@ -480,7 +483,9 @@ export class FilesController {
         if (userId) {
           const isOwner = file.userId === userId;
           const isShared = file.shares.some((s: any) => s.userId === userId);
-          this.logger.log(`[OO-DL] JWT userId="${userId}" isOwner=${isOwner} isShared=${isShared}`);
+          this.logger.log(
+            `[OO-DL] JWT userId="${userId}" isOwner=${isOwner} isShared=${isShared}`,
+          );
           if (isOwner || isShared) hasAccess = true;
         }
       } catch (err: any) {
@@ -494,26 +499,39 @@ export class FilesController {
     }
 
     try {
-      const stream = await this.filesService.getLaceraFileStreamDirect(file.key);
+      const stream = await this.filesService.getLaceraFileStreamDirect(
+        file.key,
+      );
       if (!stream) {
         this.logger.error(`[OO-DL] S3 object missing for key="${file.key}"`);
-        res.status(HttpStatus.NOT_FOUND).json({ message: 'File data not found in storage' });
+        res
+          .status(HttpStatus.NOT_FOUND)
+          .json({ message: 'File data not found in storage' });
         return;
       }
       this.logger.log(`[OO-DL] Got S3 stream, reading...`);
       const chunks: Buffer[] = [];
       for await (const chunk of stream) chunks.push(Buffer.from(chunk));
       const encryptedBuffer = Buffer.concat(chunks);
-      this.logger.log(`[OO-DL] Read ${encryptedBuffer.length} bytes, decrypting...`);
+      this.logger.log(
+        `[OO-DL] Read ${encryptedBuffer.length} bytes, decrypting...`,
+      );
       const keyBuffer = Buffer.from(fileKey, 'base64url');
       const decrypted = decryptFileBuffer(encryptedBuffer, keyBuffer);
-      this.logger.log(`[OO-DL] Decrypted to ${decrypted.length} bytes, sending.`);
+      this.logger.log(
+        `[OO-DL] Decrypted to ${decrypted.length} bytes, sending.`,
+      );
       res.setHeader('Content-Type', 'application/octet-stream');
-      res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(file.name)}"`);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${encodeURIComponent(file.name)}"`,
+      );
       res.send(decrypted);
     } catch (err: any) {
       this.logger.error(`[OO-DL] Error: ${err.message}`, err.stack);
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ message: 'Failed to process document' });
+      res
+        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .json({ message: 'Failed to process document' });
     }
   }
 
@@ -547,18 +565,32 @@ export class FilesController {
           const isShared = file.shares.some((s: any) => s.userId === userId);
           if (isOwner || isShared) hasAccess = true;
         }
-      } catch { /* invalid token */ }
+      } catch {
+        /* invalid token */
+      }
     }
     if (!hasAccess && file.isPublic) hasAccess = true;
     if (!hasAccess) return { error: 1, message: 'Forbidden' };
 
     try {
       const downloadRes = await fetch(body.url);
-      if (!downloadRes.ok) throw new Error(`OnlyOffice download failed: ${downloadRes.statusText}`);
+      if (!downloadRes.ok)
+        throw new Error(
+          `OnlyOffice download failed: ${downloadRes.statusText}`,
+        );
       const plaintextBuffer = Buffer.from(await downloadRes.arrayBuffer());
       const keyBuffer = Buffer.from(fileKey, 'base64url');
       const encryptedBuffer = encryptFileBuffer(plaintextBuffer, keyBuffer);
-      await this.filesService.updateLaceraFileContent(id, userId, { buffer: encryptedBuffer, size: encryptedBuffer.length, mimetype: file.type } as any, encryptedBuffer.length);
+      await this.filesService.updateLaceraFileContent(
+        id,
+        userId,
+        {
+          buffer: encryptedBuffer,
+          size: encryptedBuffer.length,
+          mimetype: file.type,
+        } as any,
+        encryptedBuffer.length,
+      );
       this.logger.log(`[OO-CB] Saved document id="${id}"`);
       return { error: 0 };
     } catch (err: any) {
@@ -567,17 +599,19 @@ export class FilesController {
     }
   }
 
-
-
   // ---------------------------------------------------------------------------
   // GET /lacerta/:file — owner or public, wildcard must be last
   // ---------------------------------------------------------------------------
 
   @Public()
   @Get('files/lacerta/:id/metadata')
-  async getLaceraFileMetadata(
-    @Param('id') id: string,
-  ): Promise<{ id: string; name: string; size: number | null; type: string | null; isPublic: boolean }> {
+  async getLaceraFileMetadata(@Param('id') id: string): Promise<{
+    id: string;
+    name: string;
+    size: number | null;
+    type: string | null;
+    isPublic: boolean;
+  }> {
     return this.filesService.getLaceraFileMetadata(id);
   }
 

@@ -22,11 +22,15 @@ interface Member {
   },
   namespace: 'lacerta-collab',
 })
-export class LacertaCollabGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class LacertaCollabGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
-  private readonly secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET);
+  private readonly secret = new TextEncoder().encode(
+    process.env.NEXTAUTH_SECRET,
+  );
 
   // Map to track active room members: fileId -> Set of Members
   private roomMembers = new Map<string, Set<Member>>();
@@ -46,7 +50,7 @@ export class LacertaCollabGateway implements OnGatewayConnection, OnGatewayDisco
           const { payload } = await jwtVerify(token, this.secret, {
             algorithms: ['HS256'],
           });
-          userId = payload.sub as string;
+          userId = payload.sub;
           username = (payload.name || payload.email || 'User') as string;
         } catch (err) {
           // Token invalid, treat as guest
@@ -59,8 +63,18 @@ export class LacertaCollabGateway implements OnGatewayConnection, OnGatewayDisco
         username = queryUsername;
       } else if (!userId) {
         // Generate random guest username if they don't have one
-        const animals = ['Fox', 'Lion', 'Bear', 'Rabbit', 'Tiger', 'Panda', 'Koala', 'Owl'];
-        const randomAnimal = animals[Math.floor(Math.random() * animals.length)];
+        const animals = [
+          'Fox',
+          'Lion',
+          'Bear',
+          'Rabbit',
+          'Tiger',
+          'Panda',
+          'Koala',
+          'Owl',
+        ];
+        const randomAnimal =
+          animals[Math.floor(Math.random() * animals.length)];
         const randomNum = Math.floor(100 + Math.random() * 900);
         username = `Guest (${randomAnimal} #${randomNum})`;
       }
@@ -123,7 +137,10 @@ export class LacertaCollabGateway implements OnGatewayConnection, OnGatewayDisco
     }
 
     // Update username if requested during join
-    const member = this.socketIdentity.get(client.id) || { socketId: client.id, username: username || 'Guest' };
+    const member = this.socketIdentity.get(client.id) || {
+      socketId: client.id,
+      username: username || 'Guest',
+    };
     if (username) {
       member.username = username;
       this.socketIdentity.set(client.id, member);
@@ -190,7 +207,8 @@ export class LacertaCollabGateway implements OnGatewayConnection, OnGatewayDisco
   @SubscribeMessage('tiptap-update')
   handleTiptapUpdate(
     @ConnectedSocket() client: Socket,
-    @MessageBody() data: { fileId: string; nodeId: string; encryptedPayload: string },
+    @MessageBody()
+    data: { fileId: string; nodeId: string; encryptedPayload: string },
   ): void {
     const { fileId, nodeId, encryptedPayload } = data;
     if (!fileId || !nodeId || !encryptedPayload) return;

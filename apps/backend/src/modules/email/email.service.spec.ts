@@ -104,7 +104,9 @@ describe('EmailService', () => {
           emailMessages: [],
         },
       ];
-      mockPrismaClient.userEmailAccount.findMany.mockResolvedValue(mockAccounts);
+      mockPrismaClient.userEmailAccount.findMany.mockResolvedValue(
+        mockAccounts,
+      );
 
       const result = await service.getEmailAccounts('user-1');
 
@@ -127,7 +129,9 @@ describe('EmailService', () => {
         smtpSecure: true,
         password: 'myPassword',
       };
-      mockPrismaClient.userEmailAccount.create.mockResolvedValue({ id: 'acc-2' });
+      mockPrismaClient.userEmailAccount.create.mockResolvedValue({
+        id: 'acc-2',
+      });
 
       const result = await service.addEmailAccount('user-1', dto);
 
@@ -138,9 +142,9 @@ describe('EmailService', () => {
 
   describe('fetchEmailAutoconfig', () => {
     it('should throw BadRequestException on invalid domain', async () => {
-      await expect(service.fetchEmailAutoconfig('invalid_domain_!@#')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.fetchEmailAutoconfig('invalid_domain_!@#'),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should return autoconfig mapped for gmail.com', async () => {

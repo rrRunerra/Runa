@@ -4,11 +4,7 @@ import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { decrypt } from '@runa/crypto/server';
-import {
-  generateDataKey,
-  encrypt,
-  wrapKey,
-} from '@runa/crypto/node';
+import { generateDataKey, encrypt, wrapKey } from '@runa/crypto/node';
 import { NotificationGateway } from '../notification/notification.gateway';
 
 interface SyncState {
@@ -62,7 +58,7 @@ export class EmailSyncService {
           // Trigger sync task in the background
           this.syncAccount(account.id).catch((err) => {
             this.logger.error(
-              `Error syncing account ...${account.emailAddress.split("@")[1]}:`,
+              `Error syncing account ...${account.emailAddress.split('@')[1]}:`,
               err,
             );
           });
@@ -225,10 +221,7 @@ export class EmailSyncService {
                   if (ccStr) ccStr = encrypt(ccStr, dataKey);
                   if (bccStr) bccStr = encrypt(bccStr, dataKey);
 
-                  encryptedKey = wrapKey(
-                    dataKey,
-                    user.userPublicKey,
-                  ) as any;
+                  encryptedKey = wrapKey(dataKey, user.userPublicKey) as any;
                 } catch (encErr) {
                   this.logger.error(
                     `E2EE encryption failed for UID ${msg.uid} on account ${account.emailAddress}:`,
@@ -239,38 +232,37 @@ export class EmailSyncService {
               }
 
               // Cache metadata and body content locally in the database
-              const emailRecord =
-                await this.prisma.client.emailMessage.upsert({
-                  where: {
-                    userEmailAccountId_folder_uid: {
-                      userEmailAccountId: account.id,
-                      folder: standardFolder,
-                      uid: msg.uid,
-                    },
-                  },
-                  update: {
-                    // Optionally update flags on re-sync
-                    read: msg.flags ? msg.flags.has('\\Seen') : false,
-                    flagged: msg.flags ? msg.flags.has('\\Flagged') : false,
-                  },
-                  create: {
+              const emailRecord = await this.prisma.client.emailMessage.upsert({
+                where: {
+                  userEmailAccountId_folder_uid: {
                     userEmailAccountId: account.id,
-                    uid: msg.uid,
-                    messageId: parsed.messageId || null,
-                    subject,
-                    from: fromStr,
-                    to: toStr,
-                    cc: ccStr || null,
-                    bcc: bccStr || null,
-                    date,
-                    bodyText,
-                    bodyHtml,
-                    read: msg.flags ? msg.flags.has('\\Seen') : false,
-                    flagged: msg.flags ? msg.flags.has('\\Flagged') : false,
                     folder: standardFolder,
-                    encryptedKey: encryptedKey || undefined,
+                    uid: msg.uid,
                   },
-                });
+                },
+                update: {
+                  // Optionally update flags on re-sync
+                  read: msg.flags ? msg.flags.has('\\Seen') : false,
+                  flagged: msg.flags ? msg.flags.has('\\Flagged') : false,
+                },
+                create: {
+                  userEmailAccountId: account.id,
+                  uid: msg.uid,
+                  messageId: parsed.messageId || null,
+                  subject,
+                  from: fromStr,
+                  to: toStr,
+                  cc: ccStr || null,
+                  bcc: bccStr || null,
+                  date,
+                  bodyText,
+                  bodyHtml,
+                  read: msg.flags ? msg.flags.has('\\Seen') : false,
+                  flagged: msg.flags ? msg.flags.has('\\Flagged') : false,
+                  folder: standardFolder,
+                  encryptedKey: encryptedKey || undefined,
+                },
+              });
 
               try {
                 const userRecord = await this.prisma.client.user.findUnique({
@@ -314,17 +306,16 @@ export class EmailSyncService {
                       metadataPayload.encryptedKey = encryptedKey;
                     }
 
-                    const notif =
-                      await this.prisma.client.notification.create({
-                        data: {
-                          userId: userRecord.id,
-                          title: notifTitle,
-                          message: notifMessage,
-                          type: 'INFO',
-                          status: 'PENDING',
-                          metadata: metadataPayload,
-                        },
-                      });
+                    const notif = await this.prisma.client.notification.create({
+                      data: {
+                        userId: userRecord.id,
+                        title: notifTitle,
+                        message: notifMessage,
+                        type: 'INFO',
+                        status: 'PENDING',
+                        metadata: metadataPayload,
+                      },
+                    });
 
                     this.gateway.sendToUser(
                       userRecord.id,

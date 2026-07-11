@@ -28,7 +28,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
-import { BASE_CONNECTION_PROVIDERS } from "@/lib/providers";
+import {
+  BASE_CONNECTION_PROVIDERS,
+  ConnectionCapability,
+} from "@/lib/providers";
 
 // Import extracted sub-components
 import { RrMediaEditDialogHeader } from "./media-edit/RrMediaEditDialogHeader";
@@ -723,6 +726,23 @@ export function RrMediaEditDialog({
     setIsConnectionSearchOpen(true);
   };
 
+  const filteredConnectionProviders = useMemo(() => {
+    const mediaTypeToCapability: Record<string, ConnectionCapability | null> = {
+      anime: ConnectionCapability.ANIME,
+      manga: ConnectionCapability.MANGA,
+      tv: ConnectionCapability.TV_SHOWS,
+      movie: ConnectionCapability.MOVIES,
+      game: ConnectionCapability.GAME,
+      book: ConnectionCapability.BOOKS,
+    };
+    const requiredCapability = mediaTypeToCapability[mediaType] ?? null;
+    return requiredCapability
+      ? BASE_CONNECTION_PROVIDERS.filter((p) =>
+          p.capabilities.includes(requiredCapability),
+        )
+      : BASE_CONNECTION_PROVIDERS;
+  }, [mediaType]);
+
   const handleSelectSearchResult = (
     provider: string,
     resultId: string,
@@ -788,13 +808,6 @@ export function RrMediaEditDialog({
       />
     );
 
-    const currentCaps =
-      mediaType === "anime"
-        ? [BASE_CONNECTION_PROVIDERS[0].capabilities[0]] // anime capability
-        : mediaType === "manga"
-          ? [BASE_CONNECTION_PROVIDERS[0].capabilities[0]] // manga capability
-          : [];
-
     const connectionsSection = (
       <RrMediaEditConnections
         mediaType={mediaType}
@@ -803,7 +816,7 @@ export function RrMediaEditDialog({
         connections={connections}
         onConnectionsChange={setConnections}
         userConnections={userConnections}
-        connectionProviders={BASE_CONNECTION_PROVIDERS}
+        connectionProviders={filteredConnectionProviders}
         onOpenSearchModal={handleOpenSearchModal}
         listStatus={listStatus}
         progress={progress}
@@ -910,7 +923,7 @@ export function RrMediaEditDialog({
             mediaType={mediaType}
             mediaTitle={media.title.english || media.title.romaji}
             activeSearchProvider={activeSearchProvider}
-            connectionProviders={BASE_CONNECTION_PROVIDERS}
+            connectionProviders={filteredConnectionProviders}
             onSelectResult={handleSelectSearchResult}
           />
         )}

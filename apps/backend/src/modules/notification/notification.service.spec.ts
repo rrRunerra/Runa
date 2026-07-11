@@ -102,7 +102,9 @@ describe('NotificationService', () => {
         },
       });
       expect(logSpy).toHaveBeenCalledWith(
-        expect.stringContaining('[Notification Cleanup] Deleted 3 notifications older than a week.'),
+        expect.stringContaining(
+          '[Notification Cleanup] Deleted 3 notifications older than a week.',
+        ),
       );
 
       logSpy.mockRestore();

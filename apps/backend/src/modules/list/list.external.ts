@@ -21,7 +21,8 @@ export class ListExternal {
     data: AnimeUpdateData,
   ): Promise<void> {
     try {
-      const provider = this.connectionService.getConnectionInstance(providerKey);
+      const provider =
+        this.connectionService.getConnectionInstance(providerKey);
 
       // Enforce capability tag check
       if (!provider.capabilities.includes(ConnectionCapability.ANIME)) {
@@ -48,7 +49,8 @@ export class ListExternal {
     data: MangaUpdateData,
   ): Promise<void> {
     try {
-      const provider = this.connectionService.getConnectionInstance(providerKey);
+      const provider =
+        this.connectionService.getConnectionInstance(providerKey);
 
       // Enforce capability tag check
       if (!provider.capabilities.includes(ConnectionCapability.MANGA)) {
@@ -75,7 +77,8 @@ export class ListExternal {
     data: MovieUpdateData,
   ): Promise<void> {
     try {
-      const provider = this.connectionService.getConnectionInstance(providerKey);
+      const provider =
+        this.connectionService.getConnectionInstance(providerKey);
 
       // Enforce capability tag check
       if (!provider.capabilities.includes(ConnectionCapability.MOVIES)) {
@@ -102,7 +105,8 @@ export class ListExternal {
     data: TvUpdateData,
   ): Promise<void> {
     try {
-      const provider = this.connectionService.getConnectionInstance(providerKey);
+      const provider =
+        this.connectionService.getConnectionInstance(providerKey);
 
       // Enforce capability tag check
       if (!provider.capabilities.includes(ConnectionCapability.TV_SHOWS)) {
@@ -128,7 +132,8 @@ export class ListExternal {
     providerId: number,
   ): Promise<void> {
     try {
-      const provider = this.connectionService.getConnectionInstance(providerKey);
+      const provider =
+        this.connectionService.getConnectionInstance(providerKey);
 
       if (!provider.capabilities.includes(ConnectionCapability.ANIME)) {
         this.logger.warn(
@@ -153,7 +158,8 @@ export class ListExternal {
     providerId: number,
   ): Promise<void> {
     try {
-      const provider = this.connectionService.getConnectionInstance(providerKey);
+      const provider =
+        this.connectionService.getConnectionInstance(providerKey);
 
       if (!provider.capabilities.includes(ConnectionCapability.MANGA)) {
         this.logger.warn(
@@ -178,7 +184,8 @@ export class ListExternal {
     providerId: number,
   ): Promise<void> {
     try {
-      const provider = this.connectionService.getConnectionInstance(providerKey);
+      const provider =
+        this.connectionService.getConnectionInstance(providerKey);
 
       if (!provider.capabilities.includes(ConnectionCapability.MOVIES)) {
         this.logger.warn(
@@ -203,7 +210,8 @@ export class ListExternal {
     providerId: number,
   ): Promise<void> {
     try {
-      const provider = this.connectionService.getConnectionInstance(providerKey);
+      const provider =
+        this.connectionService.getConnectionInstance(providerKey);
 
       if (!provider.capabilities.includes(ConnectionCapability.TV_SHOWS)) {
         this.logger.warn(

@@ -159,9 +159,7 @@ export class GameService {
     if (!game) {
       try {
         await this.gameExternal.fetchAndUpsertGame(rawgId);
-        game = (await this.gameRepository.findByRawgId(
-          rawgId,
-        )) as DbGameResult | null;
+        game = await this.gameRepository.findByRawgId(rawgId);
       } catch {
         game = (await this.gameRepository.upsert(rawgId, {
           rawgId,

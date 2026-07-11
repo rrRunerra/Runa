@@ -198,25 +198,27 @@ describe('ListService', () => {
   describe('getUserId', () => {
     it('should throw NotFoundException if user is not found', async () => {
       mockPrismaClient.user.findUnique.mockResolvedValue(null);
-      await expect(service.upsertAnimeList('testuser', { animeId: 1 })).rejects.toThrow(
-        new NotFoundException('User testuser not found'),
-      );
+      await expect(
+        service.upsertAnimeList('testuser', { animeId: 1 }),
+      ).rejects.toThrow(new NotFoundException('User testuser not found'));
     });
   });
 
   describe('getAnimeList', () => {
     it('should throw NotFoundException if user not found', async () => {
       mockPrismaClient.user.findUnique.mockResolvedValue(null);
-      await expect(service.getAnimeList('testuser')).rejects.toThrow(NotFoundException);
+      await expect(service.getAnimeList('testuser')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw ForbiddenException if list is private and requester is not owner', async () => {
       mockPrismaClient.user.findUnique.mockResolvedValue({
         privacy: { animeList: true },
       });
-      await expect(service.getAnimeList('testuser', 'otheruser')).rejects.toThrow(
-        ForbiddenException,
-      );
+      await expect(
+        service.getAnimeList('testuser', 'otheruser'),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should return list and status counts if authorized', async () => {
@@ -277,7 +279,10 @@ describe('ListService', () => {
 
   describe('upsertAnimeList', () => {
     it('should successfully upsert anime list entry and recalculate stats', async () => {
-      mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-1', privacy: {} });
+      mockPrismaClient.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        privacy: {},
+      });
       mockPrismaClient.aquilaAnimeUserList.upsert.mockResolvedValue({});
 
       const result = await service.upsertAnimeList('testuser', {
@@ -287,7 +292,10 @@ describe('ListService', () => {
         connections: { anilist: 100 },
       });
 
-      expect(result).toEqual({ success: true, message: 'Anime list updated successfully' });
+      expect(result).toEqual({
+        success: true,
+        message: 'Anime list updated successfully',
+      });
       expect(mockPrismaClient.aquilaAnimeUserList.upsert).toHaveBeenCalled();
       expect(mockConnectionsManager.syncAnime).toHaveBeenCalledWith(
         'anilist',
@@ -295,12 +303,20 @@ describe('ListService', () => {
         100,
         expect.any(Object),
       );
-      expect(mockStatsService.recalculate).toHaveBeenCalledWith('user-1', 'anime');
+      expect(mockStatsService.recalculate).toHaveBeenCalledWith(
+        'user-1',
+        'anime',
+      );
     });
 
     it('should handle errors and return failure status', async () => {
-      mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-1', privacy: {} });
-      mockPrismaClient.aquilaAnimeUserList.upsert.mockRejectedValue(new Error('DB error'));
+      mockPrismaClient.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        privacy: {},
+      });
+      mockPrismaClient.aquilaAnimeUserList.upsert.mockRejectedValue(
+        new Error('DB error'),
+      );
 
       const result = await service.upsertAnimeList('testuser', { animeId: 1 });
       expect(result.success).toBe(false);
@@ -321,12 +337,21 @@ describe('ListService', () => {
 
       expect(result.success).toBe(true);
       expect(mockPrismaClient.aquilaAnimeUserList.delete).toHaveBeenCalled();
-      expect(mockConnectionsManager.deleteAnime).toHaveBeenCalledWith('mal', 'testuser', 200);
-      expect(mockStatsService.recalculate).toHaveBeenCalledWith('user-1', 'anime');
+      expect(mockConnectionsManager.deleteAnime).toHaveBeenCalledWith(
+        'mal',
+        'testuser',
+        200,
+      );
+      expect(mockStatsService.recalculate).toHaveBeenCalledWith(
+        'user-1',
+        'anime',
+      );
     });
 
     it('should return failure if deletion fails', async () => {
-      mockPrismaClient.aquilaAnimeUserList.findUnique.mockRejectedValue(new Error('Fail'));
+      mockPrismaClient.aquilaAnimeUserList.findUnique.mockRejectedValue(
+        new Error('Fail'),
+      );
       const result = await service.deleteAnimeList('testuser', 1);
       expect(result.success).toBe(false);
     });
@@ -362,11 +387,16 @@ describe('ListService', () => {
 
     it('should throw NotFoundException on getMangaListEntry if not found', async () => {
       mockPrismaClient.aquilaMangaUserList.findUnique.mockResolvedValue(null);
-      await expect(service.getMangaListEntry('testuser', 1)).rejects.toThrow(NotFoundException);
+      await expect(service.getMangaListEntry('testuser', 1)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should upsert manga list successfully', async () => {
-      mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-1', privacy: {} });
+      mockPrismaClient.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        privacy: {},
+      });
       mockPrismaClient.aquilaMangaUserList.upsert.mockResolvedValue({});
 
       const result = await service.upsertMangaList('testuser', {
@@ -417,11 +447,16 @@ describe('ListService', () => {
 
     it('should throw NotFoundException on getMovieListEntry if not found', async () => {
       mockPrismaClient.aquilaMovieUserList.findUnique.mockResolvedValue(null);
-      await expect(service.getMovieListEntry('testuser', 1)).rejects.toThrow(NotFoundException);
+      await expect(service.getMovieListEntry('testuser', 1)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should upsert movie list successfully', async () => {
-      mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-1', privacy: {} });
+      mockPrismaClient.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        privacy: {},
+      });
       mockPrismaClient.aquilaMovieUserList.upsert.mockResolvedValue({});
 
       const result = await service.upsertMovieList('testuser', {
@@ -437,7 +472,9 @@ describe('ListService', () => {
 
     it('should delete movie list successfully', async () => {
       mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaClient.aquilaMovieUserList.findUnique.mockResolvedValue({ connections: { mal: 300 } });
+      mockPrismaClient.aquilaMovieUserList.findUnique.mockResolvedValue({
+        connections: { mal: 300 },
+      });
       mockPrismaClient.aquilaMovieUserList.delete.mockResolvedValue({});
 
       const result = await service.deleteMovieList('testuser', 1);
@@ -475,11 +512,16 @@ describe('ListService', () => {
 
     it('should throw NotFoundException on getTvListEntry if not found', async () => {
       mockPrismaClient.aquilaTvUserList.findUnique.mockResolvedValue(null);
-      await expect(service.getTvListEntry('testuser', 1)).rejects.toThrow(NotFoundException);
+      await expect(service.getTvListEntry('testuser', 1)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should upsert TV list successfully', async () => {
-      mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-1', privacy: {} });
+      mockPrismaClient.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        privacy: {},
+      });
       mockPrismaClient.aquilaTvUserList.upsert.mockResolvedValue({});
       mockPrismaClient.aquilaTvUserList.findUnique.mockResolvedValue({
         watchedEpisodes: [],
@@ -498,7 +540,9 @@ describe('ListService', () => {
 
     it('should delete TV list successfully', async () => {
       mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaClient.aquilaTvUserList.findUnique.mockResolvedValue({ connections: { mal: 400 } });
+      mockPrismaClient.aquilaTvUserList.findUnique.mockResolvedValue({
+        connections: { mal: 400 },
+      });
       mockPrismaClient.aquilaTvUserList.delete.mockResolvedValue({});
 
       const result = await service.deleteTvList('testuser', 1);
@@ -507,8 +551,13 @@ describe('ListService', () => {
 
     it('should toggle episode watched - create watched record if it does not exist', async () => {
       mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaClient.aquilaTvUserList.findUnique.mockResolvedValue({ id: 'list-1', connections: {} });
-      mockPrismaClient.aquilaTvWatchedEpisode.findUnique.mockResolvedValue(null);
+      mockPrismaClient.aquilaTvUserList.findUnique.mockResolvedValue({
+        id: 'list-1',
+        connections: {},
+      });
+      mockPrismaClient.aquilaTvWatchedEpisode.findUnique.mockResolvedValue(
+        null,
+      );
       mockPrismaClient.aquilaTvWatchedEpisode.create.mockResolvedValue({});
 
       const result = await service.toggleEpisodeWatched('testuser', 1, 1, 1);
@@ -518,8 +567,13 @@ describe('ListService', () => {
 
     it('should toggle episode watched - delete watched record if it exists', async () => {
       mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaClient.aquilaTvUserList.findUnique.mockResolvedValue({ id: 'list-1', connections: {} });
-      mockPrismaClient.aquilaTvWatchedEpisode.findUnique.mockResolvedValue({ id: 'ep-1' });
+      mockPrismaClient.aquilaTvUserList.findUnique.mockResolvedValue({
+        id: 'list-1',
+        connections: {},
+      });
+      mockPrismaClient.aquilaTvWatchedEpisode.findUnique.mockResolvedValue({
+        id: 'ep-1',
+      });
       mockPrismaClient.aquilaTvWatchedEpisode.delete.mockResolvedValue({});
 
       const result = await service.toggleEpisodeWatched('testuser', 1, 1, 1);
@@ -529,14 +583,17 @@ describe('ListService', () => {
 
     it('should throw NotFoundException in toggleEpisodeWatched if TV show not in list', async () => {
       mockPrismaClient.aquilaTvUserList.findUnique.mockResolvedValue(null);
-      await expect(service.toggleEpisodeWatched('testuser', 1, 1, 1)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.toggleEpisodeWatched('testuser', 1, 1, 1),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should toggle season watched to true - upsert all episodes', async () => {
       mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaClient.aquilaTvUserList.findUnique.mockResolvedValue({ id: 'list-1', connections: {} });
+      mockPrismaClient.aquilaTvUserList.findUnique.mockResolvedValue({
+        id: 'list-1',
+        connections: {},
+      });
       mockPrismaClient.aquilaTvWatchedEpisode.upsert.mockResolvedValue({});
 
       const result = await service.toggleSeasonWatched(
@@ -547,12 +604,17 @@ describe('ListService', () => {
         true,
       );
       expect(result).toEqual({ success: true });
-      expect(mockPrismaClient.aquilaTvWatchedEpisode.upsert).toHaveBeenCalledTimes(2);
+      expect(
+        mockPrismaClient.aquilaTvWatchedEpisode.upsert,
+      ).toHaveBeenCalledTimes(2);
     });
 
     it('should toggle season watched to false - delete many episodes', async () => {
       mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaClient.aquilaTvUserList.findUnique.mockResolvedValue({ id: 'list-1', connections: {} });
+      mockPrismaClient.aquilaTvUserList.findUnique.mockResolvedValue({
+        id: 'list-1',
+        connections: {},
+      });
       mockPrismaClient.aquilaTvWatchedEpisode.deleteMany.mockResolvedValue({});
 
       const result = await service.toggleSeasonWatched(
@@ -563,7 +625,9 @@ describe('ListService', () => {
         false,
       );
       expect(result).toEqual({ success: true });
-      expect(mockPrismaClient.aquilaTvWatchedEpisode.deleteMany).toHaveBeenCalledWith({
+      expect(
+        mockPrismaClient.aquilaTvWatchedEpisode.deleteMany,
+      ).toHaveBeenCalledWith({
         where: { listId: 'list-1', seasonNum: 1 },
       });
     });
@@ -594,11 +658,16 @@ describe('ListService', () => {
 
     it('should throw NotFoundException on getGameListEntry if not found', async () => {
       mockPrismaClient.aquilaGameUserList.findUnique.mockResolvedValue(null);
-      await expect(service.getGameListEntry('testuser', 1)).rejects.toThrow(NotFoundException);
+      await expect(service.getGameListEntry('testuser', 1)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should upsert game list successfully', async () => {
-      mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-1', privacy: {} });
+      mockPrismaClient.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        privacy: {},
+      });
       mockPrismaClient.aquilaGameUserList.upsert.mockResolvedValue({});
 
       const result = await service.upsertGameList('testuser', {
@@ -644,11 +713,16 @@ describe('ListService', () => {
 
     it('should throw NotFoundException on getBookListEntry if not found', async () => {
       mockPrismaClient.aquilaBookUserList.findUnique.mockResolvedValue(null);
-      await expect(service.getBookListEntry('testuser', 'book-1')).rejects.toThrow(NotFoundException);
+      await expect(
+        service.getBookListEntry('testuser', 'book-1'),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should upsert book list successfully', async () => {
-      mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-1', privacy: {} });
+      mockPrismaClient.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        privacy: {},
+      });
       mockPrismaClient.aquilaBookUserList.upsert.mockResolvedValue({});
 
       const result = await service.upsertBookList('testuser', {
@@ -722,9 +796,9 @@ describe('ListService', () => {
 
   describe('incrementProgress', () => {
     it('should throw error for invalid game ID in incrementProgress', async () => {
-      await expect(service.incrementProgress('testuser', 'game', NaN)).rejects.toThrow(
-        'Invalid game ID',
-      );
+      await expect(
+        service.incrementProgress('testuser', 'game', NaN),
+      ).rejects.toThrow('Invalid game ID');
     });
 
     it('should increment progress for game', async () => {
@@ -746,9 +820,9 @@ describe('ListService', () => {
 
     it('should throw NotFoundException if game not in list', async () => {
       mockPrismaClient.aquilaGameUserList.findUnique.mockResolvedValue(null);
-      await expect(service.incrementProgress('testuser', 'game', 1)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.incrementProgress('testuser', 'game', 1),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should increment progress for book and mark completed if chapters limit reached', async () => {
@@ -761,7 +835,12 @@ describe('ListService', () => {
       });
       mockPrismaClient.aquilaBookUserList.update.mockResolvedValue({});
 
-      const result = await service.incrementProgress('testuser', 'book', 'book-1', 2);
+      const result = await service.incrementProgress(
+        'testuser',
+        'book',
+        'book-1',
+        2,
+      );
 
       expect(result.success).toBe(true);
       expect(mockPrismaClient.aquilaBookUserList.update).toHaveBeenCalledWith({
@@ -853,7 +932,9 @@ describe('ListService', () => {
       const result = await service.incrementProgress('testuser', 'tv', 1, 1);
 
       expect(result.success).toBe(true);
-      expect(mockPrismaClient.aquilaTvWatchedEpisode.createMany).toHaveBeenCalledWith({
+      expect(
+        mockPrismaClient.aquilaTvWatchedEpisode.createMany,
+      ).toHaveBeenCalledWith({
         data: [{ listId: 'list-tv-1', seasonNum: 1, episodeNum: 1 }],
       });
     });
@@ -876,7 +957,10 @@ describe('ListService', () => {
 
       const result = await service.incrementProgress('testuser', 'tv', 1, 1);
 
-      expect(result).toEqual({ success: false, message: 'All episodes already watched' });
+      expect(result).toEqual({
+        success: false,
+        message: 'All episodes already watched',
+      });
     });
   });
 });

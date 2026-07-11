@@ -173,7 +173,7 @@ export class UserController {
   ): Promise<string[]> {
     return this.usersService.verifyPasskeyRegister(
       req.user!.id,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       data.response as any,
       data.name,
     );

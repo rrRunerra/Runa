@@ -9,11 +9,7 @@ import { PrismaService } from '../../providers/database/prisma.service';
 import { CacheService } from '../../providers/cache/cache.service';
 import { MailService } from '../../providers/mail/mail.service';
 import { decrypt } from '@runa/crypto/server';
-import {
-  generateDataKey,
-  encrypt,
-  wrapKey,
-} from '@runa/crypto/node';
+import { generateDataKey, encrypt, wrapKey } from '@runa/crypto/node';
 import { verify } from 'otplib';
 import bcrypt from 'bcrypt';
 import type { User, Passkey } from '@runa/database';
@@ -293,7 +289,7 @@ export class AuthService {
     <p style="margin-bottom: 8px;"><strong>Security notice:</strong> If you did not request this code, please ignore this email or contact support if you suspect unauthorized access.</p>
     <p style="margin: 0; text-align: center; font-size: 11px; margin-top: 24px; color: #52525b;">&copy; ${new Date().getFullYear()} Runa. All rights reserved.</p>
   </div>
-</div>`
+</div>`,
     );
 
     return { success: true };
@@ -361,7 +357,7 @@ export class AuthService {
     <p style="margin-bottom: 8px;"><strong>Security notice:</strong> If you did not request this code, someone else may be trying to access your account. Please log in immediately and update your password.</p>
     <p style="margin: 0; text-align: center; font-size: 11px; margin-top: 24px; color: #52525b;">&copy; ${new Date().getFullYear()} Runa. All rights reserved.</p>
   </div>
-</div>`
+</div>`,
     );
 
     return { success: true };
@@ -410,10 +406,7 @@ export class AuthService {
       dataKey,
     );
     const encryptedTitle = encrypt('Device Login Request', dataKey);
-    const encryptedKeyPayload = wrapKey(
-      dataKey,
-      device.identityKey,
-    );
+    const encryptedKeyPayload = wrapKey(dataKey, device.identityKey);
 
     await this.prisma.client.notification.create({
       data: {

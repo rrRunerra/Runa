@@ -3,8 +3,10 @@ export enum ConnectionCapability {
   MANGA = "MANGA",
   MOVIES = "MOVIES",
   TV_SHOWS = "TV_SHOWS",
+  GAME = "GAME",
   AUTH = "AUTH",
   SHOWCASE = "SHOWCASE",
+  BOOKS = "BOOKS",
 }
 
 export interface ConnectionSearchResult {

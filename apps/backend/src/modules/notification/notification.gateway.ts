@@ -17,11 +17,15 @@ import { Notification } from '@runa/notifications';
   },
   namespace: 'notifications',
 })
-export class NotificationGateway implements OnGatewayConnection, OnGatewayDisconnect {
+export class NotificationGateway
+  implements OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer()
   server: Server;
 
-  private readonly secret = new TextEncoder().encode(process.env.NEXTAUTH_SECRET);
+  private readonly secret = new TextEncoder().encode(
+    process.env.NEXTAUTH_SECRET,
+  );
 
   async handleConnection(client: Socket): Promise<void> {
     try {
@@ -39,10 +43,12 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
       const username = payload.name as string;
 
       client.data.user = { id: userId, username };
-      
+
       // Join a room unique to the user
       await client.join(userId);
-      console.log(`WebSocket connected: User ${username} (${userId}) connected on socket ${client.id}`);
+      console.log(
+        `WebSocket connected: User ${username} (${userId}) connected on socket ${client.id}`,
+      );
     } catch (err) {
       console.error('WebSocket connection authentication failed:', err.message);
       client.disconnect();
@@ -52,7 +58,9 @@ export class NotificationGateway implements OnGatewayConnection, OnGatewayDiscon
   handleDisconnect(client: Socket): void {
     const user = client.data.user;
     if (user) {
-      console.log(`WebSocket disconnected: User ${user.username} (${user.id}) disconnected on socket ${client.id}`);
+      console.log(
+        `WebSocket disconnected: User ${user.username} (${user.id}) disconnected on socket ${client.id}`,
+      );
     }
   }
 

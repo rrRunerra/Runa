@@ -112,7 +112,7 @@ describe('AnimeQueueService', () => {
 
       // There should only be one call - but the mergeMap hasn't resolved yet,
       // so let's resolve it and check the final state
-      resolveSearch!(mockSearchResults);
+      resolveSearch(mockSearchResults);
       await new Promise((resolve) => process.nextTick(resolve));
 
       // External should only be called once despite adding the same search twice

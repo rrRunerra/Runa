@@ -88,7 +88,9 @@ describe('GameService', () => {
 
   describe('getGame', () => {
     it('should throw error if ID is NaN', async () => {
-      await expect(service.getGame(NaN)).rejects.toThrow('Invalid game ID: NaN');
+      await expect(service.getGame(NaN)).rejects.toThrow(
+        'Invalid game ID: NaN',
+      );
     });
 
     it('should return cached game if within CACHE_DURATION_MS without calling fetch', async () => {

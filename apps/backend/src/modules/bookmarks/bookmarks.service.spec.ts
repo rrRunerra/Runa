@@ -63,50 +63,68 @@ describe('BookmarksService', () => {
     };
 
     it('should update bookmark if it already exists', async () => {
-      const existing = { id: 'bookmark-1', name: 'Test Bookmark', userId: 'user-1' };
-      mockPrismaClient.polarisUserBookMarks.findFirst.mockResolvedValue(existing);
-      mockPrismaClient.polarisUserBookMarks.update.mockResolvedValue({ id: 'bookmark-1', ...dto });
+      const existing = {
+        id: 'bookmark-1',
+        name: 'Test Bookmark',
+        userId: 'user-1',
+      };
+      mockPrismaClient.polarisUserBookMarks.findFirst.mockResolvedValue(
+        existing,
+      );
+      mockPrismaClient.polarisUserBookMarks.update.mockResolvedValue({
+        id: 'bookmark-1',
+        ...dto,
+      });
 
       const result = await service.createOrUpdateBookmark('user-1', dto);
 
-      expect(mockPrismaClient.polarisUserBookMarks.findFirst).toHaveBeenCalledWith({
+      expect(
+        mockPrismaClient.polarisUserBookMarks.findFirst,
+      ).toHaveBeenCalledWith({
         where: { userId: 'user-1', name: 'Test Bookmark' },
       });
-      expect(mockPrismaClient.polarisUserBookMarks.update).toHaveBeenCalledWith({
-        where: { id: 'bookmark-1' },
-        data: {
-          description: dto.description,
-          redirect: dto.redirect,
-          stars: dto.stars,
-          connections: dto.connections,
-          icon: dto.icon,
-          connectionColor: dto.connectionColor,
-          starColor: dto.starColor,
+      expect(mockPrismaClient.polarisUserBookMarks.update).toHaveBeenCalledWith(
+        {
+          where: { id: 'bookmark-1' },
+          data: {
+            description: dto.description,
+            redirect: dto.redirect,
+            stars: dto.stars,
+            connections: dto.connections,
+            icon: dto.icon,
+            connectionColor: dto.connectionColor,
+            starColor: dto.starColor,
+          },
         },
-      });
+      );
       expect(mockCache.del).toHaveBeenCalled();
       expect(result.id).toBe('bookmark-1');
     });
 
     it('should create new bookmark if it does not exist', async () => {
       mockPrismaClient.polarisUserBookMarks.findFirst.mockResolvedValue(null);
-      mockPrismaClient.polarisUserBookMarks.create.mockResolvedValue({ id: 'bookmark-2', ...dto });
+      mockPrismaClient.polarisUserBookMarks.create.mockResolvedValue({
+        id: 'bookmark-2',
+        ...dto,
+      });
 
       const result = await service.createOrUpdateBookmark('user-1', dto);
 
-      expect(mockPrismaClient.polarisUserBookMarks.create).toHaveBeenCalledWith({
-        data: {
-          userId: 'user-1',
-          name: dto.name,
-          description: dto.description,
-          redirect: dto.redirect,
-          stars: dto.stars,
-          connections: dto.connections,
-          icon: dto.icon,
-          connectionColor: dto.connectionColor,
-          starColor: dto.starColor,
+      expect(mockPrismaClient.polarisUserBookMarks.create).toHaveBeenCalledWith(
+        {
+          data: {
+            userId: 'user-1',
+            name: dto.name,
+            description: dto.description,
+            redirect: dto.redirect,
+            stars: dto.stars,
+            connections: dto.connections,
+            icon: dto.icon,
+            connectionColor: dto.connectionColor,
+            starColor: dto.starColor,
+          },
         },
-      });
+      );
       expect(mockCache.del).toHaveBeenCalled();
       expect(result.id).toBe('bookmark-2');
     });
@@ -120,17 +138,23 @@ describe('BookmarksService', () => {
       const result = await service.getBookmarks('user-1');
 
       expect(mockCache.get).toHaveBeenCalled();
-      expect(mockPrismaClient.polarisUserBookMarks.findMany).not.toHaveBeenCalled();
+      expect(
+        mockPrismaClient.polarisUserBookMarks.findMany,
+      ).not.toHaveBeenCalled();
       expect(result).toBe(cached);
     });
 
     it('should retrieve bookmarks list for a user sorted by createdAt desc and cache result', async () => {
       const mockList = [{ id: 'bookmark-1', createdAt: new Date() }];
-      mockPrismaClient.polarisUserBookMarks.findMany.mockResolvedValue(mockList);
+      mockPrismaClient.polarisUserBookMarks.findMany.mockResolvedValue(
+        mockList,
+      );
 
       const result = await service.getBookmarks('user-1');
 
-      expect(mockPrismaClient.polarisUserBookMarks.findMany).toHaveBeenCalledWith({
+      expect(
+        mockPrismaClient.polarisUserBookMarks.findMany,
+      ).toHaveBeenCalledWith({
         where: { userId: 'user-1' },
         orderBy: { createdAt: 'desc' },
       });
@@ -142,17 +166,23 @@ describe('BookmarksService', () => {
   describe('deleteBookmark', () => {
     it('should successfully delete an existing bookmark owned by user', async () => {
       const bookmark = { id: 'bookmark-1', userId: 'user-1' };
-      mockPrismaClient.polarisUserBookMarks.findFirst.mockResolvedValue(bookmark);
+      mockPrismaClient.polarisUserBookMarks.findFirst.mockResolvedValue(
+        bookmark,
+      );
       mockPrismaClient.polarisUserBookMarks.delete.mockResolvedValue({});
 
       const result = await service.deleteBookmark('user-1', 'bookmark-1');
 
-      expect(mockPrismaClient.polarisUserBookMarks.findFirst).toHaveBeenCalledWith({
+      expect(
+        mockPrismaClient.polarisUserBookMarks.findFirst,
+      ).toHaveBeenCalledWith({
         where: { id: 'bookmark-1', userId: 'user-1' },
       });
-      expect(mockPrismaClient.polarisUserBookMarks.delete).toHaveBeenCalledWith({
-        where: { id: 'bookmark-1' },
-      });
+      expect(mockPrismaClient.polarisUserBookMarks.delete).toHaveBeenCalledWith(
+        {
+          where: { id: 'bookmark-1' },
+        },
+      );
       expect(mockCache.del).toHaveBeenCalled();
       expect(result).toEqual({ success: true });
     });
@@ -160,10 +190,12 @@ describe('BookmarksService', () => {
     it('should throw NotFoundException if bookmark is not found or not owned by user', async () => {
       mockPrismaClient.polarisUserBookMarks.findFirst.mockResolvedValue(null);
 
-      await expect(service.deleteBookmark('user-1', 'bookmark-1')).rejects.toThrow(
-        NotFoundException,
-      );
-      expect(mockPrismaClient.polarisUserBookMarks.delete).not.toHaveBeenCalled();
+      await expect(
+        service.deleteBookmark('user-1', 'bookmark-1'),
+      ).rejects.toThrow(NotFoundException);
+      expect(
+        mockPrismaClient.polarisUserBookMarks.delete,
+      ).not.toHaveBeenCalled();
     });
   });
 });

@@ -158,15 +158,13 @@ export class BookService {
     if (!book) {
       try {
         await this.bookExternal.fetchAndUpsertBook(googleBookId);
-        book = (await this.bookRepository.findByGoogleBookId(
-          googleBookId,
-        )) as DbBookResult | null;
+        book = await this.bookRepository.findByGoogleBookId(googleBookId);
       } catch {
-        book = (await this.bookRepository.upsert(googleBookId, {
+        book = await this.bookRepository.upsert(googleBookId, {
           googleBookId,
           titleString: title || 'Unknown',
           coverImage: coverImage || null,
-        })) as DbBookResult;
+        });
       }
     }
     return book;

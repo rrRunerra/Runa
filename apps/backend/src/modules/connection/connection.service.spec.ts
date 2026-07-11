@@ -15,7 +15,15 @@ const mockProviderInstance = {
   getAuthUrl: jest.fn().mockResolvedValue('https://auth.url'),
   handleCallback: jest.fn().mockResolvedValue({}),
   fetchUserList: jest.fn().mockResolvedValue([
-    { mediaType: 'anime', anilistId: 1, malId: 10, title: 'Test Anime', status: 'WATCHING', progress: 5, coverImage: 'img' }
+    {
+      mediaType: 'anime',
+      anilistId: 1,
+      malId: 10,
+      title: 'Test Anime',
+      status: 'WATCHING',
+      progress: 5,
+      coverImage: 'img',
+    },
   ]),
 };
 
@@ -59,8 +67,12 @@ describe('ConnectionService', () => {
   const mockMangaService = { ensureManga: jest.fn() };
   const mockMovieService = { ensureMovie: jest.fn() };
   const mockTvService = { ensureTv: jest.fn() };
-  const mockStatsService = { recalculate: jest.fn().mockResolvedValue(undefined) };
-  const mockNotificationService = { create: jest.fn().mockResolvedValue(undefined) };
+  const mockStatsService = {
+    recalculate: jest.fn().mockResolvedValue(undefined),
+  };
+  const mockNotificationService = {
+    create: jest.fn().mockResolvedValue(undefined),
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -90,7 +102,9 @@ describe('ConnectionService', () => {
 
   describe('getConnectionInstance', () => {
     it('should throw BadRequestException if provider is invalid', () => {
-      expect(() => service.getConnectionInstance('INVALID')).toThrow(BadRequestException);
+      expect(() => service.getConnectionInstance('INVALID')).toThrow(
+        BadRequestException,
+      );
     });
 
     it('should retrieve a valid and enabled provider', () => {
@@ -102,7 +116,10 @@ describe('ConnectionService', () => {
   describe('getAuthUrl', () => {
     it('should call getAuthUrl on the provider instance', async () => {
       const url = await service.getAuthUrl('anilist', 'token-123', '/redirect');
-      expect(mockProviderInstance.getAuthUrl).toHaveBeenCalledWith('token-123', '/redirect');
+      expect(mockProviderInstance.getAuthUrl).toHaveBeenCalledWith(
+        'token-123',
+        '/redirect',
+      );
       expect(url).toBe('https://auth.url');
     });
   });
@@ -110,13 +127,18 @@ describe('ConnectionService', () => {
   describe('handleCallback', () => {
     it('should call handleCallback on the provider instance', async () => {
       await service.handleCallback('anilist', 'code-123', 'testuser');
-      expect(mockProviderInstance.handleCallback).toHaveBeenCalledWith('code-123', 'testuser');
+      expect(mockProviderInstance.handleCallback).toHaveBeenCalledWith(
+        'code-123',
+        'testuser',
+      );
     });
   });
 
   describe('findAll', () => {
     it('should query connections from prisma', async () => {
-      const mockResult = [{ id: '1', provider: 'ANILIST', linkedUsername: 'linkuser' }];
+      const mockResult = [
+        { id: '1', provider: 'ANILIST', linkedUsername: 'linkuser' },
+      ];
       mockPrismaClient.connections.findMany.mockResolvedValue(mockResult);
 
       const result = await service.findAll('testuser');
@@ -135,7 +157,10 @@ describe('ConnectionService', () => {
       const mockSaved = { id: '1', provider: 'ANILIST' };
       mockPrismaClient.connections.upsert.mockResolvedValue(mockSaved);
 
-      const result = await service.upsert('testuser', { provider: 'anilist', linkedUsername: 'linkuser' });
+      const result = await service.upsert('testuser', {
+        provider: 'anilist',
+        linkedUsername: 'linkuser',
+      });
 
       expect(mockPrismaClient.connections.upsert).toHaveBeenCalled();
       expect(result.id).toBe('1');
@@ -146,16 +171,22 @@ describe('ConnectionService', () => {
     it('should throw NotFoundException if connection to delete is missing', async () => {
       mockPrismaClient.connections.findUnique.mockResolvedValue(null);
 
-      await expect(service.remove('testuser', 'anilist')).rejects.toThrow(NotFoundException);
+      await expect(service.remove('testuser', 'anilist')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should delete from DB if connection exists', async () => {
-      mockPrismaClient.connections.findUnique.mockResolvedValue({ id: 'conn-1' });
+      mockPrismaClient.connections.findUnique.mockResolvedValue({
+        id: 'conn-1',
+      });
       mockPrismaClient.connections.delete.mockResolvedValue({});
 
       const result = await service.remove('testuser', 'anilist');
 
-      expect(mockPrismaClient.connections.delete).toHaveBeenCalledWith({ where: { id: 'conn-1' } });
+      expect(mockPrismaClient.connections.delete).toHaveBeenCalledWith({
+        where: { id: 'conn-1' },
+      });
       expect(result).toEqual({ success: true });
     });
   });
@@ -163,14 +194,20 @@ describe('ConnectionService', () => {
   describe('importList', () => {
     it('should throw BadRequestException if provider list import is not supported', async () => {
       const unsupportedProvider = { capabilities: [], isEnabled: true };
-      service['loader'].getConnection = jest.fn().mockReturnValue(unsupportedProvider);
+      service['loader'].getConnection = jest
+        .fn()
+        .mockReturnValue(unsupportedProvider);
 
-      await expect(service.startImport('testuser', 'anilist')).rejects.toThrow(BadRequestException);
+      await expect(service.startImport('testuser', 'anilist')).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should start list import and update activeImports status', async () => {
-      service['loader'].getConnection = jest.fn().mockReturnValue(mockProviderInstance);
-      
+      service['loader'].getConnection = jest
+        .fn()
+        .mockReturnValue(mockProviderInstance);
+
       const result = await service.startImport('testuser', 'anilist');
 
       expect(result).toEqual({ status: 'processing' });
@@ -183,34 +220,52 @@ describe('ConnectionService', () => {
     });
 
     it('should run background import and save items to user list', async () => {
-      service['loader'].getConnection = jest.fn().mockReturnValue(mockProviderInstance);
+      service['loader'].getConnection = jest
+        .fn()
+        .mockReturnValue(mockProviderInstance);
       mockPrismaClient.aquilaAnimeUserList.findUnique.mockResolvedValue(null);
       mockPrismaClient.aquilaAnimeUserList.create.mockResolvedValue({});
       mockPrismaClient.user.findFirst.mockResolvedValue({ id: 'user-id-123' });
 
       await service['runImportInBackground']('testuser', 'anilist');
 
-      expect(mockAnimeService.ensureAnime).toHaveBeenCalledWith(1, 10, 'Test Anime', 'img');
+      expect(mockAnimeService.ensureAnime).toHaveBeenCalledWith(
+        1,
+        10,
+        'Test Anime',
+        'img',
+      );
       expect(mockPrismaClient.aquilaAnimeUserList.create).toHaveBeenCalled();
-      expect(service.getImportStatus('testuser', 'anilist').status).toBe('completed');
+      expect(service.getImportStatus('testuser', 'anilist').status).toBe(
+        'completed',
+      );
     });
 
     it('should handle rate limiting (Too Many Requests) by notifying the user and failing gracefully/silently', async () => {
-      const rateLimitError = new Error('Failed to fetch AniList ANIME list: Too Many Requests');
+      const rateLimitError = new Error(
+        'Failed to fetch AniList ANIME list: Too Many Requests',
+      );
       const mockProviderWithRateLimit = {
         ...mockProviderInstance,
         fetchUserList: jest.fn().mockRejectedValue(rateLimitError),
       };
-      service['loader'].getConnection = jest.fn().mockReturnValue(mockProviderWithRateLimit);
+      service['loader'].getConnection = jest
+        .fn()
+        .mockReturnValue(mockProviderWithRateLimit);
       mockPrismaClient.user.findFirst.mockResolvedValue({ id: 'user-id-123' });
 
       await service['runImportInBackground']('testuser', 'anilist');
 
-      expect(mockNotificationService.create).toHaveBeenCalledWith('user-id-123', expect.objectContaining({
-        title: 'AniList Import Rate Limited',
-        type: 'INFO',
-      }));
-      expect(service.getImportStatus('testuser', 'anilist').status).toBe('failed');
+      expect(mockNotificationService.create).toHaveBeenCalledWith(
+        'user-id-123',
+        expect.objectContaining({
+          title: 'AniList Import Rate Limited',
+          type: 'INFO',
+        }),
+      );
+      expect(service.getImportStatus('testuser', 'anilist').status).toBe(
+        'failed',
+      );
     });
   });
 });

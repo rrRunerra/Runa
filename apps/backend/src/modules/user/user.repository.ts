@@ -378,16 +378,18 @@ export class UserRepository {
   async searchUsers(
     currentUserId: string,
     query: string,
-  ): Promise<{
-    id: string;
-    username: string;
-    displayName: string | null;
-    avatarUrl: string | null;
-    bannerUrl: string | null;
-    email: string;
-    createdAt: Date;
-    userPublicKey: string | null;
-  }[]> {
+  ): Promise<
+    {
+      id: string;
+      username: string;
+      displayName: string | null;
+      avatarUrl: string | null;
+      bannerUrl: string | null;
+      email: string;
+      createdAt: Date;
+      userPublicKey: string | null;
+    }[]
+  > {
     return this.prisma.client.user.findMany({
       where: {
         id: { not: currentUserId },

@@ -658,7 +658,8 @@ describe('UserService', () => {
       });
       expect(result.key).toBeDefined();
 
-      const lastUpdateArgs = mockPrismaClient.apiKey.update.mock.calls[0][0].data;
+      const lastUpdateArgs =
+        mockPrismaClient.apiKey.update.mock.calls[0][0].data;
       const expectedDiff = 30 * 24 * 60 * 60 * 1000;
       const durationMs = lastUpdateArgs.expiresAt.getTime() - Date.now();
       expect(Math.abs(durationMs - expectedDiff)).toBeLessThan(5000);
