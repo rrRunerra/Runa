@@ -41,9 +41,14 @@ const hashStringToFloat = (str: string): number => {
 };
 
 // Translates a constellation to center at target RA and Dec
-const shiftConstellation = (constellation: any, targetRa: number, targetDec: number) => {
-  if (!constellation.stars || constellation.stars.length === 0) return constellation;
-  
+const shiftConstellation = (
+  constellation: any,
+  targetRa: number,
+  targetDec: number,
+) => {
+  if (!constellation.stars || constellation.stars.length === 0)
+    return constellation;
+
   let sumRa = 0;
   let sumDec = 0;
   constellation.stars.forEach((s: any) => {
@@ -52,13 +57,13 @@ const shiftConstellation = (constellation: any, targetRa: number, targetDec: num
   });
   const avgRa = sumRa / constellation.stars.length;
   const avgDec = sumDec / constellation.stars.length;
-  
+
   const shiftedStars = constellation.stars.map((s: any) => ({
     ...s,
     ra: Number((s.ra - avgRa + targetRa).toFixed(2)),
     dec: Number((s.dec - avgDec + targetDec).toFixed(2)),
   }));
-  
+
   return {
     ...constellation,
     stars: shiftedStars,
@@ -84,9 +89,9 @@ export function LacertaDropStarMap({
     const updateDimensions = () => {
       if (containerRef.current) {
         const { clientWidth, clientHeight } = containerRef.current;
-        setDimensions({ 
-          width: clientWidth || 600, 
-          height: clientHeight || 350 
+        setDimensions({
+          width: clientWidth || 600,
+          height: clientHeight || 350,
         });
       }
     };
@@ -101,7 +106,7 @@ export function LacertaDropStarMap({
       resizeObserver?.disconnect();
     };
   }, []);
-  
+
   // Build dynamic list of constellations to display
   const displayConstellations = useMemo(() => {
     const list: Constellation[] = [];
@@ -109,37 +114,44 @@ export function LacertaDropStarMap({
     // 1. Add Self Constellation (centered at 0, 0)
     let selfBase = myConstellation;
     if (!selfBase && currentUser?.username) {
-      const idx = Math.floor(hashStringToFloat(currentUser.username) * REFERENCE_CONSTELLATIONS.length);
+      const idx = Math.floor(
+        hashStringToFloat(currentUser.username) *
+          REFERENCE_CONSTELLATIONS.length,
+      );
       selfBase = REFERENCE_CONSTELLATIONS[idx];
     }
-    
+
     if (selfBase) {
       const selfShifted = shiftConstellation(selfBase, 0, 0);
+      const selfStarColor = isHidden ? "#374151" : "var(--primary)";
+      const selfConnectionColor = isHidden
+        ? "rgba(55, 65, 81, 0.25)"
+        : "var(--primary)";
+
       list.push({
         ...selfShifted,
         id: "self",
-        name: `Me (${currentUser?.displayName || currentUser?.username || "Local Device"})`,
-        starColor: isHidden ? "#374151" : (selfBase.starColor || "#6366f1"), // Dimmed dark grey when hidden
-        connectionColor: isHidden ? "rgba(55, 65, 81, 0.25)" : (selfBase.connectionColor || "rgba(99, 102, 241, 0.7)"),
+        name: `Me (This Device)`,
+        starColor: selfStarColor,
+        connectionColor: selfConnectionColor,
       } as Constellation);
     }
 
     // 2. Sort peers by socketId for stable coordinate mapping
-    const sortedPeers = [...peers].sort((a, b) => a.socketId.localeCompare(b.socketId));
+    const sortedPeers = [...peers].sort((a, b) =>
+      a.socketId.localeCompare(b.socketId),
+    );
 
-    // 3. Add Discovered Peers (distributed procedurally in concentric elliptical rings to prevent overlaps)
-    sortedPeers.forEach((peer, i) => {
-      // Ring 0 holds up to 4 peers, Ring 1 holds next 4 peers, etc.
-      const ringIndex = Math.floor(i / 4);
-      const indexInRing = i % 4;
-      const peersInRing = Math.min(sortedPeers.length - ringIndex * 4, 4);
+    // 3. Add Discovered Peers (distributed procedurally with stable random offsets and randomized hues)
+    sortedPeers.forEach((peer) => {
+      // Procedurally generate a stable, random position for the peer based on their unique socketId
+      const angleHash = hashStringToFloat(peer.socketId + "-angle");
+      const angle = angleHash * 2 * Math.PI;
 
-      // Angle offset of index + ring stagger rotation to interleave rings
-      const angle = (indexInRing * 2 * Math.PI) / peersInRing + (ringIndex * Math.PI / 4);
-
-      // Ellipse radii scaling by ring distance
-      const raRadius = 5.0 + ringIndex * 3.0;
-      const decRadius = 32.0 + ringIndex * 18.0;
+      // Distribute within a random radius range
+      const distHash = hashStringToFloat(peer.socketId + "-radius");
+      const raRadius = 6.0 + distHash * 10.0;
+      const decRadius = 35.0 + distHash * 50.0;
 
       const raOffset = raRadius * Math.cos(angle);
       const decOffset = decRadius * Math.sin(angle);
@@ -155,18 +167,31 @@ export function LacertaDropStarMap({
       }
 
       if (!peerBase) {
-        const idx = Math.floor(hashStringToFloat(peer.userId) * REFERENCE_CONSTELLATIONS.length);
+        const idx = Math.floor(
+          hashStringToFloat(peer.userId) * REFERENCE_CONSTELLATIONS.length,
+        );
         peerBase = REFERENCE_CONSTELLATIONS[idx];
       }
 
       if (peerBase) {
         const peerShifted = shiftConstellation(peerBase, raOffset, decOffset);
+        const isMyDevice = peer.userId === currentUser?.id;
+        const displayName = isMyDevice
+          ? `My Device (${peer.deviceName.split(" ")[0]})`
+          : `@${peer.username} (${peer.deviceName.split(" ")[0]})`;
+
+        // Generate stable random color based on peer socketId
+        const colorHash = hashStringToFloat(peer.socketId + "-color");
+        const hue = Math.floor(colorHash * 360);
+        const starColor = `hsl(${hue}, 85%, 65%)`;
+        const connectionColor = `hsla(${hue}, 85%, 65%, 0.55)`;
+
         list.push({
           ...peerShifted,
           id: peer.socketId,
-          name: `@${peer.username} (${peer.deviceName.split(" ")[0]})`,
-          starColor: peerBase.starColor || "#10b981", // Emerald for peers
-          connectionColor: peerBase.connectionColor || "rgba(16, 185, 129, 0.7)",
+          name: displayName,
+          starColor,
+          connectionColor,
         } as Constellation);
       }
     });
@@ -177,11 +202,16 @@ export function LacertaDropStarMap({
   const activeTransferMapProp = useMemo(() => {
     if (
       transfer &&
-      ["transferring", "encrypting", "decrypting", "connecting"].includes(transfer.status)
+      ["transferring", "encrypting", "decrypting", "connecting"].includes(
+        transfer.status,
+      )
     ) {
       return {
-        constellationId: transfer.direction === "send" ? transfer.peerId : "self",
+        constellationId: transfer.peerId,
         progress: transfer.progress,
+        direction: transfer.direction,
+        filesCount: transfer.files.length,
+        currentFileIndex: transfer.currentFileIndex,
       };
     }
     return undefined;
@@ -200,15 +230,19 @@ export function LacertaDropStarMap({
       {/* Floating Header Overlay */}
       <div className="absolute top-4 left-4 z-10 pointer-events-none select-none hidden sm:flex">
         <div className="flex items-center gap-2 bg-background/40 backdrop-blur-md px-3.5 py-2 rounded-xl border border-border/40 shadow-xl">
-          <div className={`h-2.5 w-2.5 rounded-full ${isHidden ? "bg-amber-400" : "bg-emerald-400"} animate-pulse`} />
+          <div
+            className={`h-2.5 w-2.5 rounded-full ${isHidden ? "bg-amber-400" : "bg-emerald-400"} animate-pulse`}
+          />
           <span className="text-xs font-mono font-bold uppercase tracking-wider text-foreground/90">
-            {isHidden ? "Discovery Paused" : `Network Map (${peers.length} online)`}
+            {isHidden
+              ? "Discovery Paused"
+              : `Network Map (${peers.length} online)`}
           </span>
         </div>
       </div>
 
       {/* StarMap view container (edge-to-edge) */}
-      <div 
+      <div
         ref={containerRef}
         className="w-full h-full flex-1 flex items-center justify-center min-h-[350px] relative"
       >
@@ -238,11 +272,17 @@ export function LacertaDropStarMap({
               const y = -avgDec * 30;
 
               const isSelf = c.id === "self";
-              const isTransferringThisNode = transfer && (
-                (transfer.direction === "send" && transfer.peerId === c.id) ||
-                (transfer.direction === "receive" && c.id === "self" &&
-                  ["transferring", "encrypting", "decrypting", "connecting"].includes(transfer.status))
-              );
+              const isTransferringThisNode =
+                transfer &&
+                ((transfer.direction === "send" && transfer.peerId === c.id) ||
+                  (transfer.direction === "receive" &&
+                    c.id === "self" &&
+                    [
+                      "transferring",
+                      "encrypting",
+                      "decrypting",
+                      "connecting",
+                    ].includes(transfer.status)));
 
               if (isTransferringThisNode) {
                 return (
@@ -253,22 +293,36 @@ export function LacertaDropStarMap({
                       left: x,
                       top: y - 95,
                       transform: "translate(-50%, -50%)",
+                      borderColor: isSelf ? undefined : c.connectionColor,
+                      color: isSelf ? undefined : c.starColor,
+                      backgroundColor: isSelf
+                        ? undefined
+                        : c.connectionColor?.replace("0.55", "0.20"),
                     }}
                     className={`text-xs font-mono font-bold px-4 py-3 rounded-xl border backdrop-blur-md shadow-2xl select-none min-w-[170px] flex flex-col gap-2.5 transition-all ${
                       isSelf
-                        ? "bg-indigo-500/20 border-indigo-500/50 text-indigo-200"
-                        : "bg-emerald-500/20 border-emerald-500/50 text-emerald-200"
+                        ? "bg-primary/20 border-primary/50 text-primary"
+                        : "hover:brightness-110"
                     }`}
                   >
                     <div className="flex justify-between items-center text-[9px] uppercase font-bold tracking-wider opacity-80">
                       <span>{isSelf ? "Receiving" : "Sending"}</span>
-                      <span className="font-mono text-foreground font-bold">{transfer.progress}%</span>
+                      <span className="font-mono text-foreground font-bold">
+                        {transfer.progress}%
+                      </span>
                     </div>
-                    <div className="font-semibold truncate text-[11px] max-w-[145px]" title={transfer.files[transfer.currentFileIndex]?.name}>
-                      {transfer.files[transfer.currentFileIndex]?.name || "Preparing file..."}
+                    <div
+                      className="font-semibold truncate text-[11px] max-w-[145px]"
+                      title={transfer.files[transfer.currentFileIndex]?.name}
+                    >
+                      {transfer.files[transfer.currentFileIndex]?.name ||
+                        "Preparing file..."}
                     </div>
                     <div className="w-full h-1 bg-secondary rounded-full overflow-hidden border border-border/10">
-                      <div style={{ width: `${transfer.progress}%` }} className="h-full bg-primary transition-all duration-150" />
+                      <div
+                        style={{ width: `${transfer.progress}%` }}
+                        className="h-full bg-primary transition-all duration-150"
+                      />
                     </div>
                     <div className="flex justify-between items-center text-[9px] text-muted-foreground font-semibold">
                       <span>{formatSpeed(transfer.speed)}</span>
@@ -294,13 +348,18 @@ export function LacertaDropStarMap({
                     left: x,
                     top: y - 65,
                     transform: "translate(-50%, -50%)",
+                    borderColor: isSelf ? undefined : c.connectionColor,
+                    color: isSelf ? undefined : c.starColor,
+                    backgroundColor: isSelf
+                      ? undefined
+                      : c.connectionColor?.replace("0.55", "0.15"),
                   }}
                   className={`text-sm font-mono font-bold px-3.5 py-1.5 rounded-lg border backdrop-blur-md shadow-xl select-none transition-all cursor-pointer ${
                     isSelf
                       ? isHidden
                         ? "bg-slate-800/10 border-slate-700/40 text-slate-500 hover:bg-slate-800/20 line-through decoration-slate-600/50"
-                        : "bg-indigo-500/15 border-indigo-500/40 text-indigo-300 hover:bg-indigo-500/25"
-                      : "bg-emerald-500/15 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/25"
+                        : "bg-primary/15 border-primary text-primary hover:bg-primary/25 shadow-lg shadow-primary/20 ring-2 ring-primary/30"
+                      : "hover:brightness-110"
                   }`}
                 >
                   {c.name} {isSelf && isHidden && " (Hidden)"}
@@ -323,7 +382,8 @@ export function LacertaDropStarMap({
       {/* Floating Footer Overlay */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 pointer-events-none select-none hidden sm:block">
         <div className="bg-background/40 backdrop-blur-md px-3.5 py-2 rounded-xl border border-border/40 shadow-xl text-[10px] text-muted-foreground font-mono font-bold text-center whitespace-nowrap">
-          Click a peer constellation on the StarMap to select files and initiate a transfer.
+          Click a peer constellation on the StarMap to select files and initiate
+          a transfer.
         </div>
       </div>
     </div>

@@ -386,41 +386,46 @@ export function useLacertaSharing() {
   const setupDataChannel = useCallback((ch: RTCDataChannel, peerId: string) => {
     ch.binaryType = "arraybuffer";
 
-    ch.onopen = () => {
-      const generateAndSendPQHandshake = async () => {
-        try {
-          const { generateKeyPair, exportPublicKey, generateMlKemKeyPair, bufferToBase64Url } = await import("@runa/crypto/browser");
-          const ownEcdh = await generateKeyPair();
-          const ownEcdhPub = await exportPublicKey(ownEcdh.publicKey);
+    const generateAndSendPQHandshake = async () => {
+      try {
+        const { generateKeyPair, exportPublicKey, generateMlKemKeyPair, bufferToBase64Url } = await import("@runa/crypto/browser");
+        const ownEcdh = await generateKeyPair();
+        const ownEcdhPub = await exportPublicKey(ownEcdh.publicKey);
 
-          const ownMlKem = await generateMlKemKeyPair();
-          const ownMlKemPub = bufferToBase64Url(
-            ownMlKem.publicKey.buffer.slice(
-              ownMlKem.publicKey.byteOffset,
-              ownMlKem.publicKey.byteOffset + ownMlKem.publicKey.byteLength
-            ) as ArrayBuffer
-          );
+        const ownMlKem = await generateMlKemKeyPair();
+        const ownMlKemPub = bufferToBase64Url(
+          ownMlKem.publicKey.buffer.slice(
+            ownMlKem.publicKey.byteOffset,
+            ownMlKem.publicKey.byteOffset + ownMlKem.publicKey.byteLength
+          ) as ArrayBuffer
+        );
 
-          ownEphemeralKeys.current.set(peerId, {
-            ecdhPrivateKey: ownEcdh.privateKey,
-            ecdhPublicKeyBase64: ownEcdhPub,
-            mlKemPrivateKey: ownMlKem.secretKey,
-            mlKemPublicKeyBase64: ownMlKemPub,
-          });
+        ownEphemeralKeys.current.set(peerId, {
+          ecdhPrivateKey: ownEcdh.privateKey,
+          ecdhPublicKeyBase64: ownEcdhPub,
+          mlKemPrivateKey: ownMlKem.secretKey,
+          mlKemPublicKeyBase64: ownMlKemPub,
+        });
 
-          ch.send(
-            JSON.stringify({
-              type: "PQ_HANDSHAKE",
-              ecdhPublicKey: ownEcdhPub,
-              mlKemPublicKey: ownMlKemPub,
-            })
-          );
-        } catch (err) {
-          console.error("[WebRTC] PQ Handshake generation failed:", err);
-        }
-      };
-      generateAndSendPQHandshake();
+        ch.send(
+          JSON.stringify({
+            type: "PQ_HANDSHAKE",
+            ecdhPublicKey: ownEcdhPub,
+            mlKemPublicKey: ownMlKemPub,
+          })
+        );
+      } catch (err) {
+        console.error("[WebRTC] PQ Handshake generation failed:", err);
+      }
     };
+
+    if (ch.readyState === "open") {
+      generateAndSendPQHandshake();
+    } else {
+      ch.onopen = () => {
+        generateAndSendPQHandshake();
+      };
+    }
 
     ch.onclose = () => {
       console.warn(`[WebRTC] Data channel closed with peer: ${peerId}`);

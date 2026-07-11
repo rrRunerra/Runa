@@ -314,12 +314,15 @@ export class LacertaSharingGateway
 
   private findLocalPeers(ip: string, excludeSocketId: string): string[] {
     const list: string[] = [];
+    const clientInfo = this.activeClients.get(excludeSocketId);
+    const userId = clientInfo?.userId;
+
     for (const [socketId, info] of this.activeClients.entries()) {
       if (
         socketId !== excludeSocketId &&
-        info.ip === ip &&
         !info.isHidden &&
-        !info.roomId
+        !info.roomId &&
+        (info.ip === ip || (userId && info.userId === userId))
       ) {
         list.push(socketId);
       }

@@ -55,7 +55,13 @@ interface StarMapProps {
   onConstellationClick?: (constellation: Constellation, event: React.MouseEvent) => void;
   customControls?: React.ReactNode;
   defaultZoom?: number;
-  activeTransfer?: { constellationId: string; progress: number };
+  activeTransfer?: {
+    constellationId: string;
+    progress: number;
+    direction?: "send" | "receive";
+    filesCount?: number;
+    currentFileIndex?: number;
+  };
 }
 
 export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
@@ -250,6 +256,7 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
     const intensitiesRef = useRef<Record<string, number>>({});
     const lastUpdateRef = useRef<number>(0);
     const hoverPointRef = useRef<{ x: number; y: number } | null>(null);
+    const animatedProgressRef = useRef<number>(0);
 
     // Animation Loop
     useEffect(() => {
@@ -258,6 +265,24 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
       const animate = (time: number) => {
         const delta = lastUpdateRef.current ? time - lastUpdateRef.current : 0;
         lastUpdateRef.current = time;
+
+        // Smoothly interpolate progress to prevent choppy jumping animations
+        if (activeTransfer) {
+          const targetProgress = activeTransfer.progress;
+          const currentProgress = animatedProgressRef.current;
+          
+          if (currentProgress < targetProgress) {
+            const diff = targetProgress - currentProgress;
+            // Move faster when far, but slow down when near, using frame-delta timing
+            const step = Math.max(0.1, diff * 0.15) * (delta / 16.6); 
+            animatedProgressRef.current = Math.min(targetProgress, currentProgress + step);
+          } else if (currentProgress > targetProgress) {
+            // Snap if progress resets or decreases
+            animatedProgressRef.current = targetProgress;
+          }
+        } else {
+          animatedProgressRef.current = 0;
+        }
 
         let hasChanged = false;
         const step = delta / 200; // Complete light-up/fade in ~200ms increments (per line logic)
@@ -271,8 +296,9 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
           const isHovered = hoveredConstellation?.name === c.name;
           const isSelected = selectedConstellation?.name === c.name;
           const isTransferringThis = activeTransfer && (
-            activeTransfer.constellationId === c.id ||
-            (activeTransfer.constellationId === "self" && c.id === "self")
+            (activeTransfer.direction === "send" && activeTransfer.constellationId === c.id) ||
+            (activeTransfer.direction === "receive" && c.id === "self") ||
+            (!activeTransfer.direction && (activeTransfer.constellationId === c.id || (activeTransfer.constellationId === "self" && c.id === "self")))
           );
           const target = isHovered || isSelected ? 1 : (isTransferringThis ? (activeTransfer.progress / 100) : 0);
 
@@ -292,7 +318,7 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
           }
         });
 
-        if (hasChanged) {
+        if (hasChanged || activeTransfer) {
           setTick((t) => t + 1);
         }
         animationFrame = requestAnimationFrame(animate);
@@ -300,7 +326,7 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
 
       animationFrame = requestAnimationFrame(animate);
       return () => cancelAnimationFrame(animationFrame);
-    }, [constellations, hoveredConstellation, selectedConstellation]);
+    }, [constellations, hoveredConstellation, selectedConstellation, activeTransfer]);
 
     // Draw the star map
     useEffect(() => {
@@ -450,11 +476,13 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
         });
 
         // Draw progress ring if there is an active transfer for this constellation
-        if (
-          activeTransfer &&
-          (activeTransfer.constellationId === constellation.id ||
-            (activeTransfer.constellationId === "self" && constellation.id === "self"))
-        ) {
+        const isReceiverOfTransfer = activeTransfer && (
+          (activeTransfer.direction === "send" && activeTransfer.constellationId === constellation.id) ||
+          (activeTransfer.direction === "receive" && constellation.id === "self") ||
+          (!activeTransfer.direction && (activeTransfer.constellationId === constellation.id || (activeTransfer.constellationId === "self" && constellation.id === "self")))
+        );
+
+        if (isReceiverOfTransfer) {
           let sumRa = 0;
           let sumDec = 0;
           constellation.stars.forEach((s) => {
@@ -503,6 +531,165 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
         }
         // 3. Stars are rendered via React layer using StarIcon
       });
+
+      // Draw flying stars for active transfer
+      if (activeTransfer && activeTransfer.filesCount && activeTransfer.filesCount > 0) {
+        const isSending = activeTransfer.direction === "send";
+        const peerId = activeTransfer.constellationId;
+
+        const senderConst = constellations.find(
+          (c) => c.id === (isSending ? "self" : peerId)
+        );
+        const receiverConst = constellations.find(
+          (c) => c.id === (isSending ? peerId : "self")
+        );
+
+        if (senderConst && receiverConst) {
+          const currentScale = BASE_SCALE * zoom;
+
+          // Helper to get average constellation center
+          const getCenter = (c: Constellation) => {
+            let sumRa = 0;
+            let sumDec = 0;
+            c.stars.forEach((s) => {
+              sumRa += s.ra;
+              sumDec += s.dec;
+            });
+            return raDecToScreen(
+              sumRa / c.stars.length,
+              sumDec / c.stars.length,
+              offset.x,
+              offset.y,
+              currentScale
+            );
+          };
+
+          const P_sender = getCenter(senderConst);
+          const P_receiver = getCenter(receiverConst);
+
+          // Draw the Bezier path
+          const midX = (P_sender.x + P_receiver.x) / 2;
+          const midY = (P_sender.y + P_receiver.y) / 2;
+          // Perpendicular offset for arc
+          const dx = P_receiver.x - P_sender.x;
+          const dy = P_receiver.y - P_sender.y;
+          const nx = -dy * 0.15;
+          const ny = dx * 0.15;
+          const P_control = { x: midX + nx, y: midY + ny };
+
+          // Draw a faint dotted arc path representing the transfer channel
+          const prevGlobalAlpha = ctx.globalAlpha;
+          ctx.globalAlpha = 0.15;
+          ctx.lineWidth = 1.5 * zoom;
+          ctx.strokeStyle = receiverConst.connectionColor || "rgba(255, 255, 255, 0.4)";
+          ctx.setLineDash([3, 6]);
+          ctx.beginPath();
+          ctx.moveTo(P_sender.x, P_sender.y);
+          ctx.quadraticCurveTo(P_control.x, P_control.y, P_receiver.x, P_receiver.y);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // Helper to draw a big bright glowing star with lens flare
+          const drawBigBrightStar = (
+            x: number,
+            y: number,
+            size: number,
+            color: string,
+            alpha: number
+          ) => {
+            const prevAlpha = ctx.globalAlpha;
+            
+            // 1. Large outer soft glow (halo)
+            ctx.globalAlpha = alpha * 0.15;
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(x, y, size * 2.2 * zoom, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.globalAlpha = alpha * 0.35;
+            ctx.beginPath();
+            ctx.arc(x, y, size * 1.3 * zoom, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 2. Large glow-colored cross
+            ctx.fillStyle = color;
+            drawStar(ctx, x, y, size * zoom, alpha, "cross");
+
+            // 3. Inner core bright white cross
+            ctx.fillStyle = "#ffffff";
+            drawStar(ctx, x, y, size * 0.55 * zoom, alpha, "cross");
+
+            // 4. Lens flare rays extending horizontally and vertically
+            const rayLength = size * (2.2 + Math.sin(tick * 0.12) * 0.25) * zoom;
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 1.8 * zoom;
+            ctx.globalAlpha = alpha * 0.55;
+            
+            ctx.beginPath();
+            ctx.moveTo(x - rayLength, y);
+            ctx.lineTo(x + rayLength, y);
+            ctx.moveTo(x, y - rayLength);
+            ctx.lineTo(x, y + rayLength);
+            ctx.stroke();
+
+            ctx.globalAlpha = prevAlpha;
+          };
+
+          // Draw stars for each file
+          const totalFiles = activeTransfer.filesCount;
+          const curIndex = activeTransfer.currentFileIndex ?? 0;
+
+          for (let i = 0; i < totalFiles; i++) {
+            let t = 0;
+            if (i < curIndex) {
+              t = 1.0; // Completed
+            } else if (i > curIndex) {
+              t = 0.0; // Pending
+            } else {
+              t = animatedProgressRef.current / 100; // Active traveling smoothly!
+            }
+
+            if (t === 1.0) {
+              // Draw completed stars orbiting the receiver in a ring
+              const angle = (i * 2 * Math.PI) / totalFiles + (tick / 70);
+              const radius = 35 * zoom;
+              const rx = P_receiver.x + radius * Math.cos(angle);
+              const ry = P_receiver.y + radius * Math.sin(angle);
+              drawStar(ctx, rx, ry, 8 * zoom, 0.95, "cross");
+            } else if (t === 0.0) {
+              // Draw pending stars orbiting the sender faintly
+              const angle = (i * 2 * Math.PI) / totalFiles + (tick / 150);
+              const radius = 35 * zoom;
+              const sx = P_sender.x + radius * Math.cos(angle);
+              const sy = P_sender.y + radius * Math.sin(angle);
+              drawStar(ctx, sx, sy, 5 * zoom, 0.35, "cross");
+            } else {
+              // Active traveling star (Bezier interpolation)
+              const tx = (1 - t) * (1 - t) * P_sender.x + 2 * (1 - t) * t * P_control.x + t * t * P_receiver.x;
+              const ty = (1 - t) * (1 - t) * P_sender.y + 2 * (1 - t) * t * P_control.y + t * t * P_receiver.y;
+
+              // Draw comet-like trail
+              for (let step = 1; step <= 8; step++) {
+                const trailT = Math.max(0, t - step * 0.015);
+                const ttx = (1 - trailT) * (1 - trailT) * P_sender.x + 2 * (1 - trailT) * trailT * P_control.x + trailT * trailT * P_receiver.x;
+                const tty = (1 - trailT) * (1 - trailT) * P_sender.y + 2 * (1 - trailT) * trailT * P_control.y + trailT * trailT * P_receiver.y;
+                
+                const trailSize = (10 - step * 1.0) * zoom;
+                const trailOpacity = 0.65 * (1 - step * 0.12);
+                ctx.fillStyle = receiverConst.starColor || "rgba(255, 255, 255, 0.8)";
+                ctx.globalAlpha = trailOpacity;
+                ctx.beginPath();
+                ctx.arc(ttx, tty, Math.max(0.5, trailSize * 0.5), 0, Math.PI * 2);
+                ctx.fill();
+              }
+
+              // Draw the main traveling big bright star with lens flare
+              drawBigBrightStar(tx, ty, 16, receiverConst.starColor || "#10b981", 1.0);
+            }
+          }
+          ctx.globalAlpha = prevGlobalAlpha;
+        }
+      }
     }, [
       offset,
       tick,
