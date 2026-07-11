@@ -1,4 +1,4 @@
-import { User, ShieldCheck, KeyRound, Mail, Link2, Lock, Smartphone, List, LucideIcon } from "lucide-react";
+import { User, ShieldCheck, KeyRound, Mail, Link2, Lock, Smartphone, List, LucideIcon, Sparkles } from "lucide-react";
 
 export interface SettingCategory {
   id: string;
@@ -18,4 +18,5 @@ export const settingsNavConfig: SettingCategory[] = [
   { id: "privacy", name: "Privacy Settings", label: "Privacy", badge: "Personal data", icon: Lock },
   { id: "sidebar", name: "Sidebar Shortcuts", label: "Sidebar Shortcuts", badge: "Mobile sidebar configurations", icon: Smartphone },
   { id: "lists", name: "Lists Settings", label: "Lists", badge: "Import and export media lists", icon: List, visibleOn: ["/aquila"] },
+  { id: "constellation", name: "Constellation Settings", label: "Lacerta Drop constellation", badge: "Customize your device constellation", icon: Sparkles, visibleOn: ["/lacerta"] },
 ];

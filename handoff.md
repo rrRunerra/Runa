@@ -1,76 +1,87 @@
-# Lacerta E2EE Spatial Canvas — Handoff Document
+# Lacerta Drop - Direct P2P File Sharing Handoff Document
 
-This document outlines the architecture, interactive features, implementation patterns, and recommendations for future enhancements of the zero-knowledge end-to-end encrypted (E2EE) spatial collaboration canvas.
+This document outlines the final architecture, protocol details, implemented fixes, and testing recommendations for the **Lacerta Drop** direct P2P file sharing module.
 
 ---
 
-## 1. System Architecture & Flow
+## 1. Feature Overview & Capabilities
 
-The canvas is designed around a zero-knowledge security model. Document files are stored encrypted on the server, and real-time collaboration updates are broadcasted through WebSockets utilizing AES-GCM client-side encryption.
+* **Direct Local P2P Discovery**: Automatically discovers other online devices on the same local subnet using public IP clustering.
+* **Incognito Mode**: Allows authenticated users to toggle their visibility settings on the network.
+* **Double-Encryption Guarantee**: Performs client-side **AES-GCM payload encryption** (using WebCrypto API) on top of the mandatory **DTLS transport layer** provided by WebRTC.
+* **Same-Device loopback Discovery**: Normalizes loopback addresses (such as `::1`, `localhost`, `::ffff:127.0.0.1`, and `127.0.0.1`) to ensure developer environments discover other local browser windows instantly.
+* **E2EE Batch Transfer Protocol**: Allows sending multiple files concurrently under a single acceptance dialog, reusing open channels and resolving individual decryption key dropouts.
 
-```mermaid
-graph TD
-    Client1[Editor Client A] -- Decrypted State in RAM -- UI[React Canvas View]
-    Client1 -- Encrypts Update -- WS[Socket.io Server]
-    WS -- Relays Encrypted Payload -- Client2[Editor Client B]
-    Client2 -- Decrypts with Room Key -- RAM2[Decrypted State Client B]
-    Client1 -- Save Trigger -- PUT[NestJS REST API]
+---
+
+## 2. Key Architecture Files
+
+* **Frontend Page**: [page.tsx](file:///c:/Users/akari/OneDrive/Documents/GitHub/Runa/apps/frontend/src/app/(apps)/lacerta/drop/page.tsx)
+  * Renders the scanning radar, processes files via inputs or drag-and-drop targets, manages WebRTC peer connections/channels, performs chunk-level AES-GCM encryption/decryption, and displays itemized transfer cards.
+* **Backend Gateway**: [sharing.gateway.ts](file:///c:/Users/akari/OneDrive/Documents/GitHub/Runa/apps/backend/src/modules/files/sharing.gateway.ts)
+  * Handles NestJS WebSocket connections, extracts and clusters public IP subnets, validates accounts using decoded JWT payload properties (supporting both `username` and `name` attributes), and relays WebRTC SDP signals.
+
+---
+
+## 3. E2EE Batch Transfer Protocol Handshake
+
+When a user shares a batch of files, the system employs the following WebRTC data channel handshake flow:
+
+```
+[Sender]                                                         [Receiver]
+   |                                                                  |
+   |---- (ASK_BATCH_TRANSFER: Encrypted Metadata & Batch Key) ------->|
+   |                                                                  | (Unified Accept Dialog)
+   |<--- (ACCEPT_BATCH_TRANSFER) -------------------------------------|
+   |                                                                  |
+   |---- (START_FILE: Index 0) -------------------------------------->|
+   |---- (Streams AES-GCM Encrypted Chunks) ------------------------->|
+   |---- (EOF: Index 0) --------------------------------------------->|
+   |                                                                  | (Decrypts & Downloads File 0)
+   |<--- (FILE_RECEIVED: Index 0) ------------------------------------|
+   |                                                                  |
+   |---- (START_FILE: Index 1) -------------------------------------->|
+   |---- (Streams AES-GCM Encrypted Chunks) ------------------------->|
+   |---- (EOF: Index 1) --------------------------------------------->|
+   |                                                                  | (Decrypts & Downloads File 1)
+   |<--- (FILE_RECEIVED: Index 1) ------------------------------------|
+   |                                                                  |
+   |---- (BATCH_COMPLETE) ------------------------------------------->|
+   |                                                                  |
 ```
 
-### Core Components
-* **[CanvasEditor.tsx](file:///C:/Users/akari/OneDrive/Documents/GitHub/Runa/apps/frontend/src/components/rrComponents/lacerta/CanvasEditor.tsx)**: Main coordinator. Manages canvas zooming, panning, drag-and-drop operations, card selections, mouse events, context menus, and Socket.io broadcasts.
-* **[TiptapNode.tsx](file:///C:/Users/akari/OneDrive/Documents/GitHub/Runa/apps/frontend/src/components/rrComponents/lacerta/TiptapNode.tsx)**: Inline rich text document editor wrapper using Tiptap. Configured with modular floating bubble/block-insertion menus.
+---
+
+## 4. Key Bug Fixes & Technical Implementation Rationale
+
+### A. NextAuth Token Race Conditions
+* **Problem**: On page load, NextAuth is `"loading"`, so the socket initialized with an empty token. Once session resolved, the hook didn't re-initialize the connection.
+* **Fix**: Decoupled socket mounts by adding `accessToken` to the dependency array. The socket is only opened when the access token is fully loaded, preventing connection rejections.
+
+### B. React Asynchronous State Update Batching
+* **Problem**: In loops, React `useState` changes are batched. Iterations checked `transfer` state to decide whether to queue or initiate a connection, initiating all selected files simultaneously.
+* **Fix**: Introduced a synchronous lock ref (`isTransferInProgress.current`) to immediately block subsequent iterations from bypassing the queue.
+
+### C. WebRTC SDP Renegotiation Conflicts (`InvalidModificationError`)
+* **Problem**: Sequential queue items triggered teardown and renegotiation timeouts while previous channels were still active, throwing `Changing the mid of m-sections is not allowed` errors.
+* **Fix**: Removed successful completion teardown timeouts. Once a WebRTC data channel is established, it remains open and is reused for subsequent files in the batch. Teardown is only triggered upon cancellations, declines, or disconnects.
+
+### D. ICE Candidate Out-of-Order Execution
+* **Problem**: Remote ICE candidates arrived before the remote description was applied, crashing with `SetRemoteDescription must be called first` exceptions.
+* **Fix**: Implemented a candidate buffer (`pendingCandidates.current`) to store early candidates, applying them sequentially once `setRemoteDescription` completes.
 
 ---
 
-## 2. Interactive Features & UX Behaviors
+## 5. Verification & Testing Playbook
 
-### 2.1 Spatial Controls & Resizing Hotkeys
-* **Canvas Pan & Zoom**: Trackpad pinch-to-zoom and mouse scroll actions adjust scale. Right-click or spacebar drag pans the canvas viewport.
-* **Unfocus (Escape & Background Click)**: Pressing `Escape` or left-clicking the empty canvas background deselects the active card, blurs the active text field, and resets mouse states.
-* **Mouse Wheel Resize**: Selecting a card and holding `Shift + Mouse Wheel Scroll` resizes the card's width/height.
-* **Arrow Keys Resize**: Selecting a card and holding `Shift + Arrow keys` resizes it in that direction.
-
-### 2.2 Aesthetic Theming & Hover Borders
-* **Headerless Minimalist Cards**: Standard cards (`document` and `sticky`) are borderless at the top—there are no static title headers. Card content stretches fully to boundaries.
-* **Hover-Only Borders**: Cards render with `border-transparent` by default. Borders fade into view (`border-border`) only on mouse hover or selection, giving a lightweight, paper-like board design.
-* **10 Color Preset Accents**: Right-clicking a card exposes a **Change Color** sub-menu with 10 presets: *Slate, Blue, Emerald, Amber, Rose, Purple, Teal, Fuchsia, Orange, and Indigo*.
-
-### 2.3 Intelligent Drag Constraints
-* **Inactive Cards**: Dragging an unselected card from any region moves it immediately.
-* **Active Cards**: Once focused (for text selecting, drawing, or grid inputs), standard dragging is disabled. To move a selected card, users hold **`Ctrl`** (or **`Cmd`** on Mac) and drag *anywhere* on the card container.
-
-### 2.4 Advanced Drawing Tools (Sketchpad)
-* **Direct Vector Drawing**: Clicking inside a Sketchpad card starts sketching instantly (no mode toggles needed).
-* **Brush Styling & Custom Colors**:
-  * **Range Slider**: Controls brush size smoothly from `1px` to `40px`.
-  * **5 Brush Presets**: `✏️ Pencil` (solid), `✒️ Calligraphy` (flat square-cap), `🖍️ Highlighter` (semi-transparent), `➖ Dashed`, and `💬 Dotted`.
-  * **Custom Color Picker**: A hidden input inside the custom palette button opens the native color wheel, updating both color and button background.
-* **Segment-Splitting Eraser**:
-  * Triggered by holding the **Middle Mouse Button** and dragging.
-  * Autoscroll is suppressed, and points within the eraser radius are discarded—splitting paths into contiguous vector strokes instead of deleting lines whole.
-  * Renders a dashed **circular eraser guide** around the cursor to track erasure radius.
-
-### 2.5 Adjacent Graph Settings Panel
-* **Clean Visual Card**: Interactive Chart cards hide all inputs by default, dedicating 100% of their card size to the graph view.
-* **Adjacent Settings Panel**: Selecting a Chart card spawns an editor panel directly to the right of the card, allowing users to toggle graph types (Bar, Line, Pie) and add/edit data rows.
-
----
-
-## 3. Recommended Future Enhancements
-
-### 3.1 Vector Path Simplification
-* **Opportunity**: Drawing long brush strokes accumulates hundreds of mouse coordinates, which bloots WebSocket packets and JSON database saves.
-* **Improvement**: Implement the **Ramer-Douglas-Peucker algorithm** on `onMouseUp` to simplify strokes. This reduces point counts by 70–80% without losing visual detail.
-
-### 3.2 Dynamic Adjacent Panel Positioning
-* **Opportunity**: Currently, the Chart settings panel floats at `left: node.x + node.width + 12`. If the chart card is near the right edge of the screen, the settings panel may overflow the viewport.
-* **Improvement**: Check viewport bounds on selection. If the panel would exceed screen limits, float it to the left of the card (`left: node.x - panelWidth - 12`) or below it.
-
-### 3.3 Collaborative Element Locking
-* **Opportunity**: If two guest users attempt to edit the same card or draw on the same sketchpad at once, their modifications can overlap.
-* **Improvement**: Add a lock socket message. When Client A starts typing/drawing in a card, broadcast a temporary "lock" so Client B sees a read-only indicator until Client A deselects it.
-
-### 3.4 Custom Connectors (Edges)
-* **Opportunity**: Connection lines use a default primary color.
-* **Improvement**: Allow users to right-click an edge to label it, color-code it (matching card presets), or change line styles (solid, curved, or dashed).
+1. **Local Setup**:
+   * Open two different browsers (e.g. Chrome and Firefox) and navigate to `http://localhost:3000/lacerta/drop`.
+   * Log in to two separate developer test accounts (ensuring same-device/different-account rendering is verified).
+2. **Visibility Checks**:
+   * Discovered nodes should immediately display device types (Mobile, Tablet, Desktop) and platform details (browser name and OS).
+   * Verify that toggling the "Incognito" visibility setting updates the other scanner screen instantly without page reloads.
+3. **Batch Sharing & Verification**:
+   * Drag multiple files onto the target device node or click it to select them from the file picker.
+   * Verify that the receiver receives a single modal window listing all files.
+   * Accept the transfer and verify that the progress card details updates dynamically (completed files show checkmarks, active files show progress bars/speed rates, pending files wait sequentially).
+   * Ensure files decrypt cleanly and trigger browser downloads at 100% completion.

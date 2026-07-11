@@ -1,6 +1,6 @@
 "use client";
 
-import { Folder, Lock, Share2, Trash2 } from "lucide-react";
+import { Folder, Lock, Share2, Trash2, Radio } from "lucide-react";
 import { SidebarConfig } from "@/types/SidebarConfig";
 import { RunaFlags } from "@runa/permissions";
 
@@ -41,6 +41,14 @@ export const getLacertaSidebarConfig = (): SidebarConfig => [
         subtitle: "Recycle Bin",
         position: 4,
       },
+      {
+        label: "Lacerta Drop",
+        href: "/lacerta/drop",
+        preventRedirect: false,
+        icon: <Radio className="h-4 w-4" />,
+        subtitle: "Direct Sharing",
+        position: 5,
+      },
     ],
   },
   {
@@ -74,6 +82,13 @@ export const getLacertaSidebarConfig = (): SidebarConfig => [
         icon: <Trash2 className="h-4 w-4" />,
         preventRedirect: false,
         subtitle: "Recycle Bin",
+      },
+      {
+        label: "Lacerta Drop",
+        href: "/lacerta/drop",
+        icon: <Radio className="h-4 w-4" />,
+        preventRedirect: false,
+        subtitle: "Direct Sharing",
       },
     ],
   },

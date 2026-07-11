@@ -42,6 +42,7 @@ import { RrSidebarSettingsTab } from "./rrSidebarSettingsTab";
 import { RrMailSettingsTab } from "./rrMailSettingsTab";
 import { RrApiKeysTab } from "./rrApiKeysTab";
 import { RrListsTab } from "./rrListsTab";
+import { RrConstellationBuilderModal } from "../rrConstellationBuilderModal";
 
 type rrCategory =
   | "account"
@@ -51,7 +52,8 @@ type rrCategory =
   | "security"
   | "mailAccounts"
   | "apiKeys"
-  | "lists";
+  | "lists"
+  | "constellation";
 
 export interface rrSettingsDialogProps {
   open: boolean;
@@ -63,6 +65,7 @@ export function SettingsDialog({
   onOpenChange,
 }: rrSettingsDialogProps): React.JSX.Element {
   const [activeCategory, setActiveCategory] = useState<rrCategory>("account");
+  const [isConstellationBuilderOpen, setIsConstellationBuilderOpen] = useState(false);
   const isMobile = useIsMobile();
   const pathname = usePathname();
   const isPegasus = pathname.startsWith("/pegasus");
@@ -121,11 +124,18 @@ export function SettingsDialog({
     label: item.name,
     icon: <item.icon className="size-4" />,
     isActive: activeCategory === item.id,
-    onClick: () => setActiveCategory(item.id),
+    onClick: () => {
+      if (item.id === "constellation") {
+        setIsConstellationBuilderOpen(true);
+      } else {
+        setActiveCategory(item.id);
+      }
+    },
   }));
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] md:max-w-5xl lg:max-w-6xl p-0 gap-0 overflow-hidden rounded-2xl flex flex-col md:flex-row h-[92vh] md:h-[720px]">
         <DialogTitle className="sr-only">Settings</DialogTitle>
         <DialogDescription className="sr-only">
@@ -152,7 +162,13 @@ export function SettingsDialog({
                         <SidebarMenuButton
                           asChild
                           isActive={activeCategory === item.id}
-                          onClick={() => setActiveCategory(item.id)}
+                          onClick={() => {
+                            if (item.id === "constellation") {
+                              setIsConstellationBuilderOpen(true);
+                            } else {
+                              setActiveCategory(item.id);
+                            }
+                          }}
                           className="cursor-pointer"
                         >
                           <button
@@ -242,5 +258,11 @@ export function SettingsDialog({
         </div>
       </DialogContent>
     </Dialog>
+    <RrConstellationBuilderModal
+      open={isConstellationBuilderOpen}
+      onOpenChange={setIsConstellationBuilderOpen}
+      mode="device"
+    />
+    </>
   );
 }

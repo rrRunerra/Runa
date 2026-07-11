@@ -1,14 +1,10 @@
 "use client";
 
 import type React from "react";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { LayoutGrid, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type {
-  SidebarConfig,
-  SidebarItem,
-  SidebarItemChild,
-} from "@/types/SidebarConfig";
+import type { SidebarConfig, SidebarItem } from "@/types/SidebarConfig";
 import { useSession } from "next-auth/react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";

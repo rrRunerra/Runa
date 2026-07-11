@@ -51,6 +51,11 @@ interface StarMapProps {
   children?: React.ReactNode;
   effects?: React.ReactNode;
   onMapClick?: (ra: number, dec: number) => void;
+  onSelectConstellation?: (constellation: Constellation | null) => void;
+  onConstellationClick?: (constellation: Constellation, event: React.MouseEvent) => void;
+  customControls?: React.ReactNode;
+  defaultZoom?: number;
+  activeTransfer?: { constellationId: string; progress: number };
 }
 
 export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
@@ -64,6 +69,11 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
       children,
       effects,
       onMapClick,
+      onSelectConstellation,
+      onConstellationClick,
+      customControls,
+      defaultZoom = 0.8,
+      activeTransfer,
     },
     ref,
   ) => {
@@ -78,7 +88,7 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
     const [selectedConstellation, setSelectedConstellation] =
       useState<Constellation | null>(null);
     const [showCompass, setShowCompass] = useState(false);
-    const [zoom, setZoom] = useState(0.8); // Zoom level, default 1
+    const [zoom, setZoom] = useState(defaultZoom); // Zoom level, default custom or 0.8
     const BASE_SCALE = 30;
     const animationRef = useRef<number | null>(null);
 
@@ -260,7 +270,11 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
           const current = intensitiesRef.current[c.name] || 0;
           const isHovered = hoveredConstellation?.name === c.name;
           const isSelected = selectedConstellation?.name === c.name;
-          const target = isHovered || isSelected ? 1 : 0;
+          const isTransferringThis = activeTransfer && (
+            activeTransfer.constellationId === c.id ||
+            (activeTransfer.constellationId === "self" && c.id === "self")
+          );
+          const target = isHovered || isSelected ? 1 : (isTransferringThis ? (activeTransfer.progress / 100) : 0);
 
           if (current !== target) {
             if (target > current) {
@@ -396,9 +410,9 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
 
             // A. Draw base/faint line (full length)
             const prevGlobalAlpha = ctx.globalAlpha;
-            ctx.globalAlpha = isHovered ? 0.05 : 0.1;
+            ctx.globalAlpha = isHovered ? 0.2 : 0.45;
             ctx.strokeStyle = constellation.connectionColor || "#ffffff";
-            ctx.lineWidth = 1 * zoom;
+            ctx.lineWidth = 1.2 * zoom;
             ctx.beginPath();
             ctx.moveTo(p1.x, p1.y);
             ctx.lineTo(p2.x, p2.y);
@@ -435,6 +449,58 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
           }
         });
 
+        // Draw progress ring if there is an active transfer for this constellation
+        if (
+          activeTransfer &&
+          (activeTransfer.constellationId === constellation.id ||
+            (activeTransfer.constellationId === "self" && constellation.id === "self"))
+        ) {
+          let sumRa = 0;
+          let sumDec = 0;
+          constellation.stars.forEach((s) => {
+            sumRa += s.ra;
+            sumDec += s.dec;
+          });
+          const avgRa = sumRa / constellation.stars.length;
+          const avgDec = sumDec / constellation.stars.length;
+          
+          const centerPos = raDecToScreen(
+            avgRa,
+            avgDec,
+            offset.x,
+            offset.y,
+            currentScale
+          );
+
+          // 1. Dashed track
+          const prevGlobalAlpha = ctx.globalAlpha;
+          ctx.globalAlpha = 0.15;
+          ctx.beginPath();
+          ctx.arc(centerPos.x, centerPos.y, 50 * zoom, 0, 2 * Math.PI);
+          ctx.strokeStyle = constellation.starColor || "#10b981";
+          ctx.lineWidth = 2 * zoom;
+          ctx.setLineDash([4, 4]);
+          ctx.stroke();
+          ctx.setLineDash([]);
+
+          // 2. Active arc
+          const progressPct = activeTransfer.progress / 100;
+          ctx.globalAlpha = 0.85;
+          ctx.beginPath();
+          ctx.arc(
+            centerPos.x,
+            centerPos.y,
+            50 * zoom,
+            -Math.PI / 2,
+            -Math.PI / 2 + 2 * Math.PI * progressPct
+          );
+          ctx.strokeStyle = constellation.starColor || "#10b981";
+          ctx.lineWidth = 3.5 * zoom;
+          ctx.lineCap = "round";
+          ctx.stroke();
+          ctx.lineCap = "butt";
+          ctx.globalAlpha = prevGlobalAlpha;
+        }
         // 3. Stars are rendered via React layer using StarIcon
       });
     }, [
@@ -445,6 +511,7 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
       zoom,
       constellations,
       hoveredConstellation,
+      activeTransfer,
     ]);
 
     // Calculate nearest constellation for compass
@@ -872,13 +939,21 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
           onMapClick(ra, dec);
         } else {
           if (hoveredConstellation) {
-            if (e.ctrlKey || e.metaKey) {
+            if (onConstellationClick) {
+              onConstellationClick(hoveredConstellation, e);
+            } else if (e.ctrlKey || e.metaKey) {
               window.location.href = hoveredConstellation.redirect;
             } else {
               setSelectedConstellation(hoveredConstellation);
+              if (onSelectConstellation) {
+                onSelectConstellation(hoveredConstellation);
+              }
             }
           } else {
             setSelectedConstellation(null);
+            if (onSelectConstellation) {
+              onSelectConstellation(null);
+            }
           }
         }
       }
@@ -1000,14 +1075,18 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
         {effects}
 
         {/* Controls */}
-        <StarMapControls
-          onReset={() => {
-            setOffset({ x: width / 2, y: height / 2 });
-            setZoom(0.8);
-          }}
-          showCompass={showCompass}
-          onToggleCompass={() => setShowCompass(!showCompass)}
-        />
+        {customControls !== undefined ? (
+          customControls
+        ) : (
+          <StarMapControls
+            onReset={() => {
+              setOffset({ x: width / 2, y: height / 2 });
+              setZoom(defaultZoom);
+            }}
+            showCompass={showCompass}
+            onToggleCompass={() => setShowCompass(!showCompass)}
+          />
+        )}
 
         {/* Waypoint Indicator */}
         {showCompass &&

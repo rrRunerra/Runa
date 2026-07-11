@@ -31,6 +31,8 @@ import {
   Unlock,
 } from "lucide-react";
 import { toast } from "sonner";
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
 
 import {
   Dialog,
@@ -56,6 +58,7 @@ interface ConstellationBuilderModalProps {
   initialRedirect?: string;
   initialName?: string;
   initialIcon?: string;
+  mode?: "bookmark" | "device";
 }
 
 interface StarPoint {
@@ -102,6 +105,7 @@ export function RrConstellationBuilderModal({
   initialRedirect,
   initialName,
   initialIcon,
+  mode = "bookmark",
 }: ConstellationBuilderModalProps): React.JSX.Element | null {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -122,9 +126,28 @@ export function RrConstellationBuilderModal({
     null,
   );
 
-  // Sync bookmarks using useBookmarks
+  const hasInitializedRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    if (!open) {
+      hasInitializedRef.current = false;
+    }
+  }, [open]);
+
+  // Fetch user profile settings if in device mode
+  const { data: profileData, mutate: refetchProfile } = useSWR<any>(
+    session?.user?.username && session?.accessToken && mode === "device" && open
+      ? [
+          `${process.env.NEXT_PUBLIC_API_URL}/users/${session.user.username}`,
+          session.accessToken,
+        ]
+      : null,
+    fetcher
+  );
+
+  // Sync bookmarks using useBookmarks (only if NOT in device mode to save API load)
   const { bookmarks: fetchedBookmarksRaw, mutate: refetchBookmarks } = useBookmarks({
-    enabled: !!(session?.accessToken && open),
+    enabled: !!(session?.accessToken && open && mode !== "device"),
   });
   const fetchedBookmarks = fetchedBookmarksRaw as unknown as Bookmark[];
 
@@ -214,6 +237,38 @@ export function RrConstellationBuilderModal({
       if (initialIcon) setIcon(initialIcon);
     }
   }, [open, initialRedirect, initialName, initialIcon]);
+
+  // Load device constellation when profileData is retrieved
+  useEffect(() => {
+    if (open && mode === "device" && profileData && !hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      const constellationStr = profileData.profileSettings?.lacerta_drop_constellation;
+      if (constellationStr) {
+        try {
+          const constellation = typeof constellationStr === "string" ? JSON.parse(constellationStr) : constellationStr;
+          if (constellation) {
+            setName(constellation.name || "My Constellation");
+            setStarColor(constellation.starColor || "");
+            setConnectionColor(constellation.connectionColor || "");
+            if (constellation.stars) {
+              const mappedStars = constellation.stars.map((s: any) => ({
+                ra: s.ra,
+                dec: s.dec,
+                x: 0,
+                y: 0,
+              }));
+              setStars(mappedStars);
+            }
+            if (constellation.connections) {
+              setConnections(constellation.connections);
+            }
+          }
+        } catch (e) {
+          console.error("Failed to parse device constellation", e);
+        }
+      }
+    }
+  }, [open, mode, profileData]);
 
   // Viewport Settings
   const scale = 30;
@@ -1014,34 +1069,60 @@ export function RrConstellationBuilderModal({
 
     setIsSaving(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/bookmarks`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.accessToken}`,
-        },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => null);
-        throw new Error(errJson?.message || "Failed to save constellation bookmark.");
-      }
-      const savedBookmark = await res.json() as Bookmark;
-      toast.success(`Successfully saved "${name}" to database bookmarks!`);
-      window.dispatchEvent(new CustomEvent("runa-bookmarks-changed"));
+      if (mode === "device") {
+        const currentProfileSettings = profileData?.profileSettings || {};
+        const updatedSettings = {
+          ...currentProfileSettings,
+          lacerta_drop_constellation: JSON.stringify(data),
+        };
 
-      // Update local bookmarks list
-      setBookmarks((prev) => {
-        const index = prev.findIndex((b) => b.name === name);
-        if (index !== -1) {
-          const updated = [...prev];
-          updated[index] = savedBookmark;
-          return updated;
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me/settings`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+          body: JSON.stringify({ profileSettings: updatedSettings }),
+        });
+
+        if (!res.ok) {
+          const errJson = await res.json().catch(() => null);
+          throw new Error(errJson?.message || "Failed to save device constellation.");
         }
-        return [savedBookmark, ...prev];
-      });
+
+        toast.success(`Successfully saved your device constellation!`);
+        window.dispatchEvent(new CustomEvent("runa-constellation-changed"));
+        refetchProfile();
+      } else {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/bookmarks`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+          body: JSON.stringify(data),
+        });
+        if (!res.ok) {
+          const errJson = await res.json().catch(() => null);
+          throw new Error(errJson?.message || "Failed to save constellation bookmark.");
+        }
+        const savedBookmark = await res.json() as Bookmark;
+        toast.success(`Successfully saved "${name}" to database bookmarks!`);
+        window.dispatchEvent(new CustomEvent("runa-bookmarks-changed"));
+
+        // Update local bookmarks list
+        setBookmarks((prev) => {
+          const index = prev.findIndex((b) => b.name === name);
+          if (index !== -1) {
+            const updated = [...prev];
+            updated[index] = savedBookmark;
+            return updated;
+          }
+          return [savedBookmark, ...prev];
+        });
+      }
     } catch (err: any) {
-      toast.error(err.message || "Failed to save constellation bookmark.");
+      toast.error(err.message || "Failed to save constellation.");
     } finally {
       setIsSaving(false);
     }
@@ -1558,19 +1639,24 @@ export function RrConstellationBuilderModal({
                 onValueChange={setActiveTab}
                 className="w-full flex flex-col h-full gap-4"
               >
-                <TabsList className="grid grid-cols-5 w-full bg-muted border border-border p-[3px] rounded-xl shrink-0">
+                <TabsList className={cn(
+                  "grid w-full bg-muted border border-border p-[3px] rounded-xl shrink-0",
+                  mode === "device" ? "grid-cols-4" : "grid-cols-5"
+                )}>
                   <TabsTrigger
                     value="metadata"
                     className="text-[10px] sm:text-[11px] cursor-pointer"
                   >
                     Meta
                   </TabsTrigger>
-                  <TabsTrigger
-                    value="saved"
-                    className="text-[10px] sm:text-[11px] cursor-pointer"
-                  >
-                    Saved
-                  </TabsTrigger>
+                  {mode !== "device" && (
+                    <TabsTrigger
+                      value="saved"
+                      className="text-[10px] sm:text-[11px] cursor-pointer"
+                    >
+                      Saved
+                    </TabsTrigger>
+                  )}
                   <TabsTrigger
                     value="export"
                     className="text-[10px] sm:text-[11px] cursor-pointer"
@@ -1615,51 +1701,55 @@ export function RrConstellationBuilderModal({
                         />
                       </Field>
 
-                      <Field>
-                        <FieldLabel htmlFor="const-desc">
-                          Description
-                        </FieldLabel>
-                        <Input
-                          id="const-desc"
-                          type="text"
-                          value={description}
-                          onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                            setDescription(e.target.value)
-                          }
-                          className="h-8 text-xs bg-background border-input focus-visible:ring-primary/20"
-                        />
-                      </Field>
+                      {mode !== "device" && (
+                        <>
+                          <Field>
+                            <FieldLabel htmlFor="const-desc">
+                              Description
+                            </FieldLabel>
+                            <Input
+                              id="const-desc"
+                              type="text"
+                              value={description}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                                setDescription(e.target.value)
+                              }
+                              className="h-8 text-xs bg-background border-input focus-visible:ring-primary/20"
+                            />
+                          </Field>
 
-                      <Field>
-                        <FieldLabel htmlFor="const-redirect">
-                          Redirect Path
-                        </FieldLabel>
-                        <Input
-                          id="const-redirect"
-                          type="text"
-                          value={redirect}
-                          onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                            setRedirect(e.target.value)
-                          }
-                          className="h-8 text-xs bg-background border-input focus-visible:ring-primary/20"
-                        />
-                      </Field>
+                          <Field>
+                            <FieldLabel htmlFor="const-redirect">
+                              Redirect Path
+                            </FieldLabel>
+                            <Input
+                              id="const-redirect"
+                              type="text"
+                              value={redirect}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                                setRedirect(e.target.value)
+                              }
+                              className="h-8 text-xs bg-background border-input focus-visible:ring-primary/20"
+                            />
+                          </Field>
 
-                      <Field>
-                        <FieldLabel htmlFor="const-icon">
-                          Icon URL (Optional)
-                        </FieldLabel>
-                        <Input
-                          id="const-icon"
-                          type="text"
-                          placeholder="e.g. /favicons/my-app.ico"
-                          value={icon}
-                          onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                            setIcon(e.target.value)
-                          }
-                          className="h-8 text-xs bg-background border-input focus-visible:ring-primary/20"
-                        />
-                      </Field>
+                          <Field>
+                            <FieldLabel htmlFor="const-icon">
+                              Icon URL (Optional)
+                            </FieldLabel>
+                            <Input
+                              id="const-icon"
+                              type="text"
+                              placeholder="e.g. /favicons/my-app.ico"
+                              value={icon}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                                setIcon(e.target.value)
+                              }
+                              className="h-8 text-xs bg-background border-input focus-visible:ring-primary/20"
+                            />
+                          </Field>
+                        </>
+                      )}
 
                       <div className="grid grid-cols-2 gap-3">
                         <Field>
@@ -1779,7 +1869,6 @@ export function RrConstellationBuilderModal({
                         <Compass className="size-3.5" />
                         Pick Offset visually from StarMap
                       </Button>
-
                       <Button
                         onClick={handleSaveToBookmarks}
                         type="button"
@@ -1788,9 +1877,11 @@ export function RrConstellationBuilderModal({
                         aria-label={
                           isSaving
                             ? "Saving constellation..."
-                            : editingBookmarkId
-                              ? "Update existing bookmark"
-                              : "Add current constellation to database bookmarks"
+                            : mode === "device"
+                              ? "Save constellation for device"
+                              : editingBookmarkId
+                                ? "Update existing bookmark"
+                                : "Add current constellation to database bookmarks"
                         }
                       >
                         {isSaving ? (
@@ -1798,15 +1889,14 @@ export function RrConstellationBuilderModal({
                             <RefreshCw className="size-3.5 animate-spin" />
                             Saving Constellation...
                           </>
-                        ) : editingBookmarkId ? (
-                          <>
-                            <Check className="size-3.5" />
-                            Update Bookmark
-                          </>
                         ) : (
                           <>
-                            <Sparkles className="size-3.5" />
-                            Add to Bookmarks
+                            <Check className="size-3.5" />
+                            {mode === "device"
+                              ? "Save Constellation for Device"
+                              : editingBookmarkId
+                                ? "Update Bookmark"
+                                : "Save to Bookmarks"}
                           </>
                         )}
                       </Button>
@@ -1832,88 +1922,90 @@ export function RrConstellationBuilderModal({
                 </TabsContent>
 
                 {/* Tab 2: Saved Bookmarks */}
-                <TabsContent
-                  value="saved"
-                  className="mt-0 focus-visible:outline-hidden flex flex-col gap-4"
-                >
-                  <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-2.5">
-                    <div className="flex items-center justify-between border-b border-border pb-2">
-                      <h3 className="text-xs font-semibold text-foreground uppercase tracking-widest">
-                        Saved Constellations
-                      </h3>
-                    </div>
+                {mode !== "device" && (
+                  <TabsContent
+                    value="saved"
+                    className="mt-0 focus-visible:outline-hidden flex flex-col gap-4"
+                  >
+                    <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-2.5">
+                      <div className="flex items-center justify-between border-b border-border pb-2">
+                        <h3 className="text-xs font-semibold text-foreground uppercase tracking-widest">
+                          Saved Constellations
+                        </h3>
+                      </div>
 
-                    {!session?.accessToken ? (
-                      <p className="text-xs text-muted-foreground text-center py-8">
-                        Please sign in to manage database bookmarks.
-                      </p>
-                    ) : bookmarks.length === 0 ? (
-                      <p className="text-xs text-muted-foreground text-center py-8">
-                        No bookmarks saved in database yet.
-                      </p>
-                    ) : (
-                      <div className="flex flex-col gap-2 max-h-[440px] overflow-y-auto pr-1">
-                        {bookmarks.map((b) => (
-                          <div
-                            key={b.id}
-                            className="bg-background border border-border hover:border-muted-foreground/35 p-3 rounded-lg flex items-center justify-between gap-3 transition-colors group"
-                          >
-                            <div className="flex-1 min-w-0">
-                              <h4 className="text-xs font-bold text-foreground truncate">
-                                {b.name}
-                              </h4>
-                              <p className="text-[10px] text-muted-foreground truncate mt-0.5">
-                                {b.description || "No description provided."}
-                              </p>
-                              <div className="flex gap-2 mt-1">
-                                <span className="text-[9px] font-mono text-muted-foreground">
-                                  {Array.isArray(b.stars) ? b.stars.length : 0}{" "}
-                                  stars
-                                </span>
-                                <span className="text-[9px] font-mono text-muted-foreground">
-                                  {Array.isArray(b.connections)
-                                    ? b.connections.length
-                                    : 0}{" "}
-                                  connections
-                                </span>
+                      {!session?.accessToken ? (
+                        <p className="text-xs text-muted-foreground text-center py-8">
+                          Please sign in to manage database bookmarks.
+                        </p>
+                      ) : bookmarks.length === 0 ? (
+                        <p className="text-xs text-muted-foreground text-center py-8">
+                          No bookmarks saved in database yet.
+                        </p>
+                      ) : (
+                        <div className="flex flex-col gap-2 max-h-[440px] overflow-y-auto pr-1">
+                          {bookmarks.map((b) => (
+                            <div
+                              key={b.id}
+                              className="bg-background border border-border hover:border-muted-foreground/35 p-3 rounded-lg flex items-center justify-between gap-3 transition-colors group"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <h4 className="text-xs font-bold text-foreground truncate">
+                                  {b.name}
+                                </h4>
+                                <p className="text-[10px] text-muted-foreground truncate mt-0.5">
+                                  {b.description || "No description provided."}
+                                </p>
+                                <div className="flex gap-2 mt-1">
+                                  <span className="text-[9px] font-mono text-muted-foreground">
+                                    {Array.isArray(b.stars) ? b.stars.length : 0}{" "}
+                                    stars
+                                  </span>
+                                  <span className="text-[9px] font-mono text-muted-foreground">
+                                    {Array.isArray(b.connections)
+                                      ? b.connections.length
+                                      : 0}{" "}
+                                    connections
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <Button
+                                  onClick={() => handleLoadBookmark(b)}
+                                  size="xs"
+                                  variant="outline"
+                                  className="h-7 px-2 rounded-md text-[10px] border-border text-primary hover:bg-muted cursor-pointer flex items-center gap-1"
+                                  title={`Edit constellation ${b.name}`}
+                                  aria-label={`Edit constellation ${b.name}`}
+                                >
+                                  <Pencil className="size-3" />
+                                  Edit
+                                </Button>
+                                <Button
+                                  onClick={() =>
+                                    handleDeleteBookmark(b.id, b.name)
+                                  }
+                                  size="xs"
+                                  variant="outline"
+                                  disabled={isDeleting && deleteId === b.id}
+                                  className="h-7 px-2 rounded-md text-[10px] border-destructive/20 text-destructive hover:bg-destructive/10 cursor-pointer disabled:opacity-50"
+                                  title={`Delete constellation ${b.name}`}
+                                  aria-label={`Delete constellation ${b.name}`}
+                                >
+                                  {isDeleting && deleteId === b.id ? (
+                                    <RefreshCw className="size-3 animate-spin" />
+                                  ) : (
+                                    <Trash2 className="size-3" />
+                                  )}
+                                </Button>
                               </div>
                             </div>
-                            <div className="flex items-center gap-1 shrink-0">
-                              <Button
-                                onClick={() => handleLoadBookmark(b)}
-                                size="xs"
-                                variant="outline"
-                                className="h-7 px-2 rounded-md text-[10px] border-border text-primary hover:bg-muted cursor-pointer flex items-center gap-1"
-                                title={`Edit constellation ${b.name}`}
-                                aria-label={`Edit constellation ${b.name}`}
-                              >
-                                <Pencil className="size-3" />
-                                Edit
-                              </Button>
-                              <Button
-                                onClick={() =>
-                                  handleDeleteBookmark(b.id, b.name)
-                                }
-                                size="xs"
-                                variant="outline"
-                                disabled={isDeleting && deleteId === b.id}
-                                className="h-7 px-2 rounded-md text-[10px] border-destructive/20 text-destructive hover:bg-destructive/10 cursor-pointer disabled:opacity-50"
-                                title={`Delete constellation ${b.name}`}
-                                aria-label={`Delete constellation ${b.name}`}
-                              >
-                                {isDeleting && deleteId === b.id ? (
-                                  <RefreshCw className="size-3 animate-spin" />
-                                ) : (
-                                  <Trash2 className="size-3" />
-                                )}
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </TabsContent>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </TabsContent>
+                )}
 
                 {/* Tab 3: Export */}
                 <TabsContent
