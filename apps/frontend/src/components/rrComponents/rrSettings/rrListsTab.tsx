@@ -55,7 +55,9 @@ export function RrListsTab({
     "game",
     "book",
   ]);
-  const [exportFormat, setExportFormat] = useState<"json" | "mal-xml">("json");
+  const [exportFormat, setExportFormat] = useState<
+    "json" | "mal-xml" | "anilist-xml" | "simkl-xml" | "trakt-json"
+  >("json");
   const [isExporting, setIsExporting] = useState<boolean>(false);
 
   // Import States
@@ -66,12 +68,12 @@ export function RrListsTab({
 
   // Export handlers
   const handleToggleType = (typeId: string) => {
-    if (
-      exportFormat === "mal-xml" &&
-      typeId !== "anime" &&
-      typeId !== "manga"
-    ) {
-      return; // MAL XML only supports Anime and Manga
+    const isXml = ["mal-xml", "anilist-xml", "simkl-xml"].includes(exportFormat);
+    if (isXml && typeId !== "anime" && typeId !== "manga") {
+      return; // XML only supports Anime and Manga
+    }
+    if (exportFormat === "trakt-json" && typeId !== "tv" && typeId !== "movie") {
+      return; // Trakt only supports TV Shows and Movies
     }
     setSelectedTypes((prev) =>
       prev.includes(typeId)
@@ -81,8 +83,10 @@ export function RrListsTab({
   };
 
   const handleSelectAll = () => {
-    if (exportFormat === "mal-xml") {
+    if (["mal-xml", "anilist-xml", "simkl-xml"].includes(exportFormat)) {
       setSelectedTypes(["anime", "manga"]);
+    } else if (exportFormat === "trakt-json") {
+      setSelectedTypes(["tv", "movie"]);
     } else {
       setSelectedTypes(MEDIA_TYPES.map((t) => t.id));
     }
@@ -92,12 +96,19 @@ export function RrListsTab({
     setSelectedTypes([]);
   };
 
-  const handleFormatChange = (format: "json" | "mal-xml") => {
+  const handleFormatChange = (
+    format: "json" | "mal-xml" | "anilist-xml" | "simkl-xml" | "trakt-json"
+  ) => {
     setExportFormat(format);
-    if (format === "mal-xml") {
+    if (["mal-xml", "anilist-xml", "simkl-xml"].includes(format)) {
       // Filter out non-anime/manga media
       setSelectedTypes((prev) =>
-        prev.filter((id) => id === "anime" || id === "manga"),
+        prev.filter((id) => id === "anime" || id === "manga")
+      );
+    } else if (format === "trakt-json") {
+      // Filter out non-tv/movie media
+      setSelectedTypes((prev) =>
+        prev.filter((id) => id === "tv" || id === "movie")
       );
     }
   };
@@ -133,7 +144,7 @@ export function RrListsTab({
     const username = session.user?.username || "user";
 
     try {
-      if (exportFormat === "json") {
+      if (exportFormat === "json" || exportFormat === "trakt-json") {
         const queryParams = new URLSearchParams({
           types: selectedTypes.join(","),
         });
@@ -151,14 +162,24 @@ export function RrListsTab({
         }
 
         const data = await res.json();
+        const prefix = exportFormat === "trakt-json" ? "trakt" : "media-list";
         triggerDownload(
           JSON.stringify(data, null, 2),
-          `runa-media-list-export-${username}-${timestamp}.json`,
+          `runa-${prefix}-export-${username}-${timestamp}.json`,
           "application/json",
         );
-        toast.success("JSON lists exported successfully!");
+        toast.success(
+          `${exportFormat === "trakt-json" ? "Trakt JSON" : "JSON"} lists exported successfully!`
+        );
       } else {
-        // MAL XML export (anime and/or manga)
+        // XML export (MyAnimeList, AniList, Simkl using MAL XML format)
+        const providerName =
+          exportFormat === "anilist-xml"
+            ? "anilist"
+            : exportFormat === "simkl-xml"
+              ? "simkl"
+              : "mal";
+
         if (selectedTypes.includes("anime")) {
           const res = await fetch(
             `${process.env.NEXT_PUBLIC_API_URL}/list/export/mal?type=anime`,
@@ -172,7 +193,7 @@ export function RrListsTab({
           const xml = await res.text();
           triggerDownload(
             xml,
-            `runa-mal-export-anime-${username}-${timestamp}.xml`,
+            `runa-${providerName}-export-anime-${username}-${timestamp}.xml`,
             "application/xml",
           );
         }
@@ -190,11 +211,13 @@ export function RrListsTab({
           const xml = await res.text();
           triggerDownload(
             xml,
-            `runa-mal-export-manga-${username}-${timestamp}.xml`,
+            `runa-${providerName}-export-manga-${username}-${timestamp}.xml`,
             "application/xml",
           );
         }
-        toast.success("MAL XML exported successfully!");
+        toast.success(
+          `${providerName === "mal" ? "MAL XML" : providerName.charAt(0).toUpperCase() + providerName.slice(1) + " XML"} exported successfully!`
+        );
       }
     } catch (error: any) {
       console.error(error);
@@ -341,24 +364,51 @@ export function RrListsTab({
               <Label className="text-xs font-semibold text-muted-foreground uppercase">
                 Export Format
               </Label>
-              <div className="flex gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <Button
                   variant={exportFormat === "json" ? "default" : "outline"}
                   onClick={() => handleFormatChange("json")}
-                  className="flex-1 text-xs"
+                  className="text-xs font-medium h-8.5"
                   size="sm"
                 >
-                  <FileJson className="size-4 mr-1.5" />
+                  <FileJson className="size-3.5 mr-1.5 shrink-0" />
                   rrList (JSON)
                 </Button>
                 <Button
                   variant={exportFormat === "mal-xml" ? "default" : "outline"}
                   onClick={() => handleFormatChange("mal-xml")}
-                  className="flex-1 text-xs"
+                  className="text-xs font-medium h-8.5"
                   size="sm"
                 >
-                  <FileCode className="size-4 mr-1.5" />
+                  <FileCode className="size-3.5 mr-1.5 shrink-0" />
                   MyAnimeList (XML)
+                </Button>
+                <Button
+                  variant={exportFormat === "anilist-xml" ? "default" : "outline"}
+                  onClick={() => handleFormatChange("anilist-xml")}
+                  className="text-xs font-medium h-8.5"
+                  size="sm"
+                >
+                  <FileCode className="size-3.5 mr-1.5 shrink-0" />
+                  AniList (XML)
+                </Button>
+                <Button
+                  variant={exportFormat === "simkl-xml" ? "default" : "outline"}
+                  onClick={() => handleFormatChange("simkl-xml")}
+                  className="text-xs font-medium h-8.5"
+                  size="sm"
+                >
+                  <FileCode className="size-3.5 mr-1.5 shrink-0" />
+                  Simkl (XML)
+                </Button>
+                <Button
+                  variant={exportFormat === "trakt-json" ? "default" : "outline"}
+                  onClick={() => handleFormatChange("trakt-json")}
+                  className="text-xs font-medium h-8.5 col-span-2"
+                  size="sm"
+                >
+                  <FileJson className="size-3.5 mr-1.5 shrink-0" />
+                  Trakt (JSON)
                 </Button>
               </div>
             </div>
@@ -389,9 +439,11 @@ export function RrListsTab({
               <div className="grid grid-cols-2 gap-3 p-3 bg-muted/30 border border-border/40 rounded-xl">
                 {MEDIA_TYPES.map((type) => {
                   const isDisabled =
-                    exportFormat === "mal-xml" &&
-                    type.id !== "anime" &&
-                    type.id !== "manga";
+                    ["mal-xml", "anilist-xml", "simkl-xml"].includes(exportFormat)
+                      ? (type.id !== "anime" && type.id !== "manga")
+                      : (exportFormat === "trakt-json"
+                        ? (type.id !== "tv" && type.id !== "movie")
+                        : false);
 
                   return (
                     <div
@@ -421,12 +473,59 @@ export function RrListsTab({
                 })}
               </div>
 
-              {exportFormat === "mal-xml" && (
-                <div className="flex gap-1.5 items-start text-[11px] text-amber-500 font-medium leading-normal bg-amber-500/10 p-2.5 rounded-lg border border-amber-500/20">
-                  <AlertCircle className="size-3.5 shrink-0 mt-0.5" />
-                  <span>
-                    MyAnimeList XML format only supports Anime and Manga. TV,
-                    Movies, Games, and Books will not be exported.
+              {/* Conditional Info Alert / Banners for external platforms */}
+              {exportFormat !== "json" && (
+                <div className="flex flex-col gap-1.5 items-start text-[11px] text-amber-500 font-medium leading-normal bg-amber-500/10 p-2.5 rounded-lg border border-amber-500/20">
+                  <div className="flex gap-1.5 items-start">
+                    <AlertCircle className="size-3.5 shrink-0 mt-0.5" />
+                    <span>
+                      {exportFormat === "trakt-json"
+                        ? "Trakt only supports TV Shows and Movies. Anime, Manga, Games, and Books will not be exported."
+                        : `${exportFormat === "mal-xml" ? "MyAnimeList" : exportFormat === "anilist-xml" ? "AniList" : "Simkl"} XML format only supports Anime and Manga. TV, Movies, Games, and Books will not be exported.`}
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-muted-foreground">
+                    After downloading, you can import this file on the{" "}
+                    {exportFormat === "mal-xml" && (
+                      <a
+                        href="https://myanimelist.net/import.php"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline font-semibold inline-flex items-center gap-0.5"
+                      >
+                        MyAnimeList Import Page <ExternalLink className="size-3" />
+                      </a>
+                    )}
+                    {exportFormat === "anilist-xml" && (
+                      <a
+                        href="https://anilist.co/settings/import"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline font-semibold inline-flex items-center gap-0.5"
+                      >
+                        AniList Import Page <ExternalLink className="size-3" />
+                      </a>
+                    )}
+                    {exportFormat === "simkl-xml" && (
+                      <a
+                        href="https://simkl.com/apps/import/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline font-semibold inline-flex items-center gap-0.5"
+                      >
+                        Simkl Import Page <ExternalLink className="size-3" />
+                      </a>
+                    )}
+                    {exportFormat === "trakt-json" && (
+                      <a
+                        href="https://trakt.tv/import"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline font-semibold inline-flex items-center gap-0.5"
+                      >
+                        Trakt Import Page <ExternalLink className="size-3" />
+                      </a>
+                    )}
                   </span>
                 </div>
               )}

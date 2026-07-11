@@ -1,6 +1,7 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { json, urlencoded } from 'express';
 import { AppModule } from './app.module';
 import 'reflect-metadata';
 
@@ -28,6 +29,8 @@ REQUIRED_ENV_VARS.forEach((key) => {
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  app.use(json({ limit: '5mb' }));
+  app.use(urlencoded({ limit: '5mb', extended: true }));
   app.enableCors({ origin: process.env.NEXT_PUBLIC_URL, credentials: true });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
 
