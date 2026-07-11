@@ -1,4 +1,4 @@
-export const DB_NAME = "RunaE2EE";
+export const DB_NAME = "RunaEncryption";
 export const STORE_NAME = "keys";
 export const DB_VERSION = 1;
 

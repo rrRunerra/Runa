@@ -29,7 +29,7 @@ import type {
   MfaStatusEntity,
   DeviceEntity,
   DeviceStatusEntity,
-  E2eeKeysEntity,
+  EncryptionKeysEntity,
   SuccessEntity,
   UserProfileEntity,
   UserSearchEntity,
@@ -871,6 +871,7 @@ export class UserService {
           userAgent: dto.userAgent ?? null,
           lastActiveAt: new Date(),
           signedPreKey: dto.signedPreKey,
+          mlKemIdentityKey: dto.mlKemIdentityKey,
         },
       );
 
@@ -882,6 +883,7 @@ export class UserService {
         userAgent: updated.userAgent,
         lastActiveAt: updated.lastActiveAt,
         identityKey: updated.identityKey,
+        mlKemIdentityKey: updated.mlKemIdentityKey,
         signedPreKey: updated.signedPreKey,
         encryptedMasterKey: updated.encryptedMasterKey,
       };
@@ -893,6 +895,7 @@ export class UserService {
       deviceName: dto.deviceName,
       userAgent: dto.userAgent ?? null,
       identityKey: dto.identityKey,
+      mlKemIdentityKey: dto.mlKemIdentityKey,
       signedPreKey: dto.signedPreKey,
     });
 
@@ -912,6 +915,7 @@ export class UserService {
         device.id,
         dto.deviceName,
         dto.identityKey,
+        dto.mlKemIdentityKey,
       );
     }
 
@@ -923,6 +927,7 @@ export class UserService {
       userAgent: device.userAgent,
       lastActiveAt: device.lastActiveAt,
       identityKey: device.identityKey,
+      mlKemIdentityKey: device.mlKemIdentityKey,
       signedPreKey: device.signedPreKey,
       encryptedMasterKey: device.encryptedMasterKey,
     };
@@ -942,15 +947,15 @@ export class UserService {
   }
 
   // ---------------------------------------------------------------------------
-  // E2EE Keys
+  // Encryption Keys
   // ---------------------------------------------------------------------------
 
-  async getE2eeKeys(userId: string): Promise<E2eeKeysEntity> {
-    const cacheKey = `user:e2ee-keys:${userId}`;
-    const cached = await this.cacheService.get<E2eeKeysEntity>(cacheKey);
+  async getEncryptionKeys(userId: string): Promise<EncryptionKeysEntity> {
+    const cacheKey = `user:encryption-keys:${userId}`;
+    const cached = await this.cacheService.get<EncryptionKeysEntity>(cacheKey);
     if (cached) return cached;
 
-    const keys = await this.userRepository.getE2eeKeys(userId);
+    const keys = await this.userRepository.getEncryptionKeys(userId);
     if (!keys) {
       throw new rrNotFoundException(`${this.moduleCode}UNF013`, {
         message: 'User not found',
@@ -961,9 +966,10 @@ export class UserService {
     return keys;
   }
 
-  async updateE2eeKeys(
+  async updateEncryptionKeys(
     userId: string,
     userPublicKey: string,
+    userMlKemPublicKey: string,
     encryptedUserPrivateKey: string,
   ): Promise<User> {
     const user = await this.userRepository.findUserById(userId);
@@ -973,13 +979,14 @@ export class UserService {
       });
     }
 
-    const updated = await this.userRepository.updateE2eeKeys(
+    const updated = await this.userRepository.updateEncryptionKeys(
       userId,
       userPublicKey,
+      userMlKemPublicKey,
       encryptedUserPrivateKey,
     );
 
-    await this.cacheService.del(`user:e2ee-keys:${userId}`);
+    await this.cacheService.del(`user:encryption-keys:${userId}`);
     return updated;
   }
 

@@ -33,6 +33,7 @@ import { jwtVerify } from 'jose';
 
 import { FilesService } from './files.service';
 import { FilesRepository } from './files.repository';
+import { encrypt, decrypt } from '@runa/crypto/node';
 import type {
   UploadPublicEntity,
   UploadLaceraEntity,
@@ -40,33 +41,8 @@ import type {
 } from './files.entity';
 
 // ---------------------------------------------------------------------------
-// OnlyOffice E2EE crypto helpers
+// OnlyOffice Encryption crypto helpers
 // ---------------------------------------------------------------------------
-function decryptFileBuffer(encryptedBuffer: Buffer, keyBuffer: Buffer): Buffer {
-  if (encryptedBuffer.length < 28)
-    throw new Error('Encrypted buffer too short');
-  const iv = encryptedBuffer.subarray(0, 12);
-  const tag = encryptedBuffer.subarray(12, 28);
-  const ciphertext = encryptedBuffer.subarray(28);
-  const decipher = crypto.createDecipheriv('aes-256-gcm', keyBuffer, iv);
-  decipher.setAuthTag(tag);
-  return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
-}
-
-function encryptFileBuffer(plaintextBuffer: Buffer, keyBuffer: Buffer): Buffer {
-  const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv('aes-256-gcm', keyBuffer, iv);
-  const ciphertext = Buffer.concat([
-    cipher.update(plaintextBuffer),
-    cipher.final(),
-  ]);
-  const tag = cipher.getAuthTag();
-  const out = Buffer.alloc(12 + 16 + ciphertext.length);
-  iv.copy(out, 0);
-  tag.copy(out, 12);
-  ciphertext.copy(out, 28);
-  return out;
-}
 
 const FOUR_MB = 4 * 1024 * 1024;
 
@@ -517,7 +493,7 @@ export class FilesController {
         `[OO-DL] Read ${encryptedBuffer.length} bytes, decrypting...`,
       );
       const keyBuffer = Buffer.from(fileKey, 'base64url');
-      const decrypted = decryptFileBuffer(encryptedBuffer, keyBuffer);
+      const decrypted = decrypt(encryptedBuffer, keyBuffer);
       this.logger.log(
         `[OO-DL] Decrypted to ${decrypted.length} bytes, sending.`,
       );
@@ -580,7 +556,7 @@ export class FilesController {
         );
       const plaintextBuffer = Buffer.from(await downloadRes.arrayBuffer());
       const keyBuffer = Buffer.from(fileKey, 'base64url');
-      const encryptedBuffer = encryptFileBuffer(plaintextBuffer, keyBuffer);
+      const encryptedBuffer = encrypt(plaintextBuffer, keyBuffer);
       await this.filesService.updateLaceraFileContent(
         id,
         userId,

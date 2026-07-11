@@ -97,23 +97,7 @@ export default function LacertaPage({
   tab?: LacertaTab;
 }): React.JSX.Element {
   const { data: session } = useSession();
-  const { isE2eeUnlocked, privateKey, setShowUnlockDialog, lockE2ee } = useRRCrypto();
-
-  const [userPublicKey, setUserPublicKey] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (session?.user?.username && isE2eeUnlocked) {
-      import("@/lib/indexeddb").then(({ loadKey }) => {
-        loadKey(`public_key_string_${session.user.username}`).then((key) => {
-          if (key) {
-            setUserPublicKey(key as string);
-          }
-        });
-      });
-    } else {
-      setUserPublicKey(null);
-    }
-  }, [session?.user?.username, isE2eeUnlocked]);
+  const { isEncryptionUnlocked, privateKey, setShowUnlockDialog, lockEncryption, userPublicKey } = useRRCrypto();
 
   const currentTab = tab;
   const router = useRouter();
@@ -176,9 +160,9 @@ export default function LacertaPage({
     fetcher
   );
 
-  // Decrypt metadata of file list whenever data or E2EE status updates
+  // Decrypt metadata of file list whenever data or Encryption status updates
   useEffect(() => {
-    if (!isE2eeUnlocked || !data || !privateKey) {
+    if (!isEncryptionUnlocked || !data || !privateKey) {
       setDecryptedFiles([]);
       return;
     }
@@ -233,7 +217,7 @@ export default function LacertaPage({
     };
 
     decryptAll();
-  }, [data, isE2eeUnlocked, privateKey, session?.user?.id]);
+  }, [data, isEncryptionUnlocked, privateKey, session?.user?.id]);
 
   // Tab filter files selection
   const filteredFiles = decryptedFiles.filter((file) => {
@@ -770,7 +754,7 @@ export default function LacertaPage({
   };
 
   // Locked Landing Page UI
-  if (!isE2eeUnlocked) {
+  if (!isEncryptionUnlocked) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center bg-background p-6">
         <div className="w-full max-w-md rounded-2xl border border-border bg-card/60 p-8 shadow-2xl backdrop-blur-xl flex flex-col items-center">
@@ -815,7 +799,7 @@ export default function LacertaPage({
           onCreateDoc={handleCreateDoc}
           onUploadFile={handleUploadFile}
           isSharedTab={currentTab === "shared"}
-          onLockE2ee={lockE2ee}
+          onLockEncryption={lockEncryption}
           onSaveCopy={handleSaveCopy}
         />
       )}

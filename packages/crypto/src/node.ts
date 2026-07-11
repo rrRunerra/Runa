@@ -120,10 +120,16 @@ export function decrypt(data: any, key: Buffer | string | (Buffer | string)[]): 
 /**
  * Unified asymmetric key wrapping for E2EE hybrid encryption in Node.
  */
-export function wrapKey(
+export async function wrapKey(
   rawKey: Buffer | string,
-  recipientPublicKeyBase64Url: string
-): EncryptedKeyPayload {
+  recipientPublicKeyBase64Url: string,
+  recipientMlKemPublicKeyBase64Url?: string | null
+): Promise<EncryptedKeyPayload | HybridEncryptedKeyPayload> {
+  if (recipientMlKemPublicKeyBase64Url) {
+    const mlKemBytes = base64UrlToBuffer(recipientMlKemPublicKeyBase64Url);
+    return hybridWrapKey(rawKey, recipientPublicKeyBase64Url, mlKemBytes);
+  }
+
   const userPublicKeyBuf = base64UrlToBuffer(recipientPublicKeyBase64Url);
 
   const serverEcdh = crypto.createECDH('prime256v1');
@@ -188,3 +194,108 @@ export function unwrapKey(
 
   throw lastError || new Error('Failed to unwrap key with all provided private keys');
 }
+
+export interface HybridEncryptedKeyPayload {
+  version: 'hybrid-v1';
+  ecdh: EncryptedKeyPayload;
+  mlkemCiphertext: string;
+  iv: string;
+  tag: string;
+  ciphertextInner: string;
+}
+
+function deriveHybridKey(ecdhSecret: Buffer, mlkemSecret: Uint8Array): Buffer {
+  const ikm = Buffer.concat([ecdhSecret, Buffer.from(mlkemSecret)]);
+  return Buffer.from(
+    crypto.hkdfSync(
+      'sha256',
+      ikm,
+      Buffer.alloc(0),
+      Buffer.from('runa-hybrid-v1', 'utf8'),
+      32
+    )
+  );
+}
+
+export async function hybridWrapKey(
+  rawKey: Buffer | string,
+  recipientEcdhPublicKeyBase64Url: string,
+  recipientMlKemPublicKey: Uint8Array
+): Promise<HybridEncryptedKeyPayload> {
+  const userPublicKeyBuf = base64UrlToBuffer(recipientEcdhPublicKeyBase64Url);
+
+  const serverEcdh = crypto.createECDH('prime256v1');
+  serverEcdh.generateKeys();
+  const ephemeralPublicKey = serverEcdh.getPublicKey();
+  const ecdhSecret = serverEcdh.computeSecret(userPublicKeyBuf);
+
+  const ecdhAesKey = crypto.createHash('sha256').update(ecdhSecret).digest();
+  const useRawKey = typeof rawKey === 'string' ? base64UrlToBuffer(rawKey) : rawKey;
+  const ecdhIv = crypto.randomBytes(IV_LENGTH);
+  const ecdhCipher = crypto.createCipheriv(ALGORITHM, ecdhAesKey, ecdhIv);
+  const ecdhCiphertext = Buffer.concat([ecdhCipher.update(useRawKey), ecdhCipher.final()]);
+  const ecdhTag = ecdhCipher.getAuthTag();
+
+  const ecdhPayload: EncryptedKeyPayload = {
+    ephemeralPublicKey: bufferToBase64Url(ephemeralPublicKey),
+    iv: bufferToBase64Url(ecdhIv),
+    tag: bufferToBase64Url(ecdhTag),
+    ciphertext: bufferToBase64Url(ecdhCiphertext)
+  };
+
+  const { ml_kem768 } = await import('@noble/post-quantum/ml-kem.js');
+  const { cipherText: mlkemCiphertext, sharedSecret: mlkemSecret } = ml_kem768.encapsulate(recipientMlKemPublicKey);
+
+  const hybridKey = deriveHybridKey(ecdhSecret, mlkemSecret);
+
+  const innerIv = crypto.randomBytes(IV_LENGTH);
+  const innerCipher = crypto.createCipheriv(ALGORITHM, hybridKey, innerIv);
+  const innerCiphertext = Buffer.concat([innerCipher.update(useRawKey), innerCipher.final()]);
+  const innerTag = innerCipher.getAuthTag();
+
+  return {
+    version: 'hybrid-v1',
+    ecdh: ecdhPayload,
+    mlkemCiphertext: bufferToBase64Url(Buffer.from(mlkemCiphertext.buffer, mlkemCiphertext.byteOffset, mlkemCiphertext.byteLength)),
+    iv: bufferToBase64Url(innerIv),
+    tag: bufferToBase64Url(innerTag),
+    ciphertextInner: bufferToBase64Url(innerCiphertext)
+  };
+}
+
+export async function hybridUnwrapKey(
+  wrappedKey: HybridEncryptedKeyPayload | string,
+  privateEcdhKey: Buffer | string,
+  privateMlKemKey: Uint8Array
+): Promise<Buffer> {
+  const payload: HybridEncryptedKeyPayload = typeof wrappedKey === 'string'
+    ? JSON.parse(wrappedKey)
+    : wrappedKey;
+
+  if (payload.version !== 'hybrid-v1') {
+    throw new Error('Unsupported wrapped key version, expected hybrid-v1');
+  }
+
+  const usePrivKey = typeof privateEcdhKey === 'string' ? base64UrlToBuffer(privateEcdhKey) : privateEcdhKey;
+  const ephemeralPublicKeyBuf = base64UrlToBuffer(payload.ecdh.ephemeralPublicKey);
+
+  const clientEcdh = crypto.createECDH('prime256v1');
+  clientEcdh.setPrivateKey(usePrivKey);
+  const ecdhSecret = clientEcdh.computeSecret(ephemeralPublicKeyBuf);
+
+  const { ml_kem768 } = await import('@noble/post-quantum/ml-kem.js');
+  const mlkemCiphertextBytes = new Uint8Array(base64UrlToBuffer(payload.mlkemCiphertext));
+  const mlkemSecret = ml_kem768.decapsulate(mlkemCiphertextBytes, privateMlKemKey);
+
+  const hybridKey = deriveHybridKey(ecdhSecret, mlkemSecret);
+
+  const innerIvBuf = base64UrlToBuffer(payload.iv);
+  const innerCiphertextBuf = base64UrlToBuffer(payload.ciphertextInner);
+  const innerTagBuf = base64UrlToBuffer(payload.tag);
+
+  const decipher = crypto.createDecipheriv(ALGORITHM, hybridKey, innerIvBuf);
+  decipher.setAuthTag(innerTagBuf);
+
+  return Buffer.concat([decipher.update(innerCiphertextBuf), decipher.final()]);
+}
+

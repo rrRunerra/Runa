@@ -85,7 +85,7 @@ export class EmailSyncService {
 
     const user = await this.prisma.client.user.findUnique({
       where: { username: account.username },
-      select: { id: true, userPublicKey: true },
+      select: { id: true, userPublicKey: true, userMlKemPublicKey: true },
     });
 
     let decryptedPassword = '';
@@ -221,7 +221,11 @@ export class EmailSyncService {
                   if (ccStr) ccStr = encrypt(ccStr, dataKey);
                   if (bccStr) bccStr = encrypt(bccStr, dataKey);
 
-                  encryptedKey = wrapKey(dataKey, user.userPublicKey) as any;
+                  encryptedKey = (await wrapKey(
+                    dataKey,
+                    user.userPublicKey,
+                    user.userMlKemPublicKey,
+                  )) as any;
                 } catch (encErr) {
                   this.logger.error(
                     `E2EE encryption failed for UID ${msg.uid} on account ${account.emailAddress}:`,

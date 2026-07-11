@@ -199,6 +199,10 @@ export class RegisterDeviceDto {
   @IsNotEmpty({ message: 'RrDvdto-IKMNBE001: Identity key must not be empty' })
   identityKey!: string;
 
+  @IsString({ message: 'RrDvdto-MLKMBAS001: ML-KEM Identity key must be a string' })
+  @IsOptional()
+  mlKemIdentityKey?: string;
+
   @IsString({ message: 'RrDvdto-SPKMBAS001: Signed pre key must be a string' })
   @IsNotEmpty({
     message: 'RrDvdto-SPKMNBE001: Signed pre key must not be empty',

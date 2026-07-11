@@ -105,7 +105,7 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
   const { setBaseTheme } = useBaseTheme();
   const { sidebarConfig } = useRRSidebar();
   const { toggleSidebar } = useSidebar();
-  const { isE2eeUnlocked, setShowUnlockDialog } = useRRCrypto();
+  const { isEncryptionUnlocked, setShowUnlockDialog } = useRRCrypto();
 
   const { clipboardHistory, openPreview, openParameters } = useSpotlight();
 
@@ -187,7 +187,7 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
     return () => {
       active = false;
     };
-  }, [session, isE2eeUnlocked]);
+  }, [session, isEncryptionUnlocked]);
 
   // 2. Fetch and resolve actions dynamically from loaded features
   useEffect(() => {
@@ -201,7 +201,7 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
         username: session?.user?.username || "",
         pathname,
         clipboardHistory,
-        isE2eeUnlocked,
+        isEncryptionUnlocked,
         userPermissions: session?.user?.permissions,
         openPreview,
         openParameters,
@@ -350,7 +350,7 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
   }, [
     loadedFeatures,
     search,
-    isE2eeUnlocked,
+    isEncryptionUnlocked,
     session,
     openParameters,
     setShowUnlockDialog,
@@ -641,7 +641,7 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
                     username: session?.user?.username || "",
                     pathname,
                     clipboardHistory,
-                    isE2eeUnlocked: false,
+                    isEncryptionUnlocked: false,
                     openPreview,
                     openParameters,
                     triggerSettingsTab,
@@ -695,7 +695,7 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
                     username: session?.user?.username || "",
                     pathname,
                     clipboardHistory,
-                    isE2eeUnlocked: false,
+                    isEncryptionUnlocked: false,
                     openPreview,
                     openParameters,
                     triggerSettingsTab,
@@ -871,7 +871,7 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
                       username: session?.user?.username || "",
                       pathname,
                       clipboardHistory,
-                      isE2eeUnlocked,
+                      isEncryptionUnlocked,
                       userPermissions: session?.user?.permissions,
                       openPreview,
                       openParameters,

@@ -32,7 +32,7 @@ export default class AquariusSpotlightFeature extends BaseSpotlightFeature {
     const actions: SpotlightAction[] = [];
 
     // 2. Encryption gating check
-    if (!context.isE2eeUnlocked) {
+    if (!context.isEncryptionUnlocked) {
       actions.push({
         id: "aquarius-unlock-warning",
         label: "Unlock Encryption to search social messages",

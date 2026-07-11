@@ -13,7 +13,7 @@ jest.mock('@runa/crypto/node', () => ({
     if (Buffer.isBuffer(data)) return data;
     return `enc:${data}`;
   }),
-  wrapKey: jest.fn(() => 'mockEncKey'),
+  wrapKey: jest.fn(async () => 'mockEncKey'),
 }));
 
 jest.mock('@runa/crypto/server', () => ({

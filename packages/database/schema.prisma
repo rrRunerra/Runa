@@ -49,9 +49,10 @@ model User {
     backupCodes     String[]  @default([])
     passkeys        Passkey[]
 
-    // E2EE Keys
+    // Encryption Keys
     userPublicKey           String?
     encryptedUserPrivateKey String?
+    userMlKemPublicKey      String?
 
     @@index([id])
     @@index([username])
@@ -1080,6 +1081,7 @@ model Device {
     identityKey        String
     signedPreKey       String
     encryptedMasterKey String?
+    mlKemIdentityKey   String?
     user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
     preKeys            PreKey[]
 

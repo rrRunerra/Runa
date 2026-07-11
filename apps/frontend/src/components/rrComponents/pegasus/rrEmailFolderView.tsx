@@ -105,7 +105,7 @@ export default function RrEmailFolderView({
   const [showShortcutsFooter, setShowShortcutsFooter] = useState<boolean>(true);
   const audioContextRef = useRef<AudioContext | null>(null);
 
-  const { getPrivateKey, unwrapKey, decrypt } = useRRCrypto();
+  const { getPrivateKey, unwrapKey, decrypt, isEncryptionUnlocked } = useRRCrypto();
   const [accounts, setAccounts] = useState<any[]>([]);
 
   const adjustUnreadBadge = useCallback(
@@ -180,6 +180,7 @@ export default function RrEmailFolderView({
   const decryptMessageObj = useCallback(
     async (msg: Message): Promise<Message> => {
       if (!msg.encryptedKey) return msg;
+      if (!isEncryptionUnlocked) return msg;
 
       try {
         const dataKey = await unwrapKey(msg.encryptedKey);
@@ -237,12 +238,13 @@ export default function RrEmailFolderView({
         return msg;
       }
     },
-    [unwrapKey, decrypt],
+    [unwrapKey, decrypt, isEncryptionUnlocked],
   );
 
   const decryptDetailedMessageObj = useCallback(
     async (msg: DetailedMessage): Promise<DetailedMessage> => {
       if (!msg.encryptedKey) return msg;
+      if (!isEncryptionUnlocked) return msg;
 
       try {
         const dataKey = await unwrapKey(msg.encryptedKey);
@@ -311,7 +313,7 @@ export default function RrEmailFolderView({
         return msg;
       }
     },
-    [unwrapKey, decrypt],
+    [unwrapKey, decrypt, isEncryptionUnlocked],
   );
 
   // Fetch accounts list

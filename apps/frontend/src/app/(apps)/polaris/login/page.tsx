@@ -30,7 +30,13 @@ export default function Page() {
     Array<"totp" | "email" | "passkey" | "backup" | "device_notification">
   >([]);
   const [activeMfaMethod, setActiveMfaMethod] = useState<
-    "totp" | "email" | "passkey" | "backup" | "device_notification" | "recovery" | null
+    | "totp"
+    | "email"
+    | "passkey"
+    | "backup"
+    | "device_notification"
+    | "recovery"
+    | null
   >(null);
   const [tempToken, setTempToken] = useState("");
   const [mfaCode, setMfaCode] = useState("");
@@ -110,13 +116,27 @@ export default function Page() {
     if (existingDeviceId) return;
 
     try {
-      const { generateKeyPair, exportPublicKey } =
-        await import("@runa/crypto/browser");
+      const {
+        generateKeyPair,
+        exportPublicKey,
+        generateMlKemKeyPair,
+        bufferToBase64Url,
+      } = await import("@runa/crypto/browser");
       const { saveKey } = await import("@/lib/indexeddb");
 
       // Generate Identity Key
       const identityKeys = await generateKeyPair();
       const identityPublicKey = await exportPublicKey(identityKeys.publicKey);
+
+      // Generate ML-KEM Identity Key
+      const mlKemIdentityKeys = await generateMlKemKeyPair();
+      const mlKemIdentityPublicKey = bufferToBase64Url(
+        mlKemIdentityKeys.publicKey.buffer.slice(
+          mlKemIdentityKeys.publicKey.byteOffset,
+          mlKemIdentityKeys.publicKey.byteOffset +
+            mlKemIdentityKeys.publicKey.byteLength,
+        ) as ArrayBuffer,
+      );
 
       // Generate Signed PreKey
       const signedPreKeys = await generateKeyPair();
@@ -149,6 +169,7 @@ export default function Page() {
             deviceName,
             userAgent,
             identityKey: identityPublicKey,
+            mlKemIdentityKey: mlKemIdentityPublicKey,
             signedPreKey: signedPrePublicKey,
             preKeys: preKeysPublic,
           }),
@@ -170,6 +191,10 @@ export default function Page() {
         identityKeys.privateKey,
       );
       await saveKey(
+        `polaris_mlkem_identity_key_${deviceData.id}`,
+        mlKemIdentityKeys.secretKey,
+      );
+      await saveKey(
         `polaris_signed_prekey_${deviceData.id}`,
         signedPreKeys.privateKey,
       );
@@ -179,7 +204,7 @@ export default function Page() {
     }
   };
 
-  const initializeE2eeKeysOnLogin = async (
+  const initializeEncryptionKeysOnLogin = async (
     accessToken: string,
     username: string,
     password: string,
@@ -191,26 +216,30 @@ export default function Page() {
         exportPublicKey,
         encryptData,
         decryptData,
+        generateMlKemKeyPair,
+        bufferToBase64Url,
+        base64UrlToBuffer,
       } = await import("@runa/crypto/browser");
       const { saveKey } = await import("@/lib/indexeddb");
 
-      // 1. Fetch E2EE keys status from server
+      // 1. Fetch Encryption keys status from server
       const getRes = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/users/me/e2ee-keys`,
+        `${process.env.NEXT_PUBLIC_API_URL}/users/me/encryption-keys`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
         },
       );
-      if (!getRes.ok) throw new Error("Failed to check E2EE keys status");
-      const e2eKeys = await getRes.json();
+      if (!getRes.ok) throw new Error("Failed to check encryption keys status");
+      const encryptionKeys = await getRes.json();
 
       const masterKey = await deriveMasterKey(password, username);
       let importedPrivateKey: CryptoKey;
+      let importedMlKemPrivateKey: Uint8Array | null = null;
 
-      if (!e2eKeys.userPublicKey) {
-        // Create user keypair
+      if (!encryptionKeys.userPublicKey) {
+        // Create user keypair (ECDH)
         const userKeyPair = await generateKeyPair();
         const userPublicKeyBase64 = await exportPublicKey(
           userKeyPair.publicKey,
@@ -221,17 +250,40 @@ export default function Page() {
           "jwk",
           userKeyPair.privateKey,
         );
-        const userPrivateKeyStr = JSON.stringify(userPrivateKeyJwk);
 
-        // Encrypt private key string using masterKey
+        // Create user keypair (ML-KEM)
+        const mlKemKeyPair = await generateMlKemKeyPair();
+        const userMlKemPublicKeyBase64 = bufferToBase64Url(
+          mlKemKeyPair.publicKey.buffer.slice(
+            mlKemKeyPair.publicKey.byteOffset,
+            mlKemKeyPair.publicKey.byteOffset +
+              mlKemKeyPair.publicKey.byteLength,
+          ) as ArrayBuffer,
+        );
+
+        const userMlKemPrivateKeyBase64 = bufferToBase64Url(
+          mlKemKeyPair.secretKey.buffer.slice(
+            mlKemKeyPair.secretKey.byteOffset,
+            mlKemKeyPair.secretKey.byteOffset +
+              mlKemKeyPair.secretKey.byteLength,
+          ) as ArrayBuffer,
+        );
+
+        // Package both private keys together
+        const keysPackage = {
+          ecdhJwk: userPrivateKeyJwk,
+          mlkemSecretKey: userMlKemPrivateKeyBase64,
+        };
+
+        // Encrypt private keys package using masterKey
         const encryptedPrivate = await encryptData(
-          userPrivateKeyStr,
+          JSON.stringify(keysPackage),
           masterKey,
         );
 
         // Upload to server
         const putRes = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/users/me/e2ee-keys`,
+          `${process.env.NEXT_PUBLIC_API_URL}/users/me/encryption-keys`,
           {
             method: "PUT",
             headers: {
@@ -240,11 +292,13 @@ export default function Page() {
             },
             body: JSON.stringify({
               userPublicKey: userPublicKeyBase64,
+              userMlKemPublicKey: userMlKemPublicKeyBase64,
               encryptedUserPrivateKey: JSON.stringify(encryptedPrivate),
             }),
           },
         );
-        if (!putRes.ok) throw new Error("Failed to store E2EE keys on server");
+        if (!putRes.ok)
+          throw new Error("Failed to store encryption keys on server");
 
         importedPrivateKey = await window.crypto.subtle.importKey(
           "jwk",
@@ -253,43 +307,124 @@ export default function Page() {
           false,
           ["deriveKey", "deriveBits"],
         );
-      } else if (e2eKeys.encryptedUserPrivateKey) {
-        // Decrypt existing user private key using masterKey
-        const encryptedPrivate = JSON.parse(e2eKeys.encryptedUserPrivateKey);
-        const userPrivateKeyStr = await decryptData(
+        importedMlKemPrivateKey = mlKemKeyPair.secretKey;
+      } else if (encryptionKeys.encryptedUserPrivateKey) {
+        // Decrypt existing user private keys using masterKey
+        const encryptedPrivate = JSON.parse(
+          encryptionKeys.encryptedUserPrivateKey,
+        );
+        const privateKeysStr = await decryptData(
           encryptedPrivate.ciphertext,
           encryptedPrivate.iv,
           masterKey,
         );
 
-        const jwk = JSON.parse(userPrivateKeyStr);
+        const keysPackage = JSON.parse(privateKeysStr);
+        let ecdhJwk: any;
+        let mlkemSecretKeyBase64: string | null = null;
+
+        if (
+          keysPackage &&
+          typeof keysPackage === "object" &&
+          "ecdhJwk" in keysPackage
+        ) {
+          ecdhJwk = keysPackage.ecdhJwk;
+          mlkemSecretKeyBase64 = keysPackage.mlkemSecretKey || null;
+        } else {
+          ecdhJwk = keysPackage; // Plain JWK
+        }
+
         importedPrivateKey = await window.crypto.subtle.importKey(
           "jwk",
-          jwk,
+          ecdhJwk,
           { name: "ECDH", namedCurve: "P-256" },
           false,
           ["deriveKey", "deriveBits"],
         );
+
+        if (mlkemSecretKeyBase64) {
+          importedMlKemPrivateKey = new Uint8Array(
+            base64UrlToBuffer(mlkemSecretKeyBase64),
+          );
+        } else {
+          // Upgrade on the fly: generate ML-KEM keys
+          const mlKemKeyPair = await generateMlKemKeyPair();
+          const userMlKemPublicKeyBase64 = bufferToBase64Url(
+            mlKemKeyPair.publicKey.buffer.slice(
+              mlKemKeyPair.publicKey.byteOffset,
+              mlKemKeyPair.publicKey.byteOffset +
+                mlKemKeyPair.publicKey.byteLength,
+            ) as ArrayBuffer,
+          );
+          importedMlKemPrivateKey = mlKemKeyPair.secretKey;
+
+          const newMlKemPrivateKeyBase64 = bufferToBase64Url(
+            mlKemKeyPair.secretKey.buffer.slice(
+              mlKemKeyPair.secretKey.byteOffset,
+              mlKemKeyPair.secretKey.byteOffset +
+                mlKemKeyPair.secretKey.byteLength,
+            ) as ArrayBuffer,
+          );
+
+          // Package both together
+          const newKeysPackage = {
+            ecdhJwk,
+            mlkemSecretKey: newMlKemPrivateKeyBase64,
+          };
+
+          // Re-encrypt package
+          const newEncryptedPrivate = await encryptData(
+            JSON.stringify(newKeysPackage),
+            masterKey,
+          );
+
+          // Update server on the fly
+          await fetch(
+            `${process.env.NEXT_PUBLIC_API_URL}/users/me/encryption-keys`,
+            {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${accessToken}`,
+              },
+              body: JSON.stringify({
+                userPublicKey: encryptionKeys.userPublicKey,
+                userMlKemPublicKey: userMlKemPublicKeyBase64,
+                encryptedUserPrivateKey: JSON.stringify(newEncryptedPrivate),
+              }),
+            },
+          );
+        }
       } else {
         return;
       }
 
       await saveKey(`private_key_${username}`, importedPrivateKey);
-      const publicKeyBase64 =
-        e2eKeys.userPublicKey ||
-        // For the new-key branch, userPublicKey was just uploaded — re-read from server
-        (await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me/e2ee-keys`, {
+      await saveKey(`mlkem_key_${username}`, importedMlKemPrivateKey);
+
+      // Re-read keys from server to make sure we have final values
+      const finalRes = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/users/me/encryption-keys`,
+        {
           headers: { Authorization: `Bearer ${accessToken}` },
-        })
-          .then((r) => r.json())
-          .then((d) => d.userPublicKey)
-          .catch(() => null));
-      if (publicKeyBase64) {
-        await saveKey(`public_key_string_${username}`, publicKeyBase64);
+        },
+      );
+      if (finalRes.ok) {
+        const d = await finalRes.json();
+        if (d.userPublicKey) {
+          await saveKey(`public_key_string_${username}`, d.userPublicKey);
+        }
+        if (d.userMlKemPublicKey) {
+          await saveKey(
+            `mlkem_public_key_string_${username}`,
+            d.userMlKemPublicKey,
+          );
+        }
       }
-      window.dispatchEvent(new CustomEvent("runa-e2ee-unlocked"));
+
+      window.dispatchEvent(new CustomEvent("runa-encryption-unlocked"));
     } catch (err) {
-      console.error("E2EE key initialization failed:", err);
+      console.error("Encryption keys initialization failed:", err);
     }
   };
 
@@ -391,7 +526,7 @@ export default function Page() {
           const sessionData = await sessionRes.json();
           if (sessionData?.accessToken) {
             await registerDeviceOnLogin(sessionData.accessToken);
-            await initializeE2eeKeysOnLogin(
+            await initializeEncryptionKeysOnLogin(
               sessionData.accessToken,
               sessionData.user?.username ?? lower,
               password,
@@ -453,9 +588,7 @@ export default function Page() {
         setMessage("✉️ Account recovery code sent to your email.");
       } else {
         const data = await res.json();
-        setMessage(
-          `❌ ${data.message || "Failed to send recovery email."}`,
-        );
+        setMessage(`❌ ${data.message || "Failed to send recovery email."}`);
       }
     } catch {
       setMessage("❌ Failed to contact mail server.");
@@ -603,7 +736,7 @@ export default function Page() {
         if (sessionData?.accessToken) {
           await registerDeviceOnLogin(sessionData.accessToken);
 
-          await initializeE2eeKeysOnLogin(
+          await initializeEncryptionKeysOnLogin(
             sessionData.accessToken,
             sessionData.user?.username ?? identifier.trim().toLowerCase(),
             password,

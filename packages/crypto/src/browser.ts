@@ -502,3 +502,259 @@ export async function exportRawKey(key: CryptoKey): Promise<string> {
   const raw = await window.crypto.subtle.exportKey("raw", key);
   return bufferToBase64Url(raw);
 }
+
+export interface HybridEncryptedKeyPayload {
+  version: 'hybrid-v1';
+  ecdh: EncryptedKeyPayload;
+  mlkemCiphertext: string;       // base64url — ML-KEM-768 ciphertext
+  iv: string;                    // base64url — AES-GCM iv for inner layer
+  tag: string;                   // base64url — AES-GCM tag
+  ciphertextInner: string;       // base64url — AES-GCM encrypted raw key under hybrid secret
+}
+
+export async function generateMlKemKeyPair(): Promise<{ publicKey: Uint8Array; secretKey: Uint8Array }> {
+  const { ml_kem768 } = await import('@noble/post-quantum/ml-kem.js');
+  const keys = ml_kem768.keygen();
+  return {
+    publicKey: keys.publicKey,
+    secretKey: keys.secretKey
+  };
+}
+
+export async function mlKemEncapsulate(publicKey: Uint8Array): Promise<{ ciphertext: Uint8Array; sharedSecret: Uint8Array }> {
+  const { ml_kem768 } = await import('@noble/post-quantum/ml-kem.js');
+  const result = ml_kem768.encapsulate(publicKey);
+  return {
+    ciphertext: result.cipherText,
+    sharedSecret: result.sharedSecret
+  };
+}
+
+export async function mlKemDecapsulate(ciphertext: Uint8Array, secretKey: Uint8Array): Promise<Uint8Array> {
+  const { ml_kem768 } = await import('@noble/post-quantum/ml-kem.js');
+  return ml_kem768.decapsulate(ciphertext, secretKey);
+}
+
+export async function deriveHybridKey(ecdhSecret: ArrayBuffer, mlkemSecret: Uint8Array): Promise<CryptoKey> {
+  const combined = new Uint8Array(ecdhSecret.byteLength + mlkemSecret.byteLength);
+  combined.set(new Uint8Array(ecdhSecret), 0);
+  combined.set(mlkemSecret, ecdhSecret.byteLength);
+
+  const baseKey = await window.crypto.subtle.importKey(
+    'raw',
+    combined,
+    { name: 'HKDF' },
+    false,
+    ['deriveKey']
+  );
+
+  return window.crypto.subtle.deriveKey(
+    {
+      name: 'HKDF',
+      hash: 'SHA-256',
+      salt: new Uint8Array(0),
+      info: new TextEncoder().encode('runa-hybrid-v1')
+    },
+    baseKey,
+    { name: 'AES-GCM', length: 256 },
+    true,
+    ['encrypt', 'decrypt']
+  );
+}
+
+export async function hybridWrapKey(
+  rawKey: string | CryptoKey,
+  recipientEcdhPublicKey: string | CryptoKey,
+  recipientMlKemPublicKey: Uint8Array
+): Promise<HybridEncryptedKeyPayload> {
+  const recipientPublicKey = typeof recipientEcdhPublicKey === 'string'
+    ? await importPublicKey(recipientEcdhPublicKey)
+    : recipientEcdhPublicKey;
+
+  const ephemeralKeyPair = await window.crypto.subtle.generateKey(
+    { name: 'ECDH', namedCurve: 'P-256' },
+    true,
+    ['deriveKey', 'deriveBits']
+  );
+
+  const ecdhSecretBits = await window.crypto.subtle.deriveBits(
+    { name: 'ECDH', public: recipientPublicKey },
+    ephemeralKeyPair.privateKey,
+    256
+  );
+
+  const ecdhAesKeyBuffer = await window.crypto.subtle.digest('SHA-256', ecdhSecretBits);
+  const ecdhWrappingKey = await window.crypto.subtle.importKey(
+    'raw',
+    ecdhAesKeyBuffer,
+    { name: AES_GCM },
+    false,
+    ['encrypt']
+  );
+
+  let rawKeyBuffer: ArrayBuffer;
+  if (typeof rawKey === 'string') {
+    rawKeyBuffer = base64UrlToBuffer(rawKey);
+  } else {
+    rawKeyBuffer = await window.crypto.subtle.exportKey('raw', rawKey);
+  }
+
+  const ecdhIv = window.crypto.getRandomValues(new Uint8Array(12));
+  const ecdhEncrypted = await window.crypto.subtle.encrypt(
+    { name: AES_GCM, iv: ecdhIv },
+    ecdhWrappingKey,
+    rawKeyBuffer
+  );
+
+  const ecdhEncryptedBytes = new Uint8Array(ecdhEncrypted);
+  const ecdhCiphertext = ecdhEncryptedBytes.slice(0, ecdhEncryptedBytes.length - 16);
+  const ecdhTag = ecdhEncryptedBytes.slice(ecdhEncryptedBytes.length - 16);
+  const exportedEphemeralPub = await window.crypto.subtle.exportKey('raw', ephemeralKeyPair.publicKey);
+
+  const ecdhPayload: EncryptedKeyPayload = {
+    ephemeralPublicKey: bufferToBase64Url(exportedEphemeralPub),
+    iv: bufferToBase64Url(ecdhIv.buffer),
+    tag: bufferToBase64Url(ecdhTag.buffer),
+    ciphertext: bufferToBase64Url(ecdhCiphertext.buffer),
+  };
+
+  const { ml_kem768 } = await import('@noble/post-quantum/ml-kem.js');
+  const { cipherText: mlkemCiphertext, sharedSecret: mlkemSecret } = ml_kem768.encapsulate(recipientMlKemPublicKey);
+
+  const hybridKey = await deriveHybridKey(ecdhSecretBits, mlkemSecret);
+
+  const innerIv = window.crypto.getRandomValues(new Uint8Array(12));
+  const innerEncrypted = await window.crypto.subtle.encrypt(
+    { name: AES_GCM, iv: innerIv },
+    hybridKey,
+    rawKeyBuffer
+  );
+
+  const innerEncryptedBytes = new Uint8Array(innerEncrypted);
+  const innerCiphertext = innerEncryptedBytes.slice(0, innerEncryptedBytes.length - 16);
+  const innerTag = innerEncryptedBytes.slice(innerEncryptedBytes.length - 16);
+
+  return {
+    version: 'hybrid-v1',
+    ecdh: ecdhPayload,
+    mlkemCiphertext: bufferToBase64Url(mlkemCiphertext.buffer),
+    iv: bufferToBase64Url(innerIv.buffer),
+    tag: bufferToBase64Url(innerTag.buffer),
+    ciphertextInner: bufferToBase64Url(innerCiphertext.buffer),
+  };
+}
+
+export async function hybridUnwrapKey(
+  wrappedKey: HybridEncryptedKeyPayload | string,
+  privateEcdhKey: CryptoKey,
+  privateMlKemKey: Uint8Array
+): Promise<CryptoKey> {
+  const payload: HybridEncryptedKeyPayload = typeof wrappedKey === 'string'
+    ? JSON.parse(wrappedKey)
+    : wrappedKey;
+
+  if (payload.version !== 'hybrid-v1') {
+    throw new Error('Unsupported wrapped key version, expected hybrid-v1');
+  }
+
+  const ephemeralPubBuf = base64UrlToBuffer(payload.ecdh.ephemeralPublicKey);
+  const ephemeralPublicKey = await window.crypto.subtle.importKey(
+    'raw',
+    ephemeralPubBuf,
+    { name: 'ECDH', namedCurve: 'P-256' },
+    true,
+    []
+  );
+
+  const ecdhSecretBits = await window.crypto.subtle.deriveBits(
+    { name: 'ECDH', public: ephemeralPublicKey },
+    privateEcdhKey,
+    256
+  );
+
+  const { ml_kem768 } = await import('@noble/post-quantum/ml-kem.js');
+  const mlkemCiphertextBytes = new Uint8Array(base64UrlToBuffer(payload.mlkemCiphertext));
+  const mlkemSecret = ml_kem768.decapsulate(mlkemCiphertextBytes, privateMlKemKey);
+
+  const hybridKey = await deriveHybridKey(ecdhSecretBits, mlkemSecret);
+
+  const innerCiphertextBuf = base64UrlToBuffer(payload.ciphertextInner);
+  const innerIvBuf = base64UrlToBuffer(payload.iv);
+  const innerTagBuf = base64UrlToBuffer(payload.tag);
+
+  const ciphertextWithTag = new Uint8Array(innerCiphertextBuf.byteLength + innerTagBuf.byteLength);
+  ciphertextWithTag.set(new Uint8Array(innerCiphertextBuf), 0);
+  ciphertextWithTag.set(new Uint8Array(innerTagBuf), innerCiphertextBuf.byteLength);
+
+  const rawDecryptedKey = await window.crypto.subtle.decrypt(
+    { name: AES_GCM, iv: new Uint8Array(innerIvBuf) },
+    hybridKey,
+    ciphertextWithTag
+  );
+
+  return await window.crypto.subtle.importKey(
+    'raw',
+    rawDecryptedKey,
+    { name: AES_GCM },
+    true,
+    ['encrypt', 'decrypt']
+  );
+}
+
+export async function hybridEncryptMasterKeyForDevice(
+  masterKeyHexOrBase64: string,
+  targetDeviceEcdhPublicKeyBase64: string,
+  targetDeviceMlKemPublicKey: Uint8Array,
+  ownPrivateKey: CryptoKey
+): Promise<{ ciphertext: string; iv: string; mlkemCiphertext: string }> {
+  const targetPublicKey = await importPublicKey(targetDeviceEcdhPublicKeyBase64);
+  const ecdhSecretBits = await window.crypto.subtle.deriveBits(
+    {
+      name: 'ECDH',
+      public: targetPublicKey
+    },
+    ownPrivateKey,
+    256
+  );
+
+  const { ml_kem768 } = await import('@noble/post-quantum/ml-kem.js');
+  const { cipherText: mlkemCiphertext, sharedSecret: mlkemSecret } = ml_kem768.encapsulate(targetDeviceMlKemPublicKey);
+
+  const hybridKey = await deriveHybridKey(ecdhSecretBits, mlkemSecret);
+
+  const { ciphertext, iv } = await encryptData(masterKeyHexOrBase64, hybridKey);
+
+  return {
+    ciphertext,
+    iv,
+    mlkemCiphertext: bufferToBase64Url(mlkemCiphertext.buffer)
+  };
+}
+
+export async function hybridDecryptMasterKeyFromDevice(
+  encryptedPayload: string,
+  iv: string,
+  mlkemCiphertext: string,
+  senderEcdhPublicKeyBase64: string,
+  ownEcdhPrivateKey: CryptoKey,
+  ownMlKemSecretKey: Uint8Array
+): Promise<string> {
+  const senderPublicKey = await importPublicKey(senderEcdhPublicKeyBase64);
+  const ecdhSecretBits = await window.crypto.subtle.deriveBits(
+    {
+      name: 'ECDH',
+      public: senderPublicKey
+    },
+    ownEcdhPrivateKey,
+    256
+  );
+
+  const { ml_kem768 } = await import('@noble/post-quantum/ml-kem.js');
+  const mlkemCiphertextBytes = new Uint8Array(base64UrlToBuffer(mlkemCiphertext));
+  const mlkemSecret = ml_kem768.decapsulate(mlkemCiphertextBytes, ownMlKemSecretKey);
+
+  const hybridKey = await deriveHybridKey(ecdhSecretBits, mlkemSecret);
+
+  return decryptData(encryptedPayload, iv, hybridKey);
+}
+

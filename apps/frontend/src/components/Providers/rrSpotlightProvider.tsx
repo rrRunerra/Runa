@@ -19,7 +19,7 @@ import { Calendar } from "lucide-react";
 
 interface SpotlightContextType {
   clipboardHistory: string[];
-  isE2eeUnlocked: boolean;
+  isEncryptionUnlocked: boolean;
   openPreview: (content: React.ReactNode) => void;
   openParameters: (
     actionId: string,
@@ -40,7 +40,7 @@ export function useSpotlight(): SpotlightContextType {
 
 export function RrSpotlightProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
   const { data: session } = useSession();
-  const { isE2eeUnlocked } = useRRCrypto();
+  const { isEncryptionUnlocked } = useRRCrypto();
   const [clipboardHistory, setClipboardHistory] = useState<string[]>([]);
 
   // Preview dialog state
@@ -123,7 +123,7 @@ export function RrSpotlightProvider({ children }: { children: React.ReactNode })
     <SpotlightContext.Provider
       value={{
         clipboardHistory,
-        isE2eeUnlocked,
+        isEncryptionUnlocked,
         openPreview,
         openParameters,
       }}

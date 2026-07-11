@@ -31,16 +31,55 @@ export function useRRCrypto() {
   const wrapKey = useCallback(
     async (
       rawKey: string | CryptoKey,
-      recipientPublicKeyStr: string | CryptoKey
-    ): Promise<cryptoBrowser.EncryptedKeyPayload> => {
-      return cryptoBrowser.wrapKey(rawKey, recipientPublicKeyStr);
+      recipientPublicKey: string | CryptoKey | { userPublicKey: string; userMlKemPublicKey?: string | null }
+    ): Promise<any> => {
+      if (
+        recipientPublicKey &&
+        typeof recipientPublicKey === "object" &&
+        !(recipientPublicKey instanceof CryptoKey) &&
+        "userPublicKey" in recipientPublicKey &&
+        recipientPublicKey.userMlKemPublicKey
+      ) {
+        const { base64UrlToBuffer } = await import("@runa/crypto/browser");
+        const recipientMlKemBytes = new Uint8Array(
+          base64UrlToBuffer(recipientPublicKey.userMlKemPublicKey)
+        );
+        return cryptoBrowser.hybridWrapKey(
+          rawKey,
+          recipientPublicKey.userPublicKey,
+          recipientMlKemBytes
+        );
+      }
+
+      // Check if recipient is current user and we have their ML-KEM key available in context
+      if (
+        typeof recipientPublicKey === "string" &&
+        recipientPublicKey === context.userPublicKey &&
+        context.userMlKemPublicKey
+      ) {
+        const { base64UrlToBuffer } = await import("@runa/crypto/browser");
+        const recipientMlKemBytes = new Uint8Array(
+          base64UrlToBuffer(context.userMlKemPublicKey)
+        );
+        return cryptoBrowser.hybridWrapKey(
+          rawKey,
+          recipientPublicKey,
+          recipientMlKemBytes
+        );
+      }
+
+      const usePubKey = typeof recipientPublicKey === "object" && "userPublicKey" in recipientPublicKey
+        ? recipientPublicKey.userPublicKey
+        : recipientPublicKey;
+
+      return cryptoBrowser.wrapKey(rawKey, usePubKey as any);
     },
-    []
+    [context.userPublicKey, context.userMlKemPublicKey]
   );
 
   const unwrapKey = useCallback(
     async (
-      wrappedKey: cryptoBrowser.EncryptedKeyPayload | string,
+      wrappedKey: cryptoBrowser.EncryptedKeyPayload | cryptoBrowser.HybridEncryptedKeyPayload | string,
       privKey?: CryptoKey | CryptoKey[]
     ): Promise<CryptoKey> => {
       let keyToUse = privKey;
@@ -50,23 +89,34 @@ export function useRRCrypto() {
       }
       if (!keyToUse) {
         throw new Error(
-          "No private key available for unwrapping. E2EE might be locked."
+          "No private key available for unwrapping. Encryption might be locked."
         );
       }
-      return cryptoBrowser.unwrapKey(wrappedKey, keyToUse);
+
+      const parsed: any = typeof wrappedKey === "string" ? JSON.parse(wrappedKey) : wrappedKey;
+      if (parsed && parsed.version === "hybrid-v1") {
+        const mlKey = await context.getMlKemPrivateKey();
+        if (!mlKey) {
+          throw new Error("No ML-KEM private key available for hybrid unwrapping.");
+        }
+        const singleEcdhKey = Array.isArray(keyToUse) ? keyToUse[0] : keyToUse;
+        return cryptoBrowser.hybridUnwrapKey(parsed, singleEcdhKey, mlKey);
+      }
+
+      return cryptoBrowser.unwrapKey(parsed, keyToUse as any);
     },
-    [getPrivateKey, privateKey]
+    [getPrivateKey, privateKey, context]
   );
 
   /**
-   * Helper to decrypt E2E wrapped data in one step.
+   * Helper to decrypt wrapped data in one step.
    * Unwraps the symmetric data key using the user's private key from context,
    * then decrypts the payload with that symmetric key.
    */
-  const decryptE2ee = useCallback(
+  const decryptEncrypted = useCallback(
     async (
       data: any,
-      wrappedKey: cryptoBrowser.EncryptedKeyPayload | string
+      wrappedKey: any
     ): Promise<any> => {
       const dataKey = await unwrapKey(wrappedKey);
       return decrypt(data, dataKey);
@@ -80,6 +130,6 @@ export function useRRCrypto() {
     decrypt,
     wrapKey,
     unwrapKey,
-    decryptE2ee,
+    decryptEncrypted,
   };
 }

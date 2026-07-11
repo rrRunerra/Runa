@@ -115,6 +115,21 @@ export function useLacertaSharing() {
   const dataChannels = useRef<Map<string, RTCDataChannel>>(new Map());
   const pendingCandidates = useRef<Map<string, RTCIceCandidateInit[]>>(new Map());
 
+  const ownEphemeralKeys = useRef<
+    Map<
+      string,
+      {
+        ecdhPrivateKey: CryptoKey;
+        ecdhPublicKeyBase64: string;
+        mlKemPrivateKey: Uint8Array;
+        mlKemPublicKeyBase64: string;
+      }
+    >
+  >(new Map());
+  const peerEphemeralPublicKeys = useRef<
+    Map<string, { ecdhPublicKey: string; mlKemPublicKey: string }>
+  >(new Map());
+
   const receivedChunks = useRef<ArrayBuffer[]>([]);
   const receivedBytes = useRef<number>(0);
 
@@ -166,6 +181,8 @@ export function useLacertaSharing() {
       dataChannels.current.delete(peerId);
     }
     pendingCandidates.current.delete(peerId);
+    ownEphemeralKeys.current.delete(peerId);
+    peerEphemeralPublicKeys.current.delete(peerId);
   }, []);
 
   // Clean up connections on unmount
@@ -198,12 +215,28 @@ export function useLacertaSharing() {
         })
       );
 
+      const peerKeys = peerEphemeralPublicKeys.current.get(peerId);
+      if (!peerKeys) {
+        throw new Error("P2P PQ Cryptographic handshake not completed.");
+      }
+
+      const { hybridWrapKey, base64UrlToBuffer } = await import("@runa/crypto/browser");
+      const peerMlKemBytes = new Uint8Array(
+        base64UrlToBuffer(peerKeys.mlKemPublicKey)
+      );
+
+      const wrappedSessionKey = await hybridWrapKey(
+        sessionKey,
+        peerKeys.ecdhPublicKey,
+        peerMlKemBytes
+      );
+
       ch.send(JSON.stringify({
         type: "ASK_BATCH_TRANSFER",
         batchId: batch.batchId,
         senderName: session?.user?.username || "Local Device",
         files: encryptedFiles,
-        sessionKey,
+        wrappedSessionKey: JSON.stringify(wrappedSessionKey),
       }));
     } catch (err) {
       console.error("[WebRTC] Failed to send ASK_BATCH_TRANSFER request:", err);
@@ -354,10 +387,39 @@ export function useLacertaSharing() {
     ch.binaryType = "arraybuffer";
 
     ch.onopen = () => {
-      const active = transferRef.current;
-      if (active && active.peerId === peerId && active.direction === "send" && active.status === "connecting") {
-        sendAskBatchTransferDirect(ch, peerId);
-      }
+      const generateAndSendPQHandshake = async () => {
+        try {
+          const { generateKeyPair, exportPublicKey, generateMlKemKeyPair, bufferToBase64Url } = await import("@runa/crypto/browser");
+          const ownEcdh = await generateKeyPair();
+          const ownEcdhPub = await exportPublicKey(ownEcdh.publicKey);
+
+          const ownMlKem = await generateMlKemKeyPair();
+          const ownMlKemPub = bufferToBase64Url(
+            ownMlKem.publicKey.buffer.slice(
+              ownMlKem.publicKey.byteOffset,
+              ownMlKem.publicKey.byteOffset + ownMlKem.publicKey.byteLength
+            ) as ArrayBuffer
+          );
+
+          ownEphemeralKeys.current.set(peerId, {
+            ecdhPrivateKey: ownEcdh.privateKey,
+            ecdhPublicKeyBase64: ownEcdhPub,
+            mlKemPrivateKey: ownMlKem.secretKey,
+            mlKemPublicKeyBase64: ownMlKemPub,
+          });
+
+          ch.send(
+            JSON.stringify({
+              type: "PQ_HANDSHAKE",
+              ecdhPublicKey: ownEcdhPub,
+              mlKemPublicKey: ownMlKemPub,
+            })
+          );
+        } catch (err) {
+          console.error("[WebRTC] PQ Handshake generation failed:", err);
+        }
+      };
+      generateAndSendPQHandshake();
     };
 
     ch.onclose = () => {
@@ -375,11 +437,40 @@ export function useLacertaSharing() {
         try {
           const message = JSON.parse(data);
 
-          if (message.type === "ASK_BATCH_TRANSFER") {
-            const decryptionKey = message.sessionKey;
-            if (decryptionKey) {
-              activeFileKey.current = decryptionKey;
+          if (message.type === "PQ_HANDSHAKE") {
+            peerEphemeralPublicKeys.current.set(peerId, {
+              ecdhPublicKey: message.ecdhPublicKey,
+              mlKemPublicKey: message.mlKemPublicKey,
+            });
+
+            const active = transferRef.current;
+            if (
+              active &&
+              active.peerId === peerId &&
+              active.direction === "send" &&
+              active.status === "connecting"
+            ) {
+              sendAskBatchTransferDirect(ch, peerId);
             }
+            return;
+          }
+
+          if (message.type === "ASK_BATCH_TRANSFER") {
+            const ownKeys = ownEphemeralKeys.current.get(peerId);
+            if (!ownKeys) {
+              throw new Error("No private key available for unwrapping. Encryption handshake not completed.");
+            }
+
+            const { hybridUnwrapKey, exportRawKey } = await import("@runa/crypto/browser");
+            const wrappedSessionKey = JSON.parse(message.wrappedSessionKey);
+
+            const unwrappedKey = await hybridUnwrapKey(
+              wrappedSessionKey,
+              ownKeys.ecdhPrivateKey,
+              ownKeys.mlKemPrivateKey
+            );
+            const decryptionKey = await exportRawKey(unwrappedKey);
+            activeFileKey.current = decryptionKey;
 
             const decryptedFiles = await Promise.all(
               message.files.map(async (f: any) => {

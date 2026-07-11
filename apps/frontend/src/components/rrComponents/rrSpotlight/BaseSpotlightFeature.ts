@@ -28,7 +28,7 @@ export interface SpotlightActionContext {
   pathname: string;
   searchQuery?: string; // Real-time search query typed in the Spotlight input
   clipboardHistory: string[];
-  isE2eeUnlocked: boolean;
+  isEncryptionUnlocked: boolean;
   userPermissions?: number[];
   openPreview: (content: React.ReactNode) => void;
   openParameters: (
