@@ -78,5 +78,19 @@ export class CacheService implements OnModuleDestroy {
       mediaId: number | string,
     ) =>
       `list:${mediaType}:entry:user:${username.trim().toLowerCase()}:${mediaId}`,
+
+    // Discover
+    discoverMeta: (mediaType: string) => `discover-meta:${mediaType.toLowerCase()}`,
+    discoverList: (
+      mediaType: string,
+      page: number | string,
+      limit: number | string,
+      year: number | string,
+      format: string,
+      status: string,
+      search: string,
+      sort: string,
+    ) =>
+      `discover:${mediaType.toLowerCase()}:${page}:${limit}:${year}:${format}:${status}:${search}:${sort}`,
   };
 }

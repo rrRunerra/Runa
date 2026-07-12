@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import RrLapplandLayingRight from "@/components/rrComponents/rrImages/rrLapplandLayingRight";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import * as Lucide from "lucide-react";
@@ -104,7 +105,7 @@ export function RrUserListFilters({
   const activeGenre = filters.genres?.[0] || "";
 
   return (
-    <div className="flex flex-col gap-4 w-full bg-card/20 backdrop-blur-xl border border-border/40 p-4 rounded-2xl shadow-xl select-none">
+    <div className="relative flex flex-col gap-4 w-full bg-card/20 backdrop-blur-xl border border-border/40 p-4 rounded-2xl shadow-xl select-none">
       <div className="flex flex-col xl:flex-row gap-3 items-stretch xl:items-center justify-between">
         {/* Left Side: Search bar */}
         <div className="relative flex-1 max-w-full xl:max-w-xs">
@@ -115,6 +116,11 @@ export function RrUserListFilters({
             value={searchVal}
             onChange={(e) => setSearchVal(e.target.value)}
           />
+        </div>
+
+        {/* Lappland: fills the gap, pushed right to sit next to the filters */}
+        <div className="hidden xl:flex flex-1 items-end justify-end pointer-events-none select-none">
+          <RrLapplandLayingRight className="h-16 w-auto text-foreground/20" />
         </div>
 
         {/* Right Side: Row of Select Dropdowns */}

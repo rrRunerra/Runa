@@ -5,7 +5,18 @@ import { LayoutGrid } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { SidebarConfig, SidebarItem } from "@/types/SidebarConfig";
+import {
+  SidebarConfig,
+  SidebarItem,
+  SidebarItemChild,
+} from "@/types/SidebarConfig";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "../ui/button";
 
 interface DockItemData {
   label: string;
@@ -14,6 +25,7 @@ interface DockItemData {
   isActive?: boolean;
   onClick?: () => void;
   component?: React.ReactNode;
+  children?: SidebarItemChild[];
 }
 
 interface RrBottomDockProps {
@@ -32,14 +44,17 @@ export default function RrBottomDock({
   // If custom items are provided, render them
   if (customItems) {
     return (
-      <div className="fixed bottom-3.5 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-background/80 backdrop-blur-xl border border-border/80 shadow-2xl w-[calc(100%-1.5rem)] sm:w-[calc(100%-2rem)] max-w-sm select-none rounded-full overflow-hidden">
+      <div
+        onContextMenu={(e) => e.preventDefault()}
+        className="fixed bottom-3.5 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-background/80 backdrop-blur-xl border border-border/80 shadow-2xl w-[calc(100%-1.5rem)] sm:w-[calc(100%-2rem)] max-w-sm select-none rounded-full overflow-hidden"
+      >
         <div className="flex items-center overflow-x-auto no-scrollbar px-1 py-1.5 sm:py-2 snap-x snap-mandatory w-full">
           {customItems.map((item) => (
             <div
               key={item.label}
               className="flex-[0_0_20%] shrink-0 snap-center flex justify-center"
             >
-              <RrDockItem item={item} />
+              <RrDockItem item={item} pathname={pathname} />
             </div>
           ))}
         </div>
@@ -63,8 +78,17 @@ export default function RrBottomDock({
   const item3 = items.find((i) => i.position === 3);
   const item4 = items.find((i) => i.position === 4);
 
+  const checkActive = (item: SidebarItem) => {
+    const isChildActive =
+      item.children && item.children.some((child) => pathname === child.href);
+    return (item.href && pathname === item.href) || !!isChildActive;
+  };
+
   const mapItem = (item?: SidebarItem) => {
-    if (!item) return <div className="min-w-[48px] sm:min-w-[58px] min-h-[38px] sm:min-h-[44px]" />;
+    if (!item)
+      return (
+        <div className="min-w-[48px] sm:min-w-[58px] min-h-[38px] sm:min-h-[44px]" />
+      );
     return (
       <RrDockItem
         key={item.href || item.label}
@@ -72,15 +96,20 @@ export default function RrBottomDock({
           label: item.label,
           icon: item.icon,
           href: item.href,
-          isActive: pathname === item.href,
+          isActive: checkActive(item),
           component: item.component,
+          children: item.children,
         }}
+        pathname={pathname}
       />
     );
   };
 
   return (
-    <div className="fixed bottom-3.5 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between gap-1 px-2 py-1.5 sm:px-3 sm:py-2 bg-background/80 backdrop-blur-xl border border-border/80 shadow-2xl w-[calc(100%-1.5rem)] sm:w-[calc(100%-2rem)] max-w-sm md:hidden select-none rounded-full">
+    <div
+      onContextMenu={(e) => e.preventDefault()}
+      className="fixed bottom-3.5 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between gap-1 px-2 py-1.5 sm:px-3 sm:py-2 bg-background/80 backdrop-blur-xl border border-border/80 shadow-2xl w-[calc(100%-1.5rem)] sm:w-[calc(100%-2rem)] max-w-sm md:hidden select-none rounded-full"
+    >
       {/* Left items */}
       <div className="flex items-center gap-0.5 flex-1 justify-around">
         {mapItem(item1)}
@@ -109,7 +138,104 @@ export default function RrBottomDock({
   );
 }
 
-function RrDockItem({ item }: { item: DockItemData }): React.JSX.Element {
+function RrDockItem({
+  item,
+  pathname,
+}: {
+  item: DockItemData;
+  pathname?: string;
+}): React.JSX.Element {
+  const [dropdownOpen, setDropdownOpen] = React.useState(false);
+  const timerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const isLongPressRef = React.useRef(false);
+  const cleanupContextMenuRef = React.useRef<(() => void) | null>(null);
+
+  const startPress = (e: React.MouseEvent | React.TouchEvent) => {
+    if ("button" in e && e.button !== 0) return;
+    if (!item.children || item.children.length === 0) return;
+
+    if (cleanupContextMenuRef.current) {
+      cleanupContextMenuRef.current();
+    }
+
+    isLongPressRef.current = false;
+
+    const blockContextMenu = (ev: Event) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+    };
+    window.addEventListener("contextmenu", blockContextMenu, { capture: true });
+
+    const cleanup = () => {
+      setTimeout(() => {
+        window.removeEventListener("contextmenu", blockContextMenu, { capture: true });
+      }, 500);
+      window.removeEventListener("mouseup", cleanup);
+      window.removeEventListener("touchend", cleanup);
+      window.removeEventListener("touchcancel", cleanup);
+      cleanupContextMenuRef.current = null;
+    };
+
+    cleanupContextMenuRef.current = cleanup;
+
+    window.addEventListener("mouseup", cleanup);
+    window.addEventListener("touchend", cleanup);
+    window.addEventListener("touchcancel", cleanup);
+
+    timerRef.current = setTimeout(() => {
+      isLongPressRef.current = true;
+      setDropdownOpen(true);
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        try {
+          navigator.vibrate(50);
+        } catch (err) {
+          // ignore vibrate security exceptions
+        }
+      }
+    }, 300);
+  };
+
+  const endPress = (e: React.MouseEvent | React.TouchEvent) => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    if (isLongPressRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      setTimeout(() => {
+        isLongPressRef.current = false;
+      }, 100);
+    }
+  };
+
+  const cancelPress = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+    if (cleanupContextMenuRef.current) {
+      cleanupContextMenuRef.current();
+    }
+  };
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (isLongPressRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    if (item.onClick) {
+      item.onClick();
+    }
+  };
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    if (item.children && item.children.length > 0) {
+      e.preventDefault();
+    }
+  };
+
   const content = (
     <>
       {item.isActive && (
@@ -140,6 +266,102 @@ function RrDockItem({ item }: { item: DockItemData }): React.JSX.Element {
       ? "text-primary font-bold"
       : "text-muted-foreground/70 hover:text-foreground",
   );
+
+  // If item has children, render dropdown
+  if (item.children && item.children.length > 0) {
+    const triggerElement = item.onClick ? (
+      <Button
+        className={buttonClass}
+        style={{ WebkitTouchCallout: "none" }}
+        onClick={handleClick}
+        onMouseDown={startPress}
+        onTouchStart={startPress}
+        onMouseUp={endPress}
+        onTouchEnd={endPress}
+        onMouseLeave={cancelPress}
+        onTouchMove={cancelPress}
+        onTouchCancel={cancelPress}
+        onContextMenu={handleContextMenu}
+      >
+        {content}
+      </Button>
+    ) : (
+      <Link
+        href={item.href || "#"}
+        className={buttonClass}
+        style={{ WebkitTouchCallout: "none" }}
+        onClick={handleClick}
+        onMouseDown={startPress}
+        onTouchStart={startPress}
+        onMouseUp={endPress}
+        onTouchEnd={endPress}
+        onMouseLeave={cancelPress}
+        onTouchMove={cancelPress}
+        onTouchCancel={cancelPress}
+        onContextMenu={handleContextMenu}
+      >
+        {content}
+      </Link>
+    );
+
+    return (
+      <DropdownMenu
+        open={dropdownOpen}
+        onOpenChange={(open) => {
+          if (open) {
+            if (isLongPressRef.current) {
+              setDropdownOpen(true);
+            }
+          } else {
+            setDropdownOpen(false);
+          }
+        }}
+      >
+        <DropdownMenuTrigger asChild onContextMenu={handleContextMenu}>
+          {triggerElement}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="center"
+          className="w-48 bg-background/95 backdrop-blur-md"
+        >
+          {item.children.map((child) => {
+            const isChildActive = pathname === child.href;
+            return (
+              <DropdownMenuItem key={child.label} asChild>
+                {child.component ? (
+                  child.component
+                ) : (
+                  <Link
+                    href={child.href || "#"}
+                    className={cn(
+                      "flex items-center gap-2 w-full cursor-pointer px-2 py-1.5 rounded-md transition-colors duration-200",
+                      isChildActive
+                        ? "bg-primary/10 text-primary font-bold"
+                        : "hover:bg-muted",
+                    )}
+                  >
+                    {child.icon && (
+                      <span
+                        className={cn(
+                          "[&>svg]:size-3.5",
+                          isChildActive
+                            ? "text-primary"
+                            : "text-muted-foreground",
+                        )}
+                      >
+                        {child.icon}
+                      </span>
+                    )}
+                    <span>{child.label}</span>
+                  </Link>
+                )}
+              </DropdownMenuItem>
+            );
+          })}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
 
   if (item.component && React.isValidElement(item.component)) {
     return React.cloneElement(
