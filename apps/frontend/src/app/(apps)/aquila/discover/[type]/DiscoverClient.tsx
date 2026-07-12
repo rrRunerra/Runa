@@ -59,6 +59,7 @@ export default function DiscoverClientPage({
   const [format, setFormat] = useState<string>("all");
   const [status, setStatus] = useState<string>("all");
   const [sort, setSort] = useState<string>("latest");
+  const [addedWithin, setAddedWithin] = useState<string>("all");
   const [page, setPage] = useState<number>(1);
 
   const [accumulatedItems, setAccumulatedItems] = useState<any[]>([]);
@@ -78,6 +79,7 @@ export default function DiscoverClientPage({
     setFormat(params.get("format") || "all");
     setStatus(params.get("status") || "all");
     setSort(params.get("sort") || "latest");
+    setAddedWithin(params.get("addedWithin") || "all");
   }, [type]);
 
   // Synchronize dynamic parameters into URL parameters
@@ -113,8 +115,14 @@ export default function DiscoverClientPage({
       url.searchParams.delete("sort");
     }
 
+    if (addedWithin !== "all") {
+      url.searchParams.set("addedWithin", addedWithin);
+    } else {
+      url.searchParams.delete("addedWithin");
+    }
+
     window.history.replaceState(null, "", url.pathname + url.search);
-  }, [debouncedSearch, year, format, status, sort]);
+  }, [debouncedSearch, year, format, status, sort, addedWithin]);
 
   // Debounce the search text input
   useEffect(() => {
@@ -139,6 +147,7 @@ export default function DiscoverClientPage({
   if (status !== "all") queryParams.set("status", status);
   if (debouncedSearch.trim()) queryParams.set("search", debouncedSearch);
   if (sort !== "latest") queryParams.set("sort", sort);
+  if (addedWithin !== "all") queryParams.set("addedWithin", addedWithin);
 
   const discoverUrl = `${process.env.NEXT_PUBLIC_API_URL}/discover/${type}?${queryParams.toString()}`;
   const { data, error, isLoading } = useSWR<any>(discoverUrl, fetcher, {
@@ -191,6 +200,11 @@ export default function DiscoverClientPage({
     setPage(1);
   };
 
+  const handleAddedWithinChange = (val: string): void => {
+    setAddedWithin(val);
+    setPage(1);
+  };
+
   const loadMore = useCallback(() => {
     if (hasMore && !isLoading) {
       setPage((prev) => prev + 1);
@@ -203,6 +217,7 @@ export default function DiscoverClientPage({
     setFormat("all");
     setStatus("all");
     setSort("latest");
+    setAddedWithin("all");
     setPage(1);
   };
 
@@ -211,7 +226,8 @@ export default function DiscoverClientPage({
     year !== "all" ||
     format !== "all" ||
     status !== "all" ||
-    sort !== "latest";
+    sort !== "latest" ||
+    addedWithin !== "all";
 
   const isNotFound = !isLoading && !error && accumulatedItems.length === 0;
   const Wallpaper = isNotFound ? RrLapplandDiscoverNotFound : RrLapplandDiscover;
@@ -323,6 +339,19 @@ export default function DiscoverClientPage({
               </Select>
             )}
 
+            {/* Added date filter dropdown */}
+            <Select value={addedWithin} onValueChange={handleAddedWithinChange}>
+              <SelectTrigger className="h-10 bg-background/50 border-border/60 rounded-xl w-full sm:w-[160px]">
+                <SelectValue placeholder="Added Time" />
+              </SelectTrigger>
+              <SelectContent className="max-h-60" position="popper">
+                <SelectItem value="all">Added (Anytime)</SelectItem>
+                <SelectItem value="1">Added 1 day ago</SelectItem>
+                <SelectItem value="7">Added 7 days ago</SelectItem>
+                <SelectItem value="30">Added 30 days ago</SelectItem>
+              </SelectContent>
+            </Select>
+
             {/* Server-side sorting dropdown */}
             <Select value={sort} onValueChange={handleSortChange}>
               <SelectTrigger className="h-10 bg-background/50 border-border/60 rounded-xl w-full sm:w-[160px]">
@@ -337,20 +366,18 @@ export default function DiscoverClientPage({
                 <SelectItem value="alphabetical">Alphabetical (A-Z)</SelectItem>
               </SelectContent>
             </Select>
-          </div>
 
-          {hasActiveFilters && (
-            <div className="flex justify-end mt-1">
+            {hasActiveFilters && (
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={clearFilters}
-                className="text-xs text-muted-foreground hover:text-foreground h-8 cursor-pointer rounded-lg px-3"
+                className="text-xs text-muted-foreground hover:text-foreground h-10 cursor-pointer rounded-lg px-3"
               >
                 Clear Filters
               </Button>
-            </div>
-          )}
+            )}
+          </div>
         </motion.div>
       </div>
 

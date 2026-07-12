@@ -25,3 +25,16 @@ export interface DiscoverMetaResponse {
   formats: string[];
   statuses: string[];
 }
+
+export interface CalendarItemEntity {
+  id: string | number;
+  title: string;
+  coverImage: string | null;
+  type: 'anime' | 'manga' | 'tv' | 'movie' | 'game' | 'book';
+  airDate: string; // YYYY-MM-DD
+  airingAt?: number; // Unix timestamp (for anime countdowns)
+  episode?: number; // Episode number if applicable
+  episodeTitle?: string; // TV episode title if applicable
+  event: 'airing' | 'release' | 'premiere';
+}
+

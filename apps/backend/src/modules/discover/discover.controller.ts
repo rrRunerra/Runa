@@ -1,9 +1,9 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards, Req } from '@nestjs/common';
 import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { Public } from 'src/common/decorators/public.decorator';
 import { DiscoverService } from './discover.service';
-import { DiscoverQueryDto } from './discover.dto';
-import { DiscoverResponse, DiscoverMetaResponse } from './discover.entity';
+import { DiscoverQueryDto, CalendarQueryDto } from './discover.dto';
+import { DiscoverResponse, DiscoverMetaResponse, CalendarItemEntity } from './discover.entity';
 
 @Controller('discover')
 @UseGuards(AuthGuard)
@@ -21,6 +21,15 @@ export class DiscoverController {
   }
 
   @Public()
+  @Get('calendar')
+  async getCalendar(
+    @Query() query: CalendarQueryDto,
+    @Req() req?: any,
+  ): Promise<CalendarItemEntity[]> {
+    return this.discoverService.getCalendar(query, req?.user?.username);
+  }
+
+  @Public()
   @Get(':type')
   async discover(
     @Param('type') type: string,
@@ -29,3 +38,4 @@ export class DiscoverController {
     return this.discoverService.discover(type, query);
   }
 }
+

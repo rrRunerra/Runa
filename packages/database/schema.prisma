@@ -309,6 +309,7 @@ model AquilaAnime {
 
     locked          Boolean               @default(false)
     anilistUpdatedAt Int?
+    createdAt       DateTime              @default(now())
     updatedAt       DateTime              @updatedAt
     aquilaUserLists AquilaAnimeUserList[]
     animeCharacters AquilaAnimeCharacter[]
@@ -502,6 +503,7 @@ model AquilaManga {
 
     locked    Boolean               @default(false)
     anilistUpdatedAt Int?
+    createdAt DateTime              @default(now())
     updatedAt DateTime              @updatedAt
     aquilaUserLists AquilaMangaUserList[]
     mangaCharacters AquilaMangaCharacter[]
@@ -627,6 +629,7 @@ model AquilaMovie {
     contentRating    String?
 
     locked               Boolean               @default(false)
+    createdAt            DateTime              @default(now())
     updatedAt            DateTime              @updatedAt
     aquilaMovieUserLists AquilaMovieUserList[]
     movieActors          AquilaMovieActor[]
@@ -669,6 +672,7 @@ model AquilaTv {
     contentRating String?
 
     locked          Boolean            @default(false)
+    createdAt       DateTime           @default(now())
     updatedAt       DateTime           @updatedAt
     aquilaUserLists AquilaTvUserList[]
     tvActors         AquilaTvActor[]
@@ -873,6 +877,7 @@ model AquilaGame {
     esrbRating   String?
 
     locked          Boolean              @default(false)
+    createdAt       DateTime             @default(now())
     updatedAt       DateTime             @updatedAt
     aquilaUserLists AquilaGameUserList[]
 
@@ -941,6 +946,7 @@ model AquilaBook {
     publisher           String? @db.Text
 
     locked          Boolean              @default(false)
+    createdAt       DateTime             @default(now())
     updatedAt       DateTime             @updatedAt
     aquilaUserLists AquilaBookUserList[]
 

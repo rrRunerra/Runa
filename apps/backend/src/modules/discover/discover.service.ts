@@ -1,9 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { DiscoverRepository } from './discover.repository';
 import { AnimeFormat, MangaFormat } from '@runa/database';
-import { DiscoverResponse, DiscoverMetaResponse } from './discover.entity';
-import { DiscoverQueryDto } from './discover.dto';
+import { DiscoverResponse, DiscoverMetaResponse, CalendarItemEntity } from './discover.entity';
+import { DiscoverQueryDto, CalendarQueryDto } from './discover.dto';
 import { CacheService } from '../../providers/cache/cache.service';
+import { rrError } from 'src/providers/error';
 
 @Injectable()
 export class DiscoverService {
@@ -27,6 +28,7 @@ export class DiscoverService {
     const status = query.status ?? '';
     const search = query.search ?? '';
     const sort = query.sort ?? '';
+    const addedWithin = query.addedWithin ?? '';
 
     const cacheKey = CacheService.keys.discoverList(
       mappedType,
@@ -37,6 +39,7 @@ export class DiscoverService {
       status,
       search,
       sort,
+      addedWithin,
     );
     const cached = await this.cacheService.get<DiscoverResponse>(cacheKey);
     if (cached) {
@@ -99,6 +102,27 @@ export class DiscoverService {
     return response;
   }
 
+  public async getCalendar(
+    query: CalendarQueryDto,
+    username?: string,
+  ): Promise<CalendarItemEntity[]> {
+    const start = new Date(query.start + 'T00:00:00Z');
+    const end = new Date(query.end + 'T23:59:59Z');
+    const isWatchlist = query.watchlist === 'true';
+
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+      throw new rrError(`${this.moduleCode}INVLD001`, {
+        message: 'Invalid start or end date format',
+      });
+    }
+
+    return this.discoverRepository.getCalendar(
+      start,
+      end,
+      isWatchlist ? username : undefined,
+    );
+  }
+
   private mapType(type: string): string {
     const typeLower = type.toLowerCase();
     if (typeLower === 'movies') return 'movie';
@@ -107,3 +131,4 @@ export class DiscoverService {
     return typeLower;
   }
 }
+

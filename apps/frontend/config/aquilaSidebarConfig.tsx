@@ -12,6 +12,7 @@ import {
   Music,
   BookA,
   Compass,
+  Calendar,
 } from "lucide-react";
 
 import type { NavbarConfig } from "@/types/NavbarConfig";
@@ -42,12 +43,20 @@ export const getAquilaSidebarConfig = (
         position: 2,
       },
       {
+        label: "Calendar",
+        href: "/aquila/calendar",
+        icon: <Calendar className="h-4 w-4" />,
+        preventRedirect: false,
+        subtitle: "Calendar",
+        position: 3,
+      },
+      {
         label: "Discover",
         href: "/aquila/discover",
         icon: <Compass className="h-4 w-4" />,
         preventRedirect: false,
         subtitle: "Discover",
-        position: 3,
+        position: 4,
         children: [
           {
             label: "Anime",
@@ -111,6 +120,13 @@ export const getAquilaSidebarConfig = (
         icon: <Search className="h-4 w-4" />,
         preventRedirect: false,
         subtitle: "Browse",
+      },
+      {
+        label: "Calendar",
+        href: "/aquila/calendar",
+        icon: <Calendar className="h-4 w-4" />,
+        preventRedirect: false,
+        subtitle: "Calendar",
       },
       {
         label: "Discover",

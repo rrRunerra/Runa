@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsInt, Min } from 'class-validator';
+import { IsOptional, IsString, IsInt, Min, IsNotEmpty, IsBooleanString } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class DiscoverQueryDto {
@@ -26,4 +26,23 @@ export class DiscoverQueryDto {
   @IsOptional()
   @IsString({ message: 'DqDto-SMBAS003: Sort must be a string' })
   sort?: string;
+
+  @IsOptional()
+  @IsString({ message: 'DqDto-SMBAS004: AddedWithin must be a string' })
+  addedWithin?: string;
 }
+
+export class CalendarQueryDto {
+  @IsNotEmpty({ message: 'CalDto-STRQ001: Start date is required' })
+  @IsString({ message: 'CalDto-STSTR001: Start date must be a string' })
+  start: string;
+
+  @IsNotEmpty({ message: 'CalDto-ENDRQ001: End date is required' })
+  @IsString({ message: 'CalDto-ENDSTR001: End date must be a string' })
+  end: string;
+
+  @IsOptional()
+  @IsString({ message: 'CalDto-WLTSTR001: Watchlist filter must be a string representation of boolean' })
+  watchlist?: string;
+}
+
