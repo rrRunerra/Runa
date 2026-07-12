@@ -58,3 +58,65 @@ export function distance(
   const dy = p2.y - p1.y;
   return Math.sqrt(dx * dx + dy * dy);
 }
+
+/**
+ * Calculate perpendicular distance from point to a line segment
+ */
+export function getPerpendicularDistance(
+  p: { x: number; y: number },
+  lineStart: { x: number; y: number },
+  lineEnd: { x: number; y: number },
+): number {
+  const dx = lineEnd.x - lineStart.x;
+  const dy = lineEnd.y - lineStart.y;
+
+  // If start and end point are the same, return distance to that point
+  if (dx === 0 && dy === 0) {
+    const distDx = p.x - lineStart.x;
+    const distDy = p.y - lineStart.y;
+    return Math.sqrt(distDx * distDx + distDy * distDy);
+  }
+
+  // Calculate area / length of base
+  const numerator = Math.abs(
+    dy * p.x - dx * p.y + lineEnd.x * lineStart.y - lineEnd.y * lineStart.x
+  );
+  const denominator = Math.sqrt(dx * dx + dy * dy);
+  return numerator / denominator;
+}
+
+/**
+ * Simplify a list of points using the Ramer-Douglas-Peucker algorithm
+ */
+export function ramerDouglasPeucker(
+  points: { x: number; y: number }[],
+  epsilon: number,
+): { x: number; y: number }[] {
+  if (points.length <= 2) {
+    return points;
+  }
+
+  let maxDistance = 0;
+  let index = 0;
+  const end = points.length - 1;
+
+  for (let i = 1; i < end; i++) {
+    const d = getPerpendicularDistance(points[i], points[0], points[end]);
+    if (d > maxDistance) {
+      index = i;
+      maxDistance = d;
+    }
+  }
+
+  if (maxDistance > epsilon) {
+    // Recursive call
+    const results1 = ramerDouglasPeucker(points.slice(0, index + 1), epsilon);
+    const results2 = ramerDouglasPeucker(points.slice(index), epsilon);
+
+    // Build the result list (excluding the duplicate middle point)
+    return results1.slice(0, results1.length - 1).concat(results2);
+  }
+
+  return [points[0], points[end]];
+}
+

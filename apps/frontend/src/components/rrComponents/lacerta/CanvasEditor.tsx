@@ -64,7 +64,7 @@ import { fetcher } from "@/lib/fetcher";
 import { useRRCrypto } from "@/hooks/useRRCrypto";
 import { useSession } from "next-auth/react";
 import UserProfileCard, { UserProfileInfo } from "./UserProfileCard";
-import { Video, Film, ExternalLink, Download, Check } from "lucide-react";
+import { Video, Film, ExternalLink, Download, Check, ChevronRight, Grid3X3, Lock, Calculator } from "lucide-react";
 import mermaid from "mermaid";
 import {
   ContextMenu,
@@ -99,7 +99,9 @@ export type CanvasNodeType =
   | "callout"
   | "annotation"
   | "group"
-  | "rrImage";
+  | "rrImage"
+  | "scientific-calc"
+  | "graphing-calc";
 
 export interface Point {
   x: number;
@@ -152,6 +154,13 @@ export interface CanvasNode {
   // rrImage card
   rrImageId?: string; // SVG component key OR public image URL path
   rrImageType?: "svg" | "image";
+
+  // Calculator properties
+  variables?: Record<string, string>;
+  memory?: number;
+  ans?: string;
+  equations?: string[];
+  angleMode?: "deg" | "rad" | "grad";
 }
 
 export interface CanvasEdge {
@@ -164,6 +173,7 @@ export interface CanvasEdge {
   color?: string;
   arrowType?: "normal" | "association" | "composition" | "aggregation";
   lineType?: "solid" | "dashed" | "dotted" | "dashed-dotted";
+  lineStyle?: "curved" | "straight";
 }
 
 interface Collaborator {
@@ -418,6 +428,10 @@ export default function CanvasEditor({
   const selectedNodeId = selectedNodeIds[selectedNodeIds.length - 1] || null;
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
 
+  // Scientific Calculator adjacent settings panel states
+  const [calcVarName, setCalcVarName] = useState("");
+  const [calcVarVal, setCalcVarVal] = useState("");
+
   // Lasso rectangle selection state
   const [selectionBox, setSelectionBox] = useState<{
     startX: number;
@@ -469,6 +483,7 @@ export default function CanvasEditor({
   // Collaboration States
   const [socket, setSocket] = useState<Socket | null>(null);
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
+  const [lockedElements, setLockedElements] = useState<Record<string, { username: string; senderId: string }>>({});
   const [guestName, setGuestName] = useState<string>("");
   const [showGuestPrompt, setShowGuestPrompt] = useState<boolean>(
     guestMode && !accessToken,
@@ -832,7 +847,39 @@ export default function CanvasEditor({
         setCollaborators((prev) =>
           prev.filter((m) => m.socketId !== data.socketId),
         );
+        // Also release locks held by this user
+        setLockedElements((prev) => {
+          const next = { ...prev };
+          for (const key of Object.keys(next)) {
+            if (next[key].senderId === data.socketId) {
+              delete next[key];
+            }
+          }
+          return next;
+        });
       });
+
+      newSocket.on(
+        "element-lock",
+        (data: {
+          nodeId: string;
+          isLocked: boolean;
+          username: string;
+          senderId: string;
+        }) => {
+          setLockedElements((prev) => {
+            const next = { ...prev };
+            if (data.isLocked) {
+              next[data.nodeId] = { username: data.username, senderId: data.senderId };
+              // Deselect if currently selected by this client
+              setSelectedNodeIds((prevIds) => prevIds.filter((id) => id !== data.nodeId));
+            } else {
+              delete next[data.nodeId];
+            }
+            return next;
+          });
+        },
+      );
 
       newSocket.on(
         "cursor-move",
@@ -1132,8 +1179,28 @@ export default function CanvasEditor({
     }
   };
 
-  // Auto-save on card selection change (focus change / deselect)
+  // Auto-save and Socket lock emissions on card selection change (focus change / deselect)
   const prevSelectedNodeIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (socket && file?.id && selectedNodeId) {
+      socket.emit("element-lock", {
+        fileId: file.id,
+        nodeId: selectedNodeId,
+        isLocked: true,
+      });
+    }
+
+    return () => {
+      if (socket && file?.id && selectedNodeId) {
+        socket.emit("element-lock", {
+          fileId: file.id,
+          nodeId: selectedNodeId,
+          isLocked: false,
+        });
+      }
+    };
+  }, [selectedNodeId, socket, file?.id]);
+
   useEffect(() => {
     console.log(
       "Autosave effect run - selected:",
@@ -1156,6 +1223,51 @@ export default function CanvasEditor({
     }
     prevSelectedNodeIdRef.current = selectedNodeId;
   }, [selectedNodeId]);
+
+  // Helper to dynamically calculate floating panel positioning
+  const getPanelStyle = (node: CanvasNode, panelWidth: number) => {
+    if (!containerRef.current) {
+      return {
+        left: node.x + node.width + 12,
+        top: node.y,
+        height: node.height,
+      };
+    }
+
+    const rect = containerRef.current.getBoundingClientRect();
+    const viewportMaxX = (rect.width - pan.x) / zoom;
+    const viewportMinX = -pan.x / zoom;
+
+    const defaultLeft = node.x + node.width + 12;
+    const rightEdge = defaultLeft + panelWidth;
+
+    // Check if right edge exceeds viewport
+    if (rightEdge > viewportMaxX) {
+      const leftOption = node.x - panelWidth - 12;
+      // If left fits, place it on the left
+      if (leftOption >= viewportMinX) {
+        return {
+          left: leftOption,
+          top: node.y,
+          height: node.height,
+        };
+      } else {
+        // Otherwise place it below the card
+        return {
+          left: node.x,
+          top: node.y + node.height + 12,
+          height: Math.max(120, node.height), // ensure it's not squished
+        };
+      }
+    }
+
+    // Default right float
+    return {
+      left: defaultLeft,
+      top: node.y,
+      height: node.height,
+    };
+  };
 
   // -----------------------------------------------------------------------------
   // Viewport Handlers: Zoom, Pan, MouseMove Cursors
@@ -1554,6 +1666,7 @@ export default function CanvasEditor({
   };
 
   const startDragNodeTouch = (e: React.TouchEvent, node: CanvasNode) => {
+    if (lockedElements[node.id]) return;
     e.stopPropagation();
     const touch = e.touches[0];
     const isShift = e.shiftKey;
@@ -1602,6 +1715,7 @@ export default function CanvasEditor({
   };
 
   const startResizeNodeTouch = (e: React.TouchEvent, node: CanvasNode) => {
+    if (lockedElements[node.id]) return;
     e.stopPropagation();
     if (e.cancelable) e.preventDefault();
     const touch = e.touches[0];
@@ -1690,6 +1804,12 @@ export default function CanvasEditor({
     } else if (type === "group") {
       defaultWidth = 500;
       defaultHeight = 360;
+    } else if (type === "scientific-calc") {
+      defaultWidth = 360;
+      defaultHeight = 480;
+    } else if (type === "graphing-calc") {
+      defaultWidth = 440;
+      defaultHeight = 520;
     }
 
     const newNode: CanvasNode = {
@@ -1809,6 +1929,7 @@ export default function CanvasEditor({
   };
 
   const startDragNode = (e: React.MouseEvent, node: CanvasNode) => {
+    if (lockedElements[node.id]) return;
     e.stopPropagation();
     if (isSpacePressed) return;
     if (node.lockPosition) return; // locked cards cannot be dragged
@@ -1862,6 +1983,7 @@ export default function CanvasEditor({
   };
 
   const startResizeNode = (e: React.MouseEvent, node: CanvasNode) => {
+    if (lockedElements[node.id]) return;
     e.stopPropagation();
     e.preventDefault();
     setResizeNodeId(node.id);
@@ -1870,6 +1992,7 @@ export default function CanvasEditor({
   };
 
   const startDragAnnotationPointer = (e: React.MouseEvent, nodeId: string) => {
+    if (lockedElements[nodeId]) return;
     e.stopPropagation();
     e.preventDefault();
     setDragAnnotationPointerNodeId(nodeId);
@@ -1880,6 +2003,7 @@ export default function CanvasEditor({
     nodeId: string,
     side: CanvasEdge["fromSide"],
   ) => {
+    if (lockedElements[nodeId]) return;
     e.stopPropagation();
     e.preventDefault();
     if (!containerRef.current) return;
@@ -2055,6 +2179,8 @@ export default function CanvasEditor({
     const start = getPortCoordinates(edge.fromNode, edge.fromSide);
     const end = getPortCoordinates(edge.toNode, edge.toSide);
 
+    const isStraight = edge.lineStyle === "straight";
+
     // Control points offset
     const dx = Math.abs(end.x - start.x) * 0.4;
     const dy = Math.abs(end.y - start.y) * 0.4;
@@ -2082,10 +2208,19 @@ export default function CanvasEditor({
     else if (edge.toSide === "bottom-left") { cp2x -= dx; cp2y += dy; }
     else if (edge.toSide === "bottom-right") { cp2x += dx; cp2y += dy; }
 
-    const pathD = `M ${start.x} ${start.y} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${end.x} ${end.y}`;
+    const pathD = isStraight
+      ? `M ${start.x} ${start.y} L ${end.x} ${end.y}`
+      : `M ${start.x} ${start.y} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${end.x} ${end.y}`;
+
     const isSelected = selectedEdgeId === edge.id;
-    const midX = (start.x + end.x) / 2;
-    const midY = (start.y + end.y) / 2;
+
+    // Midpoint calculations
+    const midX = isStraight
+      ? (start.x + end.x) / 2
+      : 0.125 * start.x + 0.375 * cp1x + 0.375 * cp2x + 0.125 * end.x;
+    const midY = isStraight
+      ? (start.y + end.y) / 2
+      : 0.125 * start.y + 0.375 * cp1y + 0.375 * cp2y + 0.125 * end.y;
 
     const strokeColor = edge.color || "var(--primary)";
     const strokeDash =
@@ -2142,6 +2277,31 @@ export default function CanvasEditor({
           style={{ color: strokeColor }}
           markerEnd={mEnd}
         />
+        {/* Connection Label Pill */}
+        {edge.label && (
+          <g className="pointer-events-none select-none">
+            {/* Background pill */}
+            <rect
+              x={midX - (edge.label.length * 3.5) - 6}
+              y={midY - 8}
+              width={edge.label.length * 7 + 12}
+              height={16}
+              rx={8}
+              fill="var(--popover)"
+              stroke="var(--border)"
+              strokeWidth={1}
+              className="shadow-sm"
+            />
+            <text
+              x={midX}
+              y={midY + 3}
+              textAnchor="middle"
+              className="text-[9px] font-extrabold fill-current text-foreground"
+            >
+              {edge.label}
+            </text>
+          </g>
+        )}
       </g>
     );
   };
@@ -2404,7 +2564,8 @@ export default function CanvasEditor({
             <div
               className="absolute origin-top-left pointer-events-none"
               style={{
-                transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                transform: `translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`,
+                willChange: "transform",
               }}
             >
               <div className="relative w-0 h-0 pointer-events-auto">
@@ -2623,6 +2784,7 @@ export default function CanvasEditor({
                               );
                             }
                             if (node.lockPosition) cls += " cursor-not-allowed";
+                            if (lockedElements[node.id]) cls += " opacity-80 border-destructive/30";
                             return cls;
                           })()}
                           style={{
@@ -2642,6 +2804,13 @@ export default function CanvasEditor({
                             ) : {}),
                           }}
                         >
+                          {/* Lock indicator overlay */}
+                          {lockedElements[node.id] && (
+                            <div className="absolute top-2 right-2 z-40 bg-destructive text-destructive-foreground px-2 py-0.5 rounded-full text-[8px] font-bold flex items-center gap-1 shadow-md pointer-events-none select-none">
+                              <Lock className="h-2.5 w-2.5 animate-pulse" />
+                              <span>Locked by {lockedElements[node.id].username}</span>
+                            </div>
+                          )}
                           {/* Card Content Area */}
                           <div
                             className={cn(
@@ -2668,6 +2837,7 @@ export default function CanvasEditor({
                                   onChange={(html) =>
                                     handleTextChange(node.id, html)
                                   }
+                                  editable={!lockedElements[node.id]}
                                 />
                               </div>
                             ) : (
@@ -2676,6 +2846,7 @@ export default function CanvasEditor({
                                 selected={selectedNodeId === node.id}
                                 accessToken={accessToken}
                                 zoom={zoom}
+                                isLocked={!!lockedElements[node.id]}
                                 onNodeUpdate={(updates) => {
                                   setNodes((prev) =>
                                     prev.map((n) =>
@@ -2784,11 +2955,7 @@ export default function CanvasEditor({
                           selectedNodeId === node.id && (
                             <div
                               className="absolute z-30 bg-popover border border-border text-popover-foreground rounded-2xl shadow-2xl p-4 flex flex-col pointer-events-auto transition-all w-[260px]"
-                              style={{
-                                left: node.x + node.width + 12,
-                                top: node.y,
-                                height: node.height,
-                              }}
+                              style={getPanelStyle(node, 260)}
                               onMouseDown={(e) => e.stopPropagation()}
                             >
                               <div className="flex items-center justify-between border-b border-border pb-2 mb-2 shrink-0">
@@ -2942,11 +3109,7 @@ export default function CanvasEditor({
                           selectedNodeId === node.id && (
                             <div
                               className="absolute z-30 bg-popover border border-border text-popover-foreground rounded-2xl shadow-2xl p-4 flex flex-col pointer-events-auto transition-all w-[320px]"
-                              style={{
-                                left: node.x + node.width + 12,
-                                top: node.y,
-                                height: node.height,
-                              }}
+                              style={getPanelStyle(node, 320)}
                               onMouseDown={(e) => e.stopPropagation()}
                             >
                               <div className="flex items-center justify-between border-b border-border pb-2 mb-2 shrink-0">
@@ -3004,6 +3167,166 @@ export default function CanvasEditor({
                                     }
                                   }}
                                 />
+                              </div>
+                            </div>
+                          )}
+
+                        {/* Scientific Calculator Settings Floating Panel */}
+                        {node.type === "scientific-calc" &&
+                          selectedNodeId === node.id && (
+                            <div
+                              className="absolute z-30 bg-popover border border-border text-popover-foreground rounded-2xl shadow-2xl p-3 flex flex-col pointer-events-auto transition-all w-[220px]"
+                              style={getPanelStyle(node, 220)}
+                              onMouseDown={(e) => e.stopPropagation()}
+                            >
+                              <div className="flex items-center justify-between border-b border-border pb-1.5 mb-2 shrink-0">
+                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                                  Shift & Variable Settings
+                                </span>
+                              </div>
+                              <div className="flex flex-col gap-2 min-h-0 text-[10px]">
+                                {/* Custom Variables Editor */}
+                                <div className="flex flex-col gap-1 bg-muted/40 border border-border/30 p-2 rounded-xl">
+                                  <span className="font-bold text-muted-foreground uppercase tracking-wide">
+                                    Variables
+                                  </span>
+                                  {!lockedElements[node.id] && (
+                                    <div className="flex gap-1">
+                                      <input
+                                        type="text"
+                                        placeholder="var"
+                                        value={calcVarName}
+                                        onChange={(e) => setCalcVarName(e.target.value)}
+                                        className="w-10 bg-background border border-border/50 rounded px-1 py-0.5 focus:outline-none text-[9px]"
+                                      />
+                                      <input
+                                        type="text"
+                                        placeholder="val"
+                                        value={calcVarVal}
+                                        onChange={(e) => setCalcVarVal(e.target.value)}
+                                        className="flex-1 bg-background border border-border/50 rounded px-1 py-0.5 focus:outline-none text-[9px]"
+                                      />
+                                      <button
+                                        onClick={() => {
+                                          if (!calcVarName.trim() || !calcVarVal.trim()) return;
+                                          if (!/^[a-zA-Z][a-zA-Z0-9]*$/.test(calcVarName)) return;
+                                          setNodes((prev) =>
+                                            prev.map((n) =>
+                                              n.id === node.id
+                                                ? {
+                                                    ...n,
+                                                    variables: {
+                                                      ...(n.variables || {}),
+                                                      [calcVarName.trim()]: calcVarVal.trim(),
+                                                    },
+                                                  }
+                                                : n,
+                                            ),
+                                          );
+                                          setIsDirty(true);
+                                          setCalcVarName("");
+                                          setCalcVarVal("");
+                                        }}
+                                        className="px-1 bg-primary text-primary-foreground rounded hover:bg-primary/95 font-bold text-[9px]"
+                                      >
+                                        +
+                                      </button>
+                                    </div>
+                                  )}
+                                  <div className="flex flex-col gap-1 max-h-[70px] overflow-y-auto pr-1 font-mono">
+                                    {Object.entries(node.variables || {}).map(([name, val]) => (
+                                      <div
+                                        key={name}
+                                        className="flex justify-between items-center bg-muted/70 px-1.5 py-0.5 rounded text-[8px]"
+                                      >
+                                        <span
+                                          onClick={() => {
+                                            setNodes((prev) =>
+                                              prev.map((n) =>
+                                                n.id === node.id
+                                                  ? { ...n, text: (n.text || "") + name }
+                                                  : n,
+                                              ),
+                                            );
+                                            setIsDirty(true);
+                                          }}
+                                          className="cursor-pointer font-bold text-primary hover:underline truncate max-w-[120px]"
+                                        >
+                                          {name} = {val}
+                                        </span>
+                                        {!lockedElements[node.id] && (
+                                          <button
+                                            onClick={() => {
+                                              const updatedVars = { ...(node.variables || {}) };
+                                              delete updatedVars[name];
+                                              setNodes((prev) =>
+                                                prev.map((n) =>
+                                                  n.id === node.id
+                                                    ? { ...n, variables: updatedVars }
+                                                    : n,
+                                                ),
+                                              );
+                                              setIsDirty(true);
+                                            }}
+                                            className="text-destructive font-bold hover:scale-115 px-1"
+                                          >
+                                            ×
+                                          </button>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* Shift Symbols Reference Keypad */}
+                                <div className="flex flex-col gap-1.5 bg-muted/40 border border-border/30 p-2.5 rounded-xl">
+                                  <span className="font-bold text-muted-foreground uppercase tracking-wide">
+                                    Shift Options
+                                  </span>
+                                  <div className="grid grid-cols-3 gap-1">
+                                    {[
+                                      { label: "sin⁻¹", value: "asin(" },
+                                      { label: "cos⁻¹", value: "acos(" },
+                                      { label: "tan⁻¹", value: "atan(" },
+                                      { label: "sinh⁻¹", value: "asinh(" },
+                                      { label: "cosh⁻¹", value: "acosh(" },
+                                      { label: "tanh⁻¹", value: "atanh(" },
+                                      { label: "³√■", value: "nthRoot(■, 3)" },
+                                      { label: "x!", value: "!" },
+                                      { label: "Ran#", value: "random()" },
+                                      { label: "log_N", value: "log(■, N)" },
+                                      { label: "Mean", value: "mean(" },
+                                      { label: "StdDev", value: "std(" },
+                                      { label: "Derivative", value: "derivative(" },
+                                      { label: "Simplify", value: "simplify(" },
+                                      { label: "Integrate", value: "integrate(" },
+                                      { label: "Matrix", value: "[1, 2; 3, 4]" },
+                                      { label: "Complex", value: "3 + 2i" },
+                                      { label: "Unit Conv", value: "10 inch to cm" },
+                                    ].map((s) => (
+                                      <button
+                                        key={s.label}
+                                        disabled={!!lockedElements[node.id]}
+                                        onClick={() => {
+                                          setNodes((prev) =>
+                                            prev.map((n) =>
+                                              n.id === node.id
+                                                ? {
+                                                    ...n,
+                                                    text: (n.text || "") + s.value,
+                                                  }
+                                                : n,
+                                            ),
+                                          );
+                                          setIsDirty(true);
+                                        }}
+                                        className="py-1 text-[8px] bg-amber-500/10 hover:bg-amber-500/25 border border-amber-500/20 text-amber-500 rounded font-semibold active:scale-95 transition-transform"
+                                      >
+                                        {s.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           )}
@@ -3404,6 +3727,63 @@ export default function CanvasEditor({
             </ContextMenuLabel>
             <ContextMenuSeparator className="bg-border" />
 
+            {/* Set Connection Label */}
+            <ContextMenuItem
+              onClick={() => {
+                const edge = edges.find((e) => e.id === rightClickedEdgeId);
+                const label = prompt("Enter connection label:", edge?.label || "");
+                if (label !== null) {
+                  setEdges((prev) =>
+                    prev.map((ed) => (ed.id === rightClickedEdgeId ? { ...ed, label } : ed))
+                  );
+                  setIsDirty(true);
+                }
+              }}
+              className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-2 text-xs font-semibold"
+            >
+              <Type className="h-3.5 w-3.5 mr-2 text-indigo-400" />
+              Set Connection Label
+            </ContextMenuItem>
+
+            <ContextMenuSeparator className="bg-border/30" />
+
+            {/* Preset Color Selector */}
+            <ContextMenuSub>
+              <ContextMenuSubTrigger className="focus:bg-accent focus:text-accent-foreground cursor-pointer text-xs font-semibold px-3 py-2">
+                <Palette className="h-3.5 w-3.5 mr-2 text-primary" />
+                Change Preset Color
+              </ContextMenuSubTrigger>
+              <ContextMenuPortal>
+                <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-[120px]">
+                  {([
+                    { name: "slate", color: "var(--muted-foreground)" },
+                    { name: "blue", color: "#3b82f6" },
+                    { name: "emerald", color: "#10b981" },
+                    { name: "rose", color: "#ef4444" },
+                    { name: "purple", color: "#a855f7" },
+                    { name: "teal", color: "#14b8a6" },
+                    { name: "fuchsia", color: "#d946ef" },
+                    { name: "orange", color: "#f97316" },
+                    { name: "indigo", color: "#6366f1" },
+                  ] as const).map((p) => (
+                    <ContextMenuItem
+                      key={p.name}
+                      onClick={() => {
+                        setEdges((prev) =>
+                          prev.map((ed) => (ed.id === rightClickedEdgeId ? { ...ed, color: p.color } : ed))
+                        );
+                        setIsDirty(true);
+                      }}
+                      className="focus:bg-accent focus:text-accent-foreground cursor-pointer flex items-center px-3 py-1.5 text-xs font-semibold"
+                    >
+                      <div className="w-2.5 h-2.5 rounded-full mr-2" style={{ backgroundColor: p.color }} />
+                      <span className="capitalize">{p.name}</span>
+                    </ContextMenuItem>
+                  ))}
+                </ContextMenuSubContent>
+              </ContextMenuPortal>
+            </ContextMenuSub>
+
             {/* Custom Color Selector */}
             <div className="flex items-center justify-between px-3 py-1.5 text-[10px] font-semibold text-muted-foreground/80 hover:bg-accent/40 rounded transition-colors select-none relative">
               <span className="uppercase tracking-wider">Custom Color</span>
@@ -3436,6 +3816,48 @@ export default function CanvasEditor({
             </ContextMenuItem>
             
             <ContextMenuSeparator className="bg-border/30" />
+
+            {/* Line Shape (Curved / Straight) */}
+            <ContextMenuSub>
+              <ContextMenuSubTrigger className="focus:bg-accent focus:text-accent-foreground cursor-pointer text-xs font-semibold px-3 py-2">
+                <ChevronRight className="h-3.5 w-3.5 mr-2 text-warning" />
+                Line Shape
+              </ContextMenuSubTrigger>
+              <ContextMenuPortal>
+                <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-[120px]">
+                  <ContextMenuItem
+                    onClick={() => {
+                      setEdges((prev) =>
+                        prev.map((ed) =>
+                          ed.id === rightClickedEdgeId
+                            ? { ...ed, lineStyle: "curved" }
+                            : ed,
+                        ),
+                      );
+                      setIsDirty(true);
+                    }}
+                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
+                  >
+                    Curved
+                  </ContextMenuItem>
+                  <ContextMenuItem
+                    onClick={() => {
+                      setEdges((prev) =>
+                        prev.map((ed) =>
+                          ed.id === rightClickedEdgeId
+                            ? { ...ed, lineStyle: "straight" }
+                            : ed,
+                        ),
+                      );
+                      setIsDirty(true);
+                    }}
+                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
+                  >
+                    Straight
+                  </ContextMenuItem>
+                </ContextMenuSubContent>
+              </ContextMenuPortal>
+            </ContextMenuSub>
 
             {/* Line styles */}
             <ContextMenuSub>
@@ -3821,6 +4243,32 @@ export default function CanvasEditor({
                   >
                     <BarChart2 className="h-3.5 w-3.5 mr-2 text-primary" />
                     Interactive Graph
+                  </ContextMenuItem>
+                  <ContextMenuItem
+                    onClick={() =>
+                      createNodeAtPos(
+                        "scientific-calc",
+                        rightClickPosition.x,
+                        rightClickPosition.y,
+                      )
+                    }
+                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
+                  >
+                    <Calculator className="h-3.5 w-3.5 mr-2 text-indigo-400" />
+                    Scientific Calculator
+                  </ContextMenuItem>
+                  <ContextMenuItem
+                    onClick={() =>
+                      createNodeAtPos(
+                        "graphing-calc",
+                        rightClickPosition.x,
+                        rightClickPosition.y,
+                      )
+                    }
+                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
+                  >
+                    <Calculator className="h-3.5 w-3.5 mr-2 text-emerald-400" />
+                    Graphing Calculator
                   </ContextMenuItem>
                 </ContextMenuSubContent>
               </ContextMenuPortal>

@@ -18,6 +18,7 @@ import { TableHeader } from "@tiptap/extension-table-header";
 import { TableCell } from "@tiptap/extension-table-cell";
 import { Node, mergeAttributes } from "@tiptap/core";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
+import { ramerDouglasPeucker } from "@/lib/coordinates";
 import { createLowlight, common } from "lowlight";
 
 const lowlight = createLowlight(common);
@@ -126,8 +127,9 @@ const DrawingComponent: React.FC<DrawingComponentProps> = ({
 
   const handleEnd = () => {
     if (isDrawing && currentLine && currentLine.points.length > 1) {
+      const simplifiedPoints = ramerDouglasPeucker(currentLine.points, 1.5);
       updateAttributes({
-        lines: [...lines, currentLine],
+        lines: [...lines, { ...currentLine, points: simplifiedPoints }],
       });
     }
     setIsDrawing(false);

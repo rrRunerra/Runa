@@ -220,6 +220,25 @@ export class LacertaCollabGateway
     });
   }
 
+  @SubscribeMessage('element-lock')
+  handleElementLock(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { fileId: string; nodeId: string; isLocked: boolean },
+  ): void {
+    const { fileId, nodeId, isLocked } = data;
+    if (!fileId || !nodeId) return;
+
+    const member = this.socketIdentity.get(client.id);
+    if (!member) return;
+
+    client.to(fileId).emit('element-lock', {
+      nodeId,
+      isLocked,
+      username: member.username,
+      senderId: client.id,
+    });
+  }
+
   private extractToken(client: Socket): string | null {
     // Check Authorization header
     const authHeader = client.handshake.headers.authorization;

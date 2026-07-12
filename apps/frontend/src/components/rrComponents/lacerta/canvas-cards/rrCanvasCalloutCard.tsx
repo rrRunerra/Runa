@@ -8,10 +8,11 @@ import { cn } from "@/lib/utils";
 
 interface RrCanvasCalloutCardProps {
   node: CanvasNode;
+  isLocked?: boolean;
   onNodeUpdate: (updates: Partial<CanvasNode>) => void;
 }
 
-export default function RrCanvasCalloutCard({ node, onNodeUpdate }: RrCanvasCalloutCardProps) {
+export default function RrCanvasCalloutCard({ node, isLocked = false, onNodeUpdate }: RrCanvasCalloutCardProps) {
   const type = node.calloutType || "info";
 
   const config = {
@@ -67,6 +68,7 @@ export default function RrCanvasCalloutCard({ node, onNodeUpdate }: RrCanvasCall
         <TiptapNode
           content={node.text || ""}
           onChange={(html) => onNodeUpdate({ text: html })}
+          editable={!isLocked}
         />
       </div>
     </div>
