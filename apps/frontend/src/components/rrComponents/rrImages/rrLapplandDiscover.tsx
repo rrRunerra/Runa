@@ -3,12 +3,10 @@ export default function RrLapplandDiscover({
 }: React.ComponentProps<"svg">) {
   return (
     <svg
-      version="1.0"
       xmlns="http://www.w3.org/2000/svg"
-      width="1024.000000pt"
-      height="1024.000000pt"
       viewBox="0 0 1024.000000 1024.000000"
       preserveAspectRatio="xMidYMid meet"
+      stroke="none"
       {...props}
     >
       {" "}
