@@ -61,7 +61,7 @@ export class FavoriteRepository {
     switch (type) {
       case FavoriteType.ANIME:
         return this.prisma.client.aquilaAnime.findUnique({
-          where: { anilistId: num },
+          where: { id: num },
           select: {
             titleEnglish: true,
             titleRomaji: true,
@@ -71,7 +71,7 @@ export class FavoriteRepository {
         });
       case FavoriteType.MANGA:
         return this.prisma.client.aquilaManga.findUnique({
-          where: { anilistId: num },
+          where: { id: num },
           select: {
             titleEnglish: true,
             titleRomaji: true,
@@ -81,22 +81,22 @@ export class FavoriteRepository {
         });
       case FavoriteType.TV:
         return this.prisma.client.aquilaTv.findUnique({
-          where: { tvdbId: num },
+          where: { id: num },
           select: { titleEnglish: true, coverImage: true },
         });
       case FavoriteType.MOVIE:
         return this.prisma.client.aquilaMovie.findUnique({
-          where: { tvdbId: num },
+          where: { id: num },
           select: { titleEnglish: true, coverImage: true },
         });
       case FavoriteType.GAME:
         return this.prisma.client.aquilaGame.findUnique({
-          where: { rawgId: num },
+          where: { id: num },
           select: { titleString: true, coverImage: true },
         });
       case FavoriteType.BOOK:
         return this.prisma.client.aquilaBook.findUnique({
-          where: { googleBookId: mediaId },
+          where: { id: num },
           select: { titleString: true, coverImage: true },
         });
       case FavoriteType.USER:

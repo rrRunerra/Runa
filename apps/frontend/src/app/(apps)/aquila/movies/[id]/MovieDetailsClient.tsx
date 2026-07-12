@@ -33,6 +33,7 @@ import { RrMediaInfoRow } from "@/components/rrComponents/aquila/details/rrMedia
 import { RrMediaDescription } from "@/components/rrComponents/aquila/details/rrMediaDescription";
 import { RrMediaGenres } from "@/components/rrComponents/aquila/details/rrMediaGenres";
 import { RrMediaCharacters } from "@/components/rrComponents/aquila/details/rrMediaCharacters";
+import { RrMediaStatsDashboard } from "@/components/rrComponents/aquila/details/rrMediaStatsDashboard";
 
 interface ListEntry {
   id: number | string;
@@ -551,6 +552,15 @@ export default function MovieDetailsPage(): React.JSX.Element {
                 </Badge>
               )}
             </motion.div>
+
+            {/* Stats Dashboard */}
+            <RrMediaStatsDashboard
+              localAverageScore={movie.localAverageScore}
+              localPopularity={movie.localPopularity}
+              localFavoritesCount={movie.localFavoritesCount}
+              localStatusDistribution={movie.localStatusDistribution}
+              localScoreDistribution={movie.localScoreDistribution}
+            />
 
             {/* Description */}
             <RrMediaDescription description={movie.description} />

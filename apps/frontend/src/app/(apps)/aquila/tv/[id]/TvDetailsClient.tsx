@@ -38,6 +38,7 @@ import { RrMediaInfoRow } from "@/components/rrComponents/aquila/details/rrMedia
 import { RrMediaDescription } from "@/components/rrComponents/aquila/details/rrMediaDescription";
 import { RrMediaGenres } from "@/components/rrComponents/aquila/details/rrMediaGenres";
 import { RrMediaCharacters } from "@/components/rrComponents/aquila/details/rrMediaCharacters";
+import { RrMediaStatsDashboard } from "@/components/rrComponents/aquila/details/rrMediaStatsDashboard";
 
 interface TvMedia extends Media {
   seasons: Season[];
@@ -657,6 +658,15 @@ export default function TvDetailsPage(): React.JSX.Element {
                 </div>
               </motion.div>
             )}
+
+            {/* Stats Dashboard */}
+            <RrMediaStatsDashboard
+              localAverageScore={tv.localAverageScore}
+              localPopularity={tv.localPopularity}
+              localFavoritesCount={tv.localFavoritesCount}
+              localStatusDistribution={tv.localStatusDistribution}
+              localScoreDistribution={tv.localScoreDistribution}
+            />
 
             {/* Description */}
             <RrMediaDescription description={tv.description} />

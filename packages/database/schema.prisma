@@ -311,6 +311,14 @@ model AquilaAnime {
     anilistUpdatedAt Int?
     createdAt       DateTime              @default(now())
     updatedAt       DateTime              @updatedAt
+
+    localPopularity         Int      @default(0)
+    localFavoritesCount     Int      @default(0)
+    localAverageScore       Float    @default(0)
+    localStatusDistribution Json     @default("{}") @db.Json
+    localScoreDistribution  Json     @default("{}") @db.Json
+    localTotalScoreSum      Int      @default(0)
+    localScoredCount        Int      @default(0)
     aquilaUserLists AquilaAnimeUserList[]
     animeCharacters AquilaAnimeCharacter[]
     animeStudios    AquilaAnimeStudio[]
@@ -510,6 +518,14 @@ model AquilaManga {
     anilistUpdatedAt Int?
     createdAt DateTime              @default(now())
     updatedAt DateTime              @updatedAt
+
+    localPopularity         Int      @default(0)
+    localFavoritesCount     Int      @default(0)
+    localAverageScore       Float    @default(0)
+    localStatusDistribution Json     @default("{}") @db.Json
+    localScoreDistribution  Json     @default("{}") @db.Json
+    localTotalScoreSum      Int      @default(0)
+    localScoredCount        Int      @default(0)
     aquilaUserLists AquilaMangaUserList[]
     mangaCharacters AquilaMangaCharacter[]
     mangaStudios    AquilaMangaStudio[]
@@ -636,6 +652,14 @@ model AquilaMovie {
     locked               Boolean               @default(false)
     createdAt            DateTime              @default(now())
     updatedAt            DateTime              @updatedAt
+
+    localPopularity         Int      @default(0)
+    localFavoritesCount     Int      @default(0)
+    localAverageScore       Float    @default(0)
+    localStatusDistribution Json     @default("{}") @db.Json
+    localScoreDistribution  Json     @default("{}") @db.Json
+    localTotalScoreSum      Int      @default(0)
+    localScoredCount        Int      @default(0)
     aquilaMovieUserLists AquilaMovieUserList[]
     movieCharacters      AquilaMovieCharacter[]
 
@@ -679,6 +703,14 @@ model AquilaTv {
     locked          Boolean            @default(false)
     createdAt       DateTime           @default(now())
     updatedAt       DateTime           @updatedAt
+
+    localPopularity         Int      @default(0)
+    localFavoritesCount     Int      @default(0)
+    localAverageScore       Float    @default(0)
+    localStatusDistribution Json     @default("{}") @db.Json
+    localScoreDistribution  Json     @default("{}") @db.Json
+    localTotalScoreSum      Int      @default(0)
+    localScoredCount        Int      @default(0)
     aquilaUserLists AquilaTvUserList[]
     tvCharacters    AquilaTvCharacter[]
 
@@ -893,6 +925,14 @@ model AquilaGame {
     locked          Boolean              @default(false)
     createdAt       DateTime             @default(now())
     updatedAt       DateTime             @updatedAt
+
+    localPopularity         Int      @default(0)
+    localFavoritesCount     Int      @default(0)
+    localAverageScore       Float    @default(0)
+    localStatusDistribution Json     @default("{}") @db.Json
+    localScoreDistribution  Json     @default("{}") @db.Json
+    localTotalScoreSum      Int      @default(0)
+    localScoredCount        Int      @default(0)
     aquilaUserLists AquilaGameUserList[]
 
     @@index([rawgId])
@@ -962,6 +1002,14 @@ model AquilaBook {
     locked          Boolean              @default(false)
     createdAt       DateTime             @default(now())
     updatedAt       DateTime             @updatedAt
+
+    localPopularity         Int      @default(0)
+    localFavoritesCount     Int      @default(0)
+    localAverageScore       Float    @default(0)
+    localStatusDistribution Json     @default("{}") @db.Json
+    localScoreDistribution  Json     @default("{}") @db.Json
+    localTotalScoreSum      Int      @default(0)
+    localScoredCount        Int      @default(0)
     aquilaUserLists AquilaBookUserList[]
 
     @@index([googleBookId])

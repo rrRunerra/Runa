@@ -19,6 +19,7 @@ import { RrMediaEditDialog } from "@/components/rrComponents/aquila/rrMediaEditD
 import RrLapplandImageNotFound from "@/components/rrComponents/rrImages/rrLapplandImageNotFound";
 import { RrMediaRefreshButton } from "@/components/rrComponents/aquila/rrMediaRefreshButton";
 import { GameEntity } from "@/types/game.entities";
+import { RrMediaStatsDashboard } from "@/components/rrComponents/aquila/details/rrMediaStatsDashboard";
 
 interface ListEntry {
   id: number | string;
@@ -437,60 +438,13 @@ export default function GameDetailsPage(): React.JSX.Element {
             </motion.div>
 
             {/* Stats Dashboard */}
-            <motion.div
-              variants={itemVariants}
-              className="grid grid-cols-2 sm:grid-cols-3 gap-4"
-            >
-              {game.metacritic && (
-                <div className="bg-card/45 border border-border/30 backdrop-blur-md p-4 rounded-xl flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-semibold">
-                    <Star className="size-3.5 text-primary fill-primary/20" />
-                    <span>Metacritic</span>
-                  </div>
-                  <span className="text-xl font-extrabold text-primary">
-                    {game.metacritic}
-                  </span>
-                </div>
-              )}
-              {game.averageScore && (
-                <div className="bg-card/45 border border-border/30 backdrop-blur-md p-4 rounded-xl flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-semibold">
-                    <Star className="size-3.5 text-primary fill-primary/20" />
-                    <span>Average Score</span>
-                  </div>
-                  <span className="text-xl font-extrabold text-primary">
-                    {game.averageScore}%
-                  </span>
-                </div>
-              )}
-              {game.rating && (
-                <div className="bg-card/45 border border-border/30 backdrop-blur-md p-4 rounded-xl flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-semibold">
-                    <Star className="size-3.5 text-primary fill-primary/20" />
-                    <span>RAWG Rating</span>
-                  </div>
-                  <span className="text-xl font-extrabold text-primary">
-                    {game.rating} / 5
-                    {game.ratingsCount && (
-                      <span className="text-xs text-muted-foreground font-normal ml-1">
-                        ({game.ratingsCount.toLocaleString()})
-                      </span>
-                    )}
-                  </span>
-                </div>
-              )}
-              {game.popularity && (
-                <div className="bg-card/45 border border-border/30 backdrop-blur-md p-4 rounded-xl flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5 text-muted-foreground text-xs font-semibold">
-                    <TrendingUp className="size-3.5 text-primary" />
-                    <span>RAWG Members</span>
-                  </div>
-                  <span className="text-xl font-extrabold text-primary">
-                    {game.popularity.toLocaleString()}
-                  </span>
-                </div>
-              )}
-            </motion.div>
+            <RrMediaStatsDashboard
+              localAverageScore={game.localAverageScore}
+              localPopularity={game.localPopularity}
+              localFavoritesCount={game.localFavoritesCount}
+              localStatusDistribution={game.localStatusDistribution}
+              localScoreDistribution={game.localScoreDistribution}
+            />
 
             {/* Description */}
             <motion.div

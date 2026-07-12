@@ -486,8 +486,11 @@ export default function AnimeDetailsPage(): React.JSX.Element {
 
             {/* Stats Dashboard */}
             <RrMediaStatsDashboard
-              averageScore={anime.averageScore}
-              favourites={anime.favourites}
+              localAverageScore={anime.localAverageScore}
+              localPopularity={anime.localPopularity}
+              localFavoritesCount={anime.localFavoritesCount}
+              localStatusDistribution={anime.localStatusDistribution}
+              localScoreDistribution={anime.localScoreDistribution}
             />
 
             {/* Description */}

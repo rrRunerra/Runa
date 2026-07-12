@@ -22,6 +22,7 @@ import { MangaService } from '../manga/manga.service';
 import { GameService } from '../game/game.service';
 import { BookService } from '../book/book.service';
 import { NotificationService } from '../notification/notification.service';
+import { MediaStatsService } from './media-stats.service';
 
 export interface ListQueryOptions {
   limit?: number;
@@ -86,6 +87,7 @@ export class ListService {
     private readonly gameService: GameService,
     private readonly bookService: BookService,
     private readonly notificationService: NotificationService,
+    private readonly mediaStatsService: MediaStatsService,
   ) {}
 
   private readonly logger = new Logger(ListService.name);
@@ -398,6 +400,15 @@ export class ListService {
       const privacy = parsePrivacy(user?.privacy);
       const isPrivate = !!(privacy.profile || privacy.animeList);
 
+      const oldEntry = await this.prisma.client.aquilaAnimeUserList.findUnique({
+        where: {
+          username_animeId: {
+            username: username.toLowerCase(),
+            animeId: body.animeId,
+          },
+        },
+      });
+
       await this.prisma.client.aquilaAnimeUserList.upsert({
         where: {
           username_animeId: {
@@ -444,6 +455,16 @@ export class ListService {
           body.rewatched,
         );
       }
+
+      const newEntry = await this.prisma.client.aquilaAnimeUserList.findUnique({
+        where: {
+          username_animeId: {
+            username: username.toLowerCase(),
+            animeId: body.animeId,
+          },
+        },
+      });
+      void this.mediaStatsService.updateStatsIncremental('anime', body.animeId, oldEntry, newEntry);
     } catch (error) {
       this.logger.error(error);
       return {
@@ -484,6 +505,8 @@ export class ListService {
           },
         },
       });
+
+      void this.mediaStatsService.updateStatsIncremental('anime', animeId, entry, null);
 
       if (entry && entry.connections && typeof entry.connections === 'object') {
         for (const providerKey of Object.keys(entry.connections)) {
@@ -743,6 +766,15 @@ export class ListService {
       const privacy = parsePrivacy(user?.privacy);
       const isPrivate = !!(privacy.profile || privacy.mangaList);
 
+      const oldEntry = await this.prisma.client.aquilaMangaUserList.findUnique({
+        where: {
+          username_mangaId: {
+            username: username.toLowerCase(),
+            mangaId: body.mangaId,
+          },
+        },
+      });
+
       await this.prisma.client.aquilaMangaUserList.upsert({
         where: {
           username_mangaId: {
@@ -792,6 +824,16 @@ export class ListService {
           body.reread,
         );
       }
+
+      const newEntry = await this.prisma.client.aquilaMangaUserList.findUnique({
+        where: {
+          username_mangaId: {
+            username: username.toLowerCase(),
+            mangaId: body.mangaId,
+          },
+        },
+      });
+      void this.mediaStatsService.updateStatsIncremental('manga', body.mangaId, oldEntry, newEntry);
     } catch (error) {
       this.logger.error(error);
       return {
@@ -832,6 +874,8 @@ export class ListService {
           },
         },
       });
+
+      void this.mediaStatsService.updateStatsIncremental('manga', mangaId, entry, null);
 
       if (entry && entry.connections && typeof entry.connections === 'object') {
         for (const providerKey of Object.keys(entry.connections)) {
@@ -1205,6 +1249,15 @@ export class ListService {
       const privacy = parsePrivacy(user?.privacy);
       const isPrivate = !!(privacy.profile || privacy.movieList);
 
+      const oldEntry = await this.prisma.client.aquilaMovieUserList.findUnique({
+        where: {
+          username_movieId: {
+            username: username.toLowerCase(),
+            movieId: body.movieId,
+          },
+        },
+      });
+
       await this.prisma.client.aquilaMovieUserList.upsert({
         where: {
           username_movieId: {
@@ -1248,6 +1301,16 @@ export class ListService {
           body.rewatched,
         );
       }
+
+      const newEntry = await this.prisma.client.aquilaMovieUserList.findUnique({
+        where: {
+          username_movieId: {
+            username: username.toLowerCase(),
+            movieId: body.movieId,
+          },
+        },
+      });
+      void this.mediaStatsService.updateStatsIncremental('movie', body.movieId, oldEntry, newEntry);
     } catch (error) {
       this.logger.error(error);
       return {
@@ -1288,6 +1351,8 @@ export class ListService {
           },
         },
       });
+
+      void this.mediaStatsService.updateStatsIncremental('movie', movieId, entry, null);
 
       if (entry && entry.connections && typeof entry.connections === 'object') {
         for (const providerKey of Object.keys(entry.connections)) {
@@ -1486,6 +1551,15 @@ export class ListService {
       const privacy = parsePrivacy(user?.privacy);
       const isPrivate = !!(privacy.profile || privacy.tvList);
 
+      const oldEntry = await this.prisma.client.aquilaTvUserList.findUnique({
+        where: {
+          username_tvId: {
+            username: username.toLowerCase(),
+            tvId: body.tvId,
+          },
+        },
+      });
+
       const listEntry = await this.prisma.client.aquilaTvUserList.upsert({
         where: {
           username_tvId: {
@@ -1544,6 +1618,16 @@ export class ListService {
           body.rewatched,
         );
       }
+
+      const newEntry = await this.prisma.client.aquilaTvUserList.findUnique({
+        where: {
+          username_tvId: {
+            username: username.toLowerCase(),
+            tvId: body.tvId,
+          },
+        },
+      });
+      void this.mediaStatsService.updateStatsIncremental('tv', body.tvId, oldEntry, newEntry);
     } catch (error) {
       this.logger.error(error);
       return {
@@ -1584,6 +1668,8 @@ export class ListService {
           },
         },
       });
+
+      void this.mediaStatsService.updateStatsIncremental('tv', tvId, entry, null);
 
       if (entry && entry.connections && typeof entry.connections === 'object') {
         for (const providerKey of Object.keys(entry.connections)) {
@@ -1914,6 +2000,15 @@ export class ListService {
       const privacy = parsePrivacy(user?.privacy);
       const isPrivate = !!(privacy.profile || privacy.gameList);
 
+      const oldEntry = await this.prisma.client.aquilaGameUserList.findUnique({
+        where: {
+          username_gameId: {
+            username: username.toLowerCase(),
+            gameId: body.gameId,
+          },
+        },
+      });
+
       await this.prisma.client.aquilaGameUserList.upsert({
         where: {
           username_gameId: {
@@ -1941,6 +2036,16 @@ export class ListService {
           private: isPrivate,
         },
       });
+
+      const newEntry = await this.prisma.client.aquilaGameUserList.findUnique({
+        where: {
+          username_gameId: {
+            username: username.toLowerCase(),
+            gameId: body.gameId,
+          },
+        },
+      });
+      void this.mediaStatsService.updateStatsIncremental('game', body.gameId, oldEntry, newEntry);
     } catch (error) {
       this.logger.error(error);
       return {
@@ -1964,6 +2069,15 @@ export class ListService {
     gameId: number,
   ): Promise<{ success: boolean; message: string; error?: any }> {
     try {
+      const entry = await this.prisma.client.aquilaGameUserList.findUnique({
+        where: {
+          username_gameId: {
+            username: username.toLowerCase(),
+            gameId,
+          },
+        },
+      });
+
       await this.prisma.client.aquilaGameUserList.delete({
         where: {
           username_gameId: {
@@ -1972,6 +2086,8 @@ export class ListService {
           },
         },
       });
+
+      void this.mediaStatsService.updateStatsIncremental('game', gameId, entry, null);
 
       const userId = await this.getUserId(username);
       void this.statsService.recalculate(userId, 'game');
@@ -2133,11 +2249,21 @@ export class ListService {
       const privacy = parsePrivacy(user?.privacy);
       const isPrivate = !!(privacy.profile || privacy.bookList);
 
+      const intBookId = parseInt(body.bookId, 10);
+      const oldEntry = await this.prisma.client.aquilaBookUserList.findUnique({
+        where: {
+          username_bookId: {
+            username: username.toLowerCase(),
+            bookId: intBookId,
+          },
+        },
+      });
+
       await this.prisma.client.aquilaBookUserList.upsert({
         where: {
           username_bookId: {
             username: username.toLowerCase(),
-            bookId: parseInt(body.bookId, 10),
+            bookId: intBookId,
           },
         },
         update: {
@@ -2151,7 +2277,7 @@ export class ListService {
         },
         create: {
           username: username.toLowerCase(),
-          bookId: parseInt(body.bookId, 10),
+          bookId: intBookId,
           status: body.status,
           chapters: body.chapters,
           volumes: body.volumes,
@@ -2162,6 +2288,16 @@ export class ListService {
           private: isPrivate,
         },
       });
+
+      const newEntry = await this.prisma.client.aquilaBookUserList.findUnique({
+        where: {
+          username_bookId: {
+            username: username.toLowerCase(),
+            bookId: intBookId,
+          },
+        },
+      });
+      void this.mediaStatsService.updateStatsIncremental('book', intBookId, oldEntry, newEntry);
     } catch (error) {
       this.logger.error(error);
       return {
@@ -2185,14 +2321,26 @@ export class ListService {
     bookId: string,
   ): Promise<{ success: boolean; message: string; error?: any }> {
     try {
+      const intBookId = parseInt(bookId, 10);
+      const entry = await this.prisma.client.aquilaBookUserList.findUnique({
+        where: {
+          username_bookId: {
+            username: username.toLowerCase(),
+            bookId: intBookId,
+          },
+        },
+      });
+
       await this.prisma.client.aquilaBookUserList.delete({
         where: {
           username_bookId: {
             username: username.toLowerCase(),
-            bookId: parseInt(bookId, 10),
+            bookId: intBookId,
           },
         },
       });
+
+      void this.mediaStatsService.updateStatsIncremental('book', intBookId, entry, null);
 
       const userId = await this.getUserId(username);
       void this.statsService.recalculate(userId, 'book');

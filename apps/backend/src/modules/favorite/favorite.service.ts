@@ -5,6 +5,7 @@ import { FavoriteType } from '@runa/database';
 import { rrNotFoundException, rrConflictException } from 'src/providers/error';
 
 import { FavoriteRepository } from './favorite.repository';
+import { MediaStatsService } from '../list/media-stats.service';
 import type { AddFavoriteDto } from './favorite.dto';
 import type {
   FavoriteEntity,
@@ -18,7 +19,10 @@ export class FavoriteService {
   private readonly logger = new Logger(FavoriteService.name);
   private readonly moduleCode = 'FeSve-';
 
-  constructor(private readonly favoriteRepository: FavoriteRepository) {}
+  constructor(
+    private readonly favoriteRepository: FavoriteRepository,
+    private readonly mediaStatsService: MediaStatsService,
+  ) {}
 
   // ---------------------------------------------------------------------------
   // Add
@@ -46,6 +50,9 @@ export class FavoriteService {
       dto.targetId,
     );
 
+    // Recalculate local favorites count
+    void this.mediaStatsService.recalculateFavorites(dto.type.toLowerCase(), dto.targetId);
+
     return this.toEntity(record);
   }
 
@@ -60,6 +67,8 @@ export class FavoriteService {
   ): Promise<FavoriteSuccessEntity> {
     try {
       await this.favoriteRepository.delete(userId, type, targetId);
+      // Recalculate local favorites count
+      void this.mediaStatsService.recalculateFavorites(type.toLowerCase(), targetId);
       return { success: true };
     } catch {
       throw new rrNotFoundException(`${this.moduleCode}FNF001`, {

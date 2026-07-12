@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "devDependencies": {
+    "@runa/database": "workspace:*",
     "prompts": "^2.4.2"
   }
 }

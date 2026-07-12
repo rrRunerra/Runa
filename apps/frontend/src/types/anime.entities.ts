@@ -136,4 +136,12 @@ export interface AnimeEntity {
   animeCharacters: AnimeCharacterEntity[];
   animeStudios: AnimeStudioEntity[];
   animeRelations: RelationEntity[];
+
+  localPopularity: number;
+  localFavoritesCount: number;
+  localAverageScore: number;
+  localStatusDistribution: Record<string, number>;
+  localScoreDistribution: Record<string, number>;
+  localTotalScoreSum: number;
+  localScoredCount: number;
 }
