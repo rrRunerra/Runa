@@ -41,6 +41,7 @@ export default function Dash() {
     GREETINGS[Math.floor(Math.random() * GREETINGS.length)],
   );
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
+  const navigatedRef = useRef(false);
 
   useEffect(() => {
     document.title = "Polaris > Dashboard";
@@ -99,6 +100,25 @@ export default function Dash() {
       starColor: b.starColor || undefined,
     })),
   ];
+
+  useEffect(() => {
+    if (navigatedRef.current) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const constellationId = params.get("constellation");
+    if (constellationId && allConstellations.length > 0) {
+      const matched = allConstellations.find(
+        (c) => c.id.toLowerCase() === constellationId.toLowerCase()
+      );
+      if (matched) {
+        navigatedRef.current = true;
+        const timer = setTimeout(() => {
+          starMapRef.current?.navigateToConstellation(matched.name);
+        }, 150);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [allConstellations]);
 
   return (
     <div ref={containerRef} className="dark w-full min-h-screen bg-black">

@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useMemo, useState, useEffect, useRef } from "react";
-import { StarMap } from "@/components/stars/StarMap";
+import React, { useMemo, useState, useRef, useCallback, useEffect } from "react";
+import { X, Monitor, Smartphone, Tablet, EyeOff, FileIcon } from "lucide-react";
+import { StarMap, MeteorPosition, StarMapHandle } from "@/components/stars/StarMap";
 import { REFERENCE_CONSTELLATIONS } from "@/lib/constellations";
 import { Constellation } from "@/types/constellation";
-import { Peer } from "../use-lacerta-sharing";
+import { Peer, TransferState } from "../use-lacerta-sharing";
+import { useRrDevice } from "@/hooks/useRrDevice";
 
 interface LacertaDropStarMapProps {
   peers: Peer[];
@@ -13,23 +15,10 @@ interface LacertaDropStarMapProps {
   isHidden: boolean;
   onSelectPeer: (peerId: string) => void;
   onToggleVisibility: () => void;
-  transfer: any;
-  onCancelTransfer: () => void;
+  transfers: Record<string, TransferState>;
+  onCancelTransfer: (batchId: string) => void;
+  onDismissTransfer?: (batchId: string) => void;
 }
-
-// Formatting helpers for inline transfer progress info
-const formatSize = (bytes: number): string => {
-  if (bytes === 0) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-};
-
-const formatSpeed = (bytesPerSec: number): string => {
-  if (!bytesPerSec || bytesPerSec === 0) return "0 B/s";
-  return `${formatSize(bytesPerSec)}/s`;
-};
 
 // Simple hash function for stable positions and constellation assignments
 const hashStringToFloat = (str: string): number => {
@@ -64,11 +53,69 @@ const shiftConstellation = (
     dec: Number((s.dec - avgDec + targetDec).toFixed(2)),
   }));
 
-  return {
-    ...constellation,
-    stars: shiftedStars,
-  };
+  return { ...constellation, stars: shiftedStars };
 };
+
+// Map peer deviceType string to a lucide icon component
+function DeviceIcon({
+  deviceType,
+  size = 11,
+  className = "",
+}: {
+  deviceType: string;
+  size?: number;
+  className?: string;
+}) {
+  if (deviceType === "mobile") return <Smartphone size={size} className={className} />;
+  if (deviceType === "tablet") return <Tablet size={size} className={className} />;
+  return <Monitor size={size} className={className} />;
+}
+
+// Avatar component — shows profile image or styled initials fallback
+function PeerAvatar({
+  avatarUrl,
+  username,
+  color,
+  size = 32,
+}: {
+  avatarUrl?: string;
+  username: string;
+  color: string;
+  size?: number;
+}) {
+  const [imgError, setImgError] = useState(false);
+  const initials = username.slice(0, 2).toUpperCase();
+
+  if (avatarUrl && !imgError) {
+    return (
+      <img
+        src={avatarUrl}
+        alt={username}
+        width={size}
+        height={size}
+        onError={() => setImgError(true)}
+        className="rounded-full object-cover shrink-0"
+        style={{ width: size, height: size, border: `1.5px solid ${color}55` }}
+      />
+    );
+  }
+
+  return (
+    <div
+      className="rounded-full shrink-0 flex items-center justify-center font-bold"
+      style={{
+        width: size,
+        height: size,
+        backgroundColor: `${color}22`,
+        border: `1.5px solid ${color}55`,
+        color: color,
+        fontSize: size * 0.38,
+      }}
+    >
+      {initials}
+    </div>
+  );
+}
 
 export function LacertaDropStarMap({
   peers,
@@ -77,145 +124,138 @@ export function LacertaDropStarMap({
   isHidden,
   onSelectPeer,
   onToggleVisibility,
-  transfer,
+  transfers,
   onCancelTransfer,
+  onDismissTransfer,
 }: LacertaDropStarMapProps): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
+  const starMapRef = useRef<StarMapHandle>(null);
+  const navigatedRef = useRef(false);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const myDeviceLabel = useRrDevice();
+
+  // Meteor head positions written by canvas draw loop — stored in a ref (never setState)
+  const meteorPositionsRef = useRef<MeteorPosition[]>([]);
+  const [meteorTick, setMeteorTick] = useState(0);
+  const meteorRafRef = useRef<number | null>(null);
+
+  const onMeteorPositions = useCallback((positions: MeteorPosition[]) => {
+    meteorPositionsRef.current = positions;
+  }, []);
+
+  const hasActiveTransfers = Object.values(transfers).some((t) =>
+    ["transferring", "encrypting", "decrypting", "connecting"].includes(t.status)
+  );
+
+  useEffect(() => {
+    if (!hasActiveTransfers) {
+      if (meteorRafRef.current !== null) {
+        cancelAnimationFrame(meteorRafRef.current);
+        meteorRafRef.current = null;
+      }
+      return;
+    }
+    const tick = () => {
+      setMeteorTick((n) => n + 1);
+      meteorRafRef.current = requestAnimationFrame(tick);
+    };
+    meteorRafRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (meteorRafRef.current !== null) {
+        cancelAnimationFrame(meteorRafRef.current);
+        meteorRafRef.current = null;
+      }
+    };
+  }, [hasActiveTransfers]);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const currentMeteorPositions = meteorTick >= 0 ? meteorPositionsRef.current : [];
 
   useEffect(() => {
     let resizeObserver: ResizeObserver | null = null;
-
     const updateDimensions = () => {
       if (containerRef.current) {
         const { clientWidth, clientHeight } = containerRef.current;
-        setDimensions({
-          width: clientWidth || 600,
-          height: clientHeight || 350,
-        });
+        setDimensions({ width: clientWidth || 600, height: clientHeight || 350 });
       }
     };
-
     if (containerRef.current) {
       updateDimensions();
       resizeObserver = new ResizeObserver(updateDimensions);
       resizeObserver.observe(containerRef.current);
     }
-
-    return () => {
-      resizeObserver?.disconnect();
-    };
+    return () => resizeObserver?.disconnect();
   }, []);
 
-  // Build dynamic list of constellations to display
   const displayConstellations = useMemo(() => {
     const list: Constellation[] = [];
 
-    // 1. Add Self Constellation (centered at 0, 0)
+    // Self constellation at origin
     let selfBase = myConstellation;
     if (!selfBase && currentUser?.username) {
       const idx = Math.floor(
-        hashStringToFloat(currentUser.username) *
-          REFERENCE_CONSTELLATIONS.length,
+        hashStringToFloat(currentUser.username) * REFERENCE_CONSTELLATIONS.length,
       );
       selfBase = REFERENCE_CONSTELLATIONS[idx];
     }
-
     if (selfBase) {
       const selfShifted = shiftConstellation(selfBase, 0, 0);
       const selfStarColor = isHidden ? "#374151" : "var(--primary)";
-      const selfConnectionColor = isHidden
-        ? "rgba(55, 65, 81, 0.25)"
-        : "var(--primary)";
-
+      const selfConnectionColor = isHidden ? "rgba(55, 65, 81, 0.25)" : "var(--primary)";
       list.push({
         ...selfShifted,
         id: "self",
-        name: `Me (This Device)`,
+        name: "Me",
         starColor: selfStarColor,
         connectionColor: selfConnectionColor,
       } as Constellation);
     }
 
-    // 2. Sort peers by socketId for stable coordinate mapping
-    const sortedPeers = [...peers].sort((a, b) =>
-      a.socketId.localeCompare(b.socketId),
-    );
-
-    // 3. Add Discovered Peers (distributed procedurally with stable random offsets and randomized hues)
+    // Peers distributed procedurally
+    const sortedPeers = [...peers].sort((a, b) => a.socketId.localeCompare(b.socketId));
     sortedPeers.forEach((peer) => {
-      // Procedurally generate a stable, random position for the peer based on their unique socketId
       const angleHash = hashStringToFloat(peer.socketId + "-angle");
       const angle = angleHash * 2 * Math.PI;
-
-      // Distribute within a random radius range
       const distHash = hashStringToFloat(peer.socketId + "-radius");
-      const raRadius = 6.0 + distHash * 10.0;
-      const decRadius = 35.0 + distHash * 50.0;
+      const raOffset = (6.0 + distHash * 10.0) * Math.cos(angle);
+      const decOffset = (35.0 + distHash * 50.0) * Math.sin(angle);
 
-      const raOffset = raRadius * Math.cos(angle);
-      const decOffset = decRadius * Math.sin(angle);
-
-      // Select default base if none provided
       let peerBase = peer.constellation;
       if (typeof peerBase === "string") {
-        try {
-          peerBase = JSON.parse(peerBase);
-        } catch (e) {
-          peerBase = null;
-        }
+        try { peerBase = JSON.parse(peerBase); } catch { peerBase = null; }
       }
-
       if (!peerBase) {
-        const idx = Math.floor(
-          hashStringToFloat(peer.userId) * REFERENCE_CONSTELLATIONS.length,
-        );
-        peerBase = REFERENCE_CONSTELLATIONS[idx];
+        peerBase = REFERENCE_CONSTELLATIONS[
+          Math.floor(hashStringToFloat(peer.userId) * REFERENCE_CONSTELLATIONS.length)
+        ];
       }
-
       if (peerBase) {
         const peerShifted = shiftConstellation(peerBase, raOffset, decOffset);
-        const isMyDevice = peer.userId === currentUser?.id;
-        const displayName = isMyDevice
-          ? `My Device (${peer.deviceName.split(" ")[0]})`
-          : `@${peer.username} (${peer.deviceName.split(" ")[0]})`;
-
-        // Generate stable random color based on peer socketId
         const colorHash = hashStringToFloat(peer.socketId + "-color");
         const hue = Math.floor(colorHash * 360);
-        const starColor = `hsl(${hue}, 85%, 65%)`;
-        const connectionColor = `hsla(${hue}, 85%, 65%, 0.55)`;
-
         list.push({
           ...peerShifted,
           id: peer.socketId,
-          name: displayName,
-          starColor,
-          connectionColor,
+          name: `@${peer.username}`,
+          starColor: `hsl(${hue}, 85%, 65%)`,
+          connectionColor: `hsla(${hue}, 85%, 65%, 0.55)`,
         } as Constellation);
       }
     });
 
     return list;
-  }, [peers, myConstellation, currentUser]);
+  }, [peers, myConstellation, currentUser, isHidden]);
 
-  const activeTransferMapProp = useMemo(() => {
-    if (
-      transfer &&
-      ["transferring", "encrypting", "decrypting", "connecting"].includes(
-        transfer.status,
-      )
-    ) {
-      return {
-        constellationId: transfer.peerId,
-        progress: transfer.progress,
-        direction: transfer.direction,
-        filesCount: transfer.files.length,
-        currentFileIndex: transfer.currentFileIndex,
-      };
-    }
-    return undefined;
-  }, [transfer]);
+  const activeTransfersProp = useMemo(() => {
+    return Object.values(transfers)
+      .filter((t) => ["transferring", "encrypting", "decrypting", "connecting"].includes(t.status))
+      .map((t) => ({
+        batchId: t.batchId,
+        constellationId: t.peerId,
+        direction: t.direction,
+        files: t.files.map((f) => ({ name: f.name, size: f.size, progress: f.progress, status: f.status })),
+      }));
+  }, [transfers]);
 
   const handleConstellationClick = (selected: Constellation) => {
     if (selected.id === "self") {
@@ -225,166 +265,304 @@ export function LacertaDropStarMap({
     }
   };
 
+  // Build a lookup from constellation id -> peer (for the card rendering)
+  const peerById = useMemo(() => {
+    const map: Record<string, Peer> = {};
+    peers.forEach((p) => { map[p.socketId] = p; });
+    return map;
+  }, [peers]);
+
+  useEffect(() => {
+    if (navigatedRef.current) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const constellationId = params.get("constellation");
+    if (constellationId && displayConstellations.length > 0) {
+      const matched = displayConstellations.find(
+        (c) =>
+          c.id.toLowerCase() === constellationId.toLowerCase() ||
+          c.name.toLowerCase() === constellationId.toLowerCase() ||
+          c.name.toLowerCase() === `@${constellationId.toLowerCase()}`
+      );
+      if (matched) {
+        navigatedRef.current = true;
+        const timer = setTimeout(() => {
+          starMapRef.current?.navigateToConstellation(matched.name);
+        }, 150);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [displayConstellations]);
+
   return (
     <div className="bg-slate-950 border-0 rounded-none sm:border sm:border-border sm:rounded-2xl flex flex-col relative overflow-hidden flex-1 w-full h-full min-h-[450px]">
-      {/* Floating Header Overlay */}
-      <div className="absolute top-4 left-4 z-10 pointer-events-none select-none hidden sm:flex">
-        <div className="flex items-center gap-2 bg-background/40 backdrop-blur-md px-3.5 py-2 rounded-xl border border-border/40 shadow-xl">
-          <div
-            className={`h-2.5 w-2.5 rounded-full ${isHidden ? "bg-amber-400" : "bg-emerald-400"} animate-pulse`}
-          />
-          <span className="text-xs font-mono font-bold uppercase tracking-wider text-foreground/90">
-            {isHidden
-              ? "Discovery Paused"
-              : `Network Map (${peers.length} online)`}
-          </span>
-        </div>
-      </div>
-
-      {/* StarMap view container (edge-to-edge) */}
+      {/* StarMap container — edge to edge */}
       <div
         ref={containerRef}
         className="w-full h-full flex-1 flex items-center justify-center min-h-[350px] relative"
       >
         {dimensions.width > 0 && dimensions.height > 0 && (
           <StarMap
+            ref={starMapRef}
             width={dimensions.width}
             height={dimensions.height}
             constellations={displayConstellations}
             onConstellationClick={handleConstellationClick}
             defaultZoom={0.9}
-            activeTransfer={activeTransferMapProp}
+            activeTransfers={activeTransfersProp}
+            onMeteorPositions={onMeteorPositions}
             className="w-full h-full"
+            effects={
+              /* Screen-space meteor transfer cards — follow each comet head */
+              <>
+                {currentMeteorPositions.map((mp) => {
+                  const transfer = transfers[mp.batchId];
+                  if (!transfer) return null;
+                  const file = transfer.files[mp.fileIndex];
+                  if (!file) return null;
+
+                  return (
+                    <div
+                      key={`meteor-card-${mp.batchId}-${mp.fileIndex}`}
+                      className="absolute pointer-events-auto select-none"
+                      style={{
+                        left: mp.x,
+                        top: mp.y,
+                        transform: "translate(18px, -50%)",
+                        zIndex: 20,
+                        transition: "left 0.04s linear, top 0.04s linear",
+                      }}
+                    >
+                      <div
+                        className="flex flex-col gap-1.5 px-3 py-2 rounded-xl backdrop-blur-xl shadow-2xl"
+                        style={{
+                          background: "rgba(0,0,0,0.72)",
+                          borderLeft: `3px solid ${mp.color}`,
+                          border: `1px solid ${mp.color}33`,
+                          borderLeftWidth: "3px",
+                          minWidth: "150px",
+                          maxWidth: "210px",
+                          boxShadow: `0 0 16px ${mp.color}22, 0 4px 24px rgba(0,0,0,0.5)`,
+                        }}
+                      >
+                        {/* File row */}
+                        <div className="flex items-center gap-2 justify-between">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <FileIcon size={10} style={{ color: mp.color, flexShrink: 0 }} />
+                            <span
+                              className="text-[10px] font-mono font-bold truncate leading-none"
+                              style={{ color: mp.color }}
+                              title={file.name}
+                            >
+                              {file.name}
+                            </span>
+                          </div>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onCancelTransfer(mp.batchId); }}
+                            className="shrink-0 opacity-50 hover:opacity-100 transition-opacity cursor-pointer"
+                            title="Cancel transfer"
+                          >
+                            <X size={9} style={{ color: mp.color }} />
+                          </button>
+                        </div>
+
+                        {/* Progress bar */}
+                        <div
+                          className="h-[2px] w-full rounded-full overflow-hidden"
+                          style={{ backgroundColor: `${mp.color}20` }}
+                        >
+                          <div
+                            className="h-full rounded-full"
+                            style={{ width: `${file.progress}%`, backgroundColor: mp.color, transition: "width 0.2s linear" }}
+                          />
+                        </div>
+
+                        {/* Stats */}
+                        <div className="flex justify-between text-[9px] font-mono leading-none" style={{ color: `${mp.color}99` }}>
+                          <span>{file.progress}%</span>
+                          {file.speed > 0 && (
+                            <span>
+                              {file.speed > 1024 * 1024
+                                ? `${(file.speed / 1024 / 1024).toFixed(1)} MB/s`
+                                : `${(file.speed / 1024).toFixed(0)} KB/s`}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </>
+            }
           >
-            {/* Overlay name labels in World Space (relative to centers of constellations) */}
+            {/* World-space constellation cards — pan and zoom with the map */}
             {displayConstellations.map((c) => {
               if (!c.stars || c.stars.length === 0) return null;
+
+              // Compute centroid in world-space coordinates
               let sumRa = 0;
               let sumDec = 0;
-              c.stars.forEach((s) => {
-                sumRa += s.ra;
-                sumDec += s.dec;
-              });
+              c.stars.forEach((s) => { sumRa += s.ra; sumDec += s.dec; });
               const avgRa = sumRa / c.stars.length;
               const avgDec = sumDec / c.stars.length;
-
-              const x = avgRa * 15 * 30; // base scale is 30, RA scaling factor is 15
+              // World-space pixel coords (matches StarMap raDecToScreen at zoom=1, offset=0)
+              const x = avgRa * 15 * 30;
               const y = -avgDec * 30;
 
               const isSelf = c.id === "self";
-              const isTransferringThisNode =
-                transfer &&
-                ((transfer.direction === "send" && transfer.peerId === c.id) ||
-                  (transfer.direction === "receive" &&
-                    c.id === "self" &&
-                    [
-                      "transferring",
-                      "encrypting",
-                      "decrypting",
-                      "connecting",
-                    ].includes(transfer.status)));
+              const peer = isSelf ? null : peerById[c.id];
 
-              if (isTransferringThisNode) {
+              // Find active transfers for this node
+              const nodeTransfers = Object.values(transfers).filter(
+                (t) =>
+                  ["transferring", "encrypting", "decrypting", "connecting"].includes(t.status) &&
+                  (t.peerId === c.id || (isSelf && t.direction === "receive"))
+              );
+              const hasNodeTransfer = nodeTransfers.length > 0;
+              const avgProgress = hasNodeTransfer
+                ? Math.round(
+                    nodeTransfers.reduce(
+                      (acc, t) => acc + t.files.reduce((s, f) => s + f.progress, 0) / t.files.length,
+                      0
+                    ) / nodeTransfers.length
+                  )
+                : 0;
+
+              // Color for this card
+              const glowColor = isSelf
+                ? isHidden ? "#374151" : "var(--primary)"
+                : c.starColor || "#ffffff";
+
+              const cardStyle: React.CSSProperties = {
+                position: "absolute",
+                left: x,
+                // Anchor below the constellation centroid
+                top: y + 68,
+                transform: "translate(-50%, 0)",
+                zIndex: 10,
+              };
+
+              if (isSelf) {
                 return (
-                  <div
-                    key={c.id}
-                    style={{
-                      position: "absolute",
-                      left: x,
-                      top: y - 95,
-                      transform: "translate(-50%, -50%)",
-                      borderColor: isSelf ? undefined : c.connectionColor,
-                      color: isSelf ? undefined : c.starColor,
-                      backgroundColor: isSelf
-                        ? undefined
-                        : c.connectionColor?.replace("0.55", "0.20"),
-                    }}
-                    className={`text-xs font-mono font-bold px-4 py-3 rounded-xl border backdrop-blur-md shadow-2xl select-none min-w-[170px] flex flex-col gap-2.5 transition-all ${
-                      isSelf
-                        ? "bg-primary/20 border-primary/50 text-primary"
-                        : "hover:brightness-110"
-                    }`}
-                  >
-                    <div className="flex justify-between items-center text-[9px] uppercase font-bold tracking-wider opacity-80">
-                      <span>{isSelf ? "Receiving" : "Sending"}</span>
-                      <span className="font-mono text-foreground font-bold">
-                        {transfer.progress}%
-                      </span>
-                    </div>
-                    <div
-                      className="font-semibold truncate text-[11px] max-w-[145px]"
-                      title={transfer.files[transfer.currentFileIndex]?.name}
+                  <div key="self" style={cardStyle}>
+                    <button
+                      onClick={() => handleConstellationClick(c)}
+                      className="flex flex-col gap-0 rounded-xl backdrop-blur-xl cursor-pointer group select-none"
+                      style={{
+                        background: "rgba(0,0,0,0.70)",
+                        border: `1px solid ${isHidden ? "#37415155" : "var(--primary)"}`,
+                        boxShadow: isHidden
+                          ? "none"
+                          : `0 0 18px var(--primary-foreground, #fff)11, 0 4px 24px rgba(0,0,0,0.5)`,
+                        minWidth: "140px",
+                        overflow: "hidden",
+                      }}
                     >
-                      {transfer.files[transfer.currentFileIndex]?.name ||
-                        "Preparing file..."}
-                    </div>
-                    <div className="w-full h-1 bg-secondary rounded-full overflow-hidden border border-border/10">
-                      <div
-                        style={{ width: `${transfer.progress}%` }}
-                        className="h-full bg-primary transition-all duration-150"
-                      />
-                    </div>
-                    <div className="flex justify-between items-center text-[9px] text-muted-foreground font-semibold">
-                      <span>{formatSpeed(transfer.speed)}</span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onCancelTransfer();
-                        }}
-                        className="text-destructive font-bold hover:underline cursor-pointer"
-                      >
-                        Cancel
-                      </button>
-                    </div>
+                      <div className="flex items-center gap-2.5 px-3 py-2.5">
+                        {/* Self avatar */}
+                        <PeerAvatar
+                          avatarUrl={currentUser?.avatarUrl ?? undefined}
+                          username={currentUser?.username || "Me"}
+                          color={isHidden ? "#374151" : "var(--primary)"}
+                          size={30}
+                        />
+                        <div className="flex flex-col gap-0.5 min-w-0">
+                          <span
+                            className="text-[11px] font-bold font-mono leading-none truncate"
+                            style={{ color: isHidden ? "#6B7280" : "var(--primary)" }}
+                          >
+                            {currentUser?.username || "You"}
+                          </span>
+                          <div
+                            className="flex items-center gap-1 text-[9px] font-mono leading-none"
+                            style={{ color: isHidden ? "#4B556399" : "var(--primary-foreground, #fff)77" }}
+                          >
+                            <Monitor size={9} />
+                            <span className="truncate max-w-[90px]">{myDeviceLabel}</span>
+                            {isHidden && <EyeOff size={9} className="shrink-0" />}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Active transfer progress bar at bottom */}
+                      {hasNodeTransfer && (
+                        <div className="w-full h-[2px] bg-black/40">
+                          <div
+                            className="h-full transition-all duration-300"
+                            style={{ width: `${avgProgress}%`, backgroundColor: "var(--primary)" }}
+                          />
+                        </div>
+                      )}
+                    </button>
                   </div>
                 );
               }
 
+              // Peer card
+              if (!peer) return null;
               return (
-                <div
-                  key={c.id}
-                  style={{
-                    position: "absolute",
-                    left: x,
-                    top: y - 65,
-                    transform: "translate(-50%, -50%)",
-                    borderColor: isSelf ? undefined : c.connectionColor,
-                    color: isSelf ? undefined : c.starColor,
-                    backgroundColor: isSelf
-                      ? undefined
-                      : c.connectionColor?.replace("0.55", "0.15"),
-                  }}
-                  className={`text-sm font-mono font-bold px-3.5 py-1.5 rounded-lg border backdrop-blur-md shadow-xl select-none transition-all cursor-pointer ${
-                    isSelf
-                      ? isHidden
-                        ? "bg-slate-800/10 border-slate-700/40 text-slate-500 hover:bg-slate-800/20 line-through decoration-slate-600/50"
-                        : "bg-primary/15 border-primary text-primary hover:bg-primary/25 shadow-lg shadow-primary/20 ring-2 ring-primary/30"
-                      : "hover:brightness-110"
-                  }`}
-                >
-                  {c.name} {isSelf && isHidden && " (Hidden)"}
+                <div key={c.id} style={cardStyle}>
+                  <button
+                    onClick={() => handleConstellationClick(c)}
+                    className="flex flex-col gap-0 rounded-xl backdrop-blur-xl cursor-pointer group select-none transition-all duration-150 hover:brightness-110 active:scale-95"
+                    style={{
+                      background: "rgba(0,0,0,0.70)",
+                      border: `1px solid ${glowColor}44`,
+                      boxShadow: hasNodeTransfer
+                        ? `0 0 0 2px ${glowColor}55, 0 0 24px ${glowColor}33, 0 4px 24px rgba(0,0,0,0.5)`
+                        : `0 0 14px ${glowColor}18, 0 4px 24px rgba(0,0,0,0.5)`,
+                      minWidth: "148px",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div className="flex items-center gap-2.5 px-3 py-2.5">
+                      <PeerAvatar
+                        avatarUrl={peer.avatarUrl}
+                        username={peer.username}
+                        color={glowColor}
+                        size={30}
+                      />
+                      <div className="flex flex-col gap-0.5 min-w-0">
+                        <span
+                          className="text-[11px] font-bold font-mono leading-none truncate"
+                          style={{ color: glowColor }}
+                        >
+                          @{peer.username}
+                        </span>
+                        <div
+                          className="flex items-center gap-1 text-[9px] font-mono leading-none truncate"
+                          style={{ color: `${glowColor}88` }}
+                        >
+                          <DeviceIcon deviceType={peer.deviceType} size={9} />
+                          <span className="truncate max-w-[90px]">{peer.deviceName}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Active transfer progress bar at bottom */}
+                    {hasNodeTransfer && (
+                      <div className="w-full h-[2px]" style={{ backgroundColor: `${glowColor}22` }}>
+                        <div
+                          className="h-full transition-all duration-300"
+                          style={{ width: `${avgProgress}%`, backgroundColor: glowColor }}
+                        />
+                      </div>
+                    )}
+                  </button>
                 </div>
               );
             })}
           </StarMap>
         )}
 
-        {/* Empty list scanning message overlay */}
+        {/* Scanning overlay when no peers found */}
         {!isHidden && peers.length === 0 && (
-          <div className="absolute inset-0 flex flex-col justify-center items-center pointer-events-none text-center p-4 bg-background/10 backdrop-blur-xs">
-            <p className="text-sm font-semibold text-foreground/80 bg-background/60 border border-border/30 px-5 py-2.5 rounded-2xl backdrop-blur-md shadow-2xl">
-              No other active devices detected on the network.
+          <div className="absolute inset-0 flex flex-col justify-center items-center pointer-events-none text-center p-4">
+            <p className="text-xs font-mono font-semibold text-foreground/60 bg-black/60 border border-border/20 px-5 py-2.5 rounded-2xl backdrop-blur-md shadow-2xl tracking-wide">
+              Scanning for devices on this network…
             </p>
           </div>
         )}
-      </div>
-
-      {/* Floating Footer Overlay */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 pointer-events-none select-none hidden sm:block">
-        <div className="bg-background/40 backdrop-blur-md px-3.5 py-2 rounded-xl border border-border/40 shadow-xl text-[10px] text-muted-foreground font-mono font-bold text-center whitespace-nowrap">
-          Click a peer constellation on the StarMap to select files and initiate
-          a transfer.
-        </div>
       </div>
     </div>
   );

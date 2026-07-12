@@ -13,8 +13,8 @@ export default function LacertaDropPage(): React.JSX.Element {
     peers,
     isHidden,
     isDraggingOver,
-    transfer,
-    incomingRequest,
+    transfers,
+    incomingRequests,
     fileInputRef,
     myConstellation,
     handleToggleHidden,
@@ -26,7 +26,7 @@ export default function LacertaDropPage(): React.JSX.Element {
     acceptIncomingTransfer,
     declineIncomingTransfer,
     cancelActiveTransfer,
-    setTransfer,
+    dismissTransfer,
   } = useLacertaSharing();
 
   if (status === "loading") {
@@ -34,7 +34,9 @@ export default function LacertaDropPage(): React.JSX.Element {
       <div className="flex h-full w-full items-center justify-center bg-background text-foreground">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground font-semibold">Checking authorization...</p>
+          <p className="text-sm text-muted-foreground font-semibold">
+            Checking authorization...
+          </p>
         </div>
       </div>
     );
@@ -47,8 +49,8 @@ export default function LacertaDropPage(): React.JSX.Element {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {/* Main Workspace Map */}
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+      {/* Full-screen StarMap */}
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
         <LacertaDropStarMap
           peers={peers}
           myConstellation={myConstellation}
@@ -56,8 +58,9 @@ export default function LacertaDropPage(): React.JSX.Element {
           isHidden={isHidden}
           onSelectPeer={handlePeerClick}
           onToggleVisibility={handleToggleHidden}
-          transfer={transfer}
+          transfers={transfers}
           onCancelTransfer={cancelActiveTransfer}
+          onDismissTransfer={dismissTransfer}
         />
       </div>
 
@@ -74,18 +77,29 @@ export default function LacertaDropPage(): React.JSX.Element {
       {isDraggingOver && (
         <div className="absolute inset-0 z-50 bg-background/80 backdrop-blur-xs border-4 border-dashed border-primary flex flex-col items-center justify-center text-center p-6 transition-all duration-300">
           <Upload className="h-16 w-16 text-primary animate-bounce mb-4" />
-          <h2 className="text-xl font-bold text-foreground">Drop Files to Transfer</h2>
+          <h2 className="text-xl font-bold text-foreground">
+            Drop Files to Transfer
+          </h2>
           <p className="text-sm text-muted-foreground mt-2 max-w-sm font-semibold leading-normal">
-            Drag files directly over a discovered peer device constellation node on the StarMap to initiate direct transfer.
+            Drag files directly over a discovered peer device constellation node
+            on the StarMap to initiate direct transfer.
           </p>
         </div>
       )}
 
       {/* Incoming Request Dialog Modal */}
       <IncomingRequestModal
-        request={incomingRequest}
-        onDecline={declineIncomingTransfer}
-        onAccept={acceptIncomingTransfer}
+        request={incomingRequests[0] || null}
+        onDecline={() => {
+          if (incomingRequests[0]) {
+            declineIncomingTransfer(incomingRequests[0].batchId);
+          }
+        }}
+        onAccept={() => {
+          if (incomingRequests[0]) {
+            acceptIncomingTransfer(incomingRequests[0].batchId);
+          }
+        }}
       />
     </div>
   );

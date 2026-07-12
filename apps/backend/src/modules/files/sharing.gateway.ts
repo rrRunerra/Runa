@@ -14,6 +14,7 @@ interface SharingClient {
   socketId: string;
   userId: string; // Only authenticated users are allowed
   username: string;
+  avatarUrl?: string;
   ip: string;
   isHidden: boolean;
   deviceType: string;
@@ -69,6 +70,7 @@ export class LacertaSharingGateway
       const token = this.extractToken(client);
       let userId: string | undefined = undefined;
       let username = '';
+      let avatarUrl: string | undefined = undefined;
 
       if (token) {
         try {
@@ -77,6 +79,7 @@ export class LacertaSharingGateway
           });
           userId = payload.sub;
           username = (payload.username || payload.name || payload.email || '') as string;
+          avatarUrl = (payload.avatarUrl as string) || undefined;
         } catch (err) {
           // Token invalid, connection will be rejected below
         }
@@ -106,6 +109,7 @@ export class LacertaSharingGateway
         socketId: client.id,
         userId,
         username,
+        avatarUrl,
         ip: clientIp,
         isHidden: true, // Hidden by default until registered
         deviceType,
@@ -187,6 +191,7 @@ export class LacertaSharingGateway
           socketId: client.id,
           userId: clientInfo.userId,
           username: clientInfo.username,
+          avatarUrl: clientInfo.avatarUrl,
           deviceType: clientInfo.deviceType,
           deviceName: clientInfo.deviceName,
           constellation: clientInfo.constellation,
@@ -207,6 +212,7 @@ export class LacertaSharingGateway
           socketId: client.id,
           userId: clientInfo.userId,
           username: clientInfo.username,
+          avatarUrl: clientInfo.avatarUrl,
           deviceType: clientInfo.deviceType,
           deviceName: clientInfo.deviceName,
           constellation: clientInfo.constellation,
@@ -222,6 +228,7 @@ export class LacertaSharingGateway
           socketId: peer.socketId,
           userId: peer.userId,
           username: peer.username,
+          avatarUrl: peer.avatarUrl,
           deviceType: peer.deviceType,
           deviceName: peer.deviceName,
           constellation: peer.constellation,

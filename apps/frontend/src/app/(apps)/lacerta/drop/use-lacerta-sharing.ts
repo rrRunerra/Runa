@@ -16,6 +16,7 @@ export interface Peer {
   socketId: string;
   userId: string;
   username: string;
+  avatarUrl?: string;
   deviceType: string;
   deviceName: string;
   constellation?: any;
@@ -24,19 +25,20 @@ export interface Peer {
 export interface TransferFile {
   name: string;
   size: number;
-}
-
-export interface TransferState {
-  peerId: string;
-  peerName: string;
-  direction: "send" | "receive";
-  status: "idle" | "connecting" | "encrypting" | "transferring" | "decrypting" | "completed" | "cancelled" | "rejected";
-  files: TransferFile[];
-  currentFileIndex: number;
   progress: number;
+  status: "idle" | "encrypting" | "transferring" | "decrypting" | "completed" | "cancelled" | "rejected";
   speed: number;
   eta: number;
   error?: string;
+}
+
+export interface TransferState {
+  batchId: string;
+  peerId: string;
+  peerName: string;
+  direction: "send" | "receive";
+  status: "connecting" | "transferring" | "completed" | "cancelled" | "rejected";
+  files: TransferFile[];
 }
 
 export interface IncomingRequest {
@@ -44,7 +46,7 @@ export interface IncomingRequest {
   peerName: string;
   batchId: string;
   sessionKey: string;
-  files: TransferFile[];
+  files: { name: string; size: number }[];
 }
 
 const CHUNK_SIZE = 16384; // 16 KB
@@ -94,11 +96,11 @@ export function useLacertaSharing() {
   const [selectedPeerId, setSelectedPeerId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [transfer, setTransfer] = useState<TransferState | null>(null);
-  const transferRef = useRef<TransferState | null>(null);
+  // Map of active transfers (keyed by batchId)
+  const [transfers, setTransfers] = useState<Record<string, TransferState>>({});
+  const transfersRef = useRef<Record<string, TransferState>>({});
 
-  const isTransferInProgress = useRef<boolean>(false);
-  const activeSendingBatch = useRef<{
+  const activeSendingBatches = useRef<Map<string, {
     batchId: string;
     files: {
       name: string;
@@ -106,15 +108,21 @@ export function useLacertaSharing() {
       type: string;
       fileObj: File;
     }[];
-  } | null>(null);
-  const activeFileKey = useRef<string | null>(null);
+  }>>(new Map());
 
-  const [incomingRequest, setIncomingRequest] = useState<IncomingRequest | null>(null);
+  // Keyed by `${batchId}-${fileIndex}`
+  const activeFileKeys = useRef<Map<string, string>>(new Map());
 
+  const [incomingRequests, setIncomingRequests] = useState<IncomingRequest[]>([]);
+
+  // Keyed by `${peerId}-${batchId}`
   const peerConnections = useRef<Map<string, RTCPeerConnection>>(new Map());
+  // Keyed by `${batchId}-${fileIndex}`
   const dataChannels = useRef<Map<string, RTCDataChannel>>(new Map());
+  // Keyed by `${peerId}-${batchId}`
   const pendingCandidates = useRef<Map<string, RTCIceCandidateInit[]>>(new Map());
 
+  // Keyed by `${batchId}-${fileIndex}`
   const ownEphemeralKeys = useRef<
     Map<
       string,
@@ -126,31 +134,45 @@ export function useLacertaSharing() {
       }
     >
   >(new Map());
+
+  // Keyed by `${batchId}-${fileIndex}`
   const peerEphemeralPublicKeys = useRef<
     Map<string, { ecdhPublicKey: string; mlKemPublicKey: string }>
   >(new Map());
 
-  const receivedChunks = useRef<ArrayBuffer[]>([]);
-  const receivedBytes = useRef<number>(0);
+  // Keyed by `${batchId}-${fileIndex}`
+  const receivedChunks = useRef<Map<string, ArrayBuffer[]>>(new Map());
+  const receivedBytes = useRef<Map<string, number>>(new Map());
 
-  const lastProgressTime = useRef<number>(0);
-  const lastProgressBytes = useRef<number>(0);
+  // Keyed by `${batchId}-${fileIndex}`
+  const lastProgressTime = useRef<Map<string, number>>(new Map());
+  const lastProgressBytes = useRef<Map<string, number>>(new Map());
 
   const accessToken = session?.accessToken || "";
 
   useEffect(() => {
-    transferRef.current = transfer;
-  }, [transfer]);
+    transfersRef.current = transfers;
+  }, [transfers]);
 
-  // Auto-dismiss completed or terminated transfers after 2 seconds
+  // Auto-dismiss completed or terminated transfers after 4 seconds
   useEffect(() => {
-    if (transfer && ["completed", "rejected", "cancelled"].includes(transfer.status)) {
-      const timer = setTimeout(() => {
-        setTransfer(null);
-      }, 2000);
-      return () => clearTimeout(timer);
+    const activeTerminated = Object.values(transfers).filter((t) =>
+      ["completed", "rejected", "cancelled"].includes(t.status)
+    );
+
+    if (activeTerminated.length > 0) {
+      const timers = activeTerminated.map((t) => {
+        return setTimeout(() => {
+          setTransfers((prev) => {
+            const next = { ...prev };
+            delete next[t.batchId];
+            return next;
+          });
+        }, 4000);
+      });
+      return () => timers.forEach((timer) => clearTimeout(timer));
     }
-  }, [transfer?.status]);
+  }, [transfers]);
 
   // Read visibility config from local storage
   useEffect(() => {
@@ -168,21 +190,37 @@ export function useLacertaSharing() {
     }
   }, [status, router]);
 
-  // Clean WebRTC connections
-  const cleanPeerConnection = useCallback((peerId: string) => {
-    const pc = peerConnections.current.get(peerId);
+  // Clean WebRTC connections for a specific batch
+  const cleanPeerConnection = useCallback((peerId: string, batchId: string) => {
+    const connKey = `${peerId}-${batchId}`;
+    const pc = peerConnections.current.get(connKey);
     if (pc) {
       pc.close();
-      peerConnections.current.delete(peerId);
+      peerConnections.current.delete(connKey);
     }
-    const ch = dataChannels.current.get(peerId);
-    if (ch) {
-      ch.close();
-      dataChannels.current.delete(peerId);
+
+    // Close all channels for this batch
+    const batch = transfersRef.current[batchId];
+    if (batch) {
+      batch.files.forEach((_, idx) => {
+        const channelKey = `${batchId}-${idx}`;
+        const ch = dataChannels.current.get(channelKey);
+        if (ch) {
+          ch.close();
+          dataChannels.current.delete(channelKey);
+        }
+        ownEphemeralKeys.current.delete(channelKey);
+        peerEphemeralPublicKeys.current.delete(channelKey);
+        receivedChunks.current.delete(channelKey);
+        receivedBytes.current.delete(channelKey);
+        lastProgressTime.current.delete(channelKey);
+        lastProgressBytes.current.delete(channelKey);
+        activeFileKeys.current.delete(channelKey);
+      });
     }
-    pendingCandidates.current.delete(peerId);
-    ownEphemeralKeys.current.delete(peerId);
-    peerEphemeralPublicKeys.current.delete(peerId);
+
+    pendingCandidates.current.delete(connKey);
+    activeSendingBatches.current.delete(batchId);
   }, []);
 
   // Clean up connections on unmount
@@ -193,18 +231,28 @@ export function useLacertaSharing() {
     };
   }, []);
 
-  const sendAskBatchTransferDirect = useCallback(async (ch: RTCDataChannel, peerId: string) => {
+  const sendAskBatchTransferDirect = useCallback(async (ch: RTCDataChannel, peerId: string, batchId: string) => {
     try {
-      const batch = activeSendingBatch.current;
+      const batch = activeSendingBatches.current.get(batchId);
       if (!batch) return;
 
-      setTransfer((prev) => prev ? { ...prev, status: "encrypting" } : null);
+      setTransfers((prev) => {
+        const current = prev[batchId];
+        if (!current) return prev;
+        return {
+          ...prev,
+          [batchId]: {
+            ...current,
+            files: current.files.map((f) => ({ ...f, status: "encrypting" })),
+          },
+        };
+      });
 
       const sessionKey = await exportRawKey(await generateFileKey());
-      activeFileKey.current = sessionKey;
-
+      
       const encryptedFiles = await Promise.all(
-        batch.files.map(async (f) => {
+        batch.files.map(async (f, idx) => {
+          activeFileKeys.current.set(`${batchId}-${idx}`, sessionKey);
           const metaStr = JSON.stringify({
             fileName: f.name,
             fileSize: f.size,
@@ -215,7 +263,7 @@ export function useLacertaSharing() {
         })
       );
 
-      const peerKeys = peerEphemeralPublicKeys.current.get(peerId);
+      const peerKeys = peerEphemeralPublicKeys.current.get(`${batchId}-0`);
       if (!peerKeys) {
         throw new Error("P2P PQ Cryptographic handshake not completed.");
       }
@@ -241,21 +289,23 @@ export function useLacertaSharing() {
     } catch (err) {
       console.error("[WebRTC] Failed to send ASK_BATCH_TRANSFER request:", err);
       toast.error("Failed to prepare file transfer.");
-      setTransfer(null);
-      isTransferInProgress.current = false;
-      activeSendingBatch.current = null;
-      activeFileKey.current = null;
+      setTransfers((prev) => {
+        const next = { ...prev };
+        delete next[batchId];
+        return next;
+      });
+      cleanPeerConnection(peerId, batchId);
     }
-  }, [session]);
+  }, [session, cleanPeerConnection]);
 
-  const startBatchFileChunking = useCallback(async (peerId: string, fileIndex: number) => {
-    const batch = activeSendingBatch.current;
-    const key = activeFileKey.current;
-    const ch = dataChannels.current.get(peerId);
+  const startBatchFileChunking = useCallback(async (peerId: string, batchId: string, fileIndex: number) => {
+    const batch = activeSendingBatches.current.get(batchId);
+    const channelKey = `${batchId}-${fileIndex}`;
+    const key = activeFileKeys.current.get(channelKey);
+    const ch = dataChannels.current.get(channelKey);
 
     if (!batch || !key || !ch) {
       toast.error("Transfer error. Session details missing.");
-      isTransferInProgress.current = false;
       return;
     }
 
@@ -263,18 +313,31 @@ export function useLacertaSharing() {
     if (!currentFile) return;
 
     try {
-      ch.send(JSON.stringify({ type: "START_FILE", batchId: batch.batchId, fileIndex }));
-      setTransfer((prev) => prev ? { ...prev, status: "encrypting" } : null);
+      ch.send(JSON.stringify({ type: "START_FILE", batchId, fileIndex }));
+      
+      setTransfers((prev) => {
+        const current = prev[batchId];
+        if (!current) return prev;
+        const newFiles = [...current.files];
+        newFiles[fileIndex] = { ...newFiles[fileIndex], status: "encrypting" };
+        return { ...prev, [batchId]: { ...current, files: newFiles } };
+      });
 
       const fileBuffer = await currentFile.fileObj.arrayBuffer();
       const encryptedBuffer = await encrypt(fileBuffer, key);
       const totalSize = encryptedBuffer.byteLength;
 
-      setTransfer((prev) => prev ? { ...prev, status: "transferring" } : null);
+      setTransfers((prev) => {
+        const current = prev[batchId];
+        if (!current) return prev;
+        const newFiles = [...current.files];
+        newFiles[fileIndex] = { ...newFiles[fileIndex], status: "transferring" };
+        return { ...prev, [batchId]: { ...current, files: newFiles } };
+      });
 
       let offset = 0;
-      lastProgressTime.current = performance.now();
-      lastProgressBytes.current = 0;
+      lastProgressTime.current.set(channelKey, performance.now());
+      lastProgressBytes.current.set(channelKey, 0);
 
       while (offset < totalSize) {
         if (ch.bufferedAmount > BUFFER_THRESHOLD) {
@@ -291,64 +354,73 @@ export function useLacertaSharing() {
         offset += chunk.byteLength;
 
         const now = performance.now();
-        const elapsed = (now - lastProgressTime.current) / 1000;
+        const lastTime = lastProgressTime.current.get(channelKey) || now;
+        const elapsed = (now - lastTime) / 1000;
 
         let speed = 0;
         let eta = 0;
 
         if (elapsed >= 0.5) {
-          const sentSinceLast = offset - lastProgressBytes.current;
+          const lastBytes = lastProgressBytes.current.get(channelKey) || 0;
+          const sentSinceLast = offset - lastBytes;
           speed = Math.round(sentSinceLast / elapsed);
           const remaining = totalSize - offset;
           eta = speed > 0 ? Math.round(remaining / speed) : 0;
 
-          lastProgressTime.current = now;
-          lastProgressBytes.current = offset;
+          lastProgressTime.current.set(channelKey, now);
+          lastProgressBytes.current.set(channelKey, offset);
         }
 
-        setTransfer((prev) => {
-          if (prev && prev.peerId === peerId) {
-            const progress = Math.min(100, Math.round((offset / totalSize) * 100));
-            return {
-              ...prev,
-              progress,
-              speed: speed || prev.speed,
-              eta: eta || prev.eta,
-            };
-          }
-          return prev;
+        setTransfers((prev) => {
+          const current = prev[batchId];
+          if (!current) return prev;
+          const newFiles = [...current.files];
+          const progress = Math.min(100, Math.round((offset / totalSize) * 100));
+          newFiles[fileIndex] = {
+            ...newFiles[fileIndex],
+            progress,
+            speed: speed || newFiles[fileIndex].speed,
+            eta: eta || newFiles[fileIndex].eta,
+          };
+          return { ...prev, [batchId]: { ...current, files: newFiles } };
         });
       }
 
-      ch.send(JSON.stringify({ type: "EOF", batchId: batch.batchId, fileIndex }));
+      ch.send(JSON.stringify({ type: "EOF", batchId, fileIndex }));
     } catch (err) {
       console.error("[WebRTC] File encryption or chunking failed:", err);
-      toast.error("Failed to encrypt and send file.");
-      setTransfer((prev) => prev ? { ...prev, status: "cancelled", error: "Encryption error." } : null);
-      cleanPeerConnection(peerId);
-      isTransferInProgress.current = false;
-      activeSendingBatch.current = null;
-      activeFileKey.current = null;
+      toast.error(`Failed to send file: ${currentFile.name}`);
+      setTransfers((prev) => {
+        const current = prev[batchId];
+        if (!current) return prev;
+        const newFiles = [...current.files];
+        newFiles[fileIndex] = { ...newFiles[fileIndex], status: "cancelled", error: "Encryption error." };
+        return { ...prev, [batchId]: { ...current, status: "cancelled", files: newFiles } };
+      });
+      cleanPeerConnection(peerId, batchId);
     }
   }, [cleanPeerConnection]);
 
-  const reconstructBatchFile = useCallback(async (peerId: string, fileIndex: number, batchId: string) => {
-    const state = transferRef.current;
+  const reconstructBatchFile = useCallback(async (peerId: string, batchId: string, fileIndex: number) => {
+    const state = transfersRef.current[batchId];
     if (!state) return;
 
     const currentFile = state.files[fileIndex];
     if (!currentFile) return;
 
+    const channelKey = `${batchId}-${fileIndex}`;
+    const chunks = receivedChunks.current.get(channelKey) || [];
+
     try {
-      const totalLen = receivedChunks.current.reduce((acc, c) => acc + c.byteLength, 0);
+      const totalLen = chunks.reduce((acc, c) => acc + c.byteLength, 0);
       const concatenated = new Uint8Array(totalLen);
       let offset = 0;
-      for (const chunk of receivedChunks.current) {
+      for (const chunk of chunks) {
         concatenated.set(new Uint8Array(chunk), offset);
         offset += chunk.byteLength;
       }
 
-      const decryptionKey = activeFileKey.current;
+      const decryptionKey = activeFileKeys.current.get(channelKey);
       if (!decryptionKey) {
         throw new Error("Missing decryption key.");
       }
@@ -366,25 +438,30 @@ export function useLacertaSharing() {
       a.remove();
       URL.revokeObjectURL(url);
 
-      receivedChunks.current = [];
-      receivedBytes.current = 0;
+      receivedChunks.current.delete(channelKey);
+      receivedBytes.current.delete(channelKey);
 
-      const ch = dataChannels.current.get(peerId);
+      const ch = dataChannels.current.get(channelKey);
       if (ch) {
         ch.send(JSON.stringify({ type: "FILE_RECEIVED", batchId, fileIndex }));
       }
     } catch (err) {
       console.error("[WebRTC] File decryption failed:", err);
       toast.error(`Failed to decrypt received file: ${currentFile.name}`);
-      setTransfer((prev) => prev ? { ...prev, status: "cancelled", error: "Decryption error." } : null);
-      cleanPeerConnection(peerId);
-      isTransferInProgress.current = false;
-      activeFileKey.current = null;
+      setTransfers((prev) => {
+        const current = prev[batchId];
+        if (!current) return prev;
+        const newFiles = [...current.files];
+        newFiles[fileIndex] = { ...newFiles[fileIndex], status: "cancelled", error: "Decryption error." };
+        return { ...prev, [batchId]: { ...current, status: "cancelled", files: newFiles } };
+      });
+      cleanPeerConnection(peerId, batchId);
     }
   }, [cleanPeerConnection]);
 
-  const setupDataChannel = useCallback((ch: RTCDataChannel, peerId: string) => {
+  const setupDataChannel = useCallback((ch: RTCDataChannel, peerId: string, batchId: string, fileIndex: number) => {
     ch.binaryType = "arraybuffer";
+    const channelKey = `${batchId}-${fileIndex}`;
 
     const generateAndSendPQHandshake = async () => {
       try {
@@ -400,7 +477,7 @@ export function useLacertaSharing() {
           ) as ArrayBuffer
         );
 
-        ownEphemeralKeys.current.set(peerId, {
+        ownEphemeralKeys.current.set(channelKey, {
           ecdhPrivateKey: ownEcdh.privateKey,
           ecdhPublicKeyBase64: ownEcdhPub,
           mlKemPrivateKey: ownMlKem.secretKey,
@@ -412,6 +489,8 @@ export function useLacertaSharing() {
             type: "PQ_HANDSHAKE",
             ecdhPublicKey: ownEcdhPub,
             mlKemPublicKey: ownMlKemPub,
+            batchId,
+            fileIndex,
           })
         );
       } catch (err) {
@@ -428,11 +507,11 @@ export function useLacertaSharing() {
     }
 
     ch.onclose = () => {
-      console.warn(`[WebRTC] Data channel closed with peer: ${peerId}`);
+      console.warn(`[WebRTC] Data channel closed with peer: ${peerId}, channel: ${channelKey}`);
     };
 
     ch.onerror = (err) => {
-      console.error(`[WebRTC] Data channel error with peer ${peerId}:`, err);
+      console.error(`[WebRTC] Data channel error with peer ${peerId}, channel: ${channelKey}:`, err);
     };
 
     ch.onmessage = async (event) => {
@@ -443,25 +522,26 @@ export function useLacertaSharing() {
           const message = JSON.parse(data);
 
           if (message.type === "PQ_HANDSHAKE") {
-            peerEphemeralPublicKeys.current.set(peerId, {
+            peerEphemeralPublicKeys.current.set(channelKey, {
               ecdhPublicKey: message.ecdhPublicKey,
               mlKemPublicKey: message.mlKemPublicKey,
             });
 
-            const active = transferRef.current;
+            const active = transfersRef.current[batchId];
             if (
               active &&
               active.peerId === peerId &&
               active.direction === "send" &&
-              active.status === "connecting"
+              active.status === "connecting" &&
+              fileIndex === 0
             ) {
-              sendAskBatchTransferDirect(ch, peerId);
+              sendAskBatchTransferDirect(ch, peerId, batchId);
             }
             return;
           }
 
           if (message.type === "ASK_BATCH_TRANSFER") {
-            const ownKeys = ownEphemeralKeys.current.get(peerId);
+            const ownKeys = ownEphemeralKeys.current.get(`${batchId}-0`);
             if (!ownKeys) {
               throw new Error("No private key available for unwrapping. Encryption handshake not completed.");
             }
@@ -475,10 +555,10 @@ export function useLacertaSharing() {
               ownKeys.mlKemPrivateKey
             );
             const decryptionKey = await exportRawKey(unwrappedKey);
-            activeFileKey.current = decryptionKey;
 
             const decryptedFiles = await Promise.all(
-              message.files.map(async (f: any) => {
+              message.files.map(async (f: any, idx: number) => {
+                activeFileKeys.current.set(`${batchId}-${idx}`, decryptionKey || "");
                 if (decryptionKey && f.encryptedMeta) {
                   const decryptedResult = await decrypt(f.encryptedMeta, decryptionKey);
                   const decryptedMeta = typeof decryptedResult === "string" ? JSON.parse(decryptedResult) : decryptedResult;
@@ -491,145 +571,176 @@ export function useLacertaSharing() {
               })
             );
 
-            setIncomingRequest({
-              peerId,
-              peerName: message.senderName || "Local Device",
-              batchId: message.batchId,
-              sessionKey: decryptionKey || "",
-              files: decryptedFiles,
-            });
+            setIncomingRequests((prev) => [
+              ...prev,
+              {
+                peerId,
+                peerName: message.senderName || "Local Device",
+                batchId: message.batchId,
+                sessionKey: decryptionKey || "",
+                files: decryptedFiles,
+              }
+            ]);
           }
 
           else if (message.type === "ACCEPT_BATCH_TRANSFER") {
-            setTransfer((prev) => {
-              if (prev && prev.peerId === peerId) {
-                return { ...prev, status: "transferring", progress: 0 };
-              }
-              return prev;
+            setTransfers((prev) => {
+              const current = prev[batchId];
+              if (!current) return prev;
+              return {
+                ...prev,
+                [batchId]: {
+                  ...current,
+                  status: "transferring",
+                  files: current.files.map((f) => ({ ...f, status: "transferring" })),
+                },
+              };
             });
-            startBatchFileChunking(peerId, 0);
+
+            // Start sending ALL files concurrently!
+            const batch = activeSendingBatches.current.get(batchId);
+            if (batch) {
+              batch.files.forEach((_, idx) => {
+                startBatchFileChunking(peerId, batchId, idx);
+              });
+            }
           }
 
           else if (message.type === "REJECT_BATCH_TRANSFER") {
             toast.error("Transfer rejected by receiver.");
-            setTransfer((prev) => {
-              if (prev && prev.peerId === peerId) {
-                return { ...prev, status: "rejected" };
-              }
-              return prev;
+            setTransfers((prev) => {
+              const current = prev[batchId];
+              if (!current) return prev;
+              return {
+                ...prev,
+                [batchId]: {
+                  ...current,
+                  status: "rejected",
+                  files: current.files.map((f) => ({ ...f, status: "rejected" })),
+                },
+              };
             });
-            cleanPeerConnection(peerId);
-            isTransferInProgress.current = false;
-            activeSendingBatch.current = null;
-            activeFileKey.current = null;
+            cleanPeerConnection(peerId, batchId);
           }
 
           else if (message.type === "START_FILE") {
-            setTransfer((prev) => {
-              if (prev && prev.peerId === peerId) {
-                return { ...prev, currentFileIndex: message.fileIndex, progress: 0 };
-              }
-              return prev;
+            setTransfers((prev) => {
+              const current = prev[batchId];
+              if (!current) return prev;
+              const newFiles = [...current.files];
+              newFiles[fileIndex] = { ...newFiles[fileIndex], status: "transferring", progress: 0 };
+              return { ...prev, [batchId]: { ...current, files: newFiles } };
             });
-            receivedChunks.current = [];
-            receivedBytes.current = 0;
-            lastProgressTime.current = performance.now();
-            lastProgressBytes.current = 0;
+            receivedChunks.current.set(channelKey, []);
+            receivedBytes.current.set(channelKey, 0);
+            lastProgressTime.current.set(channelKey, performance.now());
+            lastProgressBytes.current.set(channelKey, 0);
           }
 
           else if (message.type === "EOF") {
-            setTransfer((prev) => {
-              if (prev && prev.peerId === peerId) {
-                return { ...prev, status: "decrypting", progress: 100 };
-              }
-              return prev;
+            setTransfers((prev) => {
+              const current = prev[batchId];
+              if (!current) return prev;
+              const newFiles = [...current.files];
+              newFiles[fileIndex] = { ...newFiles[fileIndex], status: "decrypting", progress: 100 };
+              return { ...prev, [batchId]: { ...current, files: newFiles } };
             });
-            await reconstructBatchFile(peerId, message.fileIndex, message.batchId);
+            await reconstructBatchFile(peerId, batchId, fileIndex);
           }
 
           else if (message.type === "FILE_RECEIVED") {
-            const batch = activeSendingBatch.current;
-            if (batch && message.fileIndex + 1 < batch.files.length) {
-              setTransfer((prev) => {
-                if (prev && prev.peerId === peerId) {
-                  return { ...prev, currentFileIndex: message.fileIndex + 1, progress: 0, status: "transferring" };
-                }
-                return prev;
-              });
-              startBatchFileChunking(peerId, message.fileIndex + 1);
-            } else if (batch) {
-              ch.send(JSON.stringify({ type: "BATCH_COMPLETE", batchId: batch.batchId }));
-              setTransfer((prev) => prev ? { ...prev, status: "completed", progress: 100 } : null);
-              toast.success("All files sent successfully!");
-              isTransferInProgress.current = false;
-              activeSendingBatch.current = null;
-              activeFileKey.current = null;
-            }
-          }
+            setTransfers((prev) => {
+              const current = prev[batchId];
+              if (!current) return prev;
+              const newFiles = [...current.files];
+              newFiles[fileIndex] = { ...newFiles[fileIndex], status: "completed", progress: 100 };
+              
+              // Check if all files in the batch are completed
+              const allDone = newFiles.every((f) => f.status === "completed" || f.status === "cancelled" || f.status === "rejected");
+              const nextStatus = allDone ? "completed" as const : current.status;
+              
+              if (allDone) {
+                toast.success("All files sent successfully!");
+                // Cleanup peer connection after a small delay to make sure signals completed
+                setTimeout(() => cleanPeerConnection(peerId, batchId), 1000);
+              }
 
-          else if (message.type === "BATCH_COMPLETE") {
-            setTransfer((prev) => prev ? { ...prev, status: "completed", progress: 100 } : null);
-            isTransferInProgress.current = false;
-            activeFileKey.current = null;
+              return { ...prev, [batchId]: { ...current, status: nextStatus, files: newFiles } };
+            });
           }
 
           else if (message.type === "CANCEL_TRANSFER") {
             toast.error("Transfer cancelled by peer.");
-            setTransfer((prev) => {
-              if (prev && prev.peerId === peerId) {
-                return { ...prev, status: "cancelled", error: "Cancelled by peer." };
-              }
-              return prev;
+            setTransfers((prev) => {
+              const current = prev[batchId];
+              if (!current) return prev;
+              return {
+                ...prev,
+                [batchId]: {
+                  ...current,
+                  status: "cancelled",
+                  files: current.files.map((f) => ({ ...f, status: "cancelled", error: "Cancelled by peer." })),
+                },
+              };
             });
-            cleanPeerConnection(peerId);
-            isTransferInProgress.current = false;
-            activeSendingBatch.current = null;
-            activeFileKey.current = null;
+            cleanPeerConnection(peerId, batchId);
           }
         } catch (e) {
           console.error("[WebRTC] Error handling string payload:", e);
         }
       } 
       else if (data instanceof ArrayBuffer) {
-        receivedChunks.current.push(data);
-        receivedBytes.current += data.byteLength;
+        const chunks = receivedChunks.current.get(channelKey) || [];
+        chunks.push(data);
+        receivedChunks.current.set(channelKey, chunks);
+
+        const currentBytes = (receivedBytes.current.get(channelKey) || 0) + data.byteLength;
+        receivedBytes.current.set(channelKey, currentBytes);
 
         const now = performance.now();
-        const elapsed = (now - lastProgressTime.current) / 1000;
+        const lastTime = lastProgressTime.current.get(channelKey) || now;
+        const elapsed = (now - lastTime) / 1000;
         
         let speed = 0;
         let eta = 0;
 
         if (elapsed >= 0.5) {
-          const sentSinceLast = receivedBytes.current - lastProgressBytes.current;
+          const lastBytes = lastProgressBytes.current.get(channelKey) || 0;
+          const sentSinceLast = currentBytes - lastBytes;
           speed = Math.round(sentSinceLast / elapsed);
-          const currentFile = transferRef.current?.files[transferRef.current?.currentFileIndex];
-          const remaining = (currentFile?.size || 0) - receivedBytes.current;
+          
+          const current = transfersRef.current[batchId];
+          const currentFile = current?.files[fileIndex];
+          const remaining = (currentFile?.size || 0) - currentBytes;
           eta = speed > 0 ? Math.round(remaining / speed) : 0;
 
-          lastProgressTime.current = now;
-          lastProgressBytes.current = receivedBytes.current;
+          lastProgressTime.current.set(channelKey, now);
+          lastProgressBytes.current.set(channelKey, currentBytes);
         }
 
-        setTransfer((prev) => {
-          if (prev && prev.peerId === peerId) {
-            const currentFile = prev.files[prev.currentFileIndex];
-            const progress = currentFile ? Math.min(100, Math.round((receivedBytes.current / currentFile.size) * 100)) : 0;
-            return {
-              ...prev,
+        setTransfers((prev) => {
+          const current = prev[batchId];
+          if (!current) return prev;
+          const newFiles = [...current.files];
+          const currentFile = newFiles[fileIndex];
+          if (currentFile) {
+            const progress = Math.min(100, Math.round((currentBytes / currentFile.size) * 100));
+            newFiles[fileIndex] = {
+              ...currentFile,
               progress,
-              speed: speed || prev.speed,
-              eta: eta || prev.eta,
+              speed: speed || currentFile.speed,
+              eta: eta || currentFile.eta,
             };
           }
-          return prev;
+          return { ...prev, [batchId]: { ...current, files: newFiles } };
         });
       }
     };
   }, [sendAskBatchTransferDirect, startBatchFileChunking, reconstructBatchFile, cleanPeerConnection]);
 
-  const getOrCreatePeerConnection = useCallback((peerId: string, isInitiator: boolean, currentSocket: Socket): RTCPeerConnection => {
-    let pc = peerConnections.current.get(peerId);
+  const getOrCreatePeerConnection = useCallback((peerId: string, batchId: string, isInitiator: boolean, currentSocket: Socket): RTCPeerConnection => {
+    const connKey = `${peerId}-${batchId}`;
+    let pc = peerConnections.current.get(connKey);
     if (pc) return pc;
 
     pc = new RTCPeerConnection({
@@ -643,17 +754,25 @@ export function useLacertaSharing() {
       if (event.candidate) {
         currentSocket.emit("signal", {
           target: peerId,
-          signal: { candidate: event.candidate },
+          signal: { candidate: event.candidate, batchId },
         });
       }
     };
 
     pc.onconnectionstatechange = () => {
       if (pc?.connectionState === "disconnected" || pc?.connectionState === "failed" || pc?.connectionState === "closed") {
-        cleanPeerConnection(peerId);
-        setTransfer((prev) => {
-          if (prev && prev.peerId === peerId && prev.status !== "completed") {
-            return { ...prev, status: "cancelled", error: "Connection lost." };
+        cleanPeerConnection(peerId, batchId);
+        setTransfers((prev) => {
+          const current = prev[batchId];
+          if (current && current.status !== "completed") {
+            return {
+              ...prev,
+              [batchId]: {
+                ...current,
+                status: "cancelled",
+                files: current.files.map((f) => ({ ...f, status: "cancelled", error: "Connection lost." })),
+              },
+            };
           }
           return prev;
         });
@@ -661,31 +780,30 @@ export function useLacertaSharing() {
     };
 
     if (isInitiator) {
-      const ch = pc.createDataChannel("file-transfer", { ordered: true });
-      setupDataChannel(ch, peerId);
-      dataChannels.current.set(peerId, ch);
+      // Data channels will be created dynamically inside queueFileForSend
     } else {
       pc.ondatachannel = (event) => {
-        setupDataChannel(event.channel, peerId);
-        dataChannels.current.set(peerId, event.channel);
+        const label = event.channel.label;
+        if (label.startsWith("file-transfer-")) {
+          const parts = label.substring("file-transfer-".length).split("-");
+          const bId = parts[0];
+          const fIdx = parseInt(parts[1], 10);
+          setupDataChannel(event.channel, peerId, bId, fIdx);
+          dataChannels.current.set(`${bId}-${fIdx}`, event.channel);
+        }
       };
     }
 
-    peerConnections.current.set(peerId, pc);
+    peerConnections.current.set(connKey, pc);
     return pc;
   }, [cleanPeerConnection, setupDataChannel]);
 
   const queueFileForSend = useCallback((peerId: string, peerName: string, filesList: File[]) => {
-    if (isTransferInProgress.current) {
-      toast.error("A file transfer is already running. Please wait.");
-      return;
-    }
-
-    isTransferInProgress.current = true;
     const initiateSend = async () => {
       try {
         const batchId = Math.random().toString(36).substring(2, 10);
-        activeSendingBatch.current = {
+        
+        activeSendingBatches.current.set(batchId, {
           batchId,
           files: filesList.map((f) => ({
             name: f.name,
@@ -693,117 +811,133 @@ export function useLacertaSharing() {
             type: f.type,
             fileObj: f,
           })),
-        };
-
-        setTransfer({
-          peerId,
-          peerName,
-          direction: "send",
-          status: "connecting",
-          files: filesList.map(f => ({ name: f.name, size: f.size })),
-          currentFileIndex: 0,
-          progress: 0,
-          speed: 0,
-          eta: 0,
         });
 
+        setTransfers((prev) => ({
+          ...prev,
+          [batchId]: {
+            batchId,
+            peerId,
+            peerName,
+            direction: "send",
+            status: "connecting",
+            files: filesList.map(f => ({
+              name: f.name,
+              size: f.size,
+              progress: 0,
+              status: "idle",
+              speed: 0,
+              eta: 0,
+            })),
+          },
+        }));
+
         if (!socket) {
-          isTransferInProgress.current = false;
-          activeSendingBatch.current = null;
+          activeSendingBatches.current.delete(batchId);
           return;
         }
         
-        const pc = getOrCreatePeerConnection(peerId, true, socket);
-        const ch = dataChannels.current.get(peerId);
+        const pc = getOrCreatePeerConnection(peerId, batchId, true, socket);
 
-        if (ch && ch.readyState === "open") {
-          await sendAskBatchTransferDirect(ch, peerId);
-        } else {
-          if (pc.signalingState === "stable") {
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            socket.emit("signal", {
-              target: peerId,
-              signal: { sdp: pc.localDescription },
-            });
-          }
+        // Create data channels for all files in parallel
+        filesList.forEach((_, idx) => {
+          const ch = pc.createDataChannel(`file-transfer-${batchId}-${idx}`, { ordered: true });
+          setupDataChannel(ch, peerId, batchId, idx);
+          dataChannels.current.set(`${batchId}-${idx}`, ch);
+        });
+
+        if (pc.signalingState === "stable") {
+          const offer = await pc.createOffer();
+          await pc.setLocalDescription(offer);
+          socket.emit("signal", {
+            target: peerId,
+            signal: { sdp: pc.localDescription, batchId },
+          });
         }
       } catch (err) {
         console.error("[WebRTC] Failed to initiate send request:", err);
         toast.error("Failed to connect to peer.");
-        setTransfer(null);
-        isTransferInProgress.current = false;
-        activeSendingBatch.current = null;
       }
     };
     initiateSend();
-  }, [socket, getOrCreatePeerConnection, sendAskBatchTransferDirect]);
+  }, [socket, getOrCreatePeerConnection, setupDataChannel]);
 
   // Accept incoming transfer
-  const acceptIncomingTransfer = async () => {
-    if (!incomingRequest || !socket) return;
+  const acceptIncomingTransfer = async (batchId: string) => {
+    const req = incomingRequests.find((r) => r.batchId === batchId);
+    if (!req || !socket) return;
 
-    isTransferInProgress.current = true;
-    const req = incomingRequest;
-    setIncomingRequest(null);
+    setIncomingRequests((prev) => prev.filter((r) => r.batchId !== batchId));
 
-    receivedChunks.current = [];
-    receivedBytes.current = 0;
+    setTransfers((prev) => ({
+      ...prev,
+      [batchId]: {
+        batchId,
+        peerId: req.peerId,
+        peerName: req.peerName,
+        direction: "receive",
+        status: "transferring",
+        files: req.files.map((f) => ({
+          name: f.name,
+          size: f.size,
+          progress: 0,
+          status: "transferring",
+          speed: 0,
+          eta: 0,
+        })),
+      },
+    }));
 
-    setTransfer({
-      peerId: req.peerId,
-      peerName: req.peerName,
-      direction: "receive",
-      status: "transferring",
-      files: req.files,
-      currentFileIndex: 0,
-      progress: 0,
-      speed: 0,
-      eta: 0,
-    });
-
-    const ch = dataChannels.current.get(req.peerId);
+    // Setup channels on receiver side are already done via ondatachannel
+    // We send accepting signal on the control channel (fileIndex 0)
+    const ch = dataChannels.current.get(`${batchId}-0`);
     if (ch) {
-      ch.send(JSON.stringify({ type: "ACCEPT_BATCH_TRANSFER", batchId: req.batchId }));
+      ch.send(JSON.stringify({ type: "ACCEPT_BATCH_TRANSFER", batchId }));
     }
   };
 
   // Decline incoming transfer
-  const declineIncomingTransfer = () => {
-    if (!incomingRequest) return;
-    const req = incomingRequest;
-    setIncomingRequest(null);
+  const declineIncomingTransfer = (batchId: string) => {
+    const req = incomingRequests.find((r) => r.batchId === batchId);
+    if (!req) return;
 
-    const ch = dataChannels.current.get(req.peerId);
+    setIncomingRequests((prev) => prev.filter((r) => r.batchId !== batchId));
+
+    const ch = dataChannels.current.get(`${batchId}-0`);
     if (ch) {
-      ch.send(JSON.stringify({ type: "REJECT_BATCH_TRANSFER", batchId: req.batchId }));
+      ch.send(JSON.stringify({ type: "REJECT_BATCH_TRANSFER", batchId }));
     }
-    cleanPeerConnection(req.peerId);
-    isTransferInProgress.current = false;
+    cleanPeerConnection(req.peerId, batchId);
   };
 
   // Cancel active transfer
-  const cancelActiveTransfer = () => {
-    const current = transferRef.current;
+  const cancelActiveTransfer = (batchId: string) => {
+    const current = transfersRef.current[batchId];
     if (!current) return;
 
-    const ch = dataChannels.current.get(current.peerId);
+    // Send CANCEL on first data channel
+    const ch = dataChannels.current.get(`${batchId}-0`);
     if (ch) {
       try {
         ch.send(JSON.stringify({ type: "CANCEL_TRANSFER" }));
       } catch (e) {}
     }
 
-    cleanPeerConnection(current.peerId);
-    setTransfer((prev) => prev ? { ...prev, status: "cancelled", error: "Cancelled by you." } : null);
-    isTransferInProgress.current = false;
-    activeSendingBatch.current = null;
-    activeFileKey.current = null;
-    receivedChunks.current = [];
-    receivedBytes.current = 0;
+    cleanPeerConnection(current.peerId, batchId);
+    setTransfers((prev) => {
+      const curr = prev[batchId];
+      if (!curr) return prev;
+      return {
+        ...prev,
+        [batchId]: {
+          ...curr,
+          status: "cancelled",
+          files: curr.files.map((f) => ({ ...f, status: "cancelled", error: "Cancelled by you." })),
+        },
+      };
+    });
   };
 
-  // Stable refs to prevent cascading socket reconnections during active transfers
   const getOrCreatePeerConnectionRef = useRef(getOrCreatePeerConnection);
   const cleanPeerConnectionRef = useRef(cleanPeerConnection);
   const sessionRef = useRef(session);
@@ -857,48 +991,54 @@ export function useLacertaSharing() {
     newSocket.on("peer-left", (data: { socketId: string }) => {
       setPeers((prev) => prev.filter((p) => p.socketId !== data.socketId));
       
-      const active = transferRef.current;
-      const isTransferringWithThisPeer = active && active.peerId === data.socketId && 
-        ["transferring", "encrypting", "decrypting", "connecting"].includes(active.status);
+      // Cancel active transfers with this peer
+      const activeBatches = Object.values(transfersRef.current).filter(
+        (t) => t.peerId === data.socketId && ["connecting", "transferring"].includes(t.status)
+      );
 
-      if (!isTransferringWithThisPeer) {
-        setTransfer((prev) => {
-          if (prev && prev.peerId === data.socketId && prev.status !== "completed") {
-            return { ...prev, status: "cancelled", error: "Peer went offline." };
-          }
-          return prev;
+      activeBatches.forEach((batch) => {
+        setTransfers((prev) => {
+          const current = prev[batch.batchId];
+          if (!current) return prev;
+          return {
+            ...prev,
+            [batch.batchId]: {
+              ...current,
+              status: "cancelled",
+              files: current.files.map((f) => ({ ...f, status: "cancelled", error: "Peer went offline." })),
+            },
+          };
         });
-        cleanPeerConnectionRef.current(data.socketId);
-        isTransferInProgress.current = false;
-      }
+        cleanPeerConnectionRef.current(data.socketId, batch.batchId);
+      });
     });
 
     newSocket.on("signal", async (data: { sender: string; signal: any }) => {
       const { sender, signal } = data;
-      const pc = getOrCreatePeerConnectionRef.current(sender, false, newSocket);
+      const batchId = signal.batchId;
+      if (!batchId) return;
+
+      const pc = getOrCreatePeerConnectionRef.current(sender, batchId, false, newSocket);
 
       if (signal.sdp) {
         await pc.setRemoteDescription(new RTCSessionDescription(signal.sdp));
 
-        const queued = pendingCandidates.current.get(sender);
+        const queued = pendingCandidates.current.get(`${sender}-${batchId}`);
         if (queued) {
           for (const cand of queued) {
             try {
               await pc.addIceCandidate(new RTCIceCandidate(cand));
             } catch (e) {}
           }
-          pendingCandidates.current.delete(sender);
+          pendingCandidates.current.delete(`${sender}-${batchId}`);
         }
 
         if (signal.sdp.type === "offer") {
-          if (signal.sdp.sessionKey) {
-            activeFileKey.current = signal.sdp.sessionKey;
-          }
           const answer = await pc.createAnswer();
           await pc.setLocalDescription(answer);
           newSocket.emit("signal", {
             target: sender,
-            signal: { sdp: pc.localDescription },
+            signal: { sdp: pc.localDescription, batchId },
           });
         }
       } else if (signal.candidate) {
@@ -907,10 +1047,11 @@ export function useLacertaSharing() {
             await pc.addIceCandidate(new RTCIceCandidate(signal.candidate));
           } catch (e) {}
         } else {
-          if (!pendingCandidates.current.has(sender)) {
-            pendingCandidates.current.set(sender, []);
+          const connKey = `${sender}-${batchId}`;
+          if (!pendingCandidates.current.has(connKey)) {
+            pendingCandidates.current.set(connKey, []);
           }
-          pendingCandidates.current.get(sender)!.push(signal.candidate);
+          pendingCandidates.current.get(connKey)!.push(signal.candidate);
         }
       }
     });
@@ -1052,8 +1193,8 @@ export function useLacertaSharing() {
     peers,
     isHidden,
     isDraggingOver,
-    transfer,
-    incomingRequest,
+    transfers,
+    incomingRequests,
     fileInputRef,
     myConstellation,
     handleToggleHidden,
@@ -1065,6 +1206,13 @@ export function useLacertaSharing() {
     acceptIncomingTransfer,
     declineIncomingTransfer,
     cancelActiveTransfer,
-    setTransfer,
+    setTransfers,
+    dismissTransfer: (batchId: string) => {
+      setTransfers((prev) => {
+        const next = { ...prev };
+        delete next[batchId];
+        return next;
+      });
+    },
   };
 }

@@ -1,6 +1,7 @@
 import React from "react";
 import { BaseSpotlightFeature, SpotlightAction, SpotlightActionContext } from "../BaseSpotlightFeature";
-import { User, Settings, KeyRound, Bookmark } from "lucide-react";
+import { User, Settings, KeyRound, Bookmark, Compass } from "lucide-react";
+import { REFERENCE_CONSTELLATIONS } from "@/lib/constellations";
 
 let cachedBookmarks: any[] | null = null;
 let lastFetched = 0;
@@ -27,51 +28,81 @@ export default class PolarisSpotlightFeature extends BaseSpotlightFeature {
       });
     }
 
-    // Fetch and show Bookmarks dynamically if token is present
-    if (context.accessToken) {
-      try {
-        const now = Date.now();
-        if (cachedBookmarks && (now - lastFetched < CACHE_DURATION)) {
-          for (const b of cachedBookmarks) {
-            actions.push({
-              id: `action-polaris-bookmark-${b.id}`,
-              label: `Bookmark: ${b.name}`,
-              category: "Navigation",
-              icon: <Bookmark className="size-4 text-primary" />,
-              badge: `Saved constellation`,
-              action: () => {
-                window.location.href = `/polaris?constellation=${b.id}`;
+    // 1. Reference constellations navigation actions (only available on /polaris dashboard)
+    if (context.pathname === "/polaris") {
+      for (const c of REFERENCE_CONSTELLATIONS) {
+        actions.push({
+          id: `action-polaris-navigate-${c.id}`,
+          label: `Navigate: ${c.name}`,
+          category: "Navigation",
+          icon: <Compass className="size-4 text-primary" />,
+          badge: `App constellation`,
+          action: () => {
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(
+                new CustomEvent("runa-star-map-navigate", {
+                  detail: { constellationName: c.name },
+                })
+              );
+              window.dispatchEvent(new CustomEvent("runa-close-spotlight"));
+            }
+          },
+        });
+      }
+
+      // 2. Fetch and show Bookmarks dynamically if token is present
+      if (context.accessToken) {
+        try {
+          const now = Date.now();
+          const handleBookmarkAction = (b: any) => {
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(
+                new CustomEvent("runa-star-map-navigate", {
+                  detail: { constellationName: b.name },
+                })
+              );
+              window.dispatchEvent(new CustomEvent("runa-close-spotlight"));
+            }
+          };
+
+          if (cachedBookmarks && (now - lastFetched < CACHE_DURATION)) {
+            for (const b of cachedBookmarks) {
+              actions.push({
+                id: `action-polaris-bookmark-${b.id}`,
+                label: `Navigate: ${b.name}`,
+                category: "Navigation",
+                icon: <Bookmark className="size-4 text-primary" />,
+                badge: `Saved constellation`,
+                action: () => handleBookmarkAction(b),
+              });
+            }
+          } else {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/bookmarks`, {
+              headers: {
+                Authorization: `Bearer ${context.accessToken}`,
               },
             });
-          }
-        } else {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/bookmarks`, {
-            headers: {
-              Authorization: `Bearer ${context.accessToken}`,
-            },
-          });
-          if (res.ok) {
-            const bookmarks = await res.json();
-            if (Array.isArray(bookmarks)) {
-              cachedBookmarks = bookmarks;
-              lastFetched = now;
-              for (const b of bookmarks) {
-                actions.push({
-                  id: `action-polaris-bookmark-${b.id}`,
-                  label: `Bookmark: ${b.name}`,
-                  category: "Navigation",
-                  icon: <Bookmark className="size-4 text-primary" />,
-                  badge: `Saved constellation`,
-                  action: () => {
-                    window.location.href = `/polaris?constellation=${b.id}`;
-                  },
-                });
+            if (res.ok) {
+              const bookmarks = await res.json();
+              if (Array.isArray(bookmarks)) {
+                cachedBookmarks = bookmarks;
+                lastFetched = now;
+                for (const b of bookmarks) {
+                  actions.push({
+                    id: `action-polaris-bookmark-${b.id}`,
+                    label: `Navigate: ${b.name}`,
+                    category: "Navigation",
+                    icon: <Bookmark className="size-4 text-primary" />,
+                    badge: `Saved constellation`,
+                    action: () => handleBookmarkAction(b),
+                  });
+                }
               }
             }
           }
+        } catch (err) {
+          console.error("Failed to fetch bookmarks in spotlight", err);
         }
-      } catch (err) {
-        console.error("Failed to fetch bookmarks in spotlight", err);
       }
     }
 

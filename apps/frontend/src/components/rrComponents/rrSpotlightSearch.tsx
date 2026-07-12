@@ -509,6 +509,17 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
     };
   }, [handleSetOpen]);
 
+  // Listen for custom trigger to open spotlight search dialog
+  useEffect(() => {
+    const handleOpenSpotlight = () => {
+      handleSetOpen(true);
+    };
+    window.addEventListener("runa-open-spotlight", handleOpenSpotlight);
+    return () => {
+      window.removeEventListener("runa-open-spotlight", handleOpenSpotlight);
+    };
+  }, [handleSetOpen]);
+
   // Memoized: full item list — only rebuilt when nav config, session, or path changes
   const items = useMemo<SpotlightSearchItem[]>(() => {
     const result: SpotlightSearchItem[] = [];
