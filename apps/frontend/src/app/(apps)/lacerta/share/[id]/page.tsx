@@ -199,7 +199,7 @@ export default function LacertaSharePage(): React.JSX.Element {
           <div className="mt-6 w-full flex flex-col items-center">
             <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full mb-6">
               <ShieldCheck className="h-3.5 w-3.5" />
-              Decryption Key Found in URL (E2EE Active)
+              Decryption Key Found in URL (Encryption Active)
             </div>
 
             {/* Content Preview for Images */}

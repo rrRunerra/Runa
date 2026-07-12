@@ -60,6 +60,16 @@ export class CacheService implements OnModuleDestroy {
     bookDetail: (id: string) => `book:${id}`,
     bookRefreshCooldown: (id: string) => `cooldown:refresh:book:${id}`,
 
+    // Character
+    characterSearch: (name: string) =>
+      `character-search:${name.trim().toLowerCase().replaceAll(' ', '')}`,
+    characterDetail: (id: number) => `character:${id}`,
+
+    // Actor
+    actorSearch: (name: string) =>
+      `actor-search:${name.trim().toLowerCase().replaceAll(' ', '')}`,
+    actorDetail: (id: number) => `actor:${id}`,
+
     // Email
     emailRefreshCooldown: (id: string) =>
       `cooldown:refresh:email-account:${id}`,
@@ -78,5 +88,20 @@ export class CacheService implements OnModuleDestroy {
       mediaId: number | string,
     ) =>
       `list:${mediaType}:entry:user:${username.trim().toLowerCase()}:${mediaId}`,
+
+    // Discover
+    discoverMeta: (mediaType: string) => `discover-meta:${mediaType.toLowerCase()}`,
+    discoverList: (
+      mediaType: string,
+      page: number | string,
+      limit: number | string,
+      year: number | string,
+      format: string,
+      status: string,
+      search: string,
+      sort: string,
+      addedWithin: string,
+    ) =>
+      `discover:${mediaType.toLowerCase()}:${page}:${limit}:${year}:${format}:${status}:${search}:${sort}:${addedWithin}`,
   };
 }

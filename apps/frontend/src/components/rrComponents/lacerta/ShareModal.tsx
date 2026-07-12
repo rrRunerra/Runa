@@ -3,10 +3,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link2, UserPlus, Check, Copy, Trash2, X, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
-import { wrapKey, decrypt, importRawKey } from "@runa/crypto/browser";
+import { decrypt, importRawKey } from "@runa/crypto/browser";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import UserProfileCard, { UserProfileInfo } from "./UserProfileCard";
+import { useRRCrypto } from "@/hooks/useRRCrypto";
 
 interface SharedUser {
   id: string;
@@ -55,6 +56,7 @@ export default function ShareModal({
   allItems,
 }: ShareModalProps): React.JSX.Element | null {
   const { data: session } = useSession();
+  const { wrapKey } = useRRCrypto();
   const [copiedLink, setCopiedLink] = useState<boolean>(false);
   const [usernameInput, setUsernameInput] = useState<string>("");
   const [isSearching, setIsSearching] = useState<boolean>(false);
@@ -122,10 +124,11 @@ export default function ShareModal({
     id: string;
     username: string;
     userPublicKey: string | null;
+    userMlKemPublicKey?: string | null;
   }) => {
     if (!session?.accessToken) return;
     if (!recipient.userPublicKey) {
-      toast.error("Recipient does not have E2EE enabled. They must log in once to initialize keys.");
+      toast.error("Recipient does not have Encryption enabled. They must log in once to initialize keys.");
       return;
     }
 
@@ -142,7 +145,7 @@ export default function ShareModal({
     }
 
     if (!rawFileKey) {
-      toast.error("Unlock your secure storage first (E2EE keys not active).");
+      toast.error("Unlock your secure storage first (Encryption keys not active).");
       return;
     }
 
@@ -176,7 +179,10 @@ export default function ShareModal({
         if (!targetRawKey) continue;
 
         const recipientWrappedKey = JSON.stringify(
-          await wrapKey(targetRawKey, recipient.userPublicKey)
+          await wrapKey(targetRawKey, {
+            userPublicKey: recipient.userPublicKey!,
+            userMlKemPublicKey: recipient.userMlKemPublicKey,
+          })
         );
 
         const shareRes = await fetch(
@@ -227,7 +233,7 @@ export default function ShareModal({
         }
       );
       if (!res.ok) {
-        throw new Error("Recipient user not found or does not have E2EE keys setup.");
+        throw new Error("Recipient user not found or does not have encryption keys setup.");
       }
       const recipient = await res.json();
       await shareWithUser(recipient);

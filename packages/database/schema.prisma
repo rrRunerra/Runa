@@ -49,9 +49,10 @@ model User {
     backupCodes     String[]  @default([])
     passkeys        Passkey[]
 
-    // E2EE Keys
+    // Encryption Keys
     userPublicKey           String?
     encryptedUserPrivateKey String?
+    userMlKemPublicKey      String?
 
     @@index([id])
     @@index([username])
@@ -308,7 +309,16 @@ model AquilaAnime {
 
     locked          Boolean               @default(false)
     anilistUpdatedAt Int?
+    createdAt       DateTime              @default(now())
     updatedAt       DateTime              @updatedAt
+
+    localPopularity         Int      @default(0)
+    localFavoritesCount     Int      @default(0)
+    localAverageScore       Float    @default(0)
+    localStatusDistribution Json     @default("{}") @db.Json
+    localScoreDistribution  Json     @default("{}") @db.Json
+    localTotalScoreSum      Int      @default(0)
+    localScoredCount        Int      @default(0)
     aquilaUserLists AquilaAnimeUserList[]
     animeCharacters AquilaAnimeCharacter[]
     animeStudios    AquilaAnimeStudio[]
@@ -344,23 +354,28 @@ model AquilaCharacter {
 
     animeCharacters AquilaAnimeCharacter[]
     mangaCharacters AquilaMangaCharacter[]
+    movieCharacters AquilaMovieCharacter[]
+    tvCharacters    AquilaTvCharacter[]
 
     @@index([anilistId])
 }
 
 model AquilaAnimeCharacter {
-    animeId     Int
-    characterId Int
+    animeId      Int
+    characterId  Int
+    voiceActorId Int?
 
     role  String?
     order Int?
 
-    anime     AquilaAnime     @relation(fields: [animeId], references: [id], onDelete: Cascade)
-    character AquilaCharacter @relation(fields: [characterId], references: [id], onDelete: Cascade)
+    anime      AquilaAnime     @relation(fields: [animeId], references: [id], onDelete: Cascade)
+    character  AquilaCharacter @relation(fields: [characterId], references: [id], onDelete: Cascade)
+    voiceActor AquilaActor?    @relation(fields: [voiceActorId], references: [id], onDelete: SetNull)
 
     @@id([animeId, characterId])
     @@index([animeId])
     @@index([characterId])
+    @@index([voiceActorId])
 }
 
 model AquilaStudio {
@@ -501,7 +516,16 @@ model AquilaManga {
 
     locked    Boolean               @default(false)
     anilistUpdatedAt Int?
+    createdAt DateTime              @default(now())
     updatedAt DateTime              @updatedAt
+
+    localPopularity         Int      @default(0)
+    localFavoritesCount     Int      @default(0)
+    localAverageScore       Float    @default(0)
+    localStatusDistribution Json     @default("{}") @db.Json
+    localScoreDistribution  Json     @default("{}") @db.Json
+    localTotalScoreSum      Int      @default(0)
+    localScoredCount        Int      @default(0)
     aquilaUserLists AquilaMangaUserList[]
     mangaCharacters AquilaMangaCharacter[]
     mangaStudios    AquilaMangaStudio[]
@@ -626,9 +650,18 @@ model AquilaMovie {
     contentRating    String?
 
     locked               Boolean               @default(false)
+    createdAt            DateTime              @default(now())
     updatedAt            DateTime              @updatedAt
+
+    localPopularity         Int      @default(0)
+    localFavoritesCount     Int      @default(0)
+    localAverageScore       Float    @default(0)
+    localStatusDistribution Json     @default("{}") @db.Json
+    localScoreDistribution  Json     @default("{}") @db.Json
+    localTotalScoreSum      Int      @default(0)
+    localScoredCount        Int      @default(0)
     aquilaMovieUserLists AquilaMovieUserList[]
-    movieActors          AquilaMovieActor[]
+    movieCharacters      AquilaMovieCharacter[]
 
     @@index([tvdbId])
     @@index([tmdbId])
@@ -668,56 +701,74 @@ model AquilaTv {
     contentRating String?
 
     locked          Boolean            @default(false)
+    createdAt       DateTime           @default(now())
     updatedAt       DateTime           @updatedAt
+
+    localPopularity         Int      @default(0)
+    localFavoritesCount     Int      @default(0)
+    localAverageScore       Float    @default(0)
+    localStatusDistribution Json     @default("{}") @db.Json
+    localScoreDistribution  Json     @default("{}") @db.Json
+    localTotalScoreSum      Int      @default(0)
+    localScoredCount        Int      @default(0)
     aquilaUserLists AquilaTvUserList[]
-    tvActors         AquilaTvActor[]
+    tvCharacters    AquilaTvCharacter[]
 
     @@index([tvdbId])
     @@index([tmdbId])
 }
 
 model AquilaActor {
-    id        Int  @id @default(autoincrement())
-    peopleId  Int? @unique
+    id             Int  @id @default(autoincrement())
+    peopleId       Int? @unique
+    anilistStaffId Int? @unique
 
     name       String? @db.Text
     personName String? @db.Text
     image      String? @db.Text
     peopleType String?
 
-    movieActors AquilaMovieActor[]
-    tvActors    AquilaTvActor[]
+    movieCharacters AquilaMovieCharacter[]
+    tvCharacters    AquilaTvCharacter[]
+    animeCharacters AquilaAnimeCharacter[]
 
     @@index([peopleId])
+    @@index([anilistStaffId])
 }
 
-model AquilaMovieActor {
-    movieId Int
-    actorId Int
+model AquilaMovieCharacter {
+    movieId     Int
+    characterId Int
+    actorId     Int?
 
     role  String?
     order Int?
 
-    movie AquilaMovie @relation(fields: [movieId], references: [id], onDelete: Cascade)
-    actor AquilaActor @relation(fields: [actorId], references: [id], onDelete: Cascade)
+    movie     AquilaMovie     @relation(fields: [movieId], references: [id], onDelete: Cascade)
+    character AquilaCharacter @relation(fields: [characterId], references: [id], onDelete: Cascade)
+    actor     AquilaActor?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
 
-    @@id([movieId, actorId])
+    @@id([movieId, characterId])
     @@index([movieId])
+    @@index([characterId])
     @@index([actorId])
 }
 
-model AquilaTvActor {
+model AquilaTvCharacter {
     tvId    Int
-    actorId Int
+    characterId Int
+    actorId     Int?
 
     role  String?
     order Int?
 
     tv    AquilaTv    @relation(fields: [tvId], references: [id], onDelete: Cascade)
-    actor AquilaActor @relation(fields: [actorId], references: [id], onDelete: Cascade)
+    character AquilaCharacter @relation(fields: [characterId], references: [id], onDelete: Cascade)
+    actor AquilaActor?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
 
-    @@id([tvId, actorId])
+    @@id([tvId, characterId])
     @@index([tvId])
+    @@index([characterId])
     @@index([actorId])
 }
 
@@ -809,6 +860,8 @@ enum FavoriteType {
     BOOK
     GAME
     USER
+    CHARACTER
+    STAFF
 }
 
 model Favorite {
@@ -872,7 +925,16 @@ model AquilaGame {
     esrbRating   String?
 
     locked          Boolean              @default(false)
+    createdAt       DateTime             @default(now())
     updatedAt       DateTime             @updatedAt
+
+    localPopularity         Int      @default(0)
+    localFavoritesCount     Int      @default(0)
+    localAverageScore       Float    @default(0)
+    localStatusDistribution Json     @default("{}") @db.Json
+    localScoreDistribution  Json     @default("{}") @db.Json
+    localTotalScoreSum      Int      @default(0)
+    localScoredCount        Int      @default(0)
     aquilaUserLists AquilaGameUserList[]
 
     @@index([rawgId])
@@ -940,7 +1002,16 @@ model AquilaBook {
     publisher           String? @db.Text
 
     locked          Boolean              @default(false)
+    createdAt       DateTime             @default(now())
     updatedAt       DateTime             @updatedAt
+
+    localPopularity         Int      @default(0)
+    localFavoritesCount     Int      @default(0)
+    localAverageScore       Float    @default(0)
+    localStatusDistribution Json     @default("{}") @db.Json
+    localScoreDistribution  Json     @default("{}") @db.Json
+    localTotalScoreSum      Int      @default(0)
+    localScoredCount        Int      @default(0)
     aquilaUserLists AquilaBookUserList[]
 
     @@index([googleBookId])
@@ -1080,6 +1151,7 @@ model Device {
     identityKey        String
     signedPreKey       String
     encryptedMasterKey String?
+    mlKemIdentityKey   String?
     user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
     preKeys            PreKey[]
 

@@ -1062,7 +1062,7 @@ export class EmailService {
 
     const userRecord = await this.prisma.client.user.findUnique({
       where: { username },
-      select: { id: true, userPublicKey: true },
+      select: { id: true, userPublicKey: true, userMlKemPublicKey: true },
     });
 
     let subject = data.subject || '';
@@ -1086,7 +1086,11 @@ export class EmailService {
         if (ccVal) ccVal = encrypt(ccVal, dataKey);
         if (bccVal) bccVal = encrypt(bccVal, dataKey);
 
-        encryptedKey = wrapKey(dataKey, userRecord.userPublicKey) as any;
+        encryptedKey = (await wrapKey(
+          dataKey,
+          userRecord.userPublicKey,
+          userRecord.userMlKemPublicKey,
+        )) as any;
       } catch (encErr) {
         this.logger.error(`E2EE encryption failed for sent email:`, encErr);
       }
@@ -1161,7 +1165,7 @@ export class EmailService {
 
     const userRecord = await this.prisma.client.user.findUnique({
       where: { username },
-      select: { id: true, userPublicKey: true },
+      select: { id: true, userPublicKey: true, userMlKemPublicKey: true },
     });
 
     let subject = data.subject || '';
@@ -1185,7 +1189,11 @@ export class EmailService {
         if (ccVal) ccVal = encrypt(ccVal, dataKey);
         if (bccVal) bccVal = encrypt(bccVal, dataKey);
 
-        encryptedKey = wrapKey(dataKey, userRecord.userPublicKey) as any;
+        encryptedKey = (await wrapKey(
+          dataKey,
+          userRecord.userPublicKey,
+          userRecord.userMlKemPublicKey,
+        )) as any;
       } catch (encErr) {
         this.logger.error(`E2EE encryption failed for draft email:`, encErr);
       }
@@ -1299,7 +1307,7 @@ export class EmailService {
   ): Promise<any> {
     const user = await this.prisma.client.user.findUnique({
       where: { username },
-      select: { userPublicKey: true },
+      select: { userPublicKey: true, userMlKemPublicKey: true },
     });
 
     let subject = data.subject || '';
@@ -1311,7 +1319,11 @@ export class EmailService {
         const dataKey = generateDataKey();
         if (subject) subject = encrypt(subject, dataKey);
         bodyText = encrypt(bodyText, dataKey);
-        encryptedKey = wrapKey(dataKey, user.userPublicKey) as any;
+        encryptedKey = (await wrapKey(
+          dataKey,
+          user.userPublicKey,
+          user.userMlKemPublicKey,
+        )) as any;
       } catch (encErr) {
         this.logger.error(`Canned response encryption failed:`, encErr);
       }
@@ -1343,7 +1355,7 @@ export class EmailService {
 
     const user = await this.prisma.client.user.findUnique({
       where: { username },
-      select: { userPublicKey: true },
+      select: { userPublicKey: true, userMlKemPublicKey: true },
     });
 
     let subject = data.subject || '';
@@ -1355,7 +1367,11 @@ export class EmailService {
         const dataKey = generateDataKey();
         if (subject) subject = encrypt(subject, dataKey);
         bodyText = encrypt(bodyText, dataKey);
-        encryptedKey = wrapKey(dataKey, user.userPublicKey) as any;
+        encryptedKey = (await wrapKey(
+          dataKey,
+          user.userPublicKey,
+          user.userMlKemPublicKey,
+        )) as any;
       } catch (encErr) {
         this.logger.error(`Canned response update encryption failed:`, encErr);
       }

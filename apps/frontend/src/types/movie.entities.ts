@@ -10,10 +10,12 @@ export interface MovieSearchEntity {
 }
 
 export interface MovieCharacterEntity {
+  id: number;
   name: string;
   personName: string;
   image: string | null;
   role: string | null;
+  actorId: number | null;
 }
 
 export interface MovieStudioEntity {
@@ -56,4 +58,10 @@ export interface MovieEntity {
   startDateDay: number | null;
   locked: boolean;
   updatedAt: Date;
+
+  localPopularity: number;
+  localFavoritesCount: number;
+  localAverageScore: number;
+  localStatusDistribution: Record<string, number>;
+  localScoreDistribution: Record<string, number>;
 }

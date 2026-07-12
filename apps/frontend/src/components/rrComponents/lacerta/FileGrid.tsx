@@ -54,7 +54,7 @@ interface FileGridProps {
   ) => void;
   onUploadFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
   isSharedTab: boolean;
-  onLockE2ee?: () => void;
+  onLockEncryption?: () => void;
   onSaveCopy?: (item: RenderFileItem) => void;
 }
 
@@ -75,7 +75,7 @@ export default function FileGrid({
   onCreateDoc,
   onUploadFile,
   isSharedTab,
-  onLockE2ee,
+  onLockEncryption,
   onSaveCopy,
 }: FileGridProps): React.JSX.Element {
   const [search, setSearch] = useState<string>("");
@@ -410,7 +410,7 @@ export default function FileGrid({
         <div className="absolute inset-0 bg-primary/10 border-2 border-dashed border-primary m-6 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm z-50 pointer-events-none">
           <Upload className="h-12 w-12 text-primary animate-bounce mb-3" />
           <span className="text-sm font-bold text-foreground">
-            Drop files to upload E2EE encrypted
+            Drop files to upload encrypted
           </span>
           <span className="text-xs text-muted-foreground mt-1">
             Files are fully encrypted locally in browser.
@@ -502,9 +502,9 @@ export default function FileGrid({
               </button>
             </div>
 
-            {onLockE2ee && (
+            {onLockEncryption && (
               <button
-                onClick={onLockE2ee}
+                onClick={onLockEncryption}
                 className="p-1 sm:p-2 border border-border hover:bg-muted/10 text-muted-foreground hover:text-foreground rounded-lg transition-all"
                 title="Lock Cryptographic Session"
               >
@@ -678,7 +678,7 @@ export default function FileGrid({
               This folder is empty
             </span>
             <span className="text-[10px] text-muted-foreground/60 mt-1">
-              Drag and drop files to upload E2EE encrypted.
+              Drag and drop files to upload encrypted.
             </span>
           </div>
         ) : viewMode === "grid" ? (

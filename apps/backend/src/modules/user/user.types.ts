@@ -45,6 +45,7 @@ export interface RegisterDeviceData {
   deviceName: string;
   userAgent?: string;
   identityKey: string;
+  mlKemIdentityKey?: string;
   signedPreKey: string;
   preKeys?: string[];
 }

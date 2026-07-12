@@ -38,6 +38,8 @@ function getMediaUrl(type: string, mediaId: string): string {
   if (t === "MOVIE") return `/aquila/movies/${mediaId}`;
   if (t === "GAME") return `/aquila/games/${mediaId}`;
   if (t === "BOOK") return `/aquila/books/${mediaId}`;
+  if (t === "CHARACTER") return `/aquila/characters/${mediaId}`;
+  if (t === "STAFF") return `/aquila/actors/${mediaId}`;
   return `/aquila/browse`;
 }
 
@@ -51,39 +53,47 @@ export default function RrFavoritesTab({
 
   const { data: favorites, isLoading: loading } = useSWR<FavoriteItem[]>(
     url ? [url, session?.accessToken] : null,
-    fetcher
+    fetcher,
   );
 
   const animeFavs = useMemo(
     () => favorites?.filter((f) => f.type === "ANIME") || [],
-    [favorites]
+    [favorites],
   );
   const mangaFavs = useMemo(
     () => favorites?.filter((f) => f.type === "MANGA") || [],
-    [favorites]
+    [favorites],
   );
   const tvFavs = useMemo(
     () => favorites?.filter((f) => f.type === "TV") || [],
-    [favorites]
+    [favorites],
   );
   const movieFavs = useMemo(
     () => favorites?.filter((f) => f.type === "MOVIE") || [],
-    [favorites]
+    [favorites],
   );
   const gameFavs = useMemo(
     () => favorites?.filter((f) => f.type === "GAME") || [],
-    [favorites]
+    [favorites],
   );
   const bookFavs = useMemo(
     () => favorites?.filter((f) => f.type === "BOOK") || [],
-    [favorites]
+    [favorites],
+  );
+  const characterFavs = useMemo(
+    () => favorites?.filter((f) => f.type === "CHARACTER") || [],
+    [favorites],
+  );
+  const staffFavs = useMemo(
+    () => favorites?.filter((f) => f.type === "STAFF") || [],
+    [favorites],
   );
 
   if (loading) {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
         {Array.from({ length: 8 }).map((_, idx) => (
-          <Skeleton key={idx} className="aspect-[2/3] w-full rounded-xl" />
+          <Skeleton key={idx} className="aspect-2/3 w-full rounded-xl" />
         ))}
       </div>
     );
@@ -110,6 +120,12 @@ export default function RrFavoritesTab({
           {[
             { title: "Favorite Anime", items: animeFavs, type: "anime" },
             { title: "Favorite Manga", items: mangaFavs, type: "manga" },
+            {
+              title: "Favorite Characters",
+              items: characterFavs,
+              type: "characters",
+            },
+            { title: "Favorite Actors", items: staffFavs, type: "actors" },
             { title: "Favorite Games", items: gameFavs, type: "games" },
             { title: "Favorite TV Shows", items: tvFavs, type: "tv" },
             { title: "Favorite Movies", items: movieFavs, type: "movies" },
@@ -139,7 +155,7 @@ export default function RrFavoritesTab({
                       <motion.div
                         whileHover={{ y: -4 }}
                         whileTap={{ scale: 0.98 }}
-                        className="group relative aspect-[2/3] rounded-xl overflow-hidden border bg-card cursor-pointer shadow-sm"
+                        className="group relative aspect-2/3 rounded-xl overflow-hidden border bg-card cursor-pointer shadow-sm"
                       >
                         {fav.image ? (
                           <Image

@@ -13,6 +13,7 @@ import { MangaModule } from '../manga/manga.module';
 import { GameModule } from '../game/game.module';
 import { BookModule } from '../book/book.module';
 import { NotificationModule } from '../notification/notification.module';
+import { MediaStatsService } from './media-stats.service';
 
 @Module({
   imports: [
@@ -30,9 +31,10 @@ import { NotificationModule } from '../notification/notification.module';
   controllers: [ListController],
   providers: [
     ListService,
+    MediaStatsService,
     { provide: 'ConnectionsManager', useClass: ListExternal },
     ListExternal,
   ],
-  exports: [ListService],
+  exports: [ListService, MediaStatsService],
 })
 export class ListModule {}

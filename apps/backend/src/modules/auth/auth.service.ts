@@ -406,7 +406,11 @@ export class AuthService {
       dataKey,
     );
     const encryptedTitle = encrypt('Device Login Request', dataKey);
-    const encryptedKeyPayload = wrapKey(dataKey, device.identityKey);
+    const encryptedKeyPayload = await wrapKey(
+      dataKey,
+      device.identityKey,
+      device.mlKemIdentityKey,
+    );
 
     await this.prisma.client.notification.create({
       data: {

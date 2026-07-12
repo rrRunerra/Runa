@@ -16,6 +16,8 @@ import RrCanvasCalloutCard from "./rrCanvasCalloutCard";
 import RrCanvasAnnotationCard from "./rrCanvasAnnotationCard";
 import RrCanvasGroupCard from "./rrCanvasGroupCard";
 import RrCanvasRrImageCard from "./rrCanvasRrImageCard";
+import RrCanvasScientificCalcCard from "./rrCanvasScientificCalcCard";
+import RrCanvasGraphingCalcCard from "./rrCanvasGraphingCalcCard";
 import { CanvasNode } from "../CanvasEditor";
 
 interface RrCanvasCardContentProps {
@@ -23,6 +25,7 @@ interface RrCanvasCardContentProps {
   selected: boolean;
   accessToken: string;
   zoom: number;
+  isLocked?: boolean;
   onNodeUpdate: (updates: Partial<CanvasNode>) => void;
 }
 
@@ -31,6 +34,7 @@ export default function RrCanvasCardContent({
   selected,
   accessToken,
   zoom,
+  isLocked = false,
   onNodeUpdate,
 }: RrCanvasCardContentProps) {
   switch (node.type) {
@@ -47,23 +51,27 @@ export default function RrCanvasCardContent({
     case "gif":
       return <RrCanvasGifCard node={node} />;
     case "table":
-      return <RrCanvasTableCard node={node} onNodeUpdate={onNodeUpdate} />;
+      return <RrCanvasTableCard node={node} isLocked={isLocked} onNodeUpdate={onNodeUpdate} />;
     case "graph":
       return <RrCanvasGraphCard node={node} />;
     case "drawing":
-      return <RrCanvasDrawingCard node={node} zoom={zoom} onNodeUpdate={onNodeUpdate} />;
+      return <RrCanvasDrawingCard node={node} zoom={zoom} isLocked={isLocked} onNodeUpdate={onNodeUpdate} />;
     case "emoji":
       return <RrCanvasEmojiCard node={node} />;
     case "pdf":
       return <RrCanvasPdfCard node={node} accessToken={accessToken} />;
     case "callout":
-      return <RrCanvasCalloutCard node={node} onNodeUpdate={onNodeUpdate} />;
+      return <RrCanvasCalloutCard node={node} isLocked={isLocked} onNodeUpdate={onNodeUpdate} />;
     case "annotation":
-      return <RrCanvasAnnotationCard node={node} onNodeUpdate={onNodeUpdate} />;
+      return <RrCanvasAnnotationCard node={node} isLocked={isLocked} onNodeUpdate={onNodeUpdate} />;
     case "group":
       return <RrCanvasGroupCard node={node} selected={selected} onNodeUpdate={onNodeUpdate} />;
     case "rrImage":
       return <RrCanvasRrImageCard node={node} />;
+    case "scientific-calc":
+      return <RrCanvasScientificCalcCard node={node} isLocked={isLocked} onNodeUpdate={onNodeUpdate} />;
+    case "graphing-calc":
+      return <RrCanvasGraphingCalcCard node={node} isLocked={isLocked} onNodeUpdate={onNodeUpdate} />;
     default:
       return null;
   }

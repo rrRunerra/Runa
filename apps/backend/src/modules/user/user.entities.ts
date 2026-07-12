@@ -59,6 +59,7 @@ export interface DeviceEntity {
   userAgent: string | null;
   lastActiveAt: Date;
   identityKey: string;
+  mlKemIdentityKey: string | null;
   signedPreKey: string;
   encryptedMasterKey: string | null;
 }
@@ -71,10 +72,11 @@ export interface DeviceStatusEntity {
   encryptedMasterKey: string | null;
 }
 
-// --- E2EE Keys ---
+// --- Encryption Keys ---
 
-export interface E2eeKeysEntity {
+export interface EncryptionKeysEntity {
   userPublicKey: string | null;
+  userMlKemPublicKey: string | null;
   encryptedUserPrivateKey: string | null;
 }
 

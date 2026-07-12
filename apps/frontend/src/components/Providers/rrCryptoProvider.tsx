@@ -17,14 +17,18 @@ import { saveKey, loadKey, removeKey } from "@/lib/indexeddb";
 // --- Context & Types ---
 
 export interface RrCryptoContextValue {
-  isE2eeUnlocked: boolean;
+  isEncryptionUnlocked: boolean;
   isKeysExist: boolean;
   privateKey: CryptoKey | null;
+  mlKemPrivateKey: Uint8Array | null;
+  userPublicKey: string | null;
+  userMlKemPublicKey: string | null;
   showUnlockDialog: boolean;
   setShowUnlockDialog: (show: boolean) => void;
   getPrivateKey: () => Promise<CryptoKey | null>;
-  lockE2ee: () => void;
-  unlockE2ee: (password: string) => Promise<void>;
+  getMlKemPrivateKey: () => Promise<Uint8Array | null>;
+  lockEncryption: () => void;
+  unlockEncryption: (password: string) => Promise<void>;
 }
 
 const RrCryptoContext = createContext<RrCryptoContextValue | null>(null);
@@ -42,10 +46,13 @@ export function useRrCryptoContext() {
 export function RrCryptoProvider({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
 
-  const [isE2eeUnlocked, setIsE2eeUnlocked] = useState<boolean>(false);
+  const [isEncryptionUnlocked, setIsEncryptionUnlocked] = useState<boolean>(false);
   const [isKeysExist, setIsKeysExist] = useState<boolean>(false);
   const [showUnlockDialog, setShowUnlockDialog] = useState<boolean>(false);
   const [privateKey, setPrivateKey] = useState<CryptoKey | null>(null);
+  const [mlKemPrivateKey, setMlKemPrivateKey] = useState<Uint8Array | null>(null);
+  const [userPublicKey, setUserPublicKey] = useState<string | null>(null);
+  const [userMlKemPublicKey, setUserMlKemPublicKey] = useState<string | null>(null);
 
   const prevUsernameRef = useRef<string | null>(null);
 
@@ -54,29 +61,37 @@ export function RrCryptoProvider({ children }: { children: React.ReactNode }) {
     if (status === "authenticated" && session?.user?.username) {
       prevUsernameRef.current = session.user.username;
     } else if (status === "unauthenticated" && prevUsernameRef.current) {
-      // User logged out, clear their key from IndexedDB
+      // User logged out, clear their keys from IndexedDB
       removeKey(`private_key_${prevUsernameRef.current}`).catch(console.error);
+      removeKey(`mlkem_key_${prevUsernameRef.current}`).catch(console.error);
       removeKey(`public_key_string_${prevUsernameRef.current}`).catch(
+        console.error,
+      );
+      removeKey(`mlkem_public_key_string_${prevUsernameRef.current}`).catch(
         console.error,
       );
       prevUsernameRef.current = null;
       setPrivateKey(null);
-      setIsE2eeUnlocked(false);
+      setMlKemPrivateKey(null);
+      setUserPublicKey(null);
+      setUserMlKemPublicKey(null);
+      setIsEncryptionUnlocked(false);
       setIsKeysExist(false);
     }
   }, [status, session]);
 
-  // Fetch E2EE keys with SWR
-  const e2eKeysUrl =
+  // Fetch Encryption keys with SWR
+  const encryptionKeysUrl =
     session?.accessToken && session?.user?.username
-      ? `${process.env.NEXT_PUBLIC_API_URL}/users/me/e2ee-keys`
+      ? `${process.env.NEXT_PUBLIC_API_URL}/users/me/encryption-keys`
       : null;
 
-  const { data: e2eKeysData, mutate: refetchE2eKeys } = useSWR<{
+  const { data: encryptionKeysData, mutate: refetchEncryptionKeys } = useSWR<{
     userPublicKey?: string;
+    userMlKemPublicKey?: string;
     encryptedUserPrivateKey?: string;
   }>(
-    e2eKeysUrl ? [e2eKeysUrl, session?.accessToken] : null,
+    encryptionKeysUrl ? [encryptionKeysUrl, session?.accessToken] : null,
     fetcher,
     {
       revalidateOnFocus: false,
@@ -87,85 +102,110 @@ export function RrCryptoProvider({ children }: { children: React.ReactNode }) {
 
   // Initial Check via useFetch data changes
   useEffect(() => {
-    if (!session?.user?.username || !e2eKeysData) return;
+    if (!session?.user?.username || !encryptionKeysData) return;
 
     const checkKeys = async () => {
       try {
-        const serverPublicKey = e2eKeysData.userPublicKey;
+        const serverPublicKey = encryptionKeysData.userPublicKey;
+        const serverMlKemPublicKey = encryptionKeysData.userMlKemPublicKey;
 
         if (serverPublicKey) {
           setIsKeysExist(true);
           const storedKey = await loadKey(
             `private_key_${session.user.username}`,
           );
+          const storedMlKemKey = await loadKey(
+            `mlkem_key_${session.user.username}`,
+          );
 
-          if (storedKey) {
+          if (storedKey && storedMlKemKey) {
             const storedPubKeyStr = await loadKey(
               `public_key_string_${session.user.username}`,
+            );
+            const storedMlKemPubKeyStr = await loadKey(
+              `mlkem_public_key_string_${session.user.username}`,
             );
 
             if (storedPubKeyStr === serverPublicKey) {
               setPrivateKey(storedKey);
-              setIsE2eeUnlocked(true);
+              setMlKemPrivateKey(storedMlKemKey as Uint8Array);
+              setUserPublicKey(storedPubKeyStr as string);
+              setUserMlKemPublicKey(storedMlKemPubKeyStr as string || null);
+              setIsEncryptionUnlocked(true);
               setShowUnlockDialog(false);
               return;
             }
 
             // If the local key is invalid/mismatched or we don't have the pub key, remove it.
             await removeKey(`private_key_${session.user.username}`);
+            await removeKey(`mlkem_key_${session.user.username}`);
             await removeKey(`public_key_string_${session.user.username}`);
+            await removeKey(`mlkem_public_key_string_${session.user.username}`);
             setPrivateKey(null);
+            setMlKemPrivateKey(null);
+            setUserPublicKey(null);
+            setUserMlKemPublicKey(null);
           }
 
-          setIsE2eeUnlocked(false);
+          setIsEncryptionUnlocked(false);
           // Only show unlock dialog if NOT dismissed by user for this page load session
-          const isDismissed = localStorage.getItem(`runa-e2ee-dismissed-${session.user.username}`) === "true";
+          const isDismissed = localStorage.getItem(`runa-encryption-dismissed-${session.user.username}`) === "true";
           if (!isDismissed) {
             setShowUnlockDialog(true);
           }
         } else {
           setIsKeysExist(false);
-          setIsE2eeUnlocked(false);
+          setIsEncryptionUnlocked(false);
           
           // Only show unlock dialog if NOT dismissed by user for this page load session
-          const isDismissed = localStorage.getItem(`runa-e2ee-dismissed-${session.user.username}`) === "true";
+          const isDismissed = localStorage.getItem(`runa-encryption-dismissed-${session.user.username}`) === "true";
           if (!isDismissed) {
             setShowUnlockDialog(true);
           }
           await removeKey(`private_key_${session.user.username}`);
+          await removeKey(`mlkem_key_${session.user.username}`);
           await removeKey(`public_key_string_${session.user.username}`);
+          await removeKey(`mlkem_public_key_string_${session.user.username}`);
           setPrivateKey(null);
+          setMlKemPrivateKey(null);
+          setUserPublicKey(null);
+          setUserMlKemPublicKey(null);
         }
       } catch (err) {
-        console.error("Failed to check E2EE keys:", err);
+        console.error("Failed to check encryption keys:", err);
       }
     };
 
     checkKeys();
-  }, [e2eKeysData, session?.user?.username]);
+  }, [encryptionKeysData, session?.user?.username]);
 
-  // Listen for the login page firing runa-e2ee-unlocked after saving keys to IndexedDB
+  // Listen for the login page firing runa-encryption-unlocked after saving keys to IndexedDB
   useEffect(() => {
     const handleUnlocked = async () => {
       if (!session?.user?.username) return;
       try {
         const storedKey = await loadKey(`private_key_${session.user.username}`);
+        const storedMlKemKey = await loadKey(`mlkem_key_${session.user.username}`);
         const storedPubKeyStr = await loadKey(`public_key_string_${session.user.username}`);
-        if (storedKey && storedPubKeyStr) {
+        const storedMlKemPubKeyStr = await loadKey(`mlkem_public_key_string_${session.user.username}`);
+        if (storedKey && storedMlKemKey && storedPubKeyStr) {
           setPrivateKey(storedKey as CryptoKey);
-          setIsE2eeUnlocked(true);
+          setMlKemPrivateKey(storedMlKemKey as Uint8Array);
+          setUserPublicKey(storedPubKeyStr as string);
+          setUserMlKemPublicKey(storedMlKemPubKeyStr as string || null);
+          setIsEncryptionUnlocked(true);
           setIsKeysExist(true);
           setShowUnlockDialog(false);
         }
       } catch (err) {
-        console.error("Failed to auto-unlock E2EE after login:", err);
+        console.error("Failed to auto-unlock encryption after login:", err);
       }
     };
-    window.addEventListener("runa-e2ee-unlocked", handleUnlocked);
-    return () => window.removeEventListener("runa-e2ee-unlocked", handleUnlocked);
+    window.addEventListener("runa-encryption-unlocked", handleUnlocked);
+    return () => window.removeEventListener("runa-encryption-unlocked", handleUnlocked);
   }, [session?.user?.username]);
 
-  const unlockE2ee = async (passwordInput: string) => {
+  const unlockEncryption = async (passwordInput: string) => {
     if (!passwordInput || !session?.user?.username || !session?.accessToken) return;
 
     const {
@@ -174,15 +214,20 @@ export function RrCryptoProvider({ children }: { children: React.ReactNode }) {
       exportPublicKey,
       encryptData,
       decryptData,
+      generateMlKemKeyPair,
+      bufferToBase64Url,
+      base64UrlToBuffer,
     } = await import("@runa/crypto/browser");
 
     const masterKey = await deriveMasterKey(passwordInput, session.user.username);
     let importedPrivateKey: CryptoKey;
+    let importedMlKemPrivateKey: Uint8Array | null = null;
 
     let userPublicKeyBase64ToSave = "";
+    let userMlKemPublicKeyBase64ToSave = "";
 
     if (!isKeysExist) {
-      // Create user keypair
+      // Create user keypair (ECDH)
       const userKeyPair = await generateKeyPair();
       const userPublicKeyBase64 = await exportPublicKey(
         userKeyPair.publicKey,
@@ -192,17 +237,39 @@ export function RrCryptoProvider({ children }: { children: React.ReactNode }) {
         "jwk",
         userKeyPair.privateKey,
       );
-      const userPrivateKeyStr = JSON.stringify(userPrivateKeyJwk);
 
-      // Encrypt private key using masterKey
+      // Create user keypair (ML-KEM)
+      const mlKemKeyPair = await generateMlKemKeyPair();
+      const userMlKemPublicKeyBase64 = bufferToBase64Url(
+        mlKemKeyPair.publicKey.buffer.slice(
+          mlKemKeyPair.publicKey.byteOffset,
+          mlKemKeyPair.publicKey.byteOffset + mlKemKeyPair.publicKey.byteLength
+        ) as ArrayBuffer
+      );
+      userMlKemPublicKeyBase64ToSave = userMlKemPublicKeyBase64;
+
+      const userMlKemPrivateKeyBase64 = bufferToBase64Url(
+        mlKemKeyPair.secretKey.buffer.slice(
+          mlKemKeyPair.secretKey.byteOffset,
+          mlKemKeyPair.secretKey.byteOffset + mlKemKeyPair.secretKey.byteLength
+        ) as ArrayBuffer
+      );
+
+      // Package both private keys together
+      const keysPackage = {
+        ecdhJwk: userPrivateKeyJwk,
+        mlkemSecretKey: userMlKemPrivateKeyBase64
+      };
+
+      // Encrypt private keys package using masterKey
       const encryptedPrivate = await encryptData(
-        userPrivateKeyStr,
+        JSON.stringify(keysPackage),
         masterKey,
       );
 
       // Upload to server
       const putRes = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/users/me/e2ee-keys`,
+        `${process.env.NEXT_PUBLIC_API_URL}/users/me/encryption-keys`,
         {
           method: "PUT",
           headers: {
@@ -211,11 +278,12 @@ export function RrCryptoProvider({ children }: { children: React.ReactNode }) {
           },
           body: JSON.stringify({
             userPublicKey: userPublicKeyBase64,
+            userMlKemPublicKey: userMlKemPublicKeyBase64,
             encryptedUserPrivateKey: JSON.stringify(encryptedPrivate),
           }),
         },
       );
-      if (!putRes.ok) throw new Error("Failed to store E2EE keys on server");
+      if (!putRes.ok) throw new Error("Failed to store encryption keys on server");
 
       importedPrivateKey = await window.crypto.subtle.importKey(
         "jwk",
@@ -224,33 +292,93 @@ export function RrCryptoProvider({ children }: { children: React.ReactNode }) {
         false, // extractable: false for security in IndexedDB
         ["deriveKey", "deriveBits"],
       );
+      importedMlKemPrivateKey = mlKemKeyPair.secretKey;
 
       // Refetch from server using useFetch to sync keys data
-      refetchE2eKeys();
+      refetchEncryptionKeys();
 
       toast.success("Encryption initialized!");
     } else {
       // Get keys from useFetch data
-      if (!e2eKeysData) throw new Error("E2EE keys data not loaded");
+      if (!encryptionKeysData) throw new Error("Encryption keys data not loaded");
 
-      userPublicKeyBase64ToSave = e2eKeysData.userPublicKey || "";
+      userPublicKeyBase64ToSave = encryptionKeysData.userPublicKey || "";
+      userMlKemPublicKeyBase64ToSave = encryptionKeysData.userMlKemPublicKey || "";
 
-      if (e2eKeysData.encryptedUserPrivateKey) {
-        const encryptedPrivate = JSON.parse(e2eKeysData.encryptedUserPrivateKey);
-        const userPrivateKeyStr = await decryptData(
+      if (encryptionKeysData.encryptedUserPrivateKey) {
+        const encryptedPrivate = JSON.parse(encryptionKeysData.encryptedUserPrivateKey);
+        const privateKeysStr = await decryptData(
           encryptedPrivate.ciphertext,
           encryptedPrivate.iv,
           masterKey,
         );
 
-        const jwk = JSON.parse(userPrivateKeyStr);
+        const keysPackage = JSON.parse(privateKeysStr);
+        let ecdhJwk: any;
+        let mlkemSecretKeyBase64: string | null = null;
+
+        if (keysPackage && typeof keysPackage === "object" && "ecdhJwk" in keysPackage) {
+          ecdhJwk = keysPackage.ecdhJwk;
+          mlkemSecretKeyBase64 = keysPackage.mlkemSecretKey || null;
+        } else {
+          ecdhJwk = keysPackage; // Plain JWK
+        }
+
         importedPrivateKey = await window.crypto.subtle.importKey(
           "jwk",
-          jwk,
+          ecdhJwk,
           { name: "ECDH", namedCurve: "P-256" },
-          false, // extractable: false for security in IndexedDB
+          false,
           ["deriveKey", "deriveBits"],
         );
+
+        if (mlkemSecretKeyBase64) {
+          importedMlKemPrivateKey = new Uint8Array(base64UrlToBuffer(mlkemSecretKeyBase64));
+        } else {
+          // Upgrade on the fly: generate ML-KEM keys
+          const mlKemKeyPair = await generateMlKemKeyPair();
+          const userMlKemPublicKeyBase64 = bufferToBase64Url(
+            mlKemKeyPair.publicKey.buffer.slice(
+              mlKemKeyPair.publicKey.byteOffset,
+              mlKemKeyPair.publicKey.byteOffset + mlKemKeyPair.publicKey.byteLength
+            ) as ArrayBuffer
+          );
+          userMlKemPublicKeyBase64ToSave = userMlKemPublicKeyBase64;
+          importedMlKemPrivateKey = mlKemKeyPair.secretKey;
+
+          const newMlKemPrivateKeyBase64 = bufferToBase64Url(
+            mlKemKeyPair.secretKey.buffer.slice(
+              mlKemKeyPair.secretKey.byteOffset,
+              mlKemKeyPair.secretKey.byteOffset + mlKemKeyPair.secretKey.byteLength
+            ) as ArrayBuffer
+          );
+
+          // Package both together
+          const newKeysPackage = {
+            ecdhJwk,
+            mlkemSecretKey: newMlKemPrivateKeyBase64,
+          };
+
+          // Re-encrypt package
+          const newEncryptedPrivate = await encryptData(
+            JSON.stringify(newKeysPackage),
+            masterKey,
+          );
+
+          // Update server on the fly
+          await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me/encryption-keys`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.accessToken}`,
+            },
+            body: JSON.stringify({
+              userPublicKey: encryptionKeysData.userPublicKey,
+              userMlKemPublicKey: userMlKemPublicKeyBase64,
+              encryptedUserPrivateKey: JSON.stringify(newEncryptedPrivate),
+            }),
+          });
+        }
 
         toast.success("Encryption unlocked successfully!");
       } else {
@@ -259,31 +387,46 @@ export function RrCryptoProvider({ children }: { children: React.ReactNode }) {
     }
 
     await saveKey(`private_key_${session.user.username}`, importedPrivateKey);
+    await saveKey(`mlkem_key_${session.user.username}`, importedMlKemPrivateKey);
     if (userPublicKeyBase64ToSave) {
       await saveKey(
         `public_key_string_${session.user.username}`,
         userPublicKeyBase64ToSave,
       );
     }
+    if (userMlKemPublicKeyBase64ToSave) {
+      await saveKey(
+        `mlkem_public_key_string_${session.user.username}`,
+        userMlKemPublicKeyBase64ToSave,
+      );
+    }
     setPrivateKey(importedPrivateKey);
-    setIsE2eeUnlocked(true);
+    setMlKemPrivateKey(importedMlKemPrivateKey);
+    setUserPublicKey(userPublicKeyBase64ToSave);
+    setUserMlKemPublicKey(userMlKemPublicKeyBase64ToSave || null);
+    setIsEncryptionUnlocked(true);
     setShowUnlockDialog(false);
 
-    // Clear dismissal state since E2EE is now unlocked
-    localStorage.removeItem(`runa-e2ee-dismissed-${session.user.username}`);
+    // Clear dismissal state since Encryption is now unlocked
+    localStorage.removeItem(`runa-encryption-dismissed-${session.user.username}`);
 
-    window.dispatchEvent(new CustomEvent("runa-e2ee-unlocked"));
+    window.dispatchEvent(new CustomEvent("runa-encryption-unlocked"));
   };
 
-  const lockE2ee = useCallback(async () => {
+  const lockEncryption = useCallback(async () => {
     if (session?.user?.username) {
       await removeKey(`private_key_${session.user.username}`);
+      await removeKey(`mlkem_key_${session.user.username}`);
       await removeKey(`public_key_string_${session.user.username}`);
-      // Clear dismissal state when user manually locks E2EE
-      localStorage.removeItem(`runa-e2ee-dismissed-${session.user.username}`);
+      await removeKey(`mlkem_public_key_string_${session.user.username}`);
+      // Clear dismissal state when user manually locks encryption
+      localStorage.removeItem(`runa-encryption-dismissed-${session.user.username}`);
     }
     setPrivateKey(null);
-    setIsE2eeUnlocked(false);
+    setMlKemPrivateKey(null);
+    setUserPublicKey(null);
+    setUserMlKemPublicKey(null);
+    setIsEncryptionUnlocked(false);
     setShowUnlockDialog(true);
   }, [session?.user?.username]);
 
@@ -299,17 +442,33 @@ export function RrCryptoProvider({ children }: { children: React.ReactNode }) {
     return null;
   }, [privateKey, session?.user?.username]);
 
+  const getMlKemPrivateKey = useCallback(async () => {
+    if (mlKemPrivateKey) return mlKemPrivateKey;
+    if (session?.user?.username) {
+      const stored = await loadKey(`mlkem_key_${session.user.username}`);
+      if (stored) {
+        setMlKemPrivateKey(stored as Uint8Array);
+        return stored as Uint8Array;
+      }
+    }
+    return null;
+  }, [mlKemPrivateKey, session?.user?.username]);
+
   return (
     <RrCryptoContext.Provider
       value={{
-        isE2eeUnlocked,
+        isEncryptionUnlocked,
         isKeysExist,
         privateKey,
+        mlKemPrivateKey,
+        userPublicKey,
+        userMlKemPublicKey,
         showUnlockDialog,
         setShowUnlockDialog,
         getPrivateKey,
-        lockE2ee,
-        unlockE2ee,
+        getMlKemPrivateKey,
+        lockEncryption,
+        unlockEncryption,
       }}
     >
       {children}

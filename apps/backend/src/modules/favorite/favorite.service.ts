@@ -5,6 +5,7 @@ import { FavoriteType } from '@runa/database';
 import { rrNotFoundException, rrConflictException } from 'src/providers/error';
 
 import { FavoriteRepository } from './favorite.repository';
+import { MediaStatsService } from '../list/media-stats.service';
 import type { AddFavoriteDto } from './favorite.dto';
 import type {
   FavoriteEntity,
@@ -18,7 +19,10 @@ export class FavoriteService {
   private readonly logger = new Logger(FavoriteService.name);
   private readonly moduleCode = 'FeSve-';
 
-  constructor(private readonly favoriteRepository: FavoriteRepository) {}
+  constructor(
+    private readonly favoriteRepository: FavoriteRepository,
+    private readonly mediaStatsService: MediaStatsService,
+  ) {}
 
   // ---------------------------------------------------------------------------
   // Add
@@ -46,6 +50,9 @@ export class FavoriteService {
       dto.targetId,
     );
 
+    // Recalculate local favorites count
+    void this.mediaStatsService.recalculateFavorites(dto.type.toLowerCase(), dto.targetId);
+
     return this.toEntity(record);
   }
 
@@ -60,6 +67,8 @@ export class FavoriteService {
   ): Promise<FavoriteSuccessEntity> {
     try {
       await this.favoriteRepository.delete(userId, type, targetId);
+      // Recalculate local favorites count
+      void this.mediaStatsService.recalculateFavorites(type.toLowerCase(), targetId);
       return { success: true };
     } catch {
       throw new rrNotFoundException(`${this.moduleCode}FNF001`, {
@@ -201,6 +210,21 @@ export class FavoriteService {
             (details.username as string) ??
             '',
           image: (details.avatarUrl as string | null) ?? '',
+        };
+      case FavoriteType.CHARACTER: {
+        const first = (details.nameFirst as string | null) ?? '';
+        const middle = (details.nameMiddle as string | null) ?? '';
+        const last = (details.nameLast as string | null) ?? '';
+        const name = [first, middle, last].filter(Boolean).join(' ') || (details.nameNative as string | null) || '';
+        return {
+          title: name,
+          image: (details.image as string | null) ?? '',
+        };
+      }
+      case FavoriteType.STAFF:
+        return {
+          title: (details.name as string | null) ?? (details.personName as string | null) ?? '',
+          image: (details.image as string | null) ?? '',
         };
       default:
         return { title: '', image: '' };

@@ -36,7 +36,7 @@ describe('E2E Crypto Utilities via @runa/crypto/node', () => {
     expect(decryptedBuf.toString('utf8')).toBe(dataBuffer.toString('utf8'));
   });
 
-  it('should perform hybrid ECDH key agreement to wrap and unwrap a data key', () => {
+  it('should perform hybrid ECDH key agreement to wrap and unwrap a data key', async () => {
     // 1. Generate client keypair (prime256v1 / P-256)
     const clientEcdh = crypto.createECDH('prime256v1');
     clientEcdh.generateKeys();
@@ -47,7 +47,7 @@ describe('E2E Crypto Utilities via @runa/crypto/node', () => {
     const dataKey = generateDataKey();
 
     // 3. Wrap dataKey for client using client's public key
-    const wrappedPayload = wrapKey(dataKey, clientPublicKeyBase64Url);
+    const wrappedPayload = await wrapKey(dataKey, clientPublicKeyBase64Url);
 
     expect(wrappedPayload.ephemeralPublicKey).toBeDefined();
     expect(wrappedPayload.iv).toBeDefined();

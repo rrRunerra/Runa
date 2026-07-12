@@ -3,16 +3,19 @@
 import React, { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { CanvasNode, Stroke, Point } from "../CanvasEditor";
+import { ramerDouglasPeucker } from "@/lib/coordinates";
 
 interface RrCanvasDrawingCardProps {
   node: CanvasNode;
   zoom: number;
+  isLocked?: boolean;
   onNodeUpdate: (updates: Partial<CanvasNode>) => void;
 }
 
 export default function RrCanvasDrawingCard({
   node,
   zoom,
+  isLocked = false,
   onNodeUpdate,
 }: RrCanvasDrawingCardProps) {
   const [activeDrawColor, setActiveDrawColor] =
@@ -50,6 +53,7 @@ export default function RrCanvasDrawingCard({
   const handleDrawingStart = (
     e: React.MouseEvent<SVGSVGElement> | React.TouchEvent<SVGSVGElement>,
   ) => {
+    if (isLocked) return;
     e.stopPropagation();
 
     // Check for middle click (button === 1) to erase instead of draw
@@ -91,6 +95,7 @@ export default function RrCanvasDrawingCard({
   const handleDrawingMove = (
     e: React.MouseEvent<SVGSVGElement> | React.TouchEvent<SVGSVGElement>,
   ) => {
+    if (isLocked) return;
     e.stopPropagation();
 
     if (isErasing) {
@@ -152,13 +157,15 @@ export default function RrCanvasDrawingCard({
   };
 
   const handleDrawingEnd = () => {
+    if (isLocked) return;
     if (isErasing) {
       setIsErasing(false);
       return;
     }
     if (drawingStroke && drawingStroke.points.length > 1) {
+      const simplifiedPoints = ramerDouglasPeucker(drawingStroke.points, 1.5);
       onNodeUpdate({
-        lines: [...(node.lines || []), drawingStroke],
+        lines: [...(node.lines || []), { ...drawingStroke, points: simplifiedPoints }],
       });
     }
     setDrawingStroke(null);
@@ -177,7 +184,8 @@ export default function RrCanvasDrawingCard({
       }}
     >
       {/* Sketchpad Tool Options Panel */}
-      <div className="flex items-center justify-between px-3 py-1.5 border-b border-border bg-muted/10 shrink-0 text-[9px] select-none">
+      {!isLocked && (
+        <div className="flex items-center justify-between px-3 py-1.5 border-b border-border bg-muted/10 shrink-0 text-[9px] select-none">
         <div className="flex items-center gap-2">
           {/* Colors */}
           <div className="flex items-center gap-1">
@@ -290,6 +298,7 @@ export default function RrCanvasDrawingCard({
           <span>Clear Canvas</span>
         </button>
       </div>
+      )}
 
       {/* SVG Canvas Area */}
       <div className="flex-1 w-full min-h-0 relative select-none">

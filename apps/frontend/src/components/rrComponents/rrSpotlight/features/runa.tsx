@@ -132,9 +132,9 @@ export default class RunaSpotlightFeature extends BaseSpotlightFeature {
     });
 
     // 5. Unlock Encryption (if locked)
-    if (!context.isE2eeUnlocked) {
+    if (!context.isEncryptionUnlocked) {
       actions.push({
-        id: "action-unlock-e2ee",
+        id: "action-unlock-encryption",
         label: "Unlock Encryption",
         category: "Actions",
         icon: <Shield className="size-4 text-warning" />,

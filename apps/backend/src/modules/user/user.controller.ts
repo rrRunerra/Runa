@@ -41,7 +41,7 @@ import type {
   MfaStatusEntity,
   DeviceEntity,
   DeviceStatusEntity,
-  E2eeKeysEntity,
+  EncryptionKeysEntity,
   SuccessEntity,
   PrivacySettings,
   ApiKeyEntity,
@@ -231,24 +231,25 @@ export class UserController {
   }
 
   // ---------------------------------------------------------------------------
-  // E2EE Keys
+  // Encryption Keys
   // ---------------------------------------------------------------------------
 
-  @Put('me/e2ee-keys')
-  async updateE2eeKeys(
+  @Put('me/encryption-keys')
+  async updateEncryptionKeys(
     @Req() req: ExtendedRequest,
-    @Body() body: { userPublicKey: string; encryptedUserPrivateKey: string },
+    @Body() body: { userPublicKey: string; userMlKemPublicKey: string; encryptedUserPrivateKey: string },
   ): Promise<User> {
-    return this.usersService.updateE2eeKeys(
+    return this.usersService.updateEncryptionKeys(
       req.user!.id,
       body.userPublicKey,
+      body.userMlKemPublicKey,
       body.encryptedUserPrivateKey,
     );
   }
 
-  @Get('me/e2ee-keys')
-  async getE2eeKeys(@Req() req: ExtendedRequest): Promise<E2eeKeysEntity> {
-    return this.usersService.getE2eeKeys(req.user!.id);
+  @Get('me/encryption-keys')
+  async getEncryptionKeys(@Req() req: ExtendedRequest): Promise<EncryptionKeysEntity> {
+    return this.usersService.getEncryptionKeys(req.user!.id);
   }
 
   // ---------------------------------------------------------------------------
@@ -283,7 +284,7 @@ export class UserController {
   @Get(':username/public-key')
   async getPublicKeyByUsername(
     @Param('username') username: string,
-  ): Promise<{ id: string; username: string; userPublicKey: string | null }> {
+  ): Promise<{ id: string; username: string; userPublicKey: string | null; userMlKemPublicKey: string | null }> {
     const user = await this.usersService.findByUsername(username);
     if (!user) {
       throw new rrNotFoundException(`${this.moduleCode}UNF099`, {
@@ -294,6 +295,7 @@ export class UserController {
       id: user.id,
       username: user.username,
       userPublicKey: user.userPublicKey,
+      userMlKemPublicKey: user.userMlKemPublicKey,
     };
   }
 

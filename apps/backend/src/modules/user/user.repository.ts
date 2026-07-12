@@ -15,7 +15,7 @@ import type {
   DeviceEntity,
   PasskeyEntity,
   DeviceStatusEntity,
-  E2eeKeysEntity,
+  EncryptionKeysEntity,
 } from './user.entities';
 import type { PrivacySettingsDto } from './user.dto';
 
@@ -213,6 +213,7 @@ export class UserRepository {
         userAgent: true,
         lastActiveAt: true,
         identityKey: true,
+        mlKemIdentityKey: true,
         signedPreKey: true,
         encryptedMasterKey: true,
       },
@@ -295,6 +296,7 @@ export class UserRepository {
     deviceId: string,
     deviceName: string,
     identityKey: string,
+    mlKemIdentityKey?: string | null,
   ): Promise<void> {
     await this.prisma.client.notification.create({
       data: {
@@ -307,31 +309,34 @@ export class UserRepository {
           deviceId,
           deviceName,
           publicKey: identityKey,
+          mlKemPublicKey: mlKemIdentityKey || null,
         } as Prisma.JsonObject,
       },
     });
   }
 
-  // --- E2EE Keys ---
+  // --- Encryption Keys ---
 
-  async getE2eeKeys(userId: string): Promise<E2eeKeysEntity | null> {
+  async getEncryptionKeys(userId: string): Promise<EncryptionKeysEntity | null> {
     return this.prisma.client.user.findUnique({
       where: { id: userId },
       select: {
         userPublicKey: true,
+        userMlKemPublicKey: true,
         encryptedUserPrivateKey: true,
       },
     });
   }
 
-  async updateE2eeKeys(
+  async updateEncryptionKeys(
     userId: string,
     userPublicKey: string,
+    userMlKemPublicKey: string,
     encryptedUserPrivateKey: string,
   ): Promise<User> {
     return this.prisma.client.user.update({
       where: { id: userId },
-      data: { userPublicKey, encryptedUserPrivateKey },
+      data: { userPublicKey, userMlKemPublicKey, encryptedUserPrivateKey },
     });
   }
 

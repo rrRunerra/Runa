@@ -290,22 +290,67 @@ export class MovieExternal {
       select: { id: true },
     });
 
-    // Upsert actors
+    // Upsert actors/characters
     if (movie.characters && movie.characters.length > 0) {
       for (const char of movie.characters) {
         if (!char.peopleId) continue;
 
+        // 1. Try to find if this character is already linked to this movie
+        const movieChar = await this.prisma.client.aquilaMovieCharacter.findFirst({
+          where: {
+            movieId: dbMovie.id,
+            role: char.name,
+          },
+          include: { character: true },
+        });
+
+        let dbChar;
+        if (movieChar) {
+          dbChar = movieChar.character;
+          await this.prisma.client.aquilaCharacter.update({
+            where: { id: dbChar.id },
+            data: {
+              nameFirst: char.name || null,
+              image: dbChar.image || char.image || null,
+            },
+          });
+        } else {
+          // Check if character already exists globally by name to avoid duplicate stubs
+          const existingChar = await this.prisma.client.aquilaCharacter.findFirst({
+            where: {
+              nameFirst: char.name,
+            },
+          });
+
+          if (existingChar) {
+            dbChar = existingChar;
+            if (!dbChar.image && char.image) {
+              await this.prisma.client.aquilaCharacter.update({
+                where: { id: dbChar.id },
+                data: { image: char.image },
+              });
+            }
+          } else {
+            dbChar = await this.prisma.client.aquilaCharacter.create({
+              data: {
+                nameFirst: char.name || null,
+                image: char.image || null,
+              },
+            });
+          }
+        }
+
         const actor = await this.prisma.client.aquilaActor.upsert({
           where: { peopleId: char.peopleId },
           update: {
-            name: char.name || null,
+            name: char.personName || null,
             personName: char.personName || null,
             image: char.image || null,
             peopleType: char.peopleType || null,
           },
           create: {
             peopleId: char.peopleId,
-            name: char.name || null,
+            name: char.personName || null,
             personName: char.personName || null,
             image: char.image || null,
             peopleType: char.peopleType || null,
@@ -313,19 +358,24 @@ export class MovieExternal {
           select: { id: true },
         });
 
-        await this.prisma.client.aquilaMovieActor.upsert({
+        await this.prisma.client.aquilaMovieCharacter.upsert({
           where: {
-            movieId_actorId: {
+            movieId_characterId: {
               movieId: dbMovie.id,
-              actorId: actor.id,
+              characterId: dbChar.id,
             },
           },
-          update: { order: char.sort || null },
-          create: {
-            movieId: dbMovie.id,
-            actorId: actor.id,
+          update: {
             role: char.name || null,
             order: char.sort || null,
+            actorId: actor.id,
+          },
+          create: {
+            movieId: dbMovie.id,
+            characterId: dbChar.id,
+            role: char.name || null,
+            order: char.sort || null,
+            actorId: actor.id,
           },
         });
       }

@@ -34,7 +34,7 @@ const RrBrowseCardComponent = ({
 }: RrBrowseCardProps): React.JSX.Element => {
   const primaryTitle = typeof item.title === "string" ? item.title : (item.title?.english || item.title?.romaji || "");
   const secondaryTitle = typeof item.title === "string" ? (item.secondaryTitle || null) : (item.title?.english ? item.title.romaji : null);
-  const safeType = ["anime", "manga", "movies", "tv", "games", "books"].includes(type) ? type : "anime";
+  const safeType = ["anime", "manga", "movies", "tv", "games", "books", "characters", "actors"].includes(type) ? type : "anime";
   const safeId = encodeURIComponent(item.id.toString());
 
   return (

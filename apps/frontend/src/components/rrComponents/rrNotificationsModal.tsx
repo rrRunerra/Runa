@@ -50,6 +50,8 @@ import {
   encryptMasterKeyForDevice,
   exportPublicKey,
   generateKeyPair,
+  hybridEncryptMasterKeyForDevice,
+  base64UrlToBuffer,
 } from "@runa/crypto/browser";
 import { useRRCrypto } from "@/hooks/useRRCrypto";
 import { fetcher } from "@/lib/fetcher";
@@ -534,7 +536,11 @@ export function RrNotificationsModal({
     }
   };
 
-  const handleApproveDevice = async (id: string, requestPublicKey: string) => {
+  const handleApproveDevice = async (
+    id: string,
+    requestPublicKey: string,
+    requestMlKemPublicKey?: string | null
+  ) => {
     if (!session?.accessToken || !session?.user?.username) return;
     const password = passwords[id];
     if (!password) {
@@ -558,12 +564,38 @@ export function RrNotificationsModal({
         String.fromCharCode(...new Uint8Array(exportedMasterBuffer)),
       );
       const ownKeyPair = await generateKeyPair();
-      const { ciphertext, iv } = await encryptMasterKeyForDevice(
-        masterKeyMaterial,
-        requestPublicKey,
-        ownKeyPair.privateKey,
-      );
       const ownPublicKeyBase64 = await exportPublicKey(ownKeyPair.publicKey);
+
+      let encryptedMasterKeyPayload: any;
+
+      if (requestMlKemPublicKey) {
+        const targetDeviceMlKemPublicKeyBytes = new Uint8Array(
+          base64UrlToBuffer(requestMlKemPublicKey)
+        );
+        const { ciphertext, iv, mlkemCiphertext } = await hybridEncryptMasterKeyForDevice(
+          masterKeyMaterial,
+          requestPublicKey,
+          targetDeviceMlKemPublicKeyBytes,
+          ownKeyPair.privateKey
+        );
+        encryptedMasterKeyPayload = {
+          ciphertext,
+          iv,
+          mlkemCiphertext,
+          senderPublicKey: ownPublicKeyBase64,
+        };
+      } else {
+        const { ciphertext, iv } = await encryptMasterKeyForDevice(
+          masterKeyMaterial,
+          requestPublicKey,
+          ownKeyPair.privateKey,
+        );
+        encryptedMasterKeyPayload = {
+          ciphertext,
+          iv,
+          senderPublicKey: ownPublicKeyBase64,
+        };
+      }
 
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/notifications/approve`,
@@ -575,11 +607,7 @@ export function RrNotificationsModal({
           },
           body: JSON.stringify({
             notificationId: id,
-            encryptedMasterKey: JSON.stringify({
-              ciphertext,
-              iv,
-              senderPublicKey: ownPublicKeyBase64,
-            }),
+            encryptedMasterKey: JSON.stringify(encryptedMasterKeyPayload),
           }),
         },
       );
@@ -615,7 +643,11 @@ export function RrNotificationsModal({
   ) => {
     if (n.type === "INTERACTIVE") {
       if (actionType === "APPROVE") {
-        handleApproveDevice(n.id, (n.metadata as any)?.publicKey || "");
+        handleApproveDevice(
+          n.id,
+          (n.metadata as any)?.publicKey || "",
+          (n.metadata as any)?.mlKemPublicKey || null
+        );
       } else {
         handleGenericStatusUpdate(n.id, "DENIED");
       }

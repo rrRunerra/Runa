@@ -21,8 +21,8 @@ export function RrUnlockSecureStorageModal() {
     showUnlockDialog,
     setShowUnlockDialog,
     isKeysExist,
-    isE2eeUnlocked,
-    unlockE2ee,
+    isEncryptionUnlocked,
+    unlockEncryption,
   } = useRRCrypto();
 
   const [password, setPassword] = useState("");
@@ -32,8 +32,8 @@ export function RrUnlockSecureStorageModal() {
   const handleOpenChange = (open: boolean) => {
     if (loading) return;
     setShowUnlockDialog(open);
-    if (!open && !isE2eeUnlocked && session?.user?.username) {
-      localStorage.setItem(`runa-e2ee-dismissed-${session.user.username}`, "true");
+    if (!open && !isEncryptionUnlocked && session?.user?.username) {
+      localStorage.setItem(`runa-encryption-dismissed-${session.user.username}`, "true");
     }
   };
 
@@ -45,7 +45,7 @@ export function RrUnlockSecureStorageModal() {
     setError("");
 
     try {
-      await unlockE2ee(password);
+      await unlockEncryption(password);
       setPassword("");
     } catch {
       setError(
@@ -68,19 +68,19 @@ export function RrUnlockSecureStorageModal() {
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground mt-1 leading-relaxed">
             {isKeysExist
-              ? "Enter your account password to decrypt your E2E private key."
-              : "Enter your account password to initialize your E2E keys for Chats, Emails, and Files."}
+              ? "Enter your account password to decrypt your private key."
+              : "Enter your account password to initialize your encryption keys for Chats, Emails, and Files."}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 pt-4">
           <div className="flex flex-col gap-2">
-            <Label htmlFor="e2ee-password" className="text-xs font-semibold text-muted-foreground">
+            <Label htmlFor="encryption-password" className="text-xs font-semibold text-muted-foreground">
               Account Password
             </Label>
             <div className="relative">
               <Input
-                id="e2ee-password"
+                id="encryption-password"
                 type="password"
                 placeholder="Enter account password"
                 value={password}
@@ -117,7 +117,7 @@ export function RrUnlockSecureStorageModal() {
               ) : (
                 <>
                   <Lock className="size-3.5 mr-1.5" />
-                  {isKeysExist ? "Unlock Storage" : "Initialize E2EE"}
+                  {isKeysExist ? "Unlock Storage" : "Initialize Encryption"}
                 </>
               )}
             </Button>

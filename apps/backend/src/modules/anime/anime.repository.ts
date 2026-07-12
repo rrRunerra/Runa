@@ -59,6 +59,7 @@ export class AnimeRepository {
         animeCharacters: {
           include: {
             character: true,
+            voiceActor: true,
           },
         },
         animeRelations: {

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
+import "katex/dist/katex.min.css";
 import { cn } from "@/lib/utils";
 import Providers from "./providers";
 import { Toaster } from "@/components/ui/sonner";

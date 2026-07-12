@@ -21,6 +21,9 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { StatsModule } from './modules/stats/stats.module';
 import { BookmarksModule } from './modules/bookmarks/bookmarks.module';
 import { NotificationModule } from './modules/notification/notification.module';
+import { DiscoverModule } from './modules/discover/discover.module';
+import { CharacterModule } from './modules/character/character.module';
+import { ActorModule } from './modules/actor/actor.module';
 
 @Module({
   providers: [
@@ -53,6 +56,9 @@ import { NotificationModule } from './modules/notification/notification.module';
     StatsModule,
     BookmarksModule,
     NotificationModule,
+    DiscoverModule,
+    CharacterModule,
+    ActorModule,
     ThrottlerModule.forRoot({
       throttlers: [
         {

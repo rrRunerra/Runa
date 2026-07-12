@@ -16,8 +16,8 @@ export default class PegasusSpotlightFeature extends BaseSpotlightFeature {
   ): Promise<SpotlightAction[]> {
     const actions: SpotlightAction[] = [];
 
-    // 1. Check if E2EE is locked
-    if (!context.isE2eeUnlocked) {
+    // 1. Check if Encryption is locked
+    if (!context.isEncryptionUnlocked) {
       actions.push({
         id: "pegasus-unlock-warning",
         label: "Unlock Encryption to search emails",

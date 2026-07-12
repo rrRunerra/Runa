@@ -59,7 +59,7 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
   const [bookmarkIcon, setBookmarkIcon] = useState("");
 
   const { isMobile } = useSidebar();
-  const { isE2eeUnlocked, isKeysExist, lockE2ee, setShowUnlockDialog } =
+  const { isEncryptionUnlocked, isKeysExist, lockEncryption, setShowUnlockDialog } =
     useRRCrypto();
 
   useEffect(() => {
@@ -317,14 +317,14 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
                 <DropdownMenuItem
                   onSelect={(e) => {
                     e.preventDefault();
-                    if (isE2eeUnlocked) {
+                    if (isEncryptionUnlocked) {
                       setShowLockConfirmation(true);
                     } else {
                       setShowUnlockDialog(true);
                     }
                   }}
                 >
-                  {isE2eeUnlocked ? (
+                  {isEncryptionUnlocked ? (
                     <ShieldCheck className="text-emerald-400" />
                   ) : (
                     <Shield className="text-amber-500" />
@@ -333,12 +333,12 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
                   <Badge
                     className={cn(
                       "ml-auto h-4 px-1.5 border text-[8px] font-bold rounded-full flex items-center justify-center",
-                      isE2eeUnlocked
+                      isEncryptionUnlocked
                         ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                         : "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
                     )}
                   >
-                    {isE2eeUnlocked ? "Active" : "Locked"}
+                    {isEncryptionUnlocked ? "Active" : "Locked"}
                   </Badge>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
@@ -435,7 +435,7 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
               </Button>
               <Button
                 onClick={() => {
-                  lockE2ee();
+                  lockEncryption();
                   setShowLockConfirmation(false);
                 }}
                 className="h-9 px-4 bg-red-600 hover:bg-red-500 text-white border border-red-500/30 text-xs font-semibold rounded-lg shadow-lg active:scale-95 transition-all"

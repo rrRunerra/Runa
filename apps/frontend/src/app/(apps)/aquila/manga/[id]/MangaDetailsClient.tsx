@@ -462,8 +462,11 @@ export default function MangaDetailsPage(): React.JSX.Element {
 
             {/* Stats Dashboard */}
             <RrMediaStatsDashboard
-              averageScore={manga.averageScore}
-              favourites={manga.favourites}
+              localAverageScore={manga.localAverageScore}
+              localPopularity={manga.localPopularity}
+              localFavoritesCount={manga.localFavoritesCount}
+              localStatusDistribution={manga.localStatusDistribution}
+              localScoreDistribution={manga.localScoreDistribution}
             />
 
             {/* Description */}

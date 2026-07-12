@@ -47,8 +47,11 @@ export class MovieRepository {
     const result = await this.prisma.client.aquilaMovie.findUnique({
       where: { id },
       include: {
-        movieActors: {
-          include: { actor: true },
+        movieCharacters: {
+          include: {
+            character: true,
+            actor: true,
+          },
         },
       },
     });
@@ -75,11 +78,13 @@ export class MovieRepository {
       genres: result.genres,
       studios: result.studios,
       characters:
-        result.movieActors?.map((ma) => ({
-          name: ma.role || '',
-          personName: ma.actor.personName || '',
-          image: ma.actor.image || null,
-          role: ma.actor.peopleType || null,
+        result.movieCharacters?.map((mc) => ({
+          id: mc.character.id,
+          name: mc.character.nameFirst || '',
+          personName: mc.actor?.personName || '',
+          image: mc.character.image || mc.actor?.image || null,
+          role: mc.role || null,
+          actorId: mc.actor?.id || null,
         })) ?? null,
       trailers: (result.trailers ?? null) as MovieEntity['trailers'],
       originalCountry: result.originalCountry,

@@ -63,4 +63,12 @@ export interface MangaEntity {
   mangaCharacters: MangaCharacterEntity[];
   mangaStudios: MangaStudioEntity[];
   mangaMangaRelations: RelationEntity[];
+
+  localPopularity: number;
+  localFavoritesCount: number;
+  localAverageScore: number;
+  localStatusDistribution: Record<string, number>;
+  localScoreDistribution: Record<string, number>;
+  localTotalScoreSum: number;
+  localScoredCount: number;
 }

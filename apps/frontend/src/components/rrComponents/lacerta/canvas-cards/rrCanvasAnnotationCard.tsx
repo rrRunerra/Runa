@@ -7,10 +7,11 @@ import { CanvasNode } from "../CanvasEditor";
 
 interface RrCanvasAnnotationCardProps {
   node: CanvasNode;
+  isLocked?: boolean;
   onNodeUpdate: (updates: Partial<CanvasNode>) => void;
 }
 
-export default function RrCanvasAnnotationCard({ node, onNodeUpdate }: RrCanvasAnnotationCardProps) {
+export default function RrCanvasAnnotationCard({ node, isLocked = false, onNodeUpdate }: RrCanvasAnnotationCardProps) {
   return (
     <div
       className="relative w-full h-full flex flex-col p-3 border border-indigo-500/25 bg-card rounded-2xl shadow-xl hover:border-indigo-500/45 transition-colors"
@@ -28,6 +29,7 @@ export default function RrCanvasAnnotationCard({ node, onNodeUpdate }: RrCanvasA
         <TiptapNode
           content={node.text || ""}
           onChange={(html) => onNodeUpdate({ text: html })}
+          editable={!isLocked}
         />
       </div>
     </div>

@@ -325,22 +325,67 @@ export class TvExternal {
       select: { id: true },
     });
 
-    // Upsert actors
+    // Upsert actors/characters
     if (series.characters && series.characters.length > 0) {
       for (const char of series.characters) {
         if (!char.peopleId) continue;
 
+        // 1. Try to find if this character is already linked to this TV series
+        const tvChar = await this.prisma.client.aquilaTvCharacter.findFirst({
+          where: {
+            tvId: dbTv.id,
+            role: char.name,
+          },
+          include: { character: true },
+        });
+
+        let dbChar;
+        if (tvChar) {
+          dbChar = tvChar.character;
+          await this.prisma.client.aquilaCharacter.update({
+            where: { id: dbChar.id },
+            data: {
+              nameFirst: char.name || null,
+              image: dbChar.image || char.image || null,
+            },
+          });
+        } else {
+          // Check if character already exists globally by name to avoid duplicate stubs
+          const existingChar = await this.prisma.client.aquilaCharacter.findFirst({
+            where: {
+              nameFirst: char.name,
+            },
+          });
+
+          if (existingChar) {
+            dbChar = existingChar;
+            if (!dbChar.image && char.image) {
+              await this.prisma.client.aquilaCharacter.update({
+                where: { id: dbChar.id },
+                data: { image: char.image },
+              });
+            }
+          } else {
+            dbChar = await this.prisma.client.aquilaCharacter.create({
+              data: {
+                nameFirst: char.name || null,
+                image: char.image || null,
+              },
+            });
+          }
+        }
+
         const actor = await this.prisma.client.aquilaActor.upsert({
           where: { peopleId: char.peopleId },
           update: {
-            name: char.name || null,
+            name: char.personName || null,
             personName: char.personName || null,
             image: char.image || null,
             peopleType: char.peopleType || null,
           },
           create: {
             peopleId: char.peopleId,
-            name: char.name || null,
+            name: char.personName || null,
             personName: char.personName || null,
             image: char.image || null,
             peopleType: char.peopleType || null,
@@ -348,18 +393,24 @@ export class TvExternal {
           select: { id: true },
         });
 
-        await this.prisma.client.aquilaTvActor.upsert({
+        await this.prisma.client.aquilaTvCharacter.upsert({
           where: {
-            tvId_actorId: {
+            tvId_characterId: {
               tvId: dbTv.id,
-              actorId: actor.id,
+              characterId: dbChar.id,
             },
           },
-          update: {},
+          update: {
+            role: char.name || null,
+            order: char.sort || null,
+            actorId: actor.id,
+          },
           create: {
             tvId: dbTv.id,
-            actorId: actor.id,
+            characterId: dbChar.id,
             role: char.name || null,
+            order: char.sort || null,
+            actorId: actor.id,
           },
         });
       }

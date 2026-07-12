@@ -29,6 +29,7 @@ import { RrMediaEditDialog } from "@/components/rrComponents/aquila/rrMediaEditD
 import RrLapplandImageNotFound from "@/components/rrComponents/rrImages/rrLapplandImageNotFound";
 import { RrMediaRefreshButton } from "@/components/rrComponents/aquila/rrMediaRefreshButton";
 import { BookEntity } from "@/types/book.entities";
+import { RrMediaStatsDashboard } from "@/components/rrComponents/aquila/details/rrMediaStatsDashboard";
 
 interface ListEntry {
   id: number | string;
@@ -489,6 +490,15 @@ export default function BookDetailsPage(): React.JSX.Element {
                 </Badge>
               )}
             </motion.div>
+
+            {/* Stats Dashboard */}
+            <RrMediaStatsDashboard
+              localAverageScore={book.localAverageScore}
+              localPopularity={book.localPopularity}
+              localFavoritesCount={book.localFavoritesCount}
+              localStatusDistribution={book.localStatusDistribution}
+              localScoreDistribution={book.localScoreDistribution}
+            />
 
             {/* Description */}
             <motion.div

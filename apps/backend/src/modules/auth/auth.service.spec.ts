@@ -28,7 +28,7 @@ jest.mock('@runa/crypto/node', () => ({
     if (Buffer.isBuffer(data)) return data;
     return 'mock-encrypted-message';
   }),
-  wrapKey: jest.fn().mockReturnValue('mock-encrypted-key-payload'),
+  wrapKey: jest.fn().mockResolvedValue('mock-encrypted-key-payload'),
 }));
 
 describe('AuthService', () => {
@@ -215,6 +215,7 @@ describe('AuthService', () => {
       );
       expect(mailService.sendMail).toHaveBeenCalledWith(
         'test@example.com',
+        expect.any(String),
         expect.any(String),
         expect.any(String),
       );

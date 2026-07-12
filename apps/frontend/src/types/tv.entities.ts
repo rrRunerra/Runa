@@ -10,10 +10,12 @@ export interface TvSearchEntity {
 }
 
 export interface TvCharacterEntity {
+  id: number;
   name: string;
   personName: string;
   image: string | null;
   role: string | null;
+  actorId: number | null;
 }
 
 export interface TvTrailerEntity {
@@ -66,4 +68,10 @@ export interface TvEntity {
   contentRating: string | null;
   locked: boolean;
   updatedAt: Date;
+
+  localPopularity: number;
+  localFavoritesCount: number;
+  localAverageScore: number;
+  localStatusDistribution: Record<string, number>;
+  localScoreDistribution: Record<string, number>;
 }

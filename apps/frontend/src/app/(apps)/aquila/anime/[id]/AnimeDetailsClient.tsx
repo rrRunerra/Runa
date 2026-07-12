@@ -148,6 +148,12 @@ export default function AnimeDetailsPage(): React.JSX.Element {
           },
           nameAlternative: char.nameAlternative ?? [],
           nameAlternativeSpoiler: char.nameAlternativeSpoiler ?? [],
+          voiceActor: ac.voiceActor ? {
+            id: ac.voiceActor.id,
+            name: ac.voiceActor.name || ac.voiceActor.personName || "Unknown Actor",
+            image: ac.voiceActor.image ?? "",
+            role: ac.voiceActor.peopleType ?? "Voice Actor",
+          } : null,
         };
       });
   }, [anime]);
@@ -480,8 +486,11 @@ export default function AnimeDetailsPage(): React.JSX.Element {
 
             {/* Stats Dashboard */}
             <RrMediaStatsDashboard
-              averageScore={anime.averageScore}
-              favourites={anime.favourites}
+              localAverageScore={anime.localAverageScore}
+              localPopularity={anime.localPopularity}
+              localFavoritesCount={anime.localFavoritesCount}
+              localStatusDistribution={anime.localStatusDistribution}
+              localScoreDistribution={anime.localScoreDistribution}
             />
 
             {/* Description */}

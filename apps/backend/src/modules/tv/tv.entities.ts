@@ -10,10 +10,12 @@ export interface TvSearchEntity {
 }
 
 export interface TvCharacterEntity {
+  id: number;
   name: string;
   personName: string;
   image: string | null;
   role: string | null;
+  actorId: number | null;
 }
 
 export interface TvTrailerEntity {
