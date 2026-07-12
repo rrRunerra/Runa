@@ -128,6 +128,10 @@ export class DiscoverRepository {
         return this.discoverGame(query, skip, limit);
       } else if (type === 'book') {
         return this.discoverBook(query, skip, limit);
+      } else if (type === 'character') {
+        return this.discoverCharacter(query, skip, limit);
+      } else if (type === 'actor') {
+        return this.discoverActor(query, skip, limit);
       }
       throw new rrError(`${this.moduleCode}IMT001`, {
         message: 'Invalid media type for discovery',
@@ -821,6 +825,86 @@ export class DiscoverRepository {
         message: 'Failed to query calendar data from database',
       });
     }
+  }
+
+  private async discoverCharacter(
+    query: DiscoverQueryDto,
+    skip: number,
+    limit: number,
+  ): Promise<{ items: DiscoverItemEntity[]; totalCount: number }> {
+    const { search } = query;
+    const where: Prisma.AquilaCharacterWhereInput = {};
+
+    if (search) {
+      const searchStr = search.trim();
+      where.OR = [
+        { nameFirst: { contains: searchStr, mode: 'insensitive' } },
+        { nameMiddle: { contains: searchStr, mode: 'insensitive' } },
+        { nameLast: { contains: searchStr, mode: 'insensitive' } },
+        { nameNative: { contains: searchStr, mode: 'insensitive' } },
+      ];
+    }
+
+    const [data, totalCount] = await Promise.all([
+      this.prisma.client.aquilaCharacter.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { nameFirst: 'asc' },
+      }),
+      this.prisma.client.aquilaCharacter.count({ where }),
+    ]);
+
+    const items = data.map((item) => ({
+      id: item.id,
+      title: [item.nameFirst, item.nameMiddle, item.nameLast].filter(Boolean).join(' ') || item.nameNative || 'Unknown Character',
+      secondaryTitle: item.nameNative || null,
+      coverImage: item.image || null,
+      format: item.gender || 'Character',
+      status: item.age || null,
+      isAdult: false,
+    }));
+
+    return { items, totalCount };
+  }
+
+  private async discoverActor(
+    query: DiscoverQueryDto,
+    skip: number,
+    limit: number,
+  ): Promise<{ items: DiscoverItemEntity[]; totalCount: number }> {
+    const { search } = query;
+    const where: Prisma.AquilaActorWhereInput = {};
+
+    if (search) {
+      const searchStr = search.trim();
+      where.OR = [
+        { name: { contains: searchStr, mode: 'insensitive' } },
+        { personName: { contains: searchStr, mode: 'insensitive' } },
+      ];
+    }
+
+    const [data, totalCount] = await Promise.all([
+      this.prisma.client.aquilaActor.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { name: 'asc' },
+      }),
+      this.prisma.client.aquilaActor.count({ where }),
+    ]);
+
+    const items = data.map((item) => ({
+      id: item.id,
+      title: item.name || item.personName || 'Unknown Actor',
+      secondaryTitle: item.personName || null,
+      coverImage: item.image || null,
+      format: item.peopleType || 'Actor',
+      status: null,
+      isAdult: false,
+    }));
+
+    return { items, totalCount };
   }
 }
 

@@ -346,23 +346,28 @@ model AquilaCharacter {
 
     animeCharacters AquilaAnimeCharacter[]
     mangaCharacters AquilaMangaCharacter[]
+    movieCharacters AquilaMovieCharacter[]
+    tvCharacters    AquilaTvCharacter[]
 
     @@index([anilistId])
 }
 
 model AquilaAnimeCharacter {
-    animeId     Int
-    characterId Int
+    animeId      Int
+    characterId  Int
+    voiceActorId Int?
 
     role  String?
     order Int?
 
-    anime     AquilaAnime     @relation(fields: [animeId], references: [id], onDelete: Cascade)
-    character AquilaCharacter @relation(fields: [characterId], references: [id], onDelete: Cascade)
+    anime      AquilaAnime     @relation(fields: [animeId], references: [id], onDelete: Cascade)
+    character  AquilaCharacter @relation(fields: [characterId], references: [id], onDelete: Cascade)
+    voiceActor AquilaActor?    @relation(fields: [voiceActorId], references: [id], onDelete: SetNull)
 
     @@id([animeId, characterId])
     @@index([animeId])
     @@index([characterId])
+    @@index([voiceActorId])
 }
 
 model AquilaStudio {
@@ -632,7 +637,7 @@ model AquilaMovie {
     createdAt            DateTime              @default(now())
     updatedAt            DateTime              @updatedAt
     aquilaMovieUserLists AquilaMovieUserList[]
-    movieActors          AquilaMovieActor[]
+    movieCharacters      AquilaMovieCharacter[]
 
     @@index([tvdbId])
     @@index([tmdbId])
@@ -675,54 +680,63 @@ model AquilaTv {
     createdAt       DateTime           @default(now())
     updatedAt       DateTime           @updatedAt
     aquilaUserLists AquilaTvUserList[]
-    tvActors         AquilaTvActor[]
+    tvCharacters    AquilaTvCharacter[]
 
     @@index([tvdbId])
     @@index([tmdbId])
 }
 
 model AquilaActor {
-    id        Int  @id @default(autoincrement())
-    peopleId  Int? @unique
+    id             Int  @id @default(autoincrement())
+    peopleId       Int? @unique
+    anilistStaffId Int? @unique
 
     name       String? @db.Text
     personName String? @db.Text
     image      String? @db.Text
     peopleType String?
 
-    movieActors AquilaMovieActor[]
-    tvActors    AquilaTvActor[]
+    movieCharacters AquilaMovieCharacter[]
+    tvCharacters    AquilaTvCharacter[]
+    animeCharacters AquilaAnimeCharacter[]
 
     @@index([peopleId])
+    @@index([anilistStaffId])
 }
 
-model AquilaMovieActor {
-    movieId Int
-    actorId Int
+model AquilaMovieCharacter {
+    movieId     Int
+    characterId Int
+    actorId     Int?
 
     role  String?
     order Int?
 
-    movie AquilaMovie @relation(fields: [movieId], references: [id], onDelete: Cascade)
-    actor AquilaActor @relation(fields: [actorId], references: [id], onDelete: Cascade)
+    movie     AquilaMovie     @relation(fields: [movieId], references: [id], onDelete: Cascade)
+    character AquilaCharacter @relation(fields: [characterId], references: [id], onDelete: Cascade)
+    actor     AquilaActor?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
 
-    @@id([movieId, actorId])
+    @@id([movieId, characterId])
     @@index([movieId])
+    @@index([characterId])
     @@index([actorId])
 }
 
-model AquilaTvActor {
+model AquilaTvCharacter {
     tvId    Int
-    actorId Int
+    characterId Int
+    actorId     Int?
 
     role  String?
     order Int?
 
     tv    AquilaTv    @relation(fields: [tvId], references: [id], onDelete: Cascade)
-    actor AquilaActor @relation(fields: [actorId], references: [id], onDelete: Cascade)
+    character AquilaCharacter @relation(fields: [characterId], references: [id], onDelete: Cascade)
+    actor AquilaActor?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
 
-    @@id([tvId, actorId])
+    @@id([tvId, characterId])
     @@index([tvId])
+    @@index([characterId])
     @@index([actorId])
 }
 

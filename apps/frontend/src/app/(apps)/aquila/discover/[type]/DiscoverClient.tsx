@@ -29,15 +29,6 @@ interface DiscoverClientPageProps {
   type: string;
 }
 
-const categories = [
-  { id: "anime", label: "Anime" },
-  { id: "manga", label: "Manga" },
-  { id: "movies", label: "Movies" },
-  { id: "tv", label: "TV Shows" },
-  { id: "games", label: "Games" },
-  { id: "books", label: "Books" },
-];
-
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
   show: {
@@ -271,7 +262,7 @@ export default function DiscoverClientPage({
             <div className="relative w-full sm:w-[220px]">
               <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground/70" />
               <Input
-                placeholder="Search titles..."
+                placeholder={["characters", "actors"].includes(type) ? "Search names..." : "Search titles..."}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9 h-10 bg-background/50 border-border/60 focus-visible:ring-primary rounded-xl"
@@ -288,22 +279,24 @@ export default function DiscoverClientPage({
             </div>
 
             {/* Year dynamic dropdown */}
-            <Select value={year} onValueChange={handleYearChange}>
-              <SelectTrigger className="h-10 bg-background/50 border-border/60 rounded-xl w-full sm:w-[130px]">
-                <SelectValue placeholder="Year (All)" />
-              </SelectTrigger>
-              <SelectContent className="max-h-60" position="popper">
-                <SelectItem value="all">Year (All)</SelectItem>
-                {meta?.years?.map((y: number) => (
-                  <SelectItem key={y} value={y.toString()}>
-                    {y}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {meta?.years && meta.years.length > 0 && !["characters", "actors"].includes(type) && (
+              <Select value={year} onValueChange={handleYearChange}>
+                <SelectTrigger className="h-10 bg-background/50 border-border/60 rounded-xl w-full sm:w-[130px]">
+                  <SelectValue placeholder="Year (All)" />
+                </SelectTrigger>
+                <SelectContent className="max-h-60" position="popper">
+                  <SelectItem value="all">Year (All)</SelectItem>
+                  {meta.years.map((y: number) => (
+                    <SelectItem key={y} value={y.toString()}>
+                      {y}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
 
             {/* Format dynamic dropdown (only anime/manga) */}
-            {meta?.formats && meta.formats.length > 0 && (
+            {meta?.formats && meta.formats.length > 0 && !["characters", "actors"].includes(type) && (
               <Select value={format} onValueChange={handleFormatChange}>
                 <SelectTrigger className="h-10 bg-background/50 border-border/60 rounded-xl w-full sm:w-[140px]">
                   <SelectValue placeholder="Format (All)" />
@@ -320,7 +313,7 @@ export default function DiscoverClientPage({
             )}
 
             {/* Status dynamic dropdown (only media with statuses) */}
-            {meta?.statuses && meta.statuses.length > 0 && (
+            {meta?.statuses && meta.statuses.length > 0 && !["characters", "actors"].includes(type) && (
               <Select value={status} onValueChange={handleStatusChange}>
                 <SelectTrigger className="h-10 bg-background/50 border-border/60 rounded-xl w-full sm:w-[140px]">
                   <SelectValue placeholder="Status (All)" />
@@ -340,32 +333,36 @@ export default function DiscoverClientPage({
             )}
 
             {/* Added date filter dropdown */}
-            <Select value={addedWithin} onValueChange={handleAddedWithinChange}>
-              <SelectTrigger className="h-10 bg-background/50 border-border/60 rounded-xl w-full sm:w-[160px]">
-                <SelectValue placeholder="Added Time" />
-              </SelectTrigger>
-              <SelectContent className="max-h-60" position="popper">
-                <SelectItem value="all">Added (Anytime)</SelectItem>
-                <SelectItem value="1">Added 1 day ago</SelectItem>
-                <SelectItem value="7">Added 7 days ago</SelectItem>
-                <SelectItem value="30">Added 30 days ago</SelectItem>
-              </SelectContent>
-            </Select>
+            {!["characters", "actors"].includes(type) && (
+              <Select value={addedWithin} onValueChange={handleAddedWithinChange}>
+                <SelectTrigger className="h-10 bg-background/50 border-border/60 rounded-xl w-full sm:w-[160px]">
+                  <SelectValue placeholder="Added Time" />
+                </SelectTrigger>
+                <SelectContent className="max-h-60" position="popper">
+                  <SelectItem value="all">Added (Anytime)</SelectItem>
+                  <SelectItem value="1">Added 1 day ago</SelectItem>
+                  <SelectItem value="7">Added 7 days ago</SelectItem>
+                  <SelectItem value="30">Added 30 days ago</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
 
             {/* Server-side sorting dropdown */}
-            <Select value={sort} onValueChange={handleSortChange}>
-              <SelectTrigger className="h-10 bg-background/50 border-border/60 rounded-xl w-full sm:w-[160px]">
-                <SelectValue placeholder="Sort By" />
-              </SelectTrigger>
-              <SelectContent className="max-h-60" position="popper">
-                <SelectItem value="latest">Latest Release</SelectItem>
-                <SelectItem value="oldest">Oldest Release</SelectItem>
-                {type !== "movies" && type !== "tv" && (
-                  <SelectItem value="score">Highest Score</SelectItem>
-                )}
-                <SelectItem value="alphabetical">Alphabetical (A-Z)</SelectItem>
-              </SelectContent>
-            </Select>
+            {!["characters", "actors"].includes(type) && (
+              <Select value={sort} onValueChange={handleSortChange}>
+                <SelectTrigger className="h-10 bg-background/50 border-border/60 rounded-xl w-full sm:w-[160px]">
+                  <SelectValue placeholder="Sort By" />
+                </SelectTrigger>
+                <SelectContent className="max-h-60" position="popper">
+                  <SelectItem value="latest">Latest Release</SelectItem>
+                  <SelectItem value="oldest">Oldest Release</SelectItem>
+                  {type !== "movies" && type !== "tv" && (
+                    <SelectItem value="score">Highest Score</SelectItem>
+                  )}
+                  <SelectItem value="alphabetical">Alphabetical (A-Z)</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
 
             {hasActiveFilters && (
               <Button

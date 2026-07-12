@@ -41,7 +41,11 @@ export default function BrowsePage(): React.JSX.Element {
         ? "game"
         : type === "books"
           ? "book"
-          : type;
+          : type === "characters"
+            ? "character"
+            : type === "actors"
+              ? "actor"
+              : type;
 
   const {
     data: rawData,
@@ -168,7 +172,7 @@ export default function BrowsePage(): React.JSX.Element {
 
   const handleQueryChange = (val: string): void => {
     const match = val.match(
-      /^@(anime|manga|movies|movie|tv show|tv|games|game|books|book)\s+(.*)$/i,
+      /^@(anime|manga|movies|movie|tv show|tv|games|game|books|book|characters|character|actors|actor)\s+(.*)$/i,
     );
 
     if (match) {
@@ -180,6 +184,8 @@ export default function BrowsePage(): React.JSX.Element {
       if (rawType === "tv show") targetType = "tv";
       if (rawType === "game") targetType = "games";
       if (rawType === "book") targetType = "books";
+      if (rawType === "character") targetType = "characters";
+      if (rawType === "actor") targetType = "actors";
 
       setType(targetType);
       setQuery(remaining);
@@ -279,6 +285,8 @@ export default function BrowsePage(): React.JSX.Element {
     { id: "tv", label: "TV Show" },
     { id: "games", label: "Games" },
     { id: "books", label: "Books" },
+    { id: "characters", label: "Characters" },
+    { id: "actors", label: "Actors" },
   ];
 
   return (
@@ -300,7 +308,7 @@ export default function BrowsePage(): React.JSX.Element {
           </div>
 
           {/* Animated Glassmorphic Category Selector Pills */}
-          <div className="flex p-1 bg-muted/40 backdrop-blur-xs border border-border/30 rounded-2xl w-full md:w-auto self-stretch md:self-center shadow-2xs">
+          <div className="flex p-1 bg-muted/40 backdrop-blur-xs border border-border/30 rounded-2xl w-full md:w-auto flex-wrap gap-1 shadow-2xs">
             {categories.map((cat) => {
               const isActive = type === cat.id;
               return (
@@ -309,7 +317,7 @@ export default function BrowsePage(): React.JSX.Element {
                   type="button"
                   onClick={() => handleTypeChange(cat.id)}
                   className={cn(
-                    "relative px-5 py-2 rounded-xl text-sm font-semibold transition-colors duration-200 select-none cursor-pointer flex-1 md:flex-none text-center outline-hidden",
+                    "relative px-4 py-1.5 rounded-xl text-xs font-semibold transition-colors duration-200 select-none cursor-pointer flex-1 md:flex-none text-center outline-hidden",
                     isActive
                       ? "text-primary-foreground"
                       : "text-muted-foreground hover:text-foreground",
@@ -338,6 +346,11 @@ export default function BrowsePage(): React.JSX.Element {
           query={query}
           onChange={handleQueryChange}
           onSubmit={handleSearchSubmit}
+          placeholder={
+            ["characters", "actors"].includes(type)
+              ? `Search names... (try @anime, @manga to switch type)`
+              : `Search titles... (try @anime, @manga to switch type)`
+          }
         />
 
         {/* Animated Search History badges */}

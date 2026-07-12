@@ -32,6 +32,7 @@ import { MovieEntity } from "@/types/movie.entities";
 import { RrMediaInfoRow } from "@/components/rrComponents/aquila/details/rrMediaInfoRow";
 import { RrMediaDescription } from "@/components/rrComponents/aquila/details/rrMediaDescription";
 import { RrMediaGenres } from "@/components/rrComponents/aquila/details/rrMediaGenres";
+import { RrMediaCharacters } from "@/components/rrComponents/aquila/details/rrMediaCharacters";
 
 interface ListEntry {
   id: number | string;
@@ -119,6 +120,23 @@ export default function MovieDetailsPage(): React.JSX.Element {
       return null;
     }
   }, [movie?.releaseDate]);
+
+  const characters = useMemo(() => {
+    if (!movie?.characters) return [];
+    return movie.characters.map((mc) => ({
+      id: mc.id,
+      name: mc.name || "Unknown Character",
+      native: "",
+      role: mc.role || "Actor",
+      image: mc.image || "",
+      voiceActor: mc.actorId ? {
+        id: mc.actorId,
+        name: mc.personName || "Unknown Actor",
+        image: mc.image || "",
+        role: "Actor",
+      } : null,
+    }));
+  }, [movie]);
 
   useEffect((): void => {
     if (!movie) return;
@@ -540,69 +558,9 @@ export default function MovieDetailsPage(): React.JSX.Element {
             {/* Genres */}
             <RrMediaGenres genres={movie.genres} />
 
-            {/* Cast */}
-            {movie.characters && movie.characters.length > 0 && (
-              <motion.div variants={itemVariants} className="space-y-3">
-                <h3 className="text-base font-bold text-foreground">Cast</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {(showAllCharacters
-                    ? movie.characters
-                    : movie.characters.slice(0, 12)
-                  ).map((char, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between bg-card/45 border border-border/30 backdrop-blur-md p-3 rounded-xl overflow-hidden hover:border-border/50 transition-all group"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        {char.image && char.image.length > 0 ? (
-                          <div className="relative size-12 rounded-lg overflow-hidden shrink-0 bg-muted">
-                            <Image
-                              src={char.image}
-                              alt={char.name}
-                              fill
-                              sizes="48px"
-                              className="object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                          </div>
-                        ) : (
-                          <div className="size-12 rounded-lg bg-muted shrink-0 flex items-center justify-center text-muted-foreground text-xs">
-                            ?
-                          </div>
-                        )}
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold truncate text-foreground">
-                            {char.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground capitalize truncate">
-                            {char.role?.toLowerCase()}
-                          </p>
-                        </div>
-                      </div>
-                      {char.personName && (
-                        <span className="text-xs text-muted-foreground truncate ml-3 shrink-0">
-                          {char.personName}
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                {movie.characters.length > 12 && (
-                  <div className="flex justify-center mt-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(): void =>
-                        setShowAllCharacters(!showAllCharacters)
-                      }
-                      className="rounded-xl cursor-pointer"
-                    >
-                      {showAllCharacters
-                        ? "Show Less"
-                        : `Show All (${movie.characters.length})`}
-                    </Button>
-                  </div>
-                )}
-              </motion.div>
+            {/* Characters */}
+            {characters && characters.length > 0 && (
+              <RrMediaCharacters characters={characters} />
             )}
           </div>
         </motion.div>

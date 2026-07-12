@@ -13,6 +13,8 @@ import {
   BookA,
   Compass,
   Calendar,
+  User,
+  Users,
 } from "lucide-react";
 
 import type { NavbarConfig } from "@/types/NavbarConfig";
@@ -100,6 +102,20 @@ export const getAquilaSidebarConfig = (
             subtitle: "Books",
             icon: <BookA className="h-3.5 w-3.5" />,
           },
+          {
+            label: "Characters",
+            href: "/aquila/discover/characters",
+            preventRedirect: false,
+            subtitle: "Characters",
+            icon: <User className="h-3.5 w-3.5" />,
+          },
+          {
+            label: "Actors",
+            href: "/aquila/discover/actors",
+            preventRedirect: false,
+            subtitle: "Actors",
+            icon: <Users className="h-3.5 w-3.5" />,
+          },
         ],
       },
     ],
@@ -176,6 +192,20 @@ export const getAquilaSidebarConfig = (
             preventRedirect: false,
             subtitle: "Books",
             icon: <BookA className="h-3.5 w-3.5" />,
+          },
+          {
+            label: "Characters",
+            href: "/aquila/discover/characters",
+            preventRedirect: false,
+            subtitle: "Characters",
+            icon: <User className="h-3.5 w-3.5" />,
+          },
+          {
+            label: "Actors",
+            href: "/aquila/discover/actors",
+            preventRedirect: false,
+            subtitle: "Actors",
+            icon: <Users className="h-3.5 w-3.5" />,
           },
         ],
       },

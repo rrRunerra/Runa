@@ -148,6 +148,12 @@ export default function AnimeDetailsPage(): React.JSX.Element {
           },
           nameAlternative: char.nameAlternative ?? [],
           nameAlternativeSpoiler: char.nameAlternativeSpoiler ?? [],
+          voiceActor: ac.voiceActor ? {
+            id: ac.voiceActor.id,
+            name: ac.voiceActor.name || ac.voiceActor.personName || "Unknown Actor",
+            image: ac.voiceActor.image ?? "",
+            role: ac.voiceActor.peopleType ?? "Voice Actor",
+          } : null,
         };
       });
   }, [anime]);

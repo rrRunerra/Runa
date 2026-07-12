@@ -10,10 +10,12 @@ export interface MovieSearchEntity {
 }
 
 export interface MovieCharacterEntity {
+  id: number;
   name: string;
   personName: string;
   image: string | null;
   role: string | null;
+  actorId: number | null;
 }
 
 export interface MovieStudioEntity {

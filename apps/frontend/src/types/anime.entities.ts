@@ -46,12 +46,24 @@ export interface StudioEntity {
   siteUrl: string | null;
 }
 
+export interface ActorEntity {
+  id: number;
+  peopleId: number | null;
+  anilistStaffId: number | null;
+  name: string | null;
+  personName: string | null;
+  image: string | null;
+  peopleType: string | null;
+}
+
 export interface AnimeCharacterEntity {
   animeId: number;
   characterId: number;
+  voiceActorId: number | null;
   role: string | null;
   order: number | null;
   character?: CharacterEntity;
+  voiceActor?: ActorEntity | null;
 }
 
 export interface AnimeStudioEntity {

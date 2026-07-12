@@ -128,6 +128,8 @@ export class DiscoverService {
     if (typeLower === 'movies') return 'movie';
     if (typeLower === 'games') return 'game';
     if (typeLower === 'books') return 'book';
+    if (typeLower === 'characters') return 'character';
+    if (typeLower === 'actors') return 'actor';
     return typeLower;
   }
 }

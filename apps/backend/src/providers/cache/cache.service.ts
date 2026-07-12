@@ -60,6 +60,16 @@ export class CacheService implements OnModuleDestroy {
     bookDetail: (id: string) => `book:${id}`,
     bookRefreshCooldown: (id: string) => `cooldown:refresh:book:${id}`,
 
+    // Character
+    characterSearch: (name: string) =>
+      `character-search:${name.trim().toLowerCase().replaceAll(' ', '')}`,
+    characterDetail: (id: number) => `character:${id}`,
+
+    // Actor
+    actorSearch: (name: string) =>
+      `actor-search:${name.trim().toLowerCase().replaceAll(' ', '')}`,
+    actorDetail: (id: number) => `actor:${id}`,
+
     // Email
     emailRefreshCooldown: (id: string) =>
       `cooldown:refresh:email-account:${id}`,

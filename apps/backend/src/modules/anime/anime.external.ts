@@ -545,6 +545,27 @@ export class AnimeExternal {
       for (const edge of item.characters.edges) {
         const character = await this.upsertCharacter(edge.node);
 
+        let voiceActorDb: any = null;
+        if (edge.voiceActors && edge.voiceActors.length > 0) {
+          const va = edge.voiceActors[0];
+          voiceActorDb = await this.prisma.client.aquilaActor.upsert({
+            where: { anilistStaffId: va.id },
+            update: {
+              name: va.name.full,
+              personName: va.name.full,
+              image: va.image?.large,
+              peopleType: 'Voice Actor',
+            },
+            create: {
+              anilistStaffId: va.id,
+              name: va.name.full,
+              personName: va.name.full,
+              image: va.image?.large,
+              peopleType: 'Voice Actor',
+            },
+          });
+        }
+
         await this.prisma.client.aquilaAnimeCharacter.upsert({
           where: {
             animeId_characterId: {
@@ -552,12 +573,17 @@ export class AnimeExternal {
               characterId: character.id,
             },
           },
-          update: { role: edge.role, order: 0 },
+          update: {
+            role: edge.role,
+            order: 0,
+            voiceActorId: voiceActorDb ? voiceActorDb.id : null,
+          },
           create: {
             animeId: anime.id,
             characterId: character.id,
             role: edge.role,
             order: 0,
+            voiceActorId: voiceActorDb ? voiceActorDb.id : null,
           },
         });
       }

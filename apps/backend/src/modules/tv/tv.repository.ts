@@ -47,8 +47,11 @@ export class TvRepository {
     const result = await this.prisma.client.aquilaTv.findUnique({
       where: { id },
       include: {
-        tvActors: {
-          include: { actor: true },
+        tvCharacters: {
+          include: {
+            character: true,
+            actor: true,
+          },
         },
       },
     });
@@ -73,11 +76,13 @@ export class TvRepository {
       genres: result.genres,
       studios: result.studios,
       characters:
-        result.tvActors?.map((ta) => ({
-          name: ta.role || '',
-          personName: ta.actor.personName || '',
-          image: ta.actor.image || null,
-          role: ta.actor.peopleType || null,
+        result.tvCharacters?.map((tc) => ({
+          id: tc.character.id,
+          name: tc.character.nameFirst || '',
+          personName: tc.actor?.personName || '',
+          image: tc.character.image || tc.actor?.image || null,
+          role: tc.role || null,
+          actorId: tc.actor?.id || null,
         })) ?? null,
       seasons: (result.seasons ?? null) as TvEntity['seasons'],
       trailers: (result.trailers ?? null) as TvEntity['trailers'],
