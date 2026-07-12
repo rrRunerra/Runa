@@ -5,8 +5,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import useSWR from "swr";
+import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
-import { ArrowLeft, User, Film, Tv, BookOpen, Calendar, HelpCircle } from "lucide-react";
+import { ArrowLeft, User, Film, Tv, BookOpen, Calendar, HelpCircle, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { fetcher } from "@/lib/fetcher";
@@ -73,11 +74,50 @@ export default function CharacterPage() {
   const params = useParams();
   const router = useRouter();
   const id = params?.id as string;
+  const { data: session } = useSession();
 
   const { data: char, error, isLoading } = useSWR<CharacterDetail>(
     id ? `${process.env.NEXT_PUBLIC_API_URL}/character/${id}` : null,
     fetcher
   );
+
+  const { data: favStatus, mutate: mutateFav } = useSWR<{ favorited: boolean }>(
+    id && session?.accessToken
+      ? [`${process.env.NEXT_PUBLIC_API_URL}/favorites/CHARACTER/${id}/status`, session.accessToken]
+      : null,
+    fetcher
+  );
+
+  const toggleFavorite = async () => {
+    if (!session?.accessToken) return;
+    const isFavorited = favStatus?.favorited;
+
+    try {
+      if (isFavorited) {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/favorites/CHARACTER/${id}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+        });
+      } else {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}/favorites`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+          body: JSON.stringify({
+            type: "CHARACTER",
+            targetId: id,
+          }),
+        });
+      }
+      mutateFav({ favorited: !isFavorited });
+    } catch (e) {
+      console.error("Failed to toggle favorite", e);
+    }
+  };
 
   const fullName = useMemo(() => {
     if (!char) return "Character Details";
@@ -196,7 +236,25 @@ export default function CharacterPage() {
           <div className="md:col-span-3 space-y-6">
             {/* Header Details */}
             <div className="space-y-2">
-              <h1 className="text-3xl font-extrabold text-foreground tracking-tight">{fullName}</h1>
+              <div className="flex items-center justify-between gap-4">
+                <h1 className="text-3xl font-extrabold text-foreground tracking-tight">{fullName}</h1>
+                {session && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={toggleFavorite}
+                    className="rounded-xl border-border/40 hover:bg-muted"
+                  >
+                    <Heart
+                      className={`size-5 transition-colors ${
+                        favStatus?.favorited
+                          ? "fill-primary text-primary"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    />
+                  </Button>
+                )}
+              </div>
               {char.nameAlternativeSpoiler && char.nameAlternativeSpoiler.length > 0 && (
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-xs font-semibold text-muted-foreground">Spoiler Aliases:</span>

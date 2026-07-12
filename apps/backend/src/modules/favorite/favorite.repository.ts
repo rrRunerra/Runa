@@ -104,6 +104,26 @@ export class FavoriteRepository {
           where: { id: mediaId },
           select: { username: true, displayName: true, avatarUrl: true },
         });
+      case FavoriteType.CHARACTER:
+        return this.prisma.client.aquilaCharacter.findUnique({
+          where: { id: num },
+          select: {
+            nameFirst: true,
+            nameMiddle: true,
+            nameLast: true,
+            nameNative: true,
+            image: true,
+          },
+        });
+      case FavoriteType.STAFF:
+        return this.prisma.client.aquilaActor.findUnique({
+          where: { id: num },
+          select: {
+            name: true,
+            personName: true,
+            image: true,
+          },
+        });
       default:
         return null;
     }

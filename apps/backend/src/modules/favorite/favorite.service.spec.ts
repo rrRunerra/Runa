@@ -12,10 +12,19 @@ jest.mock('@runa/database', () => ({
     GAME: 'GAME',
     BOOK: 'BOOK',
     USER: 'USER',
+    CHARACTER: 'CHARACTER',
+    STAFF: 'STAFF',
+  },
+  prisma: {
+    $extends: jest.fn().mockReturnValue({}),
+  },
+  Prisma: {
+    getExtensionContext: jest.fn(),
   },
 }));
 
 import { FavoriteType } from '@runa/database';
+import { MediaStatsService } from '../list/media-stats.service';
 
 const mockRepo = {
   findUnique: jest.fn(),
@@ -24,6 +33,10 @@ const mockRepo = {
   findManyByUserId: jest.fn(),
   findUserByUsername: jest.fn(),
   resolveMedia: jest.fn(),
+};
+
+const mockMediaStatsService = {
+  recalculateFavorites: jest.fn(),
 };
 
 describe('FavoriteService', () => {
@@ -36,6 +49,7 @@ describe('FavoriteService', () => {
       providers: [
         FavoriteService,
         { provide: FavoriteRepository, useValue: mockRepo },
+        { provide: MediaStatsService, useValue: mockMediaStatsService },
       ],
     }).compile();
 
@@ -218,6 +232,50 @@ describe('FavoriteService', () => {
         targetId: 'other-user-id',
         title: 'Other User',
         image: 'http://avatar.test',
+      });
+    });
+
+    it('should handle CHARACTER type favorites', async () => {
+      mockRepo.findUserByUsername.mockResolvedValue({ id: 'u1' });
+      const createdAt = new Date();
+      mockRepo.findManyByUserId.mockResolvedValue([
+        { id: 'fav-3', userId: 'u1', type: 'CHARACTER', mediaId: '200', createdAt },
+      ]);
+      mockRepo.resolveMedia.mockResolvedValue({
+        nameFirst: 'Lappland',
+        nameMiddle: '',
+        nameLast: 'Saluzzo',
+        nameNative: '拉普兰德',
+        image: 'http://lappland.img',
+      });
+
+      const result = await service.getFavoritesByUsername('testuser');
+
+      expect(result[0]).toMatchObject({
+        targetId: '200',
+        title: 'Lappland Saluzzo',
+        image: 'http://lappland.img',
+      });
+    });
+
+    it('should handle STAFF type favorites', async () => {
+      mockRepo.findUserByUsername.mockResolvedValue({ id: 'u1' });
+      const createdAt = new Date();
+      mockRepo.findManyByUserId.mockResolvedValue([
+        { id: 'fav-4', userId: 'u1', type: 'STAFF', mediaId: '300', createdAt },
+      ]);
+      mockRepo.resolveMedia.mockResolvedValue({
+        name: 'Aoi Yuuki',
+        personName: 'Yabusaki Aoi',
+        image: 'http://aoi.img',
+      });
+
+      const result = await service.getFavoritesByUsername('testuser');
+
+      expect(result[0]).toMatchObject({
+        targetId: '300',
+        title: 'Aoi Yuuki',
+        image: 'http://aoi.img',
       });
     });
   });

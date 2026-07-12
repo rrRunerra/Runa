@@ -211,6 +211,21 @@ export class FavoriteService {
             '',
           image: (details.avatarUrl as string | null) ?? '',
         };
+      case FavoriteType.CHARACTER: {
+        const first = (details.nameFirst as string | null) ?? '';
+        const middle = (details.nameMiddle as string | null) ?? '';
+        const last = (details.nameLast as string | null) ?? '';
+        const name = [first, middle, last].filter(Boolean).join(' ') || (details.nameNative as string | null) || '';
+        return {
+          title: name,
+          image: (details.image as string | null) ?? '',
+        };
+      }
+      case FavoriteType.STAFF:
+        return {
+          title: (details.name as string | null) ?? (details.personName as string | null) ?? '',
+          image: (details.image as string | null) ?? '',
+        };
       default:
         return { title: '', image: '' };
     }

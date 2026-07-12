@@ -860,6 +860,8 @@ enum FavoriteType {
     BOOK
     GAME
     USER
+    CHARACTER
+    STAFF
 }
 
 model Favorite {
