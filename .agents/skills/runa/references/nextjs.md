@@ -1,5 +1,10 @@
 # Next.js & React Best Practices
 
+**Performance and User Experience are the #1 concern.** Always keep rendering speed, responsiveness, bundle size, and layout stability at the forefront of your design.
+
+> [!IMPORTANT]
+> **Planning Requirement**: Always inform the user in detail about what you are going to do and always present a plan before executing any changes.
+
 Read this file when working on server components, pages, route handlers, or any data fetching logic.
 
 For the full rule set, consult:
@@ -117,3 +122,41 @@ export default async function Page({
 - Prefer **Server Actions** over Route Handlers for mutations triggered from the UI.
 - Use Route Handlers (`route.ts`) for webhook receivers, third-party callbacks, or when you need full HTTP control.
 - A `route.ts` and a `page.tsx` **cannot coexist** in the same segment directory.
+
+---
+
+## Route Access & Conditional Rendering
+
+- **Public Routing First**: If possible, routes should be publicly accessible.
+- **Conditional Rendering**: Rather than locking down entire pages behind hard route guards, favor rendering public shells and conditionally rendering sensitive/permission-based components when the user is logged in and has appropriate permissions.
+
+---
+
+## Localization & Internationalization (i18n)
+
+- **Strict i18n**: When creating pages or layouts, make sure they strictly follow localization and internationalization patterns. Do not hardcode user-facing strings.
+- **Supported Languages**: Support and design layouts for the following 15 languages:
+  1. English US
+  2. Japanese
+  3. Korean
+  4. Chinese (Simplified & Traditional)
+  5. Polish
+  6. Russian
+  7. Norwegian
+  8. Finnish
+  9. Spanish
+  10. German
+  11. Czech
+  12. Turkish
+  13. Vietnamese (Vietnamise)
+  14. Thai
+  15. Malay
+
+---
+
+## Caching & Server Components
+
+- **Prefer Server Components**: Maximize the use of React Server Components (RSC) to handle initial rendering and static shells.
+- **Cache Where Possible**: Implement caching for data fetching and heavy rendering tasks where appropriate.
+- **Centralized Keys**: Keep all cache invalidation tags and keys in the unified cache keys file: `apps/frontend/src/lib/cache-keys.ts`.
+

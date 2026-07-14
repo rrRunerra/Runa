@@ -12,6 +12,16 @@ Master skill for all backend work in the Runa NestJS API. **Always read the rele
 
 ---
 
+## External Skill References
+
+These skills provide deeper guidance for specific backend architectures. Consult them when designing NestJS systems:
+
+| Skill | When to use |
+|---|---|
+| [nestjs-best-practices](./../nestjs-best-practices/SKILL.md) | **Always active** when writing, refactoring, or reviewing NestJS modules to ensure solid architecture, security, and DI design patterns. |
+
+---
+
 ## Project Structure
 
 ```
@@ -21,14 +31,13 @@ apps/backend/src/
 │   ├── guards/           # Auth guards (AuthGuard)
 │   └── types/            # Shared type definitions (types.d.ts)
 ├── modules/
-│   ├── <module>/         # Feature module (kebab-case)
-│   │   ├── dto/          # Input validation classes
-│   │   ├── entities/     # Response shape type aliases
-│   │   ├── repositories/ # Database access layer
-│   │   ├── services/     # Queue services, sub-services
-│   │   ├── connections/  # (optional) Provider connection logic
+│   ├── <module>/         # Feature module (kebab-case, completely flat)
 │   │   ├── <module>.controller.ts
 │   │   ├── <module>.service.ts
+│   │   ├── <module>.repository.ts
+│   │   ├── <module>.dto.ts
+│   │   ├── <module>.entities.ts
+│   │   ├── <module>.types.ts
 │   │   └── <module>.module.ts
 │   └── ...
 └── providers/
@@ -41,16 +50,16 @@ apps/backend/src/
 
 ## Creating a New Module
 
-### Step 1: Scaffold the folder structure
+### Step 1: Scaffold the flat folder structure
 
 ```
 apps/backend/src/modules/<name>/
-├── dto/                  # (if the module has inputs)
-├── entities/             # (if the module returns typed responses)
-├── repositories/         # (if the module needs DB access)
-├── services/             # (if the module needs queue/sub-services)
 ├── <name>.controller.ts
 ├── <name>.service.ts
+├── <name>.repository.ts
+├── <name>.dto.ts
+├── <name>.entities.ts
+├── <name>.types.ts
 └── <name>.module.ts
 ```
 
@@ -60,8 +69,8 @@ apps/backend/src/modules/<name>/
 import { Module } from '@nestjs/common';
 import { XxxService } from './xxx.service';
 import { XxxController } from './xxx.controller';
-import { XxxRepository } from './repositories/xxx.repository';
-import { XxxQueueService } from './services/xxx-queue.service';
+import { XxxRepository } from './xxx.repository';
+import { XxxQueueService } from './xxx-queue.service';
 
 @Module({
   controllers: [XxxController],
@@ -104,7 +113,7 @@ private readonly moduleCode = 'AeSve-';
 
 ```typescript
 import { Injectable, Logger } from '@nestjs/common';
-import { XxxRepository } from './repositories/xxx.repository';
+import { XxxRepository } from './xxx.repository';
 import { rrNotFoundException } from 'src/providers/error';
 
 @Injectable()
@@ -144,16 +153,14 @@ export class XxxService {
 ```typescript
 import { Controller, Get, Post, Param, Body, UseGuards, Req, Query } from '@nestjs/common';
 import { XxxService } from './xxx.service';
-import { AuthGuard } from '../../common/guards/auth.guard';
-import { Public } from 'src/common/decorators/public.decorator';
-import { CreateXxxDto } from './dto/create-xxx.dto';
-import { XxxEntity } from './entities/xxx.entity';
+import { AuthGuard } from '../../common/guards/auth/auth.guard';
+import { CreateXxxDto } from './xxx.dto';
+import { XxxEntity } from './xxx.entities';
 import { AquilaBitField } from '@runa/permissions';
 import { CacheService } from '../../providers/cache/cache.service';
 import { rrForbiddenException, rrTooManyRequestsException } from 'src/providers/error';
 
 @Controller('xxx')
-@UseGuards(AuthGuard)
 export class XxxController {
   private readonly moduleCode = 'XxCtr-';
 
@@ -162,13 +169,13 @@ export class XxxController {
     private readonly cacheService: CacheService, // only if using cooldowns
   ) {}
 
-  @Public()
   @Get('search')
   async search(@Query() query: { name: string }): Promise<XxxEntity> {
     return this.xxxService.search(query.name);
   }
 
   @Post('refresh/:id')
+  @UseGuards(AuthGuard) // Apply guard at the method level
   async refresh(
     @Param('id') id: string,
     @Req() req: Request & { user: { permissions: number[] } },
@@ -195,10 +202,9 @@ export class XxxController {
 ```
 
 ### Rules
-- **Always** apply `@UseGuards(AuthGuard)` at the class level.
-- **Always** add `@Public()` to endpoints that should be accessible without auth.
+- **Never** apply `@UseGuards(AuthGuard)` at the class level. Apply auth/permission guards selectively at the method/handler level to align with the public-first routing architecture.
+- **Strict Parameter Validation**: Every single parameter (e.g. `@Param('id')`), query parameter (`@Query()`), request body (`@Body()`), or properties injected/passed into controller methods **MUST** have its own dedicated DTO class with class-validator validation decorators. Never use unvalidated raw primitives (like `string`, `number`) directly without a validation DTO.
 - **Always** use entity types for return types (e.g. `Promise<XxxEntity>`).
-- **Always** use DTOs for request body types.
 - For permission checks, use `AquilaBitField.fromRaw()` pattern.
 - For cooldown-protected endpoints, use the `cacheService` pattern shown above.
 
@@ -210,7 +216,7 @@ export class XxxController {
 
 ```typescript
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../../providers/database/prisma.service';
+import { PrismaService } from '../../providers/database/prisma.service';
 import { Prisma } from '@runa/database';
 
 @Injectable()
@@ -247,7 +253,7 @@ export class XxxRepository {
 DTOs use `class-validator` decorators for validation.
 
 ```typescript
-// apps/backend/src/modules/xxx/dto/create-xxx.dto.ts
+// apps/backend/src/modules/xxx/xxx.dto.ts
 import { IsNotEmpty, IsString, IsOptional, IsNumber } from 'class-validator';
 
 export class CreateXxxDto {
@@ -268,8 +274,8 @@ export class CreateXxxDto {
 Entities are type aliases that reference shared types for response shapes.
 
 ```typescript
-// apps/backend/src/modules/xxx/entities/xxx.entity.ts
-import { Media } from '../../../common/types/types';
+// apps/backend/src/modules/xxx/xxx.entities.ts
+import { Media } from '../../common/types/types';
 
 export type XxxEntity = Media;
 ```
@@ -286,7 +292,7 @@ For background processing with concurrency control:
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Subject, EMPTY } from 'rxjs';
 import { mergeMap, catchError } from 'rxjs/operators';
-import { XxxRepository } from '../repositories/xxx.repository';
+import { XxxRepository } from '../xxx.repository';
 
 @Injectable()
 export class XxxQueueService implements OnModuleInit {
@@ -502,9 +508,46 @@ After creating new endpoints, add them to `apps/backend/Runa-Insomnia.json` foll
 
 ## Naming Conventions
 
-- **Files**: kebab-case (`user-service.ts`, `user-profile.tsx`)
-- **Classes/Interfaces**: PascalCase (`UserService`, `UserProfile`)
-- **Functions/variables**: camelCase (`getUserById`, `userCount`)
-- **DTOs**: PascalCase with `Dto` suffix (`CreateUserDto`)
-- **Entities**: PascalCase with `Entity` suffix (`UserEntity`)
-- **Module directories**: kebab-case matching the module name
+- **Module Files**: Flat `<module-name>.<type>.ts` format (e.g. `user.service.ts`, `user.controller.ts`, `user.repository.ts`, `user.dto.ts`, `user.entities.ts`, `user-queue.service.ts`).
+- **Classes/Interfaces**: PascalCase (`UserService`, `UserProfile`).
+- **Functions/variables**: camelCase (`getUserById`, `userCount`).
+- **DTOs**: PascalCase with `Dto` suffix inside `<module>.dto.ts` (e.g. `CreateUserDto`).
+- **Entities**: PascalCase with `Entity` suffix inside `<module>.entities.ts` (e.g. `UserEntity`).
+- **Module directories**: kebab-case matching the module name.
+
+---
+
+## Core Backend Development Rules
+
+### Planning & Execution
+- **Detailed Plan**: Always inform the user in detail about what you are going to do, and always present a plan before execution.
+- **Performance & UX**: Performance and responsiveness are the #1 concern for every backend change.
+- **Configurability & Network**: Ensure features are highly configurable and fully usable both on a local network (LAN/offline environments) and through the internet.
+
+### Controller & DTO Input Validation
+- **Strict Parameter DTOs**: Every single parameter (e.g. `@Param('id')`), query parameter (`@Query()`), request body (`@Body()`), or property passed into controller endpoints must have its own dedicated DTO validation class with `class-validator` decorators. Never use unvalidated raw primitives (e.g. `string` or `number`) directly in controller arguments.
+
+### Public-First Routing Architecture
+- **No Class-Level Auth Guards**: Do not apply `@UseGuards(AuthGuard)` at the controller class level. Default all routes to public.
+- **Selective Method Guards**: Apply `@UseGuards(AuthGuard)` and `@Permissions(...)` guards selectively at the method/handler level for endpoints requiring authentication or specific privileges.
+- **Conditional Data Rendering**: If a public route returns optional user-specific fields, retrieve the session dynamically and serialize/strip fields conditionally without rejecting anonymous visitors.
+
+### Centralized Constants & Cache Keys
+- **Centralized Constants**: Keep all backend constants in `apps/backend/src/common/constants.ts` using uppercase names. Minimize magic strings across services.
+- **Centralized Cache Keys**: Place all Redis and cache keys in `apps/backend/src/common/cache-keys.ts` with standard uppercase exported constants.
+
+### Sensitive Data Encryption
+- **Post-Quantum Encryption**: All sensitive user data stored in the database must be encrypted.
+- **Crypto Service**: Use a dedicated NestJS Crypto service wrapper over the `@runa/crypto` package to encrypt/decrypt fields before database operations.
+
+### Error Handling & rrCodes
+- **Strict rrError Exceptions**: Never throw generic `Error` or native NestJS HTTP exceptions directly. Only throw `rr*` equivalent exceptions from `src/providers/error` (e.g. `rrNotFoundException`, `rrBadRequestException`).
+- **Unique rrCodes**: Every exception thrown must include a unique `rrCode` following the pattern `moduleCode + errorCode + 3-digit-number`. Generate the `errorCode` using the first letter of every word in the error message (e.g. "User not found" -> `UNF`, "This media was refreshed recently" -> `TMWRR`), prefix with the class `moduleCode`, and append a unique 3-digit number starting at `001`.
+
+### Automation & Scripting
+- **Repeated Tasks**: If any manual workflow, setup, code generation, or migrations are repeated, automate them with a script placed in the `rrScripts/` directory.
+
+### Feature Documentation
+- **Always Document Features**: Always document every new feature or major change. Create or update the walkthrough, write clean inline comments/docstrings, and add or update markdown references.
+
+

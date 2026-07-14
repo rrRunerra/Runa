@@ -89,3 +89,33 @@ const { toggleSidebar, open, setOpen } = useSidebar();
 | Read/set nav items or sections | `useRRSidebar` |
 | Toggle / open / close the sidebar panel | `useSidebar` |
 | Both | Use both hooks together |
+
+---
+
+## D. Reusable Data Fetching via Providers
+
+- **Reusable Components**: Leaf components should not directly trigger data-fetching requests. Instead, consume data from Context Providers or shared custom hooks.
+- **Provider Pattern**: Keep presentation elements independent of the data retrieval mechanism to maximize reusability across different panels or workspaces.
+
+---
+
+## E. Sensitive Data Encryption & Post-Quantum Cryptography
+
+All sensitive user data must be encrypted to ensure privacy and security, preferably using the post-quantum `@runa/crypto` package.
+
+### Client-Side Encryption via `useRRCrypto`
+
+Import `useRRCrypto` from `@/hooks/useRRCrypto` to perform post-quantum hybrid encryption:
+
+```typescript
+import { useRRCrypto } from "@/hooks/useRRCrypto";
+
+const { encrypt, decrypt, wrapKey, unwrapKey, decryptEncrypted } = useRRCrypto();
+
+// Encrypt user data
+const encryptedPayload = await encrypt(sensitiveData, dataKey);
+```
+
+- Always ensure the encryption keys are unlocked and available (see `useRRe2ee` and `isE2eeUnlocked`).
+- Decrypt incoming sensitive data cleanly using hybrid ML-KEM wrapped keys.
+

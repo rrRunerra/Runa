@@ -29,7 +29,7 @@ This is the master skill for all frontend work in the Runa app. **Read the relev
 
 These skills provide deeper guidance for specific domains. Consult them when the task falls into their scope:
 
-| Skill                                                                    | When to use                                                                                                                                        |
+| Skill | When to use |
 | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [vercel-react-best-practices](./../vercel-react-best-practices/SKILL.md) | Reviewing or optimizing React/Next.js code for performance, bundle size, or re-render issues                                                       |
 | [next-best-practices](./../next-best-practices/SKILL.md)                 | Working with file conventions, route handlers, metadata, image/font optimization, error boundaries, or async APIs                                  |
@@ -42,28 +42,46 @@ These skills provide deeper guidance for specific domains. Consult them when the
 
 ## Quick Rules (Always Enforced)
 
-### Data & Hooks
+### Planning & Execution
 
-- **Never** use the custom `useFetch` hook. Always use `useSWR` from `"swr"` for querying, and standard `fetch` (with SWR `mutate`) for mutations.
-- **Always** use `useRRSidebar` from `@/hooks/useRRSidebar` for sidebar **navigation config** (reading/writing nav items and sections).
-- **Always** use `useSidebar` from `@/components/ui/sidebar` when **directly controlling the sidebar panel** (toggle, open, close). Both hooks may be used together when both concerns are needed.
+- **Detailed Plan**: Always inform the user in detail about what you are going to do, and always present a plan before execution.
+- **Performance & UX**: Performance and user experience are the #1 concern for every change.
+- **Configurability & Network**: Ensure components and features are highly configurable and fully usable/compatible both on a local network (LAN/offline environments) and through the public internet.
+
+### Data, Caching & Encryption
+
+- **No Magic Strings**: Minimize magic strings; define all application constants in `apps/frontend/src/lib/constants.ts` using uppercase names.
+- **Encryption**: Encrypt all sensitive user data, preferably using the post-quantum `@runa/crypto` package (`useRRCrypto` on the client side).
+- **Caching**: Implement caching where beneficial; register all cache tag/key constants in `apps/frontend/src/lib/cache-keys.ts`.
+- **Querying**: Never use the custom `useFetch` hook. Always use `useSWR` from `"swr"` for querying, and standard `fetch` (with SWR `mutate`) for mutations.
+- **Navigation Hooks**: Always use `useRRSidebar` from `@/hooks/useRRSidebar` for sidebar navigation config. Always use `useSidebar` from `@/components/ui/sidebar` when directly controlling the sidebar panel toggle/open state.
+
+### Route Access & UI Design
+
+- **Public Routing**: Make routes publicly accessible where possible; conditionally render sensitive/permissioned UI elements.
+- **Providers for Data**: Leaf components must be reusable and remain independent of data fetching; pass data through Context Providers or custom hooks.
+- **Pessimistic Modals**: Always use a pessimistic approach for modals; keep the dialog open in a disabled/loading state during requests, and only close on success. Show validation or backend errors inline.
+- **Content-Matching Skeletons**: Avoid generic page loading spinners; use custom Tailwind skeletons that match the shape and layout of the loading content.
 
 ### Styling & Theming
 
-- **Never** use raw Tailwind color values — use semantic tokens (`bg-background`, `text-foreground`, etc.).
-- **Never** add `dark:` class overrides — semantic tokens handle both themes automatically.
+- **Never** use hardcoded color values (raw hex, rgb) or static Tailwind colors (e.g., `bg-zinc-950`, `text-emerald-400`) in the UI markup. Only use schematic classes in `globals.css` (custom ones can be listed/defined there using CSS variables to adapt to both light/dark themes seamlessly).
+- **Never** add `dark:` class overrides — schematic classes and tokens handle both themes automatically.
 - **Always** import icons from `lucide-react` (project uses radix-mira preset).
+- **Always** design layouts and components using a **mobile first approach**. Define styles for mobile by default, and use Tailwind responsive prefixes (e.g., `md:`, `lg:`) to scale the interface upward.
 
 ### Before Acting
 
 - **Always** propose existing alternatives before writing custom code — search the shadcn registry (`npx shadcn@latest search`), npm packages, or community registries first.
 - Present options to the user with a brief trade-off summary and let them choose before proceeding.
 
-### Component Design
+### Component Design & i18n
 
 - **Always** follow DRY — extract repeated JSX into sub-components, repeated logic into hooks/utilities.
 - **Always** make components reusable: export props interfaces, accept overrides via props, prefer composition over monolithic config objects.
 - **Always** split pages/tabs larger than ~150–200 lines of JSX into focused child components.
+- **Always** follow strict localization and internationalization (i18n) when building pages. Do not hardcode user-facing strings.
+- **Always** support the following 15 languages: English US, Japanese, Korean, Chinese simplified/traditional, Polish, Russian, Norwegian, Finnish, Spanish, German, Czech, Turkish, Vietnamise, Thai, Malay.
 
 ### TypeScript Types
 
@@ -82,6 +100,14 @@ These skills provide deeper guidance for specific domains. Consult them when the
 - **Dynamic imports** — use `next/dynamic` for heavy components not needed on initial render.
 - **No barrel imports** — import directly from the source file to keep bundles lean.
 - **Authenticate every Server Action** — treat them the same as API route handlers.
+
+### Feature Documentation
+
+- **Always** document every new feature or major change. Create or update the walkthrough, write clean inline comments/docstrings, and add or update markdown references.
+
+### Automation & Scripting
+
+- **Always** automate manual, repeated setup, workflows, component generation, or data migration with a script placed in the `rrScripts/` directory.
 
 ### Testing
 
