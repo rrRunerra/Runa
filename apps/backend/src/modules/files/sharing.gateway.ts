@@ -65,11 +65,37 @@ export class LacertaSharingGateway
     return ip;
   }
 
+  private readonly constellationAliases = [
+    'Andromeda', 'Antlia', 'Apus', 'Aquarius', 'Aquila', 'Ara', 'Aries', 'Auriga',
+    'Bootes', 'Caelum', 'Camelopardalis', 'Cancer', 'Canes Venatici', 'Canis Major',
+    'Canis Minor', 'Capricornus', 'Carina', 'Cassiopeia', 'Centaurus', 'Cepheus',
+    'Cetus', 'Chamaeleon', 'Circinus', 'Columba', 'Coma Berenices', 'Corona Australis',
+    'Corona Borealis', 'Corvus', 'Crater', 'Crux', 'Cygnus', 'Delphinus', 'Dorado',
+    'Draco', 'Equuleus', 'Eridanus', 'Fornax', 'Gemini', 'Grus', 'Hercules',
+    'Horologium', 'Hydra', 'Hydrus', 'Indus', 'Lacerta', 'Leo', 'Leo Minor',
+    'Lepus', 'Libra', 'Lupus', 'Lynx', 'Lyra', 'Mensa', 'Microscopium', 'Monoceros',
+    'Musca', 'Norma', 'Octans', 'Ophiuchus', 'Orion', 'Pavo', 'Pegasus', 'Perseus',
+    'Phoenix', 'Pictor', 'Pisces', 'Piscis Austrinus', 'Puppis', 'Pyxis', 'Reticulum',
+    'Sagitta', 'Sagittarius', 'Scorpius', 'Sculptor', 'Scutum', 'Serpens', 'Sextans',
+    'Taurus', 'Telescopium', 'Triangulum', 'Triangulum Australe', 'Tucana',
+    'Ursa Major', 'Ursa Minor', 'Vela', 'Virgo', 'Volans', 'Vulpecula'
+  ];
+
+  private generateConstellationAlias(socketId: string): string {
+    let hash = 0;
+    for (let i = 0; i < socketId.length; i++) {
+      hash = socketId.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const index = Math.abs(hash) % this.constellationAliases.length;
+    return this.constellationAliases[index];
+  }
+
   async handleConnection(client: Socket): Promise<void> {
     try {
       const token = this.extractToken(client);
       let userId: string | undefined = undefined;
       let username = '';
+      let displayName: string | undefined = undefined;
       let avatarUrl: string | undefined = undefined;
 
       if (token) {
@@ -79,17 +105,19 @@ export class LacertaSharingGateway
           });
           userId = payload.sub;
           username = (payload.username || payload.name || payload.email || '') as string;
+          displayName = payload.displayName as string | undefined;
           avatarUrl = (payload.avatarUrl as string) || undefined;
         } catch (err) {
-          // Token invalid, connection will be rejected below
+          // Token invalid, treat as guest
         }
       }
 
-      // Enforce: only authenticated users can connect to the direct sharing system
+      // If not logged in, generate guest alias and temporary guest ID
       if (!userId || !username) {
-        console.warn(`Unauthenticated connection attempt rejected on lacerta-sharing socket: ${client.id}`);
-        client.disconnect();
-        return;
+        userId = `guest-${client.id}`;
+        const constellationName = this.generateConstellationAlias(client.id);
+        username = constellationName;
+        displayName = constellationName;
       }
 
       const clientIp = this.getClientIp(client);
@@ -101,14 +129,14 @@ export class LacertaSharingGateway
       let constellation: any = undefined;
       if (constellationStr) {
         try {
-          constellation = JSON.parse(constellationStr);
+          const constellation = JSON.parse(constellationStr);
         } catch (e) {}
       }
 
       const clientInfo: SharingClient = {
         socketId: client.id,
         userId,
-        username,
+        username: displayName || username,
         avatarUrl,
         ip: clientIp,
         isHidden: true, // Hidden by default until registered
@@ -118,7 +146,7 @@ export class LacertaSharingGateway
       };
 
       this.activeClients.set(client.id, clientInfo);
-      console.log(`Lacerta Sharing socket authenticated: ${username} (ID: ${userId}, IP: ${clientIp}, Socket: ${client.id})`);
+      console.log(`Lacerta Sharing socket connected (Guest/Auth): ${clientInfo.username} (ID: ${userId}, IP: ${clientIp}, Socket: ${client.id})`);
     } catch (err) {
       console.error('Lacerta Sharing socket connection setup failed:', err);
       client.disconnect();
@@ -239,6 +267,14 @@ export class LacertaSharingGateway
       // If hidden, clear client's local peers list
       client.emit('peers-list', []);
     }
+
+    client.emit('registered', {
+      socketId: client.id,
+      userId: clientInfo.userId,
+      username: clientInfo.username,
+      deviceType: clientInfo.deviceType,
+      deviceName: clientInfo.deviceName,
+    });
   }
 
   @SubscribeMessage('join-room')

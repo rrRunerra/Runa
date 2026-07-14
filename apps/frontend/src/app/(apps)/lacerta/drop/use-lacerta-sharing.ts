@@ -30,6 +30,9 @@ export interface TransferFile {
   speed: number;
   eta: number;
   error?: string;
+  relativePath?: string;
+  isText?: boolean;
+  textContent?: string;
 }
 
 export interface TransferState {
@@ -39,6 +42,7 @@ export interface TransferState {
   direction: "send" | "receive";
   status: "connecting" | "transferring" | "completed" | "cancelled" | "rejected";
   files: TransferFile[];
+  pinCode?: string;
 }
 
 export interface IncomingRequest {
@@ -46,8 +50,60 @@ export interface IncomingRequest {
   peerName: string;
   batchId: string;
   sessionKey: string;
-  files: { name: string; size: number }[];
+  files: {
+    name: string;
+    size: number;
+    relativePath?: string;
+    isText?: boolean;
+    textContent?: string;
+  }[];
+  pinRequired?: boolean;
 }
+
+export const getAllFilesFromEntries = async (items: DataTransferItemList): Promise<File[]> => {
+  const files: File[] = [];
+  const traverse = async (entry: any, path = "") => {
+    if (entry.isFile) {
+      const file = await new Promise<File>((resolve, reject) => entry.file(resolve, reject));
+      Object.defineProperty(file, 'relativePath', {
+        value: path + file.name,
+        writable: true,
+        enumerable: true,
+        configurable: true
+      });
+      files.push(file);
+    } else if (entry.isDirectory) {
+      const reader = entry.createReader();
+      const entries = await new Promise<any[]>((resolve) => {
+        const allEntries: any[] = [];
+        const readFilter = () => {
+          reader.readEntries((results: any[]) => {
+            if (results.length === 0) {
+              resolve(allEntries);
+            } else {
+              allEntries.push(...results);
+              readFilter();
+            }
+          });
+        };
+        readFilter();
+      });
+      for (const child of entries) {
+        await traverse(child, path + entry.name + "/");
+      }
+    }
+  };
+
+  const promises: Promise<void>[] = [];
+  for (let i = 0; i < items.length; i++) {
+    const entry = items[i].webkitGetAsEntry();
+    if (entry) {
+      promises.push(traverse(entry));
+    }
+  }
+  await Promise.all(promises);
+  return files;
+};
 
 const CHUNK_SIZE = 16384; // 16 KB
 const BUFFER_THRESHOLD = 16 * 1024 * 1024; // 16 MB
@@ -95,6 +151,17 @@ export function useLacertaSharing() {
   const [isDraggingOver, setIsDraggingOver] = useState<boolean>(false);
   const [selectedPeerId, setSelectedPeerId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const folderInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [activeSharePeer, setActiveSharePeer] = useState<Peer | null>(null);
+  const [preselectedFiles, setPreselectedFiles] = useState<File[]>([]);
+  const [pendingPinRequests, setPendingPinRequests] = useState<{
+    peerId: string;
+    peerName: string;
+    batchId: string;
+  }[]>([]);
+  const [pinError, setPinError] = useState<string | null>(null);
+  const [myGuestAlias, setMyGuestAlias] = useState<string>("");
 
   // Map of active transfers (keyed by batchId)
   const [transfers, setTransfers] = useState<Record<string, TransferState>>({});
@@ -102,11 +169,16 @@ export function useLacertaSharing() {
 
   const activeSendingBatches = useRef<Map<string, {
     batchId: string;
+    pinCode?: string;
+    attempts?: number;
     files: {
       name: string;
       size: number;
       type: string;
       fileObj: File;
+      relativePath?: string;
+      isText?: boolean;
+      textContent?: string;
     }[];
   }>>(new Map());
 
@@ -182,14 +254,6 @@ export function useLacertaSharing() {
     }
   }, []);
 
-  // Enforce authentication redirect
-  useEffect(() => {
-    if (status === "unauthenticated") {
-      toast.error("Access denied. Please sign in to use Lacerta Drop.");
-      router.push("/api/auth/signin?callbackUrl=/lacerta/drop");
-    }
-  }, [status, router]);
-
   // Clean WebRTC connections for a specific batch
   const cleanPeerConnection = useCallback((peerId: string, batchId: string) => {
     const connKey = `${peerId}-${batchId}`;
@@ -257,6 +321,9 @@ export function useLacertaSharing() {
             fileName: f.name,
             fileSize: f.size,
             fileType: f.type || "application/octet-stream",
+            relativePath: f.relativePath || "",
+            isText: f.isText || false,
+            textContent: f.textContent || "",
           });
           const encryptedMeta = await encrypt(metaStr, sessionKey);
           return { encryptedMeta };
@@ -282,7 +349,7 @@ export function useLacertaSharing() {
       ch.send(JSON.stringify({
         type: "ASK_BATCH_TRANSFER",
         batchId: batch.batchId,
-        senderName: session?.user?.username || "Local Device",
+        senderName: session?.user?.displayName || session?.user?.username || "Local Device",
         files: encryptedFiles,
         wrappedSessionKey: JSON.stringify(wrappedSessionKey),
       }));
@@ -535,8 +602,60 @@ export function useLacertaSharing() {
               active.status === "connecting" &&
               fileIndex === 0
             ) {
-              sendAskBatchTransferDirect(ch, peerId, batchId);
+              const batch = activeSendingBatches.current.get(batchId);
+              if (batch?.pinCode) {
+                ch.send(JSON.stringify({ type: "PIN_REQUIRED", batchId }));
+              } else {
+                sendAskBatchTransferDirect(ch, peerId, batchId);
+              }
             }
+            return;
+          }
+
+          if (message.type === "PIN_REQUIRED") {
+            const active = transfersRef.current[batchId];
+            setPendingPinRequests((prev) => {
+              if (prev.some((r) => r.batchId === batchId)) return prev;
+              return [...prev, { peerId, peerName: active?.peerName || "Local Device", batchId }];
+            });
+            return;
+          }
+
+          if (message.type === "VERIFY_PIN") {
+            const batch = activeSendingBatches.current.get(batchId);
+            if (batch) {
+              if (batch.pinCode === message.pin) {
+                ch.send(JSON.stringify({ type: "PIN_VERIFIED", batchId }));
+                sendAskBatchTransferDirect(ch, peerId, batchId);
+              } else {
+                batch.attempts = (batch.attempts || 0) + 1;
+                if (batch.attempts >= 3) {
+                  ch.send(JSON.stringify({ type: "PIN_FAILED", batchId }));
+                  cleanPeerConnection(peerId, batchId);
+                } else {
+                  ch.send(JSON.stringify({ type: "PIN_INCORRECT", batchId, remainingAttempts: 3 - batch.attempts }));
+                }
+              }
+            }
+            return;
+          }
+
+          if (message.type === "PIN_INCORRECT") {
+            setPinError(`Incorrect PIN. ${message.remainingAttempts} attempts remaining.`);
+            return;
+          }
+
+          if (message.type === "PIN_FAILED") {
+            setPinError(null);
+            setPendingPinRequests((prev) => prev.filter((r) => r.batchId !== batchId));
+            toast.error("PIN verification failed: too many incorrect attempts.");
+            cleanPeerConnection(peerId, batchId);
+            return;
+          }
+
+          if (message.type === "PIN_VERIFIED") {
+            setPinError(null);
+            setPendingPinRequests((prev) => prev.filter((r) => r.batchId !== batchId));
             return;
           }
 
@@ -565,6 +684,9 @@ export function useLacertaSharing() {
                   return {
                     name: decryptedMeta.fileName,
                     size: decryptedMeta.fileSize,
+                    relativePath: decryptedMeta.relativePath || "",
+                    isText: decryptedMeta.isText || false,
+                    textContent: decryptedMeta.textContent || "",
                   };
                 }
                 return { name: "Encrypted File", size: 0 };
@@ -584,6 +706,7 @@ export function useLacertaSharing() {
           }
 
           else if (message.type === "ACCEPT_BATCH_TRANSFER") {
+            const acceptedIndices = message.acceptedIndices as number[] || [];
             setTransfers((prev) => {
               const current = prev[batchId];
               if (!current) return prev;
@@ -592,16 +715,24 @@ export function useLacertaSharing() {
                 [batchId]: {
                   ...current,
                   status: "transferring",
-                  files: current.files.map((f) => ({ ...f, status: "transferring" })),
+                  files: current.files.map((f, idx) => {
+                    if (acceptedIndices.includes(idx)) {
+                      return { ...f, status: "transferring" };
+                    } else {
+                      return { ...f, status: "rejected", progress: 0 };
+                    }
+                  }),
                 },
               };
             });
 
-            // Start sending ALL files concurrently!
+            // Start sending ONLY accepted files concurrently!
             const batch = activeSendingBatches.current.get(batchId);
             if (batch) {
               batch.files.forEach((_, idx) => {
-                startBatchFileChunking(peerId, batchId, idx);
+                if (acceptedIndices.includes(idx)) {
+                  startBatchFileChunking(peerId, batchId, idx);
+                }
               });
             }
           }
@@ -655,12 +786,12 @@ export function useLacertaSharing() {
               const newFiles = [...current.files];
               newFiles[fileIndex] = { ...newFiles[fileIndex], status: "completed", progress: 100 };
               
-              // Check if all files in the batch are completed
+              // Check if all files in the batch are completed or skipped
               const allDone = newFiles.every((f) => f.status === "completed" || f.status === "cancelled" || f.status === "rejected");
               const nextStatus = allDone ? "completed" as const : current.status;
               
               if (allDone) {
-                toast.success("All files sent successfully!");
+                toast.success("File transfer batch completed!");
                 // Cleanup peer connection after a small delay to make sure signals completed
                 setTimeout(() => cleanPeerConnection(peerId, batchId), 1000);
               }
@@ -798,18 +929,24 @@ export function useLacertaSharing() {
     return pc;
   }, [cleanPeerConnection, setupDataChannel]);
 
-  const queueFileForSend = useCallback((peerId: string, peerName: string, filesList: File[]) => {
+  const queueFileForSend = useCallback((peerId: string, peerName: string, filesList: File[], requirePin: boolean = false) => {
     const initiateSend = async () => {
       try {
         const batchId = Math.random().toString(36).substring(2, 10);
+        const pinCode = requirePin ? Math.floor(1000 + Math.random() * 9000).toString() : undefined;
         
         activeSendingBatches.current.set(batchId, {
           batchId,
+          pinCode,
+          attempts: 0,
           files: filesList.map((f) => ({
             name: f.name,
             size: f.size,
             type: f.type,
             fileObj: f,
+            relativePath: (f as any).relativePath || f.webkitRelativePath || "",
+            isText: (f as any).isText || false,
+            textContent: (f as any).textContent || "",
           })),
         });
 
@@ -821,6 +958,7 @@ export function useLacertaSharing() {
             peerName,
             direction: "send",
             status: "connecting",
+            pinCode,
             files: filesList.map(f => ({
               name: f.name,
               size: f.size,
@@ -828,6 +966,9 @@ export function useLacertaSharing() {
               status: "idle",
               speed: 0,
               eta: 0,
+              relativePath: (f as any).relativePath || f.webkitRelativePath || "",
+              isText: (f as any).isText || false,
+              textContent: (f as any).textContent || "",
             })),
           },
         }));
@@ -862,10 +1003,31 @@ export function useLacertaSharing() {
     initiateSend();
   }, [socket, getOrCreatePeerConnection, setupDataChannel]);
 
+  const queueTextForSend = useCallback((peerId: string, peerName: string, text: string, title: string = "Text Share", requirePin: boolean = false) => {
+    const textBlob = new Blob([text], { type: "text/plain" });
+    const textFile = new File([textBlob], `${title}.txt`, { type: "text/plain" });
+    
+    Object.defineProperty(textFile, 'isText', { value: true, writable: true, enumerable: true });
+    Object.defineProperty(textFile, 'textContent', { value: text, writable: true, enumerable: true });
+    
+    queueFileForSend(peerId, peerName, [textFile], requirePin);
+  }, [queueFileForSend]);
+
+  const submitPin = useCallback((batchId: string, pin: string) => {
+    const pending = pendingPinRequests.find((r) => r.batchId === batchId);
+    if (!pending) return;
+    const ch = dataChannels.current.get(`${batchId}-0`);
+    if (ch) {
+      ch.send(JSON.stringify({ type: "VERIFY_PIN", batchId, pin }));
+    }
+  }, [pendingPinRequests]);
+
   // Accept incoming transfer
-  const acceptIncomingTransfer = async (batchId: string) => {
+  const acceptIncomingTransfer = async (batchId: string, acceptedIndices?: number[]) => {
     const req = incomingRequests.find((r) => r.batchId === batchId);
     if (!req || !socket) return;
+
+    const finalAcceptedIndices = acceptedIndices || req.files.map((_, i) => i);
 
     setIncomingRequests((prev) => prev.filter((r) => r.batchId !== batchId));
 
@@ -877,13 +1039,16 @@ export function useLacertaSharing() {
         peerName: req.peerName,
         direction: "receive",
         status: "transferring",
-        files: req.files.map((f) => ({
+        files: req.files.map((f, idx) => ({
           name: f.name,
           size: f.size,
           progress: 0,
-          status: "transferring",
+          status: finalAcceptedIndices.includes(idx) ? "transferring" : "rejected",
           speed: 0,
           eta: 0,
+          relativePath: f.relativePath,
+          isText: f.isText,
+          textContent: f.textContent,
         })),
       },
     }));
@@ -892,7 +1057,7 @@ export function useLacertaSharing() {
     // We send accepting signal on the control channel (fileIndex 0)
     const ch = dataChannels.current.get(`${batchId}-0`);
     if (ch) {
-      ch.send(JSON.stringify({ type: "ACCEPT_BATCH_TRANSFER", batchId }));
+      ch.send(JSON.stringify({ type: "ACCEPT_BATCH_TRANSFER", batchId, acceptedIndices: finalAcceptedIndices }));
     }
   };
 
@@ -952,7 +1117,7 @@ export function useLacertaSharing() {
 
   // Socket setup
   const setupSocketConnection = useCallback(() => {
-    if (status !== "authenticated" || !accessToken) return () => {};
+    if (status === "loading") return () => {};
 
     const apiBase = process.env.NEXT_PUBLIC_API_URL || (typeof window !== "undefined" ? window.location.origin : "");
     const deviceType = getDeviceType();
@@ -960,7 +1125,7 @@ export function useLacertaSharing() {
 
     const newSocket = io(`${apiBase}/lacerta-sharing`, {
       query: {
-        token: accessToken,
+        token: accessToken || "",
         deviceType,
         deviceName,
       },
@@ -969,6 +1134,10 @@ export function useLacertaSharing() {
 
     newSocket.on("connect", () => {
       newSocket.emit("register", { isHidden: isHiddenRef.current });
+    });
+
+    newSocket.on("registered", (data: { username: string }) => {
+      setMyGuestAlias(data.username);
     });
 
     newSocket.on("peers-list", (peersList: Peer[]) => {
@@ -1138,24 +1307,26 @@ export function useLacertaSharing() {
 
   // Click peer trigger selection
   const handlePeerClick = (peerId: string) => {
-    setSelectedPeerId(peerId);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-      fileInputRef.current.click();
+    const peer = peers.find((p) => p.socketId === peerId);
+    if (peer) {
+      setActiveSharePeer(peer);
+      setPreselectedFiles([]);
+      setPinError(null);
     }
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files && files.length > 0 && selectedPeerId) {
-      const peer = peers.find((p) => p.socketId === selectedPeerId);
-      if (peer) {
-        const isMyDevice = peer.userId === session?.user?.id;
-        const displayName = isMyDevice ? `My Device (${peer.deviceName})` : `${peer.username} (${peer.deviceName})`;
-        queueFileForSend(selectedPeerId, displayName, Array.from(files));
-      }
+    if (files && files.length > 0) {
+      setPreselectedFiles((prev) => [...prev, ...Array.from(files)]);
     }
-    setSelectedPeerId(null);
+  };
+
+  const handleFolderInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      setPreselectedFiles((prev) => [...prev, ...Array.from(files)]);
+    }
   };
 
   // Drag-and-drop triggers
@@ -1168,18 +1339,24 @@ export function useLacertaSharing() {
     setIsDraggingOver(false);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDraggingOver(false);
 
-    const files = e.dataTransfer.files;
+    let files: File[] = [];
+    if (e.dataTransfer.items && e.dataTransfer.items.length > 0) {
+      files = await getAllFilesFromEntries(e.dataTransfer.items);
+    } else if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      files = Array.from(e.dataTransfer.files);
+    }
+
     if (files && files.length > 0) {
       if (peers.length === 1) {
         const peer = peers[0];
-        const isMyDevice = peer.userId === session?.user?.id;
-        const displayName = isMyDevice ? `My Device (${peer.deviceName})` : `${peer.username} (${peer.deviceName})`;
-        queueFileForSend(peer.socketId, displayName, Array.from(files));
+        setActiveSharePeer(peer);
+        setPreselectedFiles(files);
       } else if (peers.length > 1) {
+        setPreselectedFiles(files);
         toast.info("Select a device constellation node on the StarMap to share files.");
       } else {
         toast.error("No other devices online on this network.");
@@ -1196,10 +1373,12 @@ export function useLacertaSharing() {
     transfers,
     incomingRequests,
     fileInputRef,
+    folderInputRef,
     myConstellation,
     handleToggleHidden,
     handlePeerClick,
     handleFileInputChange,
+    handleFolderInputChange,
     handleDragOver,
     handleDragLeave,
     handleDrop,
@@ -1207,6 +1386,16 @@ export function useLacertaSharing() {
     declineIncomingTransfer,
     cancelActiveTransfer,
     setTransfers,
+    activeSharePeer,
+    setActiveSharePeer,
+    preselectedFiles,
+    setPreselectedFiles,
+    pendingPinRequests,
+    pinError,
+    submitPin,
+    queueFileForSend,
+    queueTextForSend,
+    myGuestAlias,
     dismissTransfer: (batchId: string) => {
       setTransfers((prev) => {
         const next = { ...prev };

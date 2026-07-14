@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState, useRef, useCallback, useEffect } from "react";
-import { X, Monitor, Smartphone, Tablet, EyeOff, FileIcon } from "lucide-react";
+import { X, Monitor, Smartphone, Tablet, EyeOff, FileIcon, Globe, Server as ServerIcon, Terminal } from "lucide-react";
 import { StarMap, MeteorPosition, StarMapHandle } from "@/components/stars/StarMap";
 import { REFERENCE_CONSTELLATIONS } from "@/lib/constellations";
 import { Constellation } from "@/types/constellation";
@@ -18,6 +18,7 @@ interface LacertaDropStarMapProps {
   transfers: Record<string, TransferState>;
   onCancelTransfer: (batchId: string) => void;
   onDismissTransfer?: (batchId: string) => void;
+  myGuestAlias?: string;
 }
 
 // Simple hash function for stable positions and constellation assignments
@@ -68,6 +69,9 @@ function DeviceIcon({
 }) {
   if (deviceType === "mobile") return <Smartphone size={size} className={className} />;
   if (deviceType === "tablet") return <Tablet size={size} className={className} />;
+  if (deviceType === "web") return <Globe size={size} className={className} />;
+  if (deviceType === "server") return <ServerIcon size={size} className={className} />;
+  if (deviceType === "headless") return <Terminal size={size} className={className} />;
   return <Monitor size={size} className={className} />;
 }
 
@@ -127,6 +131,7 @@ export function LacertaDropStarMap({
   transfers,
   onCancelTransfer,
   onDismissTransfer,
+  myGuestAlias,
 }: LacertaDropStarMapProps): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null);
   const starMapRef = useRef<StarMapHandle>(null);
@@ -192,9 +197,10 @@ export function LacertaDropStarMap({
 
     // Self constellation at origin
     let selfBase = myConstellation;
-    if (!selfBase && currentUser?.username) {
+    const selfUsername = currentUser?.username || myGuestAlias;
+    if (!selfBase && selfUsername) {
       const idx = Math.floor(
-        hashStringToFloat(currentUser.username) * REFERENCE_CONSTELLATIONS.length,
+        hashStringToFloat(selfUsername) * REFERENCE_CONSTELLATIONS.length,
       );
       selfBase = REFERENCE_CONSTELLATIONS[idx];
     }
@@ -462,7 +468,7 @@ export function LacertaDropStarMap({
                         {/* Self avatar */}
                         <PeerAvatar
                           avatarUrl={currentUser?.avatarUrl ?? undefined}
-                          username={currentUser?.username || "Me"}
+                          username={currentUser?.displayName || currentUser?.username || myGuestAlias || "Me"}
                           color={isHidden ? "#374151" : "var(--primary)"}
                           size={30}
                         />
@@ -471,7 +477,7 @@ export function LacertaDropStarMap({
                             className="text-[11px] font-bold font-mono leading-none truncate"
                             style={{ color: isHidden ? "#6B7280" : "var(--primary)" }}
                           >
-                            {currentUser?.username || "You"}
+                            {currentUser?.displayName || currentUser?.username || myGuestAlias || "You"}
                           </span>
                           <div
                             className="flex items-center gap-1 text-[9px] font-mono leading-none"

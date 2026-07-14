@@ -116,6 +116,9 @@ export function LacertaDropTransferPanel({
                         <div className="shrink-0 flex items-center gap-1.5 text-[9px] font-mono text-muted-foreground">
                           <span>{formatSize(file.size)}</span>
                           {isCompleted && <Check className="h-3 w-3 text-emerald-500 shrink-0" />}
+                          {file.status === "rejected" && (
+                            <span className="text-red-500 font-bold text-[8px] uppercase tracking-wider">Skipped</span>
+                          )}
                           {isActive && file.status === "transferring" && (
                             <span className="text-primary font-bold">{file.progress}%</span>
                           )}
