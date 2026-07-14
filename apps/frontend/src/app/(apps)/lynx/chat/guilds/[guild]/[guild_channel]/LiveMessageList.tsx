@@ -1,6 +1,7 @@
 "use client";
 
-import { Badge, FileText, Link2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { FileText, Link2 } from "lucide-react";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
@@ -8,6 +9,7 @@ import remarkGfm from "remark-gfm";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Attachment, Embed, Message } from "@/types/lynx";
+import { useTranslation } from "react-i18next";
 
 const MarkdownComponents: Record<string, React.FC<any>> = {
   a: ({ ...props }: any) => (
@@ -20,9 +22,11 @@ const MarkdownComponents: Record<string, React.FC<any>> = {
   ),
 };
 
-
-
-function MessageMedia({ attachment }: { attachment: Attachment }) {
+function MessageMedia({
+  attachment,
+}: {
+  attachment: Attachment;
+}): React.JSX.Element {
   const isImage = attachment.contentType?.startsWith("image/");
   const isVideo = attachment.contentType?.startsWith("video/");
   const isTextFile =
@@ -48,7 +52,7 @@ function MessageMedia({ attachment }: { attachment: Attachment }) {
 
   if (isImage) {
     return (
-      <div className="mt-2 rounded-xl overflow-hidden border border-zinc-800/60 max-w-[340px] shadow-md hover:scale-[1.01] transition-transform duration-300">
+      <div className="mt-2 rounded-xl overflow-hidden border border-border/60 max-w-[340px] shadow-md hover:scale-[1.01] transition-transform duration-300">
         <Image
           src={attachment.url}
           alt={attachment.name}
@@ -62,7 +66,7 @@ function MessageMedia({ attachment }: { attachment: Attachment }) {
 
   if (isVideo) {
     return (
-      <div className="mt-2 rounded-xl overflow-hidden border border-zinc-800/60 max-w-[360px] shadow-md">
+      <div className="mt-2 rounded-xl overflow-hidden border border-border/60 max-w-[360px] shadow-md">
         <video
           src={attachment.url}
           controls
@@ -78,12 +82,12 @@ function MessageMedia({ attachment }: { attachment: Attachment }) {
 
   if (isTextFile && textPreview) {
     return (
-      <div className="mt-2 rounded-xl border border-zinc-800 bg-zinc-950/60 overflow-hidden max-w-2xl shadow-inner font-mono">
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900/50 border-b border-zinc-800 text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
+      <div className="mt-2 rounded-xl border border-border bg-background/60 overflow-hidden max-w-2xl shadow-inner font-mono">
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-muted/50 border-b border-border text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
           <FileText className="size-3.5 text-primary" />
           {attachment.name}
         </div>
-        <pre className="p-4 text-[11px] text-zinc-300 leading-relaxed whitespace-pre-wrap overflow-x-auto no-scrollbar">
+        <pre className="p-4 text-[11px] text-muted-foreground leading-relaxed whitespace-pre-wrap overflow-x-auto no-scrollbar">
           {textPreview}
         </pre>
       </div>
@@ -95,7 +99,7 @@ function MessageMedia({ attachment }: { attachment: Attachment }) {
       href={attachment.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="mt-2 flex items-center gap-2 px-3.5 py-2 rounded-xl border border-zinc-800/80 bg-zinc-900/30 hover:bg-zinc-800/20 text-xs font-semibold text-primary transition-all w-fit shadow-xs"
+      className="mt-2 flex items-center gap-2 px-3.5 py-2 rounded-xl border border-border/80 bg-muted/30 hover:bg-accent/20 text-xs font-semibold text-primary transition-all w-fit shadow-xs"
     >
       <Link2 className="size-3.5" />
       {attachment.name}
@@ -103,22 +107,25 @@ function MessageMedia({ attachment }: { attachment: Attachment }) {
   );
 }
 
-
-
-function MessageEmbed({ embed }: { embed: Embed }) {
+function MessageEmbed({ embed }: { embed: Embed }): React.JSX.Element {
   const embedColor = embed.color
     ? `#${embed.color.toString(16).padStart(6, "0")}`
     : "#6366f1"; // default primary indigo
 
   return (
     <div
-      className="mt-2.5 p-4 rounded-xl border-l-[3px] bg-zinc-950/40 border border-zinc-900/50 max-w-xl space-y-2 shadow-sm font-sans"
+      className="mt-2.5 p-4 rounded-xl border-l-[3px] bg-background/40 border border-border/50 max-w-xl flex flex-col gap-2 shadow-sm font-sans"
       style={{ borderLeftColor: embedColor }}
     >
       {embed.title && (
         <h4 className="font-bold text-foreground text-sm hover:text-primary transition-colors cursor-pointer leading-tight">
           {embed.url ? (
-            <a href={embed.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1">
+            <a
+              href={embed.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1"
+            >
               {embed.title}
               <Link2 className="size-3" />
             </a>
@@ -139,20 +146,22 @@ function MessageEmbed({ embed }: { embed: Embed }) {
       )}
 
       {embed.fields && embed.fields.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-zinc-900/40">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-border/40">
           {embed.fields.map((field, i: number) => (
             <div key={i} className={field.inline ? "" : "col-span-full"}>
               <div className="text-[9px] font-bold text-muted-foreground/60 uppercase tracking-widest">
                 {field.name}
               </div>
-              <div className="text-xs text-foreground mt-0.5 font-medium">{field.value}</div>
+              <div className="text-xs text-foreground mt-0.5 font-medium">
+                {field.value}
+              </div>
             </div>
           ))}
         </div>
       )}
 
       {embed.video && (
-        <div className="mt-2 rounded-xl overflow-hidden border border-zinc-800/60 max-w-[420px]">
+        <div className="mt-2 rounded-xl overflow-hidden border border-border/60 max-w-[420px]">
           <video
             src={embed.video.url}
             controls
@@ -165,7 +174,7 @@ function MessageEmbed({ embed }: { embed: Embed }) {
       )}
 
       {embed.image && !embed.video && (
-        <div className="mt-2 rounded-xl overflow-hidden border border-zinc-800/60 max-w-[340px]">
+        <div className="mt-2 rounded-xl overflow-hidden border border-border/60 max-w-[340px]">
           <Image
             src={embed.image.url}
             alt="Embed Image"
@@ -177,7 +186,7 @@ function MessageEmbed({ embed }: { embed: Embed }) {
       )}
 
       {embed.thumbnail && !embed.image && !embed.video && (
-        <div className="mt-2 rounded-xl overflow-hidden border border-zinc-800/60 max-w-[120px] shadow-sm">
+        <div className="mt-2 rounded-xl overflow-hidden border border-border/60 max-w-[120px] shadow-sm">
           <Image
             src={embed.thumbnail.url}
             alt="Thumbnail"
@@ -189,7 +198,7 @@ function MessageEmbed({ embed }: { embed: Embed }) {
       )}
 
       {embed.footer && (
-        <div className="flex items-center gap-2 mt-2 pt-2 border-t border-zinc-900/40 text-[10px] text-muted-foreground/60 select-none">
+        <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/40 text-[10px] text-muted-foreground/60 select-none">
           {embed.footer.icon_url && (
             <Image
               src={embed.footer.icon_url}
@@ -206,8 +215,6 @@ function MessageEmbed({ embed }: { embed: Embed }) {
   );
 }
 
-
-
 export default function LiveMessageList({
   initialMessages,
   guildId,
@@ -216,7 +223,8 @@ export default function LiveMessageList({
   initialMessages: Message[];
   guildId: string;
   channelId: string;
-}) {
+}): React.JSX.Element {
+  const { t } = useTranslation();
   const [messages, setMessages] = useState(initialMessages);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -256,11 +264,13 @@ export default function LiveMessageList({
   }, [guildId, channelId]);
 
   return (
-    <div className="space-y-4 pt-2 select-none">
+    <div className="flex flex-col gap-4 pt-2 select-none">
       {messages && messages.length > 0 ? (
         <AnimatePresence initial={false}>
           {messages.map((message: Message) => {
-            const isBot = message.author.username?.toLowerCase().includes("lynx");
+            const isBot = message.author.username
+              ?.toLowerCase()
+              .includes("lynx");
             return (
               <motion.div
                 key={message.id}
@@ -268,41 +278,44 @@ export default function LiveMessageList({
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
                 transition={{ type: "spring", stiffness: 400, damping: 28 }}
-                className="group flex gap-4 bg-zinc-950/20 backdrop-blur-xl p-4.5 rounded-2xl border border-zinc-900/50 hover:border-zinc-800/60 hover:bg-zinc-900/10 transition-all duration-300 shadow-md relative overflow-hidden"
+                className="group flex gap-4 bg-background/20 backdrop-blur-xl p-4.5 rounded-2xl border border-border/50 hover:border-border/60 hover:bg-accent/10 transition-all duration-300 shadow-md relative overflow-hidden"
               >
                 {/* Subtle hover background glow */}
                 <div className="absolute top-0 left-0 size-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/8 transition-all duration-500 pointer-events-none" />
 
                 <div className="shrink-0 pt-0.5 relative z-10">
-                  <div className="size-9 rounded-full overflow-hidden border border-zinc-800/80 bg-zinc-900/50 shadow-inner group-hover:scale-105 transition-transform duration-300">
+                  <div className="size-9 rounded-full overflow-hidden border border-border/80 bg-muted/50 shadow-inner group-hover:scale-105 transition-transform duration-300">
                     {message.author.avatarURL ? (
                       <Image
                         src={message.author.avatarURL}
                         alt="User Avatar"
                         width={36}
                         height={36}
-                        className="w-full h-full object-cover"
+                        className="size-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-[11px] text-muted-foreground font-bold bg-zinc-900">
-                        {message.author.username?.charAt(0).toUpperCase() || "?"}
+                      <div className="size-full flex items-center justify-center text-[11px] text-muted-foreground font-bold bg-muted">
+                        {message.author.username?.charAt(0).toUpperCase() ||
+                          "?"}
                       </div>
                     )}
                   </div>
                 </div>
-                <div className="flex-1 space-y-1.5 min-w-0 relative z-10">
+                <div className="flex-1 flex flex-col gap-1.5 min-w-0 relative z-10">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className={cn(
-                      "font-bold text-[13px] transition-colors cursor-pointer",
-                      isBot
-                        ? "text-primary hover:text-primary/80"
-                        : "text-foreground hover:text-primary"
-                    )}>
+                    <span
+                      className={cn(
+                        "font-bold text-[13px] transition-colors cursor-pointer",
+                        isBot
+                          ? "text-primary hover:text-primary/80"
+                          : "text-foreground hover:text-primary",
+                      )}
+                    >
                       {message.author.globalName || message.author.username}
                     </span>
                     {isBot && (
                       <Badge className="bg-primary/20 hover:bg-primary/20 text-primary border border-primary/30 text-[9px] uppercase px-1.5 py-0.5 h-4.5 font-bold tracking-wider select-none shrink-0 font-sans">
-                        Bot
+                        {t("bot")}
                       </Badge>
                     )}
                     <span className="text-[10px] text-muted-foreground/50 font-semibold font-mono">
@@ -311,7 +324,7 @@ export default function LiveMessageList({
                   </div>
 
                   {message.cleanContent && (
-                    <div className="text-zinc-300 text-xs md:text-sm leading-relaxed prose prose-stone dark:prose-invert max-w-none prose-p:my-0 prose-pre:my-2 prose-pre:bg-zinc-950/60 prose-pre:border prose-pre:border-zinc-800/50 prose-pre:p-4 prose-pre:rounded-xl prose-pre:font-mono prose-code:text-[11px] select-text">
+                    <div className="text-muted-foreground text-xs md:text-sm leading-relaxed prose prose-stone dark:prose-invert max-w-none prose-p:my-0 prose-pre:my-2 prose-pre:bg-background/60 prose-pre:border prose-pre:border-border/50 prose-pre:p-4 prose-pre:rounded-xl prose-pre:font-mono prose-code:text-[11px] select-text">
                       <ReactMarkdown
                         remarkPlugins={[remarkGfm]}
                         components={MarkdownComponents}
@@ -334,12 +347,12 @@ export default function LiveMessageList({
           })}
         </AnimatePresence>
       ) : (
-        <div className="flex flex-col items-center justify-center py-20 text-center space-y-3 opacity-40">
-          <div className="size-11 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-muted-foreground font-semibold">
+        <div className="flex flex-col items-center justify-center py-20 text-center gap-3 opacity-40">
+          <div className="size-11 rounded-full bg-muted border border-border flex items-center justify-center text-muted-foreground font-semibold">
             #
           </div>
           <p className="text-muted-foreground text-sm italic font-medium">
-            No history found here
+            {t("noHistory")}
           </p>
         </div>
       )}

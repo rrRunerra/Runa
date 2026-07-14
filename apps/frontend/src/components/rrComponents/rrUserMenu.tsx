@@ -13,6 +13,7 @@ import {
   Shield,
   ShieldAlert,
   ShieldCheck,
+  Languages,
 } from "lucide-react";
 import { signIn, signOut } from "next-auth/react";
 import {
@@ -23,6 +24,11 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from "../ui/dropdown-menu";
 import { getSafeImageUrl } from "@/lib/inputValidation";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
@@ -45,9 +51,11 @@ import { Button } from "../ui/button";
 import { SettingsDialog } from "./rrSettings/rrSettingsModal";
 import { RrAppearanceModal } from "./rrAppearanceModal";
 import { useRRCrypto } from "@/hooks/useRRCrypto";
+import { useTranslation } from "react-i18next";
 
 export default function RrUserMenu({ session }: { session: Session | null }) {
   const { unreadCount } = useNotificationAndBookmarks();
+  const { t, i18n } = useTranslation();
 
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -121,6 +129,16 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
       const params = new URLSearchParams(window.location.search);
       if (params.has("settings") || params.has("category")) {
         setIsSettingsOpen(true);
+      }
+    }
+  }, []);
+
+  // Sync localStorage language → cookie on mount so server components read the right locale
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("runa-language");
+      if (saved) {
+        document.cookie = `runa-language=${saved};path=/;max-age=${60 * 60 * 24 * 365};SameSite=Lax`;
       }
     }
   }, []);
@@ -313,6 +331,46 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
                   <Settings />
                   Settings
                 </DropdownMenuItem>
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Languages />
+                    <span>{t("language")}</span>
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent className="max-h-60 overflow-y-auto no-scrollbar">
+                    <DropdownMenuRadioGroup
+                      value={i18n.language}
+                      onValueChange={(value) => {
+                        i18n.changeLanguage(value);
+                        localStorage.setItem("runa-language", value);
+                        // Also write a cookie so server components (serverTranslation) can read the locale
+                        document.cookie = `runa-language=${value};path=/;max-age=${60 * 60 * 24 * 365};SameSite=Lax`;
+                      }}
+                    >
+                      {[
+                        { code: "en", label: "English (US)" },
+                        { code: "ja", label: "日本語" },
+                        { code: "ko", label: "한국어" },
+                        { code: "zh-CN", label: "简体中文" },
+                        { code: "zh-TW", label: "繁體中文" },
+                        { code: "pl", label: "Polski" },
+                        { code: "ru", label: "Русский" },
+                        { code: "no", label: "Norsk" },
+                        { code: "fi", label: "Suomi" },
+                        { code: "es", label: "Español" },
+                        { code: "de", label: "Deutsch" },
+                        { code: "cs", label: "Čeština" },
+                        { code: "tr", label: "Türkçe" },
+                        { code: "vi", label: "Tiếng Việt" },
+                        { code: "th", label: "ไทย" },
+                        { code: "ms", label: "Bahasa Melayu" },
+                      ].map((lang) => (
+                        <DropdownMenuRadioItem key={lang.code} value={lang.code}>
+                          {lang.label}
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onSelect={(e) => {

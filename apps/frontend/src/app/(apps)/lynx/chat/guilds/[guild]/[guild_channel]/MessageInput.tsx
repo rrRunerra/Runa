@@ -4,6 +4,7 @@ import { Loader2, Send } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 export default function MessageInput({
   guildId,
@@ -11,7 +12,8 @@ export default function MessageInput({
 }: {
   guildId: string;
   channelId: string;
-}) {
+}): React.JSX.Element {
+  const { t } = useTranslation();
   const [content, setContent] = useState("");
   const [isSending, setIsSending] = useState(false);
   const router = useRouter();
@@ -48,17 +50,17 @@ export default function MessageInput({
   };
 
   return (
-    <div className="sticky top-0 z-20 bg-zinc-950/20 backdrop-blur-xl border-b border-zinc-800/40 -mx-6 px-6 py-4 mb-4 select-none">
+    <div className="sticky top-0 z-20 bg-background/20 backdrop-blur-xl border-b border-border/40 -mx-6 px-6 py-4 mb-4 select-none">
       <form
         onSubmit={handleSend}
-        className="relative flex items-center gap-3.5 max-w-4xl mx-auto"
+        className="relative flex items-center gap-3 max-w-4xl mx-auto"
       >
         <input
           type="text"
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="Message this channel…"
-          className="flex-1 bg-zinc-900/30 border border-zinc-800/50 rounded-xl px-4 py-2.5 text-xs text-foreground placeholder:text-muted-foreground/45 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/25 transition-all shadow-inner"
+          placeholder={t("messageThisChannel")}
+          className="flex-1 bg-muted/30 border border-border/50 rounded-xl px-4 py-2.5 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/25 transition-all shadow-inner"
           disabled={isSending}
           autoComplete="off"
         />
@@ -79,3 +81,4 @@ export default function MessageInput({
     </div>
   );
 }
+

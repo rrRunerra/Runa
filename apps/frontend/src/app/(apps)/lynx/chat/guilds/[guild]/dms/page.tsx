@@ -1,11 +1,12 @@
 import { auth } from "@runa/auth";
-import { hasPermission, BitField, LynxFlags } from "@runa/permissions";
+import { hasPermission, LynxFlags } from "@runa/permissions";
 import { ChevronRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import AccessDenied from "@/components/lynx/AccessDenied";
 import { PageHeader } from "@/components/lynx/LynxPageHeader";
 import { cn } from "@/lib/utils";
+import { getServerTranslation } from "@/lib/serverTranslation";
 
 import { GuildMember } from "@/types/lynx";
 
@@ -14,10 +15,10 @@ async function getGuildUsers(guildId: string): Promise<GuildMember[]> {
     `${process.env.LYNX_API_URL}/guilds/${guildId}/getUsers`,
     {
       cache: "force-cache",
-        next: {
-          revalidate: 30, // revalidate every 30 seconds
-          tags: ["guilds"]
-        }
+      next: {
+        revalidate: 30, // revalidate every 30 seconds
+        tags: ["guilds"],
+      },
     },
   );
   if (!res.ok) return [];
@@ -28,22 +29,25 @@ export default async function MemberGridPage({
   params,
 }: {
   params: Promise<{ guild: string }>;
-}) {
+}): Promise<React.JSX.Element> {
   const { guild } = await params;
   const session = await auth();
-  if (!session || !hasPermission(session.user.permissions, LynxFlags.GUILD_CHAT)) {
+  if (
+    !session ||
+    !hasPermission(session.user.permissions, LynxFlags.GUILD_CHAT)
+  ) {
     return <AccessDenied />;
   }
   const members = await getGuildUsers(guild);
-
+  const { t } = await getServerTranslation();
 
   return (
-    <div className="container mx-auto p-6 md:p-8 space-y-6 md:space-y-8 select-none">
+    <div className="container mx-auto p-6 md:p-8 flex flex-col gap-6 md:gap-8 select-none">
       <PageHeader
-        title="Choose a Member"
-        description="Select a member from this guild to start a Direct Message conversation."
+        title={t("chooseMember")}
+        description={t("selectMemberDesc")}
         backHref={`/lynx/chat/guilds/${guild}`}
-        backLabel="Back to Channels"
+        backLabel={t("backToChannels")}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
@@ -54,32 +58,32 @@ export default async function MemberGridPage({
               href={`/lynx/chat/dms/start?userId=${member.id}`}
               className="block h-full"
             >
-              <div className="h-full relative overflow-hidden rounded-2xl border border-zinc-800/40 bg-zinc-950/20 backdrop-blur-xl p-6 shadow-xl hover:shadow-2xl hover:border-zinc-700/50 hover:bg-zinc-800/10 cursor-pointer group flex flex-col justify-between transition-all duration-300 isolate [transform:translate3d(0,0,0)]">
+              <div className="h-full relative overflow-hidden rounded-2xl border border-border/40 bg-card/20 backdrop-blur-xl p-6 shadow-xl hover:shadow-2xl hover:border-border/60 hover:bg-accent/10 cursor-pointer group flex flex-col justify-between transition-all duration-300 isolate transform-[translate3d(0,0,0)]">
                 {/* Accent glow on hover */}
                 <div className="absolute top-0 right-0 size-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors pointer-events-none" />
 
                 <div className="flex items-center justify-between relative z-10 w-full">
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="relative shrink-0">
-                      <div className="size-12 rounded-full overflow-hidden border border-zinc-800/80 bg-zinc-900/50 shadow-inner group-hover:scale-105 transition-transform duration-300 flex items-center justify-center">
+                      <div className="size-12 rounded-full overflow-hidden border border-border/80 bg-muted/50 shadow-inner group-hover:scale-105 transition-transform duration-300 flex items-center justify-center">
                         <Image
                           src={member.avatarURL}
                           alt=""
                           width={48}
                           height={48}
-                          className="w-full h-full object-cover"
+                          className="size-full object-cover"
                         />
                       </div>
                       <div
                         className={cn(
-                          "absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-zinc-950",
+                          "absolute bottom-0 right-0 size-3.5 rounded-full border-2 border-background",
                           member.status === "online"
-                            ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse"
+                            ? "bg-success shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse"
                             : member.status === "idle"
-                              ? "bg-yellow-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]"
+                              ? "bg-warning shadow-[0_0_8px_rgba(245,158,11,0.5)]"
                               : member.status === "dnd"
-                                ? "bg-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]"
-                                : "bg-zinc-500",
+                                ? "bg-destructive shadow-[0_0_8px_rgba(239,68,68,0.5)]"
+                                : "bg-muted-foreground",
                         )}
                       />
                     </div>
@@ -98,8 +102,8 @@ export default async function MemberGridPage({
             </Link>
           ))
         ) : (
-          <div className="col-span-full py-16 text-center rounded-2xl border-2 border-dashed border-zinc-800/40 bg-zinc-900/10 italic text-muted-foreground text-sm">
-            No members found in this guild
+          <div className="col-span-full py-16 text-center rounded-2xl border-2 border-dashed border-border/40 bg-muted/10 italic text-muted-foreground text-sm">
+            {t("noMembersFound")}
           </div>
         )}
       </div>

@@ -2,6 +2,7 @@
 
 import type React from "react";
 import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { LayoutGrid, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SidebarConfig, SidebarItem } from "@/types/SidebarConfig";
@@ -55,6 +56,7 @@ export function RrSidebarSettingsTab({
   onOpenChange,
 }: RrSidebarSettingsTabProps): React.JSX.Element {
   const { data: session } = useSession();
+  const { t } = useTranslation();
   const [selectedAppHref, setSelectedAppHref] = useState<string>("/aquila");
   const [focusedSlot, setFocusedSlot] = useState<string | null>("1");
   const [tempPositions, setTempPositions] = useState<
@@ -113,7 +115,7 @@ export function RrSidebarSettingsTab({
       return getAquilaSidebarConfig(session, connections);
     }
     if (selectedAppHref === "/lynx") {
-      return getLynxSidebarConfig({});
+      return getLynxSidebarConfig({}, t);
     }
     if (selectedAppHref === "/pegasus") {
       return getPegasusSidebarConfig(emails);

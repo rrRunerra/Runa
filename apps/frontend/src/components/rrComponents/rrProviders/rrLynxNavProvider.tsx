@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { getLynxSidebarConfig } from "../../../../config/lynxSidebarConfig";
 import { useSession } from "next-auth/react";
 import { filterSidebarConfig } from "@/lib/navigation";
@@ -24,6 +25,7 @@ interface RrLynxNavProviderProps {
 
 export default function RrLynxNavProvider({ children }: RrLynxNavProviderProps): React.JSX.Element {
   const { data: session } = useSession();
+  const { t } = useTranslation();
   const [data, setData] = useState({
     commands: [] as { name: string }[],
     events: [] as { name: string }[],
@@ -45,9 +47,10 @@ export default function RrLynxNavProvider({ children }: RrLynxNavProviderProps):
   }, []);
 
   const sidebarConfig = useMemo(() => {
-    const rawConfig = getLynxSidebarConfig(data);
+    const rawConfig = getLynxSidebarConfig(data, t);
     return filterSidebarConfig(rawConfig, session?.user?.permissions);
-  }, [data, session?.user?.permissions]);
+  }, [data, t, session?.user?.permissions]);
+
 
   return (
     <>

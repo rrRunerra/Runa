@@ -1,10 +1,11 @@
 import { auth } from "@runa/auth";
-import { hasPermission, BitField, LynxFlags } from "@runa/permissions";
+import { hasPermission, LynxFlags } from "@runa/permissions";
 import { LynxLogType, prisma } from "@runa/database";
 import AccessDenied from "@/components/lynx/AccessDenied";
 import { LogTerminal } from "@/components/lynx/LogTerminal";
+import { getServerTranslation } from "@/lib/serverTranslation";
 
-export default async function DebugLogsPage() {
+export default async function DebugLogsPage(): Promise<React.JSX.Element> {
   const session = await auth();
   if (!session || !hasPermission(session.user.permissions, LynxFlags.VIEW_LOGS)) {
     return <AccessDenied />;
@@ -27,10 +28,12 @@ export default async function DebugLogsPage() {
     nextCursor = nextItem?.id;
   }
 
+  const { t } = await getServerTranslation();
+
   return (
-    <div className="p-4 md:p-6 h-screen flex flex-col space-y-4 w-full">
+    <div className="p-4 md:p-6 h-screen flex flex-col gap-4 w-full">
       <div className="flex items-center justify-between shrink-0">
-        <h1 className="text-2xl font-bold tracking-tight">Debug Logs</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("debugLogs")}</h1>
       </div>
 
       <LogTerminal

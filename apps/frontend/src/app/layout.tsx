@@ -5,6 +5,7 @@ import "katex/dist/katex.min.css";
 import { cn } from "@/lib/utils";
 import Providers from "./providers";
 import { Toaster } from "@/components/ui/sonner";
+import { RrI18nServerProvider } from "@/components/Providers/rrI18nServerProvider";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -50,7 +51,9 @@ export default function RootLayout({
       )}
     >
       <body className="h-screen flex flex-col">
-        <Providers>{children}</Providers>
+        <RrI18nServerProvider>
+          <Providers>{children}</Providers>
+        </RrI18nServerProvider>
         <Toaster position="top-center" />
       </body>
     </html>

@@ -3,21 +3,25 @@
 import { ChevronRight, Settings, ScrollText } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { hasPermission, BitField, LynxFlags } from "@runa/permissions";
+import { hasPermission, LynxFlags } from "@runa/permissions";
 import AccessDenied from "@/components/lynx/AccessDenied";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
-export default function ConfigPage() {
+export default function ConfigPage(): React.JSX.Element {
+  const { t } = useTranslation();
   const { data: session, status } = useSession();
-  if (status === "unauthenticated" || !hasPermission(session?.user?.permissions, LynxFlags.MANAGE_CONFIG)) {
+  if (
+    status === "unauthenticated" ||
+    !hasPermission(session?.user?.permissions, LynxFlags.MANAGE_CONFIG)
+  ) {
     return <AccessDenied />;
   }
 
   const configs = [
     {
-      title: "Homework Channels",
-      description:
-        "Configure subject-specific channels for homework assignments.",
+      title: t("homeworkChannels"),
+      description: t("homeworkChannelsDesc"),
       href: "/lynx/config/homework",
       icon: <ScrollText className="size-5" />,
     },
@@ -27,28 +31,28 @@ export default function ConfigPage() {
     hidden: { opacity: 0 },
     show: {
       opacity: 1,
-      transition: { staggerChildren: 0.04 }
-    }
+      transition: { staggerChildren: 0.04 },
+    },
   };
 
   const cardVariants = {
     hidden: { opacity: 0, y: 12 },
-    show: { 
-      opacity: 1, 
+    show: {
+      opacity: 1,
       y: 0,
-      transition: { type: "spring", stiffness: 350, damping: 26 }
-    }
+      transition: { type: "spring", stiffness: 350, damping: 26 },
+    },
   } as const;
 
   return (
-    <div className="container mx-auto p-6 md:p-8 space-y-6 md:space-y-8 select-none">
+    <div className="container mx-auto p-6 md:p-8 flex flex-col gap-6 md:gap-8 select-none">
       <div className="flex flex-col gap-1.5">
         <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
           <Settings className="size-8 text-primary" />
-          Bot Configuration
+          {t("botConfig")}
         </h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Adjust features, subjects, automatic channels, and default behaviors of your Discord bot.
+          {t("botConfigDesc")}
         </p>
       </div>
 
@@ -64,15 +68,15 @@ export default function ConfigPage() {
               variants={cardVariants}
               whileHover={{ scale: 1.015, y: -2 }}
               whileTap={{ scale: 0.985 }}
-              className="h-full relative overflow-hidden rounded-2xl border border-zinc-800/40 bg-zinc-950/20 backdrop-blur-xl p-6 shadow-xl hover:shadow-2xl hover:border-zinc-700/50 hover:bg-zinc-800/10 cursor-pointer group flex flex-col justify-between transition-all duration-300 isolate [transform:translate3d(0,0,0)]"
+              className="h-full relative overflow-hidden rounded-2xl border border-border/40 bg-card/20 backdrop-blur-xl p-6 shadow-xl hover:shadow-2xl hover:border-border/60 hover:bg-accent/10 cursor-pointer group flex flex-col justify-between transition-all duration-300 isolate transform-[translate3d(0,0,0)]"
             >
               {/* Accent glow on hover */}
               <div className="absolute top-0 right-0 size-32 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors pointer-events-none" />
 
-              <div className="space-y-4">
+              <div className="flex flex-col gap-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="size-10 rounded-xl border border-zinc-800 bg-zinc-900/50 text-primary flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform duration-300">
+                    <div className="size-10 rounded-xl border border-border bg-muted/50 text-primary flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform duration-300">
                       {config.icon}
                     </div>
                     <h3 className="text-lg font-bold text-foreground group-hover:text-primary transition-colors">

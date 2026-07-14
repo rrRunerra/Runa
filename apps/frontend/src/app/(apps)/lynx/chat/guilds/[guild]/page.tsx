@@ -1,11 +1,12 @@
 import { auth } from "@runa/auth";
-import { hasPermission, BitField, LynxFlags } from "@runa/permissions";
+import { hasPermission, LynxFlags } from "@runa/permissions";
 import { ChevronRight, Hash, Volume2 } from "lucide-react";
 import Link from "next/link";
 import AccessDenied from "@/components/lynx/AccessDenied";
 import { PageHeader } from "@/components/lynx/LynxPageHeader";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { getServerTranslation } from "@/lib/serverTranslation";
 
 // TYPE 2 = VOICE
 // TYPE 0 = TEXT
@@ -24,10 +25,10 @@ async function getChannels(guild: string): Promise<Channel[]> {
         "Content-Type": "application/json",
       },
       cache: "force-cache",
-        next: {
-          revalidate: 60, // revalidate every 60 seconds
-          tags: ["guilds"]
-        }
+      next: {
+        revalidate: 60, // revalidate every 60 seconds
+        tags: ["guilds"],
+      },
     },
   );
   if (!res.ok) return [];
@@ -38,22 +39,25 @@ export default async function ChannelsPage({
   params,
 }: {
   params: Promise<{ guild: string }>;
-}) {
+}): Promise<React.JSX.Element> {
   const { guild } = await params;
   const session = await auth();
-  if (!session || !hasPermission(session.user.permissions, LynxFlags.GUILD_CHAT)) {
+  if (
+    !session ||
+    !hasPermission(session.user.permissions, LynxFlags.GUILD_CHAT)
+  ) {
     return <AccessDenied />;
   }
   const channels: Channel[] = await getChannels(guild);
-
+  const { t } = await getServerTranslation();
 
   return (
-    <div className="container mx-auto p-8 space-y-8 relative">
+    <div className="container mx-auto p-8 flex flex-col gap-8 relative">
       <PageHeader
-        title="Channels"
-        description={`Select a channel in Guild ${guild} to send messages`}
+        title={t("discordChannels")}
+        description={t("selectGuildMessages")}
         backHref="/lynx/chat/guilds"
-        backLabel="Back to Guilds"
+        backLabel={t("chooseGuild")}
         className="relative z-10"
       />
 
@@ -70,7 +74,7 @@ export default async function ChannelsPage({
                   href={`/lynx/chat/guilds/${guild}/${channel.id}`}
                   className="block h-full"
                 >
-                  <div className="h-full relative overflow-hidden rounded-2xl border border-zinc-800/40 bg-zinc-950/20 backdrop-blur-xl p-6 shadow-xl hover:shadow-2xl hover:border-zinc-700/50 hover:bg-zinc-800/10 cursor-pointer group flex flex-col justify-between transition-all duration-300 isolate [transform:translate3d(0,0,0)]">
+                  <div className="h-full relative overflow-hidden rounded-2xl border border-border/40 bg-card/20 backdrop-blur-xl p-6 shadow-xl hover:shadow-2xl hover:border-border/60 hover:bg-accent/10 cursor-pointer group flex flex-col justify-between transition-all duration-300 isolate transform-[translate3d(0,0,0)]">
                     {/* Accent glow on hover */}
                     <div className="absolute top-0 right-0 size-24 bg-primary/5 rounded-full blur-2xl group-hover:bg-primary/10 transition-colors pointer-events-none" />
 
@@ -80,7 +84,7 @@ export default async function ChannelsPage({
                           className={cn(
                             "size-10 rounded-xl border flex items-center justify-center transition-all duration-300 group-hover:scale-105 shadow-inner shrink-0",
                             isVoice
-                              ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+                              ? "bg-success/10 border-success/20 text-success"
                               : "bg-primary/10 border-primary/20 text-primary",
                             channel.nsfw &&
                               "bg-destructive/10 border-destructive/20 text-destructive",
@@ -92,7 +96,10 @@ export default async function ChannelsPage({
                             <Hash className="size-5" />
                           )}
                         </div>
-                        <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors truncate max-w-[170px]" title={channel.name}>
+                        <h3
+                          className="text-base font-bold text-foreground group-hover:text-primary transition-colors truncate max-w-[170px]"
+                          title={channel.name}
+                        >
                           {channel.name}
                         </h3>
                       </div>
@@ -100,7 +107,7 @@ export default async function ChannelsPage({
                         {channel.nsfw && (
                           <Badge
                             variant="destructive"
-                            className="bg-red-500/10 text-red-400 border border-red-500/20 text-[9px] font-bold uppercase px-1.5 h-5 shadow-[0_0_8px_rgba(239,68,68,0.08)]"
+                            className="bg-destructive/10 text-destructive border border-destructive/20 text-[9px] font-bold uppercase px-1.5 h-5 shadow-[0_0_8px_rgba(239,68,68,0.08)]"
                           >
                             NSFW
                           </Badge>
@@ -113,7 +120,7 @@ export default async function ChannelsPage({
               );
             })
         ) : (
-          <div>No channels found</div>
+          <div>{t("noChannelsLinked")}</div>
         )}
       </div>
     </div>

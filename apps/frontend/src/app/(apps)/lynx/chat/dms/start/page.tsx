@@ -2,11 +2,13 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { hasPermission, BitField, LynxFlags } from "@runa/permissions";
+import { hasPermission, LynxFlags } from "@runa/permissions";
 import { Suspense, useEffect } from "react";
 import AccessDenied from "@/components/lynx/AccessDenied";
+import { useTranslation } from "react-i18next";
 
-function StartDmContent() {
+function StartDmContent(): React.JSX.Element {
+  const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
   const userId = searchParams.get("userId");
@@ -35,18 +37,18 @@ function StartDmContent() {
   }, [userId, router]);
 
   return (
-    <div className="flex items-center justify-center min-h-screen text-zinc-400 bg-background relative z-10">
-      <div className="flex flex-col items-center gap-4 bg-zinc-950/20 backdrop-blur-xl p-8 border border-zinc-900/50 rounded-2xl shadow-xl">
-        <div className="w-8 h-8 border-2 border-zinc-800 border-t-primary rounded-full animate-spin" />
+    <div className="flex items-center justify-center min-h-screen text-muted-foreground bg-background relative z-10 select-none">
+      <div className="flex flex-col items-center gap-4 bg-card/20 backdrop-blur-xl p-8 border border-border/50 rounded-2xl shadow-xl">
+        <div className="size-8 border-2 border-muted border-t-primary rounded-full animate-spin" />
         <p className="text-xs font-semibold animate-pulse text-muted-foreground">
-          Initializing Direct Message…
+          {t("initializingDm")}
         </p>
       </div>
     </div>
   );
 }
 
-export default function StartDmPage() {
+export default function StartDmPage(): React.JSX.Element {
   return (
     <Suspense>
       <StartDmContent />

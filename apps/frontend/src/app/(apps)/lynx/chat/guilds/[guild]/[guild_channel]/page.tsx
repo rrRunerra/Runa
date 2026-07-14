@@ -1,13 +1,16 @@
 import { auth } from "@runa/auth";
-import { hasPermission, BitField, LynxFlags } from "@runa/permissions";
+import { hasPermission, LynxFlags } from "@runa/permissions";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import AccessDenied from "@/components/lynx/AccessDenied";
 import LiveMessageList from "./LiveMessageList";
 import MessageInput from "./MessageInput";
-import "dotenv/config";
+import { getServerTranslation } from "@/lib/serverTranslation";
 
-async function getChatContext(guildId: string, channelId: string) {
+async function getChatContext(
+  guildId: string,
+  channelId: string,
+): Promise<{ guildName: string; channelName: string }> {
   const token = process.env.LYNX_TOKEN!;
   try {
     const [guildRes, channelsRes] = await Promise.all([
@@ -41,7 +44,7 @@ export default async function Page({
   params,
 }: {
   params: Promise<{ guild: string; guild_channel: string }>;
-}) {
+}): Promise<React.JSX.Element> {
   const { guild, guild_channel } = await params;
   let data: any[] = []; // eslint-disable-line @typescript-eslint/no-explicit-any
   let error: string | null = null;
@@ -49,7 +52,6 @@ export default async function Page({
   if (!session || !hasPermission(session.user.permissions, LynxFlags.GUILD_CHAT)) {
     return <AccessDenied />;
   }
-
 
   const [context, messagesRes] = await Promise.all([
     getChatContext(guild, guild_channel),
@@ -77,25 +79,27 @@ export default async function Page({
     error = err.message;
   }
 
+  const { t } = await getServerTranslation();
+
   if (error) {
     return (
-      <div className="container mx-auto p-8">
-        <h1 className="text-2xl font-bold text-rose-500">Error</h1>
-        <p className="text-zinc-400">{error}</p>
+      <div className="container mx-auto p-8 flex flex-col gap-4">
+        <h1 className="text-2xl font-bold text-destructive">{t("error")}</h1>
+        <p className="text-muted-foreground">{error}</p>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-4 max-w-4xl relative min-h-screen pb-20">
+    <div className="container mx-auto p-6 flex flex-col gap-4 max-w-4xl relative min-h-screen pb-20 select-none">
       {/* Header and Navigation */}
-      <div className="flex flex-col gap-4 border-b border-zinc-800 pb-5">
+      <div className="flex flex-col gap-4 border-b border-border pb-5">
         <Link
           href={`/lynx/chat/guilds/${guild}`}
           className="flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
         >
-          <ChevronLeft className="w-4 h-4 mr-1" />
-          Back to Channels
+          <ChevronLeft className="size-4 mr-1" />
+          {t("backToChannels")}
         </Link>
 
         <div className="flex flex-col gap-1">
@@ -130,3 +134,4 @@ export default async function Page({
     </div>
   );
 }
+

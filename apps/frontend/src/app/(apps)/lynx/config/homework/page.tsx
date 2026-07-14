@@ -2,15 +2,17 @@
 
 import { Loader2, Save } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { hasPermission, BitField, LynxFlags } from "@runa/permissions";
+import { hasPermission, LynxFlags } from "@runa/permissions";
 import { useState } from "react";
 import AccessDenied from "@/components/lynx/AccessDenied";
 import { PageHeader } from "@/components/lynx/LynxPageHeader";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
-export default function HomeworkConfigPage() {
+export default function HomeworkConfigPage(): React.JSX.Element {
+  const { t } = useTranslation();
   const [guildId, setGuildId] = useState("");
   const [jsonInput, setJsonInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -61,26 +63,26 @@ export default function HomeworkConfigPage() {
   };
 
   return (
-    <div className="container mx-auto p-6 md:p-8 space-y-6 md:space-y-8 select-none">
+    <div className="container mx-auto p-6 md:p-8 flex flex-col gap-6 md:gap-8 select-none">
       <PageHeader
-        title="Homework Configuration"
-        description="Configure the channel mapping targets for automatic homework assignments."
+        title={t("homeworkConfig")}
+        description={t("homeworkConfigDesc")}
         backHref="/lynx/config"
-        backLabel="Back to Configuration"
+        backLabel={t("backToConfig")}
       />
 
-      <div className="rounded-2xl border border-zinc-800/40 bg-zinc-950/20 backdrop-blur-xl p-6 shadow-xl space-y-5">
+      <div className="rounded-2xl border border-border/40 bg-card/20 backdrop-blur-xl p-6 shadow-xl flex flex-col gap-5">
         <div>
-          <h3 className="text-lg font-bold text-foreground">Homework Channels</h3>
+          <h3 className="text-lg font-bold text-foreground">{t("homeworkChannels")}</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Enter the target Discord Guild ID and map subjects to their respective channel IDs.
+            {t("homeworkInstructions")}
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-1.5 pl-0.5">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+          <div className="flex flex-col gap-1.5 pl-0.5">
             <label htmlFor="guildId" className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/60">
-              Guild ID
+              {t("guildId")}
             </label>
             <Input
               id="guildId"
@@ -89,17 +91,17 @@ export default function HomeworkConfigPage() {
               onChange={(e) => setGuildId(e.target.value)}
               autoComplete="off"
               required
-              className="bg-zinc-900/30 border-zinc-800/60 rounded-xl px-4 py-2.5 text-xs text-foreground focus:border-primary/50 focus:ring-1 focus:ring-primary/25 transition-all shadow-inner placeholder:text-muted-foreground/35"
+              className="bg-muted/30 border-border/60 rounded-xl px-4 py-2.5 text-xs text-foreground focus:border-primary/50 focus:ring-1 focus:ring-primary/25 transition-all shadow-inner placeholder:text-muted-foreground/35"
             />
           </div>
 
-          <div className="space-y-1.5 pl-0.5">
+          <div className="flex flex-col gap-1.5 pl-0.5">
             <label htmlFor="channels" className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/60">
-              Channels JSON Configuration
+              {t("channelsJsonConfig")}
             </label>
             <textarea
               id="channels"
-              className="flex min-h-[250px] w-full rounded-xl border border-zinc-800/60 bg-zinc-950/80 px-4 py-3 text-xs font-mono text-zinc-300 placeholder:text-muted-foreground/35 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/25 shadow-inner no-scrollbar"
+              className="flex min-h-[250px] w-full rounded-xl border border-border/60 bg-background/80 px-4 py-3 text-xs font-mono text-muted-foreground placeholder:text-muted-foreground/35 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/25 shadow-inner no-scrollbar"
               placeholder={`Use subject shorthand as keys:
 {
   "apm": "1425890971203145840",
@@ -111,7 +113,7 @@ export default function HomeworkConfigPage() {
               required
             />
             <p className="text-[10px] text-muted-foreground/50 italic pl-1">
-              Ensure you provide valid JSON brackets and double quotes around all keys and values.
+              {t("ensureValidJson")}
             </p>
           </div>
 
@@ -126,12 +128,12 @@ export default function HomeworkConfigPage() {
               {isLoading ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  Saving Configuration…
+                  {t("savingConfig")}
                 </>
               ) : (
                 <>
                   <Save className="size-4" />
-                  Save Configuration
+                  {t("saveConfig")}
                 </>
               )}
             </motion.button>
@@ -141,3 +143,4 @@ export default function HomeworkConfigPage() {
     </div>
   );
 }
+

@@ -1,11 +1,8 @@
 import { auth } from "@runa/auth";
-import { hasPermission, BitField, LynxFlags, RunaFlags } from "@runa/permissions";
 import { prisma } from "@runa/database";
-import AccessDenied from "@/components/lynx/AccessDenied";
 import LynxDashboardClient from "@/components/lynx/LynxDashboardClient";
-import "dotenv/config";
 
-async function getStats() {
+async function getStats(): Promise<unknown> {
   const backendUrl = `${process.env.LYNX_API_URL}/stats`;
   try {
     const res = await fetch(backendUrl, {
@@ -20,13 +17,8 @@ async function getStats() {
   }
 }
 
-export default async function LynxHome() {
+export default async function LynxHome(): Promise<React.JSX.Element> {
   const session = await auth();
-  // if (!session || !hasPermission(session.user.permissions, RunaFlags.LOGGED_IN)) {
-  //   return <AccessDenied />;
-  // }
-
-  
 
   // Fetch metrics and recent logs in parallel
   const [stats, initialLogs] = await Promise.all([
@@ -49,7 +41,8 @@ export default async function LynxHome() {
     <LynxDashboardClient
       initialStats={stats}
       initialLogs={serializedLogs}
-      session={ session}
+      session={session}
     />
   );
 }
+

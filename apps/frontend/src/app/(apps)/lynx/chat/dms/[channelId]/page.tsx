@@ -1,12 +1,15 @@
 import { auth } from "@runa/auth";
-import { hasPermission, BitField, LynxFlags } from "@runa/permissions";
+import { hasPermission, LynxFlags } from "@runa/permissions";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import AccessDenied from "@/components/lynx/AccessDenied";
 import LiveMessageList from "../../guilds/[guild]/[guild_channel]/LiveMessageList";
 import MessageInput from "../../guilds/[guild]/[guild_channel]/MessageInput";
+import { getServerTranslation } from "@/lib/serverTranslation";
 
-async function getDmContext(channelId: string) {
+async function getDmContext(
+  channelId: string,
+): Promise<{ recipientName: string; recipientId: string | null }> {
   const token = process.env.LYNX_TOKEN!;
   try {
     const res = await fetch(`https://discord.com/api/channels/${channelId}`, {
@@ -19,7 +22,7 @@ async function getDmContext(channelId: string) {
     return {
       recipientName:
         recipient?.global_name || recipient?.username || "Unknown User",
-      recipientId: recipient?.id,
+      recipientId: recipient?.id || null,
     };
   } catch (err) {
     console.error("DM Context fetch error:", err);
@@ -31,7 +34,7 @@ export default async function DmChatPage({
   params,
 }: {
   params: Promise<{ channelId: string }>;
-}) {
+}): Promise<React.JSX.Element> {
   const { channelId } = await params;
   let data: any[] = []; // eslint-disable-line @typescript-eslint/no-explicit-any
   let error: string | null = null;
@@ -67,36 +70,38 @@ export default async function DmChatPage({
     error = err.message;
   }
 
+  const { t } = await getServerTranslation();
+
   if (error) {
     return (
-      <div className="container mx-auto p-8">
-        <h1 className="text-2xl font-bold text-rose-500">Error</h1>
-        <p className="text-zinc-400">{error}</p>
+      <div className="container mx-auto p-8 flex flex-col gap-4">
+        <h1 className="text-2xl font-bold text-destructive">{t("error")}</h1>
+        <p className="text-muted-foreground">{error}</p>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-4 max-w-4xl relative min-h-screen pb-20">
+    <div className="container mx-auto p-6 flex flex-col gap-4 max-w-4xl relative min-h-screen pb-20 select-none">
       {/* Header and Navigation */}
-      <div className="flex flex-col gap-4 border-b border-zinc-800 pb-5">
+      <div className="flex flex-col gap-4 border-b border-border pb-5">
         <Link
           href="/lynx/chat/dms"
-          className="flex items-center text-xs text-zinc-500 hover:text-white transition-colors w-fit -ml-1"
+          className="flex items-center text-xs text-muted-foreground hover:text-foreground transition-colors w-fit -ml-1"
         >
-          <ChevronLeft className="w-3.5 h-3.5 mr-1" />
-          Back to DMs
+          <ChevronLeft className="size-3.5 mr-1" />
+          {t("backToDms")}
         </Link>
 
         <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-2 text-xs text-zinc-500 font-medium overflow-hidden whitespace-nowrap">
-            <span className="text-white font-semibold flex items-center gap-1">
-              <span className="text-zinc-500 font-normal">@</span>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground font-medium overflow-hidden whitespace-nowrap">
+            <span className="text-foreground font-semibold flex items-center gap-1">
+              <span className="text-muted-foreground font-normal">@</span>
               {context.recipientName}
             </span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            <span className="text-zinc-500 font-light opacity-50">@</span>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
+            <span className="text-muted-foreground font-light opacity-50">@</span>
             {context.recipientName}
           </h1>
         </div>
