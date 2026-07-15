@@ -6,9 +6,11 @@ import { useSession } from "next-auth/react";
 import { Download, Loader2, File, CheckCircle2, ShieldCheck, Play, ArrowLeft, Grid3X3 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 import CanvasEditor from "@/components/rrComponents/lacerta/CanvasEditor";
 import OnlyOfficeEditor from "@/components/rrComponents/lacerta/OnlyOfficeEditor";
 import { isOnlyOfficeFile } from "@/lib/onlyoffice";
+import { RawFileItem } from "../../types";
 
 import {
   importRawKey,
@@ -16,13 +18,14 @@ import {
 } from "@runa/crypto/browser";
 
 export default function LacertaSharePage(): React.JSX.Element {
+  const { t } = useTranslation();
   const params = useParams();
   const fileId = params.id as string;
   const { data: session } = useSession();
 
   const [loading, setLoading] = useState<boolean>(true);
   const [decrypting, setDecrypting] = useState<boolean>(false);
-  const [fileMeta, setFileMeta] = useState<any | null>(null);
+  const [fileMeta, setFileMeta] = useState<RawFileItem | null>(null);
   const [decryptedName, setDecryptedName] = useState<string>("");
   const [decryptedType, setDecryptedType] = useState<string>("");
   const [decryptedBlobUrl, setDecryptedBlobUrl] = useState<string | null>(null);
@@ -58,8 +61,9 @@ export default function LacertaSharePage(): React.JSX.Element {
             toast.error("Invalid decryption key in URL.");
           }
         }
-      } catch (err: any) {
-        toast.error(err.message || "Failed to load shared file metadata.");
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : "Failed to load shared file metadata.";
+        toast.error(errMsg);
       } finally {
         setLoading(false);
       }
@@ -108,8 +112,9 @@ export default function LacertaSharePage(): React.JSX.Element {
       a.remove();
 
       toast.success("File decrypted and downloaded successfully!", { id: downloadToast });
-    } catch (err: any) {
-      toast.error(err.message || "Decryption failed.", { id: downloadToast });
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : "Decryption failed.";
+      toast.error(errMsg, { id: downloadToast });
     } finally {
       setDecrypting(false);
     }
@@ -136,8 +141,9 @@ export default function LacertaSharePage(): React.JSX.Element {
       setCanvasContent(text);
       setShowCanvasEditor(true);
       toast.success("Canvas decrypted successfully!", { id: loadToast });
-    } catch (err: any) {
-      toast.error(err.message || "Failed to load canvas.", { id: loadToast });
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : "Failed to load canvas.";
+      toast.error(errMsg, { id: loadToast });
     } finally {
       setDecrypting(false);
     }
@@ -156,7 +162,7 @@ export default function LacertaSharePage(): React.JSX.Element {
     return (
       <div className="flex-1 flex flex-col items-center justify-center bg-background min-h-screen text-muted-foreground">
         <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
-        <span className="text-xs">Loading secure link metadata...</span>
+        <span className="text-xs">{t("lacerta.loadingSecureLink")}</span>
       </div>
     );
   }
@@ -166,15 +172,15 @@ export default function LacertaSharePage(): React.JSX.Element {
       <div className="flex-1 flex flex-col items-center justify-center bg-background min-h-screen">
         <div className="w-full max-w-md rounded-2xl border border-border bg-card/60 p-8 shadow-2xl backdrop-blur-xl flex flex-col items-center">
           <ShieldCheck className="h-12 w-12 text-destructive mb-3" />
-          <h3 className="text-lg font-bold text-foreground">Link Invalid or Private</h3>
+          <h3 className="text-lg font-bold text-foreground">{t("lacerta.sharedLinkInvalid")}</h3>
           <p className="mt-2 text-center text-xs text-muted-foreground leading-normal max-w-sm">
-            This file does not exist, has been deleted, or is not publicly shared. Check your share link.
+            {t("lacerta.sharedLinkInvalidDesc")}
           </p>
           <Link
             href="/lacerta"
-            className="mt-6 px-4 py-2 bg-muted/10 border hover:bg-muted/20 text-foreground font-semibold rounded-lg text-xs transition-all flex items-center gap-1.5"
+            className="mt-6 px-4 py-2 bg-muted/10 border hover:bg-muted/20 text-foreground font-semibold rounded-lg text-xs transition-all flex items-center gap-1.5 cursor-pointer"
           >
-            <ArrowLeft className="h-3.5 w-3.5" /> Go to Storage
+            <ArrowLeft className="h-3.5 w-3.5" /> {t("lacerta.goToStorage")}
           </Link>
         </div>
       </div>
@@ -189,22 +195,22 @@ export default function LacertaSharePage(): React.JSX.Element {
         </div>
 
         <h3 className="text-lg font-bold tracking-tight text-foreground truncate max-w-full px-4">
-          {decryptedName || "Encrypted Shared File"}
+          {decryptedName || t("lacerta.encryptedSharedFile")}
         </h3>
         <span className="text-xs text-muted-foreground mt-1">
-          Size: {formatSize(fileMeta.size)}
+          {t("lacerta.size")}: {formatSize(fileMeta.size)}
         </span>
 
         {rawKeyStr ? (
           <div className="mt-6 w-full flex flex-col items-center">
-            <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-full mb-6">
+            <div className="flex items-center gap-1.5 text-[10px] font-bold text-success bg-success/10 border border-success/20 px-3 py-1.5 rounded-full mb-6">
               <ShieldCheck className="h-3.5 w-3.5" />
-              Decryption Key Found in URL (Encryption Active)
+              {t("lacerta.decryptionKeyFound")}
             </div>
 
             {/* Content Preview for Images */}
             {decryptedBlobUrl && decryptedType.startsWith("image/") && (
-              <div className="w-full max-w-[280px] aspect-video border rounded-xl overflow-hidden shadow-md mb-6 bg-muted/10">
+              <div className="w-full max-w-[280px] aspect-video border rounded-xl overflow-hidden shadow-md mb-6 bg-muted/10 relative">
                 <img src={decryptedBlobUrl} alt="Preview" className="w-full h-full object-contain" />
               </div>
             )}
@@ -220,36 +226,36 @@ export default function LacertaSharePage(): React.JSX.Element {
               <button
                 onClick={handleOpenCanvas}
                 disabled={decrypting}
-                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-800 text-white font-semibold rounded-lg text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-98"
+                className="w-full py-2.5 bg-primary hover:bg-primary/95 disabled:opacity-50 text-primary-foreground font-semibold rounded-lg text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-98 cursor-pointer"
               >
                 {decrypting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Grid3X3 className="h-4 w-4" />
                 )}
-                {decrypting ? "Decrypting..." : "Open Collaborative Canvas"}
+                {decrypting ? t("lacerta.decrypting") : t("lacerta.openCollaborativeCanvas")}
               </button>
             ) : isOnlyOfficeFile(decryptedName, decryptedType) ? (
               <button
                 onClick={() => setShowOfficeEditor(true)}
                 disabled={decrypting}
-                className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 text-white font-semibold rounded-lg text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-98"
+                className="w-full py-2.5 bg-success hover:bg-success/90 disabled:opacity-50 text-success-foreground font-semibold rounded-lg text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-98 cursor-pointer"
               >
                 <Play className="h-4 w-4" />
-                Open Collaborative Editor
+                {t("lacerta.openCollaborativeEditor")}
               </button>
             ) : (
               <button
                 onClick={handleDecryptAndDownload}
                 disabled={decrypting}
-                className="w-full py-2.5 bg-primary hover:bg-primary/95 text-primary-foreground font-semibold rounded-lg text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-98"
+                className="w-full py-2.5 bg-primary hover:bg-primary/95 disabled:opacity-50 text-primary-foreground font-semibold rounded-lg text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-98 cursor-pointer"
               >
                 {decrypting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Download className="h-4 w-4" />
                 )}
-                {decrypting ? "Decrypting..." : "Decrypt & Download"}
+                {decrypting ? t("lacerta.decrypting") : t("lacerta.decryptAndDownload")}
               </button>
             )}
           </div>
@@ -307,7 +313,7 @@ export default function LacertaSharePage(): React.JSX.Element {
             id: fileMeta.id,
             name: decryptedName || "shared.document",
             type: decryptedType || null,
-            updatedAt: fileMeta.updatedAt || new Date().toISOString(),
+            updatedAt: typeof fileMeta.createdAt === "string" ? fileMeta.createdAt : new Date().toISOString(),
           }}
           fileKey={rawKeyStr}
           accessToken={session?.accessToken || ""}

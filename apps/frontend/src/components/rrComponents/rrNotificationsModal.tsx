@@ -56,6 +56,7 @@ import {
 import { useRRCrypto } from "@/hooks/useRRCrypto";
 import { fetcher } from "@/lib/fetcher";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface NotificationsModalProps {
   open: boolean;
@@ -129,6 +130,7 @@ export function RrNotificationsModal({
 }: NotificationsModalProps) {
   const { data: session } = useSession();
   const router = useRouter();
+  const { t } = useTranslation();
   const { getPrivateKey, unwrapKey, decrypt } = useRRCrypto();
 
   const [notifications, setNotifications] = useState<
@@ -163,9 +165,8 @@ export function RrNotificationsModal({
       if (!privKey) {
         return {
           ...n,
-          title: "Encrypted Notification",
-          message:
-            "This notification is encrypted and could not be decrypted on this device.",
+          title: t("encryptedNotification"),
+          message: t("encryptedNotificationDesc"),
           _decryptionFailed: true,
         };
       }
@@ -192,14 +193,13 @@ export function RrNotificationsModal({
         console.error("Failed to decrypt notification:", err);
         return {
           ...n,
-          title: "Encrypted Notification",
-          message:
-            "This notification is encrypted and could not be decrypted on this device.",
+          title: t("encryptedNotification"),
+          message: t("encryptedNotificationDesc"),
           _decryptionFailed: true,
         };
       }
     },
-    [],
+    [t],
   );
 
   const fetchNotifications = useCallback(
@@ -253,8 +253,8 @@ export function RrNotificationsModal({
             console.error("Failed to decrypt fetched notifications:", decErr);
             processedData = data.map((n: any) => ({
               ...n,
-              title: "Encrypted Notification",
-              message: "Failed to load decryption keys.",
+              title: t("encryptedNotification"),
+              message: t("failedLoadDecryptionKeys"),
               _decryptionFailed: true,
             }));
           }
@@ -270,7 +270,7 @@ export function RrNotificationsModal({
         setIsFetchingMore(false);
       }
     },
-    [session, getPrivateKey, decryptNotification, filterType],
+    [session, getPrivateKey, decryptNotification, filterType, t],
   );
 
   useEffect(() => {
@@ -359,7 +359,7 @@ export function RrNotificationsModal({
         return;
       }
       setNotifications((prev) => [decrypted, ...prev]);
-      toast.info(`New Notification: ${decrypted.title}`);
+      toast.info(t("newNotificationToast", { title: decrypted.title }));
     });
 
     socket.on(
@@ -393,6 +393,7 @@ export function RrNotificationsModal({
     decryptNotification,
     router,
     filterType,
+    t,
   ]);
 
   const handleDismiss = async (id: string) => {
@@ -415,10 +416,10 @@ export function RrNotificationsModal({
             n.id === id ? { ...n, status: "READ" as NotificationStatus } : n,
           ),
         );
-        toast.success("Notification dismissed");
+        toast.success(t("notificationDismissed"));
       }
     } catch {
-      toast.error("Failed to dismiss notification");
+      toast.error(t("failedDismissNotification"));
     }
   };
 
@@ -453,9 +454,9 @@ export function RrNotificationsModal({
             : n,
         ),
       );
-      toast.success("All notifications marked as read");
+      toast.success(t("allNotificationsRead"));
     } catch {
-      toast.error("Failed to mark some notifications as read");
+      toast.error(t("failedMarkNotificationsRead"));
     }
   };
 
@@ -471,12 +472,12 @@ export function RrNotificationsModal({
       );
       if (res.ok) {
         setNotifications((prev) => prev.filter((n) => n.id !== id));
-        toast.success("Notification deleted");
+        toast.success(t("notificationDeleted"));
       } else {
         throw new Error("Failed to delete");
       }
     } catch {
-      toast.error("Failed to delete notification");
+      toast.error(t("failedDeleteNotification"));
     }
   };
 
@@ -492,12 +493,12 @@ export function RrNotificationsModal({
       );
       if (res.ok) {
         setNotifications([]);
-        toast.success("All notifications cleared");
+        toast.success(t("allNotificationsCleared"));
       } else {
         throw new Error("Failed to clear");
       }
     } catch {
-      toast.error("Failed to clear notifications");
+      toast.error(t("failedClearNotifications"));
     }
   };
 
@@ -526,11 +527,11 @@ export function RrNotificationsModal({
           ),
         );
         toast.success(
-          status === "APPROVED" ? "Request Approved" : "Request Denied",
+          status === "APPROVED" ? t("requestApproved") : t("requestDenied"),
         );
       }
     } catch {
-      toast.error(`Failed to update request`);
+      toast.error(t("failedUpdateRequest"));
     } finally {
       setProcessingId(null);
     }
@@ -544,9 +545,7 @@ export function RrNotificationsModal({
     if (!session?.accessToken || !session?.user?.username) return;
     const password = passwords[id];
     if (!password) {
-      toast.error(
-        "Please enter your account password to authorize this device.",
-      );
+      toast.error(t("enterPasswordAuthorizeDevice"));
       return;
     }
 
@@ -620,7 +619,7 @@ export function RrNotificationsModal({
               : n,
           ),
         );
-        toast.success("Device authorized successfully!");
+        toast.success(t("deviceAuthorizedSuccess"));
         setPasswords((prev) => {
           const next = { ...prev };
           delete next[id];
@@ -628,10 +627,10 @@ export function RrNotificationsModal({
         });
       } else {
         const errorData = await res.json();
-        throw new Error(errorData.message || "Failed to submit authorization");
+        throw new Error(errorData.message || t("failedSubmitAuthorization"));
       }
     } catch (err: any) {
-      toast.error(err.message || "Authorization failed. Check your password.");
+      toast.error(err.message || t("authFailedCheckPassword"));
     } finally {
       setProcessingId(null);
     }
@@ -681,7 +680,7 @@ export function RrNotificationsModal({
           <div className="flex items-center justify-between w-full pr-8">
             <DialogTitle className="flex items-center gap-2 text-md font-bold text-foreground">
               <Bell className="size-4.5 text-primary" />
-              Notifications
+              {t("notifications")}
             </DialogTitle>
             <div className="flex items-center gap-2">
               <Select value={filterType} onValueChange={setFilterType}>
@@ -689,11 +688,11 @@ export function RrNotificationsModal({
                   <SelectValue placeholder="Filter" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ALL">All Types</SelectItem>
-                  <SelectItem value="INFO">Info</SelectItem>
-                  <SelectItem value="CONFIRMATION">Confirmation</SelectItem>
-                  <SelectItem value="PROMPT">Prompt</SelectItem>
-                  <SelectItem value="INTERACTIVE">Security</SelectItem>
+                  <SelectItem value="ALL">{t("allTypes")}</SelectItem>
+                  <SelectItem value="INFO">{t("info")}</SelectItem>
+                  <SelectItem value="CONFIRMATION">{t("confirmation")}</SelectItem>
+                  <SelectItem value="PROMPT">{t("prompt")}</SelectItem>
+                  <SelectItem value="INTERACTIVE">{t("security")}</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -714,14 +713,14 @@ export function RrNotificationsModal({
                         onClick={handleMarkAllRead}
                         className="cursor-pointer text-xs font-semibold"
                       >
-                        Mark All Read
+                        {t("markAllRead")}
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem
                       onClick={handleClearAll}
                       className="cursor-pointer text-xs font-semibold text-destructive focus:text-destructive focus:bg-destructive/10"
                     >
-                      Clear All
+                      {t("clearAll")}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -729,7 +728,7 @@ export function RrNotificationsModal({
             </div>
           </div>
           <DialogDescription className="text-xs text-muted-foreground mt-1">
-            Stay updated with your latest alerts and requests.
+            {t("notificationsDesc")}
           </DialogDescription>
         </DialogHeader>
 
@@ -737,7 +736,7 @@ export function RrNotificationsModal({
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <Loader2 className="size-6 text-primary animate-spin" />
             <span className="text-xs text-muted-foreground">
-              Loading alerts...
+              {t("loadingAlerts")}
             </span>
           </div>
         ) : notifications.length === 0 ? (
@@ -746,7 +745,7 @@ export function RrNotificationsModal({
               <Bell className="size-6" />
             </div>
             <span className="text-xs font-semibold text-muted-foreground">
-              No notifications yet
+              {t("noNotificationsYet")}
             </span>
           </div>
         ) : (
@@ -851,8 +850,8 @@ export function RrNotificationsModal({
                               className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide"
                             >
                               {n.type === "INTERACTIVE"
-                                ? "Account Password"
-                                : "Input Required"}
+                                ? t("accountPassword")
+                                : t("inputRequired")}
                             </Label>
                             <Input
                               id={`input-${n.id}`}
@@ -861,8 +860,8 @@ export function RrNotificationsModal({
                               }
                               placeholder={
                                 n.type === "INTERACTIVE"
-                                  ? "Enter password to authorize"
-                                  : "Enter details..."
+                                  ? t("enterPasswordAuthorize")
+                                  : t("enterDetails")
                               }
                               value={passwords[n.id] || ""}
                               onChange={(e) =>
@@ -884,7 +883,7 @@ export function RrNotificationsModal({
                             disabled={processingId === n.id}
                             className="h-8 rounded-md px-3 text-destructive hover:text-destructive hover:bg-destructive/10 text-xs font-semibold"
                           >
-                            <XCircle className="size-3.5 mr-1" /> Deny
+                            <XCircle className="size-3.5 mr-1" /> {t("deny")}
                           </Button>
                           <Button
                             size="sm"
@@ -900,7 +899,7 @@ export function RrNotificationsModal({
                             ) : (
                               <CheckCircle className="size-3.5 mr-1" />
                             )}
-                            {n.type === "INTERACTIVE" ? "Authorize" : "Approve"}
+                            {n.type === "INTERACTIVE" ? t("authorize") : t("approve")}
                           </Button>
                         </div>
                       </div>

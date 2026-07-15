@@ -55,14 +55,18 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
 
   const getSection = useCallback(
     (sectionName: string) => {
-      return sidebarConfig.find((s) => s.section === sectionName);
+      return sidebarConfig.find(
+        (s) => s.dataKey === sectionName || s.section === sectionName,
+      );
     },
     [sidebarConfig],
   );
 
   const getItem = useCallback(
     (sectionName: string, itemLabel: string) => {
-      return getSection(sectionName)?.items.find((i) => i.label === itemLabel);
+      return getSection(sectionName)?.items.find(
+        (i) => i.dataKey === itemLabel || i.label === itemLabel,
+      );
     },
     [getSection],
   );
@@ -70,7 +74,7 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
   const getChild = useCallback(
     (sectionName: string, parentLabel: string, childLabel: string) => {
       return getItem(sectionName, parentLabel)?.children?.find(
-        (c) => c.label === childLabel,
+        (c) => c.dataKey === childLabel || c.label === childLabel,
       );
     },
     [getItem],

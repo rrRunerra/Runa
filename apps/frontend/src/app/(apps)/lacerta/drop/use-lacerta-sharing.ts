@@ -19,7 +19,13 @@ export interface Peer {
   avatarUrl?: string;
   deviceType: string;
   deviceName: string;
-  constellation?: any;
+  constellation?: unknown;
+}
+
+export interface ExtendedFile extends File {
+  relativePath?: string;
+  isText?: boolean;
+  textContent?: string;
 }
 
 export interface TransferFile {
@@ -62,9 +68,10 @@ export interface IncomingRequest {
 
 export const getAllFilesFromEntries = async (items: DataTransferItemList): Promise<File[]> => {
   const files: File[] = [];
-  const traverse = async (entry: any, path = "") => {
+  const traverse = async (entry: FileSystemEntry, path = "") => {
     if (entry.isFile) {
-      const file = await new Promise<File>((resolve, reject) => entry.file(resolve, reject));
+      const fileEntry = entry as FileSystemFileEntry;
+      const file = await new Promise<File>((resolve, reject) => fileEntry.file(resolve, reject));
       Object.defineProperty(file, 'relativePath', {
         value: path + file.name,
         writable: true,
@@ -73,11 +80,12 @@ export const getAllFilesFromEntries = async (items: DataTransferItemList): Promi
       });
       files.push(file);
     } else if (entry.isDirectory) {
-      const reader = entry.createReader();
-      const entries = await new Promise<any[]>((resolve) => {
-        const allEntries: any[] = [];
+      const dirEntry = entry as FileSystemDirectoryEntry;
+      const reader = dirEntry.createReader();
+      const entries = await new Promise<FileSystemEntry[]>((resolve) => {
+        const allEntries: FileSystemEntry[] = [];
         const readFilter = () => {
-          reader.readEntries((results: any[]) => {
+          reader.readEntries((results: FileSystemEntry[]) => {
             if (results.length === 0) {
               resolve(allEntries);
             } else {
@@ -944,9 +952,9 @@ export function useLacertaSharing() {
             size: f.size,
             type: f.type,
             fileObj: f,
-            relativePath: (f as any).relativePath || f.webkitRelativePath || "",
-            isText: (f as any).isText || false,
-            textContent: (f as any).textContent || "",
+            relativePath: (f as ExtendedFile).relativePath || f.webkitRelativePath || "",
+            isText: (f as ExtendedFile).isText || false,
+            textContent: (f as ExtendedFile).textContent || "",
           })),
         });
 
@@ -966,9 +974,9 @@ export function useLacertaSharing() {
               status: "idle",
               speed: 0,
               eta: 0,
-              relativePath: (f as any).relativePath || f.webkitRelativePath || "",
-              isText: (f as any).isText || false,
-              textContent: (f as any).textContent || "",
+              relativePath: (f as ExtendedFile).relativePath || f.webkitRelativePath || "",
+              isText: (f as ExtendedFile).isText || false,
+              textContent: (f as ExtendedFile).textContent || "",
             })),
           },
         }));

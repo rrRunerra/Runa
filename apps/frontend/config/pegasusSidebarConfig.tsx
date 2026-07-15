@@ -14,8 +14,11 @@ import { RrComposeEmailModal } from "@/components/rrComponents/pegasus/rrCompose
 import { SidebarMenuButton } from "@/components/ui/sidebar";
 import { SidebarConfig } from "@/types/SidebarConfig";
 
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
+
 export const getPegasusSidebarConfig = (
   emailAccounts: any[] = [],
+  t: TranslateFn = (key) => key,
 ): SidebarConfig => {
   const defaultAccountId = emailAccounts[0]?.id;
   const totalUnread = emailAccounts.reduce(
@@ -28,36 +31,36 @@ export const getPegasusSidebarConfig = (
       section: "#$Phone",
       items: [
         {
-          label: "Compose",
+          label: t("sidebarCompose"),
           icon: <Edit className="h-4 w-4" />,
-          subtitle: "Compose mail",
+          subtitle: t("sidebarComposeSubtitle"),
           position: 1,
           component: (
             <RrComposeEmailModal accountId={defaultAccountId}>
               <SidebarMenuButton
-                tooltip="Compose"
+                tooltip={t("sidebarCompose")}
                 className="relative transition-colors duration-200 rounded-xl h-9.5 px-3 text-muted-foreground hover:text-foreground hover:bg-white/5 cursor-pointer"
               >
                 <span className="flex items-center gap-2.5 w-full relative z-20">
                   <Edit className="h-4 w-4" />
-                  <span className="truncate">Compose</span>
+                  <span className="truncate">{t("sidebarCompose")}</span>
                 </span>
               </SidebarMenuButton>
             </RrComposeEmailModal>
           ),
         },
         {
-          label: "All Inboxes",
+          label: t("sidebarAllInboxes"),
           icon: <Inbox className="h-4 w-4" />,
-          subtitle: "All inboxes combined",
+          subtitle: t("sidebarAllInboxesSubtitle"),
           position: 3,
           href: "/pegasus/unified/inbox",
           preventRedirect: false,
         },
         {
-          label: "Attachments",
+          label: t("sidebarAttachments"),
           icon: <FileText className="h-4 w-4" />,
-          subtitle: "All attachments",
+          subtitle: t("sidebarAttachmentsSubtitle"),
           position: 4,
           href: "/pegasus/attachments",
           preventRedirect: false,
@@ -68,19 +71,19 @@ export const getPegasusSidebarConfig = (
       section: "",
       items: [
         {
-          label: "Compose",
+          label: t("sidebarCompose"),
           icon: <Edit className="h-4 w-4" />,
-          subtitle: "Compose mail",
+          subtitle: t("sidebarComposeSubtitle"),
           position: 1,
           component: (
             <RrComposeEmailModal accountId={defaultAccountId}>
               <SidebarMenuButton
-                tooltip="Compose"
+                tooltip={t("sidebarCompose")}
                 className="relative transition-colors duration-200 rounded-xl h-9.5 px-3 text-muted-foreground hover:text-foreground hover:bg-white/5 cursor-pointer"
               >
                 <span className="flex items-center gap-2.5 w-full relative z-20">
                   <Edit className="h-4 w-4" />
-                  <span className="truncate">Compose</span>
+                  <span className="truncate">{t("sidebarCompose")}</span>
                 </span>
               </SidebarMenuButton>
             </RrComposeEmailModal>
@@ -89,27 +92,31 @@ export const getPegasusSidebarConfig = (
       ],
     },
     {
-      section: "Unified",
+      section: t("sidebarUnified"),
+      dataKey: "Unified",
       items: [
         {
-          label: "Unified Inbox",
+          dataKey: "Unified Inbox",
+          label: t("sidebarUnifiedInbox"),
           href: "/pegasus/unified/inbox",
           preventRedirect: true,
           icon: <Inbox className="h-4 w-4" style={{ color: "#3b82f6" }} />,
-          subtitle: "All inboxes combined",
+          subtitle: t("sidebarAllInboxesSubtitle"),
           badge: totalUnread > 0 ? totalUnread.toString() : undefined,
         },
         {
-          label: "Attachments",
+          dataKey: "Attachments",
+          label: t("sidebarAttachments"),
           href: "/pegasus/attachments",
           preventRedirect: true,
           icon: <FileText className="h-4 w-4" style={{ color: "#10b981" }} />,
-          subtitle: "All attachments",
+          subtitle: t("sidebarAttachmentsSubtitle"),
         },
       ],
     },
     {
-      section: "Accounts",
+      section: t("sidebarAccounts"),
+      dataKey: "Accounts",
       items: emailAccounts.map((account) => {
         return {
           label: account.accountName,
@@ -119,17 +126,19 @@ export const getPegasusSidebarConfig = (
           subtitle: account.emailAddress,
           children: [
             {
-              label: "Inbox",
+              dataKey: "Inbox",
+              label: t("sidebarInbox"),
               href: `/pegasus/account/${account.id}/inbox`,
               preventRedirect: true,
               icon: (
                 <Inbox className="h-4 w-4" style={{ color: account.color }} />
               ),
-              subtitle: "Incoming mail",
+              subtitle: t("sidebarInboxSubtitle"),
               badge: account.unreadCount > 0 ? account.unreadCount.toString() : undefined,
             },
             {
-              label: "Drafts",
+              dataKey: "Drafts",
+              label: t("sidebarDrafts"),
               href: `/pegasus/account/${account.id}/drafts`,
               preventRedirect: true,
               icon: (
@@ -138,37 +147,41 @@ export const getPegasusSidebarConfig = (
                   style={{ color: account.color }}
                 />
               ),
-              subtitle: "Drafts",
+              subtitle: t("sidebarDrafts"),
             },
             {
-              label: "Sent",
+              dataKey: "Sent",
+              label: t("sidebarSent"),
               href: `/pegasus/account/${account.id}/sent`,
               preventRedirect: true,
               icon: (
                 <Send className="h-4 w-4" style={{ color: account.color }} />
               ),
-              subtitle: "Sent mail",
+              subtitle: t("sidebarSentSubtitle"),
             },
             {
-              label: "Outbox",
+              dataKey: "Outbox",
+              label: t("sidebarOutbox"),
               href: `/pegasus/account/${account.id}/outbox`,
               preventRedirect: true,
               icon: (
                 <Send className="h-4 w-4" style={{ color: account.color }} />
               ),
-              subtitle: "Outbox",
+              subtitle: t("sidebarOutbox"),
             },
             {
-              label: "Archive",
+              dataKey: "Archive",
+              label: t("sidebarArchive"),
               href: `/pegasus/account/${account.id}/archive`,
               preventRedirect: true,
               icon: (
                 <Archive className="h-4 w-4" style={{ color: account.color }} />
               ),
-              subtitle: "Archive",
+              subtitle: t("sidebarArchive"),
             },
             {
-              label: "Junk",
+              dataKey: "Junk",
+              label: t("sidebarJunk"),
               href: `/pegasus/account/${account.id}/junk`,
               preventRedirect: true,
               icon: (
@@ -177,16 +190,17 @@ export const getPegasusSidebarConfig = (
                   style={{ color: account.color }}
                 />
               ),
-              subtitle: "Spam",
+              subtitle: t("sidebarJunkSubtitle"),
             },
             {
-              label: "Trash",
+              dataKey: "Trash",
+              label: t("sidebarTrash"),
               href: `/pegasus/account/${account.id}/trash`,
               preventRedirect: true,
               icon: (
                 <Trash className="h-4 w-4" style={{ color: account.color }} />
               ),
-              subtitle: "Trash",
+              subtitle: t("sidebarTrash"),
             },
           ],
         };

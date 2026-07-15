@@ -2,18 +2,21 @@
 
 import { Home } from "lucide-react";
 import { SidebarConfig } from "@/types/SidebarConfig";
-import { AndromedaFlags } from "@runa/permissions";
 
-export const getAndromedaSidebarConfig = (): SidebarConfig => [
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
+
+export const getAndromedaSidebarConfig = (
+  t: TranslateFn = (key) => key,
+): SidebarConfig => [
   {
     section: "#$Phone",
     items: [
       {
-        label: "Home",
+        label: t("sidebarHome"),
         href: "/andromeda",
         preventRedirect: false,
         icon: <Home className="h-4 w-4" />,
-        subtitle: "Home",
+        subtitle: t("sidebarHomeSubtitle"),
         position: 1,
       },
     ],
@@ -22,11 +25,12 @@ export const getAndromedaSidebarConfig = (): SidebarConfig => [
     section: "",
     items: [
       {
-        label: "Home",
+        dataKey: "Home",
+        label: t("sidebarHome"),
         href: "/andromeda",
         icon: <Home className="h-4 w-4" />,
         preventRedirect: false,
-        subtitle: "Home",
+        subtitle: t("sidebarHomeSubtitle"),
       },
     ],
   },

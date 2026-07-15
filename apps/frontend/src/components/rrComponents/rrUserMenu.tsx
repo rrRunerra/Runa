@@ -288,7 +288,7 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
                   }}
                 >
                   <Bell />
-                  Notifications
+                  {t("notifications")}
                   {unreadCount > 0 && (
                     <Badge className="ml-auto h-4 px-1 bg-primary text-primary-foreground text-[8px] font-bold rounded-full flex items-center justify-center min-w-4">
                       {unreadCount}
@@ -308,7 +308,7 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
                   }}
                 >
                   <Bookmark />
-                  Add Bookmark
+                  {t("addBookmark")}
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
@@ -320,7 +320,7 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
                   }}
                 >
                   <Palette />
-                  Appearance
+                  {t("appearance")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onSelect={(e) => {
@@ -329,7 +329,7 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
                   }}
                 >
                   <Settings />
-                  Settings
+                  {t("settings")}
                 </DropdownMenuItem>
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger>
@@ -387,7 +387,7 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
                   ) : (
                     <Shield className="text-amber-500" />
                   )}
-                  <span>Encryption</span>
+                  <span>{t("lockEncryption")}</span>
                   <Badge
                     className={cn(
                       "ml-auto h-4 px-1.5 border text-[8px] font-bold rounded-full flex items-center justify-center",
@@ -396,14 +396,14 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
                         : "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
                     )}
                   >
-                    {isEncryptionUnlocked ? "Active" : "Locked"}
+                    {isEncryptionUnlocked ? t("active") : t("locked")}
                   </Badge>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => signOut({ redirect: false })}>
                 <LogOut className="size-4 text-red-400/80" />
-                <span className="font-bold text-red-400/80">Log out</span>
+                <span className="font-bold text-red-400/80">{t("logOut")}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -420,7 +420,7 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
             className="border border-zinc-800/50 shadow-sm hover:bg-white/5 rounded-xl transition-colors h-11"
           >
             <LogIn className="size-4 text-primary" />
-            <span className="font-semibold text-foreground">Log in</span>
+            <span className="font-semibold text-foreground">{t("logIn")}</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
       )}
@@ -475,12 +475,10 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
             <DialogHeader className="pb-3 border-b border-zinc-800/40">
               <DialogTitle className="flex items-center gap-2 text-md font-bold text-foreground">
                 <ShieldAlert className="size-5 text-red-500" />
-                Lock Encryption?
+                {t("lockEncryptionQuestion")}
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground mt-1 leading-relaxed">
-                This will remove your decryption keys from this device. You will
-                need to enter your account password to decrypt chats and files
-                again.
+                {t("lockEncryptionDesc")}
               </DialogDescription>
             </DialogHeader>
             <div className="flex justify-end gap-3 pt-4">
@@ -489,7 +487,7 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
                 onClick={() => setShowLockConfirmation(false)}
                 className="h-9 px-4 text-xs font-semibold text-zinc-400 hover:text-white"
               >
-                Cancel
+                {t("cancel")}
               </Button>
               <Button
                 onClick={() => {
@@ -498,7 +496,7 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
                 }}
                 className="h-9 px-4 bg-red-600 hover:bg-red-500 text-white border border-red-500/30 text-xs font-semibold rounded-lg shadow-lg active:scale-95 transition-all"
               >
-                Lock Encryption
+                {t("lockEncryption")}
               </Button>
             </div>
           </DialogContent>

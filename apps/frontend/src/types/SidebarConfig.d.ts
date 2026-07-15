@@ -10,7 +10,15 @@ interface SidebarSection {
      * in mobile view
      */
     section: string
-    
+
+    /**
+     * Stable, language-agnostic key used for programmatic lookups via
+     * getSection(). Unlike `section`, this value never changes when the locale
+     * switches, so components can safely call getSection("Structures") regardless
+     * of the active language.
+     */
+    dataKey?: string
+
     items: SidebarItem[]
 
     permissions?: Permissions
@@ -19,6 +27,13 @@ interface SidebarSection {
 type SidebarItem = {
     label: string
     subtitle: string
+
+    /**
+     * Stable, language-agnostic key used for programmatic lookups via
+     * getItem(). Unlike `label`, this value never changes when the locale
+     * switches.
+     */
+    dataKey?: string
 
     icon?: ReactNode
     badge?: string
@@ -39,6 +54,13 @@ type SidebarItem = {
 type SidebarItemChild = {
     label: string
     subtitle: string
+
+    /**
+     * Stable, language-agnostic key used for programmatic lookups via
+     * getChild(). Unlike `label`, this value never changes when the locale
+     * switches.
+     */
+    dataKey?: string
 
     icon?: ReactNode
     badge?: string

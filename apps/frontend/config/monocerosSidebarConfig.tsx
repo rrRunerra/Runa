@@ -4,16 +4,20 @@ import { Home, Lock, Database, Zap } from "lucide-react";
 import { SidebarConfig } from "@/types/SidebarConfig";
 import { RunaFlags } from "@runa/permissions";
 
-export const getMonocerosSidebarConfig = (): SidebarConfig => [
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
+
+export const getMonocerosSidebarConfig = (
+  t: TranslateFn = (key) => key,
+): SidebarConfig => [
   {
     section: "#$Phone",
     items: [
       {
-        label: "Home",
+        label: t("sidebarHome"),
         href: "/monoceros",
         preventRedirect: false,
         icon: <Home className="h-4 w-4" />,
-        subtitle: "Home",
+        subtitle: t("sidebarHomeSubtitle"),
         position: 1,
       },
     ],
@@ -23,32 +27,36 @@ export const getMonocerosSidebarConfig = (): SidebarConfig => [
     permissions: RunaFlags.ADMINISTRATOR,
     items: [
       {
-        label: "Home",
+        dataKey: "Home",
+        label: t("sidebarHome"),
         href: "/monoceros",
         icon: <Home className="h-4 w-4" />,
         preventRedirect: false,
-        subtitle: "Home",
+        subtitle: t("sidebarHomeSubtitle"),
       },
       {
-        label: "Permissions",
+        dataKey: "Permissions",
+        label: t("sidebarPermissions"),
         href: "/monoceros/permissions",
         icon: <Lock className="h-4 w-4" />,
         preventRedirect: false,
-        subtitle: "Permissions",
+        subtitle: t("sidebarPermissions"),
       },
       {
-        label: "Databases",
+        dataKey: "Databases",
+        label: t("sidebarDatabases"),
         href: "/monoceros/databases",
         icon: <Database className="h-4 w-4" />,
         preventRedirect: false,
-        subtitle: "Databases",
+        subtitle: t("sidebarDatabases"),
       },
       {
-        label: "Cache",
+        dataKey: "Cache",
+        label: t("sidebarCache"),
         href: "/monoceros/cache",
         icon: <Zap className="h-4 w-4" />,
         preventRedirect: false,
-        subtitle: "Cache",
+        subtitle: t("sidebarCache"),
       },
     ],
   },

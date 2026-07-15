@@ -10,9 +10,11 @@ import React, {
 import { useSession } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { useRRCrypto } from "@/hooks/useRRCrypto";
 import { useRRSidebar } from "@/hooks/useRRSidebar";
 import { marked } from "marked";
+import { RrEncryptionLocked } from "../rrEncryptionLocked";
 
 // Sub-components imports
 import RrThreadList from "./rrThreadList";
@@ -106,6 +108,7 @@ export default function RrEmailFolderView({
   const audioContextRef = useRef<AudioContext | null>(null);
 
   const { getPrivateKey, unwrapKey, decrypt, isEncryptionUnlocked } = useRRCrypto();
+  const { t } = useTranslation();
   const [accounts, setAccounts] = useState<any[]>([]);
 
   const adjustUnreadBadge = useCallback(
@@ -962,6 +965,14 @@ export default function RrEmailFolderView({
       toast.error(e.message || "Failed to send inline reply.");
     }
   };
+
+  if (!isEncryptionUnlocked) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center bg-background p-6">
+        <RrEncryptionLocked />
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col flex-1 w-full h-full overflow-hidden bg-background">

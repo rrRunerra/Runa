@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
+import { useTranslation } from "react-i18next";
 import { getPegasusSidebarConfig } from "../../../../config/pegasusSidebarConfig";
 import RrSidebar from "../rrSidebar";
 import { filterSidebarConfig } from "@/lib/navigation";
@@ -14,6 +15,7 @@ export default function RrPegasusNavProvider({
   children,
 }: RrPegasusNavProviderProps): React.JSX.Element {
   const { data: session } = useSession();
+  const { t } = useTranslation();
   const [emailAccounts, setEmailAccounts] = useState<any[]>([]);
 
   const fetchEmailAccounts = (): void => {
@@ -48,9 +50,9 @@ export default function RrPegasusNavProvider({
   }, [session?.accessToken]);
 
   const sidebarConfig = useMemo(() => {
-    const rawConfig = getPegasusSidebarConfig(emailAccounts);
+    const rawConfig = getPegasusSidebarConfig(emailAccounts, t);
     return filterSidebarConfig(rawConfig, session?.user?.permissions);
-  }, [emailAccounts, session?.user?.permissions]);
+  }, [emailAccounts, session?.user?.permissions, t]);
 
   return (
     <>

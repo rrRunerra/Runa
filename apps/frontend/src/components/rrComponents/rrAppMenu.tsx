@@ -19,6 +19,7 @@ import { SidebarMenuButton, useSidebar } from "../ui/sidebar";
 import Image from "next/image";
 import { getSafeImageUrl } from "@/lib/inputValidation";
 import { hasPermission } from "@runa/permissions";
+import { useTranslation } from "react-i18next";
 
 export default function RrAppMenu({
   session,
@@ -26,6 +27,7 @@ export default function RrAppMenu({
   session: Session | null;
 }): React.ReactNode {
   const { isMobile } = useSidebar();
+  const { t } = useTranslation();
 
   const visibleApps = useMemo((): rrApp[] => {
     return rrApps.filter((app: rrApp): boolean => {
@@ -91,7 +93,7 @@ export default function RrAppMenu({
         sideOffset={4}
       >
         <DropdownMenuLabel className="text-xs text-muted-foreground">
-          Applications
+          {t("applications")}
         </DropdownMenuLabel>
         <div className="flex flex-col gap-1 max-h-[165px] overflow-y-auto no-scrollbar">
           {visibleApps.map((app: rrApp) => (
@@ -136,17 +138,17 @@ export default function RrAppMenu({
           <>
             <DropdownMenuSeparator />
             <DropdownMenuLabel className="text-xs text-muted-foreground">
-              Bookmarks
+              {t("bookmarks")}
             </DropdownMenuLabel>
 
             {loading ? (
               <div className="flex items-center justify-center py-4 text-xs text-muted-foreground gap-2">
                 <Loader2 className="size-3.5 animate-spin" />
-                Loading bookmarks...
+                {t("loadingBookmarks")}
               </div>
             ) : !bookmarks || bookmarks.length === 0 ? (
               <div className="text-center py-4 px-2 text-xs text-muted-foreground/50 border border-dashed rounded-md m-2">
-                No bookmarks saved
+                {t("noBookmarksSaved")}
               </div>
             ) : (
               bookmarks.map((bookmark) => (

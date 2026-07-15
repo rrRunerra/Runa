@@ -8,6 +8,8 @@ import { useSession } from "next-auth/react";
 import { useRRCrypto } from "@/hooks/useRRCrypto";
 import { Lock, Unlock, ShieldAlert, Loader2, FolderClosed, FileText, Grid3X3, Plus, Upload, FolderPlus, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
+import Image from "next/image";
 
 import {
   encrypt,
@@ -20,8 +22,15 @@ import {
 
 // Import local components
 import FileGrid from "@/components/rrComponents/lacerta/FileGrid";
+import { RrEncryptionLocked } from "@/components/rrComponents/rrEncryptionLocked";
 
-export type LacertaTab = "files" | "vault" | "shared" | "trash";
+import { LacertaTab, UploadQueueTask, DecryptedFileItem, RawFileItem } from "./types";
+export type { LacertaTab };
+
+import { CreateFileModal } from "./components/CreateFileModal";
+import { DeleteConfirmModal } from "./components/DeleteConfirmModal";
+import { UploadHUD } from "./components/UploadHUD";
+
 import ShareModal from "@/components/rrComponents/lacerta/ShareModal";
 import VaultAuthModal from "@/components/rrComponents/lacerta/VaultAuthModal";
 import BuiltinDocEditor from "@/components/rrComponents/lacerta/BuiltinDocEditor";
@@ -96,6 +105,7 @@ export default function LacertaPage({
 }: {
   tab?: LacertaTab;
 }): React.JSX.Element {
+  const { t } = useTranslation();
   const { data: session } = useSession();
   const { isEncryptionUnlocked, privateKey, setShowUnlockDialog, lockEncryption, userPublicKey } = useRRCrypto();
 
@@ -105,19 +115,19 @@ export default function LacertaPage({
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
 
   // Background uploads tracking
-  const [uploadQueue, setUploadQueue] = useState<any[]>([]);
+  const [uploadQueue, setUploadQueue] = useState<UploadQueueTask[]>([]);
 
   // Decrypted items states
 
-  const [decryptedFiles, setDecryptedFiles] = useState<any[]>([]);
+  const [decryptedFiles, setDecryptedFiles] = useState<DecryptedFileItem[]>([]);
   const [isDecrypting, setIsDecrypting] = useState<boolean>(false);
 
   // Modal open states
-  const [selectedFileForShare, setSelectedFileForShare] = useState<any | null>(null);
+  const [selectedFileForShare, setSelectedFileForShare] = useState<DecryptedFileItem | null>(null);
   const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
   const [isVaultAuthOpen, setIsVaultAuthOpen] = useState<boolean>(false);
   const [isVaultUnlocked, setIsVaultUnlocked] = useState<boolean>(false);
-  const [fileToDelete, setFileToDelete] = useState<RenderFileItem | null>(null);
+  const [fileToDelete, setFileToDelete] = useState<DecryptedFileItem | null>(null);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
   useEffect(() => {
@@ -127,19 +137,19 @@ export default function LacertaPage({
   }, [currentTab, isVaultUnlocked]);
 
   // Editors open states
-  const [activeTextEditorFile, setActiveTextEditorFile] = useState<any | null>(null);
+  const [activeTextEditorFile, setActiveTextEditorFile] = useState<DecryptedFileItem | null>(null);
   const [activeTextEditorContent, setActiveTextEditorContent] = useState<string>("");
-  const [activeDocEditorFile, setActiveDocEditorFile] = useState<any | null>(null);
+  const [activeDocEditorFile, setActiveDocEditorFile] = useState<DecryptedFileItem | null>(null);
   const [activeDocEditorContent, setActiveDocEditorContent] = useState<string>("");
-  const [activeSheetEditorFile, setActiveSheetEditorFile] = useState<any | null>(null);
+  const [activeSheetEditorFile, setActiveSheetEditorFile] = useState<DecryptedFileItem | null>(null);
   const [activeSheetEditorContent, setActiveSheetEditorContent] = useState<string>("");
-  const [activeCanvasEditorFile, setActiveCanvasEditorFile] = useState<any | null>(null);
+  const [activeCanvasEditorFile, setActiveCanvasEditorFile] = useState<DecryptedFileItem | null>(null);
   const [activeCanvasEditorContent, setActiveCanvasEditorContent] = useState<string>("");
-  const [activeMermaidEditorFile, setActiveMermaidEditorFile] = useState<any | null>(null);
+  const [activeMermaidEditorFile, setActiveMermaidEditorFile] = useState<DecryptedFileItem | null>(null);
   const [activeMermaidEditorContent, setActiveMermaidEditorContent] = useState<string>("");
-  const [activeUmlEditorFile, setActiveUmlEditorFile] = useState<any | null>(null);
+  const [activeUmlEditorFile, setActiveUmlEditorFile] = useState<DecryptedFileItem | null>(null);
   const [activeUmlEditorContent, setActiveUmlEditorContent] = useState<string>("");
-  const [activeOnlyOfficeFile, setActiveOnlyOfficeFile] = useState<any | null>(null);
+  const [activeOnlyOfficeFile, setActiveOnlyOfficeFile] = useState<DecryptedFileItem | null>(null);
 
   // File creation modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
@@ -148,12 +158,12 @@ export default function LacertaPage({
   const [createFormat, setCreateFormat] = useState<string>("");
 
   // Gallery slider states
-  const [galleryFiles, setGalleryFiles] = useState<any[]>([]);
+  const [galleryFiles, setGalleryFiles] = useState<DecryptedFileItem[]>([]);
   const [galleryInitialIndex, setGalleryInitialIndex] = useState<number>(0);
   const [isGalleryOpen, setIsGalleryOpen] = useState<boolean>(false);
 
   // Query files listing from NestJS API SWR
-  const { data, error, mutate, isLoading } = useSWR<any[]>(
+  const { data, error, mutate, isLoading } = useSWR<RawFileItem[]>(
     session?.accessToken
       ? [`${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/list`, session.accessToken]
       : null,
@@ -169,11 +179,11 @@ export default function LacertaPage({
 
     const decryptAll = async () => {
       setIsDecrypting(true);
-      const list: any[] = [];
+      const list: DecryptedFileItem[] = [];
       for (const file of data) {
         try {
           const isOwner = file.userId === session?.user?.id;
-          const shareRecord = file.shares?.find((s: any) => s.userId === session?.user?.id);
+          const shareRecord = file.shares?.find((s) => s.userId === session?.user?.id);
           const wrappedKeyToUse = isOwner ? file.wrappedKey : (shareRecord ? shareRecord.wrappedKey : null);
 
           if (!wrappedKeyToUse) continue;
@@ -207,6 +217,7 @@ export default function LacertaPage({
             decryptedKey: fileKey,
             rawFileKey: rawKeyStr,
             wrappedKey: file.wrappedKey,
+            shares: file.shares || [],
           });
         } catch (err) {
           console.error("Failed to decrypt file metadata:", file.id, err);
@@ -322,9 +333,10 @@ export default function LacertaPage({
         setTimeout(() => {
           setUploadQueue((prev) => prev.filter((t) => t.id !== taskId));
         }, 5000);
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const errMsg = err instanceof Error ? err.message : "Failed";
         setUploadQueue((prev) =>
-          prev.map((t) => (t.id === taskId ? { ...t, status: "error", errorMsg: err.message || "Failed" } : t))
+          prev.map((t) => (t.id === taskId ? { ...t, status: "error", errorMsg: errMsg } : t))
         );
         toast.error(`Upload failed: ${fileToUpload.name}`);
       }
@@ -360,8 +372,9 @@ export default function LacertaPage({
 
       toast.success(`Folder "${name}" created!`);
       mutate();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to create folder");
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : "Failed to create folder";
+      toast.error(errMsg);
     }
   };
 
@@ -486,13 +499,14 @@ export default function LacertaPage({
 
       toast.success(`Created E2EE ${baseName}${ext} successfully!`, { id: createToast });
       mutate();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to create doc", { id: createToast });
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : "Failed to create doc";
+      toast.error(errMsg, { id: createToast });
     }
   };
 
   // Open file (double-click) flow
-  const handleOpenFile = async (item: RenderFileItem) => {
+  const handleOpenFile = async (item: DecryptedFileItem) => {
     if (item.isFolder) {
       setCurrentFolderId(item.id);
       return;
@@ -586,13 +600,14 @@ export default function LacertaPage({
         setActiveTextEditorFile(item);
         setActiveTextEditorContent(textContent);
       }
-    } catch (err: any) {
-      toast.error(err.message || "Failed to decrypt file content", { id: downloadToast });
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : "Failed to decrypt file content";
+      toast.error(errMsg, { id: downloadToast });
     }
   };
 
   // Download file flow (decrypted locally, saved to download folder)
-  const handleDownloadFile = async (item: RenderFileItem) => {
+  const handleDownloadFile = async (item: DecryptedFileItem) => {
     if (!item.decryptedKey || !session?.accessToken) return;
     const downloadToast = toast.loading(`Downloading & decrypting ${item.name}... (0%)`);
     try {
@@ -617,14 +632,15 @@ export default function LacertaPage({
       URL.revokeObjectURL(url);
 
       toast.success(`${item.name} downloaded successfully!`, { id: downloadToast });
-    } catch (err: any) {
-      toast.error(err.message || "Download failed", { id: downloadToast });
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : "Download failed";
+      toast.error(errMsg, { id: downloadToast });
     }
   };
 
 
   // Save a copy of shared file locally under user's own account
-  const handleSaveCopy = async (item: RenderFileItem) => {
+  const handleSaveCopy = async (item: DecryptedFileItem) => {
     if (!item.decryptedKey || !userPublicKey || !session?.accessToken) return;
     const copyToast = toast.loading(`Creating a copy of ${item.name}...`);
     try {
@@ -672,15 +688,16 @@ export default function LacertaPage({
 
       if (!res.ok) throw new Error("Failed to save copy to server");
 
-      toast.success(`Successfully saved copy of ${item.name} to your files!`, { id: copyToast });
+      toast.success(t("lacerta.copySavedSuccess", { name: item.name }), { id: copyToast });
       mutate();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to save copy", { id: copyToast });
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : "Failed to save copy";
+      toast.error(errMsg, { id: copyToast });
     }
   };
 
   // Move to trash or restore
-  const handleToggleTrash = async (item: RenderFileItem) => {
+  const handleToggleTrash = async (item: DecryptedFileItem) => {
     if (!session?.accessToken) return;
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${item.id}/metadata`, {
@@ -695,13 +712,14 @@ export default function LacertaPage({
 
       toast.success(item.isTrash ? "Restored from Recycle Bin" : "Moved to Recycle Bin");
       mutate();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to update status");
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : "Failed to update status";
+      toast.error(errMsg);
     }
   };
 
   // Move to vault or remove
-  const handleToggleVault = async (item: RenderFileItem) => {
+  const handleToggleVault = async (item: DecryptedFileItem) => {
     if (!session?.accessToken) return;
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${item.id}/metadata`, {
@@ -716,13 +734,14 @@ export default function LacertaPage({
 
       toast.success(item.isVault ? "Removed from Secure Vault" : "Moved to Secure Vault");
       mutate();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to update status");
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : "Failed to update status";
+      toast.error(errMsg);
     }
   };
 
   // Permanent delete — opens confirm modal (replaces window.confirm which gets suppressed)
-  const handleDeleteForever = (item: RenderFileItem) => {
+  const handleDeleteForever = (item: DecryptedFileItem) => {
     setFileToDelete(item);
   };
 
@@ -741,14 +760,15 @@ export default function LacertaPage({
       toast.success("File deleted permanently.");
       setFileToDelete(null);
       mutate();
-    } catch (err: any) {
-      toast.error(err.message || "Delete failed");
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : "Delete failed";
+      toast.error(errMsg);
     } finally {
       setIsDeleting(false);
     }
   };
 
-  const handleShareClick = (item: RenderFileItem) => {
+  const handleShareClick = (item: DecryptedFileItem) => {
     setSelectedFileForShare(item);
     setIsShareModalOpen(true);
   };
@@ -757,21 +777,7 @@ export default function LacertaPage({
   if (!isEncryptionUnlocked) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center bg-background p-6">
-        <div className="w-full max-w-md rounded-2xl border border-border bg-card/60 p-8 shadow-2xl backdrop-blur-xl flex flex-col items-center">
-          <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full border border-primary/20 bg-primary/5 text-primary">
-            <Lock className="h-8 w-8" />
-          </div>
-          <h3 className="text-xl font-bold tracking-tight text-foreground">Secure Storage Locked</h3>
-          <p className="mt-2 text-center text-xs text-muted-foreground leading-normal max-w-sm">
-            Lacerta uses zero-knowledge cryptography. Your decryption keys are saved securely in your browser's IndexedDB and never sent to the server. Unlock secure storage to load your files.
-          </p>
-          <button
-            onClick={() => setShowUnlockDialog(true)}
-            className="mt-6 px-6 py-2.5 bg-primary hover:bg-primary/95 text-primary-foreground font-semibold rounded-lg text-xs flex items-center gap-1.5 transition-all shadow-md active:scale-98"
-          >
-            Unlock Decryption Keys
-          </button>
-        </div>
+        <RrEncryptionLocked />
       </div>
     );
   }
@@ -782,7 +788,7 @@ export default function LacertaPage({
       {isDecrypting || isLoading ? (
         <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
           <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
-          <span className="text-xs">Decrypting folder index...</span>
+          <span className="text-xs">{t("lacerta.decryptingFolderIndex")}</span>
         </div>
       ) : (
         <FileGrid
@@ -812,10 +818,10 @@ export default function LacertaPage({
             setIsShareModalOpen(false);
             setSelectedFileForShare(null);
           }}
-          file={decryptedFiles.find((f) => f.id === selectedFileForShare.id) || selectedFileForShare}
-          rawFileKey={selectedFileForShare.rawFileKey}
+          file={(decryptedFiles.find((f) => f.id === selectedFileForShare.id) || selectedFileForShare) as unknown as React.ComponentProps<typeof ShareModal>["file"]}
+          rawFileKey={selectedFileForShare.rawFileKey || null}
           onUpdate={mutate}
-          allItems={decryptedFiles}
+          allItems={decryptedFiles as unknown as React.ComponentProps<typeof ShareModal>["allItems"]}
         />
       )}
 
@@ -837,7 +843,7 @@ export default function LacertaPage({
             setActiveTextEditorFile(null);
             setActiveTextEditorContent("");
           }}
-          file={activeTextEditorFile}
+          file={activeTextEditorFile as unknown as React.ComponentProps<typeof TextEditor>["file"]}
           initialContent={activeTextEditorContent}
           accessToken={session?.accessToken || ""}
           onSaveSuccess={mutate}
@@ -851,7 +857,7 @@ export default function LacertaPage({
             setActiveDocEditorFile(null);
             setActiveDocEditorContent("");
           }}
-          file={activeDocEditorFile}
+          file={activeDocEditorFile as unknown as React.ComponentProps<typeof BuiltinDocEditor>["file"]}
           initialContent={activeDocEditorContent}
           accessToken={session?.accessToken || ""}
           onSaveSuccess={mutate}
@@ -865,7 +871,7 @@ export default function LacertaPage({
             setActiveSheetEditorFile(null);
             setActiveSheetEditorContent("");
           }}
-          file={activeSheetEditorFile}
+          file={activeSheetEditorFile as unknown as React.ComponentProps<typeof BuiltinSheetEditor>["file"]}
           initialContent={activeSheetEditorContent}
           accessToken={session?.accessToken || ""}
           onSaveSuccess={mutate}
@@ -878,108 +884,28 @@ export default function LacertaPage({
           onClose={() => {
             setActiveOnlyOfficeFile(null);
           }}
-          file={activeOnlyOfficeFile}
-          fileKey={activeOnlyOfficeFile.rawFileKey}
+          file={{
+            id: activeOnlyOfficeFile.id,
+            name: activeOnlyOfficeFile.name,
+            type: activeOnlyOfficeFile.type || null,
+            updatedAt: activeOnlyOfficeFile.createdAt,
+          } as unknown as React.ComponentProps<typeof OnlyOfficeEditor>["file"]}
+          fileKey={activeOnlyOfficeFile.rawFileKey || ""}
           accessToken={session?.accessToken || ""}
           onSaveSuccess={mutate}
         />
       )}
 
-      {/* Create File Modal */}
-      {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl animate-in zoom-in duration-150">
-            <h3 className="text-sm font-bold text-foreground mb-4">
-              Create New {createType === "doc" ? "Document" : createType === "sheet" ? "Spreadsheet" : createType === "slide" ? "Presentation" : createType}
-            </h3>
-            
-            <div className="space-y-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[11px] font-semibold text-muted-foreground">File Name</label>
-                <input
-                  type="text"
-                  value={createName}
-                  onChange={(e) => setCreateName(e.target.value)}
-                  placeholder="Enter name"
-                  className="bg-muted/10 border border-border rounded-lg px-3 py-2 text-xs text-foreground placeholder-muted-foreground/60 w-full"
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") submitCreateDoc();
-                  }}
-                />
-              </div>
-
-              {(createType === "doc" || createType === "sheet" || createType === "slide") && (
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[11px] font-semibold text-muted-foreground">File Format</label>
-                  <select
-                    value={createFormat}
-                    onChange={(e) => setCreateFormat(e.target.value)}
-                    className="bg-card border border-border rounded-lg px-3 py-2 text-xs text-foreground outline-none w-full"
-                  >
-                    {createType === "doc" && (
-                      <>
-                        <option value=".docx">Microsoft Word (.docx)</option>
-                        <option value=".doc">Legacy Word (.doc)</option>
-                        <option value=".odt">OpenDocument Text (.odt)</option>
-                        <option value=".rtf">Rich Text Format (.rtf)</option>
-                        <option value=".txt">Plain Text (.txt)</option>
-                        <option value=".html">HTML Document (.html)</option>
-                        <option value=".epub">E-book (.epub)</option>
-                        <option value=".pages">Apple Pages (.pages)</option>
-                        <option value=".hwp">Hancom Word (.hwp)</option>
-                      </>
-                    )}
-                    {createType === "sheet" && (
-                      <>
-                        <option value=".xlsx">Microsoft Excel (.xlsx)</option>
-                        <option value=".xls">Legacy Excel (.xls)</option>
-                        <option value=".xlsm">Excel Macro-Enabled (.xlsm)</option>
-                        <option value=".xlsb">Excel Binary (.xlsb)</option>
-                        <option value=".ods">OpenDocument Spreadsheet (.ods)</option>
-                        <option value=".csv">Comma Separated Values (.csv)</option>
-                        <option value=".numbers">Apple Numbers (.numbers)</option>
-                      </>
-                    )}
-                    {createType === "slide" && (
-                      <>
-                        <option value=".pptx">Microsoft PowerPoint (.pptx)</option>
-                        <option value=".ppt">Legacy PowerPoint (.ppt)</option>
-                        <option value=".odp">OpenDocument Presentation (.odp)</option>
-                        <option value=".ppsx">PowerPoint Slideshow (.ppsx)</option>
-                        <option value=".potx">PowerPoint Template (.potx)</option>
-                        <option value=".key">Apple Keynote (.key)</option>
-                      </>
-                    )}
-                  </select>
-                </div>
-              )}
-
-            </div>
-
-            <div className="flex justify-between items-center mt-6">
-              <div className="flex items-center gap-1.5 text-emerald-500">
-                <ShieldCheck className="h-3.5 w-3.5" />
-                <span className="text-[11px] font-semibold">Encrypted</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setIsCreateModalOpen(false)}
-                  className="px-3.5 py-1.5 border border-border hover:bg-muted/10 rounded-lg text-xs font-semibold text-foreground transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={submitCreateDoc}
-                  className="px-3.5 py-1.5 bg-primary hover:bg-primary/95 text-primary-foreground text-xs font-semibold rounded-lg transition-all shadow-md active:scale-98"
-                >
-                  Create
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <CreateFileModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        createType={createType}
+        createName={createName}
+        setCreateName={setCreateName}
+        createFormat={createFormat}
+        setCreateFormat={setCreateFormat}
+        onSubmit={submitCreateDoc}
+      />
 
       {activeCanvasEditorFile && (
         <CanvasEditor
@@ -988,7 +914,7 @@ export default function LacertaPage({
             setActiveCanvasEditorFile(null);
             setActiveCanvasEditorContent("");
           }}
-          file={activeCanvasEditorFile}
+          file={activeCanvasEditorFile as unknown as React.ComponentProps<typeof CanvasEditor>["file"]}
           initialContent={activeCanvasEditorContent}
           accessToken={session?.accessToken || ""}
           onSaveSuccess={mutate}
@@ -1002,14 +928,14 @@ export default function LacertaPage({
             setActiveMermaidEditorFile(null);
             setActiveMermaidEditorContent("");
           }}
-          file={activeMermaidEditorFile}
+          file={activeMermaidEditorFile as unknown as React.ComponentProps<typeof MermaidEditor>["file"]}
           initialContent={activeMermaidEditorContent}
           accessToken={session?.accessToken || ""}
           onSaveSuccess={mutate}
           isReadOnly={
             activeMermaidEditorFile
               ? activeMermaidEditorFile.userId !== session?.user?.id &&
-                !activeMermaidEditorFile.shares?.find((s: any) => s.userId === session?.user?.id)?.allowEdit
+                !activeMermaidEditorFile.shares?.find((s) => s.userId === session?.user?.id)?.allowEdit
               : false
           }
           userPublicKey={userPublicKey}
@@ -1023,14 +949,14 @@ export default function LacertaPage({
             setActiveUmlEditorFile(null);
             setActiveUmlEditorContent("");
           }}
-          file={activeUmlEditorFile}
+          file={activeUmlEditorFile as unknown as React.ComponentProps<typeof UmlEditor>["file"]}
           initialContent={activeUmlEditorContent}
           accessToken={session?.accessToken || ""}
           onSaveSuccess={mutate}
           isReadOnly={
             activeUmlEditorFile
               ? activeUmlEditorFile.userId !== session?.user?.id &&
-                !activeUmlEditorFile.shares?.find((s: any) => s.userId === session?.user?.id)?.allowEdit
+                !activeUmlEditorFile.shares?.find((s) => s.userId === session?.user?.id)?.allowEdit
               : false
           }
           userPublicKey={userPublicKey}
@@ -1045,89 +971,24 @@ export default function LacertaPage({
             setIsGalleryOpen(false);
             setGalleryFiles([]);
           }}
-          files={galleryFiles}
+          files={galleryFiles.map((f) => ({ ...f, type: f.type || "application/octet-stream" })) as unknown as React.ComponentProps<typeof MediaGallerySlider>["files"]}
           initialIndex={galleryInitialIndex}
           accessToken={session?.accessToken || ""}
         />
       )}
-      {/* Permanent delete confirmation modal */}
-      {fileToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-sm rounded-2xl border border-destructive/30 bg-card p-6 shadow-2xl animate-in zoom-in duration-150">
-            <h3 className="text-sm font-bold text-foreground mb-1">Delete Forever?</h3>
-            <p className="text-xs text-muted-foreground mb-1">
-              This will permanently delete:
-            </p>
-            <p className="text-xs font-semibold text-foreground bg-muted/20 rounded-lg px-3 py-2 mb-4 truncate">
-              {fileToDelete.name}
-            </p>
-            <p className="text-xs text-destructive/80 mb-5">
-              This action is irreversible. The file will be removed from storage permanently.
-            </p>
-            <div className="flex justify-end items-center gap-2">
-              <button
-                onClick={() => setFileToDelete(null)}
-                disabled={isDeleting}
-                className="px-3.5 py-1.5 border border-border hover:bg-muted/10 rounded-lg text-xs font-semibold text-foreground transition-all disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDeleteForever}
-                disabled={isDeleting}
-                className="px-3.5 py-1.5 bg-destructive hover:bg-destructive/90 text-destructive-foreground text-xs font-semibold rounded-lg transition-all shadow-md disabled:opacity-50 flex items-center gap-1.5"
-              >
-                {isDeleting ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                Delete Forever
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Background Uploads HUD */}
-      {uploadQueue.length > 0 && (
-        <div className="fixed bottom-4 right-4 z-50 w-80 bg-neutral-950/90 border border-neutral-800 text-white rounded-xl shadow-2xl p-4 flex flex-col gap-3 max-h-72 overflow-y-auto animate-in slide-in-from-bottom-5 duration-300">
-          <div className="flex items-center justify-between border-b border-neutral-800 pb-2">
-            <span className="text-xs font-bold tracking-wide uppercase text-neutral-400">Uploads ({uploadQueue.length})</span>
-            <button
-              onClick={() => setUploadQueue((prev) => prev.filter((t) => t.status === "uploading"))}
-              className="text-[10px] text-neutral-500 hover:text-white transition-colors"
-            >
-              Clear Finished
-            </button>
-          </div>
-          <div className="flex flex-col gap-2">
-            {uploadQueue.map((task) => (
-              <div key={task.id} className="flex flex-col gap-1.5 p-2 bg-neutral-900/50 border border-neutral-800/40 rounded-lg">
-                <div className="flex items-center justify-between text-xs gap-2">
-                  <span className="font-semibold truncate max-w-[180px]" title={task.name}>
-                    {task.name}
-                  </span>
-                  <span className="text-[10px] text-neutral-400 shrink-0 font-medium">
-                    {task.status === "encrypting" && "Encrypting..."}
-                    {task.status === "uploading" && `${task.progress}%`}
-                    {task.status === "completed" && <span className="text-emerald-400 font-semibold">Done</span>}
-                    {task.status === "error" && <span className="text-rose-400 font-semibold">Error</span>}
-                  </span>
-                </div>
-                {task.status === "uploading" && (
-                  <div className="w-full bg-neutral-800 rounded-full h-1.5 overflow-hidden">
-                    <div
-                      className="bg-primary h-full transition-all duration-300 rounded-full"
-                      style={{ width: `${task.progress}%` }}
-                    />
-                  </div>
-                )}
-                {task.errorMsg && (
-                  <span className="text-[9px] text-rose-400/80 leading-none truncate">
-                    {task.errorMsg}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+
+      <DeleteConfirmModal
+        isOpen={!!fileToDelete}
+        onClose={() => setFileToDelete(null)}
+        fileToDelete={fileToDelete}
+        isDeleting={isDeleting}
+        onConfirm={confirmDeleteForever}
+      />
+
+      <UploadHUD
+        uploadQueue={uploadQueue}
+        onClearFinished={() => setUploadQueue((prev) => prev.filter((t) => t.status === "uploading"))}
+      />
     </div>
   );
 }

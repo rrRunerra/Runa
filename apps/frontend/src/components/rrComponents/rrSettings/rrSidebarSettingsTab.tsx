@@ -124,7 +124,7 @@ export function RrSidebarSettingsTab({
       return getAquariusSidebarConfig();
     }
     if (selectedAppHref === "/lacerta") {
-      return getLacertaSidebarConfig();
+      return getLacertaSidebarConfig(t);
     }
     if (selectedAppHref === "/lyra") {
       return getLyraSidebarConfig();
@@ -133,7 +133,7 @@ export function RrSidebarSettingsTab({
       return getMonocerosSidebarConfig();
     }
     return [];
-  }, [selectedAppHref, session, connections, emails]);
+  }, [selectedAppHref, session, connections, emails, t]);
 
   const findItemByHref = (
     key: string | null | undefined,

@@ -14,9 +14,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useRRCrypto } from "@/hooks/useRRCrypto";
+import { useTranslation } from "react-i18next";
 
-export function RrUnlockSecureStorageModal() {
+export function RrDecryptModal() {
   const { data: session } = useSession();
+  const { t } = useTranslation();
   const {
     showUnlockDialog,
     setShowUnlockDialog,
@@ -50,8 +52,8 @@ export function RrUnlockSecureStorageModal() {
     } catch {
       setError(
         isKeysExist
-          ? "Incorrect password. Failed to unlock."
-          : "Failed to initialize keys.",
+          ? t("incorrectPasswordUnlock")
+          : t("failedInitializeKeys"),
       );
     } finally {
       setLoading(false);
@@ -64,25 +66,25 @@ export function RrUnlockSecureStorageModal() {
         <DialogHeader className="pb-3 border-b">
           <DialogTitle className="flex items-center gap-2 text-md font-bold text-foreground">
             <Shield className="size-5 text-primary" />
-            {isKeysExist ? "Unlock Encryption" : "Setup Encryption"}
+            {isKeysExist ? t("unlockEncryption") : t("setupEncryption")}
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground mt-1 leading-relaxed">
             {isKeysExist
-              ? "Enter your account password to decrypt your private key."
-              : "Enter your account password to initialize your encryption keys for Chats, Emails, and Files."}
+              ? t("unlockEncryptionDesc")
+              : t("setupEncryptionDesc")}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 pt-4">
           <div className="flex flex-col gap-2">
             <Label htmlFor="encryption-password" className="text-xs font-semibold text-muted-foreground">
-              Account Password
+              {t("accountPassword")}
             </Label>
             <div className="relative">
               <Input
                 id="encryption-password"
                 type="password"
-                placeholder="Enter account password"
+                placeholder={t("enterAccountPassword")}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
@@ -112,12 +114,12 @@ export function RrUnlockSecureStorageModal() {
               {loading ? (
                 <>
                   <Loader2 className="size-3.5 mr-2 animate-spin" />
-                  {isKeysExist ? "Decrypting..." : "Setting up..."}
+                  {isKeysExist ? t("decrypting") : t("settingUp")}
                 </>
               ) : (
                 <>
                   <Lock className="size-3.5 mr-1.5" />
-                  {isKeysExist ? "Unlock Storage" : "Initialize Encryption"}
+                  {isKeysExist ? t("unlockStorage") : t("initializeEncryption")}
                 </>
               )}
             </Button>

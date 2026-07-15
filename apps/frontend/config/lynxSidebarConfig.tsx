@@ -48,6 +48,7 @@ export function getLynxSidebarConfig(
       section: "#$Phone",
       items: [
         {
+          dataKey: "Commands",
           label: t("sidebarCommands"),
           href: "/lynx/commands",
           preventRedirect: false,
@@ -56,6 +57,7 @@ export function getLynxSidebarConfig(
           position: 1,
         },
         {
+          dataKey: "Events",
           label: t("sidebarEvents"),
           href: "/lynx/events",
           preventRedirect: false,
@@ -64,6 +66,7 @@ export function getLynxSidebarConfig(
           position: 2,
         },
         {
+          dataKey: "Logs",
           label: t("sidebarLogs"),
           href: "/lynx/logs",
           preventRedirect: false,
@@ -72,6 +75,7 @@ export function getLynxSidebarConfig(
           position: 3,
         },
         {
+          dataKey: "Configuration",
           label: t("sidebarConfiguration"),
           href: "/lynx/config",
           preventRedirect: false,
@@ -85,6 +89,7 @@ export function getLynxSidebarConfig(
       section: "",
       items: [
         {
+          dataKey: "Home",
           label: t("sidebarHome"),
           href: "/lynx",
           preventRedirect: false,
@@ -95,8 +100,10 @@ export function getLynxSidebarConfig(
     },
     {
       section: t("sidebarSectionStructures"),
+      dataKey: "Structures",
       items: [
         {
+          dataKey: "Commands",
           label: t("sidebarCommands"),
           href: "/lynx/commands",
           preventRedirect: false,
@@ -113,6 +120,7 @@ export function getLynxSidebarConfig(
               : [],
         },
         {
+          dataKey: "Events",
           label: t("sidebarEvents"),
           href: "/lynx/events",
           icon: <Logs className="h-4 w-4" />,
@@ -129,6 +137,7 @@ export function getLynxSidebarConfig(
               : [],
         },
         {
+          dataKey: "Crons",
           label: t("sidebarCrons"),
           href: "/lynx/crons",
           icon: <ScrollText className="h-4 w-4" />,
@@ -145,6 +154,7 @@ export function getLynxSidebarConfig(
               : [],
         },
         {
+          dataKey: "APIs",
           label: t("sidebarApis"),
           href: "/lynx/apis",
           icon: <Key className="h-4 w-4" />,
@@ -164,8 +174,10 @@ export function getLynxSidebarConfig(
     },
     {
       section: t("sidebarSectionAdministration"),
+      dataKey: "Administration",
       items: [
         {
+          dataKey: "Logs",
           label: t("sidebarLogs"),
           href: "/lynx/logs",
           icon: <Logs className="h-4 w-4" />,
@@ -174,6 +186,7 @@ export function getLynxSidebarConfig(
           permissions: LynxFlags.VIEW_LOGS,
           children: [
             {
+              dataKey: "LogsAll",
               label: t("sidebarLogsAll"),
               href: "/lynx/logs/all",
               subtitle: t("sidebarLogsAllSubtitle"),
@@ -181,6 +194,7 @@ export function getLynxSidebarConfig(
               icon: <ScrollText className="h-4 w-4" />,
             },
             {
+              dataKey: "LogsErrors",
               label: t("sidebarLogsErrors"),
               href: "/lynx/logs/error",
               preventRedirect: false,
@@ -188,6 +202,7 @@ export function getLynxSidebarConfig(
               icon: <CircleX className="h-4 w-4" />,
             },
             {
+              dataKey: "LogsWarnings",
               label: t("sidebarLogsWarnings"),
               href: "/lynx/logs/warn",
               preventRedirect: false,
@@ -195,6 +210,7 @@ export function getLynxSidebarConfig(
               icon: <AlertTriangle className="h-4 w-4" />,
             },
             {
+              dataKey: "LogsInfo",
               label: t("sidebarLogsInfo"),
               href: "/lynx/logs/info",
               preventRedirect: false,
@@ -202,6 +218,7 @@ export function getLynxSidebarConfig(
               icon: <Info className="h-4 w-4" />,
             },
             {
+              dataKey: "LogsDebug",
               label: t("sidebarLogsDebug"),
               href: "/lynx/logs/debug",
               preventRedirect: false,
@@ -209,6 +226,7 @@ export function getLynxSidebarConfig(
               icon: <Bug className="h-4 w-4" />,
             },
             {
+              dataKey: "LogsVerbose",
               label: t("sidebarLogsVerbose"),
               href: "/lynx/logs/verbose",
               preventRedirect: false,
@@ -218,6 +236,7 @@ export function getLynxSidebarConfig(
           ],
         },
         {
+          dataKey: "Databases",
           label: t("sidebarDatabases"),
           subtitle: t("sidebarDatabasesSubtitle"),
           href: "/lynx/databases",
@@ -232,6 +251,7 @@ export function getLynxSidebarConfig(
           })),
         },
         {
+          dataKey: "Configuration",
           label: t("sidebarConfiguration"),
           href: "/lynx/config",
           icon: <Settings className="h-4 w-4" />,
@@ -240,6 +260,7 @@ export function getLynxSidebarConfig(
           permissions: LynxFlags.MANAGE_CONFIG,
           children: [
             {
+              dataKey: "Homework",
               label: t("sidebarHomework"),
               href: "/lynx/config/homework",
               icon: <ScrollText className="h-4 w-4" />,
@@ -252,8 +273,10 @@ export function getLynxSidebarConfig(
     },
     {
       section: t("sidebarSectionGeneral"),
+      dataKey: "General",
       items: [
         {
+          dataKey: "Chat",
           label: t("sidebarChat"),
           href: "/lynx/chat",
           icon: <MessageSquare className="h-4 w-4" />,
@@ -261,6 +284,7 @@ export function getLynxSidebarConfig(
           preventRedirect: false,
           children: [
             {
+              dataKey: "Guilds",
               label: t("sidebarGuilds"),
               href: "/lynx/chat/guilds",
               subtitle: t("sidebarGuildsSubtitle"),
@@ -269,6 +293,7 @@ export function getLynxSidebarConfig(
               permissions: LynxFlags.GUILD_CHAT,
             },
             {
+              dataKey: "DirectMessages",
               label: t("sidebarDirectMessages"),
               href: "/lynx/chat/dms",
               subtitle: t("sidebarDirectMessagesSubtitle"),

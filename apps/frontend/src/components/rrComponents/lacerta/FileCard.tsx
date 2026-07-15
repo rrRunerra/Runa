@@ -50,6 +50,7 @@ interface LaceraFileShare {
   id: string;
   userId: string;
   user: SharedUser;
+  allowEdit?: boolean;
 }
 
 export interface RenderFileItem {

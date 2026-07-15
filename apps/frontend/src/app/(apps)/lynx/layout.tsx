@@ -20,13 +20,10 @@ export default function LynxLayout({
       <RrI18nProvider>
         <RrLynxNavProvider>
           <SidebarInset className="bg-background pt-2 overflow-x-hidden overflow-y-auto no-scrollbar flex flex-col relative isolate">
-            <div className="relative z-10 flex flex-col flex-1">
-              {children}
-            </div>
+            <div className="relative z-10 flex flex-col flex-1">{children}</div>
           </SidebarInset>
         </RrLynxNavProvider>
       </RrI18nProvider>
     </div>
   );
 }
-

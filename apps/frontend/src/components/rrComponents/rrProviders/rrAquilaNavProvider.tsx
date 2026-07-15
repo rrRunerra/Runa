@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
+import { useTranslation } from "react-i18next";
 import { getAquilaSidebarConfig } from "../../../../config/aquilaSidebarConfig";
 import RrSidebar from "../rrSidebar";
 import { filterSidebarConfig } from "@/lib/navigation";
@@ -32,10 +33,12 @@ export default function RrAquilaNavProvider({
     }
   }, [session?.accessToken]);
 
+  const { t } = useTranslation();
+
   const sideBarConfig = useMemo(() => {
-    const rawConfig = getAquilaSidebarConfig(session, connections);
+    const rawConfig = getAquilaSidebarConfig(session, connections, t);
     return filterSidebarConfig(rawConfig, session?.user?.permissions);
-  }, [session, connections]);
+  }, [session, connections, t]);
 
   return (
     <>

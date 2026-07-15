@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { THEMES, type ThemeConfig } from "@/config/themes";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 export interface AppearanceDialogProps {
   open: boolean;
@@ -104,6 +105,7 @@ export function RrAppearanceModal({
 }: AppearanceDialogProps): React.JSX.Element | null {
   const { theme, setTheme } = useTheme();
   const { baseTheme, setBaseTheme } = useBaseTheme();
+  const { t } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
 
@@ -124,9 +126,9 @@ export function RrAppearanceModal({
   };
 
   const modes: Array<{ mode: ThemeMode; label: string; description: string; icon: React.ReactNode }> = [
-    { mode: "light", label: "Light", description: "High-contrast display", icon: <Sun className="size-5" /> },
-    { mode: "dark", label: "Dark", description: "Low-light display", icon: <Moon className="size-5" /> },
-    { mode: "system", label: "System", description: "Follows OS default", icon: <Laptop className="size-5" /> },
+    { mode: "light", label: t("light"), description: t("highContrastDisplay"), icon: <Sun className="size-5" /> },
+    { mode: "dark", label: t("dark"), description: t("lowLightDisplay"), icon: <Moon className="size-5" /> },
+    { mode: "system", label: t("system"), description: t("followsOsDefault"), icon: <Laptop className="size-5" /> },
   ];
 
   return (
@@ -139,10 +141,10 @@ export function RrAppearanceModal({
           </div>
           <div className="flex flex-col gap-0.5">
             <DialogTitle className="text-base sm:text-lg font-bold text-foreground">
-              Appearance Settings
+              {t("appearanceSettings")}
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground">
-              Tailor the theme, modes, and colors of your Runa desktop dashboard.
+              {t("appearanceSettingsDesc")}
             </DialogDescription>
           </div>
         </DialogHeader>
@@ -159,10 +161,10 @@ export function RrAppearanceModal({
             <motion.div variants={itemVariants} className="flex flex-col gap-3">
               <div>
                 <h3 className="text-xs sm:text-sm font-semibold text-foreground">
-                  Interface Theme
+                  {t("interfaceTheme")}
                 </h3>
                 <p className="text-[11px] sm:text-xs text-muted-foreground">
-                  Select a color profile for the main workspace panels
+                  {t("interfaceThemeDesc")}
                 </p>
               </div>
 
@@ -188,10 +190,10 @@ export function RrAppearanceModal({
             <motion.div variants={itemVariants} className="flex flex-col gap-3">
               <div>
                 <h3 className="text-xs sm:text-sm font-semibold text-foreground">
-                  Theme Mode
+                  {t("themeMode")}
                 </h3>
                 <p className="text-[11px] sm:text-xs text-muted-foreground">
-                  Toggle between light, dark, and system variants
+                  {t("themeModeDesc")}
                 </p>
               </div>
 
@@ -220,7 +222,7 @@ export function RrAppearanceModal({
               onClick={() => onOpenChange(false)}
               className="text-xs sm:text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-md h-9 cursor-pointer"
             >
-              Cancel
+              {t("cancel")}
             </Button>
           </motion.div>
           <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
@@ -228,7 +230,7 @@ export function RrAppearanceModal({
               onClick={handleSave}
               className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-md px-5 shadow-sm text-xs sm:text-sm h-9 cursor-pointer"
             >
-              Save Preferences
+              {t("savePreferences")}
             </Button>
           </motion.div>
         </div>
