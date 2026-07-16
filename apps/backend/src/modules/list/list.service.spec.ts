@@ -11,6 +11,7 @@ import { MangaService } from '../manga/manga.service';
 import { GameService } from '../game/game.service';
 import { BookService } from '../book/book.service';
 import { NotificationService } from '../notification/notification.service';
+import { MediaStatsService } from './media-stats.service';
 
 // Mock database $Enums and prisma client
 jest.mock('@runa/database', () => ({
@@ -172,6 +173,9 @@ describe('ListService', () => {
   const mockNotificationService = {
     create: jest.fn().mockResolvedValue({}),
   };
+  const mockMediaStatsService = {
+    updateStatsIncremental: jest.fn().mockResolvedValue(undefined),
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -189,6 +193,7 @@ describe('ListService', () => {
         { provide: GameService, useValue: mockGameService },
         { provide: BookService, useValue: mockBookService },
         { provide: NotificationService, useValue: mockNotificationService },
+        { provide: MediaStatsService, useValue: mockMediaStatsService },
       ],
     }).compile();
 
@@ -768,7 +773,7 @@ describe('ListService', () => {
       mockPrismaClient.aquilaMangaUserList.findMany.mockResolvedValue([]);
       mockPrismaClient.aquilaTvUserList.findMany.mockResolvedValue([
         {
-          tvdbId: 2,
+          tvId: 2,
           score: 8,
           updatedAt: date2,
           createdAt: date2,
@@ -961,6 +966,122 @@ describe('ListService', () => {
         success: false,
         message: 'All episodes already watched',
       });
+    });
+  });
+
+  describe('fetchSonarrSeries', () => {
+    let originalFetch: typeof global.fetch;
+
+    beforeAll(() => {
+      originalFetch = global.fetch;
+      global.fetch = jest.fn().mockImplementation(() =>
+        Promise.resolve({
+          json: () => Promise.resolve([{ anilist_id: 5001, tvdb_id: 9999 }]),
+        } as any),
+      );
+    });
+
+    afterAll(() => {
+      global.fetch = originalFetch;
+    });
+
+    it('should return tv entries when includeTv is true', async () => {
+      mockPrismaClient.aquilaTvUserList.findMany.mockResolvedValue([
+        {
+          tv: {
+            tvdbId: 12345,
+            titleEnglish: 'English TV Title',
+            titleRomaji: 'Romaji TV Title',
+          },
+        },
+      ]);
+
+      const result = await service.fetchSonarrSeries('testuser', true, false);
+
+      expect(mockPrismaClient.aquilaTvUserList.findMany).toHaveBeenCalledWith({
+        where: {
+          username: 'testuser',
+          status: 'PLANNING',
+        },
+        select: {
+          tv: {
+            select: {
+              tvdbId: true,
+              titleEnglish: true,
+              titleRomaji: true,
+            },
+          },
+        },
+      });
+
+      expect(result).toEqual([
+        {
+          title: 'English TV Title',
+          tvdbId: 12345,
+          year: 0,
+          monitored: true,
+          seasons: [],
+        },
+      ]);
+    });
+
+    it('should resolve and cache anime tvdbId using anilistId', async () => {
+      mockPrismaClient.aquilaAnimeUserList.findMany.mockResolvedValue([
+        {
+          id: 10,
+          animeId: 101,
+          connections: {},
+          anime: {
+            anilistId: 5001,
+            titleEnglish: 'Test Anime',
+            titleRomaji: 'Test Anime Romaji',
+            seasonYear: 2024,
+          },
+        },
+      ]);
+
+      mockPrismaClient.aquilaAnimeUserList.update.mockResolvedValue({});
+
+      const result = await service.fetchSonarrSeries('testuser', false, true);
+
+      expect(mockPrismaClient.aquilaAnimeUserList.findMany).toHaveBeenCalledWith({
+        where: {
+          username: 'testuser',
+          status: 'PLANNING',
+        },
+        select: {
+          id: true,
+          animeId: true,
+          connections: true,
+          anime: {
+            select: {
+              anilistId: true,
+              titleEnglish: true,
+              titleRomaji: true,
+              seasonYear: true,
+            },
+          },
+        },
+      });
+
+      expect(mockPrismaClient.aquilaAnimeUserList.update).toHaveBeenCalledWith({
+        where: { id: 10 },
+        data: {
+          connections: {
+            tvdbId: 9999,
+          },
+        },
+      });
+
+      expect(result).toEqual([
+        {
+          title: 'Test Anime',
+          tvdbId: 9999,
+          year: 2024,
+          monitored: true,
+          seasons: [],
+        },
+      ]);
     });
   });
 });

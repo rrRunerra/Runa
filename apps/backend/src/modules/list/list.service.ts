@@ -3142,6 +3142,7 @@ export class ListService {
             connections: true,
             anime: {
               select: {
+                anilistId: true,
                 titleEnglish: true,
                 titleRomaji: true,
                 seasonYear: true,
@@ -3158,9 +3159,11 @@ export class ListService {
 
         if (connectionsObj.tvdbId) {
           tvdbId = connectionsObj.tvdbId;
-        } else {
+        } else if (entry.anime?.anilistId) {
           // Resolve using Fribb's mapping
-          const resolvedId = await AnimeMappingCache.getTvdbId(entry.animeId);
+          const resolvedId = await AnimeMappingCache.getTvdbId(
+            entry.anime.anilistId,
+          );
           if (resolvedId) {
             tvdbId = resolvedId;
 
