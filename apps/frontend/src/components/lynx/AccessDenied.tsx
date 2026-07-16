@@ -1,5 +1,6 @@
 import { ArrowLeft, ShieldAlert } from "lucide-react";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 
 interface AccessDeniedProps {
   title?: string;
@@ -12,6 +13,8 @@ export default function AccessDenied({
   message = "You don't have permission to access the requested resource.",
   returnUrl = "/",
 }: AccessDeniedProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="relative min-h-screen bg-background flex flex-col items-center justify-center overflow-hidden selection:bg-primary/30">
       {/* Constellation Background */}
@@ -143,7 +146,7 @@ export default function AccessDenied({
           >
             <div className="absolute inset-0 bg-linear-to-r from-primary/0 via-primary/10 to-primary/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform duration-300" />
-            <span className="font-medium">Return to Safety</span>
+            <span className="font-medium">{t("lynx.returnToSafety")}</span>
           </Link>
         </div>
       </div>

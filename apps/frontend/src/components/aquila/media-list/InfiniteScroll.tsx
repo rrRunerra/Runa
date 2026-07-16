@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 
 interface InfiniteScrollProps {
   onLoadMore: () => void;
@@ -37,6 +38,7 @@ export const InfiniteScroll: React.FC<InfiniteScrollProps> = ({
   hasMore,
   isLoading,
 }) => {
+  const { t } = useTranslation();
   const observerTarget = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -70,7 +72,7 @@ export const InfiniteScroll: React.FC<InfiniteScrollProps> = ({
       {isLoading && (
         <div className="flex items-center gap-2 text-muted-foreground text-xs font-semibold">
           <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
-          <span>Loading more...</span>
+          <span>{t("aquila.loadingMore")}</span>
         </div>
       )}
     </div>

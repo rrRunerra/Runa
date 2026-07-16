@@ -32,13 +32,21 @@ export function CreateFileModal({
   const getTypeLabel = () => {
     switch (createType) {
       case "doc":
-        return "Document";
+        return t("lacerta.fileTypeDocument");
       case "sheet":
-        return "Spreadsheet";
+        return t("lacerta.fileTypeSpreadsheet");
       case "slide":
-        return "Presentation";
+        return t("lacerta.fileTypePresentation");
+      case "note":
+        return t("lacerta.fileTypeNote");
+      case "canvas":
+        return t("lacerta.fileTypeCanvas");
+      case "mermaid":
+        return t("lacerta.fileTypeMermaid");
+      case "uml":
+        return t("lacerta.fileTypeUml");
       default:
-        return createType ? createType.charAt(0).toUpperCase() + createType.slice(1) : "";
+        return "";
     }
   };
 
