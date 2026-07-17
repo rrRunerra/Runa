@@ -49,6 +49,7 @@ interface FileGridProps {
   onToggleTrash: (item: RenderFileItem) => void;
   onToggleVault: (item: RenderFileItem) => void;
   onDelete: (item: RenderFileItem) => void;
+  onDeleteMultiple?: (items: RenderFileItem[]) => Promise<void>;
   onCreateFolder: (name: string) => void;
   onCreateDoc: (
     type: "doc" | "sheet" | "note" | "slide" | "canvas" | "mermaid" | "uml",
@@ -72,6 +73,7 @@ export default function FileGrid({
   onToggleTrash,
   onToggleVault,
   onDelete,
+  onDeleteMultiple,
   onCreateFolder,
   onCreateDoc,
   onUploadFile,
@@ -297,10 +299,15 @@ export default function FileGrid({
   const confirmBulkDelete = async () => {
     setIsBulkDeleting(true);
     try {
-      for (const id of Array.from(selectedIds)) {
-        const item = items.find((i) => i.id === id);
-        if (item) {
-          await onDelete(item);
+      if (onDeleteMultiple) {
+        const selectedItems = items.filter((i) => selectedIds.has(i.id));
+        await onDeleteMultiple(selectedItems);
+      } else {
+        for (const id of Array.from(selectedIds)) {
+          const item = items.find((i) => i.id === id);
+          if (item) {
+            await onDelete(item);
+          }
         }
       }
       setSelectedIds(new Set());
@@ -630,18 +637,27 @@ export default function FileGrid({
       {/* Grid Sorting Header */}
       {viewMode === "grid" && (
         <div className="flex items-center justify-between px-4 py-2 border border-border/50 bg-muted/5 rounded-lg text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-4 shrink-0">
-          <button
-            onClick={() => toggleSort("name")}
-            className="flex items-center gap-1 hover:text-foreground transition-all"
-          >
-            {t("lacerta.fileGrid.nameColumn", "Name")}{" "}
-            {sortField === "name" &&
-              (sortOrder === "asc" ? (
-                <ArrowUp className="h-3 w-3" />
-              ) : (
-                <ArrowDown className="h-3 w-3" />
-              ))}
-          </button>
+          <div className="flex items-center gap-2.5">
+            <Checkbox
+              checked={
+                sortedItems.length > 0 &&
+                selectedIds.size === sortedItems.length
+              }
+              onCheckedChange={handleToggleSelectAll}
+            />
+            <button
+              onClick={() => toggleSort("name")}
+              className="flex items-center gap-1 hover:text-foreground transition-all"
+            >
+              {t("lacerta.fileGrid.nameColumn", "Name")}{" "}
+              {sortField === "name" &&
+                (sortOrder === "asc" ? (
+                  <ArrowUp className="h-3 w-3" />
+                ) : (
+                  <ArrowDown className="h-3 w-3" />
+                ))}
+            </button>
+          </div>
           <div className="flex items-center gap-4">
             <button
               onClick={() => toggleSort("size")}

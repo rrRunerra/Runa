@@ -1013,6 +1013,30 @@ export default function LacertaPage({
     setFileToDelete(item);
   };
 
+  const handleDeleteMultiple = async (itemsToDelete: { id: string; name: string }[]) => {
+    if (!session?.accessToken || itemsToDelete.length === 0) return;
+    try {
+      const deletePromises = itemsToDelete.map(async (item) => {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${item.id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${session.accessToken}` },
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body?.message || `Delete failed for ${item.name} (${res.status})`);
+        }
+      });
+      await Promise.all(deletePromises);
+      toast.success(t("lacerta.bulkDeletedSuccess", { defaultValue: "Selected items deleted permanently.", count: itemsToDelete.length }));
+      mutate();
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : "Delete failed";
+      toast.error(errMsg);
+      mutate();
+      throw err;
+    }
+  };
+
   const confirmDeleteForever = async () => {
     if (!fileToDelete || !session?.accessToken) return;
     setIsDeleting(true);
@@ -1069,6 +1093,7 @@ export default function LacertaPage({
           onToggleTrash={handleToggleTrash}
           onToggleVault={handleToggleVault}
           onDelete={handleDeleteForever}
+          onDeleteMultiple={handleDeleteMultiple}
           onCreateFolder={handleCreateFolder}
           onCreateDoc={handleCreateDoc}
           onUploadFile={handleUploadFile}
