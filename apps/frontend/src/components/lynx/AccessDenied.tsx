@@ -1,3 +1,5 @@
+"use client";
+
 import { ArrowLeft, ShieldAlert } from "lucide-react";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
