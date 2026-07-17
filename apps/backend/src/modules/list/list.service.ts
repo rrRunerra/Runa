@@ -2741,13 +2741,13 @@ export class ListService {
     }
 
     if (mediaType === 'tv') {
-      const tvdbIdNum = Number(id);
-      if (isNaN(tvdbIdNum))
+      const tvIdNum = Number(id);
+      if (isNaN(tvIdNum))
         throw new rrInternalServerErrorException(`${this.moduleCode}ITI001`, {
-          message: 'Invalid TVDB ID',
+          message: 'Invalid TV ID',
         });
       const entry = await this.prisma.client.aquilaTvUserList.findUnique({
-        where: { username_tvdbId: { username: user, tvdbId: tvdbIdNum } },
+        where: { username_tvId: { username: user, tvId: tvIdNum } },
         include: { tv: true, watchedEpisodes: true },
       });
       if (!entry)
@@ -2806,7 +2806,7 @@ export class ListService {
       if (entry.connections && typeof entry.connections === 'object') {
         await this.updateTvConnections(
           user,
-          tvdbIdNum,
+          tvIdNum,
           entry.connections,
           isCompleted ? 'COMPLETED' : entry.status,
           entry.score || undefined,
