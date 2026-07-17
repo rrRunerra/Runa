@@ -1009,3 +1009,17 @@ pre code {
 [class*="bg-amber-"] .ProseMirror {
   @apply text-amber-950!;
 }
+
+/* Sitewide text selection primary color */
+::selection {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
+/* Prevent images from being selected or dragged */
+img {
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+

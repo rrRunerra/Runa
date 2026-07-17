@@ -3,22 +3,40 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Download, Loader2, File, CheckCircle2, ShieldCheck, Play, ArrowLeft, Grid3X3, FolderPlus, LogIn } from "lucide-react";
+import {
+  Download,
+  Loader2,
+  File,
+  ShieldCheck,
+  Play,
+  ArrowLeft,
+  Grid3X3,
+  FolderPlus,
+  LogIn,
+} from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useTranslation } from "react-i18next";
-import CanvasEditor from "@/components/rrComponents/lacerta/CanvasEditor";
-import OnlyOfficeEditor from "@/components/rrComponents/lacerta/OnlyOfficeEditor";
+import dynamic from "next/dynamic";
+
+const CanvasEditor = dynamic(
+  () => import("@/components/rrComponents/lacerta/CanvasEditor"),
+  { ssr: false },
+);
+const OnlyOfficeEditor = dynamic(
+  () => import("@/components/rrComponents/lacerta/OnlyOfficeEditor"),
+  { ssr: false },
+);
+const FolderPickerModal = dynamic(
+  () => import("./FolderPickerModal").then((mod) => mod.FolderPickerModal),
+  { ssr: false },
+);
 import { isOnlyOfficeFile } from "@/lib/onlyoffice";
 import { RawFileItem } from "../../types";
 import { useRRCrypto } from "@/hooks/useRRCrypto";
-import { FolderPickerModal } from "./FolderPickerModal";
 import { RrLanguageSelector } from "@/components/rrComponents/rrLanguageSelector";
 
-import {
-  importRawKey,
-  decrypt,
-} from "@runa/crypto/browser";
+import { importRawKey, decrypt } from "@runa/crypto/browser";
 
 // Overhead per chunk: 12 B IV + 16 B auth tag = 28 B
 const CHUNK_OVERHEAD = 28;
@@ -44,7 +62,9 @@ async function decryptChunk(
   const tag = wire.slice(12, 28);
   const ciphertext = wire.slice(28);
 
-  const ciphertextWithTag = new Uint8Array(ciphertext.byteLength + tag.byteLength);
+  const ciphertextWithTag = new Uint8Array(
+    ciphertext.byteLength + tag.byteLength,
+  );
   ciphertextWithTag.set(new Uint8Array(ciphertext), 0);
   ciphertextWithTag.set(new Uint8Array(tag), ciphertext.byteLength);
 
@@ -63,9 +83,11 @@ const downloadAndDecryptFileWithProgress = async (
   key: string,
   decryptedKey: CryptoKey,
   fileRecord?: { id: string; chunkCount?: number | null; size?: number | null },
-  onProgress?: (percent: number) => void
+  onProgress?: (percent: number) => void,
 ): Promise<ArrayBuffer> => {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${key}`);
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${key}`,
+  );
   if (!res.ok) throw new Error("Download failed");
 
   const contentLength = res.headers.get("content-length");
@@ -113,7 +135,9 @@ const downloadAndDecryptFileWithProgress = async (
       const partNumber = i + 1;
       const isLast = i === numChunks - 1;
       const start = i * chunkCiphertextSize;
-      const end = isLast ? totalCipherBuffer.byteLength : start + chunkCiphertextSize;
+      const end = isLast
+        ? totalCipherBuffer.byteLength
+        : start + chunkCiphertextSize;
       const chunkWire = totalCipherBuffer.slice(start, end) as ArrayBuffer;
 
       const plaintext = await decryptChunk(
@@ -127,7 +151,10 @@ const downloadAndDecryptFileWithProgress = async (
       plaintextParts.push(plaintext);
     }
 
-    const totalPlaintextBytes = plaintextParts.reduce((s, b) => s + b.byteLength, 0);
+    const totalPlaintextBytes = plaintextParts.reduce(
+      (s, b) => s + b.byteLength,
+      0,
+    );
     const result = new Uint8Array(totalPlaintextBytes);
     let offset = 0;
     for (const part of plaintextParts) {
@@ -140,14 +167,19 @@ const downloadAndDecryptFileWithProgress = async (
   return decrypt(totalCipherBuffer, decryptedKey);
 };
 
-
 export default function LacertaSharePage(): React.JSX.Element {
   const { t } = useTranslation();
   const params = useParams();
   const router = useRouter();
   const fileId = params.id as string;
   const { data: session } = useSession();
-  const { isEncryptionUnlocked, privateKey, userPublicKey, wrapKey, setShowUnlockDialog } = useRRCrypto();
+  const {
+    isEncryptionUnlocked,
+    privateKey,
+    userPublicKey,
+    wrapKey,
+    setShowUnlockDialog,
+  } = useRRCrypto();
 
   const [loading, setLoading] = useState<boolean>(true);
   const [decrypting, setDecrypting] = useState<boolean>(false);
@@ -176,10 +208,11 @@ export default function LacertaSharePage(): React.JSX.Element {
       navigator.serviceWorker
         .register("/sw-download.js")
         .then((reg) => reg.update())
-        .catch((err) => console.warn("Failed to register sw-download worker:", err));
+        .catch((err) =>
+          console.warn("Failed to register sw-download worker:", err),
+        );
     }
   }, []);
-
 
   useEffect(() => {
     // 1. Get raw key from URL hash fragment
@@ -189,7 +222,9 @@ export default function LacertaSharePage(): React.JSX.Element {
 
     const loadMetadata = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${fileId}/metadata`);
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${fileId}/metadata`,
+        );
         if (!res.ok) throw new Error("File not found or private.");
         const meta = await res.json();
         setFileMeta(meta);
@@ -207,7 +242,10 @@ export default function LacertaSharePage(): React.JSX.Element {
           }
         }
       } catch (err: unknown) {
-        const errMsg = err instanceof Error ? err.message : "Failed to load shared file metadata.";
+        const errMsg =
+          err instanceof Error
+            ? err.message
+            : "Failed to load shared file metadata.";
         toast.error(errMsg);
       } finally {
         setLoading(false);
@@ -231,24 +269,34 @@ export default function LacertaSharePage(): React.JSX.Element {
   const handleDecryptAndDownload = async () => {
     if (!fileMeta || !rawKeyStr) return;
     setDecrypting(true);
-    const downloadToast = toast.loading("Downloading and decrypting file... (0%)");
+    const downloadToast = toast.loading(
+      "Downloading and decrypting file... (0%)",
+    );
 
     try {
       const fileKey = await importRawKey(rawKeyStr);
       const numChunks = fileMeta.chunkCount ?? null;
-      const supportsFileSystem = typeof window !== "undefined" && "showSaveFilePicker" in window;
+      const supportsFileSystem =
+        typeof window !== "undefined" && "showSaveFilePicker" in window;
 
       // ── Streaming path: chunked file + File System Access API ─────────────────
       if (numChunks && numChunks > 0 && supportsFileSystem) {
         // 1. Ask user where to save
         const fileHandle = await (window as any).showSaveFilePicker({
           suggestedName: decryptedName || "shared-file",
-          types: [{ description: "File", accept: { [decryptedType || "application/octet-stream"]: [] } }],
+          types: [
+            {
+              description: "File",
+              accept: { [decryptedType || "application/octet-stream"]: [] },
+            },
+          ],
         });
         const writable = await fileHandle.createWritable();
 
         // 2. Fetch the raw ciphertext stream
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${fileMeta.key}`);
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${fileMeta.key}`,
+        );
         if (!res.ok || !res.body) throw new Error("Download failed");
 
         const contentLength = res.headers.get("content-length");
@@ -280,11 +328,14 @@ export default function LacertaSharePage(): React.JSX.Element {
           pendingBytes = merged;
 
           while (
-            (partNumber < numChunks - 1 && pendingBytes.length >= chunkCiphertextSize) ||
+            (partNumber < numChunks - 1 &&
+              pendingBytes.length >= chunkCiphertextSize) ||
             (partNumber === numChunks - 1 && pendingBytes.length > 0 && done)
           ) {
             const isLast = partNumber === numChunks - 1;
-            const chunkBytes = isLast ? pendingBytes : pendingBytes.slice(0, chunkCiphertextSize);
+            const chunkBytes = isLast
+              ? pendingBytes
+              : pendingBytes.slice(0, chunkCiphertextSize);
             const plaintext = await decryptChunk(
               chunkBytes.buffer as ArrayBuffer,
               fileKey,
@@ -295,7 +346,9 @@ export default function LacertaSharePage(): React.JSX.Element {
             );
             await writable.write(plaintext);
             partNumber++;
-            pendingBytes = isLast ? new Uint8Array(0) : pendingBytes.slice(chunkCiphertextSize);
+            pendingBytes = isLast
+              ? new Uint8Array(0)
+              : pendingBytes.slice(chunkCiphertextSize);
           }
         }
 
@@ -312,15 +365,22 @@ export default function LacertaSharePage(): React.JSX.Element {
         }
 
         await writable.close();
-        toast.success("File decrypted and downloaded successfully!", { id: downloadToast });
+        toast.success("File decrypted and downloaded successfully!", {
+          id: downloadToast,
+        });
         return;
       }
 
       // ── Firefox/Safari Streaming fallback: Service Worker stream piping ───────
-      if (numChunks && numChunks > 0 && typeof window !== "undefined" && "serviceWorker" in navigator) {
+      if (
+        numChunks &&
+        numChunks > 0 &&
+        typeof window !== "undefined" &&
+        "serviceWorker" in navigator
+      ) {
         // Ensure the Service Worker is registered and active
         const registration = await navigator.serviceWorker.ready;
-        
+
         // If the service worker is active but not yet controlling this page, wait/claim it
         if (!navigator.serviceWorker.controller) {
           // Send a message to claim client control immediately
@@ -328,10 +388,16 @@ export default function LacertaSharePage(): React.JSX.Element {
           // Await brief moment for controller change
           await new Promise<void>((resolve) => {
             const onControllerChange = () => {
-              navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
+              navigator.serviceWorker.removeEventListener(
+                "controllerchange",
+                onControllerChange,
+              );
               resolve();
             };
-            navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
+            navigator.serviceWorker.addEventListener(
+              "controllerchange",
+              onControllerChange,
+            );
             // Safety timeout fallback
             setTimeout(resolve, 500);
           });
@@ -343,10 +409,12 @@ export default function LacertaSharePage(): React.JSX.Element {
         // 1. Establish data link with the Service Worker
         registration.active?.postMessage(
           { type: "REGISTER_STREAM", streamId },
-          [channel.port2]
+          [channel.port2],
         );
 
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${fileMeta.key}`);
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${fileMeta.key}`,
+        );
         if (!res.ok || !res.body) throw new Error("Download failed");
 
         const contentLength = res.headers.get("content-length");
@@ -362,9 +430,9 @@ export default function LacertaSharePage(): React.JSX.Element {
         const reader = res.body.getReader();
 
         const downloadUrl = `/files/download-stream?id=${streamId}&name=${encodeURIComponent(
-          decryptedName || "shared-file"
+          decryptedName || "shared-file",
         )}&type=${encodeURIComponent(decryptedType || "application/octet-stream")}&size=${originalSize}`;
-        
+
         const iframe = document.createElement("iframe");
         iframe.style.display = "none";
         iframe.src = downloadUrl;
@@ -372,7 +440,7 @@ export default function LacertaSharePage(): React.JSX.Element {
         setTimeout(() => iframe.remove(), 15000);
 
         const decryptWorker = new Worker(
-          new URL("../../workers/lacerta-download.worker.ts", import.meta.url)
+          new URL("../../workers/lacerta-download.worker.ts", import.meta.url),
         );
 
         channel.port1.onmessage = async (evt) => {
@@ -399,7 +467,9 @@ export default function LacertaSharePage(): React.JSX.Element {
                   );
                 }
 
-                const merged = new Uint8Array(pendingBytes.length + value.length);
+                const merged = new Uint8Array(
+                  pendingBytes.length + value.length,
+                );
                 merged.set(pendingBytes, 0);
                 merged.set(value, pendingBytes.length);
                 pendingBytes = merged;
@@ -407,38 +477,61 @@ export default function LacertaSharePage(): React.JSX.Element {
             }
 
             if (pendingBytes.length > 0) {
-              const isLast = pendingBytes.length < chunkCiphertextSize || partNumber === numChunks - 1;
-              const chunkBuffer = isLast 
-                ? pendingBytes.buffer.slice(pendingBytes.byteOffset, pendingBytes.byteOffset + pendingBytes.byteLength)
-                : pendingBytes.buffer.slice(pendingBytes.byteOffset, pendingBytes.byteOffset + chunkCiphertextSize);
+              const isLast =
+                pendingBytes.length < chunkCiphertextSize ||
+                partNumber === numChunks - 1;
+              const chunkBuffer = isLast
+                ? pendingBytes.buffer.slice(
+                    pendingBytes.byteOffset,
+                    pendingBytes.byteOffset + pendingBytes.byteLength,
+                  )
+                : pendingBytes.buffer.slice(
+                    pendingBytes.byteOffset,
+                    pendingBytes.byteOffset + chunkCiphertextSize,
+                  );
 
-              decryptWorker.postMessage({
-                type: "decrypt-chunk",
-                chunkIndex: partNumber,
-                wireBuffer: chunkBuffer,
-                rawFileKey: rawKeyStr,
-                fileId: fileMeta.id,
-                partNumber: partNumber + 1,
-                chunkCount: numChunks,
-                originalSize
-              }, [chunkBuffer]);
+              decryptWorker.postMessage(
+                {
+                  type: "decrypt-chunk",
+                  chunkIndex: partNumber,
+                  wireBuffer: chunkBuffer,
+                  rawFileKey: rawKeyStr,
+                  fileId: fileMeta.id,
+                  partNumber: partNumber + 1,
+                  chunkCount: numChunks,
+                  originalSize,
+                },
+                [chunkBuffer],
+              );
 
               decryptWorker.onmessage = (wEvt) => {
                 const wMsg = wEvt.data;
                 if (wMsg.type === "chunk-decrypted") {
                   partNumber++;
-                  pendingBytes = isLast ? new Uint8Array(0) : pendingBytes.subarray(chunkCiphertextSize);
-                  channel.port1.postMessage({ type: "chunk", chunk: wMsg.plaintext }, [wMsg.plaintext]);
+                  pendingBytes = isLast
+                    ? new Uint8Array(0)
+                    : pendingBytes.subarray(chunkCiphertextSize);
+                  channel.port1.postMessage(
+                    { type: "chunk", chunk: wMsg.plaintext },
+                    [wMsg.plaintext],
+                  );
                 } else if (wMsg.type === "error") {
-                  channel.port1.postMessage({ type: "error", error: wMsg.error });
-                  toast.error(`Decryption failed: ${wMsg.error}`, { id: downloadToast });
+                  channel.port1.postMessage({
+                    type: "error",
+                    error: wMsg.error,
+                  });
+                  toast.error(`Decryption failed: ${wMsg.error}`, {
+                    id: downloadToast,
+                  });
                   active = false;
                   decryptWorker.terminate();
                 }
               };
             } else {
               channel.port1.postMessage({ type: "done" });
-              toast.success("File decrypted and downloaded successfully!", { id: downloadToast });
+              toast.success("File decrypted and downloaded successfully!", {
+                id: downloadToast,
+              });
               active = false;
               decryptWorker.terminate();
             }
@@ -453,11 +546,15 @@ export default function LacertaSharePage(): React.JSX.Element {
         fileKey,
         fileMeta,
         (percent) => {
-          toast.loading(`Downloading and decrypting file... (${percent}%)`, { id: downloadToast });
-        }
+          toast.loading(`Downloading and decrypting file... (${percent}%)`, {
+            id: downloadToast,
+          });
+        },
       );
 
-      const blob = new Blob([decryptedBuffer], { type: decryptedType || "application/octet-stream" });
+      const blob = new Blob([decryptedBuffer], {
+        type: decryptedType || "application/octet-stream",
+      });
       const url = URL.createObjectURL(blob);
 
       const a = document.createElement("a");
@@ -467,7 +564,9 @@ export default function LacertaSharePage(): React.JSX.Element {
       a.click();
       a.remove();
 
-      toast.success("File decrypted and downloaded successfully!", { id: downloadToast });
+      toast.success("File decrypted and downloaded successfully!", {
+        id: downloadToast,
+      });
     } catch (err: unknown) {
       if (err instanceof Error && err.name === "AbortError") {
         toast.dismiss(downloadToast);
@@ -480,14 +579,15 @@ export default function LacertaSharePage(): React.JSX.Element {
     }
   };
 
-
   const handleOpenCanvas = async () => {
     if (!fileMeta || !rawKeyStr) return;
     setDecrypting(true);
     const loadToast = toast.loading("Decrypting and loading canvas...");
     try {
       // 1. Fetch encrypted binary file from server
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${fileMeta.key}`);
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${fileMeta.key}`,
+      );
       if (!res.ok) throw new Error("Download from S3 failed.");
 
       const encryptedBuffer = await res.arrayBuffer();
@@ -503,7 +603,8 @@ export default function LacertaSharePage(): React.JSX.Element {
       setShowCanvasEditor(true);
       toast.success("Canvas decrypted successfully!", { id: loadToast });
     } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : "Failed to load canvas.";
+      const errMsg =
+        err instanceof Error ? err.message : "Failed to load canvas.";
       toast.error(errMsg, { id: loadToast });
     } finally {
       setDecrypting(false);
@@ -526,11 +627,17 @@ export default function LacertaSharePage(): React.JSX.Element {
     if (!fileMeta || !rawKeyStr || !session?.accessToken) return;
     setIsFolderPickerOpen(false);
     setCopying(true);
-    const copyToast = toast.loading(t("lacerta.savingCopy", { defaultValue: "Saving copy to your storage..." }));
+    const copyToast = toast.loading(
+      t("lacerta.savingCopy", {
+        defaultValue: "Saving copy to your storage...",
+      }),
+    );
 
     try {
       // Fetch the raw encrypted file content directly (no decryption needed to copy)
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${fileMeta.key}`);
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${fileMeta.key}`,
+      );
       if (!res.ok) throw new Error("Failed to download file from server.");
 
       if (!userPublicKey) {
@@ -538,10 +645,14 @@ export default function LacertaSharePage(): React.JSX.Element {
       }
 
       const encryptedBuffer = await res.arrayBuffer();
-      const wrappedKey = JSON.stringify(await wrapKey(rawKeyStr, userPublicKey));
+      const wrappedKey = JSON.stringify(
+        await wrapKey(rawKeyStr, userPublicKey),
+      );
 
       const formData = new FormData();
-      const blob = new Blob([encryptedBuffer], { type: "application/octet-stream" });
+      const blob = new Blob([encryptedBuffer], {
+        type: "application/octet-stream",
+      });
       formData.append("file", blob, decryptedName || "shared-file");
       formData.append("wrappedKey", wrappedKey);
       formData.append("name", fileMeta.name);
@@ -562,7 +673,10 @@ export default function LacertaSharePage(): React.JSX.Element {
 
       if (!uploadRes.ok) throw new Error("Copy upload failed");
 
-      toast.success(t("lacerta.copySavedSuccess", { name: decryptedName || "file" }), { id: copyToast });
+      toast.success(
+        t("lacerta.copySavedSuccess", { name: decryptedName || "file" }),
+        { id: copyToast },
+      );
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : "Copy failed.";
       toast.error(errMsg, { id: copyToast });
@@ -585,7 +699,9 @@ export default function LacertaSharePage(): React.JSX.Element {
       <div className="flex-1 flex flex-col items-center justify-center bg-background min-h-screen text-muted-foreground">
         <Loader2 className="size-8 animate-spin text-primary mb-2" />
         <span className="text-xs">
-          {mounted ? t("lacerta.loadingSecureLink") : "Loading secure link metadata..."}
+          {mounted
+            ? t("lacerta.loadingSecureLink")
+            : "Loading secure link metadata..."}
         </span>
       </div>
     );
@@ -596,7 +712,9 @@ export default function LacertaSharePage(): React.JSX.Element {
       <div className="flex-1 flex flex-col items-center justify-center bg-background min-h-screen">
         <div className="w-full max-w-md rounded-2xl border border-border bg-card/60 p-8 shadow-2xl backdrop-blur-xl flex flex-col items-center">
           <ShieldCheck className="size-12 text-destructive mb-3" />
-          <h3 className="text-lg font-bold text-foreground">{t("lacerta.sharedLinkInvalid")}</h3>
+          <h3 className="text-lg font-bold text-foreground">
+            {t("lacerta.sharedLinkInvalid")}
+          </h3>
           <p className="mt-2 text-center text-xs text-muted-foreground leading-normal max-w-sm">
             {t("lacerta.sharedLinkInvalidDesc")}
           </p>
@@ -616,7 +734,6 @@ export default function LacertaSharePage(): React.JSX.Element {
       {!session && <RrLanguageSelector />}
       {/* Redesigned Premium Glassmorphic Card Container */}
       <div className="w-full max-w-md rounded-3xl border border-border/40 bg-card/45 p-8 shadow-2xl backdrop-blur-2xl flex flex-col items-center text-center hover:border-border/60 transition-all duration-300 group">
-        
         {/* Glowing File Icon */}
         <div className="mb-6 flex size-20 items-center justify-center rounded-2xl border border-primary/20 bg-primary/5 text-primary shadow-lg shadow-primary/5 transition-transform duration-500 group-hover:scale-105">
           <File className="size-10 text-primary animate-pulse" />
@@ -630,7 +747,10 @@ export default function LacertaSharePage(): React.JSX.Element {
         </span>
         {fileMeta.user && (
           <span className="text-[11px] text-muted-foreground/80 mt-1">
-            {t("lacerta.sharedBy")}: <span className="font-semibold text-foreground">{fileMeta.user.displayName || fileMeta.user.username}</span>
+            {t("lacerta.sharedBy")}:{" "}
+            <span className="font-semibold text-foreground">
+              {fileMeta.user.displayName || fileMeta.user.username}
+            </span>
           </span>
         )}
 
@@ -639,20 +759,29 @@ export default function LacertaSharePage(): React.JSX.Element {
             {/* Content Preview for Images */}
             {decryptedBlobUrl && decryptedType.startsWith("image/") && (
               <div className="w-full max-w-[280px] aspect-video border border-border/40 rounded-xl overflow-hidden shadow-md mb-6 bg-muted/5 relative">
-                <img src={decryptedBlobUrl} alt="Preview" className="w-full h-full object-contain" />
+                <img
+                  src={decryptedBlobUrl}
+                  alt="Preview"
+                  className="w-full h-full object-contain"
+                />
               </div>
             )}
 
             {/* Content Preview for Videos */}
             {decryptedBlobUrl && decryptedType.startsWith("video/") && (
               <div className="w-full max-w-[280px] aspect-video border border-border/40 rounded-xl overflow-hidden shadow-md mb-6 bg-black flex items-center justify-center">
-                <video src={decryptedBlobUrl} controls className="w-full h-full object-contain" />
+                <video
+                  src={decryptedBlobUrl}
+                  controls
+                  className="w-full h-full object-contain"
+                />
               </div>
             )}
 
             {/* Action Buttons Grid */}
             <div className="w-full flex flex-col gap-3">
-              {decryptedType.includes("jsoncanvas") || decryptedName.endsWith(".canvas") ? (
+              {decryptedType.includes("jsoncanvas") ||
+              decryptedName.endsWith(".canvas") ? (
                 <button
                   onClick={handleOpenCanvas}
                   disabled={decrypting || copying}
@@ -663,7 +792,9 @@ export default function LacertaSharePage(): React.JSX.Element {
                   ) : (
                     <Grid3X3 className="size-4" />
                   )}
-                  {decrypting ? t("lacerta.decrypting") : t("lacerta.openCollaborativeCanvas")}
+                  {decrypting
+                    ? t("lacerta.decrypting")
+                    : t("lacerta.openCollaborativeCanvas")}
                 </button>
               ) : isOnlyOfficeFile(decryptedName, decryptedType) ? (
                 <button
@@ -685,7 +816,9 @@ export default function LacertaSharePage(): React.JSX.Element {
                   ) : (
                     <Download className="size-4" />
                   )}
-                  {decrypting ? t("lacerta.decrypting") : t("lacerta.decryptAndDownload")}
+                  {decrypting
+                    ? t("lacerta.decrypting")
+                    : t("lacerta.decryptAndDownload")}
                 </button>
               )}
 
@@ -703,8 +836,12 @@ export default function LacertaSharePage(): React.JSX.Element {
                   <LogIn className="size-4" />
                 )}
                 {session
-                  ? t("lacerta.saveToLacerta", { defaultValue: "Save to My Storage" })
-                  : t("lacerta.signInToSave", { defaultValue: "Sign In to Save" })}
+                  ? t("lacerta.saveToLacerta", {
+                      defaultValue: "Save to My Storage",
+                    })
+                  : t("lacerta.signInToSave", {
+                      defaultValue: "Sign In to Save",
+                    })}
               </button>
             </div>
           </div>
@@ -713,7 +850,9 @@ export default function LacertaSharePage(): React.JSX.Element {
             <div className="flex items-center gap-1.5 text-[10px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 p-3 rounded-xl leading-normal text-left mb-6">
               <ShieldCheck className="size-4 shrink-0" />
               <span>
-                <strong>Decryption key missing.</strong> The link did not include the fragment key (hash). You must enter the decryption key manually to view this file.
+                <strong>Decryption key missing.</strong> The link did not
+                include the fragment key (hash). You must enter the decryption
+                key manually to view this file.
               </span>
             </div>
             <input
@@ -763,7 +902,10 @@ export default function LacertaSharePage(): React.JSX.Element {
             id: fileMeta.id,
             name: decryptedName || "shared.document",
             type: decryptedType || null,
-            updatedAt: typeof fileMeta.createdAt === "string" ? fileMeta.createdAt : new Date().toISOString(),
+            updatedAt:
+              typeof fileMeta.createdAt === "string"
+                ? fileMeta.createdAt
+                : new Date().toISOString(),
           }}
           fileKey={rawKeyStr}
           accessToken={session?.accessToken || ""}
