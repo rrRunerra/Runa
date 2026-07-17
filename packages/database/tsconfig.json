@@ -8,7 +8,7 @@
     "sourceMap": true,
     "module": "CommonJS",
     "target": "ES6",
-    "moduleResolution": "node",
+    "moduleResolution": "node16",
     "noEmit": false,
     "skipLibCheck": true
   },
