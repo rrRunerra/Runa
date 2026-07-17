@@ -25,6 +25,7 @@ import { DiscoverModule } from './modules/discover/discover.module';
 import { CharacterModule } from './modules/character/character.module';
 import { ActorModule } from './modules/actor/actor.module';
 import { MediaUpdateModule } from './modules/media-update/media-update.module';
+import { FriendsModule } from './modules/friends/friends.module';
 
 @Module({
   providers: [
@@ -61,6 +62,7 @@ import { MediaUpdateModule } from './modules/media-update/media-update.module';
     CharacterModule,
     ActorModule,
     MediaUpdateModule,
+    FriendsModule,
     ThrottlerModule.forRoot({
       throttlers: [
         {

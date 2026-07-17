@@ -1889,7 +1889,29 @@ export default {
         "favorites": "ของโปรด",
         "lists": "รายการ",
         "stats": "สถิติ"
-      }
+      },
+      "friends": "เพื่อน",
+      "friendList": "รายชื่อเพื่อน",
+      "addFriend": "เพิ่มเพื่อน",
+      "removeFriend": "ลบเพื่อน",
+      "pendingFriendRequest": "คำขอเป็นเพื่อนรอดำเนินการ",
+      "acceptFriendRequest": "ยอมรับคำขอเป็นเพื่อน",
+      "declineFriendRequest": "ปฏิเสธคำขอเป็นเพื่อน",
+      "cancelFriendRequest": "ยกเลิกคำขอ",
+      "friendNickname": "ชื่อเล่น",
+      "friendNote": "บันทึก",
+      "editFriendSettings": "แก้ไขรายละเอียดเพื่อน",
+      "nicknamePlaceholder": "ใส่ชื่อเล่นเพื่อน",
+      "notePlaceholder": "ใส่บันทึกส่วนตัวเกี่ยวกับเพื่อนนี้",
+      "friendRequests": "คำขอเป็นเพื่อน",
+      "incomingRequests": "คำขอที่ได้รับ",
+      "outgoingRequests": "คำขอที่ส่ง",
+      "noFriends": "ยังไม่มีเพื่อน",
+      "noIncomingRequests": "ไม่มีคำขอเป็นเพื่อนที่ได้รับ",
+      "noOutgoingRequests": "ไม่มีคำขอเป็นเพื่อนที่ส่งไป",
+      "searchUsers": "ค้นหาผู้ใช้",
+      "youAreFriends": "คุณเป็นเพื่อนกัน",
+      "friendPrivacyOption": "รายชื่อเพื่อนส่วนตัว"
     }
   },
   "pegasus": {

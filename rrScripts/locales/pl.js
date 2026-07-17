@@ -1889,7 +1889,29 @@ export default {
         "favorites": "Ulubione",
         "lists": "Listy",
         "stats": "Statystyki"
-      }
+      },
+      "friends": "Znajomi",
+      "friendList": "Lista znajomych",
+      "addFriend": "Dodaj znajomego",
+      "removeFriend": "Usuń znajomego",
+      "pendingFriendRequest": "Zaproszenie do znajomych oczekuje",
+      "acceptFriendRequest": "Zaakceptuj zaproszenie",
+      "declineFriendRequest": "Odrzuć zaproszenie",
+      "cancelFriendRequest": "Anuluj zaproszenie",
+      "friendNickname": "Pseudonim",
+      "friendNote": "Notatka",
+      "editFriendSettings": "Edytuj szczegóły znajomego",
+      "nicknamePlaceholder": "Wprowadź pseudonim",
+      "notePlaceholder": "Wprowadź prywatną notatkę",
+      "friendRequests": "Zaproszenia do znajomych",
+      "incomingRequests": "Zaproszenia odebrane",
+      "outgoingRequests": "Zaproszenia wysłane",
+      "noFriends": "Brak znajomych",
+      "noIncomingRequests": "Brak oczekujących zaproszeń",
+      "noOutgoingRequests": "Brak wysłanych zaproszeń",
+      "searchUsers": "Szukaj użytkowników",
+      "youAreFriends": "Jesteście znajomymi",
+      "friendPrivacyOption": "Prywatna lista znajomych"
     }
   },
   "pegasus": {

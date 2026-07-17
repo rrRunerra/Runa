@@ -15,6 +15,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   Languages,
+  Users,
 } from "lucide-react";
 import { signIn, signOut } from "next-auth/react";
 import {
@@ -25,11 +26,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
 } from "../ui/dropdown-menu";
 import { getSafeImageUrl } from "@/lib/inputValidation";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
@@ -54,6 +50,7 @@ import { RrAppearanceModal } from "./rrAppearanceModal";
 import { useRRCrypto } from "@/hooks/useRRCrypto";
 import { useTranslation } from "react-i18next";
 import { RrLanguageSelector } from "./rrLanguageSelector";
+import { RrFriendsModal } from "./rrFriendsModal";
 
 export default function RrUserMenu({ session }: { session: Session | null }) {
   const { unreadCount } = useNotificationAndBookmarks();
@@ -63,14 +60,19 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
+  const [isFriendsOpen, setIsFriendsOpen] = useState(false);
   const [showLockConfirmation, setShowLockConfirmation] = useState(false);
 
   const [bookmarkName, setBookmarkName] = useState("");
   const [bookmarkIcon, setBookmarkIcon] = useState("");
 
   const { isMobile } = useSidebar();
-  const { isEncryptionUnlocked, isKeysExist, lockEncryption, setShowUnlockDialog } =
-    useRRCrypto();
+  const {
+    isEncryptionUnlocked,
+    isKeysExist,
+    lockEncryption,
+    setShowUnlockDialog,
+  } = useRRCrypto();
 
   useEffect(() => {
     const handleOpenSettings = (e: Event) => {
@@ -110,10 +112,15 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
       setIsNotificationsOpen(true);
     };
 
+    const handleOpenFriends = () => {
+      setIsFriendsOpen(true);
+    };
+
     window.addEventListener("runa-open-settings", handleOpenSettings);
     window.addEventListener("runa-open-appearance", handleOpenAppearance);
     window.addEventListener("runa-open-builder", handleOpenBuilder);
     window.addEventListener("runa-open-notifications", handleOpenNotifications);
+    window.addEventListener("runa-open-friends", handleOpenFriends);
 
     return () => {
       window.removeEventListener("runa-open-settings", handleOpenSettings);
@@ -123,6 +130,7 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
         "runa-open-notifications",
         handleOpenNotifications,
       );
+      window.removeEventListener("runa-open-friends", handleOpenFriends);
     };
   }, []);
 
@@ -312,6 +320,15 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
                   <Bookmark />
                   {t("addBookmark")}
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    setIsFriendsOpen(true);
+                  }}
+                >
+                  <Users />
+                  {t("polaris.user.friends")}
+                </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
               <DropdownMenuGroup>
@@ -383,7 +400,12 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
             className="border border-zinc-800/50 shadow-sm hover:bg-white/5 rounded-xl transition-colors h-11"
           >
             <LogIn className="size-4 text-primary" />
-            <span className="font-semibold text-foreground" suppressHydrationWarning>{t("logIn")}</span>
+            <span
+              className="font-semibold text-foreground"
+              suppressHydrationWarning
+            >
+              {t("logIn")}
+            </span>
           </SidebarMenuButton>
         </SidebarMenuItem>
       )}
@@ -427,6 +449,10 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
           initialName={bookmarkName}
           initialRedirect={window.location.href}
         />
+      )}
+
+      {isFriendsOpen && (
+        <RrFriendsModal open={isFriendsOpen} onOpenChange={setIsFriendsOpen} />
       )}
 
       {showLockConfirmation && (

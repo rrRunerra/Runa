@@ -1,18 +1,9 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { Star, Heart, Users, BarChart3, Award } from "lucide-react";
+import { Star, Heart, Users } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface RrMediaStatsDashboardProps {
   localAverageScore?: number | null;
@@ -75,7 +66,7 @@ export function RrMediaStatsDashboard({
     }
   };
 
-  // 1. Prepare score data for Recharts
+  // 1. Prepare score data
   const scoreData = useMemo(() => {
     const scores = Array.from({ length: 10 }, (_, i) => String(i + 1));
     return scores.map((score) => ({
@@ -89,17 +80,30 @@ export function RrMediaStatsDashboard({
   }, [scoreData]);
 
   // 2. Prepare status distribution percentages
-  const statusEntries = useMemo(() => {
-    if (!localStatusDistribution) return [];
-    const entries = Object.entries(localStatusDistribution).filter(
-      ([_, val]) => val > 0,
-    );
-    const total = entries.reduce((sum, [_, val]) => sum + val, 0);
-    return entries.map(([status, count]) => ({
-      status,
-      count,
-      percent: total > 0 ? (count / total) * 100 : 0,
-    }));
+  const parsedStatusData = useMemo(() => {
+    const dist: Record<string, number> = {};
+    if (localStatusDistribution) {
+      for (const [k, v] of Object.entries(localStatusDistribution)) {
+        dist[k.toUpperCase()] = Number(v);
+      }
+    }
+
+    const currentCount = (dist['WATCHING'] || 0) + (dist['PLAYING'] || 0) + (dist['READING'] || 0);
+    const planningCount = dist['PLANNING'] || 0;
+    const droppedCount = dist['DROPPED'] || 0;
+    const pausedCount = dist['ON_HOLD'] || 0;
+    const completedCount = dist['COMPLETED'] || 0;
+
+    const total = currentCount + planningCount + droppedCount + pausedCount + completedCount;
+
+    return {
+      current: { count: currentCount, percent: total > 0 ? (currentCount / total) * 100 : 0 },
+      planning: { count: planningCount, percent: total > 0 ? (planningCount / total) * 100 : 0 },
+      dropped: { count: droppedCount, percent: total > 0 ? (droppedCount / total) * 100 : 0 },
+      paused: { count: pausedCount, percent: total > 0 ? (pausedCount / total) * 100 : 0 },
+      completed: { count: completedCount, percent: total > 0 ? (completedCount / total) * 100 : 0 },
+      total,
+    };
   }, [localStatusDistribution]);
 
   return (
@@ -151,104 +155,143 @@ export function RrMediaStatsDashboard({
       </div>
 
       {/* Distributions Grid */}
-      {(statusEntries.length > 0 || hasScoreData) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {(parsedStatusData.total > 0 || hasScoreData) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Status Distribution */}
-          {statusEntries.length > 0 && (
-            <Card className="bg-card/35 border-border/30 shadow-xs rounded-2xl">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-foreground text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-                  <Award className="size-4 text-primary/80" />
-                  {t("aquila.statusDistribution")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {/* Visual Segment Bar */}
-                <div className="h-2.5 w-full rounded-full bg-muted/40 overflow-hidden flex">
-                  {statusEntries.map((entry, idx) => (
-                    <div
-                      key={idx}
-                      className={
-                        STATUS_COLORS[entry.status] || "bg-muted-foreground/60"
-                      }
-                      style={{ width: `${entry.percent}%` }}
-                      title={`${getStatusLabel(entry.status)}: ${entry.count} (${entry.percent.toFixed(1)}%)`}
-                    />
-                  ))}
+          <div>
+            <h3 className="text-sm font-bold text-foreground mb-3">
+              {t("aquila.statusDistribution", "Status Distribution")}
+            </h3>
+            <div className="bg-card/45 border border-border/30 backdrop-blur-md p-5 rounded-2xl flex flex-col justify-between h-[120px] w-full shadow-sm">
+              {/* Status Pill Columns */}
+              <div className="flex justify-between items-center w-full gap-2">
+                {/* Current */}
+                <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                  <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded-[4px] bg-[#52d629] whitespace-nowrap">
+                    {t("aquila.current", "Current")}
+                  </span>
+                  <div className="text-[10px] whitespace-nowrap text-center">
+                    <span className="font-bold text-[#52d629] mr-0.5">{parsedStatusData.current.count}</span>
+                    <span className="text-muted-foreground/80">Users</span>
+                  </div>
                 </div>
-                {/* Labels List */}
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  {statusEntries.map((entry, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between p-1 bg-muted/10 rounded-lg"
-                    >
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <div
-                          className={`size-2 rounded-full ${STATUS_COLORS[entry.status] || "bg-muted-foreground/60"}`}
-                        />
-                        <span className="capitalize truncate text-muted-foreground text-[10px]">
-                          {getStatusLabel(entry.status)}
-                        </span>
-                      </div>
-                      <span className="font-bold text-[10px]">
-                        {entry.count} ({entry.percent.toFixed(0)}%)
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
-          {/* Score Distribution Chart */}
-          {hasScoreData && (
-            <Card className="bg-card/35 border-border/30 shadow-xs rounded-2xl">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-foreground text-xs font-bold uppercase tracking-wider flex items-center gap-2">
-                  <BarChart3 className="size-4 text-primary/80" />
-                  {t("aquila.scoreDistribution")}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="h-32 w-full min-w-0">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={scoreData}
-                      margin={{ top: 5, right: 5, left: -30, bottom: 0 }}
-                    >
-                      <XAxis
-                        dataKey="name"
-                        tick={{ fill: "var(--muted-foreground)", fontSize: 8 }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <YAxis
-                        tick={{ fill: "var(--muted-foreground)", fontSize: 8 }}
-                        axisLine={false}
-                        tickLine={false}
-                        allowDecimals={false}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "var(--card)",
-                          borderColor: "var(--border)",
-                          borderRadius: "10px",
-                          fontSize: "10px",
-                        }}
-                      />
-                      <Bar
-                        dataKey="count"
-                        fill="var(--primary)"
-                        radius={[2, 2, 0, 0]}
-                        opacity={0.8}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
+                {/* Planning */}
+                <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                  <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded-[4px] bg-[#1ea6fc] whitespace-nowrap">
+                    {t("aquila.planning", "Planning")}
+                  </span>
+                  <div className="text-[10px] whitespace-nowrap text-center">
+                    <span className="font-bold text-[#1ea6fc] mr-0.5">{parsedStatusData.planning.count}</span>
+                    <span className="text-muted-foreground/80">Users</span>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          )}
+
+                {/* Dropped */}
+                <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                  <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded-[4px] bg-[#8d4bf2] whitespace-nowrap">
+                    {t("aquila.dropped", "Dropped")}
+                  </span>
+                  <div className="text-[10px] whitespace-nowrap text-center">
+                    <span className="font-bold text-[#8d4bf2] mr-0.5">{parsedStatusData.dropped.count}</span>
+                    <span className="text-muted-foreground/80">Users</span>
+                  </div>
+                </div>
+
+                {/* Paused */}
+                <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                  <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded-[4px] bg-[#f75284] whitespace-nowrap">
+                    {t("aquila.paused", "Paused")}
+                  </span>
+                  <div className="text-[10px] whitespace-nowrap text-center">
+                    <span className="font-bold text-[#f75284] mr-0.5">{parsedStatusData.paused.count}</span>
+                    <span className="text-muted-foreground/80">Users</span>
+                  </div>
+                </div>
+
+                {/* Completed */}
+                <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                  <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded-[4px] bg-[#e0415a] whitespace-nowrap">
+                    {t("aquila.completed", "Completed")}
+                  </span>
+                  <div className="text-[10px] whitespace-nowrap text-center">
+                    <span className="font-bold text-[#e0415a] mr-0.5">{parsedStatusData.completed.count}</span>
+                    <span className="text-muted-foreground/80">Users</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Segment Bar */}
+              <div className="h-2.5 w-full rounded-full bg-muted/20 overflow-hidden flex">
+                {parsedStatusData.current.percent > 0 && (
+                  <div className="bg-[#52d629]" style={{ width: `${parsedStatusData.current.percent}%` }} />
+                )}
+                {parsedStatusData.planning.percent > 0 && (
+                  <div className="bg-[#1ea6fc]" style={{ width: `${parsedStatusData.planning.percent}%` }} />
+                )}
+                {parsedStatusData.dropped.percent > 0 && (
+                  <div className="bg-[#8d4bf2]" style={{ width: `${parsedStatusData.dropped.percent}%` }} />
+                )}
+                {parsedStatusData.paused.percent > 0 && (
+                  <div className="bg-[#f75284]" style={{ width: `${parsedStatusData.paused.percent}%` }} />
+                )}
+                {parsedStatusData.completed.percent > 0 && (
+                  <div className="bg-[#e0415a]" style={{ width: `${parsedStatusData.completed.percent}%` }} />
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Score Distribution */}
+          <div>
+            <h3 className="text-sm font-bold text-foreground mb-3">
+              {t("aquila.scoreDistribution", "Score Distribution")}
+            </h3>
+            <div className="bg-card/45 border border-border/30 backdrop-blur-md p-5 rounded-2xl flex items-end justify-between w-full h-[120px] pb-4 px-6 gap-2 shadow-sm">
+              {scoreData.map((d, index) => {
+                const maxScoreCount = Math.max(...scoreData.map((s) => s.count), 1);
+                const heightPercent = maxScoreCount > 0 ? (d.count / maxScoreCount) * 100 : 0;
+                const barColors = [
+                  "bg-[#e0415a]",
+                  "bg-[#f06a3a]",
+                  "bg-[#f08b3a]",
+                  "bg-[#f0ac3a]",
+                  "bg-[#f0c43a]",
+                  "bg-[#d2d433]",
+                  "bg-[#b9d92b]",
+                  "bg-[#9cd92b]",
+                  "bg-[#79d92b]",
+                  "bg-[#52d629]",
+                ];
+                const colorClass = barColors[index] || "bg-muted-foreground";
+
+                return (
+                  <div
+                    key={d.name}
+                    className="flex flex-col items-center gap-1 group relative flex-1 cursor-pointer"
+                    style={{ height: "100%" }}
+                  >
+                    {/* Tooltip on hover */}
+                    <div className="absolute bottom-full mb-2 hidden group-hover:flex flex-col items-center pointer-events-none z-10">
+                      <div className="bg-popover text-popover-foreground text-[10px] px-2 py-1 rounded shadow-md border border-border whitespace-nowrap">
+                        Score {d.name}: {d.count} Users
+                      </div>
+                      <div className="w-1.5 h-1.5 bg-popover border-r border-b border-border rotate-45 -mt-1" />
+                    </div>
+
+                    {/* Vertical capsule bar */}
+                    <div className="w-full flex-1 flex items-end justify-center min-h-[40px]">
+                      <div
+                        className={`w-3 rounded-full ${colorClass} transition-all duration-300 group-hover:brightness-110`}
+                        style={{ height: `${Math.max(8, heightPercent)}%` }}
+                        title={`Score ${d.name}: ${d.count} Users`}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       )}
     </motion.div>

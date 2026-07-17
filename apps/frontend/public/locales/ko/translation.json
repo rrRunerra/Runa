@@ -1889,7 +1889,29 @@
         "favorites": "즐겨찾기",
         "lists": "목록",
         "stats": "통계"
-      }
+      },
+      "friends": "친구",
+      "friendList": "친구 목록",
+      "addFriend": "친구 추가",
+      "removeFriend": "친구 삭제",
+      "pendingFriendRequest": "친구 요청 대기 중",
+      "acceptFriendRequest": "친구 요청 수락",
+      "declineFriendRequest": "친구 요청 거절",
+      "cancelFriendRequest": "요청 취소",
+      "friendNickname": "별명",
+      "friendNote": "메모",
+      "editFriendSettings": "친구 정보 편집",
+      "nicknamePlaceholder": "별명을 입력하세요",
+      "notePlaceholder": "개인 메모를 입력하세요",
+      "friendRequests": "친구 요청",
+      "incomingRequests": "받은 요청",
+      "outgoingRequests": "보낸 요청",
+      "noFriends": "아직 추가된 친구가 없습니다",
+      "noIncomingRequests": "받은 친구 요청이 없습니다",
+      "noOutgoingRequests": "보낸 친구 요청이 없습니다",
+      "searchUsers": "사용자 검색",
+      "youAreFriends": "친구 상태입니다",
+      "friendPrivacyOption": "친구 목록 비공개"
     }
   },
   "pegasus": {

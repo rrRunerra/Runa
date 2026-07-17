@@ -1889,7 +1889,29 @@
         "favorites": "Избранное",
         "lists": "Списки",
         "stats": "Статистика"
-      }
+      },
+      "friends": "Друзья",
+      "friendList": "Список друзей",
+      "addFriend": "Добавить в друзья",
+      "removeFriend": "Удалить из друзей",
+      "pendingFriendRequest": "Запрос в друзья ожидает",
+      "acceptFriendRequest": "Принять запрос",
+      "declineFriendRequest": "Отклонить запрос",
+      "cancelFriendRequest": "Отменить запрос",
+      "friendNickname": "Никнейм",
+      "friendNote": "Заметка",
+      "editFriendSettings": "Редактировать данные друга",
+      "nicknamePlaceholder": "Введите никнейм друга",
+      "notePlaceholder": "Введите личную заметку о друге",
+      "friendRequests": "Запросы в друзья",
+      "incomingRequests": "Входящие запросы",
+      "outgoingRequests": "Исходящие запросы",
+      "noFriends": "Друзей пока нет",
+      "noIncomingRequests": "Нет входящих запросов в друзья",
+      "noOutgoingRequests": "Нет исходящих запросов в друзья",
+      "searchUsers": "Поиск пользователей",
+      "youAreFriends": "Вы друзья",
+      "friendPrivacyOption": "Приватный список друзей"
     }
   },
   "pegasus": {

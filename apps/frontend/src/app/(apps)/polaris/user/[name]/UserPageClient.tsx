@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { Lock, Inbox, ArrowLeft } from "lucide-react";
+import { Lock, Inbox, ArrowLeft, UserPlus, UserCheck, UserX, Check, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getSafeImageUrl } from "@/lib/inputValidation";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { SidebarMenu, SidebarMenuItem } from "@/components/ui/sidebar";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 
 // Shared Components
 import RrAppMenu from "@/components/rrComponents/rrAppMenu";
@@ -45,6 +46,7 @@ export default function UserPageClient(): React.ReactNode {
   const { data: session } = useSession();
 
   const [activeTab, setActiveTab] = useState<TabType>("overview");
+  const [processingFriendship, setProcessingFriendship] = useState<boolean>(false);
 
   const isOwner =
     session?.user?.username?.toLowerCase() === name?.toLowerCase();
@@ -61,6 +63,125 @@ export default function UserPageClient(): React.ReactNode {
     profileUrl ? [profileUrl, session?.accessToken] : null,
     fetcher,
   );
+
+  const stateUrl = name && session?.accessToken
+    ? `${process.env.NEXT_PUBLIC_API_URL}/friends/state/${encodeURIComponent(name)}`
+    : null;
+
+  const { data: friendship, mutate: mutateFriendship } = useSWR<any>(
+    stateUrl ? [stateUrl, session?.accessToken] : null,
+    fetcher
+  );
+
+  const handleAddFriend = async (): Promise<void> => {
+    if (!name || !session?.accessToken) return;
+    setProcessingFriendship(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/friends/request`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+        body: JSON.stringify({ username: name }),
+      });
+      if (res.ok) {
+        toast.success(t("polaris.user.sentFriendRequestSuccess", "Friend request sent successfully!"));
+        void mutateFriendship();
+      } else {
+        const errorData = await res.json();
+        toast.error(errorData.message || t("failedSendRequest", "Failed to send request"));
+      }
+    } catch {
+      toast.error(t("failedSendRequest", "Failed to send request"));
+    } finally {
+      setProcessingFriendship(false);
+    }
+  };
+
+  const handleAcceptRequest = async (): Promise<void> => {
+    if (!friendship?.requestId || !session?.accessToken) return;
+    setProcessingFriendship(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/friends/request/${friendship.requestId}/accept`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.accessToken}` },
+      });
+      if (res.ok) {
+        toast.success(t("polaris.user.friendRequestAccepted", "Friend request accepted!"));
+        void mutateFriendship();
+      } else {
+        toast.error(t("failedAcceptRequest", "Failed to accept request"));
+      }
+    } catch {
+      toast.error(t("failedAcceptRequest", "Failed to accept request"));
+    } finally {
+      setProcessingFriendship(false);
+    }
+  };
+
+  const handleDeclineRequest = async (): Promise<void> => {
+    if (!friendship?.requestId || !session?.accessToken) return;
+    setProcessingFriendship(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/friends/request/${friendship.requestId}/decline`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.accessToken}` },
+      });
+      if (res.ok) {
+        toast.success(t("polaris.user.friendRequestDeclined", "Friend request declined."));
+        void mutateFriendship();
+      } else {
+        toast.error(t("failedDeclineRequest", "Failed to decline request"));
+      }
+    } catch {
+      toast.error(t("failedDeclineRequest", "Failed to decline request"));
+    } finally {
+      setProcessingFriendship(false);
+    }
+  };
+
+  const handleCancelRequest = async (): Promise<void> => {
+    if (!friendship?.requestId || !session?.accessToken) return;
+    setProcessingFriendship(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/friends/request/${friendship.requestId}/cancel`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.accessToken}` },
+      });
+      if (res.ok) {
+        toast.success(t("polaris.user.friendRequestCancelled", "Friend request cancelled."));
+        void mutateFriendship();
+      } else {
+        toast.error(t("failedCancelRequest", "Failed to cancel request"));
+      }
+    } catch {
+      toast.error(t("failedCancelRequest", "Failed to cancel request"));
+    } finally {
+      setProcessingFriendship(false);
+    }
+  };
+
+  const handleRemoveFriend = async (): Promise<void> => {
+    if (!user?.id || !session?.accessToken) return;
+    setProcessingFriendship(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/friends/${user.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${session.accessToken}` },
+      });
+      if (res.ok) {
+        toast.success(t("polaris.user.friendRemoved", "Friend removed."));
+        void mutateFriendship();
+      } else {
+        toast.error(t("failedRemoveFriend", "Failed to remove friend"));
+      }
+    } catch {
+      toast.error(t("failedRemoveFriend", "Failed to remove friend"));
+    } finally {
+      setProcessingFriendship(false);
+    }
+  };
 
   useEffect(() => {
     if (name) {
@@ -239,6 +360,86 @@ export default function UserPageClient(): React.ReactNode {
                 </p>
               </div>
             </div>
+
+            {/* Friend Action Button */}
+            {session && friendship && friendship.state !== "SELF" && (
+              <div className="shrink-0 pb-1 self-start sm:self-auto z-20">
+                {friendship.state === "NONE" && (
+                  <Button
+                    onClick={handleAddFriend}
+                    disabled={processingFriendship}
+                    className="h-8.5 rounded-lg text-xs font-bold bg-primary text-primary-foreground flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                  >
+                    {processingFriendship ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <UserPlus className="size-3.5" />
+                    )}
+                    {t("polaris.user.addFriend", "Add Friend")}
+                  </Button>
+                )}
+                {friendship.state === "PENDING_OUTGOING" && (
+                  <Button
+                    variant="outline"
+                    onClick={handleCancelRequest}
+                    disabled={processingFriendship}
+                    className="h-8.5 rounded-lg text-xs font-bold border-destructive/25 hover:bg-destructive/5 text-destructive flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                  >
+                    {processingFriendship ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <X className="size-3.5" />
+                    )}
+                    {t("polaris.user.cancelFriendRequest", "Cancel Request")}
+                  </Button>
+                )}
+                {friendship.state === "PENDING_INCOMING" && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={handleAcceptRequest}
+                      disabled={processingFriendship}
+                      className="h-8.5 rounded-lg text-xs font-bold bg-success text-success-foreground flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                    >
+                      {processingFriendship ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <Check className="size-3.5" />
+                      )}
+                      {t("polaris.user.acceptFriendRequest", "Accept")}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={handleDeclineRequest}
+                      disabled={processingFriendship}
+                      className="h-8.5 rounded-lg text-xs font-bold text-destructive hover:bg-destructive/10 flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                    >
+                      {t("polaris.user.declineFriendRequest", "Decline")}
+                    </Button>
+                  </div>
+                )}
+                {friendship.state === "FRIENDS" && (
+                  <div className="flex items-center gap-1.5">
+                     <Badge variant="outline" className="h-8.5 rounded-lg text-xs font-semibold px-3 border-success/35 text-success bg-success/5 flex items-center gap-1">
+                      <UserCheck className="size-3.5" />
+                      {t("polaris.user.youAreFriends", "Friends")}
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      onClick={handleRemoveFriend}
+                      disabled={processingFriendship}
+                      className="h-8.5 w-8.5 p-0 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex items-center justify-center cursor-pointer transition-colors"
+                      title={t("polaris.user.removeFriend", "Remove Friend")}
+                    >
+                      {processingFriendship ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <UserX className="size-3.5" />
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -282,7 +483,13 @@ export default function UserPageClient(): React.ReactNode {
           aria-labelledby={`tab-${activeTab}`}
         >
           {activeTab === "overview" && (
-            <RrOverviewTab bio={bio} connections={visibleConnections} />
+            <RrOverviewTab
+              bio={bio}
+              connections={visibleConnections}
+              username={user.username}
+              session={session}
+              isOwner={isOwner}
+            />
           )}
 
           {activeTab === "favorites" && name && (

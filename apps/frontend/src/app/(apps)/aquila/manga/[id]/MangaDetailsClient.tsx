@@ -25,6 +25,7 @@ import { RrMediaGenres } from "@/components/rrComponents/aquila/details/rrMediaG
 import { RrMediaCharacters } from "@/components/rrComponents/aquila/details/rrMediaCharacters";
 import { RrMediaRelations } from "@/components/rrComponents/aquila/details/rrMediaRelations";
 import { RrMediaInfoRow } from "@/components/rrComponents/aquila/details/rrMediaInfoRow";
+import { RrMediaFriendsProgress } from "@/components/rrComponents/aquila/details/rrMediaFriendsProgress";
 import { useTranslation } from "react-i18next";
 
 interface ListEntry {
@@ -440,6 +441,8 @@ export default function MangaDetailsPage(): React.JSX.Element {
                 )}
               </div>
             </div>
+
+            <RrMediaFriendsProgress mediaId={manga.id.toString()} mediaType="manga" />
           </motion.div>
 
           {/* Right Column - Info */}

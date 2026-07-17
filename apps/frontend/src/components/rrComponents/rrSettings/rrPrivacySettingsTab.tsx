@@ -36,6 +36,7 @@ export const RrPrivacySettingsTab = ({
   const [tvListPrivate, setTvListPrivate] = useState<boolean>(false);
   const [movieListPrivate, setMovieListPrivate] = useState<boolean>(false);
   const [connectionsPrivate, setConnectionsPrivate] = useState<boolean>(false);
+  const [friendsPrivate, setFriendsPrivate] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
@@ -58,6 +59,7 @@ export const RrPrivacySettingsTab = ({
       setTvListPrivate(privacyData.tvList || false);
       setMovieListPrivate(privacyData.movieList || false);
       setConnectionsPrivate(privacyData.connections || false);
+      setFriendsPrivate(privacyData.friends || false);
     }
   }, [privacyData]);
 
@@ -88,6 +90,7 @@ export const RrPrivacySettingsTab = ({
             tvList: tvListPrivate,
             movieList: movieListPrivate,
             connections: connectionsPrivate,
+            friends: friendsPrivate,
           }),
         },
       );
@@ -250,6 +253,27 @@ export const RrPrivacySettingsTab = ({
               id="connections-private"
               checked={connectionsPrivate}
               onCheckedChange={setConnectionsPrivate}
+              disabled={isSubmitting || profilePrivate}
+            />
+          </div>
+
+          {/* Friends Privacy Toggle */}
+          <div className="flex items-center justify-between py-4">
+            <div className="flex flex-col gap-0.5 pr-8 text-left">
+              <Label
+                className="text-sm font-medium text-foreground cursor-pointer"
+                htmlFor="friends-private"
+              >
+                {t("polaris.user.friendPrivacyOption")}
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                {t("privacy.privateFriendsDesc", "Hide your friends list from your public profile.")}
+              </p>
+            </div>
+            <Switch
+              id="friends-private"
+              checked={friendsPrivate}
+              onCheckedChange={setFriendsPrivate}
               disabled={isSubmitting || profilePrivate}
             />
           </div>

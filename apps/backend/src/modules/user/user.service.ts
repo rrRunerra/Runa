@@ -166,6 +166,7 @@ export function parsePrivacy(privacy: unknown): PrivacySettings {
       tvList: p.tvList === true,
       movieList: p.movieList === true,
       connections: p.connections === true,
+      friends: p.friends === true,
     };
   }
   return {
@@ -175,6 +176,7 @@ export function parsePrivacy(privacy: unknown): PrivacySettings {
     tvList: false,
     movieList: false,
     connections: false,
+    friends: false,
   };
 }
 
@@ -442,6 +444,7 @@ export class UserService {
       tvList: dto.tvList ?? currentPrivacy.tvList,
       movieList: dto.movieList ?? currentPrivacy.movieList,
       connections: dto.connections ?? currentPrivacy.connections,
+      friends: dto.friends ?? currentPrivacy.friends,
     };
 
     await this.userRepository.updatePrivacySettings(

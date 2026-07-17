@@ -1889,7 +1889,29 @@
         "favorites": "Suosikit",
         "lists": "Listat",
         "stats": "Tilastot"
-      }
+      },
+      "friends": "Ystävät",
+      "friendList": "Ystävälista",
+      "addFriend": "Lisää ystävä",
+      "removeFriend": "Poista ystävä",
+      "pendingFriendRequest": "Odottava ystäväpyyntö",
+      "acceptFriendRequest": "Hyväksy ystäväpyyntö",
+      "declineFriendRequest": "Hylkää ystäväpyyntö",
+      "cancelFriendRequest": "Peruuta pyyntö",
+      "friendNickname": "Lempinimi",
+      "friendNote": "Muistiinpano",
+      "editFriendSettings": "Muokkaa ystävän tietoja",
+      "nicknamePlaceholder": "Kirjoita lempinimi",
+      "notePlaceholder": "Kirjoita yksityinen muistiinpano",
+      "friendRequests": "Ystäväpyynnöt",
+      "incomingRequests": "Saapuvat pyynnöt",
+      "outgoingRequests": "Lähtevät pyynnöt",
+      "noFriends": "Ei vielä ystäviä",
+      "noIncomingRequests": "Ei saapuvia ystäväpyyntöjä",
+      "noOutgoingRequests": "Ei lähteviä ystäväpyyntöjä",
+      "searchUsers": "Etsi käyttäjiä",
+      "youAreFriends": "Olette ystäviä",
+      "friendPrivacyOption": "Yksityinen ystävälista"
     }
   },
   "pegasus": {

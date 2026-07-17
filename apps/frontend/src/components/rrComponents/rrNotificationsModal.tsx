@@ -506,13 +506,16 @@ export function RrNotificationsModal({
     id: string,
     status: "APPROVED" | "DENIED",
   ) => {
-    if (!session?.accessToken) return;
+    if (!session?.accessToken) {
+      toast.error("No active session found");
+      return;
+    }
     setProcessingId(id);
     try {
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/notifications/${id}/status`,
         {
-          method: "PUT",
+          method: "PATCH",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.accessToken}`,
@@ -529,6 +532,9 @@ export function RrNotificationsModal({
         toast.success(
           status === "APPROVED" ? t("requestApproved") : t("requestDenied"),
         );
+      } else {
+        const errorData = await res.json().catch(() => null);
+        toast.error(errorData?.message || t("failedUpdateRequest"));
       }
     } catch {
       toast.error(t("failedUpdateRequest"));
@@ -542,7 +548,14 @@ export function RrNotificationsModal({
     requestPublicKey: string,
     requestMlKemPublicKey?: string | null
   ) => {
-    if (!session?.accessToken || !session?.user?.username) return;
+    if (!session?.accessToken) {
+      toast.error("No active session token found");
+      return;
+    }
+    if (!session?.user?.username) {
+      toast.error("Username missing from session");
+      return;
+    }
     const password = passwords[id];
     if (!password) {
       toast.error(t("enterPasswordAuthorizeDevice"));

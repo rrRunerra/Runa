@@ -1889,7 +1889,29 @@
         "favorites": "Kegemaran",
         "lists": "Senarai",
         "stats": "Statistik"
-      }
+      },
+      "friends": "Rakan",
+      "friendList": "Senarai Rakan",
+      "addFriend": "Tambah Rakan",
+      "removeFriend": "Buang Rakan",
+      "pendingFriendRequest": "Permintaan rakan sedang ditunggu",
+      "acceptFriendRequest": "Terima Permintaan Rakan",
+      "declineFriendRequest": "Tolak Permintaan Rakan",
+      "cancelFriendRequest": "Batal Permintaan",
+      "friendNickname": "Nama Panggilan",
+      "friendNote": "Nota",
+      "editFriendSettings": "Edit Butiran Rakan",
+      "nicknamePlaceholder": "Masukkan nama panggilan rakan",
+      "notePlaceholder": "Masukkan nota peribadi",
+      "friendRequests": "Permintaan Rakan",
+      "incomingRequests": "Permintaan Diterima",
+      "outgoingRequests": "Permintaan Dihantar",
+      "noFriends": "Belum ada rakan ditambah",
+      "noIncomingRequests": "Tiada permintaan rakan diterima",
+      "noOutgoingRequests": "Tiada permintaan rakan dihantar",
+      "searchUsers": "Cari Pengguna",
+      "youAreFriends": "Anda adalah rakan",
+      "friendPrivacyOption": "Senarai Rakan Peribadi"
     }
   },
   "pegasus": {

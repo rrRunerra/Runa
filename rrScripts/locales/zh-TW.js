@@ -1889,7 +1889,29 @@ export default {
         "favorites": "最愛",
         "lists": "列表",
         "stats": "統計"
-      }
+      },
+      "friends": "好友",
+      "friendList": "好友列表",
+      "addFriend": "添加好友",
+      "removeFriend": "刪除好友",
+      "pendingFriendRequest": "好友申請處理中",
+      "acceptFriendRequest": "接受好友申請",
+      "declineFriendRequest": "拒絕好友申請",
+      "cancelFriendRequest": "取消申請",
+      "friendNickname": "備註/暱稱",
+      "friendNote": "備忘",
+      "editFriendSettings": "修改備註/備忘",
+      "nicknamePlaceholder": "輸入好友暱稱",
+      "notePlaceholder": "輸入關於該好友的私密備忘",
+      "friendRequests": "好友申請",
+      "incomingRequests": "收到的申請",
+      "outgoingRequests": "已發送的申請",
+      "noFriends": "暫無好友",
+      "noIncomingRequests": "暫無收到的好友申請",
+      "noOutgoingRequests": "暫無發送的好友申請",
+      "searchUsers": "搜索用戶",
+      "youAreFriends": "互為好友",
+      "friendPrivacyOption": "私密好友列表"
     }
   },
   "pegasus": {

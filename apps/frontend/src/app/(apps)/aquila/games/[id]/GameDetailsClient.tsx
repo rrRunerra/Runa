@@ -20,6 +20,7 @@ import RrLapplandImageNotFound from "@/components/rrComponents/rrImages/rrLappla
 import { RrMediaRefreshButton } from "@/components/rrComponents/aquila/rrMediaRefreshButton";
 import { GameEntity } from "@/types/game.entities";
 import { RrMediaStatsDashboard } from "@/components/rrComponents/aquila/details/rrMediaStatsDashboard";
+import { RrMediaFriendsProgress } from "@/components/rrComponents/aquila/details/rrMediaFriendsProgress";
 import { useTranslation } from "react-i18next";
 
 interface ListEntry {
@@ -400,6 +401,8 @@ export default function GameDetailsPage(): React.JSX.Element {
                 </div>
               </div>
             )}
+
+            <RrMediaFriendsProgress mediaId={game.id.toString()} mediaType="game" />
           </motion.div>
 
           {/* Right Column - Info */}

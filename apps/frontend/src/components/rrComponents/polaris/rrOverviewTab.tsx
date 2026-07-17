@@ -5,6 +5,8 @@ import remarkGfm from "remark-gfm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getConnectionIcon, getConnectionProfileUrl } from "./rrConnectionHelpers";
 import { useTranslation } from "react-i18next";
+import { Session } from "next-auth";
+import { RrProfileFriendsCard } from "./rrProfileFriendsCard";
 
 interface Connection {
   id: string;
@@ -16,9 +18,18 @@ interface Connection {
 export interface rrOverviewTabProps {
   bio: string;
   connections: Connection[];
+  username: string;
+  session: Session | null;
+  isOwner: boolean;
 }
 
-export default function RrOverviewTab({ bio, connections }: rrOverviewTabProps): React.ReactNode {
+export default function RrOverviewTab({
+  bio,
+  connections,
+  username,
+  session,
+  isOwner,
+}: rrOverviewTabProps): React.ReactNode {
   const { t } = useTranslation();
   const getMetadataText = (conn: Connection): string | null => {
     if (!conn.metadata) return null;
@@ -156,6 +167,10 @@ export default function RrOverviewTab({ bio, connections }: rrOverviewTabProps):
             )}
           </CardContent>
         </Card>
+
+        <div className="mt-6">
+          <RrProfileFriendsCard username={username} session={session} isOwner={isOwner} />
+        </div>
       </div>
     </div>
   );

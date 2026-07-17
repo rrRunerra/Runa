@@ -1889,7 +1889,29 @@
         "favorites": "Favorites",
         "lists": "Lists",
         "stats": "Stats"
-      }
+      },
+      "friends": "Friends",
+      "friendList": "Friend List",
+      "addFriend": "Add Friend",
+      "removeFriend": "Remove Friend",
+      "pendingFriendRequest": "Friend request pending",
+      "acceptFriendRequest": "Accept Friend Request",
+      "declineFriendRequest": "Decline Friend Request",
+      "cancelFriendRequest": "Cancel Request",
+      "friendNickname": "Nickname",
+      "friendNote": "Note",
+      "editFriendSettings": "Edit Friend Details",
+      "nicknamePlaceholder": "Enter friend's nickname",
+      "notePlaceholder": "Enter private note about this friend",
+      "friendRequests": "Friend Requests",
+      "incomingRequests": "Incoming Requests",
+      "outgoingRequests": "Outgoing Requests",
+      "noFriends": "No friends added yet",
+      "noIncomingRequests": "No incoming friend requests",
+      "noOutgoingRequests": "No outgoing friend requests",
+      "searchUsers": "Search Users",
+      "youAreFriends": "You are friends",
+      "friendPrivacyOption": "Private Friends List"
     }
   },
   "pegasus": {
