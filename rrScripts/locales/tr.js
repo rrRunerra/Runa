@@ -600,7 +600,17 @@ export default {
     "addEquationPlaceholder": "Add equation... e.g. f(x) = 2 * sin(x)",
     "copyLatex": "Copy LaTeX",
     "varPlaceholder": "var",
-    "valPlaceholder": "val"
+    "valPlaceholder": "val",
+    "saveToLacerta": "Depoma Kaydet",
+    "selectFolder": "Hedef Klasör Seç",
+    "rootFolder": "Kök Klasör",
+    "saveHere": "Buraya Kaydet",
+    "noFolders": "Klasör bulunamadı",
+    "savingCopy": "Kopya deponuza kaydediliyor...",
+    "unlockVaultFirst": "Kaydetmek için lütfen önce kasanızı açın.",
+    "back": "Geri",
+    "sharedBy": "Paylaşan",
+    "signInToSave": "Kaydetmek için Giriş Yapın"
   },
   "discordChannels": "Discord Kanalları",
   "discordChannelsDesc": "Discord sunucularınızda ve doğrudan mesajlarda gerçek zamanlı olarak etkileşime geçin.",

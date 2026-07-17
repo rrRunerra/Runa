@@ -600,7 +600,17 @@
     "addEquationPlaceholder": "Add equation... e.g. f(x) = 2 * sin(x)",
     "copyLatex": "Copy LaTeX",
     "varPlaceholder": "var",
-    "valPlaceholder": "val"
+    "valPlaceholder": "val",
+    "saveToLacerta": "내 저장소에 저장",
+    "selectFolder": "대상 폴더 선택",
+    "rootFolder": "루트 폴더",
+    "saveHere": "여기에 저장",
+    "noFolders": "폴더가 없습니다",
+    "savingCopy": "저장소에 사본 저장 중...",
+    "unlockVaultFirst": "저장하려면 먼저 암호화를 해제하세요.",
+    "back": "뒤로",
+    "sharedBy": "공유자",
+    "signInToSave": "로그인하여 저장"
   },
   "applications": "애플리케이션",
   "bookmarks": "북마크",

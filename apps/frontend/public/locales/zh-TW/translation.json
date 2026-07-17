@@ -600,7 +600,17 @@
     "addEquationPlaceholder": "Add equation... e.g. f(x) = 2 * sin(x)",
     "copyLatex": "Copy LaTeX",
     "varPlaceholder": "var",
-    "valPlaceholder": "val"
+    "valPlaceholder": "val",
+    "saveToLacerta": "儲存到我的儲存空間",
+    "selectFolder": "選擇目標資料夾",
+    "rootFolder": "根資料夾",
+    "saveHere": "儲存到此處",
+    "noFolders": "未找到資料夾",
+    "savingCopy": "正在儲存複本到您的儲存空間...",
+    "unlockVaultFirst": "請先解鎖您的加密儲存庫以進行儲存。",
+    "back": "返回",
+    "sharedBy": "共享者",
+    "signInToSave": "登入以儲存"
   },
   "applications": "應用程式",
   "bookmarks": "書籤",

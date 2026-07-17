@@ -19,6 +19,8 @@ self.addEventListener("message", (event) => {
     if (port) {
       activeStreams.set(streamId, port);
     }
+  } else if (data.type === "CLAIM_CLIENTS") {
+    self.clients.claim();
   }
 });
 
@@ -64,7 +66,6 @@ self.addEventListener("fetch", (event) => {
         port.postMessage({ type: "ready" });
       },
       cancel() {
-        port.postMessage({ type: "cancel" });
         activeStreams.delete(streamId);
       },
     });

@@ -600,7 +600,17 @@ export default {
     "addEquationPlaceholder": "Add equation... e.g. f(x) = 2 * sin(x)",
     "copyLatex": "Copy LaTeX",
     "varPlaceholder": "var",
-    "valPlaceholder": "val"
+    "valPlaceholder": "val",
+    "saveToLacerta": "Lưu vào kho lưu trữ của tôi",
+    "selectFolder": "Chọn thư mục đích",
+    "rootFolder": "Thư mục gốc",
+    "saveHere": "Lưu tại đây",
+    "noFolders": "Không tìm thấy thư mục",
+    "savingCopy": "Đang lưu bản sao vào kho lưu trữ của bạn...",
+    "unlockVaultFirst": "Vui lòng mở khóa kho lưu trữ của bạn trước khi lưu.",
+    "back": "Quay lại",
+    "sharedBy": "Được chia sẻ bởi",
+    "signInToSave": "Đăng nhập để lưu"
   },
   "discordChannels": "Kênh Discord",
   "discordChannelsDesc": "Giao tiếp và tương tác thời gian thực trên các máy chủ Discord và tin nhắn trực tiếp.",

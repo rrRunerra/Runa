@@ -522,6 +522,8 @@ export class FilesService {
       type: file.type,
       key: file.key,
       isPublic: file.isPublic,
+      user: file.user,
+      chunkCount: file.chunkCount,
     };
   }
 

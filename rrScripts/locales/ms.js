@@ -600,7 +600,17 @@ export default {
     "addEquationPlaceholder": "Add equation... e.g. f(x) = 2 * sin(x)",
     "copyLatex": "Copy LaTeX",
     "varPlaceholder": "var",
-    "valPlaceholder": "val"
+    "valPlaceholder": "val",
+    "saveToLacerta": "Simpan ke Storan Saya",
+    "selectFolder": "Pilih Folder Destinasi",
+    "rootFolder": "Folder Utama",
+    "saveHere": "Simpan Di Sini",
+    "noFolders": "Tiada folder ditemui",
+    "savingCopy": "Menyimpan salinan ke storan anda...",
+    "unlockVaultFirst": "Sila buka kunci peti besi anda terlebih dahulu untuk menyimpan.",
+    "back": "Kembali",
+    "sharedBy": "Dikongsi oleh",
+    "signInToSave": "Log masuk untuk Simpan"
   },
   "discordChannels": "Saluran Discord",
   "discordChannelsDesc": "Siar dan berinteraksi secara masa nyata di pelayan Discord dan mesej terus anda.",

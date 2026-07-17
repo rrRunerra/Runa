@@ -600,7 +600,17 @@ export default {
     "addEquationPlaceholder": "Add equation... e.g. f(x) = 2 * sin(x)",
     "copyLatex": "Copy LaTeX",
     "varPlaceholder": "var",
-    "valPlaceholder": "val"
+    "valPlaceholder": "val",
+    "saveToLacerta": "บันทึกไปยังที่จัดเก็บของฉัน",
+    "selectFolder": "เลือกโฟลเดอร์ปลายทาง",
+    "rootFolder": "โฟลเดอร์หลัก",
+    "saveHere": "บันทึกที่นี่",
+    "noFolders": "ไม่พบโฟลเดอร์",
+    "savingCopy": "กำลังบันทึกสำเนาไปยังที่จัดเก็บของคุณ...",
+    "unlockVaultFirst": "กรุณาปลดล็อกห้องนิรภัยของคุณก่อนเพื่อบันทึก",
+    "back": "ย้อนกลับ",
+    "sharedBy": "แชร์โดย",
+    "signInToSave": "ลงชื่อเข้าใช้เพื่อบันทึก"
   },
   "discordChannels": "ช่อง Discord",
   "discordChannelsDesc": "สื่อสารและโต้ตอบแบบเรียลไทม์บนเซิร์ฟเวอร์ Discord และข้อความตรง",

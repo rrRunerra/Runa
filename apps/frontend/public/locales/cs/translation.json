@@ -600,7 +600,17 @@
     "addEquationPlaceholder": "Add equation... e.g. f(x) = 2 * sin(x)",
     "copyLatex": "Copy LaTeX",
     "varPlaceholder": "var",
-    "valPlaceholder": "val"
+    "valPlaceholder": "val",
+    "saveToLacerta": "Uložit do mého úložiště",
+    "selectFolder": "Vybrat cílovou složku",
+    "rootFolder": "Kořenová složka",
+    "saveHere": "Uložit sem",
+    "noFolders": "Nebyly nalezeny žádné složky",
+    "savingCopy": "Ukládání kopie do vašeho úložiště...",
+    "unlockVaultFirst": "Pro uložení nejprve odemkněte svůj trezor.",
+    "back": "Zpět",
+    "sharedBy": "Sdílí",
+    "signInToSave": "Přihlaste se pro uložení"
   },
   "discordChannels": "Discord kanály",
   "discordChannelsDesc": "Komunikujte v reálném čase na svých Discord serverech a v přímých zprávách.",

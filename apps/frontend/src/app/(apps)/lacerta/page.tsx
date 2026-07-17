@@ -861,7 +861,7 @@ export default function LacertaPage({
               };
             } else {
               // Reached end of file
-              channel.port1.postMessage({ type: "end" });
+              channel.port1.postMessage({ type: "done" });
               toast.success(`${item.name} downloaded successfully!`, { id: downloadToast });
               active = false;
               decryptWorker.terminate();

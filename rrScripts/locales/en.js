@@ -600,7 +600,17 @@ export default {
     "addEquationPlaceholder": "Add equation... e.g. f(x) = 2 * sin(x)",
     "copyLatex": "Copy LaTeX",
     "varPlaceholder": "var",
-    "valPlaceholder": "val"
+    "valPlaceholder": "val",
+    "saveToLacerta": "Save to My Storage",
+    "selectFolder": "Select Destination Folder",
+    "rootFolder": "Root Folder",
+    "saveHere": "Save Here",
+    "noFolders": "No folders found",
+    "savingCopy": "Saving copy to your storage...",
+    "unlockVaultFirst": "Please unlock your vault first to save.",
+    "back": "Back",
+    "sharedBy": "Shared by",
+    "signInToSave": "Sign In to Save"
   },
   "applications": "Applications",
   "bookmarks": "Bookmarks",

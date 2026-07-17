@@ -600,7 +600,17 @@ export default {
     "addEquationPlaceholder": "Add equation... e.g. f(x) = 2 * sin(x)",
     "copyLatex": "Copy LaTeX",
     "varPlaceholder": "var",
-    "valPlaceholder": "val"
+    "valPlaceholder": "val",
+    "saveToLacerta": "ストレージに保存",
+    "selectFolder": "保存先フォルダを選択",
+    "rootFolder": "ルートフォルダ",
+    "saveHere": "ここに保存",
+    "noFolders": "フォルダが見つかりません",
+    "savingCopy": "コピーをストレージに保存中...",
+    "unlockVaultFirst": "保存するには、まず暗号化を解除してください。",
+    "back": "戻る",
+    "sharedBy": "共有者",
+    "signInToSave": "サインインして保存"
   },
   "applications": "アプリケーション",
   "bookmarks": "ブックマーク",

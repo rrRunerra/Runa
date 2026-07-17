@@ -600,7 +600,17 @@ export default {
     "addEquationPlaceholder": "Add equation... e.g. f(x) = 2 * sin(x)",
     "copyLatex": "Copy LaTeX",
     "varPlaceholder": "var",
-    "valPlaceholder": "val"
+    "valPlaceholder": "val",
+    "saveToLacerta": "Lagre i mitt lager",
+    "selectFolder": "Velg målmappe",
+    "rootFolder": "Rotmappe",
+    "saveHere": "Lagre her",
+    "noFolders": "Ingen mapper funnet",
+    "savingCopy": "Lagrer kopi i lageret ditt...",
+    "unlockVaultFirst": "Vennligst lås opp hvelvet ditt først for å lagre.",
+    "back": "Tilbake",
+    "sharedBy": "Delt av",
+    "signInToSave": "Logg inn for å lagre"
   },
   "discordChannels": "Discord-kanaler",
   "discordChannelsDesc": "Send og motta meldinger i sanntid på Discord-serverne dine og i direktemeldinger.",

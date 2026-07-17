@@ -28,7 +28,17 @@ export class FilesRepository {
   async findLaceraFileById(id: string) {
     return this.prisma.client.laceraFile.findUnique({
       where: { id },
-      include: { shares: true },
+      include: {
+        shares: true,
+        user: {
+          select: {
+            id: true,
+            username: true,
+            displayName: true,
+            avatarUrl: true,
+          },
+        },
+      },
     });
   }
 

@@ -600,7 +600,17 @@ export default {
     "addEquationPlaceholder": "Add equation... e.g. f(x) = 2 * sin(x)",
     "copyLatex": "Copy LaTeX",
     "varPlaceholder": "var",
-    "valPlaceholder": "val"
+    "valPlaceholder": "val",
+    "saveToLacerta": "Tallenna tallennustilaani",
+    "selectFolder": "Valitse kohdekansio",
+    "rootFolder": "Juurikansio",
+    "saveHere": "Tallenna tähän",
+    "noFolders": "Kansioita ei löytynyt",
+    "savingCopy": "Tallennetaan kopiota tallennustilaasi...",
+    "unlockVaultFirst": "Avaa holvinsi lukitus ensin tallentaaksesi.",
+    "back": "Takaisin",
+    "sharedBy": "Jakanut",
+    "signInToSave": "Kirjaudu sisään tallentaaksesi"
   },
   "discordChannels": "Discord-kanavat",
   "discordChannelsDesc": "Lähetä ja vastaanota viestejä reaaliajassa Discord-palvelimillasi ja suoraviesteissä.",
