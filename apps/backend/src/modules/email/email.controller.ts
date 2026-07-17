@@ -120,7 +120,7 @@ export class EmailController {
     res.set({
       'Content-Type': attach.contentType,
       'Content-Disposition': `attachment; filename="${encodeURIComponent(attach.filename)}"`,
-      'Content-Length': attach.size,
+      'Content-Length': attach.content.length,
     });
     return new StreamableFile(attach.content);
   }

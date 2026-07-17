@@ -770,6 +770,7 @@ export default function RrEmailFolderView({
   ): Promise<void> => {
     if (!session?.accessToken) return;
     try {
+      toast.info(t("pegasus.attachments.startingDownload", { filename }));
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/emails/attachments/${attachmentId}`,
         {
@@ -789,6 +790,7 @@ export default function RrEmailFolderView({
             "Failed to decrypt attachment content on download:",
             decErr,
           );
+          throw new Error("Decryption failed. Invalid key or corrupted data.");
         }
       }
 
@@ -801,8 +803,10 @@ export default function RrEmailFolderView({
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
-    } catch (err) {
+      toast.success(t("pegasus.attachments.downloadSuccess", { filename }));
+    } catch (err: any) {
       console.error("Attachment download failed:", err);
+      toast.error(t("pegasus.attachments.downloadFailed", { message: err.message || String(err) }));
     }
   };
 
