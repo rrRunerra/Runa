@@ -879,6 +879,8 @@
   "sidebarJunkSubtitle": "Spam",
   "sidebarTrash": "Sampah",
   "aquila": {
+    "generalTab": "Umum",
+    "episodesTab": "Episod ({{watched}}/{{total}})",
     "loadingMore": "Memuatkan lebih banyak...",
     "removeFromHistory": "Buang dari sejarah",
     "recent": "Baru-baru ini:",

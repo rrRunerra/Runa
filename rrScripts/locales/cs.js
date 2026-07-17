@@ -879,6 +879,8 @@ export default {
   "sidebarJunkSubtitle": "Spam",
   "sidebarTrash": "Koš",
   "aquila": {
+    "generalTab": "Obecné",
+    "episodesTab": "Epizody ({{watched}}/{{total}})",
     "loadingMore": "Načítání dalších...",
     "removeFromHistory": "Remove from history",
     "recent": "Recent:",

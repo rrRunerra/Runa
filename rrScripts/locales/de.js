@@ -879,6 +879,8 @@ export default {
   "sidebarJunkSubtitle": "Spam",
   "sidebarTrash": "Müll",
   "aquila": {
+    "generalTab": "Allgemein",
+    "episodesTab": "Episoden ({{watched}}/{{total}})",
     "loadingMore": "Mehr laden...",
     "removeFromHistory": "Aus Verlauf entfernen",
     "recent": "Verlauf:",

@@ -880,6 +880,8 @@ export default {
   "sidebarDirectMessages": "Direct Messages",
   "sidebarDirectMessagesSubtitle": "Chat in discord dms",
   "aquila": {
+    "generalTab": "General",
+    "episodesTab": "Episodes ({{watched}}/{{total}})",
     "loadingMore": "Loading more...",
     "removeFromHistory": "Remove from history",
     "recent": "Recent:",

@@ -879,6 +879,8 @@
   "sidebarJunkSubtitle": "spam",
   "sidebarTrash": "basura",
   "aquila": {
+    "generalTab": "General",
+    "episodesTab": "Episodios ({{watched}}/{{total}})",
     "loadingMore": "Cargando más...",
     "removeFromHistory": "Eliminar del historial",
     "recent": "Reciente:",

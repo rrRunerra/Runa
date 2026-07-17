@@ -879,6 +879,8 @@
   "sidebarDirectMessages": "私信",
   "sidebarDirectMessagesSubtitle": "在 Discord 私信中聊天",
   "aquila": {
+    "generalTab": "常規",
+    "episodesTab": "劇集 ({{watched}}/{{total}})",
     "loadingMore": "載入更多...",
     "removeFromHistory": "从歷史記錄中移除",
     "recent": "最近搜尋:",

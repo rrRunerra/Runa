@@ -879,6 +879,8 @@ export default {
   "sidebarDirectMessages": "다이렉트 메시지",
   "sidebarDirectMessagesSubtitle": "Discord DM에서 채팅",
   "aquila": {
+    "generalTab": "일반",
+    "episodesTab": "에피소드 ({{watched}}/{{total}})",
     "loadingMore": "더 불러오기...",
     "removeFromHistory": "기록에서 삭제",
     "recent": "최근 검색:",

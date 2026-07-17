@@ -879,6 +879,8 @@
   "sidebarDirectMessages": "ダイレクトメッセージ",
   "sidebarDirectMessagesSubtitle": "Discord の DM でチャット",
   "aquila": {
+    "generalTab": "一般",
+    "episodesTab": "エピソード ({{watched}}/{{total}})",
     "loadingMore": "さらに読み込む...",
     "removeFromHistory": "履歴から削除",
     "recent": "履歴:",

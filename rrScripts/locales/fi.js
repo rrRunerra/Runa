@@ -879,6 +879,8 @@ export default {
   "sidebarJunkSubtitle": "Roskaposti",
   "sidebarTrash": "Roskakori",
   "aquila": {
+    "generalTab": "Yleinen",
+    "episodesTab": "Jaksot ({{watched}}/{{total}})",
     "loadingMore": "Ladataan lisää...",
     "removeFromHistory": "Poista historiasta",
     "recent": "Viimeisimmät:",

@@ -879,6 +879,8 @@
   "sidebarJunkSubtitle": "สแปม",
   "sidebarTrash": "ถังขยะ",
   "aquila": {
+    "generalTab": "ทั่วไป",
+    "episodesTab": "ตอน ({{watched}}/{{total}})",
     "loadingMore": "กำลังโหลดเพิ่มเติม...",
     "removeFromHistory": "ลบออกจากประวัติ",
     "recent": "ล่าสุด:",

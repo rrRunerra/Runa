@@ -879,6 +879,8 @@ export default {
   "sidebarJunkSubtitle": "Thư rác",
   "sidebarTrash": "Thùng rác",
   "aquila": {
+    "generalTab": "Tổng quan",
+    "episodesTab": "Tập phim ({{watched}}/{{total}})",
     "loadingMore": "Tải thêm...",
     "removeFromHistory": "Xóa khỏi lịch sử",
     "recent": "Gần đây:",

@@ -879,6 +879,8 @@ export default {
   "sidebarJunkSubtitle": "Spam",
   "sidebarTrash": "Çöp kutusu",
   "aquila": {
+    "generalTab": "Genel",
+    "episodesTab": "Bölümler ({{watched}}/{{total}})",
     "loadingMore": "Daha fazla yükle...",
     "removeFromHistory": "Remove from history",
     "recent": "Recent:",
