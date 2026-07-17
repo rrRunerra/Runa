@@ -24,6 +24,7 @@ import { NotificationModule } from './modules/notification/notification.module';
 import { DiscoverModule } from './modules/discover/discover.module';
 import { CharacterModule } from './modules/character/character.module';
 import { ActorModule } from './modules/actor/actor.module';
+import { MediaUpdateModule } from './modules/media-update/media-update.module';
 
 @Module({
   providers: [
@@ -59,6 +60,7 @@ import { ActorModule } from './modules/actor/actor.module';
     DiscoverModule,
     CharacterModule,
     ActorModule,
+    MediaUpdateModule,
     ThrottlerModule.forRoot({
       throttlers: [
         {
