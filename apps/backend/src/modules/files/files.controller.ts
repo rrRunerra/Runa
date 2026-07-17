@@ -16,11 +16,13 @@ import {
   UseInterceptors,
   UploadedFile,
   Body,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 import * as crypto from 'crypto';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
-import type { Response } from 'express';
+import type { Response, Request } from 'express';
 
 import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { Public } from '../../common/decorators/public.decorator';
@@ -34,6 +36,11 @@ import { jwtVerify } from 'jose';
 import { FilesService } from './files.service';
 import { FilesRepository } from './files.repository';
 import { encrypt, decrypt } from '@runa/crypto/node';
+import {
+  InitLaceraUploadDto,
+  UploadPartQueryDto,
+  CompleteLaceraUploadDto,
+} from './files.dto';
 import type {
   UploadPublicEntity,
   UploadLaceraEntity,
@@ -229,6 +236,122 @@ export class FilesController {
       parentId,
       isVault,
     );
+  }
+
+  // ---------------------------------------------------------------------------
+  // POST /files/lacerta/upload/init — start a chunked multipart upload
+  // ---------------------------------------------------------------------------
+
+  @Post('files/lacerta/upload/init')
+  @UseGuards(AuthGuard)
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+  async initLaceraMultipartUpload(
+    @Body() dto: InitLaceraUploadDto,
+    @Req() req: ExtendedRequest,
+  ): Promise<{ fileId: string; uploadId: string }> {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new rrUnauthorizedException(`${this.moduleCode}UA010`, {
+        message: 'Unauthenticated',
+      });
+    }
+    return this.filesService.initLaceraMultipartUpload(
+      userId,
+      dto.encName,
+      dto.encType,
+      dto.wrappedKey,
+      dto.totalSize,
+      dto.chunkCount,
+      dto.parentId,
+      dto.isVault,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // POST /files/lacerta/upload/part — stream a single encrypted chunk to S3
+  // No Multer. Raw body is piped directly to UploadPartCommand.
+  // ---------------------------------------------------------------------------
+
+  @Post('files/lacerta/upload/part')
+  @UseGuards(AuthGuard)
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+  async uploadLaceraChunk(
+    @Query() query: UploadPartQueryDto,
+    @Req() req: ExtendedRequest & Request,
+    @Res() res: Response,
+  ): Promise<void> {
+    const userId = req.user?.id;
+    if (!userId) {
+      res
+        .status(HttpStatus.UNAUTHORIZED)
+        .json({ message: 'Unauthenticated' });
+      return;
+    }
+
+    const contentLength = parseInt(
+      req.headers['content-length'] ?? '0',
+      10,
+    );
+    if (!contentLength || contentLength <= 0) {
+      res
+        .status(HttpStatus.BAD_REQUEST)
+        .json({ message: 'Content-Length header is required for chunk upload' });
+      return;
+    }
+
+    const result = await this.filesService.uploadLaceraChunk(
+      query.fileId,
+      query.partNumber,
+      userId,
+      req as unknown as import('stream').Readable,
+      contentLength,
+    );
+
+    res.status(HttpStatus.OK).json(result);
+  }
+
+  // ---------------------------------------------------------------------------
+  // POST /files/lacerta/upload/complete — finalise the multipart upload
+  // ---------------------------------------------------------------------------
+
+  @Post('files/lacerta/upload/complete')
+  @UseGuards(AuthGuard)
+  @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
+  async completeLaceraMultipartUpload(
+    @Body() dto: CompleteLaceraUploadDto,
+    @Req() req: ExtendedRequest,
+  ): Promise<{ key: string }> {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new rrUnauthorizedException(`${this.moduleCode}UA011`, {
+        message: 'Unauthenticated',
+      });
+    }
+    return this.filesService.completeLaceraMultipartUpload(
+      dto.fileId,
+      userId,
+      dto.parts,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // DELETE /files/lacerta/upload/:fileId/abort — cancel and clean up
+  // ---------------------------------------------------------------------------
+
+  @Delete('files/lacerta/upload/:fileId/abort')
+  @UseGuards(AuthGuard)
+  async abortLaceraMultipartUpload(
+    @Param('fileId') fileId: string,
+    @Req() req: ExtendedRequest,
+  ): Promise<{ success: boolean }> {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new rrUnauthorizedException(`${this.moduleCode}UA012`, {
+        message: 'Unauthenticated',
+      });
+    }
+    await this.filesService.abortLaceraMultipartUpload(fileId, userId);
+    return { success: true };
   }
 
   // ---------------------------------------------------------------------------

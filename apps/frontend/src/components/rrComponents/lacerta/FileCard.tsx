@@ -80,6 +80,8 @@ export interface RenderFileItem {
   decryptedKey?: CryptoKey | null;
   rawFileKey?: string | null;
   wrappedKey?: string;
+  /** null/undefined = single-block old format; N = chunked E2EE (N × 32 MiB parts) */
+  chunkCount?: number | null;
 }
 
 interface FileCardProps {

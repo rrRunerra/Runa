@@ -22,6 +22,68 @@ interface GalleryFileItem {
   name: string; // Decrypted name
   type: string; // Decrypted mimetype
   decryptedKey: CryptoKey | null;
+  /** null/undefined = single-block old format; N = chunked E2EE */
+  chunkCount?: number | null;
+  size?: number | null;
+}
+
+// ---------------------------------------------------------------------------
+// Chunk decryption helpers (mirrors upload worker format)
+// ---------------------------------------------------------------------------
+const GALLERY_CHUNK_OVERHEAD = 28; // 12 B IV + 16 B tag
+const GALLERY_CHUNK_PLAINTEXT = 32 * 1024 * 1024; // 32 MiB
+
+async function galleryDecryptChunk(
+  wire: ArrayBuffer,
+  key: CryptoKey,
+  fileId: string,
+  partNumber: number,
+  chunkCount: number,
+  originalSize: number,
+): Promise<ArrayBuffer> {
+  const iv = wire.slice(0, 12) as ArrayBuffer;
+  const tag = wire.slice(12, 28) as ArrayBuffer;
+  const ciphertext = wire.slice(28) as ArrayBuffer;
+  const ciphertextWithTag = new Uint8Array(ciphertext.byteLength + tag.byteLength);
+  ciphertextWithTag.set(new Uint8Array(ciphertext), 0);
+  ciphertextWithTag.set(new Uint8Array(tag), ciphertext.byteLength);
+  const aad = new TextEncoder().encode(`${fileId}|${partNumber}|${chunkCount}|${originalSize}`);
+  return window.crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: new Uint8Array(iv), additionalData: aad },
+    key,
+    ciphertextWithTag,
+  );
+}
+
+async function galleryDecryptBuffer(
+  totalBuffer: ArrayBuffer,
+  key: CryptoKey,
+  file: GalleryFileItem,
+): Promise<ArrayBuffer> {
+  const numChunks = file.chunkCount ?? null;
+  if (numChunks && numChunks > 0 && file.id) {
+    const originalSize = file.size ?? 0;
+    const chunkCiphertextSize = GALLERY_CHUNK_PLAINTEXT + GALLERY_CHUNK_OVERHEAD;
+    const parts: ArrayBuffer[] = [];
+    for (let i = 0; i < numChunks; i++) {
+      const start = i * chunkCiphertextSize;
+      const end = i === numChunks - 1 ? totalBuffer.byteLength : start + chunkCiphertextSize;
+      parts.push(await galleryDecryptChunk(
+        totalBuffer.slice(start, end) as ArrayBuffer,
+        key,
+        file.id,
+        i + 1,
+        numChunks,
+        originalSize,
+      ));
+    }
+    const totalBytes = parts.reduce((s, b) => s + b.byteLength, 0);
+    const result = new Uint8Array(totalBytes);
+    let offset = 0;
+    for (const part of parts) { result.set(new Uint8Array(part), offset); offset += part.byteLength; }
+    return result.buffer as ArrayBuffer;
+  }
+  return decrypt(totalBuffer, key);
 }
 
 interface MediaGallerySliderProps {
@@ -128,11 +190,11 @@ export default function MediaGallerySlider({
             concatenated.set(chunk, offset);
             offset += chunk.length;
           }
-          decryptedBuffer = await decrypt(concatenated.buffer, file.decryptedKey!);
+          decryptedBuffer = await galleryDecryptBuffer(concatenated.buffer as ArrayBuffer, file.decryptedKey!, file);
         } else {
           const encryptedBuffer = await res.arrayBuffer();
           if (!active) return;
-          decryptedBuffer = await decrypt(encryptedBuffer, file.decryptedKey!);
+          decryptedBuffer = await galleryDecryptBuffer(encryptedBuffer, file.decryptedKey!, file);
           setPercent(100);
         }
 

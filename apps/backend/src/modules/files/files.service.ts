@@ -4,8 +4,12 @@ import {
   PutObjectCommand,
   GetObjectCommand,
   DeleteObjectCommand,
+  CreateMultipartUploadCommand,
+  UploadPartCommand,
+  CompleteMultipartUploadCommand,
+  AbortMultipartUploadCommand,
 } from '@aws-sdk/client-s3';
-import { Readable } from 'stream';
+import type { Readable } from 'stream';
 import * as crypto from 'crypto';
 import * as path from 'path';
 import * as bcrypt from 'bcrypt';
@@ -13,6 +17,7 @@ import * as bcrypt from 'bcrypt';
 import {
   rrNotFoundException,
   rrForbiddenException,
+  rrBadRequestException,
   rrInternalServerErrorException,
 } from 'src/providers/error';
 
@@ -158,6 +163,262 @@ export class FilesService {
     });
 
     return { key };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Lacerta multipart (chunked) upload — init / part / complete / abort
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Initialises a multipart upload on S3 and creates a pending LaceraFile stub.
+   * Returns the fileId (for the stub row) and the S3 uploadId so the client can
+   * reference them when uploading individual parts.
+   */
+  async initLaceraMultipartUpload(
+    userId: string,
+    encName: string,
+    encType: string,
+    wrappedKey: string,
+    totalSize: number,
+    chunkCount: number,
+    parentId?: string,
+    isVault?: boolean,
+  ): Promise<{ fileId: string; uploadId: string }> {
+    const key = `${userId}/${crypto.randomUUID()}`;
+
+    // 1. Start the S3 multipart upload session
+    let uploadId: string;
+    try {
+      const result = await this.s3.send(
+        new CreateMultipartUploadCommand({
+          Bucket: this.lacertaBucket,
+          Key: key,
+          ContentType: 'application/octet-stream',
+        }),
+      );
+      if (!result.UploadId) {
+        throw new Error('S3 did not return an UploadId');
+      }
+      uploadId = result.UploadId;
+    } catch (err: unknown) {
+      this.logger.error('Failed to create multipart upload', err);
+      throw new rrInternalServerErrorException(`${this.moduleCode}FCMU001`, {
+        message: 'Failed to initialise file upload',
+      });
+    }
+
+    // 2. Create a pending file stub in the database
+    const fileStub = await this.filesRepository.createLaceraFile({
+      key,
+      userId,
+      wrappedKey,
+      name: encName,
+      size: totalSize,
+      type: encType,
+      parentId: parentId ?? undefined,
+      isFolder: false,
+      isVault: isVault ?? false,
+      isUploadPending: true,
+      chunkCount,
+    });
+
+    // 3. Persist the upload manifest for tracking and resumability
+    const expiresAt = new Date(Date.now() + 48 * 60 * 60 * 1000); // +48 h
+    await this.filesRepository.createLaceraUpload({
+      fileId: fileStub.id,
+      uploadId,
+      key,
+      bucket: this.lacertaBucket,
+      chunkCount,
+      expiresAt,
+    });
+
+    this.logger.log(
+      `[Multipart] Init fileId="${fileStub.id}" uploadId="${uploadId}" chunks=${chunkCount}`,
+    );
+
+    return { fileId: fileStub.id, uploadId };
+  }
+
+  /**
+   * Receives a raw ciphertext chunk stream from the client and forwards it
+   * directly to S3 as a multipart part. Never buffers the full file.
+   *
+   * @param fileId   - LaceraFile stub ID
+   * @param partNumber - 1-based part index
+   * @param userId   - Requesting user (ownership check)
+   * @param bodyStream - Raw HTTP request body (piped straight to S3)
+   * @param contentLength - Byte length of the chunk (required by S3)
+   */
+  async uploadLaceraChunk(
+    fileId: string,
+    partNumber: number,
+    userId: string,
+    bodyStream: Readable,
+    contentLength: number,
+  ): Promise<{ etag: string; partNumber: number }> {
+    // Verify ownership via the upload manifest
+    const manifest = await this.filesRepository.findLaceraUploadByFileId(fileId);
+    if (!manifest) {
+      throw new rrNotFoundException(`${this.moduleCode}MNF001`, {
+        message: 'Upload session not found',
+      });
+    }
+
+    const fileStub = await this.filesRepository.findLaceraFileById(fileId);
+    if (!fileStub || fileStub.userId !== userId) {
+      throw new rrForbiddenException(`${this.moduleCode}YDNAHTA008`, {
+        message: 'You do not have permission to upload to this file',
+      });
+    }
+
+    // Validate part number range
+    if (partNumber < 1 || partNumber > manifest.chunkCount) {
+      throw new rrBadRequestException(`${this.moduleCode}IPN001`, {
+        message: `Invalid part number ${partNumber} (expected 1–${manifest.chunkCount})`,
+      });
+    }
+
+    let etag: string;
+    try {
+      const result = await this.s3.send(
+        new UploadPartCommand({
+          Bucket: manifest.bucket,
+          Key: manifest.key,
+          UploadId: manifest.uploadId,
+          PartNumber: partNumber,
+          Body: bodyStream,
+          ContentLength: contentLength,
+        }),
+      );
+      if (!result.ETag) {
+        throw new Error('S3 did not return an ETag for the uploaded part');
+      }
+      etag = result.ETag;
+    } catch (err: unknown) {
+      this.logger.error(
+        `[Multipart] Failed to upload part ${partNumber} for fileId="${fileId}"`,
+        err,
+      );
+      throw new rrInternalServerErrorException(`${this.moduleCode}FUCP001`, {
+        message: 'Failed to upload chunk',
+      });
+    }
+
+    this.logger.log(
+      `[Multipart] Part ${partNumber}/${manifest.chunkCount} OK etag=${etag} fileId="${fileId}"`,
+    );
+    return { etag, partNumber };
+  }
+
+  /**
+   * Finalises the multipart upload once all parts have been received.
+   * Marks the LaceraFile stub as no longer pending.
+   */
+  async completeLaceraMultipartUpload(
+    fileId: string,
+    userId: string,
+    parts: { partNumber: number; etag: string }[],
+  ): Promise<{ key: string }> {
+    const manifest = await this.filesRepository.findLaceraUploadByFileId(fileId);
+    if (!manifest) {
+      throw new rrNotFoundException(`${this.moduleCode}MNF002`, {
+        message: 'Upload session not found',
+      });
+    }
+
+    const fileStub = await this.filesRepository.findLaceraFileById(fileId);
+    if (!fileStub || fileStub.userId !== userId) {
+      throw new rrForbiddenException(`${this.moduleCode}YDNAHTA009`, {
+        message: 'You do not have permission to complete this upload',
+      });
+    }
+
+    if (parts.length !== manifest.chunkCount) {
+      throw new rrBadRequestException(`${this.moduleCode}IPC001`, {
+        message: `Expected ${manifest.chunkCount} parts but received ${parts.length}`,
+      });
+    }
+
+    try {
+      await this.s3.send(
+        new CompleteMultipartUploadCommand({
+          Bucket: manifest.bucket,
+          Key: manifest.key,
+          UploadId: manifest.uploadId,
+          MultipartUpload: {
+            Parts: [...parts]
+              .sort((a, b) => a.partNumber - b.partNumber)
+              .map((p) => ({
+                PartNumber: p.partNumber,
+                ETag: p.etag,
+              })),
+          },
+        }),
+      );
+    } catch (err: unknown) {
+      this.logger.error(
+        `[Multipart] Failed to complete upload for fileId="${fileId}"`,
+        err,
+      );
+      throw new rrInternalServerErrorException(`${this.moduleCode}FCMU002`, {
+        message: 'Failed to finalise upload',
+      });
+    }
+
+    // Mark the upload manifest as complete and make the file visible
+    await this.filesRepository.completeLaceraUpload(fileId);
+    await this.filesRepository.updateLaceraMetadata(fileId, {
+      isUploadPending: false,
+    });
+
+    this.logger.log(
+      `[Multipart] Completed fileId="${fileId}" key="${manifest.key}"`,
+    );
+    return { key: manifest.key };
+  }
+
+  /**
+   * Aborts an in-progress multipart upload and removes the stub file record.
+   * Safe to call multiple times — S3 and DB operations are idempotent.
+   */
+  async abortLaceraMultipartUpload(
+    fileId: string,
+    userId: string,
+  ): Promise<void> {
+    const manifest = await this.filesRepository.findLaceraUploadByFileId(fileId);
+    if (!manifest) return; // already cleaned up
+
+    const fileStub = await this.filesRepository.findLaceraFileById(fileId);
+    if (fileStub && fileStub.userId !== userId) {
+      throw new rrForbiddenException(`${this.moduleCode}YDNAHTA010`, {
+        message: 'You do not have permission to abort this upload',
+      });
+    }
+
+    // Abort on S3 (best-effort; log but don't throw on S3 failure)
+    try {
+      await this.s3.send(
+        new AbortMultipartUploadCommand({
+          Bucket: manifest.bucket,
+          Key: manifest.key,
+          UploadId: manifest.uploadId,
+        }),
+      );
+    } catch (err: unknown) {
+      this.logger.warn(
+        `[Multipart] S3 abort failed for fileId="${fileId}" (may already be aborted):`,
+        err,
+      );
+    }
+
+    // Clean up DB records
+    await this.filesRepository.deleteLaceraUpload(fileId);
+    if (fileStub) {
+      await this.filesRepository.deleteLaceraFileById(fileId);
+    }
+
+    this.logger.log(`[Multipart] Aborted fileId="${fileId}"`);
   }
 
   // ---------------------------------------------------------------------------

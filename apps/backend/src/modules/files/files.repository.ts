@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../../providers/database/prisma.service';
-import type { LaceraFile } from '@runa/database';
+import type { LaceraFile, LaceraUpload } from '@runa/database';
 
 @Injectable()
 export class FilesRepository {
@@ -19,6 +19,8 @@ export class FilesRepository {
     parentId?: string;
     isFolder?: boolean;
     isVault?: boolean;
+    isUploadPending?: boolean;
+    chunkCount?: number;
   }): Promise<LaceraFile> {
     return this.prisma.client.laceraFile.create({ data });
   }
@@ -45,6 +47,7 @@ export class FilesRepository {
     return this.prisma.client.laceraFile.findMany({
       where: {
         OR: [{ userId }, { shares: { some: { userId } } }],
+        isUploadPending: false, // hide in-progress multipart upload stubs
       },
       include: {
         user: {
@@ -89,6 +92,7 @@ export class FilesRepository {
       isVault?: boolean;
       isPublic?: boolean;
       size?: number | null;
+      isUploadPending?: boolean;
     },
   ): Promise<LaceraFile> {
     return this.prisma.client.laceraFile.update({
@@ -191,5 +195,48 @@ export class FilesRepository {
       where: { userId, isVault: true },
       select: { key: true, isFolder: true },
     });
+  }
+
+  // ---------------------------------------------------------------------------
+  // LaceraUpload — multipart upload tracking
+  // ---------------------------------------------------------------------------
+
+  async createLaceraUpload(data: {
+    fileId: string;
+    uploadId: string;
+    key: string;
+    bucket: string;
+    chunkCount: number;
+    expiresAt: Date;
+  }): Promise<LaceraUpload> {
+    return this.prisma.client.laceraUpload.create({ data });
+  }
+
+  async findLaceraUploadByFileId(fileId: string): Promise<LaceraUpload | null> {
+    return this.prisma.client.laceraUpload.findUnique({ where: { fileId } });
+  }
+
+  async completeLaceraUpload(fileId: string): Promise<LaceraUpload> {
+    return this.prisma.client.laceraUpload.update({
+      where: { fileId },
+      data: { completedAt: new Date() },
+    });
+  }
+
+  /**
+   * Returns all uploads that have passed their expiry and have not been completed.
+   * Used by the cleanup cron to abort and remove abandoned multipart uploads.
+   */
+  async findExpiredLaceraUploads(): Promise<LaceraUpload[]> {
+    return this.prisma.client.laceraUpload.findMany({
+      where: {
+        expiresAt: { lt: new Date() },
+        completedAt: null,
+      },
+    });
+  }
+
+  async deleteLaceraUpload(fileId: string): Promise<void> {
+    await this.prisma.client.laceraUpload.deleteMany({ where: { fileId } });
   }
 }

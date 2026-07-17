@@ -3,6 +3,17 @@ import { BaseConnection } from "../base-connection.js";
 import { ConnectionCapability } from "../metadata.js";
 import { AnimeUpdateData, MovieUpdateData, TvUpdateData } from "../types.js";
 
+/** Converts a Simkl ISO-8601 date string (e.g. "2024-01-15 20:35:28") to a
+ *  Unix timestamp in seconds, matching the format stored in the DB. */
+function parseSimklDate(dateStr?: string | null): number | null {
+  if (!dateStr) return null;
+  // Simkl returns dates as "YYYY-MM-DD HH:MM:SS" — replace space with T for ISO
+  const normalized = dateStr.includes("T") ? dateStr : dateStr.replace(" ", "T") + "Z";
+  const d = new Date(normalized);
+  if (Number.isNaN(d.getTime())) return null;
+  return Math.floor(d.getTime() / 1000);
+}
+
 export default class SimklConnection extends BaseConnection {
   public readonly providerKey = ConnectionProvider.SIMKL;
 
@@ -655,6 +666,8 @@ export default class SimklConnection extends BaseConnection {
                   progress,
                   score,
                   notes,
+                  startDate: parseSimklDate(entry.watched_at || entry.last_watched_at || entry.created_at),
+                  endDate: mappedStatus === "COMPLETED" ? parseSimklDate(entry.last_watched_at || entry.watched_at) : null,
                 });
               }
             } else if (type === "tv") {
@@ -702,6 +715,8 @@ export default class SimklConnection extends BaseConnection {
                   score,
                   notes,
                   watchedEpisodes,
+                  startDate: parseSimklDate(entry.watched_at || entry.last_watched_at || entry.created_at),
+                  endDate: mappedStatus === "COMPLETED" ? parseSimklDate(entry.last_watched_at || entry.watched_at) : null,
                 });
               }
             } else if (type === "movies") {
@@ -733,6 +748,8 @@ export default class SimklConnection extends BaseConnection {
                   progress: mappedStatus === "COMPLETED" ? 1 : 0,
                   score,
                   notes,
+                  startDate: parseSimklDate(entry.watched_at || entry.last_watched_at || entry.created_at),
+                  endDate: mappedStatus === "COMPLETED" ? parseSimklDate(entry.last_watched_at || entry.watched_at) : null,
                 });
               }
             }

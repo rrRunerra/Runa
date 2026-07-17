@@ -7,6 +7,7 @@ import { FilesService } from './files.service';
 import { FilesController } from './files.controller';
 import { LacertaCollabGateway } from './collab.gateway';
 import { LacertaSharingGateway } from './sharing.gateway';
+import { FilesCleanupService } from './files-cleanup.service';
 
 @Module({
   imports: [PrismaModule],
@@ -16,6 +17,7 @@ import { LacertaSharingGateway } from './sharing.gateway';
     FilesRepository,
     LacertaCollabGateway,
     LacertaSharingGateway,
+    FilesCleanupService,
   ],
   exports: [FilesService],
 })

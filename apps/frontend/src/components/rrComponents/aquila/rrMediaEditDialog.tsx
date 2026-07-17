@@ -210,107 +210,11 @@ export function RrMediaEditDialog({
     }
   }, [favoriteData]);
 
+  // Reset form state only when the dialog closes — NOT when listEntryData is
+  // transiently undefined while SWR is loading. Separating reset from population
+  // prevents a race condition where the loading state wipes dates before they arrive.
   useEffect(() => {
-    if (listEntryData) {
-      setListStatus(listEntryData.status || "PLANNING");
-      setScore(listEntryData.score ? listEntryData.score.toString() : "");
-
-      if (mediaType === "manga" || mediaType === "book") {
-        setProgress(
-          listEntryData.chapters ? listEntryData.chapters.toString() : "",
-        );
-        setVolumes(
-          listEntryData.volumes ? listEntryData.volumes.toString() : "",
-        );
-        setRewatches(
-          listEntryData.reread ? listEntryData.reread.toString() : "0",
-        );
-      } else if (mediaType === "game") {
-        setProgress(
-          listEntryData.progress ? listEntryData.progress.toString() : "",
-        );
-      } else {
-        setProgress(
-          listEntryData.progress ? listEntryData.progress.toString() : "",
-        );
-        setRewatches(
-          listEntryData.rewatched ? listEntryData.rewatched.toString() : "0",
-        );
-      }
-
-      setNotes(listEntryData.notes || "");
-      setStartDate(
-        listEntryData.startDate
-          ? new Date(listEntryData.startDate * 1000)
-          : undefined,
-      );
-      setFinishDate(
-        listEntryData.endDate
-          ? new Date(listEntryData.endDate * 1000)
-          : undefined,
-      );
-
-      if (mediaType === "tv") {
-        setWatchedEpisodes(listEntryData.watchedEpisodes || []);
-      }
-
-      // Map connection overrides details
-      const rawConnections = listEntryData.connections || {};
-      const loadedConnections: Record<string, any> = {};
-      for (const key of Object.keys(rawConnections)) {
-        const conn = rawConnections[key];
-        const cleanKey = key.toLowerCase();
-        if (conn && typeof conn === "object") {
-          let connProgress: string | undefined = undefined;
-          const currentProgressNum =
-            Number(
-              mediaType === "manga" || mediaType === "book"
-                ? listEntryData.chapters
-                : listEntryData.progress,
-            ) || 0;
-
-          if (conn.progressOffset !== undefined) {
-            connProgress = (
-              currentProgressNum + Number(conn.progressOffset)
-            ).toString();
-          } else if (conn.chaptersOffset !== undefined) {
-            connProgress = (
-              currentProgressNum + Number(conn.chaptersOffset)
-            ).toString();
-          } else if (conn.progress !== undefined) {
-            connProgress = conn.progress.toString();
-          } else if (conn.chapters !== undefined) {
-            connProgress = conn.chapters.toString();
-          }
-
-          let connVolumes: string | undefined = undefined;
-          if (conn.volumesOffset !== undefined) {
-            connVolumes = (
-              Number(listEntryData.volumes || 0) + Number(conn.volumesOffset)
-            ).toString();
-          } else if (conn.volumes !== undefined) {
-            connVolumes = conn.volumes.toString();
-          }
-
-          loadedConnections[cleanKey] = {
-            id: conn.id,
-            status: conn.status,
-            progress: connProgress,
-            volumes: connVolumes,
-            startDate: conn.startDate
-              ? new Date(conn.startDate * 1000)
-              : undefined,
-            endDate: conn.endDate ? new Date(conn.endDate * 1000) : undefined,
-          };
-        } else {
-          loadedConnections[cleanKey] = conn;
-        }
-      }
-      setConnections(loadedConnections);
-      setUpdateConnection(Object.keys(loadedConnections).length > 0);
-      setHasListEntry(true);
-    } else {
-      // Clean states on dialog close or entry not found
+    if (!open) {
       setListStatus("PLANNING");
       setScore("");
       setProgress("");
@@ -324,6 +228,109 @@ export function RrMediaEditDialog({
       setUpdateConnection(false);
       setHasListEntry(false);
     }
+  }, [open]);
+
+  // Populate form state from the fetched list entry whenever it becomes available.
+  useEffect(() => {
+    if (!listEntryData) return;
+
+    setListStatus(listEntryData.status || "PLANNING");
+    setScore(listEntryData.score ? listEntryData.score.toString() : "");
+
+    if (mediaType === "manga" || mediaType === "book") {
+      setProgress(
+        listEntryData.chapters ? listEntryData.chapters.toString() : "",
+      );
+      setVolumes(
+        listEntryData.volumes ? listEntryData.volumes.toString() : "",
+      );
+      setRewatches(
+        listEntryData.reread ? listEntryData.reread.toString() : "0",
+      );
+    } else if (mediaType === "game") {
+      setProgress(
+        listEntryData.progress ? listEntryData.progress.toString() : "",
+      );
+    } else {
+      setProgress(
+        listEntryData.progress ? listEntryData.progress.toString() : "",
+      );
+      setRewatches(
+        listEntryData.rewatched ? listEntryData.rewatched.toString() : "0",
+      );
+    }
+
+    setNotes(listEntryData.notes || "");
+    setStartDate(
+      listEntryData.startDate
+        ? new Date(listEntryData.startDate * 1000)
+        : undefined,
+    );
+    setFinishDate(
+      listEntryData.endDate
+        ? new Date(listEntryData.endDate * 1000)
+        : undefined,
+    );
+
+    if (mediaType === "tv") {
+      setWatchedEpisodes(listEntryData.watchedEpisodes || []);
+    }
+
+    // Map connection override details
+    const rawConnections = listEntryData.connections || {};
+    const loadedConnections: Record<string, any> = {};
+    for (const key of Object.keys(rawConnections)) {
+      const conn = rawConnections[key];
+      const cleanKey = key.toLowerCase();
+      if (conn && typeof conn === "object") {
+        let connProgress: string | undefined = undefined;
+        const currentProgressNum =
+          Number(
+            mediaType === "manga" || mediaType === "book"
+              ? listEntryData.chapters
+              : listEntryData.progress,
+          ) || 0;
+
+        if (conn.progressOffset !== undefined) {
+          connProgress = (
+            currentProgressNum + Number(conn.progressOffset)
+          ).toString();
+        } else if (conn.chaptersOffset !== undefined) {
+          connProgress = (
+            currentProgressNum + Number(conn.chaptersOffset)
+          ).toString();
+        } else if (conn.progress !== undefined) {
+          connProgress = conn.progress.toString();
+        } else if (conn.chapters !== undefined) {
+          connProgress = conn.chapters.toString();
+        }
+
+        let connVolumes: string | undefined = undefined;
+        if (conn.volumesOffset !== undefined) {
+          connVolumes = (
+            Number(listEntryData.volumes || 0) + Number(conn.volumesOffset)
+          ).toString();
+        } else if (conn.volumes !== undefined) {
+          connVolumes = conn.volumes.toString();
+        }
+
+        loadedConnections[cleanKey] = {
+          id: conn.id,
+          status: conn.status,
+          progress: connProgress,
+          volumes: connVolumes,
+          startDate: conn.startDate
+            ? new Date(conn.startDate * 1000)
+            : undefined,
+          endDate: conn.endDate ? new Date(conn.endDate * 1000) : undefined,
+        };
+      } else {
+        loadedConnections[cleanKey] = conn;
+      }
+    }
+    setConnections(loadedConnections);
+    setUpdateConnection(Object.keys(loadedConnections).length > 0);
+    setHasListEntry(true);
   }, [listEntryData, mediaType]);
 
   const userConnections = Array.isArray(userConnectionsData)
@@ -562,8 +569,8 @@ export function RrMediaEditDialog({
 
     const basePayload: Record<string, any> = {
       status: listStatus,
-      startDate: startDate ? Math.floor(startDate.getTime() / 1000) : undefined,
-      endDate: finishDate ? Math.floor(finishDate.getTime() / 1000) : undefined,
+      startDate: startDate ? Math.floor(startDate.getTime() / 1000) : null,
+      endDate: finishDate ? Math.floor(finishDate.getTime() / 1000) : null,
       score: score ? Number(score) : undefined,
       notes: notes || undefined,
       updateConnection,

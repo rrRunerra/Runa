@@ -3,10 +3,16 @@ import { RenderFileItem } from "@/components/rrComponents/lacerta/FileCard";
 export type LacertaTab = "files" | "vault" | "shared" | "trash";
 
 export interface UploadQueueTask {
+  /** Stable file ID from the backend (used as IndexedDB key for resume) */
   id: string;
   name: string;
+  /** 0-100 overall progress percentage */
   progress: number;
-  status: "encrypting" | "uploading" | "completed" | "error";
+  status: "encrypting" | "uploading" | "paused" | "completed" | "error" | "resumable";
+  /** Total number of 32 MiB chunks for this file */
+  totalChunks?: number;
+  /** Number of chunks successfully uploaded so far */
+  completedChunks?: number;
   errorMsg?: string;
 }
 
@@ -24,6 +30,8 @@ export interface RawFileItem {
   userId: string;
   parentId: string | null;
   wrappedKey?: string;
+  /** null/undefined = single-block (old upload); N = chunked E2EE upload with N parts */
+  chunkCount?: number | null;
   user: {
     id: string;
     username: string;
