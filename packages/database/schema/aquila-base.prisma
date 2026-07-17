@@ -1,0 +1,103 @@
+model AquilaCharacter {
+    id        Int  @id @default(autoincrement())
+    anilistId Int? @unique
+
+    nameFirst              String?  @db.Text
+    nameMiddle             String?  @db.Text
+    nameLast               String?  @db.Text
+    nameNative             String?  @db.Text
+    nameAlternative        String[] @db.Text
+    nameAlternativeSpoiler String[] @db.Text
+
+    image String? @db.Text
+
+    description String? @db.Text
+    gender      String?
+    age         String?
+    bloodType   String?
+
+    dateOfBirthYear  Int?
+    dateOfBirthMonth Int?
+    dateOfBirthDay   Int?
+
+    animeCharacters AquilaAnimeCharacter[]
+    mangaCharacters AquilaMangaCharacter[]
+    movieCharacters AquilaMovieCharacter[]
+    tvCharacters    AquilaTvCharacter[]
+
+    @@index([anilistId])
+}
+
+model AquilaStudio {
+    id        Int  @id @default(autoincrement())
+    anilistId Int? @unique
+
+    name              String?  @db.Text
+    isAnimationStudio Boolean? @default(false)
+    siteUrl           String?  @db.Text
+
+    animeStudios AquilaAnimeStudio[]
+    mangaStudios AquilaMangaStudio[]
+
+    @@index([anilistId])
+}
+
+model AquilaActor {
+    id             Int  @id @default(autoincrement())
+    peopleId       Int? @unique
+    anilistStaffId Int? @unique
+
+    name       String? @db.Text
+    personName String? @db.Text
+    image      String? @db.Text
+    peopleType String?
+
+    movieCharacters AquilaMovieCharacter[]
+    tvCharacters    AquilaTvCharacter[]
+    animeCharacters AquilaAnimeCharacter[]
+
+    @@index([peopleId])
+    @@index([anilistStaffId])
+}
+
+model AquilaMediaRelation {
+    id             Int     @id @default(autoincrement())
+    animeId        Int?
+    mangaId        Int?
+    relatedAnimeId Int?
+    relatedMangaId Int?
+    relationType   String?
+
+    anime        AquilaAnime? @relation(fields: [animeId], references: [id], onDelete: Cascade)
+    manga        AquilaManga? @relation("MediaRelationManga", fields: [mangaId], references: [id])
+    relatedAnime AquilaAnime? @relation("MediaRelationFrom", fields: [relatedAnimeId], references: [id])
+    relatedManga AquilaManga? @relation("MediaRelationRelatedManga", fields: [relatedMangaId], references: [id])
+
+    @@index([animeId])
+    @@index([mangaId])
+}
+
+model Favorite {
+    id        String       @id @default(nanoid())
+    userId    String
+    type      FavoriteType
+    mediaId   String
+    createdAt DateTime     @default(now())
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, type, mediaId])
+    @@index([userId])
+}
+
+enum FavoriteType {
+    ANIME
+    MANGA
+    MOVIE
+    TV
+    BOOK
+    GAME
+    USER
+    CHARACTER
+    STAFF
+}

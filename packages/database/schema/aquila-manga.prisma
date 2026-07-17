@@ -1,0 +1,139 @@
+model AquilaManga {
+    id        Int  @id @default(autoincrement())
+    anilistId Int? @unique
+    malId     Int? @unique
+
+    titleEnglish String? @db.Text
+    titleRomaji  String? @db.Text
+    titleNative  String? @db.Text
+
+    coverImageLarge String? @db.Text
+
+    bannerImage String? @db.Text
+    description String? @db.Text
+
+    startDateYear  Int?
+    startDateMonth Int?
+    startDateDay   Int?
+
+    endDateYear  Int?
+    endDateMonth Int?
+    endDateDay   Int?
+
+    chapters Int?
+    volumes  Int?
+
+    genres String[] @db.Text
+    tags   Json?    @db.Json
+
+    source  String?
+    format  MangaFormat @default(UNKNOWN)
+    status  MangaStatus @default(NOT_YET_RELEASED)
+    isAdult Boolean?    @db.Boolean
+
+    averageScore    Int?
+    favourites      Int?
+    synonyms        String[] @db.Text
+    hashtag         String?
+    countryOfOrigin String?
+
+    locked           Boolean  @default(false)
+    anilistUpdatedAt Int?
+    createdAt        DateTime @default(now())
+    updatedAt        DateTime @updatedAt
+
+    localPopularity            Int                    @default(0)
+    localFavoritesCount        Int                    @default(0)
+    localAverageScore          Float                  @default(0)
+    localStatusDistribution    Json                   @default("{}") @db.Json
+    localScoreDistribution     Json                   @default("{}") @db.Json
+    localTotalScoreSum         Int                    @default(0)
+    localScoredCount           Int                    @default(0)
+    aquilaUserLists            AquilaMangaUserList[]
+    mangaCharacters            AquilaMangaCharacter[]
+    mangaStudios               AquilaMangaStudio[]
+    mangaMangaRelations        AquilaMediaRelation[]  @relation("MediaRelationManga")
+    mangaRelatedMangaRelations AquilaMediaRelation[]  @relation("MediaRelationRelatedManga")
+
+    @@index([anilistId])
+    @@index([malId])
+    @@index([titleEnglish])
+}
+
+model AquilaMangaCharacter {
+    mangaId     Int
+    characterId Int
+
+    role  String?
+    order Int?
+
+    manga     AquilaManga     @relation(fields: [mangaId], references: [id], onDelete: Cascade)
+    character AquilaCharacter @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+    @@id([mangaId, characterId])
+    @@index([mangaId])
+    @@index([characterId])
+}
+
+model AquilaMangaStudio {
+    mangaId  Int
+    studioId Int
+    isMain   Boolean? @default(false)
+
+    manga  AquilaManga  @relation(fields: [mangaId], references: [id], onDelete: Cascade)
+    studio AquilaStudio @relation(fields: [studioId], references: [id], onDelete: Cascade)
+
+    @@id([mangaId, studioId])
+    @@index([mangaId])
+    @@index([studioId])
+}
+
+model AquilaMangaUserList {
+    id       Int             @id @default(autoincrement())
+    username String
+    mangaId  Int
+    status   MangaListStatus @default(PLANNING)
+    chapters Int?
+    volumes  Int?
+    score    Int?
+    notes    String?         @db.Text
+    reread   Int?
+    private  Boolean         @default(false)
+
+    startDate Int?
+    endDate   Int?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    connections Json? @db.Json
+
+    user  User        @relation(fields: [username], references: [username])
+    manga AquilaManga @relation(fields: [mangaId], references: [id])
+
+    @@unique([username, mangaId])
+    @@index([username])
+    @@index([mangaId])
+}
+
+enum MangaFormat {
+    MANGA
+    NOVEL
+    ONE_SHOT
+    UNKNOWN
+}
+
+enum MangaStatus {
+    FINISHED
+    RELEASING
+    NOT_YET_RELEASED
+    CANCELLED
+}
+
+enum MangaListStatus {
+    PLANNING
+    READING
+    COMPLETED
+    ON_HOLD
+    DROPPED
+}

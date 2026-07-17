@@ -1,0 +1,85 @@
+model AquilaBook {
+    id           Int    @id @default(autoincrement())
+    googleBookId String @unique
+
+    titleString String? @db.Text
+    subtitle    String? @db.Text
+    coverImage  String? @db.Text
+    description String? @db.Text
+
+    publishedYear  Int?
+    publishedMonth Int?
+    publishedDay   Int?
+    publishedDate  String?
+
+    subjects   String[] @db.Text
+    authors    String[] @db.Text
+    artists    String[] @db.Text
+    publishers String[] @db.Text
+
+    pages     Int?
+    pageCount Int?
+    chapters  Int?
+
+    averageRating       Float?
+    ratingsCount        Int?
+    language            String?
+    isbn10              String?
+    isbn13              String?
+    previewLink         String? @db.Text
+    infoLink            String? @db.Text
+    buyLink             String? @db.Text
+    retailPrice         Float?
+    retailPriceCurrency String?
+    maturityRating      String?
+    publisher           String? @db.Text
+
+    locked    Boolean  @default(false)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    localPopularity         Int                  @default(0)
+    localFavoritesCount     Int                  @default(0)
+    localAverageScore       Float                @default(0)
+    localStatusDistribution Json                 @default("{}") @db.Json
+    localScoreDistribution  Json                 @default("{}") @db.Json
+    localTotalScoreSum      Int                  @default(0)
+    localScoredCount        Int                  @default(0)
+    aquilaUserLists         AquilaBookUserList[]
+
+    @@index([googleBookId])
+    @@index([titleString])
+}
+
+model AquilaBookUserList {
+    id       Int            @id @default(autoincrement())
+    username String
+    bookId   Int
+    status   BookListStatus @default(PLANNING)
+    chapters Int?
+    volumes  Int?
+    score    Int?
+    notes    String?        @db.Text
+    private  Boolean        @default(false)
+
+    startDate Int?
+    endDate   Int?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    user User       @relation(fields: [username], references: [username])
+    book AquilaBook @relation(fields: [bookId], references: [id])
+
+    @@unique([username, bookId])
+    @@index([username])
+    @@index([bookId])
+}
+
+enum BookListStatus {
+    PLANNING
+    READING
+    COMPLETED
+    ON_HOLD
+    DROPPED
+}

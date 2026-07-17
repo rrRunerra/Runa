@@ -1,0 +1,101 @@
+model AquilaMovie {
+    id     Int     @id @default(autoincrement())
+    tvdbId Int     @unique
+    tmdbId Int?
+    imdbId String?
+
+    titleEnglish String? @db.Text
+    titleRomaji  String? @db.Text
+    titleNative  String? @db.Text
+
+    coverImage  String? @db.Text
+    bannerImage String? @db.Text
+    description String? @db.Text
+    slug        String?
+
+    releaseDate String?
+    status      String?
+    runtime     Int?
+    budget      String?
+    boxOffice   String?
+
+    genres  String[] @db.Text
+    studios String[] @db.Text
+
+    startDateYear  Int?
+    startDateMonth Int?
+    startDateDay   Int?
+
+    trailers Json? @db.Json
+
+    originalCountry  String?
+    originalLanguage String?
+    contentRating    String?
+
+    locked    Boolean  @default(false)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    localPopularity         Int                    @default(0)
+    localFavoritesCount     Int                    @default(0)
+    localAverageScore       Float                  @default(0)
+    localStatusDistribution Json                   @default("{}") @db.Json
+    localScoreDistribution  Json                   @default("{}") @db.Json
+    localTotalScoreSum      Int                    @default(0)
+    localScoredCount        Int                    @default(0)
+    aquilaMovieUserLists    AquilaMovieUserList[]
+    movieCharacters         AquilaMovieCharacter[]
+
+    @@index([tvdbId])
+    @@index([tmdbId])
+}
+
+model AquilaMovieCharacter {
+    movieId     Int
+    characterId Int
+    actorId     Int?
+
+    role  String?
+    order Int?
+
+    movie     AquilaMovie     @relation(fields: [movieId], references: [id], onDelete: Cascade)
+    character AquilaCharacter @relation(fields: [characterId], references: [id], onDelete: Cascade)
+    actor     AquilaActor?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+    @@id([movieId, characterId])
+    @@index([movieId])
+    @@index([characterId])
+    @@index([actorId])
+}
+
+model AquilaMovieUserList {
+    id        Int             @id @default(autoincrement())
+    username  String
+    movieId   Int
+    status    MovieListStatus @default(PLANNING)
+    score     Int?
+    notes     String?         @db.Text
+    rewatched Int?
+    private   Boolean         @default(false)
+
+    startDate Int?
+    endDate   Int?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    connections Json? @db.Json
+
+    user  User        @relation(fields: [username], references: [username])
+    movie AquilaMovie @relation(fields: [movieId], references: [id])
+
+    @@unique([username, movieId])
+    @@index([username])
+    @@index([movieId])
+}
+
+enum MovieListStatus {
+    COMPLETED
+    PLANNING
+    DROPPED
+}

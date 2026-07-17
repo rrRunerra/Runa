@@ -1,0 +1,96 @@
+model LynxHomeworkExists {
+    id             Int    @id @default(autoincrement())
+    superID        String
+    title          String
+    forumChannelID String
+    forumID        String
+    guilID         String
+
+    @@index([superID])
+    @@index([forumChannelID])
+    @@index([forumID])
+    @@index([guilID])
+}
+
+model LynxHomeWorkChannels {
+    guildId  String @id
+    channels Json   @db.Json
+
+    @@index([guildId])
+}
+
+model LynxRngRigConfig {
+    id             String @id @default(nanoid())
+    ignoredNumbers Json   @db.Json
+}
+
+model LynxKickHistory {
+    id        String   @id @default(nanoid())
+    userId    String
+    guildId   String
+    moderator String
+    reason    String
+    createdAt DateTime @default(now())
+
+    @@index([userId])
+    @@index([guildId])
+}
+
+model LynxBanHistory {
+    id        String    @id @default(nanoid())
+    userId    String
+    guildId   String
+    moderator String
+    reason    String
+    duration  Int
+    until     DateTime?
+    createdAt DateTime  @default(now())
+
+    @@index([userId])
+    @@index([guildId])
+}
+
+model LynxClearBatch {
+    id          String               @id @default(nanoid())
+    guildId     String
+    channelId   String
+    moderatorId String
+    createdAt   DateTime             @default(now())
+    messages    LynxClearedMessage[]
+
+    @@index([guildId])
+    @@index([channelId])
+}
+
+model LynxClearedMessage {
+    id          String         @id @default(nanoid())
+    batchId     String
+    authorId    String
+    username    String
+    avatarUrl   String?
+    content     String?
+    embeds      Json?          @db.Json
+    attachments Json?          @db.Json
+    createdAt   DateTime       @default(now())
+    timestamp   DateTime
+    batch       LynxClearBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+    @@index([batchId])
+}
+
+model LynxLogs {
+    id        Int         @id @default(autoincrement())
+    type      LynxLogType
+    message   String
+    context   String?
+    metadata  Json?       @db.Json
+    createdAt DateTime    @default(now())
+}
+
+enum LynxLogType {
+    INFO
+    WARN
+    ERROR
+    DEBUG
+    VERBOSE
+}

@@ -1,0 +1,79 @@
+model AquilaGame {
+    id     Int @id @default(autoincrement())
+    rawgId Int @unique
+
+    titleString String? @db.Text
+    titleNative String? @db.Text
+    slug        String?
+
+    coverImage      String? @db.Text
+    backgroundImage String? @db.Text
+    description     String? @db.Text
+
+    releasedYear  Int?
+    releasedMonth Int?
+    releasedDay   Int?
+
+    released String?
+
+    genres     String[] @db.Text
+    platforms  String[] @db.Text
+    developers String[] @db.Text
+    publishers String[] @db.Text
+    tags       Json?    @db.Json
+
+    averageScore Float?
+    popularity   Int?
+    metacritic   Int?
+    rating       Float?
+    ratingsCount Int?
+    esrbRating   String?
+
+    locked    Boolean  @default(false)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    localPopularity         Int                  @default(0)
+    localFavoritesCount     Int                  @default(0)
+    localAverageScore       Float                @default(0)
+    localStatusDistribution Json                 @default("{}") @db.Json
+    localScoreDistribution  Json                 @default("{}") @db.Json
+    localTotalScoreSum      Int                  @default(0)
+    localScoredCount        Int                  @default(0)
+    aquilaUserLists         AquilaGameUserList[]
+
+    @@index([rawgId])
+    @@index([titleString])
+}
+
+model AquilaGameUserList {
+    id       Int            @id @default(autoincrement())
+    username String
+    gameId   Int
+    status   GameListStatus @default(PLANNING)
+    progress Int? // Hours played
+    score    Int?
+    notes    String?        @db.Text
+    private  Boolean        @default(false)
+
+    startDate Int?
+    endDate   Int?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    user User       @relation(fields: [username], references: [username])
+    game AquilaGame @relation(fields: [gameId], references: [id])
+
+    @@unique([username, gameId])
+    @@index([username])
+    @@index([gameId])
+}
+
+enum GameListStatus {
+    PLANNING
+    PLAYING
+    COMPLETED
+    ON_HOLD
+    DROPPED
+}

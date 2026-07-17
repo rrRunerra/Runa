@@ -1,0 +1,116 @@
+model AquilaTv {
+    id     Int     @id @default(autoincrement())
+    tvdbId Int     @unique
+    tmdbId Int?
+    imdbId String?
+
+    titleEnglish String? @db.Text
+    titleRomaji  String? @db.Text
+    titleNative  String? @db.Text
+
+    coverImage  String? @db.Text
+    bannerImage String? @db.Text
+    description String? @db.Text
+    slug        String?
+
+    status           String?
+    originalCountry  String?
+    originalLanguage String?
+    averageRuntime   Int?
+    firstAired       String?
+
+    genres  String[] @db.Text
+    studios String[] @db.Text
+
+    startDateYear  Int?
+    startDateMonth Int?
+    startDateDay   Int?
+
+    seasons  Json? @db.Json
+    trailers Json? @db.Json
+
+    contentRating String?
+
+    locked    Boolean  @default(false)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    localPopularity         Int                 @default(0)
+    localFavoritesCount     Int                 @default(0)
+    localAverageScore       Float               @default(0)
+    localStatusDistribution Json                @default("{}") @db.Json
+    localScoreDistribution  Json                @default("{}") @db.Json
+    localTotalScoreSum      Int                 @default(0)
+    localScoredCount        Int                 @default(0)
+    aquilaUserLists         AquilaTvUserList[]
+    tvCharacters            AquilaTvCharacter[]
+
+    @@index([tvdbId])
+    @@index([tmdbId])
+}
+
+model AquilaTvCharacter {
+    tvId        Int
+    characterId Int
+    actorId     Int?
+
+    role  String?
+    order Int?
+
+    tv        AquilaTv        @relation(fields: [tvId], references: [id], onDelete: Cascade)
+    character AquilaCharacter @relation(fields: [characterId], references: [id], onDelete: Cascade)
+    actor     AquilaActor?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+    @@id([tvId, characterId])
+    @@index([tvId])
+    @@index([characterId])
+    @@index([actorId])
+}
+
+model AquilaTvUserList {
+    id        Int          @id @default(autoincrement())
+    username  String
+    tvId      Int
+    status    TvListStatus @default(PLANNING)
+    score     Int?
+    notes     String?      @db.Text
+    rewatched Int?
+    private   Boolean      @default(false)
+
+    startDate Int?
+    endDate   Int?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    connections Json? @db.Json
+
+    user            User                     @relation(fields: [username], references: [username])
+    tv              AquilaTv                 @relation(fields: [tvId], references: [id])
+    watchedEpisodes AquilaTvWatchedEpisode[]
+
+    @@unique([username, tvId])
+    @@index([username])
+    @@index([tvId])
+}
+
+model AquilaTvWatchedEpisode {
+    id         Int      @id @default(autoincrement())
+    listId     Int
+    seasonNum  Int
+    episodeNum Int
+    watchedAt  DateTime @default(now())
+
+    list AquilaTvUserList @relation(fields: [listId], references: [id], onDelete: Cascade)
+
+    @@unique([listId, seasonNum, episodeNum])
+    @@index([listId])
+}
+
+enum TvListStatus {
+    WATCHING
+    PLANNING
+    COMPLETED
+    ON_HOLD
+    DROPPED
+}
