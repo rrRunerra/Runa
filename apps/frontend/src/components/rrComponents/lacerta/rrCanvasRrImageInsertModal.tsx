@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { ImageIcon, X, Loader2, Code2 } from "lucide-react";
 
-import { CanvasNodeType, CanvasNode } from "./CanvasEditor";
+import { CanvasNodeType, CanvasNode } from "./types";
 import { SVG_KEYS, SVG_COMPONENTS, svgKeyToLabel } from "./rrImageRegistry";
 import { useTranslation } from "react-i18next";
 

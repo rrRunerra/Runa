@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { toast } from "sonner";
-import { CanvasNodeType, CanvasNode } from "./CanvasEditor";
+import { CanvasNodeType, CanvasNode } from "./types";
 import { useTranslation } from "react-i18next";
 
 interface RrCanvasVideoInsertModalProps {

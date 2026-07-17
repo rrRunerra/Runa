@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
-import { CanvasNodeType, CanvasNode } from "./CanvasEditor";
+import { CanvasNodeType, CanvasNode } from "./types";
 import { useTranslation } from "react-i18next";
 
 interface RrCanvasGifInsertModalProps {

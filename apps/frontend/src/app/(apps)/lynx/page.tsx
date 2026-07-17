@@ -1,8 +1,8 @@
 import { auth } from "@runa/auth";
 import { prisma } from "@runa/database";
-import LynxDashboardClient from "@/components/lynx/LynxDashboardClient";
+import LynxDashboardClient, { StatsPayload } from "@/components/lynx/LynxDashboardClient";
 
-async function getStats(): Promise<unknown> {
+async function getStats(): Promise<StatsPayload | null> {
   const backendUrl = `${process.env.LYNX_API_URL}/stats`;
   try {
     const res = await fetch(backendUrl, {

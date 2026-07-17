@@ -28,7 +28,7 @@ interface LogEntry {
   createdAt: Date | string;
 }
 
-interface StatsPayload {
+export interface StatsPayload {
   status: "online" | "idle" | "dnd" | "offline";
   profile: {
     name: string;

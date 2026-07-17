@@ -4,7 +4,7 @@ import React from "react";
 import { FileText } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { wrapKey } from "@runa/crypto/browser";
-import { CanvasNodeType, CanvasNode } from "./CanvasEditor";
+import { CanvasNodeType, CanvasNode } from "./types";
 import { useTranslation } from "react-i18next";
 
 interface RrCanvasFileInsertModalProps {
