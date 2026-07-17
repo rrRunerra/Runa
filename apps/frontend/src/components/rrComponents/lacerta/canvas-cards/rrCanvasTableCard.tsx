@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { CanvasNode } from "../CanvasEditor";
+import { CanvasNode } from "../types";
+import { useTranslation } from "react-i18next";
 
 interface RrCanvasTableCardProps {
   node: CanvasNode;
@@ -9,7 +10,8 @@ interface RrCanvasTableCardProps {
   onNodeUpdate: (updates: Partial<CanvasNode>) => void;
 }
 
-export default function RrCanvasTableCard({ node, isLocked = false, onNodeUpdate }: RrCanvasTableCardProps) {
+export default function RrCanvasTableCard({ node, isLocked = false, onNodeUpdate }: RrCanvasTableCardProps): React.JSX.Element {
+  const { t } = useTranslation();
   const currentTable = node.tableData || [["", ""]];
 
   const handleAddRow = () => {
@@ -57,7 +59,7 @@ export default function RrCanvasTableCard({ node, isLocked = false, onNodeUpdate
     >
       <div className="flex items-center justify-between border-b border-border pb-1.5 mb-1.5 shrink-0">
         <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">
-          Spreadsheet Grid
+          {t("lacerta.canvasEditor.spreadsheetGrid", "Spreadsheet Grid")}
         </span>
         {!isLocked && (
           <div className="flex gap-1.5">
@@ -65,25 +67,25 @@ export default function RrCanvasTableCard({ node, isLocked = false, onNodeUpdate
               onClick={handleAddRow}
               className="px-1.5 py-0.5 bg-muted hover:bg-muted/80 rounded text-[8px] font-bold text-primary transition-all active:scale-95"
             >
-              + Row
+              {t("lacerta.canvasEditor.plusRow", "+ Row")}
             </button>
             <button
               onClick={handleAddCol}
               className="px-1.5 py-0.5 bg-muted hover:bg-muted/80 rounded text-[8px] font-bold text-success transition-all active:scale-95"
             >
-              + Col
+              {t("lacerta.canvasEditor.plusCol", "+ Col")}
             </button>
             <button
               onClick={handleRemoveRow}
               className="px-1.5 py-0.5 bg-muted hover:bg-muted/80 rounded text-[8px] font-bold text-destructive transition-all active:scale-95"
             >
-              - Row
+              {t("lacerta.canvasEditor.minusRow", "- Row")}
             </button>
             <button
               onClick={handleRemoveCol}
               className="px-1.5 py-0.5 bg-muted hover:bg-muted/80 rounded text-[8px] font-bold text-warning transition-all active:scale-95"
             >
-              - Col
+              {t("lacerta.canvasEditor.minusCol", "- Col")}
             </button>
           </div>
         )}

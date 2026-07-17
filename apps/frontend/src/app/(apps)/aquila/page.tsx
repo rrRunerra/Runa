@@ -12,6 +12,7 @@ import { fetcher } from "@/lib/fetcher";
 import { MediaItem } from "@/types/aquila";
 import { RrMediaSection } from "@/components/rrComponents/aquila/rrMediaSection";
 import RrLapplandBook from "@/components/rrComponents/rrImages/rrLapplandBook";
+import { useTranslation } from "react-i18next";
 
 type CategoryType = "anime" | "manga" | "tv" | "movie" | "game" | "book";
 
@@ -24,19 +25,8 @@ const DEFAULT_ORDER: CategoryType[] = [
   "book",
 ];
 
-const CATEGORY_CONFIG: Record<
-  CategoryType,
-  { title: string; icon: React.JSX.Element }
-> = {
-  anime: { title: "Anime", icon: <Play className="size-4" /> },
-  manga: { title: "Manga", icon: <BookOpen className="size-4" /> },
-  tv: { title: "TV Shows", icon: <Tv className="size-4" /> },
-  movie: { title: "Movies", icon: <Film className="size-4" /> },
-  game: { title: "Games", icon: <Gamepad2 className="size-4" /> },
-  book: { title: "Books", icon: <BookOpen className="size-4" /> },
-};
-
 export default function AquilaHome(): React.JSX.Element {
+  const { t } = useTranslation();
   const { data: session, status } = useSession();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
@@ -47,6 +37,18 @@ export default function AquilaHome(): React.JSX.Element {
   );
   const [dragAllowedCategory, setDragAllowedCategory] =
     useState<CategoryType | null>(null);
+
+  const CATEGORY_CONFIG: Record<
+    CategoryType,
+    { title: string; icon: React.JSX.Element }
+  > = useMemo(() => ({
+    anime: { title: t("aquila.anime", "Anime"), icon: <Play className="size-4" /> },
+    manga: { title: t("aquila.manga", "Manga"), icon: <BookOpen className="size-4" /> },
+    tv: { title: t("aquila.tvShows", "TV Shows"), icon: <Tv className="size-4" /> },
+    movie: { title: t("aquila.movies", "Movies"), icon: <Film className="size-4" /> },
+    game: { title: t("aquila.games", "Games"), icon: <Gamepad2 className="size-4" /> },
+    book: { title: t("aquila.books", "Books"), icon: <BookOpen className="size-4" /> },
+  }), [t]);
 
   const handleDragStart = (e: React.DragEvent, category: CategoryType) => {
     e.dataTransfer.effectAllowed = "move";
@@ -150,7 +152,7 @@ export default function AquilaHome(): React.JSX.Element {
   }, []);
 
   useEffect(() => {
-    document.title = "Aquila > Home";
+    document.title = t("aquila.homeTitle", "Aquila > Home");
     return () => {
       // Clear any pending debounced API calls on unmount
       Object.values(pendingIncrementsRef.current).forEach((pending) => {
@@ -159,7 +161,7 @@ export default function AquilaHome(): React.JSX.Element {
         }
       });
     };
-  }, []);
+  }, [t]);
 
   const handleIncrement = async (item: MediaItem) => {
     if (status !== "authenticated" || !session?.accessToken) return;
@@ -194,7 +196,7 @@ export default function AquilaHome(): React.JSX.Element {
     }
 
     pending.timeoutId = setTimeout(async () => {
-      const { count, originalProgress } = pending;
+      const { count } = pending;
       delete pendingIncrementsRef.current[key];
       setUpdatingId(key);
 
@@ -214,18 +216,18 @@ export default function AquilaHome(): React.JSX.Element {
         if (res.ok) {
           const result = await res.json();
           if (result.success) {
-            toast.success(`Progress updated for ${item.title}`);
+            toast.success(t("aquila.progressUpdated", "Progress updated for {{title}}", { title: item.title }));
             mutate();
           } else {
             toast.error(result.message);
             mutate();
           }
         } else {
-          toast.error("Failed to update progress");
+          toast.error(t("aquila.failedUpdateProgress", "Failed to update progress"));
           mutate();
         }
       } catch (e) {
-        toast.error("An error occurred");
+        toast.error(t("aquila.errorOccurred", "An error occurred"));
         mutate();
       } finally {
         setUpdatingId(null);
@@ -251,19 +253,17 @@ export default function AquilaHome(): React.JSX.Element {
 
         <div className="relative z-10 flex-1 flex flex-col items-center justify-center min-h-[60vh] gap-6 text-center max-w-xl mx-auto">
           <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-foreground bg-clip-text bg-linear-to-r from-foreground via-foreground/95 to-primary">
-            Welcome to Aquila
+            {t("aquila.welcomeToAquila", "Welcome to Aquila")}
           </h1>
           <p className="text-muted-foreground text-sm sm:text-base leading-relaxed">
-            Keep track of your active anime, manga series, movies, games, and
-            reading books in one highly responsive, centralized, and customized
-            dashboard.
+            {t("aquila.welcomeDesc", "Keep track of your active anime, manga series, movies, games, and reading books in one highly responsive, centralized, and customized dashboard.")}
           </p>
           <Button
             size="lg"
             className="rounded-xl px-8 font-semibold tracking-wide cursor-pointer"
             asChild
           >
-            <Link href="/auth/login">Get Started</Link>
+            <Link href="/auth/login">{t("aquila.getStarted", "Get Started")}</Link>
           </Button>
         </div>
       </div>
@@ -289,11 +289,10 @@ export default function AquilaHome(): React.JSX.Element {
           <div className="flex-1 flex flex-col justify-center items-center text-center py-16 px-4 select-none relative z-10">
             <div className="space-y-4 max-w-sm">
               <h2 className="text-4xl font-black tracking-wider text-muted-foreground/20 uppercase leading-none">
-                Nothing Here
+                {t("aquila.nothingHere", "Nothing Here")}
               </h2>
               <p className="text-muted-foreground text-sm leading-relaxed">
-                It looks like your watch list is empty. Start browsing to find
-                and track your favorite media.
+                {t("aquila.emptyListDesc", "It looks like your watch list is empty. Start browsing to find and track your favorite media.")}
               </p>
               <div className="pt-2">
                 <Button
@@ -301,7 +300,7 @@ export default function AquilaHome(): React.JSX.Element {
                   className="px-6 rounded-xl border border-border/80 bg-background/50 hover:bg-accent transition-all text-xs tracking-wider uppercase font-bold cursor-pointer"
                   asChild
                 >
-                  <Link href="/aquila/browse">Browse Media</Link>
+                  <Link href="/aquila/browse">{t("aquila.browseMedia", "Browse Media")}</Link>
                 </Button>
               </div>
             </div>

@@ -7,6 +7,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { AlertCircle } from "lucide-react";
@@ -42,6 +43,7 @@ export function RrMediaConnectionSearchModal({
   connectionProviders,
   onSelectResult,
 }: RrMediaConnectionSearchModalProps): React.JSX.Element {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState<boolean>(false);
@@ -90,9 +92,9 @@ export function RrMediaConnectionSearchModal({
     } catch (err: any) {
       console.error(`Failed to search ${providerKey}`, err);
       setSearchError(
-        err.message || `An error occurred searching ${providerKey}.`,
+        err.message || t("aquila.searchErrorGeneric", { provider: providerKey }),
       );
-      toast.error(`Search failed: ${err.message || err}`);
+      toast.error(t("aquila.searchFailed", { error: err.message || err }));
     } finally {
       setIsSearching(false);
     }
@@ -107,11 +109,11 @@ export function RrMediaConnectionSearchModal({
       <DialogContent className="sm:max-w-[650px] md:max-w-[800px] bg-background/95 backdrop-blur-xl border border-border/60 rounded-2xl shadow-2xl text-foreground [&>button]:text-foreground [&>button]:z-60 p-6 flex flex-col gap-4">
         <DialogTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground/80 flex items-center justify-between">
           <span>
-            Search on {currentProvider?.name || activeSearchProvider}
+            {t("aquila.searchOnProvider", { provider: currentProvider?.name || activeSearchProvider })}
           </span>
         </DialogTitle>
         <DialogDescription className="sr-only">
-          Search and select a media item to link connection IDs.
+          {t("aquila.searchModalDescription")}
         </DialogDescription>
 
         {searchError && (
@@ -123,7 +125,7 @@ export function RrMediaConnectionSearchModal({
 
         <div className="flex gap-2 mt-1">
           <Input
-            placeholder={`Search ${currentProvider?.name || "media"}...`}
+            placeholder={t("aquila.searchProviderPlaceholder", { provider: currentProvider?.name || "media" })}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => {
@@ -138,7 +140,7 @@ export function RrMediaConnectionSearchModal({
             disabled={isSearching}
             className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl h-10 font-bold px-5 cursor-pointer text-xs transition-colors shrink-0"
           >
-            {isSearching ? "Searching..." : "Search"}
+            {isSearching ? t("aquila.searching") : t("aquila.search")}
           </Button>
         </div>
 
@@ -165,15 +167,15 @@ export function RrMediaConnectionSearchModal({
                   {result.title}
                 </p>
                 <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">
-                  {result.format || "Unknown"}
-                  {result.episodes ? ` · ${result.episodes} eps` : ""}
+                  {result.format || t("aquila.unknown")}
+                  {result.episodes ? ` · ${t("aquila.episodesCount", { count: result.episodes })}` : ""}
                 </p>
               </div>
             </button>
           ))}
           {!isSearching && searchResults.length === 0 && (
             <div className="text-center py-6 text-xs text-muted-foreground">
-              Type a query and press Search to find connection IDs.
+              {t("aquila.typeQueryToSearch")}
             </div>
           )}
         </div>

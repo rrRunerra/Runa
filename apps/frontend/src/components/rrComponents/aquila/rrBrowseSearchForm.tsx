@@ -3,6 +3,7 @@
 import React, { useRef, useState } from "react";
 import { Search, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -17,10 +18,13 @@ export const RrBrowseSearchForm = ({
   query,
   onChange,
   onSubmit,
-  placeholder = "Search titles... (try @anime, @manga to switch type)",
+  placeholder,
 }: RrBrowseSearchFormProps): React.JSX.Element => {
+  const { t } = useTranslation();
   const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const resolvedPlaceholder = placeholder ?? t("aquila.searchPlaceholder");
 
   return (
     <motion.form
@@ -50,7 +54,7 @@ export const RrBrowseSearchForm = ({
           onChange={(e) => onChange(e.target.value)}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
-          placeholder={placeholder}
+          placeholder={resolvedPlaceholder}
           className="pl-11 pr-10 h-12 bg-transparent border-none w-full text-base rounded-xl transition-all shadow-none! focus-visible:ring-0! outline-hidden"
         />
         <AnimatePresence>

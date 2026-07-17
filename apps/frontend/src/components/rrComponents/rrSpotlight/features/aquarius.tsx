@@ -35,10 +35,10 @@ export default class AquariusSpotlightFeature extends BaseSpotlightFeature {
     if (!context.isEncryptionUnlocked) {
       actions.push({
         id: "aquarius-unlock-warning",
-        label: "Unlock Encryption to search social messages",
+        label: context.t("spotlight.unlockSocialWarning"),
         category: "Actions",
         icon: <ShieldAlert className="size-4 text-warning" />,
-        badge: "Aquarius (Encrypted)",
+        badge: context.t("spotlight.aquariusEncrypted"),
         action: () => {
           context.setShowUnlockDialog(true);
         },

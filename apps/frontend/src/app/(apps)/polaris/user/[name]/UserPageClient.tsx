@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SidebarMenu, SidebarMenuItem } from "@/components/ui/sidebar";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
+import { useTranslation } from "react-i18next";
 
 // Shared Components
 import RrAppMenu from "@/components/rrComponents/rrAppMenu";
@@ -38,6 +39,7 @@ export interface UserProfileData {
 type TabType = "overview" | "favorites" | "lists" | "stats";
 
 export default function UserPageClient(): React.ReactNode {
+  const { t } = useTranslation();
   const params = useParams();
   const name = params?.name as string | undefined;
   const { data: session } = useSession();
@@ -108,16 +110,15 @@ export default function UserPageClient(): React.ReactNode {
             <Inbox className="size-8" aria-hidden="true" />
           </div>
           <h1 className="text-xl font-bold mb-2">
-            {error ? "Failed to load profile" : "User not found"}
+            {error ? t("polaris.user.failedLoadProfile", "Failed to load profile") : t("polaris.user.userNotFound", "User not found")}
           </h1>
           <p className="text-sm text-muted-foreground mb-6">
-            The profile page could not be loaded. Ensure the username spelling
-            is correct.
+            {t("polaris.user.profileNotFoundDesc", "The profile page could not be loaded. Ensure the username spelling is correct.")}
           </p>
           <Link href="/polaris">
             <Button variant="outline" className="flex items-center gap-2">
               <ArrowLeft className="size-4" aria-hidden="true" />
-              Back to Dashboard
+              {t("polaris.user.backToDashboard", "Back to Dashboard")}
             </Button>
           </Link>
         </div>
@@ -133,15 +134,14 @@ export default function UserPageClient(): React.ReactNode {
           <div className="p-3 rounded-xl bg-primary/10 text-primary mb-4">
             <Lock className="size-8" aria-hidden="true" />
           </div>
-          <h1 className="text-xl font-bold mb-2">This profile is private</h1>
+          <h1 className="text-xl font-bold mb-2">{t("polaris.user.profileIsPrivate", "This profile is private")}</h1>
           <p className="text-sm text-muted-foreground mb-6">
-            @{user.username} has chosen to keep their profile credentials
-            private.
+            {t("polaris.user.profilePrivateDesc", "@{{username}} has chosen to keep their profile credentials private.", { username: user.username })}
           </p>
           <Link href="/polaris">
             <Button variant="outline" className="flex items-center gap-2">
               <ArrowLeft className="size-4" aria-hidden="true" />
-              Back to Dashboard
+              {t("polaris.user.backToDashboard", "Back to Dashboard")}
             </Button>
           </Link>
         </div>
@@ -153,6 +153,13 @@ export default function UserPageClient(): React.ReactNode {
   const bio = user.profileSettings?.bio || "";
   const visibleConnections =
     user.connections?.filter((conn: any) => isOwner || !conn.private) || [];
+
+  const tabLabels: Record<TabType, string> = {
+    overview: t("polaris.user.tabs.overview", "Overview"),
+    favorites: t("polaris.user.tabs.favorites", "Favorites"),
+    lists: t("polaris.user.tabs.lists", "Lists"),
+    stats: t("polaris.user.tabs.stats", "Stats"),
+  };
 
   return (
     <div className="relative flex flex-col w-full min-h-screen gap-6 p-4 lg:p-6 bg-background text-foreground antialiased font-sans max-w-7xl mx-auto pb-24 mb-12">
@@ -216,14 +223,14 @@ export default function UserPageClient(): React.ReactNode {
                     variant="secondary"
                     className="font-semibold text-xs py-0.5"
                   >
-                    Profile
+                    {t("polaris.user.profileBadge", "Profile")}
                   </Badge>
                   {isOwner && (
                     <Badge
                       variant="outline"
                       className="font-semibold text-xs py-0.5"
                     >
-                      You
+                      {t("polaris.user.youBadge", "You")}
                     </Badge>
                   )}
                 </div>
@@ -260,7 +267,7 @@ export default function UserPageClient(): React.ReactNode {
                       : "text-muted-foreground hover:text-foreground hover:border-b-2 hover:border-muted-foreground/30 border-b-2 border-transparent",
                   )}
                 >
-                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  {tabLabels[tab]}
                 </button>
               );
             },

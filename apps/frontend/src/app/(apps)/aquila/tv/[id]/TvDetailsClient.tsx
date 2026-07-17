@@ -39,6 +39,7 @@ import { RrMediaDescription } from "@/components/rrComponents/aquila/details/rrM
 import { RrMediaGenres } from "@/components/rrComponents/aquila/details/rrMediaGenres";
 import { RrMediaCharacters } from "@/components/rrComponents/aquila/details/rrMediaCharacters";
 import { RrMediaStatsDashboard } from "@/components/rrComponents/aquila/details/rrMediaStatsDashboard";
+import { useTranslation } from "react-i18next";
 
 interface TvMedia extends Media {
   seasons: Season[];
@@ -72,6 +73,7 @@ const itemVariants = {
 };
 
 export default function TvDetailsPage(): React.JSX.Element {
+  const { t } = useTranslation();
   const params = useParams();
   const id = params?.id as string;
   const session = useSession();
@@ -108,7 +110,7 @@ export default function TvDetailsPage(): React.JSX.Element {
   const titleEnglish = tv?.titleEnglish ?? "";
   const titleRomaji = tv?.titleRomaji ?? "";
   const titleNative = tv?.titleNative ?? "";
-  const displayTitle = titleEnglish || titleRomaji || "TV Details";
+  const displayTitle = titleEnglish || titleRomaji || t("aquila.tvDetails", "TV Details");
   const coverUrl = tv?.coverImage ?? "";
   const bannerUrl = tv?.bannerImage ?? "";
 
@@ -138,18 +140,18 @@ export default function TvDetailsPage(): React.JSX.Element {
     if (!tv?.characters) return [];
     return tv.characters.map((tc) => ({
       id: tc.id,
-      name: tc.name || "Unknown Character",
+      name: tc.name || t("aquila.unknownCharacter", "Unknown Character"),
       native: "",
       role: tc.role || "Actor",
       image: tc.image || "",
       voiceActor: tc.actorId ? {
         id: tc.actorId,
-        name: tc.personName || "Unknown Actor",
+        name: tc.personName || t("aquila.unknownActor", "Unknown Actor"),
         image: tc.image || "",
         role: "Actor",
       } : null,
     }));
-  }, [tv]);
+  }, [tv, t]);
 
   useEffect((): void => {
     if (!tv) return;
@@ -178,7 +180,7 @@ export default function TvDetailsPage(): React.JSX.Element {
         mutateListEntry();
       }
     } catch {
-      toast.error("Failed to update episode progress");
+      toast.error(t("aquila.failedUpdateEpisodeProgress", "Failed to update episode progress"));
     }
   };
 
@@ -210,11 +212,11 @@ export default function TvDetailsPage(): React.JSX.Element {
       if (res.ok) {
         mutateListEntry();
         toast.success(
-          watched ? "Season marked as watched" : "Season marked as unwatched",
+          watched ? t("aquila.seasonWatched", "Season marked as watched") : t("aquila.seasonUnwatched", "Season marked as unwatched"),
         );
       }
     } catch {
-      toast.error("Failed to update season progress");
+      toast.error(t("aquila.failedUpdateSeasonProgress", "Failed to update season progress"));
     }
   };
 
@@ -241,10 +243,10 @@ export default function TvDetailsPage(): React.JSX.Element {
       <div className="flex flex-col flex-1 min-h-screen bg-background relative overflow-hidden items-center justify-center gap-4">
         <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-primary/2 rounded-full blur-3xl pointer-events-none" />
         <h2 className="text-2xl font-bold text-foreground z-10">
-          TV show not found
+          {t("aquila.tvShowNotFound", "TV show not found")}
         </h2>
         <Button asChild variant="default" className="z-10 rounded-xl">
-          <Link href="/aquila/browse">Back to Browse</Link>
+          <Link href="/aquila/browse">{t("aquila.backToBrowse", "Back to Browse")}</Link>
         </Button>
       </div>
     );
@@ -267,13 +269,13 @@ export default function TvDetailsPage(): React.JSX.Element {
         },
       );
       if (res.ok) {
-        toast.success("Added to list!");
+        toast.success(t("aquila.addedToList", "Added to list!"));
         mutateListEntry();
       } else {
-        toast.error("Failed to add to list");
+        toast.error(t("aquila.failedAddToList", "Failed to add to list"));
       }
     } catch {
-      toast.error("Failed to add to list");
+      toast.error(t("aquila.failedAddToList", "Failed to add to list"));
     }
   };
 
@@ -365,7 +367,7 @@ export default function TvDetailsPage(): React.JSX.Element {
                           size="lg"
                           onClick={handleQuickAdd}
                         >
-                          Quick Add
+                          {t("aquila.quickAdd", "Quick Add")}
                         </Button>
                         <Button
                           variant="outline"
@@ -373,7 +375,7 @@ export default function TvDetailsPage(): React.JSX.Element {
                           size="lg"
                           onClick={(): void => setIsDialogOpen(true)}
                         >
-                          Add to List
+                          {t("aquila.addToList", "Add to List")}
                         </Button>
                       </>
                     ) : (
@@ -383,7 +385,7 @@ export default function TvDetailsPage(): React.JSX.Element {
                         size="lg"
                         onClick={(): void => setIsDialogOpen(true)}
                       >
-                        Edit Entry
+                        {t("aquila.editEntry", "Edit Entry")}
                       </Button>
                     )}
                     <RrMediaEditDialog
@@ -426,7 +428,7 @@ export default function TvDetailsPage(): React.JSX.Element {
                       className="flex items-center justify-center gap-2"
                     >
                       <Play className="size-4 fill-current" />
-                      Watch Trailer
+                      {t("aquila.watchTrailer", "Watch Trailer")}
                     </a>
                   </Button>
                 )}
@@ -436,29 +438,29 @@ export default function TvDetailsPage(): React.JSX.Element {
             {/* Info Sidebar */}
             <div className="bg-card/65 border border-border/40 backdrop-blur-xl rounded-2xl p-5 space-y-4">
               <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                Information
+                {t("aquila.information", "Information")}
               </h3>
               <div className="space-y-3">
-                <RrMediaInfoRow label="Episodes" value={totalEpisodes} />
-                <RrMediaInfoRow label="Seasons" value={tv.seasons?.length} />
+                <RrMediaInfoRow label={t("aquila.episodes", "Episodes")} value={totalEpisodes} />
+                <RrMediaInfoRow label={t("aquila.seasons", "Seasons")} value={tv.seasons?.length} />
                 <RrMediaInfoRow
-                  label="Status"
+                  label={t("aquila.status", "Status")}
                   value={tv.status?.replace(/_/g, " ").toLowerCase()}
                   className="capitalize"
                 />
-                <RrMediaInfoRow label="First Aired" value={formattedFirstAired} />
-                <RrMediaInfoRow label="Country" value={tv.originalCountry} />
+                <RrMediaInfoRow label={t("aquila.firstAired", "First Aired")} value={formattedFirstAired} />
+                <RrMediaInfoRow label={t("aquila.country", "Country")} value={tv.originalCountry} />
                 <RrMediaInfoRow
-                  label="Language"
+                  label={t("aquila.language", "Language")}
                   value={tv.originalLanguage}
                   className="uppercase"
                 />
                 <RrMediaInfoRow
-                  label="Avg Runtime"
-                  value={tv.averageRuntime ? `${tv.averageRuntime} min` : null}
+                  label={t("aquila.avgRuntime", "Avg Runtime")}
+                  value={tv.averageRuntime ? t("aquila.durationMinutes", "{{count}} min", { count: tv.averageRuntime }) : null}
                 />
                 <RrMediaInfoRow
-                  label="Rating"
+                  label={t("aquila.rating", "Rating")}
                   value={
                     tv.contentRating ? (
                       <Badge variant="outline" className="text-xs px-2 py-0.5">
@@ -474,7 +476,7 @@ export default function TvDetailsPage(): React.JSX.Element {
             {tv.studios && tv.studios.length > 0 && (
               <div className="bg-card/65 border border-border/40 backdrop-blur-xl rounded-2xl p-5">
                 <h4 className="font-semibold text-xs tracking-wide text-muted-foreground uppercase mb-3">
-                  Networks
+                  {t("aquila.networks", "Networks")}
                 </h4>
                 <div className="flex flex-wrap gap-2">
                   {tv.studios.map((studio, idx) => {
@@ -500,7 +502,7 @@ export default function TvDetailsPage(): React.JSX.Element {
             {tv.trailers && tv.trailers.length > 1 && (
               <div className="bg-card/65 border border-border/40 backdrop-blur-xl rounded-2xl p-5">
                 <h4 className="font-semibold text-xs tracking-wide text-muted-foreground uppercase mb-3">
-                  Trailers
+                  {t("aquila.trailers", "Trailers")}
                 </h4>
                 <div className="flex flex-col gap-2">
                   {tv.trailers.slice(1).map((trailer, idx) => (
@@ -512,7 +514,7 @@ export default function TvDetailsPage(): React.JSX.Element {
                       className="flex items-center gap-2 text-xs bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border/40 px-3 py-2 rounded-xl transition-all"
                     >
                       <Play className="size-3 fill-current" />
-                      {trailer.name || `Trailer ${idx + 2}`}
+                      {trailer.name || t("aquila.trailerName", "Trailer {{number}}", { number: idx + 2 })}
                     </a>
                   ))}
                 </div>
@@ -523,7 +525,7 @@ export default function TvDetailsPage(): React.JSX.Element {
             {(tv.tvdbId || tv.tmdbId || tv.imdbId) && (
               <div className="bg-card/65 border border-border/40 backdrop-blur-xl rounded-2xl p-5">
                 <h4 className="font-semibold text-xs tracking-wide text-muted-foreground uppercase mb-3">
-                  External Links
+                  {t("aquila.externalLinks", "External Links")}
                 </h4>
                 <div className="flex flex-col gap-2">
                   {tv.tvdbId && (
@@ -575,7 +577,7 @@ export default function TvDetailsPage(): React.JSX.Element {
               (titleRomaji && titleRomaji !== displayTitle) ||
               titleNative ? (
                 <p className="text-xs text-muted-foreground italic">
-                  Also known as:{" "}
+                  {t("aquila.alsoKnownAs", "Also known as:")}{" "}
                   {[
                     titleEnglish && titleEnglish !== displayTitle
                       ? titleEnglish
@@ -599,65 +601,20 @@ export default function TvDetailsPage(): React.JSX.Element {
               {firstAiredYear && (
                 <div className="bg-card/45 border border-border/30 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2">
                   <Calendar className="size-4 text-primary" />
-                  <span className="text-sm font-semibold text-foreground">
+                  <span className="text-xs font-semibold text-foreground">
                     {firstAiredYear}
                   </span>
                 </div>
               )}
-              <div className="bg-card/45 border border-border/30 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2">
-                <Tv2 className="size-4 text-primary" />
-                <span className="text-sm font-semibold text-foreground capitalize">
-                  {tv.status?.replace(/_/g, " ").toLowerCase()}
-                </span>
-              </div>
-              {tv.averageRuntime && (
+              {totalEpisodes > 0 && (
                 <div className="bg-card/45 border border-border/30 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2">
-                  <Clock className="size-4 text-primary" />
-                  <span className="text-sm font-semibold text-foreground">
-                    {tv.averageRuntime} min/ep
+                  <Tv2 className="size-4 text-primary" />
+                  <span className="text-xs font-semibold text-foreground">
+                    {t("aquila.episodesCount", "{{count}} Episodes", { count: totalEpisodes })}
                   </span>
                 </div>
-              )}
-              {tv.originalCountry && (
-                <div className="bg-card/45 border border-border/30 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2">
-                  <Globe className="size-4 text-primary" />
-                  <span className="text-sm font-semibold text-foreground">
-                    {tv.originalCountry}
-                  </span>
-                </div>
-              )}
-              {tv.contentRating && (
-                <Badge
-                  variant="outline"
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-muted-foreground"
-                >
-                  {tv.contentRating}
-                </Badge>
               )}
             </motion.div>
-
-            {/* Watch Progress */}
-            {hasListEntry && totalEpisodes > 0 && (
-              <motion.div
-                variants={itemVariants}
-                className="bg-card/30 border border-border/20 backdrop-blur-sm p-5 rounded-2xl"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-semibold text-foreground/90">
-                    Watch Progress
-                  </span>
-                  <span className="text-xs font-bold text-primary tabular-nums">
-                    {watchedCount} / {totalEpisodes} ({progressPercent}%)
-                  </span>
-                </div>
-                <div className="w-full bg-muted/40 h-2 rounded-full overflow-hidden">
-                  <div
-                    className="bg-primary h-full rounded-full transition-all duration-700"
-                    style={{ width: `${progressPercent}%` }}
-                  />
-                </div>
-              </motion.div>
-            )}
 
             {/* Stats Dashboard */}
             <RrMediaStatsDashboard
@@ -682,7 +639,7 @@ export default function TvDetailsPage(): React.JSX.Element {
             {/* Seasons Accordion */}
             {tv.seasons && tv.seasons.length > 0 && (
               <motion.div variants={itemVariants} className="space-y-3">
-                <h3 className="text-lg font-bold text-foreground">Seasons</h3>
+                <h3 className="text-lg font-bold text-foreground">{t("aquila.seasons", "Seasons")}</h3>
                 <Accordion type="multiple" className="w-full space-y-3">
                   {tv.seasons.map((season) => {
                     const watchedInSeason = watchedEpisodes.filter(
@@ -707,7 +664,7 @@ export default function TvDetailsPage(): React.JSX.Element {
                               {season.image || coverUrl ? (
                                 <Image
                                   src={season.image || coverUrl}
-                                  alt={season.name || `Season ${season.number}`}
+                                  alt={season.name || t("aquila.seasonName", "Season {{number}}", { number: season.number })}
                                   fill
                                   sizes="48px"
                                   className="object-cover"
@@ -721,10 +678,10 @@ export default function TvDetailsPage(): React.JSX.Element {
                             <div className="flex-1 flex items-center gap-8 text-left min-w-0">
                               <div className="flex flex-col">
                                 <h4 className="text-sm font-bold text-foreground truncate">
-                                  Season {season.number}
+                                  {t("aquila.seasonName", "Season {{number}}", { number: season.number })}
                                 </h4>
                                 <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-tight">
-                                  {season.episodeCount} Episodes
+                                  {t("aquila.episodesCount", "{{count}} Episodes", { count: season.episodeCount })}
                                 </span>
                               </div>
 

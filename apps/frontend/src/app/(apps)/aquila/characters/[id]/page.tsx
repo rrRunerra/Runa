@@ -7,11 +7,12 @@ import { useParams, useRouter } from "next/navigation";
 import useSWR from "swr";
 import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
-import { ArrowLeft, User, Film, Tv, BookOpen, Calendar, HelpCircle, Heart } from "lucide-react";
+import { ArrowLeft, User, Film, Tv, BookOpen, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { fetcher } from "@/lib/fetcher";
 import { parseSafeDescription } from "@/components/rrComponents/aquila/details/rrMediaDescription";
+import { useTranslation } from "react-i18next";
 
 interface AppearanceActor {
   id: number;
@@ -71,6 +72,7 @@ const itemVariants = {
 };
 
 export default function CharacterPage() {
+  const { t } = useTranslation();
   const params = useParams();
   const router = useRouter();
   const id = params?.id as string;
@@ -120,21 +122,31 @@ export default function CharacterPage() {
   };
 
   const fullName = useMemo(() => {
-    if (!char) return "Character Details";
+    if (!char) return t("aquila.characterDetails", "Character Details");
     return [char.nameFirst, char.nameMiddle, char.nameLast].filter(Boolean).join(" ");
-  }, [char]);
+  }, [char, t]);
 
   const dobStr = useMemo(() => {
     if (!char || (!char.dateOfBirthMonth && !char.dateOfBirthDay)) return null;
     const months = [
-      "January", "February", "March", "April", "May", "June",
-      "July", "August", "September", "October", "November", "December"
+      t("months.january", "January"),
+      t("months.february", "February"),
+      t("months.march", "March"),
+      t("months.april", "April"),
+      t("months.may", "May"),
+      t("months.june", "June"),
+      t("months.july", "July"),
+      t("months.august", "August"),
+      t("months.september", "September"),
+      t("months.october", "October"),
+      t("months.november", "November"),
+      t("months.december", "December")
     ];
     const monthStr = char.dateOfBirthMonth ? months[char.dateOfBirthMonth - 1] : "";
     const dayStr = char.dateOfBirthDay ? String(char.dateOfBirthDay) : "";
     const yearStr = char.dateOfBirthYear ? `, ${char.dateOfBirthYear}` : "";
     return [monthStr, dayStr].filter(Boolean).join(" ") + yearStr;
-  }, [char]);
+  }, [char, t]);
 
   if (isLoading) {
     return (
@@ -147,9 +159,9 @@ export default function CharacterPage() {
   if (error || !char) {
     return (
       <div className="flex flex-col flex-1 min-h-screen bg-background items-center justify-center space-y-4">
-        <h2 className="text-xl font-bold text-muted-foreground">Character not found</h2>
+        <h2 className="text-xl font-bold text-muted-foreground">{t("aquila.characterNotFound", "Character not found")}</h2>
         <Button variant="outline" onClick={() => router.back()} className="rounded-xl">
-          <ArrowLeft className="mr-2 size-4" /> Go Back
+          <ArrowLeft className="mr-2 size-4" /> {t("aquila.goBack", "Go Back")}
         </Button>
       </div>
     );
@@ -162,8 +174,6 @@ export default function CharacterPage() {
       <div className="absolute bottom-10 left-10 w-96 h-96 bg-primary/2 rounded-full blur-3xl pointer-events-none" />
 
       <div className="max-w-[1600px] mx-auto px-6 lg:px-10 pt-6 space-y-6 relative z-10">
-
-
         {/* Profile Grid */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {/* Left Column: Image & Details */}
@@ -181,35 +191,35 @@ export default function CharacterPage() {
             {/* Profile Info Cards */}
             <div className="bg-card/30 border border-border/20 backdrop-blur-sm p-4 rounded-2xl space-y-3.5">
               <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground border-b border-border/20 pb-1.5">
-                Profile Info
+                {t("aquila.profileInfo", "Profile Info")}
               </h4>
               {char.nameNative && (
                 <div>
-                  <span className="text-[10px] font-semibold text-muted-foreground block">Native Name</span>
+                  <span className="text-[10px] font-semibold text-muted-foreground block">{t("aquila.nativeName", "Native Name")}</span>
                   <span className="text-sm font-medium text-foreground">{char.nameNative}</span>
                 </div>
               )}
               {char.gender && (
                 <div>
-                  <span className="text-[10px] font-semibold text-muted-foreground block">Gender</span>
+                  <span className="text-[10px] font-semibold text-muted-foreground block">{t("aquila.gender", "Gender")}</span>
                   <span className="text-sm font-medium text-foreground">{char.gender}</span>
                 </div>
               )}
               {char.age && (
                 <div>
-                  <span className="text-[10px] font-semibold text-muted-foreground block">Age</span>
+                  <span className="text-[10px] font-semibold text-muted-foreground block">{t("aquila.age", "Age")}</span>
                   <span className="text-sm font-medium text-foreground">{char.age}</span>
                 </div>
               )}
               {char.bloodType && (
                 <div>
-                  <span className="text-[10px] font-semibold text-muted-foreground block">Blood Type</span>
+                  <span className="text-[10px] font-semibold text-muted-foreground block">{t("aquila.bloodType", "Blood Type")}</span>
                   <span className="text-sm font-medium text-foreground">{char.bloodType}</span>
                 </div>
               )}
               {dobStr && (
                 <div>
-                  <span className="text-[10px] font-semibold text-muted-foreground block">Date of Birth</span>
+                  <span className="text-[10px] font-semibold text-muted-foreground block">{t("aquila.dateOfBirth", "Date of Birth")}</span>
                   <span className="text-sm font-medium text-foreground">{dobStr}</span>
                 </div>
               )}
@@ -219,7 +229,7 @@ export default function CharacterPage() {
             {char.nameAlternative && char.nameAlternative.length > 0 && (
               <div className="bg-card/30 border border-border/20 backdrop-blur-sm p-4 rounded-2xl space-y-3">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground border-b border-border/20 pb-1.5">
-                  Aliases
+                  {t("aquila.aliases", "Aliases")}
                 </h4>
                 <div className="flex flex-wrap gap-1.5">
                   {char.nameAlternative.map((alt, idx) => (
@@ -257,12 +267,12 @@ export default function CharacterPage() {
               </div>
               {char.nameAlternativeSpoiler && char.nameAlternativeSpoiler.length > 0 && (
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs font-semibold text-muted-foreground">Spoiler Aliases:</span>
+                  <span className="text-xs font-semibold text-muted-foreground">{t("aquila.spoilerAliases", "Spoiler Aliases:")}</span>
                   {char.nameAlternativeSpoiler.map((spoiler, idx) => (
                     <span
                       key={idx}
                       className="bg-foreground/85 hover:bg-transparent text-transparent hover:text-foreground px-2 py-0.5 rounded-lg cursor-pointer transition-colors duration-200 select-none border border-border/20 text-xs"
-                      title="Hover to reveal spoiler name"
+                      title={t("aquila.hoverRevealSpoiler", "Hover to reveal spoiler name")}
                     >
                       {spoiler}
                     </span>
@@ -274,7 +284,7 @@ export default function CharacterPage() {
             {/* Biography */}
             {char.description && (
               <div className="bg-card/30 border border-border/20 backdrop-blur-sm p-6 rounded-2xl space-y-3">
-                <h3 className="text-base font-bold text-foreground">Biography</h3>
+                <h3 className="text-base font-bold text-foreground">{t("aquila.biography", "Biography")}</h3>
                 <div className="prose prose-neutral dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-sm select-text border-t border-border/10 pt-3">
                   {parseSafeDescription(char.description)}
                 </div>
@@ -283,13 +293,13 @@ export default function CharacterPage() {
 
             {/* Appearances */}
             <div className="space-y-6">
-              <h3 className="text-lg font-bold text-foreground border-b border-border/20 pb-2">Appearances</h3>
+              <h3 className="text-lg font-bold text-foreground border-b border-border/20 pb-2">{t("aquila.appearances", "Appearances")}</h3>
 
               <motion.div variants={containerVariants} initial="hidden" animate="show" className="space-y-6">
                 {/* Anime Section */}
                 {char.animeAppearances && char.animeAppearances.length > 0 && (
                   <AppearanceSection
-                    title="Anime"
+                    title={t("aquila.anime", "Anime")}
                     icon={<Tv className="size-4 text-primary" />}
                     appearances={char.animeAppearances}
                     routePrefix="/aquila/anime"
@@ -299,7 +309,7 @@ export default function CharacterPage() {
                 {/* Movie Section */}
                 {char.movieAppearances && char.movieAppearances.length > 0 && (
                   <AppearanceSection
-                    title="Movies"
+                    title={t("aquila.movies", "Movies")}
                     icon={<Film className="size-4 text-primary" />}
                     appearances={char.movieAppearances}
                     routePrefix="/aquila/movies"
@@ -309,7 +319,7 @@ export default function CharacterPage() {
                 {/* TV Section */}
                 {char.tvAppearances && char.tvAppearances.length > 0 && (
                   <AppearanceSection
-                    title="TV Shows"
+                    title={t("aquila.tvShows", "TV Shows")}
                     icon={<Tv className="size-4 text-primary" />}
                     appearances={char.tvAppearances}
                     routePrefix="/aquila/tv"
@@ -319,7 +329,7 @@ export default function CharacterPage() {
                 {/* Manga Section */}
                 {char.mangaAppearances && char.mangaAppearances.length > 0 && (
                   <AppearanceSection
-                    title="Manga"
+                    title={t("aquila.manga", "Manga")}
                     icon={<BookOpen className="size-4 text-primary" />}
                     appearances={char.mangaAppearances}
                     routePrefix="/aquila/manga"
@@ -342,6 +352,7 @@ interface AppearanceSectionProps {
 }
 
 function AppearanceSection({ title, icon, appearances, routePrefix }: AppearanceSectionProps) {
+  const { t } = useTranslation();
   return (
     <motion.div variants={itemVariants} className="space-y-3">
       <div className="flex items-center gap-2 font-bold text-sm text-foreground/90">
@@ -376,7 +387,9 @@ function AppearanceSection({ title, icon, appearances, routePrefix }: Appearance
                   <Badge variant="secondary" className="text-[9px] px-1 py-0 rounded">
                     {app.format}
                   </Badge>
-                  <span className="text-[10px] text-muted-foreground capitalize">Role: {app.role?.toLowerCase() || "cast"}</span>
+                  <span className="text-[10px] text-muted-foreground truncate">
+                    {t("aquila.role", "Role: {{role}}", { role: app.role?.toLowerCase() || "cast" })}
+                  </span>
                 </div>
               </div>
             </Link>
@@ -391,7 +404,7 @@ function AppearanceSection({ title, icon, appearances, routePrefix }: Appearance
                   <p className="text-xs font-semibold truncate text-foreground group-hover/actor:text-primary transition-colors">
                     {app.actor.name}
                   </p>
-                  <p className="text-[9px] text-muted-foreground capitalize">Actor / VA</p>
+                  <p className="text-[9px] text-muted-foreground capitalize">{t("aquila.actorVa", "Actor / VA")}</p>
                 </div>
                 <div className="relative size-9 rounded-lg overflow-hidden shrink-0 bg-muted border border-border/20">
                   {app.actor.image ? (

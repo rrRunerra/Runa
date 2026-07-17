@@ -14,8 +14,6 @@ import {
   Play,
   Loader2,
   Bookmark,
-  CalendarDays,
-  Compass,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -32,6 +30,7 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import RrLapplandBrowse from "@/components/rrComponents/rrImages/rrLapplandBrowse";
+import { useTranslation } from "react-i18next";
 
 interface CalendarItem {
   id: string | number;
@@ -44,62 +43,6 @@ interface CalendarItem {
   episodeTitle?: string;
   event: "airing" | "release" | "premiere";
 }
-
-const MEDIA_CONFIG: Record<
-  CalendarItem["type"],
-  { label: string; icon: React.JSX.Element; color: string; bg: string; border: string; detailUrl: (id: string | number) => string }
-> = {
-  anime: {
-    label: "Anime",
-    icon: <Play className="size-3" />,
-    color: "text-red-500",
-    bg: "bg-red-500/10 hover:bg-red-500/15",
-    border: "border-red-500/20 hover:border-red-500/35",
-    detailUrl: (id) => `/aquila/anime/${id}`,
-  },
-  manga: {
-    label: "Manga",
-    icon: <BookOpen className="size-3" />,
-    color: "text-emerald-500",
-    bg: "bg-emerald-500/10 hover:bg-emerald-500/15",
-    border: "border-emerald-500/20 hover:border-emerald-500/35",
-    detailUrl: (id) => `/aquila/manga/${id}`,
-  },
-  tv: {
-    label: "TV Show",
-    icon: <Tv className="size-3" />,
-    color: "text-violet-500",
-    bg: "bg-violet-500/10 hover:bg-violet-500/15",
-    border: "border-violet-500/20 hover:border-violet-500/35",
-    detailUrl: (id) => `/aquila/tv/${id}`,
-  },
-  movie: {
-    label: "Movie",
-    icon: <Film className="size-3" />,
-    color: "text-amber-500",
-    bg: "bg-amber-500/10 hover:bg-amber-500/15",
-    border: "border-amber-500/20 hover:border-amber-500/35",
-    detailUrl: (id) => `/aquila/movies/${id}`,
-  },
-  game: {
-    label: "Game",
-    icon: <Gamepad2 className="size-3" />,
-    color: "text-cyan-500",
-    bg: "bg-cyan-500/10 hover:bg-cyan-500/15",
-    border: "border-cyan-500/20 hover:border-cyan-500/35",
-    detailUrl: (id) => `/aquila/games/${id}`,
-  },
-  book: {
-    label: "Book",
-    icon: <BookOpen className="size-3" />,
-    color: "text-sky-500",
-    bg: "bg-sky-500/10 hover:bg-sky-500/15",
-    border: "border-sky-500/20 hover:border-sky-500/35",
-    detailUrl: (id) => `/aquila/books/${id}`,
-  },
-};
-
-const DAY_NAMES = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 const getMondayOfWeek = (date: Date): Date => {
   const d = new Date(date);
@@ -142,10 +85,75 @@ const formatDateStr = (d: Date): string => {
 };
 
 export default function CalendarClientPage(): React.JSX.Element {
+  const { t } = useTranslation();
   const { data: session, status } = useSession();
   const [focusDate, setFocusDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<"week" | "month">("week");
   const [watchlistOnly, setWatchlistOnly] = useState<boolean>(false);
+
+  const MEDIA_CONFIG: Record<
+    CalendarItem["type"],
+    { label: string; icon: React.JSX.Element; color: string; bg: string; border: string; detailUrl: (id: string | number) => string }
+  > = useMemo(() => ({
+    anime: {
+      label: t("aquila.anime", "Anime"),
+      icon: <Play className="size-3" />,
+      color: "text-red-500",
+      bg: "bg-red-500/10 hover:bg-red-500/15",
+      border: "border-red-500/20 hover:border-red-500/35",
+      detailUrl: (id) => `/aquila/anime/${id}`,
+    },
+    manga: {
+      label: t("aquila.manga", "Manga"),
+      icon: <BookOpen className="size-3" />,
+      color: "text-emerald-500",
+      bg: "bg-emerald-500/10 hover:bg-emerald-500/15",
+      border: "border-emerald-500/20 hover:border-emerald-500/35",
+      detailUrl: (id) => `/aquila/manga/${id}`,
+    },
+    tv: {
+      label: t("aquila.tv", "TV Show"),
+      icon: <Tv className="size-3" />,
+      color: "text-violet-500",
+      bg: "bg-violet-500/10 hover:bg-violet-500/15",
+      border: "border-violet-500/20 hover:border-violet-500/35",
+      detailUrl: (id) => `/aquila/tv/${id}`,
+    },
+    movie: {
+      label: t("aquila.movie", "Movie"),
+      icon: <Film className="size-3" />,
+      color: "text-amber-500",
+      bg: "bg-amber-500/10 hover:bg-amber-500/15",
+      border: "border-amber-500/20 hover:border-amber-500/35",
+      detailUrl: (id) => `/aquila/movies/${id}`,
+    },
+    game: {
+      label: t("aquila.game", "Game"),
+      icon: <Gamepad2 className="size-3" />,
+      color: "text-cyan-500",
+      bg: "bg-cyan-500/10 hover:bg-cyan-500/15",
+      border: "border-cyan-500/20 hover:border-cyan-500/35",
+      detailUrl: (id) => `/aquila/games/${id}`,
+    },
+    book: {
+      label: t("aquila.book", "Book"),
+      icon: <BookOpen className="size-3" />,
+      color: "text-sky-500",
+      bg: "bg-sky-500/10 hover:bg-sky-500/15",
+      border: "border-sky-500/20 hover:border-sky-500/35",
+      detailUrl: (id) => `/aquila/books/${id}`,
+    },
+  }), [t]);
+
+  const DAY_NAMES = useMemo(() => [
+    t("aquila.mon", "Mon"),
+    t("aquila.tue", "Tue"),
+    t("aquila.wed", "Wed"),
+    t("aquila.thu", "Thu"),
+    t("aquila.fri", "Fri"),
+    t("aquila.sat", "Sat"),
+    t("aquila.sun", "Sun")
+  ], [t]);
 
   // Compute active date ranges to fetch
   const dateRange = useMemo(() => {
@@ -250,8 +258,8 @@ export default function CalendarClientPage(): React.JSX.Element {
               <CalendarIcon className="size-5" />
             </div>
             <div>
-              <h2 className="text-xl font-bold tracking-tight text-foreground">Airing Calendar</h2>
-              <p className="text-xs text-muted-foreground">Keep track of your media release times</p>
+              <h2 className="text-xl font-bold tracking-tight text-foreground">{t("aquila.airingCalendar", "Airing Calendar")}</h2>
+              <p className="text-xs text-muted-foreground">{t("aquila.calendarSubtitle", "Keep track of your media release times")}</p>
             </div>
           </div>
 
@@ -270,7 +278,7 @@ export default function CalendarClientPage(): React.JSX.Element {
               onClick={handleToday}
               className="h-9 px-4 rounded-xl text-xs font-bold uppercase tracking-wider border border-border/60 hover:bg-accent/40 cursor-pointer"
             >
-              Today
+              {t("aquila.today", "Today")}
             </Button>
             <Button
               size="icon"
@@ -298,7 +306,7 @@ export default function CalendarClientPage(): React.JSX.Element {
                   viewMode === "week" && "bg-card shadow-sm border border-border/10 text-foreground"
                 )}
               >
-                Week
+                {t("aquila.week", "Week")}
               </Button>
               <Button
                 variant={viewMode === "month" ? "secondary" : "ghost"}
@@ -309,7 +317,7 @@ export default function CalendarClientPage(): React.JSX.Element {
                   viewMode === "month" && "bg-card shadow-sm border border-border/10 text-foreground"
                 )}
               >
-                Month
+                {t("aquila.month", "Month")}
               </Button>
             </div>
 
@@ -327,7 +335,7 @@ export default function CalendarClientPage(): React.JSX.Element {
                   className="text-xs font-bold uppercase tracking-wider text-muted-foreground select-none cursor-pointer flex items-center gap-1"
                 >
                   <Bookmark className={cn("size-3.5", watchlistOnly ? "fill-primary text-primary" : "text-muted-foreground")} />
-                  Watchlist
+                  {t("aquila.watchlist", "Watchlist")}
                 </Label>
               </div>
             )}
@@ -344,7 +352,7 @@ export default function CalendarClientPage(): React.JSX.Element {
               className="flex-1 min-h-[50vh] flex flex-col items-center justify-center gap-3"
             >
               <Loader2 className="size-10 animate-spin text-primary" />
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Loading releases...</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("aquila.loadingReleases", "Loading releases...")}</p>
             </motion.div>
           ) : (
             <motion.div
@@ -381,7 +389,7 @@ export default function CalendarClientPage(): React.JSX.Element {
                           </div>
                           {activeToday && (
                             <Badge className="bg-primary/20 text-primary border-primary/20 rounded-lg text-[9px] font-black uppercase tracking-wider shadow-none px-1.5 py-0.5">
-                              Today
+                              {t("aquila.todayBadge", "Today")}
                             </Badge>
                           )}
                         </div>
@@ -390,11 +398,11 @@ export default function CalendarClientPage(): React.JSX.Element {
                         <div className="flex flex-col gap-2.5 flex-1 min-h-24">
                           {dayEvents.length === 0 ? (
                             <div className="flex-1 flex items-center justify-center text-center p-3 opacity-25">
-                              <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground select-none">No Releases</p>
+                              <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground select-none">{t("aquila.noReleases", "No Releases")}</p>
                             </div>
                           ) : (
                             dayEvents.map((event) => (
-                              <CalendarEventCard key={`${event.type}-${event.id}-${event.airingAt || event.episode}`} event={event} />
+                              <CalendarEventCard key={`${event.type}-${event.id}-${event.airingAt || event.episode}`} event={event} mediaConfig={MEDIA_CONFIG} />
                             ))
                           )}
                         </div>
@@ -439,29 +447,31 @@ export default function CalendarClientPage(): React.JSX.Element {
                               {day.getDate()}
                             </span>
                             {activeToday && !isToday(focusDate) && (
-                              <span className="text-[9px] font-bold text-primary uppercase">Today</span>
+                              <span className="text-[9px] font-bold text-primary uppercase">{t("aquila.todayBadge", "Today")}</span>
                             )}
                           </div>
 
                           {/* Event Tags */}
                           <div className="flex flex-col gap-1 overflow-y-auto max-h-24 no-scrollbar mt-1">
                             {dayEvents.slice(0, 3).map((event) => (
-                              <CalendarEventTag key={`${event.type}-${event.id}-${event.airingAt || event.episode}`} event={event} />
+                              <CalendarEventTag key={`${event.type}-${event.id}-${event.airingAt || event.episode}`} event={event} mediaConfig={MEDIA_CONFIG} />
                             ))}
                             {dayEvents.length > 3 && (
                               <HoverCard openDelay={200} closeDelay={100}>
                                 <HoverCardTrigger asChild>
                                   <button className="text-[10px] text-left px-1.5 py-0.5 rounded bg-muted/65 hover:bg-muted/80 text-muted-foreground font-bold uppercase cursor-pointer">
-                                    + {dayEvents.length - 3} more
+                                    {t("aquila.moreCount", "+ {{count}} more", { count: dayEvents.length - 3 })}
                                   </button>
                                 </HoverCardTrigger>
                                 <HoverCardContent side="top" className="p-3 w-64 bg-card/95 border border-border/50 backdrop-blur-md rounded-2xl shadow-xl flex flex-col gap-2">
                                   <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border/30 pb-1.5">
-                                    Releases on {day.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                                    {t("aquila.releasesOnDate", "Releases on {{date}}", {
+                                      date: day.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+                                    })}
                                   </p>
                                   <div className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1 no-scrollbar">
                                     {dayEvents.map((event) => (
-                                      <CalendarEventCard key={`${event.type}-${event.id}-${event.airingAt || event.episode}`} event={event} compact />
+                                      <CalendarEventCard key={`${event.type}-${event.id}-${event.airingAt || event.episode}`} event={event} mediaConfig={MEDIA_CONFIG} compact />
                                     ))}
                                   </div>
                                 </HoverCardContent>
@@ -486,11 +496,13 @@ export default function CalendarClientPage(): React.JSX.Element {
 interface PreviewProps {
   event: CalendarItem;
   children: React.ReactNode;
+  mediaConfig: any;
   compact?: boolean;
 }
 
-function CalendarEventPreview({ event, children, compact = false }: PreviewProps): React.JSX.Element {
-  const config = MEDIA_CONFIG[event.type];
+function CalendarEventPreview({ event, children, mediaConfig, compact = false }: PreviewProps): React.JSX.Element {
+  const { t } = useTranslation();
+  const config = mediaConfig[event.type];
   const [hoverData, setHoverData] = useState<any>(null);
 
   const handleOpenChange = async (open: boolean) => {
@@ -505,6 +517,12 @@ function CalendarEventPreview({ event, children, compact = false }: PreviewProps
         console.error("Failed to load hover preview", err);
       }
     }
+  };
+
+  const getEventName = (evType: string) => {
+    if (evType === "airing") return t("aquila.episodeAiring", "Episode Airing");
+    if (evType === "premiere") return t("aquila.premiere", "Premiere");
+    return t("aquila.release", "Release");
   };
 
   return (
@@ -543,7 +561,7 @@ function CalendarEventPreview({ event, children, compact = false }: PreviewProps
                 </Badge>
                 {event.episode && (
                   <Badge className="bg-primary/20 text-primary border-transparent rounded px-1 text-[8px] font-extrabold shadow-none">
-                    Ep {event.episode}
+                    {t("aquila.episodeShort", "Ep")} {event.episode}
                   </Badge>
                 )}
               </div>
@@ -555,28 +573,28 @@ function CalendarEventPreview({ event, children, compact = false }: PreviewProps
         <div className="p-3.5 space-y-3.5">
           {/* Description summary */}
           <p className="text-[10px] text-muted-foreground line-clamp-3 leading-relaxed">
-            {hoverData?.description ? hoverData.description.replace(/<[^>]*>/g, "") : "Loading description..."}
+            {hoverData?.description ? hoverData.description.replace(/<[^>]*>/g, "") : t("aquila.loadingDescription", "Loading description...")}
           </p>
 
           {/* Detailed stats */}
           <div className="grid grid-cols-2 gap-2 text-[10px] border-t border-border/30 pt-3">
             <div>
-              <span className="text-muted-foreground block text-[9px] uppercase tracking-wider font-bold">Status</span>
+              <span className="text-muted-foreground block text-[9px] uppercase tracking-wider font-bold">{t("aquila.status", "Status")}</span>
               <span className="font-semibold text-foreground truncate block uppercase">
-                {hoverData?.status || "Unknown"}
+                {hoverData?.status || t("aquila.unknown", "Unknown")}
               </span>
             </div>
             <div>
-              <span className="text-muted-foreground block text-[9px] uppercase tracking-wider font-bold">Event Type</span>
+              <span className="text-muted-foreground block text-[9px] uppercase tracking-wider font-bold">{t("aquila.eventType", "Event Type")}</span>
               <span className="font-semibold text-foreground capitalize block">
-                {event.event === "airing" ? "Episode Airing" : event.event === "premiere" ? "Premiere" : "Release"}
+                {getEventName(event.event)}
               </span>
             </div>
           </div>
 
           {/* Action button */}
           <Button size="sm" className="w-full rounded-xl text-[10px] font-bold uppercase tracking-wider cursor-pointer" asChild>
-            <Link href={config.detailUrl(event.id)}>Go To Media Page</Link>
+            <Link href={config.detailUrl(event.id)}>{t("aquila.goToMediaPage", "Go To Media Page")}</Link>
           </Button>
         </div>
       </HoverCardContent>
@@ -585,11 +603,18 @@ function CalendarEventPreview({ event, children, compact = false }: PreviewProps
 }
 
 // Calendar Event Card component for Weekly View
-function CalendarEventCard({ event, compact = false }: { event: CalendarItem; compact?: boolean }): React.JSX.Element {
-  const config = MEDIA_CONFIG[event.type];
+function CalendarEventCard({ event, mediaConfig, compact = false }: { event: CalendarItem; mediaConfig: any; compact?: boolean }): React.JSX.Element {
+  const { t } = useTranslation();
+  const config = mediaConfig[event.type];
+
+  const getEventTagLabel = () => {
+    if (event.event === "airing") return `${t("aquila.episodeShort", "Ep")} ${event.episode}`;
+    if (event.event === "premiere") return t("aquila.premiere", "Premiere");
+    return t("aquila.release", "Release");
+  };
 
   return (
-    <CalendarEventPreview event={event} compact={compact}>
+    <CalendarEventPreview event={event} mediaConfig={mediaConfig} compact={compact}>
       <Link
         href={config.detailUrl(event.id)}
         className={cn(
@@ -616,11 +641,7 @@ function CalendarEventCard({ event, compact = false }: { event: CalendarItem; co
           <div className="flex items-center gap-1.5">
             <span className={cn("size-1.5 rounded-full shrink-0", event.type === "anime" ? "bg-red-500" : event.type === "manga" ? "bg-emerald-500" : event.type === "tv" ? "bg-violet-500" : event.type === "movie" ? "bg-amber-500" : event.type === "game" ? "bg-cyan-500" : "bg-sky-500")} />
             <span className="text-[8px] font-black uppercase tracking-wider text-muted-foreground truncate">
-              {event.event === "airing"
-                ? `Ep ${event.episode}`
-                : event.event === "premiere"
-                ? "Premiere"
-                : "Release"}
+              {getEventTagLabel()}
             </span>
           </div>
         </div>
@@ -630,11 +651,12 @@ function CalendarEventCard({ event, compact = false }: { event: CalendarItem; co
 }
 
 // Calendar Event Tag component for Monthly cells
-function CalendarEventTag({ event }: { event: CalendarItem }): React.JSX.Element {
-  const config = MEDIA_CONFIG[event.type];
+function CalendarEventTag({ event, mediaConfig }: { event: CalendarItem; mediaConfig: any }): React.JSX.Element {
+  const { t } = useTranslation();
+  const config = mediaConfig[event.type];
 
   return (
-    <CalendarEventPreview event={event}>
+    <CalendarEventPreview event={event} mediaConfig={mediaConfig}>
       <Link
         href={config.detailUrl(event.id)}
         className={cn(
@@ -647,7 +669,7 @@ function CalendarEventTag({ event }: { event: CalendarItem }): React.JSX.Element
           {config.icon}
         </span>
         <span className="text-[9px] font-bold text-foreground group-hover:text-primary leading-none truncate flex-1 select-none">
-          {event.event === "airing" ? `E${event.episode} ` : ""}
+          {event.event === "airing" ? `${t("aquila.episodeShortAbbr", "E")}${event.episode} ` : ""}
           {event.title}
         </span>
       </Link>

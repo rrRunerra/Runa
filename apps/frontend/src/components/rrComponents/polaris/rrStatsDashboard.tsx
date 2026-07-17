@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
+import { useTranslation } from "react-i18next";
 import {
   Tv,
   BookOpen,
@@ -40,31 +41,31 @@ type MediaType = "anime" | "manga" | "tv" | "movie" | "game" | "book";
 
 const MEDIA_CONFIG: Record<
   MediaType,
-  { title: string; icon: React.ReactNode; color: string }
+  { titleKey: string; icon: React.ReactNode; color: string }
 > = {
   anime: {
-    title: "Anime",
+    titleKey: "anime",
     icon: <Play className="w-4 h-4" />,
     color: "var(--chart-1)",
   },
   manga: {
-    title: "Manga",
+    titleKey: "manga",
     icon: <BookOpen className="w-4 h-4" />,
     color: "var(--chart-2)",
   },
-  tv: { title: "TV Shows", icon: <Tv className="w-4 h-4" />, color: "var(--chart-3)" },
+  tv: { titleKey: "tv", icon: <Tv className="w-4 h-4" />, color: "var(--chart-3)" },
   movie: {
-    title: "Movies",
+    titleKey: "movie",
     icon: <Film className="w-4 h-4" />,
     color: "var(--chart-4)",
   },
   game: {
-    title: "Games",
+    titleKey: "game",
     icon: <Gamepad2 className="w-4 h-4" />,
     color: "var(--chart-5)",
   },
   book: {
-    title: "Books",
+    titleKey: "book",
     icon: <Book className="w-4 h-4" />,
     color: "var(--chart-1)",
   },
@@ -81,6 +82,7 @@ const PIE_COLORS = [
 export default function RrStatsDashboard({
   username,
 }: StatsDashboardProps): React.JSX.Element {
+  const { t } = useTranslation();
   const [activeMedia, setActiveMedia] = useState<MediaType>("anime");
   const [mounted, setMounted] = useState<boolean>(false);
 
@@ -95,7 +97,7 @@ export default function RrStatsDashboard({
 
   const error = swrError
     ? swrError.message === "Request failed"
-      ? "This statistics page is private or failed to load."
+      ? t("polaris.stats.privateOrFailed")
       : swrError.message
     : null;
 
@@ -112,210 +114,210 @@ export default function RrStatsDashboard({
     if (activeMedia === "anime") {
       cards.push(
         {
-          title: "Total Anime",
+          title: t("polaris.stats.totalAnime"),
           value: stats.count || 0,
-          desc: "Titles in list",
+          desc: t("polaris.stats.titlesInList"),
           icon: <BarChart2 className="w-4 h-4 text-primary" />,
         },
         {
-          title: "Episodes Watched",
+          title: t("polaris.stats.episodesWatched"),
           value: stats.episodesWatched || 0,
-          desc: "Total progress",
+          desc: t("polaris.stats.totalProgress"),
           icon: <Play className="w-4 h-4 text-primary" />,
         },
         {
-          title: "Days Watched",
+          title: t("polaris.stats.daysWatched"),
           value: stats.daysWatched || 0,
-          desc: "Total time spent",
+          desc: t("polaris.stats.totalTimeSpent"),
           icon: <Clock className="w-4 h-4 text-primary" />,
         },
         {
-          title: "Hours Planned",
+          title: t("polaris.stats.hoursPlanned"),
           value: stats.hoursPlanned || 0,
-          desc: "In planning list",
+          desc: t("polaris.stats.inPlanningList"),
           icon: <ListPlus className="w-4 h-4 text-primary" />,
         },
         {
-          title: "Mean Score",
+          title: t("polaris.stats.meanScore"),
           value: stats.meanScore || "0.0",
-          desc: "Average rating",
+          desc: t("polaris.stats.averageRating"),
           icon: <TrendingUp className="w-4 h-4 text-primary" />,
         },
         {
-          title: "Standard Deviation",
+          title: t("polaris.stats.stdDev"),
           value: stats.standardDeviation || "0.0",
-          desc: "Rating spread",
+          desc: t("polaris.stats.ratingSpread"),
           icon: <HelpCircle className="w-4 h-4 text-primary" />,
         },
       );
     } else if (activeMedia === "manga") {
       cards.push(
         {
-          title: "Total Manga",
+          title: t("polaris.stats.totalManga"),
           value: stats.count || 0,
-          desc: "Titles in list",
+          desc: t("polaris.stats.titlesInList"),
           icon: <BarChart2 className="w-4 h-4 text-primary" />,
         },
         {
-          title: "Chapters Read",
+          title: t("polaris.stats.chaptersRead"),
           value: stats.chaptersRead || 0,
-          desc: "Total progress",
+          desc: t("polaris.stats.totalProgress"),
           icon: <BookOpen className="w-4 h-4 text-primary" />,
         },
         {
-          title: "Volumes Read",
+          title: t("polaris.stats.volumesRead"),
           value: stats.volumesRead || 0,
-          desc: "Total volumes completed",
+          desc: t("polaris.stats.totalVolumesCompleted"),
           icon: <Book className="w-4 h-4 text-primary" />,
         },
         {
-          title: "Chapters Planned",
+          title: t("polaris.stats.chaptersPlanned"),
           value: stats.chaptersPlanned || 0,
-          desc: "In planning list",
+          desc: t("polaris.stats.inPlanningList"),
           icon: <ListPlus className="w-4 h-4 text-primary" />,
         },
         {
-          title: "Mean Score",
+          title: t("polaris.stats.meanScore"),
           value: stats.meanScore || "0.0",
-          desc: "Average rating",
+          desc: t("polaris.stats.averageRating"),
           icon: <TrendingUp className="w-4 h-4 text-primary" />,
         },
         {
-          title: "Standard Deviation",
+          title: t("polaris.stats.stdDev"),
           value: stats.standardDeviation || "0.0",
-          desc: "Rating spread",
+          desc: t("polaris.stats.ratingSpread"),
           icon: <HelpCircle className="w-4 h-4 text-primary" />,
         },
       );
     } else if (activeMedia === "tv") {
       cards.push(
         {
-          title: "Total TV Shows",
+          title: t("polaris.stats.totalTvShows"),
           value: stats.count || 0,
-          desc: "Shows in list",
+          desc: t("polaris.stats.titlesInList"),
           icon: <BarChart2 className="w-4 h-4 text-primary" />,
         },
         {
-          title: "Episodes Watched",
+          title: t("polaris.stats.episodesWatched"),
           value: stats.episodesWatched || 0,
-          desc: "Total progress",
+          desc: t("polaris.stats.totalProgress"),
           icon: <Play className="w-4 h-4 text-primary" />,
         },
         {
-          title: "Hours Watched",
+          title: t("polaris.stats.hoursWatched"),
           value: stats.hoursWatched || 0,
-          desc: "Total watch time",
+          desc: t("polaris.stats.totalWatchTime"),
           icon: <Clock className="w-4 h-4 text-primary" />,
         },
         {
-          title: "Mean Score",
+          title: t("polaris.stats.meanScore"),
           value: stats.meanScore || "0.0",
-          desc: "Average rating",
+          desc: t("polaris.stats.averageRating"),
           icon: <TrendingUp className="w-4 h-4 text-primary" />,
         },
         {
-          title: "Standard Deviation",
+          title: t("polaris.stats.stdDev"),
           value: stats.standardDeviation || "0.0",
-          desc: "Rating spread",
+          desc: t("polaris.stats.ratingSpread"),
           icon: <HelpCircle className="w-4 h-4 text-primary" />,
         },
       );
     } else if (activeMedia === "movie") {
       cards.push(
         {
-          title: "Total Movies",
+          title: t("polaris.stats.totalMovies"),
           value: stats.count || 0,
-          desc: "Movies in list",
+          desc: t("polaris.stats.titlesInList"),
           icon: <BarChart2 className="w-4 h-4 text-primary" />,
         },
         {
-          title: "Hours Watched",
+          title: t("polaris.stats.hoursWatched"),
           value: stats.hoursWatched || 0,
-          desc: "Completed watch time",
+          desc: t("polaris.stats.completedWatchTime"),
           icon: <Clock className="w-4 h-4 text-primary" />,
         },
         {
-          title: "Hours Planned",
+          title: t("polaris.stats.hoursPlanned"),
           value: stats.hoursPlanned || 0,
-          desc: "In planning list",
+          desc: t("polaris.stats.inPlanningList"),
           icon: <ListPlus className="w-4 h-4 text-primary" />,
         },
         {
-          title: "Mean Score",
+          title: t("polaris.stats.meanScore"),
           value: stats.meanScore || "0.0",
-          desc: "Average rating",
+          desc: t("polaris.stats.averageRating"),
           icon: <TrendingUp className="w-4 h-4 text-primary" />,
         },
         {
-          title: "Standard Deviation",
+          title: t("polaris.stats.stdDev"),
           value: stats.standardDeviation || "0.0",
-          desc: "Rating spread",
+          desc: t("polaris.stats.ratingSpread"),
           icon: <HelpCircle className="w-4 h-4 text-primary" />,
         },
       );
     } else if (activeMedia === "game") {
       cards.push(
         {
-          title: "Total Games",
+          title: t("polaris.stats.totalGames"),
           value: stats.count || 0,
-          desc: "Games in list",
+          desc: t("polaris.stats.titlesInList"),
           icon: <Gamepad2 className="w-4 h-4 text-primary" />,
         },
         {
-          title: "Hours Played",
+          title: t("polaris.stats.hoursPlayed"),
           value: stats.hoursPlayed || 0,
-          desc: "Total gameplay time",
+          desc: t("polaris.stats.totalGameplayTime"),
           icon: <Clock className="w-4 h-4 text-primary" />,
         },
         {
-          title: "Mean Score",
+          title: t("polaris.stats.meanScore"),
           value: stats.meanScore || "0.0",
-          desc: "Average rating",
+          desc: t("polaris.stats.averageRating"),
           icon: <TrendingUp className="w-4 h-4 text-primary" />,
         },
         {
-          title: "Standard Deviation",
+          title: t("polaris.stats.stdDev"),
           value: stats.standardDeviation || "0.0",
-          desc: "Rating spread",
+          desc: t("polaris.stats.ratingSpread"),
           icon: <HelpCircle className="w-4 h-4 text-primary" />,
         },
       );
     } else if (activeMedia === "book") {
       cards.push(
         {
-          title: "Total Books",
+          title: t("polaris.stats.totalBooks"),
           value: stats.count || 0,
-          desc: "Books in list",
+          desc: t("polaris.stats.titlesInList"),
           icon: <BookOpen className="w-4 h-4 text-primary" />,
         },
         {
-          title: "Chapters Read",
+          title: t("polaris.stats.chaptersRead"),
           value: stats.chaptersRead || 0,
-          desc: "Total chapters progress",
+          desc: t("polaris.stats.totalChaptersProgress"),
           icon: <Book className="w-4 h-4 text-primary" />,
         },
         {
-          title: "Volumes Read",
+          title: t("polaris.stats.volumesRead"),
           value: stats.volumesRead || 0,
-          desc: "Total volumes completed",
+          desc: t("polaris.stats.totalVolumesCompleted"),
           icon: <ListPlus className="w-4 h-4 text-primary" />,
         },
         {
-          title: "Pages Read",
+          title: t("polaris.stats.pagesRead"),
           value: stats.pagesRead || 0,
-          desc: "Completed books pages",
+          desc: t("polaris.stats.completedBooksPages"),
           icon: <CheckCircle className="w-4 h-4 text-primary" />,
         },
         {
-          title: "Mean Score",
+          title: t("polaris.stats.meanScore"),
           value: stats.meanScore || "0.0",
-          desc: "Average rating",
+          desc: t("polaris.stats.averageRating"),
           icon: <TrendingUp className="w-4 h-4 text-primary" />,
         },
         {
-          title: "Standard Deviation",
+          title: t("polaris.stats.stdDev"),
           value: stats.standardDeviation || "0.0",
-          desc: "Rating spread",
+          desc: t("polaris.stats.ratingSpread"),
           icon: <HelpCircle className="w-4 h-4 text-primary" />,
         },
       );
@@ -355,7 +357,7 @@ export default function RrStatsDashboard({
     if (!dist || Object.keys(dist).length === 0) {
       return (
         <div className="flex items-center justify-center h-full text-xs italic text-muted-foreground">
-          No distribution data.
+          {t("polaris.stats.noDistributionData")}
         </div>
       );
     }
@@ -367,7 +369,7 @@ export default function RrStatsDashboard({
     const pieData = sorted.slice(0, 6);
     const otherVal = sorted.slice(6).reduce((acc, curr) => acc + curr.value, 0);
     if (otherVal > 0) {
-      pieData.push({ name: "Other", value: otherVal });
+      pieData.push({ name: t("polaris.lists.other"), value: otherVal });
     }
 
     return (
@@ -399,7 +401,7 @@ export default function RrStatsDashboard({
               {total}
             </span>
             <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold mt-1">
-              Total
+              {t("polaris.stats.total")}
             </span>
           </div>
         </div>
@@ -437,11 +439,10 @@ export default function RrStatsDashboard({
         <Card className="border shadow-sm bg-card p-12 text-center flex flex-col items-center justify-center gap-3">
           <HelpCircle className="size-10 text-muted-foreground/40 stroke-1" />
           <div className="text-sm font-semibold text-foreground">
-            No statistics calculated yet
+            {t("polaris.stats.noStatsCalculated")}
           </div>
           <p className="text-xs text-muted-foreground max-w-xs">
-            Add items and update your progress list to see statistics graphs
-            here.
+            {t("polaris.stats.addItemsToSee")}
           </p>
         </Card>
       );
@@ -492,7 +493,7 @@ export default function RrStatsDashboard({
           <Card className="border shadow-sm bg-card">
             <CardHeader className="pb-3 flex flex-row items-center justify-between">
               <CardTitle className="text-foreground text-xs font-bold uppercase tracking-wider">
-                Score Distribution
+                {t("polaris.stats.scoreDistribution")}
               </CardTitle>
             </CardHeader>
             <CardContent className="min-w-0">
@@ -541,8 +542,9 @@ export default function RrStatsDashboard({
             <Card className="border shadow-sm bg-card">
               <CardHeader className="pb-3">
                 <CardTitle className="text-foreground text-xs font-bold uppercase tracking-wider">
-                  {activeMedia === "anime" ? "Episode Count" : "Chapter Count"}{" "}
-                  Distribution
+                  {activeMedia === "anime"
+                    ? t("polaris.stats.episodeCountDistribution")
+                    : t("polaris.stats.chapterCountDistribution")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="min-w-0">
@@ -595,7 +597,7 @@ export default function RrStatsDashboard({
             <Card className="border shadow-sm bg-card">
               <CardHeader className="pb-3">
                 <CardTitle className="text-foreground text-xs font-bold uppercase tracking-wider">
-                  Format Distribution
+                  {t("polaris.stats.formatDistribution")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -609,7 +611,7 @@ export default function RrStatsDashboard({
             <Card className="border shadow-sm bg-card">
               <CardHeader className="pb-3">
                 <CardTitle className="text-foreground text-xs font-bold uppercase tracking-wider">
-                  Status Distribution
+                  {t("polaris.stats.statusDistribution")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -623,7 +625,7 @@ export default function RrStatsDashboard({
             <Card className="border shadow-sm bg-card md:col-span-2 xl:col-span-1">
               <CardHeader className="pb-3">
                 <CardTitle className="text-foreground text-xs font-bold uppercase tracking-wider">
-                  Country Distribution
+                  {t("polaris.stats.countryDistribution")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -655,7 +657,7 @@ export default function RrStatsDashboard({
                   className="flex items-center gap-2 px-4 py-2.5 rounded-md text-xs font-bold uppercase tracking-wider cursor-pointer transition-all data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm shrink-0"
                 >
                   {config.icon}
-                  <span>{config.title}</span>
+                  <span>{t(`polaris.stats.${config.titleKey}`)}</span>
                 </TabsTrigger>
               );
             })}
@@ -663,11 +665,11 @@ export default function RrStatsDashboard({
         </Tabs>
         <div
           className="flex items-center gap-1.5 text-[10px] text-muted-foreground/50 select-none hover:text-muted-foreground/80 transition-colors pl-2 cursor-help w-fit"
-          title="Statistics are compiled and cached in the background. Metrics and distributions may temporarily deviate during rapid updates or imports."
+          title={t("polaris.stats.statsCachedTooltip")}
         >
           <HelpCircle className="w-3 h-3 stroke-[1.5]" />
           <span>
-            Stats are cached and updated periodically | May not be 100% accurate
+            {t("polaris.stats.statsCached")}
           </span>
         </div>
       </div>
@@ -685,7 +687,7 @@ export default function RrStatsDashboard({
           <HelpCircle className="size-10 text-red-400 stroke-1" />
           <div className="text-sm font-semibold text-foreground">{error}</div>
           <p className="text-xs text-muted-foreground max-w-xs">
-            Make sure your list is public or check back again later.
+            {t("polaris.stats.makeSurePublic")}
           </p>
         </Card>
       ) : (

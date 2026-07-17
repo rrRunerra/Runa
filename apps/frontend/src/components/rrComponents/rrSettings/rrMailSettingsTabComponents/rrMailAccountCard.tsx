@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
 
 export interface RrMailAccountCardProps {
   account: {
@@ -20,6 +21,8 @@ export function RrMailAccountCard({
   onEdit,
   onDelete,
 }: RrMailAccountCardProps): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <div className="p-4 rounded-xl border border-border bg-card/40 flex items-center justify-between gap-3 text-left">
       <div className="flex items-center gap-3 min-w-0">
@@ -32,7 +35,7 @@ export function RrMailAccountCard({
             {account.loginEmail && account.loginEmail !== account.emailAddress && (
               <span className="text-muted-foreground/50">
                 {" "}
-                · login: {account.loginEmail}
+                · {t("mailSettings.login")}: {account.loginEmail}
               </span>
             )}
           </span>
@@ -47,7 +50,7 @@ export function RrMailAccountCard({
           variant="ghost"
           className="h-8 px-2.5 rounded-lg text-xs font-semibold text-foreground hover:bg-muted"
         >
-          Edit
+          {t("mailSettings.editBtn")}
         </Button>
         <Button
           onClick={onDelete}

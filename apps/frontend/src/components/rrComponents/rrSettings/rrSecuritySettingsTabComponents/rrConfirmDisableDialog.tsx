@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -23,16 +24,16 @@ export function RrConfirmDisableDialog({
   onConfirm,
   method: _method,
 }: RrConfirmDisableDialogProps): React.JSX.Element {
+  const { t } = useTranslation();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-card border border-border shadow-2xl p-6 rounded-2xl">
         <DialogHeader className="pb-2">
           <DialogTitle className="text-md font-bold text-destructive text-left">
-            Confirm Disconnection
+            {t("securitySettings.confirmDisableTitle")}
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground mt-1 text-left">
-            Are you sure you want to disable or remove this authentication
-            method? This could weaken your account security.
+            {t("securitySettings.confirmDisableDesc")}
           </DialogDescription>
         </DialogHeader>
 
@@ -43,17 +44,18 @@ export function RrConfirmDisableDialog({
             className="text-muted-foreground hover:text-foreground rounded-xl text-xs h-9 cursor-pointer"
             disabled={isSubmitting}
           >
-            Cancel
+            {t("cancel")}
           </Button>
           <Button
             onClick={onConfirm}
             disabled={isSubmitting}
             className="bg-destructive hover:bg-destructive/95 text-destructive-foreground font-bold rounded-xl px-5 text-xs h-9 cursor-pointer"
           >
-            {isSubmitting ? "Processing..." : "Confirm & Disable"}
+            {isSubmitting ? t("securitySettings.processing") : t("securitySettings.confirmAndDisable")}
           </Button>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
+

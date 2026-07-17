@@ -30,6 +30,7 @@ import RrLapplandImageNotFound from "@/components/rrComponents/rrImages/rrLappla
 import { RrMediaRefreshButton } from "@/components/rrComponents/aquila/rrMediaRefreshButton";
 import { BookEntity } from "@/types/book.entities";
 import { RrMediaStatsDashboard } from "@/components/rrComponents/aquila/details/rrMediaStatsDashboard";
+import { useTranslation } from "react-i18next";
 
 interface ListEntry {
   id: number | string;
@@ -58,6 +59,7 @@ const itemVariants = {
 };
 
 export default function BookDetailsPage(): React.JSX.Element {
+  const { t } = useTranslation();
   const params = useParams();
   const id = params?.id as string;
   const session = useSession();
@@ -88,7 +90,7 @@ export default function BookDetailsPage(): React.JSX.Element {
 
   const hasListEntry = !!listEntry;
 
-  const displayTitle = book?.titleString ?? "Book Details";
+  const displayTitle = book?.titleString ?? t("aquila.bookDetails", "Book Details");
   const displaySubtitle = book?.subtitle ?? null;
   const coverUrl = book?.coverImage ?? "";
 
@@ -119,16 +121,16 @@ export default function BookDetailsPage(): React.JSX.Element {
     const items: any[] = [];
     if (book.authors) {
       book.authors.forEach((author: string, idx: number) => {
-        items.push({ id: `author-${idx}`, name: author, role: "Author" });
+        items.push({ id: `author-${idx}`, name: author, role: t("aquila.author", "Author") });
       });
     }
     if (book.artists) {
       book.artists.forEach((artist: string, idx: number) => {
-        items.push({ id: `artist-${idx}`, name: artist, role: "Artist" });
+        items.push({ id: `artist-${idx}`, name: artist, role: t("aquila.artist", "Artist") });
       });
     }
     return items;
-  }, [book]);
+  }, [book, t]);
 
   useEffect((): void => {
     if (!book) return;
@@ -150,10 +152,10 @@ export default function BookDetailsPage(): React.JSX.Element {
       <div className="flex flex-col flex-1 min-h-screen bg-background relative overflow-hidden items-center justify-center gap-4">
         <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-primary/2 rounded-full blur-3xl pointer-events-none" />
         <h2 className="text-2xl font-bold text-foreground z-10">
-          Book not found
+          {t("aquila.bookNotFound", "Book not found")}
         </h2>
         <Button asChild variant="default" className="z-10 rounded-xl">
-          <Link href="/aquila/browse?type=books">Back to Browse</Link>
+          <Link href="/aquila/browse?type=books">{t("aquila.backToBrowse", "Back to Browse")}</Link>
         </Button>
       </div>
     );
@@ -176,13 +178,13 @@ export default function BookDetailsPage(): React.JSX.Element {
         },
       );
       if (res.ok) {
-        toast.success("Added to list!");
+        toast.success(t("aquila.addedToList", "Added to list!"));
         mutateListEntry();
       } else {
-        toast.error("Failed to add to list");
+        toast.error(t("aquila.failedAddToList", "Failed to add to list"));
       }
     } catch {
-      toast.error("Failed to add to list");
+      toast.error(t("aquila.failedAddToList", "Failed to add to list"));
     }
   };
 
@@ -258,7 +260,7 @@ export default function BookDetailsPage(): React.JSX.Element {
                           size="lg"
                           onClick={handleQuickAdd}
                         >
-                          Quick Add
+                          {t("aquila.quickAdd", "Quick Add")}
                         </Button>
                         <Button
                           variant="outline"
@@ -266,7 +268,7 @@ export default function BookDetailsPage(): React.JSX.Element {
                           size="lg"
                           onClick={(): void => setIsDialogOpen(true)}
                         >
-                          Add to List
+                          {t("aquila.addToList", "Add to List")}
                         </Button>
                       </>
                     ) : (
@@ -276,7 +278,7 @@ export default function BookDetailsPage(): React.JSX.Element {
                         size="lg"
                         onClick={(): void => setIsDialogOpen(true)}
                       >
-                        Edit Entry
+                        {t("aquila.editEntry", "Edit Entry")}
                       </Button>
                     )}
                     <RrMediaEditDialog
@@ -318,7 +320,7 @@ export default function BookDetailsPage(): React.JSX.Element {
                       rel="noopener noreferrer"
                     >
                       <BookOpen className="size-4" />
-                      Preview Book
+                      {t("aquila.previewBook", "Preview Book")}
                     </a>
                   </Button>
                 )}
@@ -352,7 +354,7 @@ export default function BookDetailsPage(): React.JSX.Element {
                       rel="noopener noreferrer"
                     >
                       <ShoppingBag className="size-4" />
-                      Buy Book
+                      {t("aquila.buyBook", "Buy Book")}
                     </a>
                   </Button>
                 )}
@@ -362,12 +364,12 @@ export default function BookDetailsPage(): React.JSX.Element {
             {/* Metadata Sidebar */}
             <div className="bg-card/65 border border-border/40 backdrop-blur-xl rounded-2xl p-5 space-y-4">
               <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                Information
+                {t("aquila.information", "Information")}
               </h3>
               <div className="space-y-3">
                 {book.publisher && (
                   <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
-                    <span className="text-muted-foreground">Publisher</span>
+                    <span className="text-muted-foreground">{t("aquila.publisher", "Publisher")}</span>
                     <span
                       className="font-medium text-foreground text-right text-xs max-w-[150px] truncate"
                       title={book.publisher}
@@ -379,7 +381,7 @@ export default function BookDetailsPage(): React.JSX.Element {
                 {formattedPublishedDate && (
                   <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
                     <span className="text-muted-foreground">
-                      Published Date
+                      {t("aquila.publishedDate", "Published Date")}
                     </span>
                     <span className="font-medium text-foreground">
                       {formattedPublishedDate}
@@ -388,7 +390,7 @@ export default function BookDetailsPage(): React.JSX.Element {
                 )}
                 {book.chapters && (
                   <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
-                    <span className="text-muted-foreground">Chapters</span>
+                    <span className="text-muted-foreground">{t("aquila.chapters", "Chapters")}</span>
                     <span className="font-medium text-foreground">
                       {book.chapters}
                     </span>
@@ -396,7 +398,7 @@ export default function BookDetailsPage(): React.JSX.Element {
                 )}
                 {book.retailPrice && (
                   <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
-                    <span className="text-muted-foreground">Price</span>
+                    <span className="text-muted-foreground">{t("aquila.price", "Price")}</span>
                     <span className="font-medium text-foreground">
                       {book.retailPrice} {book.retailPriceCurrency}
                     </span>
@@ -453,7 +455,7 @@ export default function BookDetailsPage(): React.JSX.Element {
                 <div className="bg-card/45 border border-border/30 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2">
                   <BookOpen className="size-4 text-primary" />
                   <span className="text-sm font-semibold text-foreground">
-                    {book.pages} pages
+                    {t("aquila.pagesCount", "{{count}} pages", { count: book.pages })}
                   </span>
                 </div>
               )}
@@ -461,7 +463,7 @@ export default function BookDetailsPage(): React.JSX.Element {
                 <div className="bg-card/45 border border-border/30 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2">
                   <BookOpen className="size-4 text-primary" />
                   <span className="text-sm font-semibold text-foreground">
-                    {book.chapters} chapters
+                    {t("aquila.chaptersCount", "{{count}} chapters", { count: book.chapters })}
                   </span>
                 </div>
               )}
@@ -469,7 +471,7 @@ export default function BookDetailsPage(): React.JSX.Element {
                 <div className="bg-card/45 border border-border/30 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2">
                   <Star className="size-4 text-amber-500 fill-amber-500" />
                   <span className="text-sm font-semibold text-foreground">
-                    {book.averageRating} ({book.ratingsCount || 0} reviews)
+                    {book.averageRating} ({t("aquila.reviewsCount", "{{count}} reviews", { count: book.ratingsCount || 0 })})
                   </span>
                 </div>
               )}
@@ -506,7 +508,7 @@ export default function BookDetailsPage(): React.JSX.Element {
               className="bg-card/30 border border-border/20 backdrop-blur-sm p-6 rounded-2xl"
             >
               <h3 className="text-base font-bold text-foreground mb-3">
-                About
+                {t("aquila.about", "About")}
               </h3>
               {book.description ? (
                 <div className="prose prose-neutral dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-sm prose-p:my-2 prose-a:text-primary hover:prose-a:text-primary transition-colors">
@@ -514,7 +516,7 @@ export default function BookDetailsPage(): React.JSX.Element {
                 </div>
               ) : (
                 <p className="text-sm text-muted-foreground italic">
-                  No description available.
+                  {t("aquila.noDescriptionAvailable", "No description available.")}
                 </p>
               )}
             </motion.div>
@@ -522,7 +524,7 @@ export default function BookDetailsPage(): React.JSX.Element {
             {/* Staff */}
             {staff && staff.length > 0 && (
               <motion.div variants={itemVariants} className="space-y-3">
-                <h3 className="text-base font-bold text-foreground">Staff</h3>
+                <h3 className="text-base font-bold text-foreground">{t("aquila.staff", "Staff")}</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {staff.map((person) => (
                     <div

@@ -12,6 +12,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -73,6 +74,7 @@ export function RrConnectionsTab({
   onOpenChange,
 }: RrConnectionsTabProps): React.JSX.Element {
   const { data: session } = useSession();
+  const { t } = useTranslation();
   const [isActionLoading, setIsActionLoading] = useState<string | null>(null);
   const [expandedMetadata, setExpandedMetadata] = useState<
     Record<string, boolean>
@@ -115,7 +117,7 @@ export function RrConnectionsTab({
                 setFailedImports({ providerId, items: data.failedItems });
               } else {
                 toast.success(
-                  `Import from ${providerId.toUpperCase()} completed successfully!`,
+                  t("connections.importSuccess", { provider: providerId.toUpperCase() }),
                 );
                 setTimeout(() => {
                   window.location.reload();
@@ -123,7 +125,7 @@ export function RrConnectionsTab({
               }
             } else if (data.status === "failed") {
               toast.error(
-                `Import from ${providerId.toUpperCase()} failed: ${data.error || "Unknown error"}`,
+                t("connections.importFailed", { provider: providerId.toUpperCase(), error: data.error || t("connections.unknownError") }),
               );
             }
           }
@@ -140,7 +142,7 @@ export function RrConnectionsTab({
         console.error(err);
       }
     },
-    [session, setFailedImports],
+    [session, setFailedImports, t],
   );
 
   const handleImport = async (
@@ -160,15 +162,16 @@ export function RrConnectionsTab({
           body: JSON.stringify({ mediaTypes }),
         },
       );
+
       if (!res.ok) {
         const errJson = await res.json().catch(() => null);
-        throw new Error(errJson?.message || "Failed to start list import.");
+        throw new Error(errJson?.message || t("connections.failedStartImport"));
       }
-      toast.info(`Import started for ${providerId.toUpperCase()}...`);
+      toast.info(t("connections.importStarted", { provider: providerId.toUpperCase() }));
       pollImportStatus(providerId);
     } catch (err: any) {
       console.error(err);
-      toast.error(err.message || "Failed to start list import.");
+      toast.error(err.message || t("connections.failedStartImport"));
     }
   };
 
@@ -189,20 +192,20 @@ export function RrConnectionsTab({
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("success") === "true") {
-      toast.success("Account connected successfully!");
+      toast.success(t("connections.connectedSuccess"));
       const newUrl = window.location.pathname + "?settings=connections";
       window.history.replaceState({}, document.title, newUrl);
     } else if (params.get("error")) {
       const err = params.get("error");
       toast.error(
         err === "oauth_failed"
-          ? "Authentication with the third-party app failed."
-          : "An error occurred during authentication.",
+          ? t("connections.authFailed")
+          : t("connections.authError"),
       );
       const newUrl = window.location.pathname + "?settings=connections";
       window.history.replaceState({}, document.title, newUrl);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (!session?.accessToken || connectionsLoading || connections.length === 0)
@@ -223,7 +226,7 @@ export function RrConnectionsTab({
 
   const handleConnect = (providerId: string): void => {
     if (!session?.accessToken) {
-      toast.error("You must be logged in to link accounts.");
+      toast.error(t("connections.mustBeLoggedIn"));
       return;
     }
     setIsActionLoading(providerId);
@@ -234,7 +237,7 @@ export function RrConnectionsTab({
   const handleDisconnect = async (providerId: string): Promise<void> => {
     if (
       !confirm(
-        `Are you sure you want to disconnect ${providerId.toUpperCase()}?`,
+        t("connections.disconnectConfirm", { provider: providerId.toUpperCase() }),
       )
     ) {
       return;
@@ -252,14 +255,14 @@ export function RrConnectionsTab({
         },
       );
       if (!res.ok) {
-        throw new Error("Failed to disconnect service.");
+        throw new Error(t("connections.failedDisconnect"));
       }
 
       refetchConnections();
-      toast.success(`${providerId.toUpperCase()} disconnected successfully.`);
+      toast.success(t("connections.disconnectSuccess", { provider: providerId.toUpperCase() }));
     } catch (err) {
       console.error(err);
-      toast.error("Failed to disconnect service.");
+      toast.error(t("connections.failedDisconnect"));
     } finally {
       setIsActionLoading(null);
     }
@@ -287,17 +290,19 @@ export function RrConnectionsTab({
         },
       );
       if (!res.ok) {
-        throw new Error("Failed to update privacy setting.");
+        throw new Error(t("connections.failedUpdatePrivacy"));
       }
       const updated = (await res.json()) as Connection;
 
       refetchConnections();
       toast.success(
-        `Connection is now ${updated.private ? "private" : "public"}.`,
+        t("connections.privacyUpdated", {
+          status: updated.private ? t("connections.private") : t("connections.public"),
+        }),
       );
     } catch (err) {
       console.error(err);
-      toast.error("Failed to update privacy setting.");
+      toast.error(t("connections.failedUpdatePrivacy"));
     } finally {
       setIsActionLoading(null);
     }
@@ -315,7 +320,7 @@ export function RrConnectionsTab({
       <div className="flex flex-col items-center justify-center py-12 gap-3">
         <Spinner className="size-8 text-primary" />
         <p className="text-xs text-muted-foreground animate-pulse">
-          Fetching your integration status...
+          {t("connections.fetchingStatus")}
         </p>
       </div>
     );
@@ -332,9 +337,10 @@ export function RrConnectionsTab({
     const configApp = rrApps.find(
       (a) => a.name.toLowerCase() === key.toLowerCase(),
     );
+    const appName = configApp?.name || key.charAt(0).toUpperCase() + key.slice(1);
     return {
-      name: configApp?.name || key.charAt(0).toUpperCase() + key.slice(1),
-      description: `Integrations for ${key}.`,
+      name: appName,
+      description: t("connections.integrationsFor", { app: appName }),
       providers: PROVIDERS.filter((p) => p.primaryApp === key),
     };
   });
@@ -344,10 +350,10 @@ export function RrConnectionsTab({
       <div className="flex items-center justify-between">
         <div className="text-left">
           <h3 className="text-sm font-semibold text-foreground">
-            Integrations & Apps
+            {t("connections.title")}
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Link and manage third-party integrations for your Runa apps.
+            {t("connections.description")}
           </p>
         </div>
         <Button
@@ -407,7 +413,7 @@ export function RrConnectionsTab({
           onClick={() => onOpenChange(false)}
           className="text-xs sm:text-sm h-9 px-5 rounded-xl cursor-pointer"
         >
-          Close Settings
+          {t("connections.closeSettingsBtn")}
         </Button>
       </div>
 
@@ -420,19 +426,18 @@ export function RrConnectionsTab({
         <DialogContent className="max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl text-left">
           <DialogHeader>
             <DialogTitle className="text-base font-semibold text-foreground">
-              Select Lists to Import
+              {t("connections.selectImportTitle")}
             </DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-4 py-4">
             <p className="text-xs text-muted-foreground">
-              Choose which watchlists you would like to import from{" "}
-              {showImportDialog?.toUpperCase()}.
+              {t("connections.selectImportDesc", { provider: showImportDialog?.toUpperCase() })}
             </p>
             <div className="flex flex-col gap-3">
               {PROVIDERS.find((p) => p.id === showImportDialog)
                 ?.capabilities.filter((cap) => cap in IMPORTABLE_CAPABILITIES)
                 .map((cap) => {
-                  const { label, key } = IMPORTABLE_CAPABILITIES[cap];
+                  const { key } = IMPORTABLE_CAPABILITIES[cap];
                   const isChecked = selectedMediaTypes.includes(key);
                   return (
                     <div
@@ -456,7 +461,7 @@ export function RrConnectionsTab({
                         htmlFor={`media-type-${key}`}
                         className="text-xs font-semibold text-foreground select-none cursor-pointer flex-1"
                       >
-                        {label}
+                        {t(`mediaTypes.${key}`)}
                       </label>
                     </div>
                   );
@@ -470,7 +475,7 @@ export function RrConnectionsTab({
               onClick={() => setShowImportDialog(null)}
               className="rounded-lg h-9 text-xs"
             >
-              Cancel
+              {t("cancel")}
             </Button>
             <Button
               size="sm"
@@ -483,7 +488,7 @@ export function RrConnectionsTab({
               }}
               className="rounded-lg h-9 text-xs font-semibold text-primary-foreground bg-primary hover:bg-primary/95"
             >
-              Start Import
+              {t("connections.startImportBtn")}
             </Button>
           </div>
         </DialogContent>
@@ -499,24 +504,21 @@ export function RrConnectionsTab({
           <DialogHeader>
             <DialogTitle className="text-base font-semibold text-foreground flex items-center gap-2">
               <span className="inline-block size-2.5 rounded-full bg-warning animate-pulse" />
-              Failed Import Items ({failedImports?.items.length})
+              {t("connections.failedItemsTitle", { count: failedImports?.items.length })}
             </DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto py-4 flex flex-col gap-3 pr-1">
             <p className="text-xs text-muted-foreground leading-relaxed">
-              The following items from{" "}
-              <strong>{failedImports?.providerId.toUpperCase()}</strong> could
-              not be imported automatically. You can manually search and link
-              them using the Edit dialog for the respective media entry.
+              {t("connections.failedItemsDesc", { provider: failedImports?.providerId.toUpperCase() })}
             </p>
             <div className="border border-border rounded-xl overflow-hidden bg-muted/10">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-secondary/25 border-b border-border text-muted-foreground font-semibold">
-                    <th className="p-3">Title</th>
-                    <th className="p-3 w-20">Type</th>
-                    <th className="p-3 w-24">ID</th>
-                    <th className="p-3">Reason</th>
+                    <th className="p-3">{t("connections.tableTitle")}</th>
+                    <th className="p-3 w-20">{t("connections.tableType")}</th>
+                    <th className="p-3 w-24">{t("connections.tableId")}</th>
+                    <th className="p-3">{t("connections.tableReason")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -536,7 +538,7 @@ export function RrConnectionsTab({
                           variant="outline"
                           className="capitalize text-[10px] px-1.5 py-0 font-medium"
                         >
-                          {item.mediaType}
+                          {t(`mediaTypes.${item.mediaType}`)}
                         </Badge>
                       </td>
                       <td className="p-3 font-mono text-[10px] text-muted-foreground">
@@ -563,7 +565,7 @@ export function RrConnectionsTab({
               }}
               className="rounded-lg h-9 text-xs font-semibold px-4"
             >
-              Close
+              {t("connections.closeBtn")}
             </Button>
           </div>
         </DialogContent>

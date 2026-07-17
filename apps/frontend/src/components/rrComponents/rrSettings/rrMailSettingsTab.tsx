@@ -3,6 +3,7 @@
 import type React from "react";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
@@ -36,6 +37,7 @@ interface RrMailSettingsTabProps {
 
 export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): React.JSX.Element {
   const { data: session } = useSession();
+  const { t } = useTranslation();
 
   // Email Accounts States
   const [emailAccounts, setEmailAccounts] = useState<any[]>([]);
@@ -125,26 +127,26 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
         await apiMutate(`${process.env.NEXT_PUBLIC_API_URL}/emails`, "POST", payload);
       }
 
-      toast.success(editingEmailAccount ? "Email account updated" : "Email account added");
+      toast.success(editingEmailAccount ? t("mailSettings.toastUpdated") : t("mailSettings.toastAdded"));
       setIsEmailAccountDialogOpen(false);
       fetchEmailAccounts();
       resetEmailForm();
       window.dispatchEvent(new CustomEvent("runa-sidebar-changed"));
     } catch (err: any) {
-      toast.error(err.message || "Failed to save account details.");
+      toast.error(err.message || t("mailSettings.toastFailedSave"));
     }
   };
 
   const handleDeleteEmailAccount = async (id: string): Promise<void> => {
     if (!session?.accessToken) return;
-    if (!window.confirm("Are you sure you want to remove this email account?")) return;
+    if (!window.confirm(t("mailSettings.deleteConfirm"))) return;
     try {
       await apiMutate(`${process.env.NEXT_PUBLIC_API_URL}/emails/${id}`, "DELETE");
-      toast.success("Email account removed");
+      toast.success(t("mailSettings.toastRemoved"));
       fetchEmailAccounts();
       window.dispatchEvent(new CustomEvent("runa-sidebar-changed"));
     } catch (err: any) {
-      toast.error(err.message || "Delete failed.");
+      toast.error(err.message || t("mailSettings.toastFailedDelete"));
     }
   };
 
@@ -171,14 +173,14 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
   const handleAutodetect = async (): Promise<void> => {
     const autodetectEmail = emailLoginField || emailAddressField;
     if (!autodetectEmail || !autodetectEmail.includes("@")) {
-      toast.error("Please enter a valid email address first.");
+      toast.error(t("mailSettings.toastEnterEmail"));
       return;
     }
     const domain = autodetectEmail.split("@")[1].toLowerCase().trim();
     if (!domain) return;
 
     if (!session?.accessToken) {
-      toast.error("Session authentication required.");
+      toast.error(t("mailSettings.toastAuthRequired"));
       return;
     }
 
@@ -192,10 +194,10 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
       setSmtpPort(config.smtpPort ? String(config.smtpPort) : "465");
       setSmtpSecure(config.smtpSecure !== false);
 
-      toast.success(`Server settings auto-filled for ${domain}!`);
+      toast.success(t("mailSettings.toastAutodetectSuccess", { domain }));
     } catch (err) {
       console.error("Autodetect error:", err);
-      toast.error("Could not autodetect settings. Using generic defaults.");
+      toast.error(t("mailSettings.toastAutodetectFailed"));
       
       setImapHost(`imap.${domain}`);
       setImapPort("993");
@@ -231,9 +233,9 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-0 pb-4 border-b border-border/40 text-left">
         <div className="flex flex-col gap-0.5">
-          <CardTitle>Linked Email Accounts</CardTitle>
+          <CardTitle>{t("mailSettings.title")}</CardTitle>
           <CardDescription>
-            Add multiple email addresses and configure IMAP/SMTP credentials.
+            {t("mailSettings.description")}
           </CardDescription>
         </div>
         <Button
@@ -241,7 +243,7 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
           className="h-8 rounded-lg cursor-pointer"
         >
           <Plus className="size-3.5 mr-1" />
-          Link Email Account
+          {t("mailSettings.linkBtn")}
         </Button>
       </CardHeader>
 
@@ -256,7 +258,7 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
         ))}
         {emailAccounts.length === 0 && (
           <div className="col-span-full p-6 text-center rounded-xl border border-dashed border-border text-xs text-muted-foreground">
-            No linked email accounts found. Add one to get started!
+            {t("mailSettings.noAccounts")}
           </div>
         )}
       </CardContent>
@@ -268,7 +270,7 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
           onClick={() => onOpenChange(false)}
           className="text-xs sm:text-sm h-9 px-5 rounded-xl cursor-pointer"
         >
-          Close Settings
+          {t("mailSettings.closeSettingsBtn")}
         </Button>
       </CardFooter>
 
@@ -277,10 +279,10 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
         <DialogContent className="sm:max-w-3xl md:max-w-4xl bg-card border border-border shadow-2xl p-6 rounded-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader className="pb-3 border-b border-border/40 text-left">
             <DialogTitle className="text-md font-bold">
-              {editingEmailAccount ? "Edit Email Account" : "Link Email Account"}
+              {editingEmailAccount ? t("mailSettings.editTitle") : t("mailSettings.linkTitle")}
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground mt-1">
-              Configure your display identity and mail server connection credentials.
+              {t("mailSettings.dialogDesc")}
             </DialogDescription>
           </DialogHeader>
 
@@ -288,17 +290,17 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
             {/* Identity & Aesthetics */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="account-name">Account Name</Label>
+                <Label htmlFor="account-name">{t("mailSettings.accountNameLabel")}</Label>
                 <Input
                   id="account-name"
                   value={emailAccountName}
                   onChange={(e) => setEmailAccountName(e.target.value)}
-                  placeholder="e.g. Personal Purelymail"
+                  placeholder={t("mailSettings.accountNamePlaceholder")}
                   className="h-9 px-3 text-xs"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="account-color">Sidebar Indicator Color</Label>
+                <Label htmlFor="account-color">{t("mailSettings.indicatorColorLabel")}</Label>
                 <div className="flex items-center gap-3">
                   <div
                     className="size-9 rounded-lg border border-border/80 shadow-inner shrink-0 transition-colors"
@@ -331,51 +333,51 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
             </div>
 
             <div className="flex flex-col gap-1 mt-1">
-              <h5 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Default Identity</h5>
-              <p className="text-[10px] text-muted-foreground/60">Information recipients see when reading your messages.</p>
+              <h5 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{t("mailSettings.defaultIdentityTitle")}</h5>
+              <p className="text-[10px] text-muted-foreground/60">{t("mailSettings.defaultIdentityDesc")}</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="sender-name">Your Name</Label>
+                <Label htmlFor="sender-name">{t("mailSettings.senderNameLabel")}</Label>
                 <Input
                   id="sender-name"
                   value={emailSenderName}
                   onChange={(e) => setEmailSenderName(e.target.value)}
-                  placeholder="e.g. Yki"
+                  placeholder={t("mailSettings.senderNamePlaceholder")}
                   className="h-9 px-3 text-xs"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="email-address-field">Email Address</Label>
+                <Label htmlFor="email-address-field">{t("mailSettings.emailAddressLabel")}</Label>
                 <Input
                   id="email-address-field"
                   value={emailAddressField}
                   onChange={(e) => setEmailAddressField(e.target.value)}
-                  placeholder="e.g. yuki@runerra.org"
+                  placeholder={t("mailSettings.emailAddressPlaceholder")}
                   className="h-9 px-3 text-xs"
                 />
                 <p className="text-[10px] text-muted-foreground/60">
-                  The address recipients see in the From field.
+                  {t("mailSettings.emailAddressDesc")}
                 </p>
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="reply-to">Reply-to Address (Optional)</Label>
+                <Label htmlFor="reply-to">{t("mailSettings.replyToLabel")}</Label>
                 <Input
                   id="reply-to"
                   value={emailReplyTo}
                   onChange={(e) => setEmailReplyTo(e.target.value)}
-                  placeholder="Alternative reply destination"
+                  placeholder={t("mailSettings.replyToPlaceholder")}
                   className="h-9 px-3 text-xs"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="organization">Organization (Optional)</Label>
+                <Label htmlFor="organization">{t("mailSettings.organizationLabel")}</Label>
                 <Input
                   id="organization"
                   value={emailOrganization}
                   onChange={(e) => setEmailOrganization(e.target.value)}
-                  placeholder="e.g. Runa Dev Group"
+                  placeholder={t("mailSettings.organizationPlaceholder")}
                   className="h-9 px-3 text-xs"
                 />
               </div>
@@ -383,7 +385,7 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
 
             <div className="flex flex-col gap-1.5">
               <div className="flex items-center justify-between">
-                <Label htmlFor="email-signature">Signature Text</Label>
+                <Label htmlFor="email-signature">{t("mailSettings.signatureLabel")}</Label>
                 <div className="flex items-center gap-1.5">
                   <input
                     id="use-html"
@@ -392,7 +394,7 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmailUseHtmlSig(e.target.checked)}
                     className="size-3.5 bg-background border-border text-primary rounded-xs cursor-pointer"
                   />
-                  <Label htmlFor="use-html" className="text-[10px] cursor-pointer">Use HTML formatting</Label>
+                  <Label htmlFor="use-html" className="text-[10px] cursor-pointer">{t("mailSettings.useHtmlSigLabel")}</Label>
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -400,16 +402,16 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
                   id="email-signature"
                   value={emailSignature}
                   onChange={(e) => setEmailSignature(e.target.value)}
-                  placeholder="Add your mail signature text... HTML or plain text supported."
+                  placeholder={t("mailSettings.signaturePlaceholder")}
                   className="w-full min-h-[100px] p-3 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-foreground font-mono"
                 />
                 <div className="flex flex-col bg-background/50 border border-border rounded-xl p-3 min-h-[100px] text-left">
-                  <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mb-2 select-none">Live Signature Preview</span>
+                  <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mb-2 select-none">{t("mailSettings.livePreview")}</span>
                   <div className="text-xs text-foreground/90 overflow-y-auto max-h-[80px]">
                     {emailUseHtmlSig ? (
-                      <div dangerouslySetInnerHTML={{ __html: emailSignature || "<i>No signature content</i>" }} />
+                      <div dangerouslySetInnerHTML={{ __html: emailSignature || `<i>${t("mailSettings.noSignatureContent")}</i>` }} />
                     ) : (
-                      <pre className="font-sans whitespace-pre-wrap">{emailSignature || "No signature content"}</pre>
+                      <pre className="font-sans whitespace-pre-wrap">{emailSignature || t("mailSettings.noSignatureContent")}</pre>
                     )}
                   </div>
                 </div>
@@ -418,7 +420,7 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
 
             <div className="flex items-center justify-between mt-1">
               <div className="flex flex-col gap-1">
-                <h5 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Server Settings</h5>
+                <h5 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{t("mailSettings.serverSettingsTitle")}</h5>
               </div>
               <Button
                 type="button"
@@ -426,32 +428,32 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
                 variant="outline"
                 className="h-7 rounded-lg border border-border hover:bg-muted text-[10px] px-2.5 font-semibold shrink-0 cursor-pointer"
               >
-                Autodetect
+                {t("mailSettings.autodetectBtn")}
               </Button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="login-email">Login Email (Authentication)</Label>
+                <Label htmlFor="login-email">{t("mailSettings.loginEmailLabel")}</Label>
                 <Input
                   id="login-email"
                   value={emailLoginField}
                   onChange={(e) => setEmailLoginField(e.target.value)}
-                  placeholder={emailAddressField || "e.g. yki@runerra.org"}
+                  placeholder={emailAddressField || t("mailSettings.emailAddressPlaceholder")}
                   className="h-9 px-3 text-xs"
                 />
                 <p className="text-[10px] text-muted-foreground/60">
-                  IMAP/SMTP login username. Leave blank to use the identity email above.
+                  {t("mailSettings.loginEmailDesc")}
                 </p>
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor="email-password">Account Password</Label>
+                <Label htmlFor="email-password">{t("mailSettings.passwordLabel")}</Label>
                 <Input
                   id="email-password"
                   type="password"
                   value={emailPassword}
                   onChange={(e) => setEmailPassword(e.target.value)}
-                  placeholder="SMTP/IMAP server password"
+                  placeholder={t("mailSettings.passwordPlaceholder")}
                   className="h-9 px-3 text-xs"
                 />
               </div>
@@ -461,9 +463,9 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 rounded-xl border border-border bg-muted/40">
               {/* Incoming IMAP */}
               <div className="flex flex-col gap-3.5">
-                <span className="text-[10px] font-bold text-primary uppercase tracking-wide">Incoming (IMAP)</span>
+                <span className="text-[10px] font-bold text-primary uppercase tracking-wide">{t("mailSettings.incomingImapTitle")}</span>
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="imap-host">Server Hostname</Label>
+                  <Label htmlFor="imap-host">{t("mailSettings.serverHostnameLabel")}</Label>
                   <Input
                     id="imap-host"
                     value={imapHost}
@@ -474,7 +476,7 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="imap-port">Port</Label>
+                    <Label htmlFor="imap-port">{t("mailSettings.portLabel")}</Label>
                     <Input
                       id="imap-port"
                       value={imapPort}
@@ -492,7 +494,7 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setImapSecure(e.target.checked)}
                         className="size-3.5 bg-background border-border text-primary rounded-xs cursor-pointer"
                       />
-                      <Label htmlFor="imap-secure" className="text-[10px] cursor-pointer">SSL/TLS</Label>
+                      <Label htmlFor="imap-secure" className="text-[10px] cursor-pointer">{t("mailSettings.sslTlsLabel")}</Label>
                     </div>
                   </div>
                 </div>
@@ -500,9 +502,9 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
 
               {/* Outgoing SMTP */}
               <div className="flex flex-col gap-3.5">
-                <span className="text-[10px] font-bold text-primary uppercase tracking-wide">Outgoing (SMTP)</span>
+                <span className="text-[10px] font-bold text-primary uppercase tracking-wide">{t("mailSettings.outgoingSmtpTitle")}</span>
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="smtp-host">Server Hostname</Label>
+                  <Label htmlFor="smtp-host">{t("mailSettings.serverHostnameLabel")}</Label>
                   <Input
                     id="smtp-host"
                     value={smtpHost}
@@ -513,7 +515,7 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="smtp-port">Port</Label>
+                    <Label htmlFor="smtp-port">{t("mailSettings.portLabel")}</Label>
                     <Input
                       id="smtp-port"
                       value={smtpPort}
@@ -531,7 +533,7 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSmtpSecure(e.target.checked)}
                         className="size-3.5 bg-background border-border text-primary rounded-xs cursor-pointer"
                       />
-                      <Label htmlFor="smtp-secure" className="text-[10px] cursor-pointer">SSL/TLS</Label>
+                      <Label htmlFor="smtp-secure" className="text-[10px] cursor-pointer">{t("mailSettings.sslTlsLabel")}</Label>
                     </div>
                   </div>
                 </div>
@@ -545,14 +547,14 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
               onClick={() => setIsEmailAccountDialogOpen(false)}
               className="text-muted-foreground hover:text-foreground rounded-xl text-xs h-9 cursor-pointer"
             >
-              Cancel
+              {t("cancel")}
             </Button>
             <Button
               onClick={handleSaveEmailAccount}
               disabled={!emailAccountName || (!emailAddressField.trim() && !emailLoginField.trim()) || !emailPassword}
               className="bg-primary hover:bg-primary/95 text-primary-foreground font-bold rounded-xl px-5 text-xs h-9 cursor-pointer"
             >
-              {editingEmailAccount ? "Update Account" : "Link Account"}
+              {editingEmailAccount ? t("mailSettings.updateAccountBtn") : t("mailSettings.linkAccountBtn")}
             </Button>
           </div>
         </DialogContent>

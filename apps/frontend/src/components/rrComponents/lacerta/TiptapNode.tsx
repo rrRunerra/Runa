@@ -20,6 +20,7 @@ import { Node, mergeAttributes } from "@tiptap/core";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { ramerDouglasPeucker } from "@/lib/coordinates";
 import { createLowlight, common } from "lowlight";
+import { useTranslation } from "react-i18next";
 
 const lowlight = createLowlight(common);
 import {
@@ -65,6 +66,7 @@ const DrawingComponent: React.FC<DrawingComponentProps> = ({
   node,
   updateAttributes,
 }) => {
+  const { t } = useTranslation();
   const lines = node.attrs.lines || [];
   const [isDrawing, setIsDrawing] = useState(false);
   const [currentLine, setCurrentLine] = useState<Stroke | null>(null);
@@ -147,7 +149,7 @@ const DrawingComponent: React.FC<DrawingComponentProps> = ({
       <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-border/80 text-[10px]">
         <span className="font-semibold text-muted-foreground/80 flex items-center gap-1.5">
           <Paintbrush className="h-3 w-3 text-primary" />
-          Inline Sketch
+          {t("lacerta.tiptapNode.inlineSketch", "Inline Sketch")}
         </span>
         <div
           className="flex items-center gap-2"
@@ -164,15 +166,15 @@ const DrawingComponent: React.FC<DrawingComponentProps> = ({
             onChange={(e) => setStrokeWidth(Number(e.target.value))}
             className="bg-muted border border-border rounded p-0.5 text-[9px] font-medium text-foreground focus:outline-none"
           >
-            <option value="2">Thin</option>
-            <option value="4">Medium</option>
-            <option value="8">Thick</option>
+            <option value="2">{t("lacerta.tiptapNode.thin", "Thin")}</option>
+            <option value="4">{t("lacerta.tiptapNode.medium", "Medium")}</option>
+            <option value="8">{t("lacerta.tiptapNode.thick", "Thick")}</option>
           </select>
           <button
             onClick={handleClear}
             className="px-2 py-0.5 bg-destructive/10 text-destructive hover:bg-destructive/15 rounded text-[9px] font-semibold transition-all"
           >
-            Clear
+            {t("lacerta.tiptapNode.clear", "Clear")}
           </button>
         </div>
       </div>
@@ -257,6 +259,7 @@ export default function TiptapNode({
   onChange,
   editable = true,
 }: TiptapNodeProps): React.JSX.Element {
+  const { t } = useTranslation();
   const isFirstRender = useRef(true);
 
   const editor = useEditor({
@@ -315,7 +318,7 @@ export default function TiptapNode({
   };
 
   const addImage = () => {
-    const url = prompt("Enter Image URL:");
+    const url = prompt(t("lacerta.tiptapNode.enterImageUrl", "Enter Image URL:"));
     if (url) {
       editor.chain().focus().setImage({ src: url }).run();
     }
@@ -343,7 +346,7 @@ export default function TiptapNode({
             onClick={() => editor.chain().focus().toggleBold().run()}
             disabled={!editor.can().chain().focus().toggleBold().run()}
             className={`p-1.5 rounded hover:bg-muted transition-colors ${editor.isActive("bold") ? "bg-muted text-primary" : "text-muted-foreground"}`}
-            title="Bold"
+            title={t("lacerta.tiptapNode.bold", "Bold")}
           >
             <Bold className="h-3.5 w-3.5" />
           </button>
@@ -351,7 +354,7 @@ export default function TiptapNode({
             onClick={() => editor.chain().focus().toggleItalic().run()}
             disabled={!editor.can().chain().focus().toggleItalic().run()}
             className={`p-1.5 rounded hover:bg-muted transition-colors ${editor.isActive("italic") ? "bg-muted text-primary" : "text-muted-foreground"}`}
-            title="Italic"
+            title={t("lacerta.tiptapNode.italic", "Italic")}
           >
             <Italic className="h-3.5 w-3.5" />
           </button>
@@ -361,7 +364,7 @@ export default function TiptapNode({
               editor.chain().focus().toggleHeading({ level: 1 }).run()
             }
             className={`p-1.5 rounded hover:bg-muted transition-colors ${editor.isActive("heading", { level: 1 }) ? "bg-muted text-primary" : "text-muted-foreground"}`}
-            title="H1"
+            title={t("lacerta.tiptapNode.h1", "H1")}
           >
             <Heading1 className="h-3.5 w-3.5" />
           </button>
@@ -370,7 +373,7 @@ export default function TiptapNode({
               editor.chain().focus().toggleHeading({ level: 2 }).run()
             }
             className={`p-1.5 rounded hover:bg-muted transition-colors ${editor.isActive("heading", { level: 2 }) ? "bg-muted text-primary" : "text-muted-foreground"}`}
-            title="H2"
+            title={t("lacerta.tiptapNode.h2", "H2")}
           >
             <Heading2 className="h-3.5 w-3.5" />
           </button>
@@ -378,21 +381,21 @@ export default function TiptapNode({
           <button
             onClick={() => editor.chain().focus().toggleBulletList().run()}
             className={`p-1.5 rounded hover:bg-muted transition-colors ${editor.isActive("bulletList") ? "bg-muted text-primary" : "text-muted-foreground"}`}
-            title="Bullet List"
+            title={t("lacerta.tiptapNode.bulletList", "Bullet List")}
           >
             <List className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={() => editor.chain().focus().toggleOrderedList().run()}
             className={`p-1.5 rounded hover:bg-muted transition-colors ${editor.isActive("orderedList") ? "bg-muted text-primary" : "text-muted-foreground"}`}
-            title="Numbered List"
+            title={t("lacerta.tiptapNode.numberedList", "Numbered List")}
           >
             <ListOrdered className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={() => editor.chain().focus().toggleTaskList().run()}
             className={`p-1.5 rounded hover:bg-muted transition-colors ${editor.isActive("taskList") ? "bg-muted text-primary" : "text-muted-foreground"}`}
-            title="Task List"
+            title={t("lacerta.tiptapNode.taskList", "Task List")}
           >
             <CheckSquare className="h-3.5 w-3.5" />
           </button>
@@ -408,24 +411,24 @@ export default function TiptapNode({
           <button
             onClick={insertTable}
             className="p-1.5 rounded hover:bg-muted text-muted-foreground transition-colors"
-            title="Insert Table"
+            title={t("lacerta.tiptapNode.insertTable", "Insert Table")}
           >
             <TableIcon className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={addImage}
             className="p-1.5 rounded hover:bg-muted text-muted-foreground transition-colors"
-            title="Insert Image URL"
+            title={t("lacerta.tiptapNode.insertImageUrl", "Insert Image URL")}
           >
             <ImageIcon className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={insertDrawing}
             className="p-1.5 rounded hover:bg-muted text-muted-foreground transition-colors flex items-center gap-1 font-bold text-[9px] border border-dashed border-border"
-            title="Insert Inline Drawing"
+            title={t("lacerta.tiptapNode.insertInlineDrawing", "Insert Inline Drawing")}
           >
             <Paintbrush className="h-3.5 w-3.5 text-primary" />
-            Sketch
+            {t("lacerta.tiptapNode.sketch", "Sketch")}
           </button>
         </FloatingMenu>
       )}

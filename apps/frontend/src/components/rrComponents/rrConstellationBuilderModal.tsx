@@ -33,6 +33,7 @@ import {
 import { toast } from "sonner";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
+import { useTranslation } from "react-i18next";
 
 import {
   Dialog,
@@ -110,6 +111,7 @@ export function RrConstellationBuilderModal({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const { data: session } = useSession();
+  const { t } = useTranslation();
 
   const [canvasWidth, setCanvasWidth] = useState<number>(800);
   const [canvasHeight, setCanvasHeight] = useState<number>(600);
@@ -1104,10 +1106,10 @@ export function RrConstellationBuilderModal({
         });
         if (!res.ok) {
           const errJson = await res.json().catch(() => null);
-          throw new Error(errJson?.message || "Failed to save constellation bookmark.");
+          throw new Error(errJson?.message || t("constellationBuilder.toastFailedSave"));
         }
         const savedBookmark = await res.json() as Bookmark;
-        toast.success(`Successfully saved "${name}" to database bookmarks!`);
+        toast.success(t("constellationBuilder.toastSaved", { name }));
         window.dispatchEvent(new CustomEvent("runa-bookmarks-changed"));
 
         // Update local bookmarks list
@@ -1122,7 +1124,7 @@ export function RrConstellationBuilderModal({
         });
       }
     } catch (err: any) {
-      toast.error(err.message || "Failed to save constellation.");
+      toast.error(err.message || t("constellationBuilder.toastFailedSave"));
     } finally {
       setIsSaving(false);
     }
@@ -1130,7 +1132,7 @@ export function RrConstellationBuilderModal({
 
   const handleDeleteBookmark = async (id: string, bookmarkName: string): Promise<void> => {
     if (!session?.accessToken) {
-      toast.error("You must be logged in to delete bookmarks.");
+      toast.error(t("constellationBuilder.toastLoginRequired"));
       return;
     }
 
@@ -1145,13 +1147,13 @@ export function RrConstellationBuilderModal({
       });
       if (!res.ok) {
         const errJson = await res.json().catch(() => null);
-        throw new Error(errJson?.message || "Failed to delete bookmark.");
+        throw new Error(errJson?.message || t("constellationBuilder.toastFailedSave"));
       }
-      toast.success(`Successfully deleted "${bookmarkName}" bookmark.`);
+      toast.success(t("constellationBuilder.toastDeleted", { name: bookmarkName }));
       setBookmarks((prev) => prev.filter((b) => b.id !== id));
       window.dispatchEvent(new CustomEvent("runa-bookmarks-changed"));
     } catch (err: any) {
-      toast.error(err.message || "Failed to delete bookmark.");
+      toast.error(err.message || t("constellationBuilder.toastFailedSave"));
     } finally {
       setIsDeleting(false);
       setDeleteId(null);
@@ -1160,7 +1162,7 @@ export function RrConstellationBuilderModal({
 
   const handleLoadBookmark = (b: Bookmark) => {
     setName(b.name);
-    setDescription(b.description || "Custom built constellation.");
+    setDescription(b.description || t("constellationBuilder.savedConstellation"));
     setRedirect(b.redirect || "/custom-constellation");
     setIcon(b.icon || "");
 
@@ -1192,13 +1194,13 @@ export function RrConstellationBuilderModal({
     setStarColor(b.starColor || "");
     setActiveTab("metadata");
     toast.success(
-      `Loaded "${b.name}" constellation into workspace! You can edit its details in the Meta tab.`,
+      t("constellationBuilder.toastLoaded", { name: b.name }),
     );
   };
 
   // Construct user's current constellation dynamically to preview on the starmap
   const currentConstellation = {
-    name: name || "New Constellation",
+    name: name || t("constellationBuilder.savedConstellation"),
     description: description,
     redirect: redirect,
     id: "user-current",
@@ -1226,11 +1228,10 @@ export function RrConstellationBuilderModal({
               </div>
               <div>
                 <DialogTitle className="text-base sm:text-lg font-bold tracking-wide">
-                  Constellation Workspace
+                  {t("constellationBuilder.workspace")}
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                  Design custom constellation path networks and generate
-                  structured star maps.
+                  {t("constellationBuilder.workspaceDesc")}
                 </DialogDescription>
               </div>
             </div>
@@ -1250,7 +1251,7 @@ export function RrConstellationBuilderModal({
                     : "text-muted-foreground hover:text-foreground border border-transparent",
                 )}
               >
-                Canvas Workspace
+                {t("constellationBuilder.canvasWorkspace")}
               </button>
               <button
                 type="button"
@@ -1262,7 +1263,7 @@ export function RrConstellationBuilderModal({
                     : "text-muted-foreground hover:text-foreground border border-transparent",
                 )}
               >
-                Workspace Settings
+                {t("constellationBuilder.workspaceSettings")}
               </button>
             </div>
 
@@ -1316,14 +1317,14 @@ export function RrConstellationBuilderModal({
                         ? "cursor-grabbing"
                         : "cursor-grab",
                   )}
-                  aria-label="Constellation designer sky canvas. Click to place stars, connect them, and adjust settings."
+                  aria-label={t("constellationBuilder.ariaSkyCanvas")}
                 />
 
                 {/* HUD Active Node Marker */}
                 {activeStarIndex !== null && (
                   <div className="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-500 font-mono text-[10px] flex items-center gap-1.5 shadow-sm">
                     <span className="size-1.5 rounded-full bg-amber-500 animate-ping" />
-                    Active Node: Star [{activeStarIndex}]
+                    {t("constellationBuilder.activeNode", { index: activeStarIndex })}
                   </div>
                 )}
 
@@ -1340,8 +1341,8 @@ export function RrConstellationBuilderModal({
                       setZoom((prev) => Math.max(0.5, prev - 0.25))
                     }
                     className="size-7 p-0 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground active:scale-95 transition-all cursor-pointer"
-                    title="Zoom Out"
-                    aria-label="Zoom Out"
+                    title={t("constellationBuilder.zoomOut")}
+                    aria-label={t("constellationBuilder.zoomOut")}
                   >
                     <Minus className="size-3.5" />
                   </Button>
@@ -1349,8 +1350,8 @@ export function RrConstellationBuilderModal({
                     type="button"
                     onClick={() => setZoom(1)}
                     className="px-2 h-7 flex items-center justify-center rounded-lg bg-muted/50 border border-border text-[10px] font-mono font-bold text-foreground hover:bg-muted transition-all min-w-[54px] cursor-pointer"
-                    title="Reset Zoom to 100%"
-                    aria-label="Reset zoom level to 100 percent"
+                    title={t("constellationBuilder.resetZoom")}
+                    aria-label={t("constellationBuilder.resetZoom")}
                   >
                     {Math.round(zoom * 100)}%
                   </button>
@@ -1361,8 +1362,8 @@ export function RrConstellationBuilderModal({
                       setZoom((prev) => Math.min(8.0, prev + 0.25))
                     }
                     className="size-7 p-0 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground active:scale-95 transition-all cursor-pointer"
-                    title="Zoom In"
-                    aria-label="Zoom In"
+                    title={t("constellationBuilder.zoomIn")}
+                    aria-label={t("constellationBuilder.zoomIn")}
                   >
                     <Plus className="size-3.5" />
                   </Button>
@@ -1381,7 +1382,7 @@ export function RrConstellationBuilderModal({
                     aria-label="Undo last star placement"
                   >
                     <Undo2 className="size-3.5 mr-1" />
-                    Undo last (Ctrl+Z)
+                    {t("constellationBuilder.undoLast")}
                   </Button>
 
                   {activeStarIndex !== null && (
@@ -1393,7 +1394,7 @@ export function RrConstellationBuilderModal({
                       aria-label="Delete active star"
                     >
                       <Trash2 className="size-3.5 mr-1" />
-                      Delete Active (Del)
+                      {t("constellationBuilder.deleteActive")}
                     </Button>
                   )}
 
@@ -1405,7 +1406,7 @@ export function RrConstellationBuilderModal({
                       className="rounded-lg text-muted-foreground hover:text-foreground"
                       aria-label="Deselect active star"
                     >
-                      Deselect (Esc)
+                      {t("constellationBuilder.deselect")}
                     </Button>
                   )}
                 </div>
@@ -1419,7 +1420,7 @@ export function RrConstellationBuilderModal({
                   aria-label="Clear constellation workspace canvas"
                 >
                   <RefreshCw className="size-3.5 mr-1" />
-                  Clear Workspace
+                  {t("constellationBuilder.clearWorkspace")}
                 </Button>
               </div>
 
@@ -1428,7 +1429,7 @@ export function RrConstellationBuilderModal({
                 <div className="w-full sm:w-auto flex flex-col gap-1.5 shrink-0">
                   <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
                     <Upload className="size-3.5" />
-                    Overlay Image
+                    {t("constellationBuilder.overlayImage")}
                   </Label>
                   <div className="relative">
                     <input
@@ -1443,11 +1444,11 @@ export function RrConstellationBuilderModal({
                       htmlFor="modal-image-upload"
                       className="inline-flex h-9 items-center px-4 rounded-lg border border-input bg-background hover:bg-muted text-xs font-medium text-foreground cursor-pointer transition-colors"
                     >
-                      Choose file...
+                      {t("constellationBuilder.chooseFile")}
                     </label>
                     {bgImage && (
                       <span className="text-[10px] text-emerald-500 block mt-1 font-mono">
-                        Image Loaded
+                        {t("constellationBuilder.imageLoaded")}
                       </span>
                     )}
                   </div>
@@ -1461,7 +1462,7 @@ export function RrConstellationBuilderModal({
                       ) : (
                         <Unlock className="size-3.5 text-primary" />
                       )}
-                      Image Lock
+                      {t("constellationBuilder.imageLock")}
                     </Label>
                     <Button
                       type="button"
@@ -1479,7 +1480,7 @@ export function RrConstellationBuilderModal({
                           : "Lock overlay image position"
                       }
                     >
-                      {bgLocked ? "Unlock Drag" : "Lock Position"}
+                      {bgLocked ? t("constellationBuilder.unlockDrag") : t("constellationBuilder.lockPosition")}
                     </Button>
                   </div>
                 )}
@@ -1489,7 +1490,7 @@ export function RrConstellationBuilderModal({
                     {/* Opacity slider */}
                     <div className="flex flex-col gap-1.5">
                       <Label className="text-[10px] text-muted-foreground flex justify-between font-mono">
-                        <span>Opacity</span>
+                        <span>{t("constellationBuilder.opacity")}</span>
                         <span>{Math.round(bgOpacity * 100)}%</span>
                       </Label>
                       <Slider
@@ -1506,7 +1507,7 @@ export function RrConstellationBuilderModal({
                     {/* Scale slider */}
                     <div className="flex flex-col gap-1.5">
                       <Label className="text-[10px] text-muted-foreground flex justify-between font-mono">
-                        <span>Scale</span>
+                        <span>{t("constellationBuilder.scale")}</span>
                         <span>{bgScale.toFixed(2)}x</span>
                       </Label>
                       <Slider
@@ -1523,7 +1524,7 @@ export function RrConstellationBuilderModal({
                     {/* Translate Position Offset Controls */}
                     <div className="flex flex-col gap-1.5">
                       <Label className="text-[10px] text-muted-foreground flex justify-between font-mono">
-                        <span>Pos X</span>
+                        <span>{t("constellationBuilder.posX")}</span>
                         <span>{bgX}px</span>
                       </Label>
                       <Slider
@@ -1538,7 +1539,7 @@ export function RrConstellationBuilderModal({
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <Label className="text-[10px] text-muted-foreground flex justify-between font-mono">
-                        <span>Pos Y</span>
+                        <span>{t("constellationBuilder.posY")}</span>
                         <span>{bgY}px</span>
                       </Label>
                       <Slider
@@ -1555,7 +1556,7 @@ export function RrConstellationBuilderModal({
                     {/* Rotation Control */}
                     <div className="flex flex-col gap-1.5">
                       <Label className="text-[10px] text-muted-foreground flex justify-between font-mono">
-                        <span>Rotation</span>
+                        <span>{t("constellationBuilder.rotation")}</span>
                         <span>{bgRotation}°</span>
                       </Label>
                       <Slider
@@ -1575,7 +1576,7 @@ export function RrConstellationBuilderModal({
                 {bgImage && (
                   <div className="flex flex-col gap-1 bg-muted/40 p-2 rounded-lg border border-border shrink-0">
                     <span className="text-[9px] text-muted-foreground uppercase tracking-widest text-center block mb-1 font-mono">
-                      Nudge
+                      {t("constellationBuilder.nudge")}
                     </span>
                     <div className="grid grid-cols-3 gap-1 w-20">
                       <div />
@@ -1583,7 +1584,7 @@ export function RrConstellationBuilderModal({
                         type="button"
                         onClick={() => nudgeImage("up")}
                         className="size-5 bg-card border border-border rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent active:scale-95 transition-colors cursor-pointer"
-                        title="Nudge Image Up"
+                        title={t("constellationBuilder.nudge")}
                         aria-label="Nudge Image Up"
                       >
                         <ArrowUp className="size-3" />
@@ -1593,7 +1594,7 @@ export function RrConstellationBuilderModal({
                         type="button"
                         onClick={() => nudgeImage("left")}
                         className="size-5 bg-card border border-border rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent active:scale-95 transition-colors cursor-pointer"
-                        title="Nudge Image Left"
+                        title={t("constellationBuilder.nudge")}
                         aria-label="Nudge Image Left"
                       >
                         <ArrowLeft className="size-3" />
@@ -1605,7 +1606,7 @@ export function RrConstellationBuilderModal({
                         type="button"
                         onClick={() => nudgeImage("right")}
                         className="size-5 bg-card border border-border rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent active:scale-95 transition-colors cursor-pointer"
-                        title="Nudge Image Right"
+                        title={t("constellationBuilder.nudge")}
                         aria-label="Nudge Image Right"
                       >
                         <ArrowRight className="size-3" />
@@ -1615,7 +1616,7 @@ export function RrConstellationBuilderModal({
                         type="button"
                         onClick={() => nudgeImage("down")}
                         className="size-5 bg-card border border-border rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent active:scale-95 transition-colors cursor-pointer"
-                        title="Nudge Image Down"
+                        title={t("constellationBuilder.nudge")}
                         aria-label="Nudge Image Down"
                       >
                         <ArrowDown className="size-3" />
@@ -1647,33 +1648,33 @@ export function RrConstellationBuilderModal({
                     value="metadata"
                     className="text-[10px] sm:text-[11px] cursor-pointer"
                   >
-                    Meta
+                    {t("constellationBuilder.meta")}
                   </TabsTrigger>
                   {mode !== "device" && (
                     <TabsTrigger
                       value="saved"
                       className="text-[10px] sm:text-[11px] cursor-pointer"
                     >
-                      Saved
+                      {t("constellationBuilder.saved")}
                     </TabsTrigger>
                   )}
                   <TabsTrigger
                     value="export"
                     className="text-[10px] sm:text-[11px] cursor-pointer"
                   >
-                    Export
+                    {t("constellationBuilder.export")}
                   </TabsTrigger>
                   <TabsTrigger
                     value="import"
                     className="text-[10px] sm:text-[11px] cursor-pointer"
                   >
-                    Import
+                    {t("constellationBuilder.import")}
                   </TabsTrigger>
                   <TabsTrigger
                     value="guide"
                     className="text-[10px] sm:text-[11px] cursor-pointer"
                   >
-                    Guide
+                    {t("constellationBuilder.guide")}
                   </TabsTrigger>
                 </TabsList>
 
@@ -1684,12 +1685,12 @@ export function RrConstellationBuilderModal({
                 >
                   <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-3.5">
                     <h3 className="text-xs font-semibold text-foreground uppercase tracking-widest border-b border-border pb-2">
-                      Constellation Meta
+                      {t("constellationBuilder.constellationMeta")}
                     </h3>
 
                     <FieldGroup>
                       <Field>
-                        <FieldLabel htmlFor="const-name">Name</FieldLabel>
+                        <FieldLabel htmlFor="const-name">{t("constellationBuilder.name")}</FieldLabel>
                         <Input
                           id="const-name"
                           type="text"
@@ -1705,7 +1706,7 @@ export function RrConstellationBuilderModal({
                         <>
                           <Field>
                             <FieldLabel htmlFor="const-desc">
-                              Description
+                              {t("constellationBuilder.description")}
                             </FieldLabel>
                             <Input
                               id="const-desc"
@@ -1720,7 +1721,7 @@ export function RrConstellationBuilderModal({
 
                           <Field>
                             <FieldLabel htmlFor="const-redirect">
-                              Redirect Path
+                              {t("constellationBuilder.redirectPath")}
                             </FieldLabel>
                             <Input
                               id="const-redirect"
@@ -1735,7 +1736,7 @@ export function RrConstellationBuilderModal({
 
                           <Field>
                             <FieldLabel htmlFor="const-icon">
-                              Icon URL (Optional)
+                              {t("constellationBuilder.iconUrl")}
                             </FieldLabel>
                             <Input
                               id="const-icon"
@@ -1754,7 +1755,7 @@ export function RrConstellationBuilderModal({
                       <div className="grid grid-cols-2 gap-3">
                         <Field>
                           <FieldLabel htmlFor="const-conn-color">
-                            Line Color
+                            {t("constellationBuilder.lineColor")}
                           </FieldLabel>
                           <div className="flex gap-1.5 items-center">
                             <Input
@@ -1782,7 +1783,7 @@ export function RrConstellationBuilderModal({
 
                         <Field>
                           <FieldLabel htmlFor="const-star-color">
-                            Star Color
+                            {t("constellationBuilder.starColor")}
                           </FieldLabel>
                           <div className="flex gap-1.5 items-center">
                             <Input
@@ -1813,11 +1814,10 @@ export function RrConstellationBuilderModal({
                     {/* Offset Positions */}
                     <div className="flex flex-col gap-1.5 pt-2 border-t border-border mt-1">
                       <Label className="text-xs font-semibold text-foreground">
-                        Universe Target Position Offset
+                        {t("constellationBuilder.universeTargetPos")}
                       </Label>
                       <p className="text-[10px] text-muted-foreground leading-normal">
-                        Shifts coordinates so lines load at these coordinate
-                        values in StarMap.
+                        {t("constellationBuilder.universeTargetPosDesc")}
                       </p>
 
                       <div className="grid grid-cols-2 gap-2 mt-1">
@@ -1826,7 +1826,7 @@ export function RrConstellationBuilderModal({
                             htmlFor="offset-ra"
                             className="text-[10px] text-muted-foreground font-mono"
                           >
-                            RA Offset (Hours)
+                            {t("constellationBuilder.raOffset")}
                           </Label>
                           <Input
                             id="offset-ra"
@@ -1844,7 +1844,7 @@ export function RrConstellationBuilderModal({
                             htmlFor="offset-dec"
                             className="text-[10px] text-muted-foreground font-mono"
                           >
-                            Dec Offset (Deg)
+                            {t("constellationBuilder.decOffset")}
                           </Label>
                           <Input
                             id="offset-dec"
@@ -1867,7 +1867,7 @@ export function RrConstellationBuilderModal({
                         aria-label="Pick target offset visually from the StarMap"
                       >
                         <Compass className="size-3.5" />
-                        Pick Offset visually from StarMap
+                        {t("constellationBuilder.pickOffsetVisually")}
                       </Button>
                       <Button
                         onClick={handleSaveToBookmarks}
@@ -1887,16 +1887,16 @@ export function RrConstellationBuilderModal({
                         {isSaving ? (
                           <>
                             <RefreshCw className="size-3.5 animate-spin" />
-                            Saving Constellation...
+                            {t("constellationBuilder.saving")}
                           </>
                         ) : (
                           <>
                             <Check className="size-3.5" />
                             {mode === "device"
-                              ? "Save Constellation for Device"
+                              ? t("constellationBuilder.saveForDevice")
                               : editingBookmarkId
-                                ? "Update Bookmark"
-                                : "Save to Bookmarks"}
+                                ? t("constellationBuilder.updateBookmark")
+                                : t("constellationBuilder.saveToBookmarks")}
                           </>
                         )}
                       </Button>
@@ -1906,7 +1906,7 @@ export function RrConstellationBuilderModal({
                           onClick={() => {
                             setEditingBookmarkId(null);
                             toast.info(
-                              "Cleared edit session. Creating new bookmark now.",
+                              t("constellationBuilder.clearEditSession"),
                             );
                           }}
                           type="button"
@@ -1914,7 +1914,7 @@ export function RrConstellationBuilderModal({
                           className="w-full mt-1.5 h-8 text-[11px] text-muted-foreground hover:text-foreground"
                           aria-label="Cancel editing this bookmark, shift to creating a new bookmark instead"
                         >
-                          Cancel Edit (Create New)
+                          {t("constellationBuilder.cancelEdit")}
                         </Button>
                       )}
                     </div>
@@ -1930,42 +1930,42 @@ export function RrConstellationBuilderModal({
                     <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-2.5">
                       <div className="flex items-center justify-between border-b border-border pb-2">
                         <h3 className="text-xs font-semibold text-foreground uppercase tracking-widest">
-                          Saved Constellations
+                          {t("constellationBuilder.savedConstellations")}
                         </h3>
                       </div>
 
                       {!session?.accessToken ? (
                         <p className="text-xs text-muted-foreground text-center py-8">
-                          Please sign in to manage database bookmarks.
+                          {t("constellationBuilder.pleaseSignIn")}
                         </p>
                       ) : bookmarks.length === 0 ? (
                         <p className="text-xs text-muted-foreground text-center py-8">
-                          No bookmarks saved in database yet.
+                          {t("constellationBuilder.noBookmarksSaved")}
                         </p>
                       ) : (
                         <div className="flex flex-col gap-2 max-h-[440px] overflow-y-auto pr-1">
                           {bookmarks.map((b) => (
                             <div
-                              key={b.id}
-                              className="bg-background border border-border hover:border-muted-foreground/35 p-3 rounded-lg flex items-center justify-between gap-3 transition-colors group"
+                               key={b.id}
+                               className="bg-background border border-border hover:border-muted-foreground/35 p-3 rounded-lg flex items-center justify-between gap-3 transition-colors group"
                             >
                               <div className="flex-1 min-w-0">
                                 <h4 className="text-xs font-bold text-foreground truncate">
                                   {b.name}
                                 </h4>
                                 <p className="text-[10px] text-muted-foreground truncate mt-0.5">
-                                  {b.description || "No description provided."}
+                                  {b.description || t("constellationBuilder.savedConstellation")}
                                 </p>
                                 <div className="flex gap-2 mt-1">
                                   <span className="text-[9px] font-mono text-muted-foreground">
                                     {Array.isArray(b.stars) ? b.stars.length : 0}{" "}
-                                    stars
+                                    {t("constellationBuilder.stars")}
                                   </span>
                                   <span className="text-[9px] font-mono text-muted-foreground">
                                     {Array.isArray(b.connections)
                                       ? b.connections.length
                                       : 0}{" "}
-                                    connections
+                                    {t("constellationBuilder.connections")}
                                   </span>
                                 </div>
                               </div>
@@ -1979,7 +1979,7 @@ export function RrConstellationBuilderModal({
                                   aria-label={`Edit constellation ${b.name}`}
                                 >
                                   <Pencil className="size-3" />
-                                  Edit
+                                  {t("constellationBuilder.edit")}
                                 </Button>
                                 <Button
                                   onClick={() =>
@@ -2015,7 +2015,7 @@ export function RrConstellationBuilderModal({
                   <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-2.5 h-full">
                     <div className="flex items-center justify-between border-b border-border pb-2 shrink-0">
                       <h3 className="text-xs font-semibold text-foreground uppercase tracking-widest">
-                        Export Configuration
+                        {t("constellationBuilder.exportConfig")}
                       </h3>
                       <div className="flex items-center gap-2">
                         <div className="flex items-center gap-0.5 bg-muted p-[2px] rounded-lg border border-border">
@@ -2041,7 +2041,7 @@ export function RrConstellationBuilderModal({
                             )}
                             aria-label="Format export as JavaScript Object"
                           >
-                            JS Object
+                            {t("constellationBuilder.jsObject")}
                           </button>
                         </div>
                         <Button
@@ -2054,12 +2054,12 @@ export function RrConstellationBuilderModal({
                           {copied ? (
                             <>
                               <Check className="size-3 text-emerald-500" />
-                              Copied
+                              {t("constellationBuilder.copied")}
                             </>
                           ) : (
                             <>
                               <Copy className="size-3" />
-                              Copy
+                              {t("constellationBuilder.copy")}
                             </>
                           )}
                         </Button>
@@ -2084,7 +2084,7 @@ export function RrConstellationBuilderModal({
                   <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-2.5">
                     <div className="flex items-center justify-between border-b border-border pb-2">
                       <h3 className="text-xs font-semibold text-foreground uppercase tracking-widest">
-                        Import Configuration
+                        {t("constellationBuilder.importConfig")}
                       </h3>
                       <Button
                         onClick={handleImport}
@@ -2092,12 +2092,12 @@ export function RrConstellationBuilderModal({
                         className="h-6 bg-primary hover:bg-primary/95 text-primary-foreground rounded cursor-pointer"
                         aria-label="Trigger import from text workspace"
                       >
-                        Import
+                        {t("constellationBuilder.import")}
                       </Button>
                     </div>
                     <div className="rounded-lg border border-border bg-muted/30 p-3 h-96">
                       <textarea
-                        placeholder="Paste JSON or JS Object config code here to load it onto the canvas..."
+                        placeholder={t("constellationBuilder.importPlaceholder")}
                         value={importText}
                         onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
                           setImportText(e.target.value)
@@ -2118,63 +2118,45 @@ export function RrConstellationBuilderModal({
                     <div className="flex items-center gap-1.5 text-foreground font-semibold mb-1 border-b border-border pb-2">
                       <HelpIcon className="size-3.5 text-primary" />
                       <span className="text-xs font-semibold uppercase tracking-widest">
-                        Workspace Guide
+                        {t("constellationBuilder.workspaceGuide")}
                       </span>
                     </div>
                     <ul className="space-y-2.5 text-muted-foreground text-[11px] list-disc list-inside">
                       <li>
                         <strong className="text-foreground">
-                          Click empty canvas:
+                          {t("constellationBuilder.guideClickCanvas")}
                         </strong>{" "}
-                        Add star & auto-connect to current active star.
+                        {t("constellationBuilder.guideClickCanvasDesc")}
                       </li>
                       <li>
                         <strong className="text-foreground">
-                          Click existing star:
+                          {t("constellationBuilder.guideClickStar")}
                         </strong>{" "}
-                        Connect active star to it, and select it as new active
-                        node.
+                        {t("constellationBuilder.guideClickStarDesc")}
                       </li>
                       <li>
                         <strong className="text-foreground">
-                          Shift+Click existing star:
+                          {t("constellationBuilder.guideShiftClickStar")}
                         </strong>{" "}
-                        Toggle connection from active star (without changing
-                        active star).
+                        {t("constellationBuilder.guideShiftClickStarDesc")}
                       </li>
                       <li>
                         <strong className="text-foreground">
-                          Deselect active star:
+                          {t("constellationBuilder.guideDeselectStar")}
                         </strong>{" "}
-                        Press{" "}
-                        <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] border border-border">
-                          Esc
-                        </kbd>
-                        .
+                        {t("constellationBuilder.guideDeselectStarDesc")}
                       </li>
                       <li>
                         <strong className="text-foreground">
-                          Delete active star:
+                          {t("constellationBuilder.guideDeleteStar")}
                         </strong>{" "}
-                        Press{" "}
-                        <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] border border-border">
-                          Backspace
-                        </kbd>{" "}
-                        /{" "}
-                        <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] border border-border">
-                          Del
-                        </kbd>
-                        .
+                        {t("constellationBuilder.guideDeleteStarDesc")}
                       </li>
                       <li>
                         <strong className="text-foreground">
-                          Undo last star:
+                          {t("constellationBuilder.guideUndoStar")}
                         </strong>{" "}
-                        Press{" "}
-                        <kbd className="px-1 py-0.5 rounded bg-muted text-[10px] border border-border">
-                          Ctrl + Z
-                        </kbd>
-                        .
+                        {t("constellationBuilder.guideUndoStarDesc")}
                       </li>
                     </ul>
                   </div>
@@ -2191,7 +2173,7 @@ export function RrConstellationBuilderModal({
               className="text-xs sm:text-sm text-muted-foreground hover:text-foreground rounded-xl h-9 cursor-pointer"
               aria-label="Close builder workspace"
             >
-              Close Workspace
+              {t("constellationBuilder.closeWorkspace")}
             </Button>
           </div>
         </DialogContent>
@@ -2203,11 +2185,10 @@ export function RrConstellationBuilderModal({
           <DialogHeader className="p-4 sm:p-5 border-b border-border flex flex-row items-center justify-between shrink-0">
             <div>
               <DialogTitle className="text-sm sm:text-base font-bold tracking-wide">
-                Select Sky Target Offset
+                {t("constellationBuilder.selectSkyTargetOffset")}
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                Click anywhere on the StarMap to set the target center
-                coordinates. Drag to pan, scroll to zoom.
+                {t("constellationBuilder.selectSkyTargetOffsetDesc")}
               </DialogDescription>
             </div>
           </DialogHeader>
@@ -2240,7 +2221,7 @@ export function RrConstellationBuilderModal({
                 setTargetRa(Number(ra.toFixed(2)));
                 setTargetDec(Number(dec.toFixed(2)));
                 toast.success(
-                  `Offset calibrated to RA: ${ra.toFixed(2)}h, Dec: ${dec.toFixed(2)}°`,
+                  t("constellationBuilder.toastCalibrated", { ra: ra.toFixed(2), dec: dec.toFixed(2) }),
                 );
               }}
             >
@@ -2265,7 +2246,7 @@ export function RrConstellationBuilderModal({
                   {/* Text Label */}
                   <div className="absolute top-5 left-5 bg-background border border-border px-2 py-0.5 rounded-md text-[9px] font-mono text-foreground shadow-md whitespace-nowrap flex items-center gap-1">
                     <span className="size-1 rounded-full bg-primary animate-pulse" />
-                    Center Point
+                    {t("constellationBuilder.centerPoint")}
                   </div>
                 </div>
               </div>
@@ -2274,17 +2255,17 @@ export function RrConstellationBuilderModal({
             {/* Floating HUD info panel */}
             <div className="absolute top-4 left-4 z-30 p-3.5 rounded-xl bg-background/85 dark:bg-zinc-950/85 backdrop-blur-md border border-border shadow-xl flex flex-col gap-1.5 max-w-[280px]">
               <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold font-mono">
-                Offset Calibration
+                {t("constellationBuilder.offsetCalibration")}
               </span>
               <div className="flex flex-col gap-1">
                 <div className="flex justify-between text-xs font-mono">
-                  <span className="text-muted-foreground">RA Offset:</span>
+                  <span className="text-muted-foreground">{t("constellationBuilder.raOffset")}</span>
                   <span className="text-primary font-bold">
                     {targetRa.toFixed(2)}h
                   </span>
                 </div>
                 <div className="flex justify-between text-xs font-mono">
-                  <span className="text-muted-foreground">Dec Offset:</span>
+                  <span className="text-muted-foreground">{t("constellationBuilder.decOffset")}</span>
                   <span className="text-primary font-bold">
                     {targetDec.toFixed(2)}°
                   </span>
@@ -2301,7 +2282,7 @@ export function RrConstellationBuilderModal({
                     }
                     className="rounded border-input bg-background text-indigo-500 size-3 focus:ring-0 cursor-pointer"
                   />
-                  Show Custom Preview
+                  {t("constellationBuilder.showCustomPreview")}
                 </label>
                 <label className="flex items-center gap-2 text-[10px] text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
                   <input
@@ -2312,7 +2293,7 @@ export function RrConstellationBuilderModal({
                     }
                     className="rounded border-input bg-background text-indigo-500 size-3 focus:ring-0 cursor-pointer"
                   />
-                  Show Saved Bookmarks
+                  {t("constellationBuilder.showSavedBookmarks")}
                 </label>
                 <label className="flex items-center gap-2 text-[10px] text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
                   <input
@@ -2323,13 +2304,12 @@ export function RrConstellationBuilderModal({
                     }
                     className="rounded border-input bg-background text-indigo-500 size-3 focus:ring-0 cursor-pointer"
                   />
-                  Show Reference Constellations
+                  {t("constellationBuilder.showRefConstellations")}
                 </label>
               </div>
 
               <p className="text-[10px] text-muted-foreground leading-normal border-t border-border pt-2 mt-1 font-sans">
-                Click to position the center of the constellation. Your custom
-                constellation is highlighted in real-time.
+                {t("constellationBuilder.offsetCalibrationDesc")}
               </p>
             </div>
           </div>
@@ -2340,7 +2320,7 @@ export function RrConstellationBuilderModal({
               className="text-xs sm:text-sm font-semibold h-9 px-4 bg-primary hover:bg-primary/95 text-primary-foreground rounded-xl shadow-xs cursor-pointer"
               aria-label="Finish calibrating map offset coordinates"
             >
-              Done Calibrating
+              {t("constellationBuilder.doneCalibrating")}
             </Button>
           </div>
         </DialogContent>

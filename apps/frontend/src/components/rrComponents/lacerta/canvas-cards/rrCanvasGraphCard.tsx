@@ -14,7 +14,7 @@ import {
   YAxis,
   Tooltip,
 } from "recharts";
-import { CanvasNode } from "../CanvasEditor";
+import { CanvasNode } from "../types";
 
 interface RrCanvasGraphCardProps {
   node: CanvasNode;

@@ -9,6 +9,7 @@ import React, {
 } from "react";
 import { useSession } from "next-auth/react";
 import { motion, useMotionValue } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import * as Lucide from "lucide-react";
 import { useRouter } from "next/navigation";
 import {
@@ -58,6 +59,7 @@ export function RrMediaRoulette({
   triggerButton = true,
   autoSpin = false,
 }: RrMediaRouletteProps): React.JSX.Element {
+  const { t } = useTranslation();
   const { data: session } = useSession();
   const router = useRouter();
 
@@ -268,7 +270,7 @@ export function RrMediaRoulette({
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className="flex items-center justify-center size-8 rounded-lg transition-all cursor-pointer text-muted-foreground hover:bg-muted/30 hover:text-foreground border border-border/20 bg-muted/10 shadow-sm"
-            title="Spin Roulette"
+            title={t("aquila.spinRoulette")}
           >
             <Lucide.Shuffle size={16} />
           </motion.button>
@@ -280,22 +282,22 @@ export function RrMediaRoulette({
           <DialogTitle className="flex items-center gap-2 text-base font-bold text-foreground">
             <Lucide.Dices className="size-5 text-primary animate-pulse" />
             <span>
-              Planned{" "}
-              {activeMediaType.charAt(0).toUpperCase() +
-                activeMediaType.slice(1)}{" "}
-              Roulette
+              {t("aquila.plannedRouletteTitle", {
+                type:
+                  activeMediaType.charAt(0).toUpperCase() +
+                  activeMediaType.slice(1),
+              })}
             </span>
           </DialogTitle>
           <DialogDescription className="sr-only">
-            Spin the roulette to randomly choose a planned media entry from your
-            list.
+            {t("aquila.rouletteDescription")}
           </DialogDescription>
         </DialogHeader>
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12 gap-3 text-muted-foreground">
             <Lucide.Loader2 className="size-8 animate-spin text-primary" />
-            <span className="text-xs">Loading planned entries...</span>
+            <span className="text-xs">{t("aquila.loadingPlanned")}</span>
           </div>
         ) : items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
@@ -304,11 +306,10 @@ export function RrMediaRoulette({
             </div>
             <div>
               <p className="font-semibold text-sm">
-                Your planned list is empty
+                {t("aquila.plannedListEmpty")}
               </p>
               <p className="text-xs text-muted-foreground mt-1 max-w-xs">
-                Add some items to your "Planning" list first, then return here
-                to spin!
+                {t("aquila.plannedListEmptyDesc")}
               </p>
             </div>
             <Button
@@ -317,7 +318,7 @@ export function RrMediaRoulette({
               size="sm"
               className="mt-2"
             >
-              Close
+              {t("aquila.close")}
             </Button>
           </div>
         ) : (
@@ -404,18 +405,14 @@ export function RrMediaRoulette({
               {stage === "idle" && (
                 <div className="flex flex-col items-center gap-2">
                   <p className="text-xs text-muted-foreground">
-                    You have{" "}
-                    <span className="font-semibold text-foreground">
-                      {items.length}
-                    </span>{" "}
-                    planned entries ready to choose from.
+                    {t("aquila.plannedEntriesCount", { count: items.length })}
                   </p>
                   <Button
                     onClick={handleSpin}
                     className="w-full max-w-[200px] font-semibold bg-primary hover:bg-primary/95 text-primary-foreground rounded-xl shadow-lg shadow-primary/20"
                     size="default"
                   >
-                    Spin the Wheel!
+                    {t("aquila.spinTheWheel")}
                   </Button>
                 </div>
               )}
@@ -423,10 +420,10 @@ export function RrMediaRoulette({
               {stage === "spinning" && (
                 <div className="flex flex-col items-center gap-1.5 animate-pulse">
                   <p className="text-xs font-medium text-primary">
-                    Spinning planned items...
+                    {t("aquila.spinningPlanned")}
                   </p>
                   <p className="text-[10px] text-muted-foreground">
-                    What will it be?
+                    {t("aquila.whatWillItBe")}
                   </p>
                 </div>
               )}
@@ -439,7 +436,7 @@ export function RrMediaRoulette({
                 >
                   <div>
                     <span className="text-[10px] font-bold tracking-widest uppercase text-primary mb-1 block">
-                      Roulette Pick!
+                      {t("aquila.roulettePick")}
                     </span>
                     <h4 className="font-bold text-sm text-foreground line-clamp-1 max-w-sm px-2">
                       {winningItem.title}
@@ -461,7 +458,7 @@ export function RrMediaRoulette({
                       size="sm"
                     >
                       <Lucide.ExternalLink className="size-4 mr-1.5" />
-                      Open Media
+                      {t("aquila.openMedia")}
                     </Button>
                     <Button
                       onClick={handleSpin}
@@ -470,7 +467,7 @@ export function RrMediaRoulette({
                       size="sm"
                     >
                       <Lucide.RefreshCw className="size-4 mr-1.5" />
-                      Spin Again
+                      {t("aquila.spinAgain")}
                     </Button>
                   </div>
                 </motion.div>

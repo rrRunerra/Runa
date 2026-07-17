@@ -12,6 +12,10 @@ const nextConfig: NextConfig = {
   reactCompiler: false,
   transpilePackages: ["@runa/auth", "@runa/database"],
   allowedDevOrigins: ["192.168.0.56", "192.168.0.44"],
+
+  experimental: {
+    useTypeScriptCli: true,
+  },
   images: {
     dangerouslyAllowLocalIP: true,
     remotePatterns: [

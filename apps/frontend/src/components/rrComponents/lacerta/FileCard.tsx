@@ -39,6 +39,7 @@ import RrLapplandFolder from "../rrImages/rrLapplandFolder";
 import RrLapplandPlaceholderFile from "../rrImages/rrLapplandPlaceholderFile";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface SharedUser {
   id: string;
@@ -110,6 +111,7 @@ export default function FileCard({
   onToggleSelect,
   hasSelection = false,
 }: FileCardProps): React.JSX.Element {
+  const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
   const longPressTimer = React.useRef<NodeJS.Timeout | null>(null);
   const touchStartPos = React.useRef<{ x: number; y: number } | null>(null);
@@ -150,7 +152,7 @@ export default function FileCard({
 
   const formatSize = (bytes: number | null) => {
     if (bytes === null) return "--";
-    if (bytes === 0) return "0 Bytes";
+    if (bytes === 0) return t("lacerta.fileCard.sizeBytesZero", "0 Bytes");
     const k = 1024;
     const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -280,7 +282,7 @@ export default function FileCard({
               className="cursor-pointer text-xs focus:bg-accent font-semibold gap-2"
             >
               <Checkbox checked={isSelected} onCheckedChange={onToggleSelect} />
-              <span>Select</span>
+              <span>{t("lacerta.fileCard.select", "Select")}</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-border" />
 
@@ -289,7 +291,7 @@ export default function FileCard({
               className="cursor-pointer text-xs focus:bg-accent font-semibold gap-2"
             >
               <ArrowUpRight className="h-3.5 w-3.5" />
-              Open
+              {t("lacerta.fileCard.open", "Open")}
             </DropdownMenuItem>
             {isSharedTab && onSaveCopy && (
               <>
@@ -298,7 +300,7 @@ export default function FileCard({
                   className="cursor-pointer text-xs focus:bg-accent font-semibold gap-2"
                 >
                   <Copy className="h-3.5 w-3.5" />
-                  Save a Copy
+                  {t("lacerta.fileCard.saveCopy", "Save a Copy")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-border" />
               </>
@@ -309,7 +311,7 @@ export default function FileCard({
                 className="cursor-pointer text-xs focus:bg-accent font-semibold gap-2"
               >
                 <Download className="h-3.5 w-3.5" />
-                Download
+                {t("lacerta.fileCard.download", "Download")}
               </DropdownMenuItem>
             )}
             {!isSharedTab && (
@@ -319,7 +321,7 @@ export default function FileCard({
                   className="cursor-pointer text-xs focus:bg-accent font-semibold gap-2"
                 >
                   <Share2 className="h-3.5 w-3.5" />
-                  Share
+                  {t("lacerta.fileCard.share", "Share")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-border" />
                 <DropdownMenuItem
@@ -327,14 +329,14 @@ export default function FileCard({
                   className="cursor-pointer text-xs focus:bg-accent font-semibold gap-2"
                 >
                   <Shield className="h-3.5 w-3.5" />
-                  {item.isVault ? "Remove Vault" : "Move to Vault"}
+                  {item.isVault ? t("lacerta.fileCard.removeVault", "Remove Vault") : t("lacerta.fileCard.moveToVault", "Move to Vault")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => onToggleTrash(item)}
                   className="cursor-pointer text-xs focus:bg-accent font-semibold gap-2"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
-                  {item.isTrash ? "Restore" : "Send to Trash"}
+                  {item.isTrash ? t("lacerta.fileCard.restore", "Restore") : t("lacerta.fileCard.sendTrash", "Send to Trash")}
                 </DropdownMenuItem>
               </>
             )}
@@ -346,7 +348,7 @@ export default function FileCard({
                   className="cursor-pointer text-xs text-destructive focus:bg-destructive/10 focus:text-destructive font-semibold gap-2"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
-                  Delete Forever
+                  {t("lacerta.fileCard.deleteForever", "Delete Forever")}
                 </DropdownMenuItem>
               </>
             )}
@@ -375,7 +377,7 @@ export default function FileCard({
           {item.name}
         </span>
         <div className="flex items-center justify-between text-[10px] text-muted-foreground/80 mt-0.5 w-full">
-          <span>{item.isFolder ? "Folder" : formatSize(item.size)}</span>
+          <span>{item.isFolder ? t("lacerta.fileCard.folder", "Folder") : formatSize(item.size)}</span>
           <span className="truncate max-w-[80px] text-right">
             {isSharedTab && item.user ? (
               <UserProfileCard user={item.user}>
@@ -396,7 +398,7 @@ export default function FileCard({
           return (
             <div
               className="absolute top-2 left-2 z-10 p-1 rounded-lg bg-rose-500/15 border border-rose-500/25 text-rose-400 shadow-sm"
-              title="Public & Shared File"
+              title={t("lacerta.fileCard.publicSharedFile", "Public & Shared File")}
             >
               <Share2 className="h-3 w-3" />
             </div>
@@ -406,7 +408,7 @@ export default function FileCard({
           return (
             <div
               className="absolute top-2 left-2 z-10 p-1 rounded-lg bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 shadow-sm"
-              title="Public File"
+              title={t("lacerta.fileCard.publicFile", "Public File")}
             >
               <Share2 className="h-3 w-3" />
             </div>
@@ -416,7 +418,7 @@ export default function FileCard({
           return (
             <div
               className="absolute top-2 left-2 z-10 p-1 rounded-lg bg-violet-500/15 border border-violet-500/25 text-violet-400 shadow-sm"
-              title={`Shared with ${item.shares.length} users`}
+              title={t("lacerta.fileCard.sharedWithUsers", { defaultValue: "Shared with {{count}} users", count: item.shares.length })}
             >
               <Share2 className="h-3 w-3" />
             </div>
@@ -430,7 +432,7 @@ export default function FileCard({
         <div className="absolute bottom-2 right-2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
           <div
             className="p-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
-            title="Secure Vault Storage"
+            title={t("lacerta.fileCard.secureVaultStorage", "Secure Vault Storage")}
           >
             <Shield className="h-3 w-3" />
           </div>

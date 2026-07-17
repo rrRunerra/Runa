@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useTranslation } from "react-i18next";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -65,7 +66,14 @@ export interface rrLoginFormProps {
     | "recovery"
     | null;
   setActiveMfaMethod: (
-    val: "totp" | "email" | "passkey" | "backup" | "device_notification" | "recovery" | null,
+    val:
+      | "totp"
+      | "email"
+      | "passkey"
+      | "backup"
+      | "device_notification"
+      | "recovery"
+      | null,
   ) => void;
   mfaMethods: Array<
     "totp" | "email" | "passkey" | "backup" | "device_notification"
@@ -74,7 +82,13 @@ export interface rrLoginFormProps {
   setMfaCode: (val: string) => void;
   onVerifyMfa: (e: React.FormEvent) => void;
   onSelectMfaMethod: (
-    method: "totp" | "email" | "passkey" | "backup" | "device_notification" | "recovery",
+    method:
+      | "totp"
+      | "email"
+      | "passkey"
+      | "backup"
+      | "device_notification"
+      | "recovery",
   ) => void;
   tempToken: string;
   sendEmailOtp: (token: string) => void;
@@ -128,6 +142,7 @@ export function RrLoginForm({
   deviceCodeSent = false,
   ...props
 }: rrLoginFormProps & React.ComponentProps<"div">) {
+  const { t } = useTranslation();
   const hasError = message?.includes("❌");
   const isPasswordError =
     hasError &&
@@ -169,7 +184,9 @@ export function RrLoginForm({
       message.toLowerCase().includes("invalid") ||
       message.toLowerCase().includes("fail"));
 
-  const [loginView, setLoginView] = React.useState<"credentials" | "options" | "code">("credentials");
+  const [loginView, setLoginView] = React.useState<
+    "credentials" | "options" | "code"
+  >("credentials");
   const [resendCooldown, setResendCooldown] = React.useState(0);
 
   React.useEffect(() => {
@@ -215,10 +232,10 @@ export function RrLoginForm({
                   >
                     <div className="flex flex-col items-center gap-1.5 text-center mb-2">
                       <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                        Welcome back
+                        {t("polaris.login.welcomeBack")}
                       </h1>
                       <p className="text-sm text-muted-foreground">
-                        Login to your Polaris account
+                        {t("polaris.login.loginToPolaris")}
                       </p>
                     </div>
 
@@ -229,7 +246,7 @@ export function RrLoginForm({
                           htmlFor="identifier"
                           className="text-xs font-semibold ml-0.5 text-muted-foreground uppercase tracking-wider"
                         >
-                          Email or Username
+                          {t("polaris.login.emailOrUsername")}
                         </Label>
                         {(fieldErrors?.identifier || isIdentifierError) && (
                           <span className="text-[10px] font-semibold text-destructive">
@@ -260,7 +277,10 @@ export function RrLoginForm({
                             RESERVED_KEYWORDS.has(sanitized)
                           ) {
                             setFieldErrors({
-                              identifier: `Username is reserved ("${sanitized}")`,
+                              identifier: t(
+                                "polaris.register.usernameReserved",
+                                { username: sanitized },
+                              ),
                             });
                           } else {
                             setFieldErrors(null);
@@ -282,7 +302,7 @@ export function RrLoginForm({
                           htmlFor="password"
                           className="text-xs font-semibold ml-0.5 text-muted-foreground uppercase tracking-wider"
                         >
-                          Password
+                          {t("polaris.login.password")}
                         </Label>
                         {isPasswordError ? (
                           <span className="text-[10px] font-semibold text-destructive">
@@ -293,7 +313,7 @@ export function RrLoginForm({
                             href="/forgot-password"
                             className="text-xs text-muted-foreground hover:text-foreground hover:underline underline-offset-2 transition-colors shrink-0"
                           >
-                            Forgot your password?
+                            {t("polaris.login.forgotPassword")}
                           </Link>
                         )}
                       </div>
@@ -334,7 +354,9 @@ export function RrLoginForm({
                       disabled={loading || !!fieldErrors?.identifier}
                       className="w-full h-10 shadow-md font-semibold"
                     >
-                      {loading ? "Logging in..." : "Login"}
+                      {loading
+                        ? t("polaris.login.loggingIn")
+                        : t("polaris.login.login")}
                     </Button>
 
                     {/* More Options option */}
@@ -346,14 +368,13 @@ export function RrLoginForm({
                         disabled={loading}
                         className="w-full h-10 border border-border hover:bg-accent text-accent-foreground hover:text-foreground font-semibold rounded-lg text-xs cursor-pointer gap-2 transition-colors"
                       >
-                        More Options
+                        {t("polaris.login.moreOptions")}
                       </Button>
-                      {hasError &&
-                        !(isIdentifierError || isPasswordError) && (
-                          <p className="text-xs text-destructive font-medium text-center">
-                            {message.replace("❌", "").trim()}
-                          </p>
-                        )}
+                      {hasError && !(isIdentifierError || isPasswordError) && (
+                        <p className="text-xs text-destructive font-medium text-center">
+                          {message.replace("❌", "").trim()}
+                        </p>
+                      )}
                     </div>
 
                     {/* Separator */}
@@ -363,7 +384,7 @@ export function RrLoginForm({
                       </div>
                       <div className="relative flex justify-center text-xs uppercase">
                         <span className="px-2 text-[10px] tracking-wider font-bold text-muted-foreground">
-                          Or continue with
+                          {t("polaris.login.orContinueWith")}
                         </span>
                       </div>
                     </div>
@@ -423,14 +444,14 @@ export function RrLoginForm({
                       </Button>
                     </div>
 
-                    {/* Sign up Link */}
+                    {/* Sign Up Link */}
                     <div className="text-center text-xs text-muted-foreground mt-2">
-                      Don&apos;t have an account?{" "}
+                      {t("polaris.login.dontHaveAccount")}{" "}
                       <Link
                         href="/polaris/register"
                         className="text-foreground font-semibold hover:underline underline-offset-2 transition-colors"
                       >
-                        Sign up
+                        {t("polaris.login.signUp")}
                       </Link>
                     </div>
                   </motion.form>
@@ -445,10 +466,10 @@ export function RrLoginForm({
                   >
                     <div className="flex flex-col items-center gap-1.5 text-center mb-2">
                       <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                        Login Options
+                        {t("polaris.login.loginOptions")}
                       </h1>
                       <p className="text-sm text-muted-foreground">
-                        Select an alternate method to log in
+                        {t("polaris.login.selectAlternateMethod")}
                       </p>
                     </div>
 
@@ -463,12 +484,16 @@ export function RrLoginForm({
                       >
                         <Fingerprint className="size-5 text-muted-foreground" />
                         <div className="flex flex-col items-start gap-0.5">
-                          <span className="font-bold text-foreground">Use a Passkey</span>
-                          <span className="text-[10px] text-muted-foreground font-normal">Use biometrics or security keys</span>
+                          <span className="font-bold text-foreground">
+                            {t("polaris.login.usePasskey")}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground font-normal">
+                            {t("polaris.login.useBiometrics")}
+                          </span>
                         </div>
                       </Button>
 
-                      {/* Login with Code */}
+                      {/* {t("polaris.login.loginWithCode")} */}
                       <Button
                         type="button"
                         variant="outline"
@@ -481,8 +506,12 @@ export function RrLoginForm({
                       >
                         <Key className="size-5 text-muted-foreground" />
                         <div className="flex flex-col items-start gap-0.5">
-                          <span className="font-bold text-foreground">Login with Code</span>
-                          <span className="text-[10px] text-muted-foreground font-normal">Link this device using another active session</span>
+                          <span className="font-bold text-foreground">
+                            {t("polaris.login.loginWithCode")}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground font-normal">
+                            {t("polaris.login.linkDeviceActiveSession")}
+                          </span>
                         </div>
                       </Button>
                     </div>
@@ -493,7 +522,7 @@ export function RrLoginForm({
                       className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer mx-auto pt-2"
                     >
                       <ArrowLeft className="size-3.5" />
-                      Back to credentials login
+                      {t("polaris.login.backToCredentials")}
                     </button>
                   </motion.div>
                 ) : (
@@ -507,32 +536,36 @@ export function RrLoginForm({
                   >
                     <div className="flex flex-col items-center gap-1.5 text-center">
                       <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                        Login with Code
+                        {t("polaris.login.loginWithCode")}
                       </h1>
                     </div>
 
                     {loginCodeState === "generating" && (
                       <div className="flex flex-col items-center justify-center gap-4 py-12 text-center">
                         <Loader2 className="size-8 animate-spin text-primary" />
-                        <span className="text-xs text-muted-foreground">Generating code...</span>
+                        <span className="text-xs text-muted-foreground">
+                          {t("polaris.login.generatingCode")}
+                        </span>
                       </div>
                     )}
 
                     {loginCodeState === "code" && (
                       <div className="flex flex-col items-center gap-4 py-3 text-center">
                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider font-mono">
-                          Your Device Link Code
+                          {t("polaris.login.deviceLinkCode")}
                         </span>
                         <div className="text-2xl font-bold tracking-widest text-primary font-mono select-all bg-muted/20 border border-border rounded-xl px-5 py-3.5">
-                          {generatedCode ? `${generatedCode.slice(0, 3)} - ${generatedCode.slice(3, 6)} - ${generatedCode.slice(6)}` : ""}
+                          {generatedCode
+                            ? `${generatedCode.slice(0, 3)} - ${generatedCode.slice(3, 6)} - ${generatedCode.slice(6)}`
+                            : ""}
                         </div>
                         <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
-                          To log in, open your account settings on another logged-in device, navigate to <strong>Security Settings</strong>, and enter this code.
+                          {t("polaris.login.toLogInOpenSettings")}
                         </p>
                         <div className="flex items-center gap-2 mt-4">
                           <Loader2 className="size-4 animate-spin text-primary" />
                           <span className="text-[10px] text-muted-foreground font-semibold uppercase tracking-wider animate-pulse">
-                            Waiting for authorization...
+                            {t("polaris.login.waitingForAuth")}
                           </span>
                         </div>
                       </div>
@@ -540,14 +573,16 @@ export function RrLoginForm({
 
                     {loginCodeState === "error" && (
                       <div className="flex flex-col items-center gap-4 py-8 text-center">
-                        <span className="text-xs text-destructive font-medium">❌ Failed to generate login code.</span>
+                        <span className="text-xs text-destructive font-medium">
+                          {t("polaris.login.failedGenerateCode")}
+                        </span>
                         <Button
                           type="button"
                           variant="outline"
                           onClick={() => onGenerateLoginCode?.()}
                           className="text-xs rounded-lg"
                         >
-                          Retry
+                          {t("polaris.login.retry")}
                         </Button>
                       </div>
                     )}
@@ -561,7 +596,7 @@ export function RrLoginForm({
                       className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer mx-auto pt-2"
                     >
                       <ArrowLeft className="size-3.5" />
-                      Back to options
+                      {t("polaris.login.backToOptions")}
                     </button>
                   </motion.div>
                 )
@@ -577,7 +612,7 @@ export function RrLoginForm({
                 >
                   <div className="text-center mb-2">
                     <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                      MFA Verification
+                      {t("polaris.login.mfaVerification")}
                     </h1>
                   </div>
 
@@ -588,7 +623,7 @@ export function RrLoginForm({
                       </div>
                       <div className="flex flex-col gap-1">
                         <h4 className="text-sm font-bold text-foreground">
-                          Passkey Prompt Active
+                          {t("polaris.login.passkeyPromptActive")}
                         </h4>
                         <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
                           Your browser should request verification using
@@ -600,7 +635,7 @@ export function RrLoginForm({
                         className="h-10 px-5 rounded-lg bg-secondary hover:bg-secondary/80 text-xs font-semibold text-secondary-foreground cursor-pointer"
                         disabled={loading}
                       >
-                        Retry Passkey Prompt
+                        {t("polaris.login.retry")} Passkey Prompt
                       </Button>
                       {hasError &&
                         (message.toLowerCase().includes("passkey") ||
@@ -622,7 +657,7 @@ export function RrLoginForm({
                       <div className="flex flex-col items-center gap-1.5 text-center">
                         <Smartphone className="size-6 text-primary" />
                         <Label className="text-xs font-bold text-foreground">
-                          Device Notification MFA
+                          {t("polaris.login.deviceNotificationMfa")}
                         </Label>
                         <p className="text-[10px] text-muted-foreground">
                           Send a push notification to one of your trusted
@@ -633,7 +668,7 @@ export function RrLoginForm({
                       {!deviceCodeSent ? (
                         <div className="flex flex-col gap-3">
                           <Label className="text-xs font-bold text-muted-foreground">
-                            Select Device
+                            {t("polaris.login.selectDevice")}
                           </Label>
                           <select
                             value={selectedDeviceId}
@@ -643,7 +678,7 @@ export function RrLoginForm({
                             className="h-10 px-3 bg-background border border-input rounded-lg text-sm focus-visible:ring-primary/20"
                           >
                             <option value="" disabled>
-                              Select a device
+                              {t("polaris.login.selectDevicePlaceholder")}
                             </option>
                             {devices.map((d) => (
                               <option key={d.id} value={d.id}>
@@ -662,7 +697,9 @@ export function RrLoginForm({
                             disabled={loading || !selectedDeviceId}
                             className="w-full h-10 shadow-md font-semibold mt-2"
                           >
-                            {loading ? "Sending..." : "Send Notification"}
+                            {loading
+                              ? t("polaris.login.sending")
+                              : t("polaris.login.sendNotification")}
                           </Button>
                         </div>
                       ) : (
@@ -690,7 +727,9 @@ export function RrLoginForm({
                             disabled={mfaCode.length !== 6 || loading}
                             className="w-full h-10 font-semibold rounded-lg text-sm shadow-md"
                           >
-                            {loading ? "Verifying..." : "Verify Code"}
+                            {loading
+                              ? t("polaris.login.verifying")
+                              : t("polaris.login.verifyCode")}
                           </Button>
                         </div>
                       )}
@@ -721,7 +760,7 @@ export function RrLoginForm({
                         >
                           {isTotpError
                             ? message.replace("❌", "").trim()
-                            : "Authenticator App Code"}
+                            : t("polaris.login.authenticatorAppCode")}
                         </Label>
                         <p className="text-[10px] text-muted-foreground">
                           Enter the 6-digit verification code from your auth
@@ -751,7 +790,9 @@ export function RrLoginForm({
                         disabled={mfaCode.length !== 6 || loading}
                         className="w-full h-10  font-semibold rounded-lg text-sm transition-all cursor-pointer shadow-md"
                       >
-                        {loading ? "Verifying..." : "Verify Code"}
+                        {loading
+                          ? t("polaris.login.verifying")
+                          : t("polaris.login.verifyCode")}
                       </Button>
                       {hasError && !isTotpError && (
                         <p className="text-xs text-destructive font-medium text-center">
@@ -779,12 +820,12 @@ export function RrLoginForm({
                         >
                           {isEmailError
                             ? message.replace("❌", "").trim()
-                            : "Email One-Time Code"}
+                            : t("polaris.login.emailOtpCode")}
                         </Label>
                         {message &&
                         message.includes("Verification code sent") ? (
                           <p className="text-[10px] text-primary font-medium">
-                            Verification code sent to your email.
+                            {t("polaris.login.otpSentToEmail")}
                           </p>
                         ) : (
                           <p className="text-[10px] text-muted-foreground">
@@ -820,15 +861,19 @@ export function RrLoginForm({
                           className="flex-1 h-10 rounded-lg border border-border hover:bg-accent text-accent-foreground text-xs font-semibold hover:text-foreground transition-colors"
                         >
                           {resendCooldown > 0
-                            ? `Resend in ${resendCooldown}s`
-                            : "Resend Email"}
+                            ? t("polaris.login.resendInSeconds", {
+                                seconds: resendCooldown,
+                              })
+                            : t("polaris.login.resendEmail")}
                         </Button>
                         <Button
                           type="submit"
                           disabled={mfaCode.length !== 6 || loading}
                           className="flex-1 h-10 shadow-md font-semibold"
                         >
-                          {loading ? "Verifying..." : "Verify"}
+                          {loading
+                            ? t("polaris.login.verifying")
+                            : t("polaris.login.verify")}
                         </Button>
                       </div>
                       {hasError &&
@@ -859,10 +904,10 @@ export function RrLoginForm({
                         >
                           {isRecoveryError
                             ? message.replace("❌", "").trim()
-                            : "Account Recovery Code"}
+                            : t("polaris.login.accountRecoveryCode")}
                         </Label>
                         <p className="text-[10px] text-muted-foreground">
-                          Enter the 6-digit recovery code sent to your email to bypass MFA.
+                          {t("polaris.login.enterRecoveryCodeEmail")}
                         </p>
                       </div>
                       <Input
@@ -892,15 +937,19 @@ export function RrLoginForm({
                           className="flex-1 h-10 rounded-lg border border-border hover:bg-accent text-accent-foreground text-xs font-semibold hover:text-foreground transition-colors"
                         >
                           {resendCooldown > 0
-                            ? `Resend in ${resendCooldown}s`
-                            : "Resend Email"}
+                            ? t("polaris.login.resendInSeconds", {
+                                seconds: resendCooldown,
+                              })
+                            : t("polaris.login.resendEmail")}
                         </Button>
                         <Button
                           type="submit"
                           disabled={mfaCode.length !== 6 || loading}
                           className="flex-1 h-10 shadow-md font-semibold"
                         >
-                          {loading ? "Verifying..." : "Verify"}
+                          {loading
+                            ? t("polaris.login.verifying")
+                            : t("polaris.login.verify")}
                         </Button>
                       </div>
                       {hasError &&
@@ -931,10 +980,10 @@ export function RrLoginForm({
                         >
                           {isBackupError
                             ? message.replace("❌", "").trim()
-                            : "Backup Recovery Code"}
+                            : t("polaris.login.backupRecoveryCode")}
                         </Label>
                         <p className="text-[10px] text-muted-foreground">
-                          Enter one of your 10-character backup recovery codes.
+                          {t("polaris.login.enterTenCharBackup")}
                         </p>
                       </div>
                       <Input
@@ -964,7 +1013,9 @@ export function RrLoginForm({
                         disabled={mfaCode.length !== 10 || loading}
                         className="w-full h-10  font-semibold rounded-lg text-sm transition-all cursor-pointer shadow-md"
                       >
-                        {loading ? "Verifying..." : "Submit Recovery Code"}
+                        {loading
+                          ? t("polaris.login.verifying")
+                          : t("polaris.login.submitRecoveryCode")}
                       </Button>
                       {hasError && !isBackupError && (
                         <p className="text-xs text-destructive font-medium text-center">
@@ -978,7 +1029,7 @@ export function RrLoginForm({
                   {mfaMethods.length > 1 && (
                     <div className="flex flex-col gap-2 mt-2">
                       <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wide block text-center">
-                        Try Another Method
+                        {t("polaris.login.tryAnotherMethod")}
                       </span>
                       <div className="flex flex-wrap gap-2 justify-center">
                         {mfaMethods.map((m) => {
@@ -990,12 +1041,13 @@ export function RrLoginForm({
                               onClick={() => onSelectMfaMethod(m)}
                               className="px-2.5 py-1.5 rounded-lg border border-border bg-background/40 text-[10px] font-semibold text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-all cursor-pointer"
                             >
-                              {m === "passkey" && "Passkey"}
+                              {m === "passkey" && t("polaris.login.passkey")}
                               {m === "device_notification" &&
-                                "Device Notification"}
-                              {m === "totp" && "Authenticator Code"}
-                              {m === "email" && "Email Code"}
-                              {m === "backup" && "Backup Code"}
+                                t("polaris.login.deviceNotification")}
+                              {m === "totp" &&
+                                t("polaris.login.authenticatorCode")}
+                              {m === "email" && t("polaris.login.emailCode")}
+                              {m === "backup" && t("polaris.login.backupCode")}
                             </button>
                           );
                         })}
@@ -1009,7 +1061,7 @@ export function RrLoginForm({
                       onClick={() => onSelectMfaMethod("recovery")}
                       className="text-xs text-primary hover:underline transition-all cursor-pointer mx-auto pt-1 font-semibold block"
                     >
-                      Lost access? Restore account via email
+                      {t("polaris.login.lostAccessRestore")}
                     </button>
                   )}
 
@@ -1019,7 +1071,7 @@ export function RrLoginForm({
                     className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground hover:text-muted-foreground transition-colors cursor-pointer mx-auto pt-2"
                   >
                     <ArrowLeft className="size-3.5" />
-                    Back to credentials login
+                    {t("polaris.login.backToCredentials")}
                   </button>
                 </motion.div>
               )}
@@ -1058,7 +1110,10 @@ export function RrLoginForm({
                     ActiveComponent = RrLapplandTOTP;
                     stateKey = "mfa-totp";
                   }
-                } else if (activeMfaMethod === "email" || activeMfaMethod === "recovery") {
+                } else if (
+                  activeMfaMethod === "email" ||
+                  activeMfaMethod === "recovery"
+                ) {
                   if (isEmailError || isRecoveryError) {
                     ActiveComponent = RrLapplandEmailError;
                     stateKey = "mfa-email-error";
@@ -1116,19 +1171,19 @@ export function RrLoginForm({
 
       {/* Footer agreement terms */}
       <p className="px-6 text-center text-xs text-muted-foreground/80 max-w-xs mx-auto leading-normal">
-        By clicking continue, you agree to our{" "}
+        {t("polaris.login.byClickingAgree")}{" "}
         <Link
           href="/polaris/tos"
           className="underline underline-offset-2 hover:text-muted-foreground transition-colors"
         >
-          Terms of Service
+          {t("polaris.login.termsOfService")}
         </Link>{" "}
-        and{" "}
+        {t("polaris.login.and")}{" "}
         <Link
           href="/polaris/privacy"
           className="underline underline-offset-2 hover:text-muted-foreground transition-colors"
         >
-          Privacy Policy
+          {t("polaris.login.privacyPolicy")}
         </Link>
         .
       </p>

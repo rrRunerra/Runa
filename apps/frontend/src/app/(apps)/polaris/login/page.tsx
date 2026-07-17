@@ -10,6 +10,7 @@ import { useRrBrowser } from "@/hooks/useRrBrowser";
 import { RrLoginForm } from "@/components/rrComponents/polaris/rrLoginForm";
 import { toast } from "sonner";
 import { RESERVED_KEYWORDS } from "@/lib/rrReservedKeywords";
+import { RrLanguageSelector } from "@/components/rrComponents/rrLanguageSelector";
 
 export default function Page() {
   const deviceType = useRrDevice();
@@ -938,6 +939,7 @@ export default function Page() {
 
   return (
     <div className="flex min-h-svh w-full flex-col items-center justify-center bg-zinc-950 p-6 md:p-10">
+      <RrLanguageSelector variant="floating" />
       <div className="w-full max-w-md md:max-w-4xl lg:max-w-5xl">
         <RrLoginForm
           identifier={identifier}

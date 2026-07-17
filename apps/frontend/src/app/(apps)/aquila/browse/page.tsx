@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { Search } from "lucide-react";
 import { motion, Variants } from "framer-motion";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
@@ -24,8 +23,10 @@ import { RrBrowseSearchForm } from "@/components/rrComponents/aquila/rrBrowseSea
 import { RrBrowseHistory } from "@/components/rrComponents/aquila/rrBrowseHistory";
 import RrLapplandBrowse from "@/components/rrComponents/rrImages/rrLapplandBrowse";
 import RrLapplandBrowseNotFound from "@/components/rrComponents/rrImages/rrLapplandBrowseNotFound";
+import { useTranslation } from "react-i18next";
 
 export default function BrowsePage(): React.JSX.Element {
+  const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [type, setType] = useState("anime");
@@ -167,8 +168,8 @@ export default function BrowsePage(): React.JSX.Element {
   }, [debouncedQuery, saveQuery]);
 
   useEffect(() => {
-    document.title = "Aquila > Browse";
-  }, []);
+    document.title = t("aquila.browseTitle", "Aquila > Browse");
+  }, [t]);
 
   const handleQueryChange = (val: string): void => {
     const match = val.match(
@@ -279,14 +280,14 @@ export default function BrowsePage(): React.JSX.Element {
   };
 
   const categories = [
-    { id: "anime", label: "Anime" },
-    { id: "manga", label: "Manga" },
-    { id: "movies", label: "Movie" },
-    { id: "tv", label: "TV Show" },
-    { id: "games", label: "Games" },
-    { id: "books", label: "Books" },
-    { id: "characters", label: "Characters" },
-    { id: "actors", label: "Actors" },
+    { id: "anime", label: t("aquila.anime", "Anime") },
+    { id: "manga", label: t("aquila.manga", "Manga") },
+    { id: "movies", label: t("aquila.movie", "Movie") },
+    { id: "tv", label: t("aquila.tv", "TV Show") },
+    { id: "games", label: t("aquila.games", "Games") },
+    { id: "books", label: t("aquila.books", "Books") },
+    { id: "characters", label: t("aquila.charactersLabel", "Characters") },
+    { id: "actors", label: t("aquila.actorsLabel", "Actors") },
   ];
 
   return (
@@ -300,10 +301,10 @@ export default function BrowsePage(): React.JSX.Element {
         >
           <div>
             <h1 className="text-3xl font-bold tracking-tight bg-linear-to-r from-foreground to-foreground/75 bg-clip-text text-transparent">
-              Browse
+              {t("aquila.browse", "Browse")}
             </h1>
             <p className="text-muted-foreground mt-1">
-              Search for your favorite anime, manga, and more.
+              {t("aquila.browseSubtitle", "Search for your favorite anime, manga, and more.")}
             </p>
           </div>
 
@@ -348,8 +349,8 @@ export default function BrowsePage(): React.JSX.Element {
           onSubmit={handleSearchSubmit}
           placeholder={
             ["characters", "actors"].includes(type)
-              ? `Search names... (try @anime, @manga to switch type)`
-              : `Search titles... (try @anime, @manga to switch type)`
+              ? t("aquila.searchNamesPlaceholder", "Search names... (try @anime, @manga to switch type)")
+              : t("aquila.searchPlaceholder", "Search titles... (try @anime, @manga to switch type)")
           }
         />
 
@@ -387,7 +388,7 @@ export default function BrowsePage(): React.JSX.Element {
               transition={{ duration: 0.3 }}
               className="absolute left-1/2 -translate-x-1/2 top-0 select-none z-0 pointer-events-none"
             >
-              <RrLapplandBrowse className="w-[550px] h-[550px] md:w-[850px] md:h-[850px] text-foreground opacity-[0.05] dark:opacity-[0.03]" />
+              <Wallpaper className="w-[550px] h-[550px] md:w-[850px] md:h-[850px] text-foreground opacity-[0.05] dark:opacity-[0.03]" />
             </motion.div>
 
             {/* The recently viewed items sit on top */}
@@ -395,14 +396,14 @@ export default function BrowsePage(): React.JSX.Element {
               <div className="relative z-10 flex flex-col gap-4">
                 <div className="flex items-center justify-between px-1">
                   <h2 className="text-xl font-bold tracking-tight">
-                    Recently Viewed
+                    {t("aquila.recentlyViewed", "Recently Viewed")}
                   </h2>
                   <button
                     type="button"
                     onClick={handleClearOpenedItems}
                     className="text-xs text-muted-foreground/60 hover:text-destructive transition-colors font-semibold py-1 px-2.5 hover:bg-destructive/10 rounded-md cursor-pointer"
                   >
-                    Clear history
+                    {t("aquila.clearHistory", "Clear history")}
                   </button>
                 </div>
                 <motion.div
@@ -433,7 +434,7 @@ export default function BrowsePage(): React.JSX.Element {
             className="flex flex-col items-center justify-center py-6 select-none gap-6"
           >
             <div className="text-center text-muted-foreground/60 text-sm font-medium">
-              No results found for &ldquo;{query}&rdquo;
+              {t("aquila.noResultsFound", "No results found for \"{{query}}\"", { query })}
             </div>
             <RrLapplandBrowseNotFound className="w-[550px] h-[550px] md:w-[850px] md:h-[850px] text-foreground opacity-[0.05] dark:opacity-[0.03] pointer-events-none" />
           </motion.div>

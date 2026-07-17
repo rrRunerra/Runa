@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +20,35 @@ export function RrUserListTabs({
   counts,
   mediaType,
 }: RrUserListTabsProps): React.JSX.Element {
+  const { t } = useTranslation();
+
+  const getListNameTranslation = (name: string) => {
+    switch (name.toUpperCase()) {
+      case "WATCHING":
+        return t("aquila.watching");
+      case "READING":
+        return t("aquila.reading");
+      case "PLAYING":
+        return t("aquila.playing");
+      case "PLANNING":
+      case "PLAN TO WATCH":
+        return t("aquila.planToWatch");
+      case "PLAN TO READ":
+        return t("aquila.planToRead");
+      case "PLAN TO PLAY":
+        return t("aquila.planToPlay");
+      case "ON_HOLD":
+      case "ON HOLD":
+        return t("aquila.onHold");
+      case "COMPLETED":
+        return t("aquila.completed");
+      case "DROPPED":
+        return t("aquila.dropped");
+      default:
+        return name;
+    }
+  };
+
   return (
     <div className="flex items-center justify-between border-b border-border/40 pb-3 overflow-x-auto no-scrollbar w-full">
       <div className="flex gap-2 flex-row flex-nowrap shrink-0">
@@ -49,7 +79,7 @@ export function RrUserListTabs({
                   }}
                 />
               )}
-              <span className="relative z-10">{list}</span>
+              <span className="relative z-10">{getListNameTranslation(list)}</span>
               <span
                 className={cn(
                   "relative z-10 text-[10px] px-1.5 py-0.5 rounded-md bg-muted/60 text-muted-foreground transition-colors",

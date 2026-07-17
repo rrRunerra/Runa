@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePathname } from "next/navigation";
 import { settingsNavConfig } from "../../../config/settings";
+import { useTranslation } from "react-i18next";
 
 import {
   Breadcrumb,
@@ -64,6 +65,7 @@ export function SettingsDialog({
   open,
   onOpenChange,
 }: rrSettingsDialogProps): React.JSX.Element {
+  const { t } = useTranslation();
   const [activeCategory, setActiveCategory] = useState<rrCategory>("account");
   const [isConstellationBuilderOpen, setIsConstellationBuilderOpen] = useState(false);
   const isMobile = useIsMobile();
@@ -121,7 +123,7 @@ export function SettingsDialog({
       }));
 
   const mobileDockItems = navItems.map((item) => ({
-    label: item.name,
+    label: t("settingsDialog." + item.id),
     icon: <item.icon className="size-4" />,
     isActive: activeCategory === item.id,
     onClick: () => {
@@ -137,9 +139,9 @@ export function SettingsDialog({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[95vw] md:max-w-5xl lg:max-w-6xl p-0 gap-0 overflow-hidden rounded-2xl flex flex-col md:flex-row h-[92vh] md:h-[720px]">
-        <DialogTitle className="sr-only">Settings</DialogTitle>
+        <DialogTitle className="sr-only">{t("settingsDialog.title")}</DialogTitle>
         <DialogDescription className="sr-only">
-          Customize your settings here.
+          {t("settingsDialog.description")}
         </DialogDescription>
         <SidebarProvider
           className="items-start h-full w-full min-h-0"
@@ -153,7 +155,7 @@ export function SettingsDialog({
             <SidebarContent>
               <SidebarGroup>
                 <div className="px-3 py-2 mb-2 text-[10px] font-bold text-muted-foreground/75 uppercase tracking-wider">
-                  Settings Dashboard
+                  {t("settingsDialog.dashboard")}
                 </div>
                 <SidebarGroupContent>
                   <SidebarMenu>
@@ -176,7 +178,7 @@ export function SettingsDialog({
                             className="w-full flex items-center gap-2"
                           >
                             <item.icon className="size-4" />
-                            <span>{item.name}</span>
+                            <span>{t("settingsDialog." + item.id)}</span>
                           </button>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
@@ -194,13 +196,12 @@ export function SettingsDialog({
                 <Breadcrumb>
                   <BreadcrumbList>
                     <BreadcrumbItem className="hidden md:block">
-                      <BreadcrumbLink href="#">Settings</BreadcrumbLink>
+                      <BreadcrumbLink href="#">{t("settingsDialog.title")}</BreadcrumbLink>
                     </BreadcrumbItem>
                     <BreadcrumbSeparator className="hidden md:block" />
                     <BreadcrumbItem>
                       <BreadcrumbPage>
-                        {navItems.find((n) => n.id === activeCategory)?.name ||
-                          "Account"}
+                        {t("settingsDialog." + activeCategory)}
                       </BreadcrumbPage>
                     </BreadcrumbItem>
                   </BreadcrumbList>

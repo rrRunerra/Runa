@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface RrListsTabProps {
   onOpenChange: (open: boolean) => void;
@@ -32,12 +33,12 @@ interface RrListsTabProps {
 }
 
 const MEDIA_TYPES = [
-  { id: "anime", label: "Anime List" },
-  { id: "manga", label: "Manga List" },
-  { id: "tv", label: "TV Shows List" },
-  { id: "movie", label: "Movies List" },
-  { id: "game", label: "Games List" },
-  { id: "book", label: "Books List" },
+  { id: "anime", key: "anime" },
+  { id: "manga", key: "manga" },
+  { id: "tv", key: "tv" },
+  { id: "movie", key: "movie" },
+  { id: "game", key: "game" },
+  { id: "book", key: "book" },
 ];
 
 export function RrListsTab({
@@ -45,6 +46,7 @@ export function RrListsTab({
   setActiveCategory,
 }: RrListsTabProps): React.JSX.Element {
   const { data: session } = useSession();
+  const { t } = useTranslation();
 
   // Export States
   const [selectedTypes, setSelectedTypes] = useState<string[]>([
@@ -248,7 +250,7 @@ export function RrListsTab({
       if (file.type === "application/json" || file.name.endsWith(".json")) {
         setImportFile(file);
       } else {
-        toast.error("Please upload a valid JSON file.");
+        toast.error(t("lists.uploadValidJson"));
       }
     }
   };
@@ -265,11 +267,11 @@ export function RrListsTab({
 
   const handleImport = () => {
     if (!session?.accessToken) {
-      toast.error("You must be logged in to import lists.");
+      toast.error(t("lists.mustBeLoggedIn"));
       return;
     }
     if (!importFile) {
-      toast.error("Please select a file to import.");
+      toast.error(t("lists.selectFileToImport"));
       return;
     }
 
@@ -283,7 +285,7 @@ export function RrListsTab({
 
         // Simple validation checks
         if (typeof payload !== "object" || payload === null) {
-          throw new Error("Invalid list backup structure.");
+          throw new Error(t("lists.invalidBackupStructure"));
         }
 
         const res = await fetch(
@@ -300,23 +302,23 @@ export function RrListsTab({
 
         if (!res.ok) {
           const errData = await res.json().catch(() => null);
-          throw new Error(errData?.message || "Failed to trigger lists import");
+          throw new Error(errData?.message || t("lists.failedTriggerImport"));
         }
 
         toast.success(
-          "Import started! This process runs in the background. You'll receive a notification once it's complete.",
+          t("lists.importStarted"),
           { duration: 6000 },
         );
         setImportFile(null);
       } catch (err: any) {
-        toast.error(err.message || "Failed to import lists file.");
+        toast.error(err.message || t("lists.failedImport"));
       } finally {
         setIsImporting(false);
       }
     };
 
     reader.onerror = () => {
-      toast.error("Failed to read the selected file.");
+      toast.error(t("lists.failedReadFile"));
       setIsImporting(false);
     };
 
@@ -330,18 +332,17 @@ export function RrListsTab({
         <Info className="size-5 text-primary shrink-0 mt-0.5" />
         <div className="flex-1 flex flex-col gap-1 text-left">
           <span className="text-sm font-semibold text-foreground">
-            Synchronizing with External Accounts
+            {t("lists.syncExternalAccounts")}
           </span>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            If you want to import or sync lists from AniList, MyAnimeList (MAL),
-            or Simkl, please configure them in the{" "}
+            {t("lists.syncExternalDesc1")}{" "}
             <button
               onClick={() => setActiveCategory?.("connections")}
               className="text-primary hover:underline font-medium inline-flex items-center gap-0.5"
             >
-              Connections Tab <ExternalLink className="size-3" />
+              {t("lists.connectionsTab")} <ExternalLink className="size-3" />
             </button>{" "}
-            instead of importing a backup file.
+            {t("lists.syncExternalDesc2")}
           </p>
         </div>
       </div>
@@ -352,17 +353,17 @@ export function RrListsTab({
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Download className="size-5 text-primary" />
-              Export Lists
+              {t("lists.exportLists")}
             </CardTitle>
             <CardDescription className="text-xs">
-              Save your media lists to a local file.
+              {t("lists.saveMediaListsDesc")}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-5 text-left">
             {/* Format Selection */}
             <div className="flex flex-col gap-2">
               <Label className="text-xs font-semibold text-muted-foreground uppercase">
-                Export Format
+                {t("lists.exportFormat")}
               </Label>
               <div className="grid grid-cols-2 gap-2">
                 <Button
@@ -417,21 +418,21 @@ export function RrListsTab({
             <div className="flex flex-col gap-3">
               <div className="flex justify-between items-center">
                 <Label className="text-xs font-semibold text-muted-foreground uppercase">
-                  Select Lists
+                  {t("lists.selectLists")}
                 </Label>
                 <div className="flex gap-2">
                   <button
                     onClick={handleSelectAll}
                     className="text-[10px] text-primary hover:underline"
                   >
-                    All
+                    {t("lists.selectAll")}
                   </button>
                   <span className="text-[10px] text-muted-foreground">|</span>
                   <button
                     onClick={handleSelectNone}
                     className="text-[10px] text-primary hover:underline"
                   >
-                    None
+                    {t("lists.selectNone")}
                   </button>
                 </div>
               </div>
@@ -466,7 +467,7 @@ export function RrListsTab({
                           isDisabled && "cursor-not-allowed",
                         )}
                       >
-                        {type.label}
+                        {t(`mediaTypes.${type.key}`)}
                       </Label>
                     </div>
                   );
@@ -480,12 +481,18 @@ export function RrListsTab({
                     <AlertCircle className="size-3.5 shrink-0 mt-0.5" />
                     <span>
                       {exportFormat === "trakt-json"
-                        ? "Trakt only supports TV Shows and Movies. Anime, Manga, Games, and Books will not be exported."
-                        : `${exportFormat === "mal-xml" ? "MyAnimeList" : exportFormat === "anilist-xml" ? "AniList" : "Simkl"} XML format only supports Anime and Manga. TV, Movies, Games, and Books will not be exported.`}
+                        ? t("lists.traktOnlyDesc")
+                        : t("lists.xmlOnlyDesc", {
+                            platform: exportFormat === "mal-xml"
+                              ? "MyAnimeList"
+                              : exportFormat === "anilist-xml"
+                                ? "AniList"
+                                : "Simkl"
+                          })}
                     </span>
                   </div>
                   <span className="text-[10px] text-muted-foreground">
-                    After downloading, you can import this file on the{" "}
+                    {t("lists.importAfterDownload")}{" "}
                     {exportFormat === "mal-xml" && (
                       <a
                         href="https://myanimelist.net/import.php"
@@ -493,7 +500,7 @@ export function RrListsTab({
                         rel="noopener noreferrer"
                         className="text-primary hover:underline font-semibold inline-flex items-center gap-0.5"
                       >
-                        MyAnimeList Import Page <ExternalLink className="size-3" />
+                        {t("lists.importPage", { platform: "MyAnimeList" })} <ExternalLink className="size-3" />
                       </a>
                     )}
                     {exportFormat === "anilist-xml" && (
@@ -503,7 +510,7 @@ export function RrListsTab({
                         rel="noopener noreferrer"
                         className="text-primary hover:underline font-semibold inline-flex items-center gap-0.5"
                       >
-                        AniList Import Page <ExternalLink className="size-3" />
+                        {t("lists.importPage", { platform: "AniList" })} <ExternalLink className="size-3" />
                       </a>
                     )}
                     {exportFormat === "simkl-xml" && (
@@ -513,7 +520,7 @@ export function RrListsTab({
                         rel="noopener noreferrer"
                         className="text-primary hover:underline font-semibold inline-flex items-center gap-0.5"
                       >
-                        Simkl Import Page <ExternalLink className="size-3" />
+                        {t("lists.importPage", { platform: "Simkl" })} <ExternalLink className="size-3" />
                       </a>
                     )}
                     {exportFormat === "trakt-json" && (
@@ -523,7 +530,7 @@ export function RrListsTab({
                         rel="noopener noreferrer"
                         className="text-primary hover:underline font-semibold inline-flex items-center gap-0.5"
                       >
-                        Trakt Import Page <ExternalLink className="size-3" />
+                        {t("lists.importPage", { platform: "Trakt" })} <ExternalLink className="size-3" />
                       </a>
                     )}
                   </span>
@@ -540,12 +547,12 @@ export function RrListsTab({
               {isExporting ? (
                 <>
                   <Spinner className="mr-1.5 size-4" />
-                  Exporting...
+                  {t("lists.exporting")}
                 </>
               ) : (
                 <>
                   <Download className="mr-1.5 size-4" />
-                  Export Selected Lists
+                  {t("lists.exportSelected")}
                 </>
               )}
             </Button>
@@ -557,10 +564,10 @@ export function RrListsTab({
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Upload className="size-5 text-primary" />
-              Import Lists
+              {t("lists.importLists")}
             </CardTitle>
             <CardDescription className="text-xs">
-              Load your media lists from an rrList JSON backup file.
+              {t("lists.loadBackupDesc")}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4 text-left">
@@ -604,10 +611,10 @@ export function RrListsTab({
               ) : (
                 <div className="flex flex-col items-center gap-1 text-center">
                   <span className="text-xs font-semibold text-foreground">
-                    Drag and drop your file here
+                    {t("lists.dragDropHere")}
                   </span>
                   <span className="text-[10px] text-muted-foreground">
-                    or click to browse from files
+                    {t("lists.clickToBrowse")}
                   </span>
                 </div>
               )}
@@ -622,7 +629,7 @@ export function RrListsTab({
                   size="sm"
                   disabled={isImporting}
                 >
-                  Clear File
+                  {t("lists.clearFile")}
                 </Button>
               )}
               <Button
@@ -634,12 +641,12 @@ export function RrListsTab({
                 {isImporting ? (
                   <>
                     <Spinner className="mr-1.5 size-4" />
-                    Importing...
+                    {t("lists.importing")}
                   </>
                 ) : (
                   <>
                     <Upload className="mr-1.5 size-4" />
-                    Start Import
+                    {t("lists.startImport")}
                   </>
                 )}
               </Button>

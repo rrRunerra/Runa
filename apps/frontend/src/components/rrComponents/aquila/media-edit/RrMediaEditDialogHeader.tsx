@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Heart } from "lucide-react";
 import { motion } from "framer-motion";
@@ -32,12 +33,14 @@ export function RrMediaEditDialogHeader({
   onToggleFavorite,
   onSave,
 }: RrMediaEditDialogHeaderProps): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <div className="relative h-48 w-full bg-muted/10">
       {bannerImage && (
         <img
           src={bannerImage}
-          alt="banner"
+          alt={t("aquila.userCoverAlt")}
           className="w-full h-full object-cover opacity-50"
         />
       )}
@@ -46,11 +49,11 @@ export function RrMediaEditDialogHeader({
         {coverImageLarge ? (
           <img
             src={coverImageLarge}
-            alt="cover"
-            className="w-20 sm:w-24 aspect-[2/3] rounded-xl shadow-2xl object-cover bg-background/40 border border-border/40 shrink-0"
+            alt={t("aquila.userCoverAlt")}
+            className="w-20 sm:w-24 aspect-2/3 rounded-xl shadow-2xl object-cover bg-background/40 border border-border/40 shrink-0"
           />
         ) : (
-          <div className="w-20 sm:w-24 aspect-[2/3] rounded-xl shadow-2xl bg-muted border border-border/40 overflow-hidden flex items-center justify-center shrink-0 relative">
+          <div className="w-20 sm:w-24 aspect-2/3 rounded-xl shadow-2xl bg-muted border border-border/40 overflow-hidden flex items-center justify-center shrink-0 relative">
             <RrLapplandImageNotFound className="size-full object-cover scale-150" />
           </div>
         )}
@@ -88,7 +91,7 @@ export function RrMediaEditDialogHeader({
               onClick={onSave}
               disabled={isSubmitting}
             >
-              {isSubmitting ? "Saving..." : "Save"}
+              {isSubmitting ? t("aquila.saving") : t("aquila.save")}
             </Button>
           </motion.div>
         </div>

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { encrypt } from "@runa/crypto/browser";
+import { useTranslation } from "react-i18next";
 
 interface TextFileItem {
   id: string;
@@ -46,6 +47,7 @@ export default function TextEditor({
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
   const [showExitConfirm, setShowExitConfirm] = useState<boolean>(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (isOpen) {
@@ -83,17 +85,11 @@ export default function TextEditor({
       const rawBuffer = encoder.encode(content).buffer;
 
       // 2. Encrypt buffer
-      const encryptedBuffer = await encrypt(
-        rawBuffer,
-        file.decryptedKey,
-      );
+      const encryptedBuffer = await encrypt(rawBuffer, file.decryptedKey);
 
       // 3. Encrypt metadata name & type
       const encName = await encrypt(file.name, file.decryptedKey);
-      const encType = await encrypt(
-        "text/plain",
-        file.decryptedKey,
-      );
+      const encType = await encrypt("text/plain", file.decryptedKey);
 
       // 4. Upload to server
       const formData = new FormData();
@@ -109,46 +105,6 @@ export default function TextEditor({
         formData.append("parentId", file.parentId);
       }
 
-      // Wait, is there an update file endpoint?
-      // In files.controller.ts, uploading to `/lacerta/upload` creates a new record.
-      // But we can overwrite the S3 object directly! Let's see: we want to update the file content.
-      // Wait, the backend has `POST /lacerta/upload` which creates a new file. Does it support updating an existing file?
-      // Wait, we can delete the old record and upload a new one, OR we can upload a new version and use the same S3 key!
-      // Wait, let's check files.controller.ts: `POST /lacerta/upload` uploads a new file and creates a new database record.
-      // If we want to save an edit, can we write to `POST /files/lacerta/upload` or modify it?
-      // Ah! Let's look at `uploadLaceraFile` in the backend service. It generates a key like `${userId}/${crypto.randomUUID()}`.
-      // So every upload creates a new file key.
-      // If we want to edit/save a file:
-      // Option A: Just create a new file record and delete the old one. This is super easy and clean.
-      // Let's do that! The client can upload the new file and then delete the old file record.
-      // Wait! Even better: can we add a PUT route or support specifying the key in `POST /lacerta/upload`?
-      // If we specify the key in upload (or pass the file ID), the backend could overwrite the S3 object and update the size in the database!
-      // Let's check `files.controller.ts` again. The upload method does not accept a file ID, it creates a new file.
-      // So deleting the old record and creating a new one on save is extremely simple.
-      // Or we can add a route `PUT /lacerta/:id` to overwrite the content.
-      // Wait! Overwriting the S3 object is actually very easy if we just expose an endpoint `PUT /lacerta/:id` in `files.controller.ts`.
-      // Let's check if we can add a route `PUT /lacerta/:id` in `files.controller.ts` to overwrite file contents! That is much more professional than delete-and-recreate.
-      // Let's design `PUT /lacerta/:id`:
-      // ```typescript
-      // @Put('lacerta/:id')
-      // @UseInterceptors(FileInterceptor('file', { storage: memoryStorage() }))
-      // async updateLaceraFile(
-      //   @Param('id') id: string,
-      //   @UploadedFile() file: Express.Multer.File,
-      //   @Body('size') sizeStr: string,
-      //   @Req() req: ExtendedRequest,
-      // ) { ... }
-      // ```
-      // Yes! Overwriting the S3 file and updating size/updatedAt in DB is super simple and is the best practice! Let's check if we have already updated `files.controller.ts`.
-      // We haven't added a `PUT /lacerta/:id` route yet, but we can easily add it! Or, wait! Can we just call the upload and then delete the old file?
-      // Yes, delete-and-recreate is perfectly fine and works without changes, but adding a PUT route is very easy.
-      // Wait, let's think: is there a simpler way?
-      // If we just upload the file to `POST /lacerta/upload` with the new content, it creates a new record, and then we delete the old one.
-      // Let's implement this on the frontend:
-      // 1. Upload new encrypted file content.
-      // 2. Delete the old file record.
-      // This works 100% reliably without needing another backend modification round!
-      // Wait, let's see how:
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${file.id}`,
         {
@@ -159,14 +115,22 @@ export default function TextEditor({
           body: formData,
         },
       );
-      if (!res.ok) throw new Error("Failed to save changes.");
+      if (!res.ok)
+        throw new Error(
+          t("lacerta.textEditor.saveFailed", "Failed to save changes."),
+        );
 
-      toast.success("File saved successfully!");
+      toast.success(
+        t("lacerta.textEditor.saveSuccess", "File saved successfully!"),
+      );
       setHasUnsavedChanges(false);
       onSaveSuccess();
       onClose();
     } catch (err: any) {
-      toast.error(err.message || "Failed to save file.");
+      toast.error(
+        err.message ||
+          t("lacerta.textEditor.saveFailedGeneric", "Failed to save file."),
+      );
     } finally {
       setIsSaving(false);
     }
@@ -220,7 +184,10 @@ export default function TextEditor({
               {file.name}
             </span>
             <span className="text-[10px] text-muted-foreground">
-              {content.split(/\s+/).filter(Boolean).length} words
+              {t("lacerta.textEditor.wordCount", {
+                count: content.split(/\s+/).filter(Boolean).length,
+                defaultValue: "{{count}} words",
+              })}
             </span>
           </div>
         </div>
@@ -231,7 +198,7 @@ export default function TextEditor({
               onClick={() => setShowExitConfirm(true)}
               className="px-3.5 py-1.5 border border-destructive/20 hover:bg-destructive/10 text-destructive font-semibold rounded-lg text-xs transition-all mr-1"
             >
-              Exit without saving
+              {t("lacerta.textEditor.exitWithoutSaving", "Exit without saving")}
             </button>
           )}
           <button
@@ -244,7 +211,9 @@ export default function TextEditor({
             ) : (
               <Save className="h-3.5 w-3.5" />
             )}
-            {isSaving ? "Saving..." : "Save"}
+            {isSaving
+              ? t("lacerta.textEditor.saving", "Saving...")
+              : t("lacerta.textEditor.save", "Save")}
           </button>
         </div>
       </div>
@@ -254,14 +223,14 @@ export default function TextEditor({
         <button
           onClick={() => insertMarkdown("h1")}
           className="p-1.5 hover:bg-muted/20 rounded text-muted-foreground hover:text-foreground transition-all"
-          title="Heading 1"
+          title={t("lacerta.textEditor.heading1", "Heading 1")}
         >
           <Heading1 className="h-4 w-4" />
         </button>
         <button
           onClick={() => insertMarkdown("h2")}
           className="p-1.5 hover:bg-muted/20 rounded text-muted-foreground hover:text-foreground transition-all"
-          title="Heading 2"
+          title={t("lacerta.textEditor.heading2", "Heading 2")}
         >
           <Heading2 className="h-4 w-4" />
         </button>
@@ -269,28 +238,28 @@ export default function TextEditor({
         <button
           onClick={() => insertMarkdown("bold")}
           className="p-1.5 hover:bg-muted/20 rounded text-muted-foreground hover:text-foreground transition-all"
-          title="Bold"
+          title={t("lacerta.textEditor.bold", "Bold")}
         >
           <Bold className="h-4 w-4" />
         </button>
         <button
           onClick={() => insertMarkdown("italic")}
           className="p-1.5 hover:bg-muted/20 rounded text-muted-foreground hover:text-foreground transition-all"
-          title="Italic"
+          title={t("lacerta.textEditor.italic", "Italic")}
         >
           <Italic className="h-4 w-4" />
         </button>
         <button
           onClick={() => insertMarkdown("code")}
           className="p-1.5 hover:bg-muted/20 rounded text-muted-foreground hover:text-foreground transition-all"
-          title="Code Block"
+          title={t("lacerta.textEditor.codeBlock", "Code Block")}
         >
           <Code className="h-4 w-4" />
         </button>
         <button
           onClick={() => insertMarkdown("link")}
           className="p-1.5 hover:bg-muted/20 rounded text-muted-foreground hover:text-foreground transition-all"
-          title="Insert Link"
+          title={t("lacerta.textEditor.insertLink", "Insert Link")}
         >
           <Link className="h-4 w-4" />
         </button>
@@ -303,7 +272,7 @@ export default function TextEditor({
           id="editor-textarea"
           value={content}
           onChange={handleTextChange}
-          placeholder="Start typing..."
+          placeholder={t("lacerta.textEditor.startTyping", "Start typing...")}
           className="w-full h-full bg-transparent resize-none p-6 text-sm font-mono leading-relaxed text-foreground placeholder-muted-foreground/60 outline-none focus:outline-none"
         />
       </div>
@@ -312,18 +281,20 @@ export default function TextEditor({
         <div className="fixed inset-0 z-100 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl animate-in zoom-in duration-150">
             <h3 className="text-sm font-bold text-foreground mb-1">
-              Discard Changes?
+              {t("lacerta.textEditor.discardChangesTitle", "Discard Changes?")}
             </h3>
             <p className="text-xs text-muted-foreground mb-4">
-              You have unsaved changes. Are you sure you want to exit without
-              saving?
+              {t(
+                "lacerta.textEditor.discardChangesDesc",
+                "You have unsaved changes. Are you sure you want to exit without saving?",
+              )}
             </p>
             <div className="flex justify-end items-center gap-2">
               <button
                 onClick={() => setShowExitConfirm(false)}
                 className="px-3.5 py-1.5 border border-border hover:bg-muted/10 rounded-lg text-xs font-semibold text-foreground transition-all"
               >
-                Cancel
+                {t("lacerta.textEditor.cancel", "Cancel")}
               </button>
               <button
                 onClick={() => {
@@ -332,7 +303,7 @@ export default function TextEditor({
                 }}
                 className="px-3.5 py-1.5 bg-destructive hover:bg-destructive/90 text-destructive-foreground text-xs font-semibold rounded-lg transition-all shadow-md"
               >
-                Discard & Exit
+                {t("lacerta.textEditor.discardExit", "Discard & Exit")}
               </button>
             </div>
           </div>

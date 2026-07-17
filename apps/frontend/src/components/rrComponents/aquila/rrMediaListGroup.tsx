@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { RrMediaEntry, UserListDisplayType } from "./rrMediaListDisplay";
 import { RrMediaCard } from "./rrMediaCard";
 import { RrMediaListRow } from "./rrMediaListRow";
@@ -24,7 +25,35 @@ export function RrMediaListGroup({
   isOwner,
   onRefresh,
 }: RrMediaListGroupProps): React.JSX.Element | null {
+  const { t } = useTranslation();
   if (entries.length === 0) return null;
+
+  const getListNameTranslation = (name: string) => {
+    switch (name.toUpperCase()) {
+      case "WATCHING":
+        return t("aquila.watching");
+      case "READING":
+        return t("aquila.reading");
+      case "PLAYING":
+        return t("aquila.playing");
+      case "PLANNING":
+      case "PLAN TO WATCH":
+        return t("aquila.planToWatch");
+      case "PLAN TO READ":
+        return t("aquila.planToRead");
+      case "PLAN TO PLAY":
+        return t("aquila.planToPlay");
+      case "ON_HOLD":
+      case "ON HOLD":
+        return t("aquila.onHold");
+      case "COMPLETED":
+        return t("aquila.completed");
+      case "DROPPED":
+        return t("aquila.dropped");
+      default:
+        return name;
+    }
+  };
 
   return (
     <div
@@ -32,7 +61,7 @@ export function RrMediaListGroup({
       style={{ contentVisibility: "auto", containIntrinsicSize: "0 600px" }}
     >
       <h3 className="mb-4 text-base font-bold uppercase tracking-wider text-muted-foreground/80 pl-1">
-        {title}
+        {getListNameTranslation(title)}
       </h3>
 
       {displayType === "grid" && (
@@ -69,10 +98,10 @@ export function RrMediaListGroup({
           {/* Header Row */}
           <div className="flex items-center justify-between w-full pr-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 border-b border-border/20 pb-2 mb-2">
             <div className="flex-1 flex items-center justify-between gap-4 px-2">
-              <span className="flex-1 text-left">Title</span>
+              <span className="flex-1 text-left">{t("aquila.title")}</span>
               <div className="flex items-center gap-4 md:gap-6 justify-end w-[100px] md:w-[120px] shrink-0">
-                <span className="w-8 text-right">Score</span>
-                <span className="w-12 text-right">Progress</span>
+                <span className="w-8 text-right">{t("aquila.score")}</span>
+                <span className="w-12 text-right">{t("aquila.progress")}</span>
               </div>
             </div>
             {isOwner && <div className="w-8 pr-1 shrink-0" />}
@@ -95,11 +124,11 @@ export function RrMediaListGroup({
           {/* Header Row */}
           <div className="flex items-center justify-between w-full pr-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 border-b border-border/20 pb-2 mb-2">
             <div className="flex-1 flex items-center justify-between gap-4 px-2">
-              <span className="flex-1 text-left">Title</span>
+              <span className="flex-1 text-left">{t("aquila.title")}</span>
               <div className="flex items-center gap-4 md:gap-6 justify-end w-[100px] sm:w-[180px] shrink-0">
-                <span className="w-8 text-right">Score</span>
-                <span className="w-12 text-right">Progress</span>
-                <span className="w-16 text-right hidden sm:block">Type</span>
+                <span className="w-8 text-right">{t("aquila.score")}</span>
+                <span className="w-12 text-right">{t("aquila.progress")}</span>
+                <span className="w-16 text-right hidden sm:block">{t("aquila.type")}</span>
               </div>
             </div>
             {isOwner && <div className="w-8 pr-1 shrink-0" />}

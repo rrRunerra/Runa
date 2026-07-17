@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getConnectionIcon, getConnectionProfileUrl } from "./rrConnectionHelpers";
+import { useTranslation } from "react-i18next";
 
 interface Connection {
   id: string;
@@ -18,6 +19,7 @@ export interface rrOverviewTabProps {
 }
 
 export default function RrOverviewTab({ bio, connections }: rrOverviewTabProps): React.ReactNode {
+  const { t } = useTranslation();
   const getMetadataText = (conn: Connection): string | null => {
     if (!conn.metadata) return null;
     try {
@@ -25,19 +27,27 @@ export default function RrOverviewTab({ bio, connections }: rrOverviewTabProps):
       const parts: string[] = [];
       if (meta.memberSince || meta.joinedAt) {
         const date = new Date(meta.memberSince || meta.joinedAt);
-        parts.push(`Member since ${date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}`);
+        parts.push(
+          t("polaris.overview.memberSince", {
+            date: date.toLocaleDateString(undefined, {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+            }),
+          })
+        );
       }
       if (meta.karma !== undefined) {
-        parts.push(`${meta.karma} Karma`);
+        parts.push(t("polaris.overview.karmaCount", { count: meta.karma }));
       }
       if (meta.gamesCount !== undefined || meta.games !== undefined) {
-        parts.push(`${meta.gamesCount || meta.games} Games`);
+        parts.push(t("polaris.overview.gamesCount", { count: meta.gamesCount || meta.games }));
       }
       if (meta.postsCount !== undefined || meta.posts !== undefined) {
-        parts.push(`${meta.postsCount || meta.posts} Posts`);
+        parts.push(t("polaris.overview.postsCount", { count: meta.postsCount || meta.posts }));
       }
       if (meta.followersCount !== undefined || meta.followers !== undefined) {
-        parts.push(`${meta.followersCount || meta.followers} Followers`);
+        parts.push(t("polaris.overview.followersCount", { count: meta.followersCount || meta.followers }));
       }
       return parts.length > 0 ? parts.join(" • ") : null;
     } catch (e) {
@@ -51,7 +61,7 @@ export default function RrOverviewTab({ bio, connections }: rrOverviewTabProps):
       <div className="lg:col-span-2">
         <Card className="w-full h-full bg-card shadow-sm border">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold uppercase tracking-wider">About Me</CardTitle>
+            <CardTitle className="text-sm font-semibold uppercase tracking-wider">{t("polaris.overview.aboutMe")}</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground leading-relaxed">
             {bio ? (
@@ -81,7 +91,7 @@ export default function RrOverviewTab({ bio, connections }: rrOverviewTabProps):
                 {bio}
               </ReactMarkdown>
             ) : (
-              <p className="italic text-muted-foreground/60">No description has been written yet.</p>
+              <p className="italic text-muted-foreground/60">{t("polaris.overview.noBio")}</p>
             )}
           </CardContent>
         </Card>
@@ -91,7 +101,7 @@ export default function RrOverviewTab({ bio, connections }: rrOverviewTabProps):
       <div className="lg:col-span-1">
         <Card className="w-full bg-card shadow-sm border">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold uppercase tracking-wider">Connections</CardTitle>
+            <CardTitle className="text-sm font-semibold uppercase tracking-wider">{t("polaris.overview.connections")}</CardTitle>
           </CardHeader>
           <CardContent>
             {connections?.length > 0 ? (
@@ -113,8 +123,8 @@ export default function RrOverviewTab({ bio, connections }: rrOverviewTabProps):
                         <div>
                           <div className="flex items-center gap-1.5">
                             <span className="font-semibold text-sm text-foreground select-all">
-                              {conn.linkedUsername || "Connected"}
-                            </span>
+                               {conn.linkedUsername || t("polaris.overview.connected")}
+                             </span>
                             {profileUrl && (
                               <a
                                 href={profileUrl}
@@ -141,7 +151,7 @@ export default function RrOverviewTab({ bio, connections }: rrOverviewTabProps):
             ) : (
               <div className="flex flex-col items-center justify-center py-8 text-center text-muted-foreground/65 gap-2">
                 <User className="size-6 text-muted-foreground/50" aria-hidden="true" />
-                <span className="text-xs italic">No third-party accounts are linked.</span>
+                <span className="text-xs italic">{t("polaris.overview.noConnections")}</span>
               </div>
             )}
           </CardContent>

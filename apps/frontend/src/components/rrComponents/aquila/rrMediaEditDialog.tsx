@@ -28,6 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import {
   BASE_CONNECTION_PROVIDERS,
   ConnectionCapability,
@@ -80,6 +81,7 @@ export function RrMediaEditDialog({
   onOpenChange,
   trigger,
 }: RrMediaEditDialogProps): React.JSX.Element {
+  const { t } = useTranslation();
   const { data: session } = useSession();
 
   // SWR queries replacing sequential imperative fetching
@@ -423,7 +425,7 @@ export function RrMediaEditDialog({
         mutateListEntry();
       }
     } catch {
-      toast.error("Failed to update episode progress");
+      toast.error(t("aquila.failedToUpdateEpisode"));
     }
   };
 
@@ -470,18 +472,18 @@ export function RrMediaEditDialog({
           );
         }
         toast.success(
-          checked ? "Season marked as watched" : "Season marked as unwatched",
+          checked ? t("aquila.seasonMarkedWatched") : t("aquila.seasonMarkedUnwatched"),
         );
         mutateListEntry();
       }
     } catch {
-      toast.error("Failed to update season progress");
+      toast.error(t("aquila.failedToUpdateSeason"));
     }
   };
 
   const handleToggleFavorite = async (): Promise<void> => {
     if (!session?.accessToken) {
-      toast.error("You must be logged in to favorite items");
+      toast.error(t("aquila.loginToFavorite"));
       return;
     }
 
@@ -489,8 +491,8 @@ export function RrMediaEditDialog({
       setIsFavorited((prev) => !prev);
       toast.success(
         isFavorited
-          ? "Removed from favorites locally!"
-          : "Added to favorites locally!",
+          ? t("aquila.removedFromFavoritesLocally")
+          : t("aquila.addedToFavoritesLocally"),
       );
       return;
     }
@@ -511,11 +513,11 @@ export function RrMediaEditDialog({
         if (res.ok) {
           setIsFavorited(false);
           setInitialFavorited(false);
-          toast.success("Removed from favorites!");
+          toast.success(t("aquila.removedFromFavorites"));
           mutateFavorite();
         } else {
           const data = await res.json().catch(() => ({}));
-          toast.error(data.message || "Failed to remove from favorites");
+          toast.error(data.message || t("aquila.failedToRemoveFavorite"));
         }
       } else {
         const res = await fetch(
@@ -535,15 +537,15 @@ export function RrMediaEditDialog({
         if (res.ok) {
           setIsFavorited(true);
           setInitialFavorited(true);
-          toast.success("Added to favorites!");
+          toast.success(t("aquila.addedToFavorites"));
           mutateFavorite();
         } else {
           const data = await res.json().catch(() => ({}));
-          toast.error(data.message || "Failed to add to favorites");
+          toast.error(data.message || t("aquila.failedToAddFavorite"));
         }
       }
     } catch {
-      toast.error("Failed to toggle favorite");
+      toast.error(t("aquila.failedToToggleFavorite"));
     } finally {
       setIsSubmittingFavorite(false);
     }
@@ -551,7 +553,7 @@ export function RrMediaEditDialog({
 
   const handleSave = async (): Promise<void> => {
     if (!session?.accessToken) {
-      toast.error("You must be logged in to save entries");
+      toast.error(t("aquila.loginToSave"));
       return;
     }
 
@@ -665,20 +667,20 @@ export function RrMediaEditDialog({
           }
         }
 
-        toast.success("Saved successfully!");
+        toast.success(t("aquila.savedSuccessfully"));
         onOpenChange(false);
         onSaved?.();
         mutateListEntry();
       } else {
         const errorMsg =
-          data.message || data.error?.message || "Failed to save entry.";
+          data.message || data.error?.message || t("aquila.failedToSave");
         setSaveError(errorMsg);
         toast.error(errorMsg);
       }
     } catch (err: any) {
       console.error(err);
-      setSaveError(err.message || "An unexpected error occurred while saving.");
-      toast.error("Failed to save entry.");
+      setSaveError(err.message || t("aquila.unexpectedSaveError"));
+      toast.error(t("aquila.failedToSave"));
     } finally {
       setIsSubmitting(false);
     }
@@ -699,23 +701,23 @@ export function RrMediaEditDialog({
       );
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success !== false) {
-        toast.success("Removed from list!");
+        toast.success(t("aquila.removedFromList"));
         onOpenChange(false);
         setHasListEntry(false);
         onDeleted?.();
         mutateListEntry();
       } else {
         const errorMsg =
-          data.message || data.error?.message || "Failed to remove entry.";
+          data.message || data.error?.message || t("aquila.failedToRemove");
         setSaveError(errorMsg);
         toast.error(errorMsg);
       }
     } catch (err: any) {
       console.error(err);
       setSaveError(
-        err.message || "An unexpected error occurred while removing.",
+        err.message || t("aquila.unexpectedRemoveError"),
       );
-      toast.error("Failed to remove.");
+      toast.error(t("aquila.failedToRemove"));
     } finally {
       setIsSubmitting(false);
     }
@@ -835,15 +837,16 @@ export function RrMediaEditDialog({
         >
           <TabsList className="bg-muted p-[3px] rounded-lg w-full sm:w-fit grid grid-cols-2">
             <TabsTrigger value="general" className="rounded-md">
-              General
+              {t("aquila.generalTab")}
             </TabsTrigger>
             <TabsTrigger value="episodes" className="rounded-md">
-              Episodes ({watchedEpisodes.length}/
-              {media.seasons?.reduce(
-                (acc: any, s: { episodeCount: any }) => acc + s.episodeCount,
-                0,
-              ) || 0}
-              )
+              {t("aquila.episodesTab", {
+                watched: watchedEpisodes.length,
+                total: media.seasons?.reduce(
+                  (acc: any, s: { episodeCount: any }) => acc + s.episodeCount,
+                  0,
+                ) || 0
+              })}
             </TabsTrigger>
           </TabsList>
           <TabsContent
@@ -887,11 +890,10 @@ export function RrMediaEditDialog({
   const dialogContent = (
     <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden bg-background/90 backdrop-blur-xl border border-border/60 text-foreground [&>button]:text-foreground [&>button]:z-60 [&>button]:hover:text-muted-foreground shadow-2xl rounded-2xl">
       <DialogTitle className="sr-only">
-        {hasListEntry ? `Edit ${mediaType} Entry` : `Add ${mediaType} to List`}
+        {hasListEntry ? t("aquila.editEntry", { type: mediaType }) : t("aquila.addToList", { type: mediaType })}
       </DialogTitle>
       <DialogDescription className="sr-only">
-        Update progress, score, notes, dates and link external service
-        connections.
+        {t("aquila.editDialogDescription")}
       </DialogDescription>
 
       <RrMediaEditDialogHeader
@@ -941,30 +943,28 @@ export function RrMediaEditDialog({
                     disabled={isSubmitting}
                     className="bg-transparent hover:bg-destructive hover:text-destructive-foreground border-border hover:border-destructive/50 text-muted-foreground text-xs font-semibold rounded-xl cursor-pointer px-4 h-9 transition-colors"
                   >
-                    Delete
+                    {t("aquila.delete")}
                   </Button>
                 </motion.div>
               </AlertDialogTrigger>
               <AlertDialogContent className="bg-background/95 backdrop-blur-xl border border-border/60 rounded-2xl shadow-2xl text-foreground">
                 <AlertDialogHeader>
                   <AlertDialogTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
-                    Confirm Deletion
+                    {t("aquila.confirmDeletion")}
                   </AlertDialogTitle>
                   <AlertDialogDescription className="text-xs text-muted-foreground/80">
-                    This action cannot be undone. This will permanently remove
-                    this {mediaType} entry from your list and erase all local
-                    progress, score, and notes.
+                    {t("aquila.confirmDeletionDescription", { type: mediaType })}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter className="mt-4 gap-2">
                   <AlertDialogCancel className="bg-transparent hover:bg-muted border-border text-foreground text-xs font-bold rounded-xl cursor-pointer h-9 px-4">
-                    Cancel
+                    {t("aquila.cancel")}
                   </AlertDialogCancel>
                   <AlertDialogAction
                     onClick={handleDelete}
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/95 text-xs font-bold rounded-xl cursor-pointer h-9 px-4"
                   >
-                    Delete
+                    {t("aquila.delete")}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

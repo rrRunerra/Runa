@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useTranslation } from "react-i18next";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -82,6 +83,7 @@ export function RrRegisterForm({
   onSubmit,
   ...props
 }: rrRegisterFormProps & React.ComponentProps<"div">) {
+  const { t } = useTranslation();
   const isEmailError = !!fieldErrors?.email;
   const isUsernameError = !!fieldErrors?.username;
   const isPasswordError = !!fieldErrors?.password;
@@ -112,10 +114,10 @@ export function RrRegisterForm({
               >
                 <div className="flex flex-col items-center gap-1.5 text-center mb-2">
                   <h1 className="text-2xl font-bold tracking-tight text-foreground">
-                    Create Credentials
+                    {t("polaris.register.createCredentials")}
                   </h1>
                   <p className="text-sm text-muted-foreground">
-                    Create a new Polaris profile
+                    {t("polaris.register.createPolarisProfile")}
                   </p>
                 </div>
 
@@ -126,7 +128,7 @@ export function RrRegisterForm({
                       htmlFor="username"
                       className="text-xs font-semibold ml-0.5 text-muted-foreground uppercase tracking-wider"
                     >
-                      Username
+                      {t("polaris.register.username")}
                     </Label>
                     {fieldErrors?.username && (
                       <span className="text-[10px] font-semibold text-destructive">
@@ -152,13 +154,12 @@ export function RrRegisterForm({
                       if (RESERVED_KEYWORDS.has(sanitized)) {
                         setFieldErrors({
                           ...fieldErrors,
-                          username: `Username is reserved ("${sanitized}")`,
+                          username: t("polaris.register.usernameReserved", { username: sanitized }),
                         });
                       } else if (sanitized.length > 0 && sanitized.length < 3) {
                         setFieldErrors({
                           ...fieldErrors,
-                          username:
-                            "Username must be at least 3 characters long",
+                          username: t("polaris.register.usernameMinLen"),
                         });
                       } else {
                         setFieldErrors({
@@ -183,7 +184,7 @@ export function RrRegisterForm({
                       htmlFor="email"
                       className="text-xs font-semibold ml-0.5 text-muted-foreground uppercase tracking-wider"
                     >
-                      Email
+                      {t("polaris.register.email")}
                     </Label>
                     {fieldErrors?.email && (
                       <span className="text-[10px] font-semibold text-destructive">
@@ -214,7 +215,7 @@ export function RrRegisterForm({
                       if (val && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
                         setFieldErrors({
                           ...fieldErrors,
-                          email: "Invalid email format",
+                          email: t("polaris.register.invalidEmailFormat"),
                         });
                       }
                     }}
@@ -234,7 +235,7 @@ export function RrRegisterForm({
                       htmlFor="password"
                       className="text-xs font-semibold ml-0.5 text-muted-foreground uppercase tracking-wider"
                     >
-                      Password
+                      {t("polaris.register.password")}
                     </Label>
                     {fieldErrors?.password && (
                       <span className="text-[10px] font-semibold text-destructive">
@@ -297,11 +298,11 @@ export function RrRegisterForm({
                       >
                         <ul className="grid grid-cols-1 gap-1.5">
                           {[
-                            { key: "length", label: "Min 16 characters" },
-                            { key: "maxLength", label: "Max 64 characters" },
-                            { key: "uppercase", label: "One uppercase letter" },
-                            { key: "number", label: "Two numbers" },
-                            { key: "special", label: "One special character" },
+                            { key: "length", label: t("polaris.register.passwordMinLen") },
+                            { key: "maxLength", label: t("polaris.register.passwordMaxLen") },
+                            { key: "uppercase", label: t("polaris.register.passwordUpper") },
+                            { key: "number", label: t("polaris.register.passwordNumber") },
+                            { key: "special", label: t("polaris.register.passwordSpecial") },
                           ].map((item) => {
                             const isValid =
                               errors[item.key as keyof typeof errors];
@@ -353,21 +354,21 @@ export function RrRegisterForm({
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 size-4 animate-spin" />
-                      Creating account...
+                      {t("polaris.register.creatingAccount")}
                     </>
                   ) : (
-                    <>{!noFieldErrors ? "Resolve Issues" : "Create Account"}</>
+                    <>{!noFieldErrors ? t("polaris.register.resolveIssues") : t("polaris.register.createAccount")}</>
                   )}
                 </Button>
 
                 {/* Sign up Link */}
                 <div className="text-center text-xs text-muted-foreground mt-2">
-                  Registered profile?{" "}
+                  {t("polaris.register.registeredProfile")}{" "}
                   <Link
                     href="/polaris/login"
                     className="text-foreground font-semibold hover:underline underline-offset-2 transition-colors"
                   >
-                    Sign in
+                    {t("polaris.register.signIn")}
                   </Link>
                 </div>
               </motion.form>
@@ -434,19 +435,19 @@ export function RrRegisterForm({
 
       {/* Footer agreement terms */}
       <p className="px-6 text-center text-xs text-muted-foreground/80 max-w-xs mx-auto leading-normal">
-        By clicking continue, you agree to our{" "}
+        {t("polaris.login.byClickingAgree")}{" "}
         <Link
           href="/polaris/tos"
           className="underline underline-offset-2 hover:text-muted-foreground transition-colors"
         >
-          Terms of Service
+          {t("polaris.login.termsOfService")}
         </Link>{" "}
-        and{" "}
+        {t("polaris.login.and")}{" "}
         <Link
           href="/polaris/privacy"
           className="underline underline-offset-2 hover:text-muted-foreground transition-colors"
         >
-          Privacy Policy
+          {t("polaris.login.privacyPolicy")}
         </Link>
         .
       </p>

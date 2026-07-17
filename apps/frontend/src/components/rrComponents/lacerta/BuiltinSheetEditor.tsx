@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { ArrowLeft, Save, Loader2, Grid3X3, Plus, Trash, Download } from "lucide-react";
 import { toast } from "sonner";
 import { encrypt } from "@runa/crypto/browser";
+import { useTranslation } from "react-i18next";
 
 interface SheetFileItem {
   id: string;
@@ -31,6 +32,7 @@ export default function BuiltinSheetEditor({
   accessToken,
   onSaveSuccess,
 }: BuiltinSheetEditorProps): React.JSX.Element | null {
+  const { t } = useTranslation();
   const [data, setData] = useState<Record<string, string>>({});
   const [activeCell, setActiveCell] = useState<string>("A1");
   const [formulaValue, setFormulaValue] = useState<string>("");
@@ -148,14 +150,14 @@ export default function BuiltinSheetEditor({
         headers: { Authorization: `Bearer ${accessToken}` },
         body: formData,
       });
-      if (!res.ok) throw new Error("Failed to save spreadsheet.");
+      if (!res.ok) throw new Error(t("lacerta.builtinSheetEditor.saveFailed", "Failed to save spreadsheet."));
 
-      toast.success("Spreadsheet saved successfully!");
+      toast.success(t("lacerta.builtinSheetEditor.saveSuccess", "Spreadsheet saved successfully!"));
       setHasChanges(false);
       onSaveSuccess();
       onClose();
     } catch (err: any) {
-      toast.error(err.message || "Failed to save spreadsheet.");
+      toast.error(err.message || t("lacerta.builtinSheetEditor.saveFailed", "Failed to save spreadsheet."));
     } finally {
       setIsSaving(false);
     }
@@ -183,7 +185,7 @@ export default function BuiltinSheetEditor({
         <div className="flex items-center gap-3">
           <button
             onClick={() => {
-              if (hasChanges && !confirm("You have unsaved changes. Exit anyway?")) return;
+              if (hasChanges && !confirm(t("lacerta.builtinSheetEditor.unsavedChangesConfirm", "You have unsaved changes. Exit anyway?"))) return;
               onClose();
             }}
             className="p-1.5 border border-border hover:bg-muted/10 rounded-lg text-muted-foreground hover:text-foreground transition-all"
@@ -194,7 +196,7 @@ export default function BuiltinSheetEditor({
             <Grid3X3 className="h-5 w-5 text-emerald-500" />
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-foreground">{file.name}</span>
-              <span className="text-[10px] text-muted-foreground">Collabora Spreadsheet Editor</span>
+              <span className="text-[10px] text-muted-foreground">{t("lacerta.builtinSheetEditor.editorTitle", "Collabora Spreadsheet Editor")}</span>
             </div>
           </div>
         </div>
@@ -205,10 +207,10 @@ export default function BuiltinSheetEditor({
             className="px-3 py-1.5 border border-border bg-card hover:bg-muted/10 rounded-lg text-xs font-semibold flex items-center gap-1.5 text-foreground transition-all"
           >
             <Download className="h-3.5 w-3.5" />
-            Export CSV
+            {t("lacerta.builtinSheetEditor.exportCsv", "Export CSV")}
           </button>
           {hasChanges && (
-            <span className="text-xs text-muted-foreground italic">Unsaved</span>
+            <span className="text-xs text-muted-foreground italic">{t("lacerta.builtinSheetEditor.unsaved", "Unsaved")}</span>
           )}
           <button
             onClick={handleSave}
@@ -216,7 +218,7 @@ export default function BuiltinSheetEditor({
             className="px-3.5 py-1.5 bg-primary hover:bg-primary/95 text-primary-foreground font-semibold rounded-lg text-xs flex items-center gap-1.5 transition-all"
           >
             {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-            {isSaving ? "Saving..." : "Save"}
+            {isSaving ? t("lacerta.builtinSheetEditor.saving", "Saving...") : t("lacerta.builtinSheetEditor.save", "Save")}
           </button>
         </div>
       </div>
@@ -231,20 +233,20 @@ export default function BuiltinSheetEditor({
           type="text"
           value={formulaValue}
           onChange={handleFormulaChange}
-          placeholder="Enter text or formula (e.g. =SUM(A1:A5))"
+          placeholder={t("lacerta.builtinSheetEditor.formulaPlaceholder", "Enter text or formula (e.g. =SUM(A1:A5))")}
           className="flex-1 bg-background border border-border rounded px-3 py-1 text-xs text-foreground focus:outline-none focus:border-emerald-500 transition-all font-mono"
         />
         <button
           onClick={addRow}
           className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground transition-all"
-          title="Add Row"
+          title={t("lacerta.builtinSheetEditor.addRow", "Add Row")}
         >
           <Plus className="h-4 w-4" />
         </button>
         <button
           onClick={addCol}
           className="p-1 hover:bg-muted rounded text-muted-foreground hover:text-foreground transition-all"
-          title="Add Column"
+          title={t("lacerta.builtinSheetEditor.addCol", "Add Column")}
         >
           <Grid3X3 className="h-4 w-4" />
         </button>

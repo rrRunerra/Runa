@@ -1,6 +1,7 @@
 import * as React from "react";
 import { useState, useRef } from "react";
 import { Camera, Crop, Trash } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -43,6 +44,7 @@ export function RrProfileBannerAvatar({
   displayName,
   username,
 }: RrProfileBannerAvatarProps): React.JSX.Element {
+  const { t } = useTranslation();
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
 
@@ -90,10 +92,9 @@ export function RrProfileBannerAvatar({
     <>
       <Card className="overflow-visible">
         <CardHeader>
-          <CardTitle>Profile Banner & Avatar</CardTitle>
+          <CardTitle>{t("account.profileBannerAvatarTitle")}</CardTitle>
           <CardDescription>
-            Customize your profile banner (recommended: 1200x266px) and avatar
-            image (recommended: 512x512px).
+            {t("account.profileBannerAvatarDesc")}
           </CardDescription>
         </CardHeader>
         <CardContent className="relative pb-8 text-left">
@@ -115,7 +116,7 @@ export function RrProfileBannerAvatar({
               />
             ) : (
               <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
-                No banner uploaded
+                {t("account.noBannerUploaded")}
               </div>
             )}
             <div className="absolute inset-0 bg-black/45 opacity-0 group-hover/banner:opacity-100 transition-opacity duration-200 flex items-center justify-center">
@@ -159,11 +160,11 @@ export function RrProfileBannerAvatar({
         onOpenChange={setIsCropperOpen}
         imageSrc={cropImageSrc || ""}
         aspectRatio={cropType === "banner" ? 4.5 : 1}
-        title={cropType === "avatar" ? "Edit Avatar" : "Edit Banner"}
+        title={cropType === "avatar" ? t("account.editAvatar") : t("account.editBanner")}
         description={
           cropType === "avatar"
-            ? "Drag and zoom to fit your avatar."
-            : "Drag and zoom to fit your profile banner."
+            ? t("account.fitAvatarDesc")
+            : t("account.fitBannerDesc")
         }
         onCrop={handleCropComplete}
       />
@@ -173,7 +174,7 @@ export function RrProfileBannerAvatar({
         <DialogContent className="max-w-xs bg-card border border-border shadow-2xl p-6 rounded-2xl">
           <DialogHeader className="pb-2">
             <DialogTitle className="text-sm font-bold text-center">
-              Profile Picture Options
+              {t("account.profilePictureOptions")}
             </DialogTitle>
           </DialogHeader>
 
@@ -186,7 +187,7 @@ export function RrProfileBannerAvatar({
               className="flex items-center justify-center gap-2 w-full py-2.5 h-auto rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground font-semibold text-xs cursor-pointer transition-all shadow-xs text-center"
             >
               <Camera className="size-3.5" />
-              Upload New Image
+              {t("account.uploadNewImage")}
             </Button>
 
             {avatarUrl && (
@@ -202,7 +203,7 @@ export function RrProfileBannerAvatar({
                   className="flex items-center justify-center gap-2 w-full py-2.5 h-auto rounded-xl border border-border text-xs font-semibold hover:bg-muted/50"
                 >
                   <Crop className="size-3.5" />
-                  Position & Fit
+                  {t("account.positionAndFit")}
                 </Button>
 
                 <Button
@@ -215,7 +216,7 @@ export function RrProfileBannerAvatar({
                   className="flex items-center justify-center gap-2 w-full py-2.5 h-auto rounded-xl border border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive text-xs font-semibold"
                 >
                   <Trash className="size-3.5" />
-                  Remove Picture
+                  {t("account.removePicture")}
                 </Button>
               </>
             )}
@@ -228,7 +229,7 @@ export function RrProfileBannerAvatar({
         <DialogContent className="max-w-xs bg-card border border-border shadow-2xl p-6 rounded-2xl">
           <DialogHeader className="pb-2">
             <DialogTitle className="text-sm font-bold text-center">
-              Profile Banner Options
+              {t("account.profileBannerOptions")}
             </DialogTitle>
           </DialogHeader>
 
@@ -241,7 +242,7 @@ export function RrProfileBannerAvatar({
               className="flex items-center justify-center gap-2 w-full py-2.5 h-auto rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground font-semibold text-xs cursor-pointer transition-all shadow-xs text-center"
             >
               <Camera className="size-3.5" />
-              Upload New Banner
+              {t("account.uploadNewBanner")}
             </Button>
 
             {bannerUrl && (
@@ -257,7 +258,7 @@ export function RrProfileBannerAvatar({
                   className="flex items-center justify-center gap-2 w-full py-2.5 h-auto rounded-xl border border-border text-xs font-semibold hover:bg-muted/50"
                 >
                   <Crop className="size-3.5" />
-                  Position & Fit
+                  {t("account.positionAndFit")}
                 </Button>
 
                 <Button
@@ -270,7 +271,7 @@ export function RrProfileBannerAvatar({
                   className="flex items-center justify-center gap-2 w-full py-2.5 h-auto rounded-xl border border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive text-xs font-semibold"
                 >
                   <Trash className="size-3.5" />
-                  Remove Banner
+                  {t("account.removeBanner")}
                 </Button>
               </>
             )}

@@ -4,6 +4,7 @@ import React from "react";
 import Image from "next/image";
 import { User, X, UserCheck, Sparkles, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
 
 interface UserProfile {
   id: string;
@@ -25,12 +26,13 @@ export default function RrSenderProfileCard({
   onClose,
 }: RrSenderProfileCardProps): React.JSX.Element {
   const router = useRouter();
+  const { t } = useTranslation();
 
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-full space-y-2 text-muted-foreground p-6">
         <Loader2 className="size-5 text-primary animate-spin" />
-        <span className="text-[10px]">Searching profiles...</span>
+        <span className="text-[10px]">{t("pegasus.senderCard.searching")}</span>
       </div>
     );
   }
@@ -43,10 +45,10 @@ export default function RrSenderProfileCard({
         </div>
         <div className="space-y-1">
           <h4 className="text-xs font-bold text-foreground">
-            No profile found
+            {t("pegasus.senderCard.noProfile")}
           </h4>
           <p className="text-[10px] text-muted-foreground leading-relaxed">
-            This email address is not linked to any active Runa user profile.
+            {t("pegasus.senderCard.notLinked")}
           </p>
         </div>
       </div>
@@ -105,19 +107,19 @@ export default function RrSenderProfileCard({
 
         <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 rounded-full text-[9px] font-semibold tracking-wider uppercase">
           <UserCheck className="size-3" />
-          <span>Verified contact</span>
+          <span>{t("pegasus.senderCard.verifiedContact")}</span>
         </div>
 
         <div className="pt-4 border-t border-border w-full space-y-3">
           <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-            Quick actions
+            {t("pegasus.senderCard.quickActions")}
           </h4>
           <button
             onClick={() => router.push(`/polar?search=${profile.username}`)}
             className="w-full text-left px-3 py-2 bg-muted/40 hover:bg-muted border border-border text-[11px] rounded-xl text-foreground font-semibold transition-all flex items-center gap-2 cursor-pointer"
           >
             <Sparkles className="size-3.5 text-primary" />
-            View Profile Dashboard
+            {t("pegasus.senderCard.viewDashboard")}
           </button>
         </div>
       </div>

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { Film } from "lucide-react";
-import { CanvasNode } from "../CanvasEditor";
+import { CanvasNode } from "../types";
 
 interface RrCanvasGifCardProps {
   node: CanvasNode;

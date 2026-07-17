@@ -4,6 +4,7 @@ import { fetcher } from "@/lib/fetcher";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LayoutDashboard, Clock, Star, ListChecks } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import RrStatsDashboard from "@/components/rrComponents/polaris/rrStatsDashboard";
 
 interface StatsTabProps {
@@ -11,6 +12,7 @@ interface StatsTabProps {
 }
 
 export default function RrStatsTab({ name }: StatsTabProps): React.ReactNode {
+  const { t } = useTranslation();
   const baseUrl = `${process.env.NEXT_PUBLIC_API_URL}/stats/${name}`;
   
   const { data: animeStats, isLoading: l1 } = useSWR<any>(`${baseUrl}/anime`, fetcher);
@@ -79,7 +81,7 @@ export default function RrStatsTab({ name }: StatsTabProps): React.ReactNode {
     <div className="space-y-8">
       {/* Global Overview Section */}
       <div className="space-y-4">
-        <h3 className="text-lg font-bold tracking-tight">Global Overview</h3>
+        <h3 className="text-lg font-bold tracking-tight">{t("polaris.stats.globalOverview")}</h3>
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -91,49 +93,49 @@ export default function RrStatsTab({ name }: StatsTabProps): React.ReactNode {
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               <Card className="border shadow-sm">
                 <CardContent className="p-5 flex flex-col items-center justify-center text-center h-full gap-2">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Library</p>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("polaris.stats.totalLibrary")}</p>
                   <p className="text-2xl font-black">{globalStats.totalItems}</p>
                 </CardContent>
               </Card>
 
               <Card className="border shadow-sm">
                 <CardContent className="p-5 flex flex-col items-center justify-center text-center h-full gap-2">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Mean Score</p>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("polaris.stats.meanScore")}</p>
                   <p className="text-2xl font-black">{globalStats.globalMeanScore}</p>
                 </CardContent>
               </Card>
 
               <Card className="border shadow-sm">
                 <CardContent className="p-5 flex flex-col items-center justify-center text-center h-full gap-2">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Days Spent</p>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("polaris.stats.daysSpent")}</p>
                   <p className="text-2xl font-black">{globalStats.totalDaysSpent}</p>
                 </CardContent>
               </Card>
 
               <Card className="border shadow-sm">
                 <CardContent className="p-5 flex flex-col items-center justify-center text-center h-full gap-2">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Hours Spent</p>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("polaris.stats.hoursSpent")}</p>
                   <p className="text-2xl font-black">{globalStats.totalHours}</p>
                 </CardContent>
               </Card>
 
               <Card className="border shadow-sm">
                 <CardContent className="p-5 flex flex-col items-center justify-center text-center h-full gap-2">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Episodes</p>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("polaris.stats.totalEpisodes")}</p>
                   <p className="text-2xl font-black">{globalStats.totalEpisodes}</p>
                 </CardContent>
               </Card>
 
               <Card className="border shadow-sm">
                 <CardContent className="p-5 flex flex-col items-center justify-center text-center h-full gap-2">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Chapters</p>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{t("polaris.stats.totalChapters")}</p>
                   <p className="text-2xl font-black">{globalStats.totalChapters}</p>
                 </CardContent>
               </Card>
             </div>
             <div className="flex items-center gap-2 mt-2 px-1">
               <span className="text-[11px] text-muted-foreground italic">
-                * Time spent reading is estimated at 12 chapters/hour for Manga and 3 chapters/hour for Books.
+                {t("polaris.stats.readingEstimate")}
               </span>
             </div>
           </>

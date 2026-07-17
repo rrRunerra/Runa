@@ -13,6 +13,20 @@ import { RrThemeProvider } from "@/components/Providers/rrThemeProvider";
 import { RrSpotlightProvider } from "@/components/Providers/rrSpotlightProvider";
 import { RrNotificationAndBookmarksProvider } from "@/components/Providers/rrNotificationAndBookmarksProvider";
 
+// Silence false positive React 19 / next-themes script tag warning in development
+if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+  const origError = console.error;
+  console.error = (...args: unknown[]) => {
+    if (
+      typeof args[0] === "string" &&
+      args[0].includes("Encountered a script tag")
+    ) {
+      return;
+    }
+    origError.apply(console, args);
+  };
+}
+
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>

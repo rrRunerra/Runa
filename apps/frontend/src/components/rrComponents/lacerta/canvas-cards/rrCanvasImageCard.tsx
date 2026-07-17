@@ -3,14 +3,16 @@
 import React, { useState, useEffect } from "react";
 import { Loader2, ShieldAlert, Image as ImageIcon } from "lucide-react";
 import { importRawKey, decrypt } from "@runa/crypto/browser";
-import { CanvasNode } from "../CanvasEditor";
+import { CanvasNode } from "../types";
+import { useTranslation } from "react-i18next";
 
 interface RrCanvasImageCardProps {
   node: CanvasNode;
   accessToken: string;
 }
 
-export default function RrCanvasImageCard({ node, accessToken }: RrCanvasImageCardProps) {
+export default function RrCanvasImageCard({ node, accessToken }: RrCanvasImageCardProps): React.JSX.Element {
+  const { t } = useTranslation();
   const [src, setSrc] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,12 +43,12 @@ export default function RrCanvasImageCard({ node, accessToken }: RrCanvasImageCa
           `${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${node.lacertaFileKey}`,
           { headers }
         );
-        if (!res.ok) throw new Error("Failed to fetch image");
+        if (!res.ok) throw new Error(t("lacerta.canvasEditor.failedFetchImage", "Failed to fetch image"));
 
         const encBuffer = await res.arrayBuffer();
         const keyToImport =
           node.lacertaFileDecryptionKey || node.lacertaFileKey;
-        if (!keyToImport) throw new Error("No decryption key present");
+        if (!keyToImport) throw new Error(t("lacerta.canvasEditor.noDecryptionKey", "No decryption key present"));
         const fileKey = await importRawKey(keyToImport);
         const decBuffer = await decrypt(encBuffer, fileKey);
 
@@ -58,7 +60,7 @@ export default function RrCanvasImageCard({ node, accessToken }: RrCanvasImageCa
         setSrc(url);
       } catch (err: any) {
         console.error("Failed to load embedded Lacerta image:", err);
-        if (active) setError(err.message || "Failed to decrypt image");
+        if (active) setError(err.message || t("lacerta.canvasEditor.failedDecryptImage", "Failed to decrypt image"));
       } finally {
         if (active) setLoading(false);
       }
@@ -72,13 +74,13 @@ export default function RrCanvasImageCard({ node, accessToken }: RrCanvasImageCa
         URL.revokeObjectURL(src);
       }
     };
-  }, [node.imageUrl, node.lacertaFileId, node.lacertaFileKey, accessToken]);
+  }, [node.imageUrl, node.lacertaFileId, node.lacertaFileKey, accessToken, src, t]);
 
   if (loading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-slate-500 gap-2 h-full w-full">
         <Loader2 className="h-6 w-6 animate-spin text-slate-600" />
-        <span className="text-[9px] font-semibold">Decrypting Image...</span>
+        <span className="text-[9px] font-semibold">{t("lacerta.canvasEditor.decryptingImage", "Decrypting Image...")}</span>
       </div>
     );
   }
@@ -98,7 +100,7 @@ export default function RrCanvasImageCard({ node, accessToken }: RrCanvasImageCa
     return (
       <div className="flex-1 flex flex-col items-center justify-center text-slate-500 gap-2 h-full w-full">
         <ImageIcon className="h-8 w-8 text-slate-700" />
-        <span className="text-[10px] font-semibold">No Image Loaded</span>
+        <span className="text-[10px] font-semibold">{t("lacerta.canvasEditor.noImageLoaded", "No Image Loaded")}</span>
       </div>
     );
   }
@@ -106,7 +108,7 @@ export default function RrCanvasImageCard({ node, accessToken }: RrCanvasImageCa
   return (
     <img
       src={src}
-      alt="Spatial Image"
+      alt={t("lacerta.canvasEditor.spatialImage", "Spatial Image")}
       className="w-full h-full object-contain select-none pointer-events-none"
     />
   );

@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { GripVertical, Eye, EyeOff } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { MediaItem } from "@/types/aquila";
@@ -27,6 +28,7 @@ export function RrMediaSection({
   onRefresh,
   dragHandleProps,
 }: RrMediaSectionProps): React.JSX.Element {
+  const { t } = useTranslation();
   const localStorageKey = `aquila_collapsed_${title.toLowerCase()}`;
   const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
     if (typeof window !== "undefined") {
@@ -71,7 +73,7 @@ export function RrMediaSection({
             dragHandleProps &&
               "cursor-grab active:cursor-grabbing hover:bg-primary/20 active:bg-primary/30 transition-all duration-200 pointer-events-auto",
           )}
-          title={dragHandleProps ? "Drag icon to reorder" : undefined}
+          title={dragHandleProps ? t("aquila.dragToReorder") : undefined}
         >
           {dragHandleProps && (
             <GripVertical className="size-4 opacity-50 group-hover/header:opacity-100 transition-opacity duration-200" />
@@ -94,12 +96,12 @@ export function RrMediaSection({
             {isCollapsed ? (
               <>
                 <EyeOff className="size-3.5 animate-pulse" />
-                <span>{items.length} hidden</span>
+                <span>{t("aquila.hiddenCount", { count: items.length })}</span>
               </>
             ) : (
               <>
                 <Eye className="size-3.5" />
-                <span>{items.length} items</span>
+                <span>{t("aquila.itemsCount", { count: items.length })}</span>
               </>
             )}
           </Badge>

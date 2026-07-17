@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { decrypt } from "@runa/crypto/browser";
+import { useTranslation } from "react-i18next";
 
 interface GalleryFileItem {
   id: string;
@@ -38,6 +39,7 @@ export default function MediaGallerySlider({
   initialIndex,
   accessToken,
 }: MediaGallerySliderProps): React.JSX.Element | null {
+  const { t } = useTranslation();
   const [currentIndex, setCurrentIndex] = useState<number>(initialIndex);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -98,7 +100,7 @@ export default function MediaGallerySlider({
             signal: abortController.signal,
           },
         );
-        if (!res.ok) throw new Error("Failed to download media file.");
+        if (!res.ok) throw new Error(t("lacerta.mediaGallery.downloadFailed", "Failed to download media file."));
 
         const contentLength = res.headers.get("content-length");
         const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
@@ -151,7 +153,7 @@ export default function MediaGallerySlider({
         }
         console.error(err);
         if (active) {
-          toast.error("Failed to decrypt media file.");
+          toast.error(t("lacerta.mediaGallery.decryptFailed", "Failed to decrypt media file."));
           setLoading(false);
         }
       }
@@ -163,7 +165,7 @@ export default function MediaGallerySlider({
       active = false;
       abortController.abort();
     };
-  }, [currentIndex, isOpen]);
+  }, [currentIndex, isOpen, accessToken, files, t]);
 
   // Handle slideshow play timer
   useEffect(() => {
@@ -238,10 +240,10 @@ const getMimeType = (fileName: string, mimeType: string | null): string => {
       <div className="flex h-16 w-full items-center justify-between px-6 bg-linear-to-b from-black/50 to-transparent shrink-0 z-10">
         <div className="flex flex-col text-white">
           <span className="text-sm font-semibold tracking-tight">
-            {currentFile?.name || "Decrypting Media..."}
+            {currentFile?.name || t("lacerta.mediaGallery.decryptingTitle", "Decrypting Media...")}
           </span>
           <span className="text-xs text-white/60">
-            {currentIndex + 1} of {files.length}
+            {t("lacerta.mediaGallery.count", { index: currentIndex + 1, total: files.length, defaultValue: "{{index}} of {{total}}" })}
           </span>
         </div>
 
@@ -250,21 +252,21 @@ const getMimeType = (fileName: string, mimeType: string | null): string => {
           <button
             onClick={() => setZoom((z) => Math.max(z - 0.25, 0.5))}
             className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-all"
-            title="Zoom Out"
+            title={t("lacerta.mediaGallery.zoomOut", "Zoom Out")}
           >
             <ZoomOut className="h-5 w-5" />
           </button>
           <button
             onClick={() => setZoom((z) => Math.min(z + 0.25, 3))}
             className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-all"
-            title="Zoom In"
+            title={t("lacerta.mediaGallery.zoomIn", "Zoom In")}
           >
             <ZoomIn className="h-5 w-5" />
           </button>
           <button
             onClick={() => setIsPlaying(!isPlaying)}
             className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-all"
-            title={isPlaying ? "Pause Slideshow" : "Play Slideshow"}
+            title={isPlaying ? t("lacerta.mediaGallery.pauseSlideshow", "Pause Slideshow") : t("lacerta.mediaGallery.playSlideshow", "Play Slideshow")}
           >
             {isPlaying ? (
               <Pause className="h-5 w-5 text-primary" />
@@ -276,7 +278,7 @@ const getMimeType = (fileName: string, mimeType: string | null): string => {
             onClick={handleDownload}
             disabled={!blobUrl}
             className="p-2 text-white/80 hover:text-white hover:bg-white/10 disabled:opacity-40 rounded-lg transition-all"
-            title="Download Decrypted File"
+            title={t("lacerta.mediaGallery.downloadDecrypted", "Download Decrypted File")}
           >
             <Download className="h-5 w-5" />
           </button>
@@ -306,7 +308,7 @@ const getMimeType = (fileName: string, mimeType: string | null): string => {
           <div className="flex flex-col items-center gap-3 text-white">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
             <span className="text-xs text-white/60">
-              Decrypting in browser... {percent > 0 ? `(${percent}%)` : ""}
+              {t("lacerta.mediaGallery.decryptingProgress", { percent: percent > 0 ? ` (${percent}%)` : "", defaultValue: "Decrypting in browser...{{percent}}" })}
             </span>
           </div>
         ) : (

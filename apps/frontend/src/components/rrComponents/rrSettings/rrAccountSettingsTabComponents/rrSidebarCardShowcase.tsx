@@ -2,6 +2,7 @@ import * as React from "react";
 import { ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getSafeImageUrl } from "@/lib/inputValidation";
+import { useTranslation } from "react-i18next";
 
 export interface RrSidebarCardShowcaseProps {
   sidebarCardBackgroundUrl: string;
@@ -18,10 +19,12 @@ export function RrSidebarCardShowcase({
   username,
   email,
 }: RrSidebarCardShowcaseProps): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <div className="flex flex-col justify-center items-center p-4 rounded-xl border border-dashed border-border bg-muted/10 relative overflow-hidden min-h-[90px]">
       <div className="text-[9px] uppercase tracking-wider text-muted-foreground/60 mb-2 font-bold select-none">
-        Sidebar Card Showcase
+        {t("account.sidebarCardShowcase")}
       </div>
 
       <div className="h-12 w-full max-w-[240px] flex items-center gap-2 px-3 py-2 rounded-xl border border-border bg-card/40 backdrop-blur-xl relative overflow-hidden transition-all duration-300 isolate transform-[translate3d(0,0,0)]">

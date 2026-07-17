@@ -38,6 +38,7 @@ import { RrPasskeyRegisterDialog } from "./rrSecuritySettingsTabComponents/rrPas
 import { RrConfirmDisableDialog } from "./rrSecuritySettingsTabComponents/rrConfirmDisableDialog";
 import { RrBackupCodesDialog } from "./rrSecuritySettingsTabComponents/rrBackupCodesDialog";
 import { hasPermission, PegasusFlags } from "@runa/permissions";
+import { useTranslation } from "react-i18next";
 
 interface RrSecuritySettingsTabProps {
   onOpenChange: (open: boolean) => void;
@@ -46,6 +47,7 @@ interface RrSecuritySettingsTabProps {
 export const RrSecuritySettingsTab = ({
   onOpenChange,
 }: RrSecuritySettingsTabProps): React.JSX.Element => {
+  const { t } = useTranslation();
   const { data: session, update } = useSession();
 
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -103,10 +105,10 @@ export const RrSecuritySettingsTab = ({
       localStorage.setItem("runa-last-token-refresh", now.toString());
       setLastRefreshTime(now);
       setRefreshCountdown(60);
-      toast.success("Session token refreshed successfully!");
+      toast.success(t("securitySettings.tokenRefreshedSuccess"));
     } catch (err: unknown) {
       const errorMessage =
-        err instanceof Error ? err.message : "Failed to refresh session token.";
+        err instanceof Error ? err.message : t("securitySettings.tokenRefreshFailed");
       toast.error(errorMessage);
     } finally {
       setIsRefreshing(false);
@@ -165,7 +167,10 @@ export const RrSecuritySettingsTab = ({
 
   const { data: devicesData, mutate: refetchDevices } = useSWR<any[]>(
     session?.accessToken
-      ? [`${process.env.NEXT_PUBLIC_API_URL}/users/me/devices`, session.accessToken]
+      ? [
+          `${process.env.NEXT_PUBLIC_API_URL}/users/me/devices`,
+          session.accessToken,
+        ]
       : null,
     fetcher,
   );
@@ -226,7 +231,7 @@ export const RrSecuritySettingsTab = ({
     if (!session?.accessToken) return;
     if (
       !window.confirm(
-        "Are you sure you want to revoke trust for this device? It will lose access to decrypt E2EE files and chat messages.",
+        t("securitySettings.revokeDeviceConfirm"),
       )
     )
       return;
@@ -235,17 +240,17 @@ export const RrSecuritySettingsTab = ({
         `${process.env.NEXT_PUBLIC_API_URL}/users/me/devices/${deviceId}`,
         "DELETE",
       );
-      toast.success("Device revoked successfully.");
+      toast.success(t("securitySettings.deviceRevokedSuccess"));
       fetchDevices();
     } catch (err: any) {
-      toast.error(err.message || "Revoke failed.");
+      toast.error(err.message || t("securitySettings.revokeFailed"));
     }
   };
 
   const handleLinkDevice = async () => {
     const code = linkCodeInput.replace(/[\s-]/g, "").trim();
     if (code.length !== 10) {
-      toast.error("Please enter a valid 10-digit code.");
+      toast.error(t("securitySettings.invalidLinkCode"));
       return;
     }
 
@@ -256,10 +261,12 @@ export const RrSecuritySettingsTab = ({
         "POST",
         { code },
       );
-      toast.success("Device linked successfully!");
+      toast.success(t("securitySettings.deviceLinkedSuccess"));
       setLinkCodeInput("");
     } catch (err: any) {
-      toast.error(err.message || "Failed to link device. Code may be invalid or expired.");
+      toast.error(
+        err.message || t("securitySettings.linkDeviceFailed"),
+      );
     } finally {
       setIsLinking(false);
     }
@@ -275,10 +282,10 @@ export const RrSecuritySettingsTab = ({
         currentPassword: current,
         newPassword: newPass,
       });
-      toast.success("Password changed successfully!");
+      toast.success(t("securitySettings.passwordChangedSuccess"));
       onOpenChange(false);
     } catch (err: any) {
-      toast.error(err.message || "Failed to update password.");
+      toast.error(err.message || t("securitySettings.passwordChangeFailed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -296,13 +303,13 @@ export const RrSecuritySettingsTab = ({
       setIsTotpSetupOpen(true);
       setTotpCode("");
     } catch (err: any) {
-      toast.error(err.message || "Failed to initiate TOTP.");
+      toast.error(err.message || t("securitySettings.totpInitFailed"));
     }
   };
 
   const confirmEnableTotp = async (): Promise<void> => {
     if (!totpCode || totpCode.length !== 6) {
-      toast.error("Please enter a 6-digit code.");
+      toast.error(t("securitySettings.enterSixDigitCode"));
       return;
     }
     setIsSubmitting(true);
@@ -313,7 +320,7 @@ export const RrSecuritySettingsTab = ({
         { code: totpCode },
       );
 
-      toast.success("Authenticator app enabled successfully!");
+      toast.success(t("securitySettings.totpEnabledSuccess"));
       setIsTotpSetupOpen(false);
 
       if (Array.isArray(data) && data.length > 0) {
@@ -322,7 +329,7 @@ export const RrSecuritySettingsTab = ({
       }
       fetchMfaSettings();
     } catch (err: any) {
-      toast.error(err.message || "Verification failed.");
+      toast.error(err.message || t("securitySettings.verificationFailed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -337,15 +344,15 @@ export const RrSecuritySettingsTab = ({
       );
       setIsEmailSetupOpen(true);
       setEmailOtpCode("");
-      toast.info("Verification code sent to your email.");
+      toast.info(t("securitySettings.emailOtpSent"));
     } catch (err: any) {
-      toast.error(err.message || "Failed to initiate email MFA.");
+      toast.error(err.message || t("securitySettings.emailMfaInitFailed"));
     }
   };
 
   const confirmEnableEmailMfa = async (): Promise<void> => {
     if (!emailOtpCode || emailOtpCode.length !== 6) {
-      toast.error("Please enter a 6-digit code.");
+      toast.error(t("securitySettings.enterSixDigitCode"));
       return;
     }
     setIsSubmitting(true);
@@ -356,7 +363,7 @@ export const RrSecuritySettingsTab = ({
         { code: emailOtpCode },
       );
 
-      toast.success("Email verification enabled successfully!");
+      toast.success(t("securitySettings.emailMfaEnabledSuccess"));
       setIsEmailSetupOpen(false);
 
       if (Array.isArray(data) && data.length > 0) {
@@ -365,7 +372,7 @@ export const RrSecuritySettingsTab = ({
       }
       fetchMfaSettings();
     } catch (err: any) {
-      toast.error(err.message || "Verification failed.");
+      toast.error(err.message || t("securitySettings.verificationFailed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -374,7 +381,7 @@ export const RrSecuritySettingsTab = ({
   // Passkey functions
   const registerPasskey = async (): Promise<void> => {
     if (!passkeyNickname.trim()) {
-      toast.error("Please enter a nickname for your passkey.");
+      toast.error(t("securitySettings.passkeyNicknameRequired"));
       return;
     }
     setIsSubmitting(true);
@@ -397,7 +404,7 @@ export const RrSecuritySettingsTab = ({
         },
       );
 
-      toast.success("Passkey registered successfully!");
+      toast.success(t("securitySettings.passkeyRegisteredSuccess"));
       setIsPasskeyRegisterOpen(false);
       setPasskeyNickname("");
 
@@ -408,7 +415,7 @@ export const RrSecuritySettingsTab = ({
       fetchMfaSettings();
     } catch (err: any) {
       console.error(err);
-      toast.error(err.message || "Passkey registration failed or cancelled.");
+      toast.error(err.message || t("securitySettings.passkeyRegistrationFailed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -456,7 +463,7 @@ export const RrSecuritySettingsTab = ({
   const regenerateBackupCodes = async (): Promise<void> => {
     if (
       !window.confirm(
-        "Regenerating backup codes will invalidate your current ones. Continue?",
+        t("securitySettings.regenerateCodesConfirm"),
       )
     )
       return;
@@ -468,9 +475,9 @@ export const RrSecuritySettingsTab = ({
       );
       setDisplayedBackupCodes(data);
       setShowCodesDialog(true);
-      toast.success("Backup codes regenerated!");
+      toast.success(t("securitySettings.backupCodesRegenerated"));
     } catch (err: any) {
-      toast.error(err.message || "Failed to regenerate backup codes.");
+      toast.error(err.message || t("securitySettings.backupCodesRegenFailed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -480,7 +487,7 @@ export const RrSecuritySettingsTab = ({
     const codeText = displayedBackupCodes.join("\n");
     navigator.clipboard.writeText(codeText);
     setCopiedCodes(true);
-    toast.success("Copied to clipboard!");
+    toast.success(t("securitySettings.copiedToClipboard"));
     setTimeout(() => setCopiedCodes(false), 2000);
   };
 
@@ -513,17 +520,14 @@ export const RrSecuritySettingsTab = ({
             <div className="flex items-center gap-2 text-primary mb-1">
               <ShieldCheck className="size-5" />
               <span className="text-[10px] font-bold uppercase tracking-wider font-mono">
-                Protection Active
+                {t("securitySettings.protectionActive")}
               </span>
             </div>
             <CardTitle className="text-lg font-bold">
-              Multi-Factor Authentication (MFA)
+              {t("securitySettings.mfaTitle")}
             </CardTitle>
             <CardDescription className="text-xs text-muted-foreground leading-relaxed mt-1">
-              Add an extra layer of security to your Runa account. By activating
-              MFA, logins will require not only your password but also
-              verification via passkeys, email codes, or authenticator app
-              tokens.
+              {t("securitySettings.mfaDesc")}
             </CardDescription>
           </CardHeader>
           {hasBackupCodes && (
@@ -531,11 +535,10 @@ export const RrSecuritySettingsTab = ({
               <div className="relative z-10 p-3 rounded-xl border border-success/10 bg-success/5 flex items-center justify-between gap-3">
                 <div className="flex flex-col gap-0.5">
                   <span className="text-[10px] font-bold text-success uppercase tracking-wide">
-                    Recovery System Active
+                    {t("securitySettings.recoverySystemActive")}
                   </span>
                   <p className="text-[10px] text-muted-foreground leading-snug">
-                    Generate backup codes in case you lose access to your
-                    primary authentication devices.
+                    {t("securitySettings.recoverySystemDesc")}
                   </p>
                 </div>
                 <Button
@@ -544,7 +547,7 @@ export const RrSecuritySettingsTab = ({
                   size="sm"
                   className="h-8 rounded-lg cursor-pointer"
                 >
-                  Regenerate
+                  {t("securitySettings.regenerateBtn")}
                 </Button>
               </div>
             </CardContent>
@@ -555,7 +558,7 @@ export const RrSecuritySettingsTab = ({
       {/* List of MFA options */}
       <div className="flex flex-col gap-4 pt-2 text-left">
         <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-          Verification Methods
+          {t("securitySettings.verificationMethods")}
         </h4>
 
         <div className="flex flex-col gap-4 p-1">
@@ -563,12 +566,12 @@ export const RrSecuritySettingsTab = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Authenticator App (TOTP) */}
             <RrMfaMethodCard
-              title="Authenticator App"
-              description="Use application tools like Google Authenticator or 1Password to generate 6-digit verification codes."
+              title={t("securitySettings.totpTitle")}
+              description={t("securitySettings.totpDesc")}
               icon={<Smartphone className="size-4.5" />}
               isActive={totpEnabled}
-              statusText={totpEnabled ? "Active" : "Inactive"}
-              actionText={totpEnabled ? "Disconnect" : "Setup TOTP"}
+              statusText={totpEnabled ? t("securitySettings.statusActive") : t("securitySettings.statusInactive")}
+              actionText={totpEnabled ? t("securitySettings.disconnectBtn") : t("securitySettings.setupTotpBtn")}
               onAction={
                 totpEnabled
                   ? () => {
@@ -581,12 +584,12 @@ export const RrSecuritySettingsTab = ({
 
             {/* Email Verification OTP */}
             <RrMfaMethodCard
-              title="Email One-Time Code"
-              description="Receive temporary verification codes sent to your primary registered email address on login attempt."
+              title={t("securitySettings.emailOtpTitle")}
+              description={t("securitySettings.emailOtpDesc")}
               icon={<Mail className="size-4.5" />}
               isActive={emailMfaEnabled}
-              statusText={emailMfaEnabled ? "Active" : "Inactive"}
-              actionText={emailMfaEnabled ? "Disconnect" : "Setup Email OTP"}
+              statusText={emailMfaEnabled ? t("securitySettings.statusActive") : t("securitySettings.statusInactive")}
+              actionText={emailMfaEnabled ? t("securitySettings.disconnectBtn") : t("securitySettings.setupEmailOtpBtn")}
               onAction={
                 emailMfaEnabled
                   ? () => {
@@ -602,16 +605,16 @@ export const RrSecuritySettingsTab = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* WebAuthn Passkeys */}
             <RrMfaMethodCard
-              title="Passkeys / Biometrics"
-              description="Log in passwordlessly or complete 2FA securely using Face ID, Touch ID, Windows Hello, or hardware keys."
+              title={t("securitySettings.passkeyTitle")}
+              description={t("securitySettings.passkeyDesc")}
               icon={<Key className="size-4.5" />}
               isActive={passkeys.length > 0}
               statusText={
                 passkeys.length > 0
-                  ? `${passkeys.length} Registered`
-                  : "Inactive"
+                  ? t("securitySettings.passkeyRegisteredCount", { count: passkeys.length })
+                  : t("securitySettings.statusInactive")
               }
-              actionText="Add Passkey"
+              actionText={t("securitySettings.addPasskeyBtn")}
               onAction={() => setIsPasskeyRegisterOpen(true)}
               actionVariant="default"
               actionClassName="bg-primary hover:bg-primary/95 text-primary-foreground"
@@ -625,11 +628,11 @@ export const RrSecuritySettingsTab = ({
                     <Key className="size-4.5" />
                   </div>
                   <UiBadge variant="outline">
-                    {passkeys.length > 0 ? `${passkeys.length} Saved` : "None"}
+                    {passkeys.length > 0 ? t("securitySettings.passkeySavedCount", { count: passkeys.length }) : t("securitySettings.none")}
                   </UiBadge>
                 </div>
                 <CardTitle className="text-sm font-bold text-foreground">
-                  Registered Passkeys
+                  {t("securitySettings.registeredPasskeys")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="flex-1 pb-4">
@@ -642,10 +645,10 @@ export const RrSecuritySettingsTab = ({
                       >
                         <div className="flex flex-col gap-0.5 text-left min-w-0 flex-1">
                           <span className="text-xs font-bold text-foreground block truncate">
-                            {pk.name || "Unnamed Passkey"}
+                            {pk.name || t("securitySettings.unnamedPasskey")}
                           </span>
                           <span className="text-[10px] text-muted-foreground block">
-                            Added: {new Date(pk.createdAt).toLocaleDateString()}
+                            {t("securitySettings.passkeyAdded")}: {new Date(pk.createdAt).toLocaleDateString()}
                           </span>
                         </div>
                         <Button
@@ -662,7 +665,7 @@ export const RrSecuritySettingsTab = ({
                   <div className="flex flex-col items-center justify-center h-full py-4 text-center text-muted-foreground/40">
                     <Key className="size-5 mb-1.5 opacity-30" />
                     <span className="text-[10px]">
-                      No passkeys registered yet.
+                      {t("securitySettings.noPasskeys")}
                     </span>
                   </div>
                 )}
@@ -678,7 +681,7 @@ export const RrSecuritySettingsTab = ({
         {/* Left Column: Active Session */}
         <div className="flex flex-col gap-4">
           <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-            Active Session
+            {t("securitySettings.activeSession")}
           </h4>
           {/* Session Token Refresh Card */}
           <Card className="flex flex-col justify-between relative overflow-hidden text-left">
@@ -688,35 +691,32 @@ export const RrSecuritySettingsTab = ({
                   className={cn("size-5", isRefreshing && "animate-spin")}
                 />
                 <span className="text-[10px] font-mono font-bold uppercase tracking-wider">
-                  Session Token
+                  {t("securitySettings.sessionTokenLabel")}
                 </span>
               </div>
               <CardTitle className="text-lg font-bold">
-                Session Settings
+                {t("securitySettings.sessionSettingsTitle")}
               </CardTitle>
               <CardDescription className="text-xs text-muted-foreground leading-relaxed mt-1">
-                If your permissions got updated recently or you don't have
-                access to stuff you should have, try refreshing your active
-                session manually to apply changes immediately without logging
-                out.
+                {t("securitySettings.sessionSettingsDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-0">
               <div className="text-[10px] text-muted-foreground/85 bg-muted/20 border border-border/40 rounded-xl p-3 flex flex-col gap-1.5">
                 <div className="flex justify-between items-center">
-                  <span>Last Refresh:</span>
+                  <span>{t("securitySettings.lastRefreshLabel")}</span>
                   <span className="font-mono text-foreground font-semibold">
                     {lastRefreshTime
                       ? new Date(lastRefreshTime).toLocaleTimeString()
-                      : "Never this session"}
+                      : t("securitySettings.neverThisSession")}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span>Token Expiration:</span>
+                  <span>{t("securitySettings.tokenExpirationLabel")}</span>
                   <span className="font-mono text-foreground font-semibold">
                     {session?.expires
                       ? new Date(session.expires).toLocaleTimeString()
-                      : "Unknown"}
+                      : t("securitySettings.unknown")}
                   </span>
                 </div>
               </div>
@@ -730,14 +730,14 @@ export const RrSecuritySettingsTab = ({
                 {isRefreshing ? (
                   <>
                     <Loader2 className="size-4 animate-spin mr-2" />
-                    Refreshing...
+                    {t("securitySettings.refreshing")}
                   </>
                 ) : refreshCountdown > 0 ? (
-                  `Refresh Token (${refreshCountdown}s)`
+                  t("securitySettings.refreshTokenCountdown", { seconds: refreshCountdown })
                 ) : (
                   <>
                     <RefreshCw className="size-4 mr-2" />
-                    Refresh Session
+                    {t("securitySettings.refreshSessionBtn")}
                   </>
                 )}
               </Button>
@@ -748,7 +748,7 @@ export const RrSecuritySettingsTab = ({
         {/* Right Column: Connected Devices */}
         <div className="flex flex-col gap-4">
           <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-            Connected Devices
+            {t("securitySettings.connectedDevices")}
           </h4>
 
           {/* Link Device via Code Card */}
@@ -760,10 +760,10 @@ export const RrSecuritySettingsTab = ({
                 </div>
                 <div>
                   <CardTitle className="text-sm font-semibold text-foreground">
-                    Link a New Device
+                    {t("securitySettings.linkNewDeviceTitle")}
                   </CardTitle>
                   <CardDescription className="text-xs text-muted-foreground mt-0.5">
-                    Enter the 10-digit code shown on the device you want to authorize
+                    {t("securitySettings.linkNewDeviceDesc")}
                   </CardDescription>
                 </div>
               </div>
@@ -774,20 +774,27 @@ export const RrSecuritySettingsTab = ({
                   id="link-device-code"
                   placeholder="e.g. 1234567890"
                   value={linkCodeInput}
-                  onChange={(e) => setLinkCodeInput(e.target.value.replace(/[^0-9\s-]/g, "").slice(0, 12))}
+                  onChange={(e) =>
+                    setLinkCodeInput(
+                      e.target.value.replace(/[^0-9\s-]/g, "").slice(0, 12),
+                    )
+                  }
                   disabled={isLinking}
                   className="h-9 text-sm font-mono tracking-widest rounded-xl bg-background border-input"
                   maxLength={12}
                 />
                 <Button
                   onClick={handleLinkDevice}
-                  disabled={isLinking || linkCodeInput.replace(/[\s-]/g, "").length !== 10}
+                  disabled={
+                    isLinking ||
+                    linkCodeInput.replace(/[\s-]/g, "").length !== 10
+                  }
                   className="h-9 px-4 text-xs font-semibold rounded-xl shrink-0"
                 >
                   {isLinking ? (
                     <Loader2 className="size-3.5 animate-spin" />
                   ) : (
-                    "Authorize"
+                    t("securitySettings.authorizeBtn")
                   )}
                 </Button>
               </div>
@@ -804,7 +811,7 @@ export const RrSecuritySettingsTab = ({
             ))}
             {devices.length === 0 && (
               <div className="col-span-full p-6 text-center rounded-2xl border border-dashed border-border text-xs text-muted-foreground">
-                No registered devices found.
+                {t("securitySettings.noDevices")}
               </div>
             )}
           </div>
@@ -818,7 +825,7 @@ export const RrSecuritySettingsTab = ({
           onClick={() => onOpenChange(false)}
           className="text-xs sm:text-sm h-9 px-5 rounded-xl cursor-pointer"
         >
-          Close Settings
+          {t("cancel")}
         </Button>
       </div>
 

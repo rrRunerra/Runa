@@ -14,8 +14,7 @@ import type { Constellation } from "@/types/constellation";
 import { useBookmarks } from "@/hooks/useBookmarks";
 import { Sparkles, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-const GREETINGS = ["Hey", "Hi", "Hello", "Greetings", "Hiya", "Welcome"];
+import { useTranslation } from "react-i18next";
 
 const constellations = REFERENCE_CONSTELLATIONS;
 
@@ -32,19 +31,29 @@ interface Bookmark {
 }
 
 export default function Dash() {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const effectManagerRef = useRef<EffectManagerHandle>(null);
   const starMapRef = useRef<StarMapHandle>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const { data: session, status } = useSession();
-  const [greeting] = useState(
-    GREETINGS[Math.floor(Math.random() * GREETINGS.length)],
-  );
+  
+  const greetings = [
+    t("polaris.greetings.hey", "Hey"),
+    t("polaris.greetings.hi", "Hi"),
+    t("polaris.greetings.hello", "Hello"),
+    t("polaris.greetings.greetings", "Greetings"),
+    t("polaris.greetings.hiya", "Hiya"),
+    t("polaris.greetings.welcome", "Welcome"),
+  ];
+
+  const [greetingIndex, setGreetingIndex] = useState(0);
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
   const navigatedRef = useRef(false);
 
   useEffect(() => {
     document.title = "Polaris > Dashboard";
+    setGreetingIndex(Math.floor(Math.random() * greetings.length));
   }, []);
 
   const { bookmarks: fetchedBookmarksRaw, mutate } = useBookmarks();
@@ -143,12 +152,12 @@ export default function Dash() {
             {/* Hero Section - Centered */}
             <section className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center text-center w-[900px] z-10">
               <h1 className="text-5xl md:text-7xl font-bold text-foreground tracking-widest opacity-90 mb-2 drop-shadow-lg select-none">
-                {greeting}
+                {greetings[greetingIndex]}
                 {", "}
                 {name}
               </h1>
               <h2 className="text-xl md:text-2xl text-muted-foreground font-light tracking-[0.2em] uppercase mb-4 drop-shadow-md select-none">
-                What would you like to explore today?
+                {t("polaris.explorePrompt", "What would you like to explore today?")}
               </h2>
               <div className="flex flex-wrap justify-center gap-3 mt-4 pointer-events-auto">
                 {allConstellations.map((constellation) => (
@@ -182,7 +191,7 @@ export default function Dash() {
         className="fixed bottom-6 right-6 z-40 h-12 rounded-full px-6 bg-background/80 hover:bg-accent border border-border text-foreground backdrop-blur-md shadow-lg transition-all duration-300 hover:scale-105 group"
       >
         <Sparkles className="size-4 mr-2 group-hover:animate-pulse" />
-        Constellation Workspace
+        {t("polaris.constellationWorkspace", "Constellation Workspace")}
       </Button>
 
       {isBuilderOpen && (
@@ -194,4 +203,3 @@ export default function Dash() {
     </div>
   );
 }
-

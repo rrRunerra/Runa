@@ -4,18 +4,25 @@ import React from "react";
 import { FileText, Download, ExternalLink } from "lucide-react";
 import { importRawKey, decrypt } from "@runa/crypto/browser";
 import { toast } from "sonner";
-import { CanvasNode } from "../CanvasEditor";
+import { CanvasNode } from "../types";
+import { useTranslation } from "react-i18next";
 
 interface RrCanvasFileCardProps {
   node: CanvasNode;
   accessToken: string;
 }
 
-export default function RrCanvasFileCard({ node, accessToken }: RrCanvasFileCardProps) {
+export default function RrCanvasFileCard({ node, accessToken }: RrCanvasFileCardProps): React.JSX.Element {
+  const { t } = useTranslation();
+
   const handleDownload = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!node.lacertaFileKey || !node.lacertaFileId) return;
-    const tId = toast.loading(`Downloading & decrypting ${node.lacertaFileName}...`);
+    const tId = toast.loading(
+      t("lacerta.canvasEditor.downloadingDecrypting", "Downloading & decrypting {{fileName}}...", {
+        fileName: node.lacertaFileName || "",
+      }),
+    );
     try {
       const headers: Record<string, string> = {};
       if (accessToken) {
@@ -25,11 +32,13 @@ export default function RrCanvasFileCard({ node, accessToken }: RrCanvasFileCard
         `${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${node.lacertaFileKey}`,
         { headers }
       );
-      if (!res.ok) throw new Error("Download failed");
+      if (!res.ok) throw new Error(t("lacerta.canvasEditor.downloadFailed", "Download failed"));
       const encBuf = await res.arrayBuffer();
       const decryptionKeyToUse =
         node.lacertaFileDecryptionKey || node.lacertaFileKey;
-      if (!decryptionKeyToUse) throw new Error("No decryption key present");
+      if (!decryptionKeyToUse) {
+        throw new Error(t("lacerta.canvasEditor.noDecryptionKey", "No decryption key present"));
+      }
       const fileKey = await importRawKey(decryptionKeyToUse);
       const decBuf = await decrypt(encBuf, fileKey);
       const blob = new Blob([decBuf], {
@@ -43,9 +52,9 @@ export default function RrCanvasFileCard({ node, accessToken }: RrCanvasFileCard
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      toast.success("Downloaded successfully", { id: tId });
+      toast.success(t("lacerta.canvasEditor.downloadSuccess", "Downloaded successfully"), { id: tId });
     } catch (err: any) {
-      toast.error(err.message || "Download failed", { id: tId });
+      toast.error(err.message || t("lacerta.canvasEditor.downloadFailed", "Download failed"), { id: tId });
     }
   };
 
@@ -71,12 +80,12 @@ export default function RrCanvasFileCard({ node, accessToken }: RrCanvasFileCard
         </div>
         <div className="flex-1 min-w-0">
           <div className="text-xs font-bold truncate text-foreground select-all">
-            {node.lacertaFileName || "Attached File"}
+            {node.lacertaFileName || t("lacerta.canvasEditor.attachedFile", "Attached File")}
           </div>
           <div className="text-[9px] text-muted-foreground select-none">
             {node.lacertaFileSize
               ? `${(node.lacertaFileSize / 1024).toFixed(1)} KB`
-              : "Size Unknown"}
+              : t("lacerta.canvasEditor.sizeUnknown", "Size Unknown")}
           </div>
         </div>
       </div>
@@ -86,14 +95,14 @@ export default function RrCanvasFileCard({ node, accessToken }: RrCanvasFileCard
           className="flex-1 py-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded text-[9px] flex items-center justify-center gap-1 transition-all active:scale-95"
         >
           <Download className="h-3 w-3" />
-          Download
+          {t("lacerta.canvasEditor.download", "Download")}
         </button>
         <button
           onClick={handleOpenShared}
           className="flex-1 py-1 bg-muted hover:bg-muted/80 text-foreground font-semibold border border-border rounded text-[9px] flex items-center justify-center gap-1 transition-all active:scale-95"
         >
           <ExternalLink className="h-3 w-3" />
-          Open Shared
+          {t("lacerta.canvasEditor.openShared", "Open Shared")}
         </button>
       </div>
     </div>

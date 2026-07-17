@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 type Connection = {
   id: string;
@@ -51,6 +52,7 @@ export function RrConnectionCard({
   handleConnect,
 }: RrConnectionCardProps): React.JSX.Element {
   const isConnected = !!conn;
+  const { t } = useTranslation();
 
   return (
     <div
@@ -84,14 +86,14 @@ export function RrConnectionCard({
             </span>
             {isConnected ? (
               <Badge className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-full font-semibold text-[10px] px-2 py-0">
-                Active
+                {t("connections.active")}
               </Badge>
             ) : (
               <Badge
                 variant="outline"
                 className="text-muted-foreground/60 border-border/40 rounded-full font-medium text-[10px] px-2 py-0"
               >
-                Offline
+                {t("connections.offline")}
               </Badge>
             )}
           </div>
@@ -102,7 +104,7 @@ export function RrConnectionCard({
             <div className="flex flex-col gap-1.5 pt-1">
               <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/80 font-medium">
                 <span className="text-[10px] uppercase tracking-wider text-muted-foreground/50">
-                  Username:
+                  {t("connections.username")}
                 </span>
                 <span className="text-foreground">
                   {conn.linkedUsername}
@@ -118,8 +120,8 @@ export function RrConnectionCard({
                       className="text-[10px] text-primary hover:underline font-semibold flex items-center gap-1 cursor-pointer"
                     >
                       {expandedMetadata
-                        ? "Hide connection data"
-                        : "Show connection data"}
+                        ? t("connections.hideData")
+                        : t("connections.showData")}
                     </button>
                     {expandedMetadata && (
                       <pre className="text-[9px] font-mono p-2 bg-muted/40 border border-border/40 rounded-lg max-w-xs overflow-x-auto max-h-[120px] text-muted-foreground">
@@ -148,7 +150,7 @@ export function RrConnectionCard({
               htmlFor={`private-switch-${provider.id}`}
               className="text-[11px] font-semibold text-muted-foreground cursor-pointer select-none"
             >
-              Private
+              {t("connections.private")}
             </label>
           </div>
         )}
@@ -163,7 +165,7 @@ export function RrConnectionCard({
                     <div className="flex items-center justify-between text-[10px] font-semibold text-muted-foreground">
                       <span className="flex items-center gap-1">
                         <Spinner className="size-2.5 text-primary animate-spin" />
-                        Importing list...
+                        {t("connections.importingList")}
                       </span>
                       <span>
                         {importStatus?.processed} / {importStatus?.total}
@@ -192,7 +194,7 @@ export function RrConnectionCard({
                     onClick={openImportDialog}
                   >
                     <RefreshCw className="size-3.5 mr-1 transition-transform duration-500 ease-in-out group-hover/import-btn:rotate-180" />
-                    Import List
+                    {t("connections.importListBtn")}
                   </Button>
                 )}
               </>
@@ -209,7 +211,7 @@ export function RrConnectionCard({
               ) : (
                 <Unlink className="size-3.5 mr-1" />
               )}
-              Disconnect
+              {t("connections.disconnectBtn")}
             </Button>
             <Button
               variant="outline"
@@ -234,7 +236,7 @@ export function RrConnectionCard({
             ) : (
               <LinkIcon className="size-3.5 mr-1" />
             )}
-            Connect Account
+            {t("connections.connectAccountBtn")}
           </Button>
         )}
       </div>

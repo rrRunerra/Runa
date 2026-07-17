@@ -37,6 +37,7 @@ import RrLapplandMermaid from "../rrImages/rrLapplandMermaid";
 import RrLapplandUml from "../rrImages/rrLapplandUml";
 import RrLapplandFolder from "../rrImages/rrLapplandFolder";
 import RrLapplandPlaceholderFile from "../rrImages/rrLapplandPlaceholderFile";
+import { useTranslation } from "react-i18next";
 
 interface FileRowProps {
   item: RenderFileItem;
@@ -67,9 +68,11 @@ export default function FileRow({
   isSharedTab,
   hasSelection = false,
 }: FileRowProps): React.JSX.Element {
+  const { t } = useTranslation();
+
   const formatSize = (bytes: number | null) => {
     if (bytes === null) return "--";
-    if (bytes === 0) return "0 Bytes";
+    if (bytes === 0) return t("lacerta.fileCard.sizeBytesZero", "0 Bytes");
     const k = 1024;
     const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -192,7 +195,7 @@ export default function FileRow({
             {item.shares && item.shares.length > 0 && (
               <div
                 className="p-0.5 rounded bg-indigo-500/10 border border-indigo-500/20 text-indigo-400"
-                title={`Shared with ${item.shares.length} users`}
+                title={t("lacerta.fileCard.sharedWithUsers", { defaultValue: "Shared with {{count}} users", count: item.shares.length })}
               >
                 <Share2 className="h-3 w-3" />
               </div>
@@ -200,7 +203,7 @@ export default function FileRow({
             {item.isVault && (
               <div
                 className="p-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
-                title="Secure Vault Storage"
+                title={t("lacerta.fileCard.secureVaultStorage", "Secure Vault Storage")}
               >
                 <Shield className="h-3 w-3" />
               </div>
@@ -219,7 +222,7 @@ export default function FileRow({
                 onShare(item);
               }}
               className="p-1.5 hover:bg-muted/25 rounded-md text-sky-500 hover:text-sky-600 transition-all shrink-0"
-              title="Share File"
+              title={t("lacerta.fileCard.share", "Share")}
             >
               <UserPlus className="h-3.5 w-3.5" />
             </button>
@@ -261,7 +264,7 @@ export default function FileRow({
                 className="cursor-pointer text-xs focus:bg-accent font-semibold gap-2"
               >
                 <ArrowUpRight className="h-3.5 w-3.5" />
-                Open
+                {t("lacerta.fileCard.open", "Open")}
               </DropdownMenuItem>
               {isSharedTab && onSaveCopy && (
                 <>
@@ -271,7 +274,7 @@ export default function FileRow({
                     className="cursor-pointer text-xs focus:bg-accent font-semibold gap-2"
                   >
                     <Copy className="h-3.5 w-3.5" />
-                    Save a Copy
+                    {t("lacerta.fileCard.saveCopy", "Save a Copy")}
                   </DropdownMenuItem>
                 </>
               )}
@@ -281,7 +284,7 @@ export default function FileRow({
                   className="cursor-pointer text-xs focus:bg-accent font-semibold gap-2"
                 >
                   <Download className="h-3.5 w-3.5" />
-                  Download
+                  {t("lacerta.fileCard.download", "Download")}
                 </DropdownMenuItem>
               )}
               {!isSharedTab && (
@@ -291,7 +294,7 @@ export default function FileRow({
                     className="cursor-pointer text-xs focus:bg-accent font-semibold gap-2"
                   >
                     <Share2 className="h-3.5 w-3.5" />
-                    Share
+                    {t("lacerta.fileCard.share", "Share")}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-border" />
                   <DropdownMenuItem
@@ -299,14 +302,14 @@ export default function FileRow({
                     className="cursor-pointer text-xs focus:bg-accent font-semibold gap-2"
                   >
                     <Shield className="h-3.5 w-3.5" />
-                    {item.isVault ? "Remove Vault" : "Move to Vault"}
+                    {item.isVault ? t("lacerta.fileCard.removeVault", "Remove Vault") : t("lacerta.fileCard.moveToVault", "Move to Vault")}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => onToggleTrash(item)}
                     className="cursor-pointer text-xs focus:bg-accent font-semibold gap-2"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
-                    {item.isTrash ? "Restore" : "Send to Trash"}
+                    {item.isTrash ? t("lacerta.fileCard.restore", "Restore") : t("lacerta.fileCard.sendTrash", "Send to Trash")}
                   </DropdownMenuItem>
                 </>
               )}
@@ -318,7 +321,7 @@ export default function FileRow({
                     className="cursor-pointer text-xs text-destructive focus:bg-destructive/10 focus:text-destructive font-semibold gap-2"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
-                    Delete Forever
+                    {t("lacerta.fileCard.deleteForever", "Delete Forever")}
                   </DropdownMenuItem>
                 </>
               )}

@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Heart } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
@@ -47,6 +48,7 @@ export default function RrFavoritesTab({
   username,
   session,
 }: FavoritesTabProps): React.ReactNode {
+  const { t } = useTranslation();
   const url = username
     ? `${process.env.NEXT_PUBLIC_API_URL}/favorites/user/${username}`
     : null;
@@ -109,38 +111,38 @@ export default function RrFavoritesTab({
             <Heart className="text-muted-foreground/50 fill-none" />
           </EmptyMedia>
           <EmptyHeader>
-            <EmptyTitle>No favorites added yet</EmptyTitle>
+            <EmptyTitle>{t("polaris.favorites.noFavorites")}</EmptyTitle>
             <EmptyDescription>
-              Tracks and items favorited on Aquila will show up here.
+              {t("polaris.favorites.tracksAndItems")}
             </EmptyDescription>
           </EmptyHeader>
         </Empty>
       ) : (
         <>
           {[
-            { title: "Favorite Anime", items: animeFavs, type: "anime" },
-            { title: "Favorite Manga", items: mangaFavs, type: "manga" },
+            { titleKey: "favoriteAnime", items: animeFavs, type: "anime" },
+            { titleKey: "favoriteManga", items: mangaFavs, type: "manga" },
             {
-              title: "Favorite Characters",
+              titleKey: "favoriteCharacters",
               items: characterFavs,
               type: "characters",
             },
-            { title: "Favorite Actors", items: staffFavs, type: "actors" },
-            { title: "Favorite Games", items: gameFavs, type: "games" },
-            { title: "Favorite TV Shows", items: tvFavs, type: "tv" },
-            { title: "Favorite Movies", items: movieFavs, type: "movies" },
-            { title: "Favorite Books", items: bookFavs, type: "books" },
+            { titleKey: "favoriteActors", items: staffFavs, type: "actors" },
+            { titleKey: "favoriteGames", items: gameFavs, type: "games" },
+            { titleKey: "favoriteTvShows", items: tvFavs, type: "tv" },
+            { titleKey: "favoriteMovies", items: movieFavs, type: "movies" },
+            { titleKey: "favoriteBooks", items: bookFavs, type: "books" },
           ]
             .filter((grp) => grp.items.length > 0)
             .map((grp) => (
-              <div key={grp.title} className="flex flex-col gap-3">
+              <div key={grp.titleKey} className="flex flex-col gap-3">
                 <div className="flex items-center gap-2 border-b pb-2">
                   <Heart
                     className="size-4 text-primary fill-primary/10"
                     aria-hidden="true"
                   />
                   <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
-                    {grp.title} ({grp.items.length})
+                    {t(`polaris.favorites.${grp.titleKey}`)} ({grp.items.length})
                   </h3>
                 </div>
 
@@ -167,7 +169,7 @@ export default function RrFavoritesTab({
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center p-3 text-center text-xs text-muted-foreground/60 bg-muted italic">
-                            {fav.title || "No Image"}
+                            {fav.title || t("polaris.favorites.noImage")}
                           </div>
                         )}
 

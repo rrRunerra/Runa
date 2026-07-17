@@ -1,6 +1,7 @@
 "use client";
 
 import { Session } from "next-auth";
+import Image from "next/image";
 import { SidebarMenuButton, SidebarMenuItem } from "../ui/sidebar";
 import {
   Bell,
@@ -52,10 +53,11 @@ import { SettingsDialog } from "./rrSettings/rrSettingsModal";
 import { RrAppearanceModal } from "./rrAppearanceModal";
 import { useRRCrypto } from "@/hooks/useRRCrypto";
 import { useTranslation } from "react-i18next";
+import { RrLanguageSelector } from "./rrLanguageSelector";
 
 export default function RrUserMenu({ session }: { session: Session | null }) {
   const { unreadCount } = useNotificationAndBookmarks();
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
 
   const [isAppearanceOpen, setIsAppearanceOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -331,46 +333,7 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
                   <Settings />
                   {t("settings")}
                 </DropdownMenuItem>
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>
-                    <Languages />
-                    <span>{t("language")}</span>
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="max-h-60 overflow-y-auto no-scrollbar">
-                    <DropdownMenuRadioGroup
-                      value={i18n.language}
-                      onValueChange={(value) => {
-                        i18n.changeLanguage(value);
-                        localStorage.setItem("runa-language", value);
-                        // Also write a cookie so server components (serverTranslation) can read the locale
-                        document.cookie = `runa-language=${value};path=/;max-age=${60 * 60 * 24 * 365};SameSite=Lax`;
-                      }}
-                    >
-                      {[
-                        { code: "en", label: "English (US)" },
-                        { code: "ja", label: "日本語" },
-                        { code: "ko", label: "한국어" },
-                        { code: "zh-CN", label: "简体中文" },
-                        { code: "zh-TW", label: "繁體中文" },
-                        { code: "pl", label: "Polski" },
-                        { code: "ru", label: "Русский" },
-                        { code: "no", label: "Norsk" },
-                        { code: "fi", label: "Suomi" },
-                        { code: "es", label: "Español" },
-                        { code: "de", label: "Deutsch" },
-                        { code: "cs", label: "Čeština" },
-                        { code: "tr", label: "Türkçe" },
-                        { code: "vi", label: "Tiếng Việt" },
-                        { code: "th", label: "ไทย" },
-                        { code: "ms", label: "Bahasa Melayu" },
-                      ].map((lang) => (
-                        <DropdownMenuRadioItem key={lang.code} value={lang.code}>
-                          {lang.label}
-                        </DropdownMenuRadioItem>
-                      ))}
-                    </DropdownMenuRadioGroup>
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
+                <RrLanguageSelector variant="submenu" />
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onSelect={(e) => {
@@ -420,7 +383,7 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
             className="border border-zinc-800/50 shadow-sm hover:bg-white/5 rounded-xl transition-colors h-11"
           >
             <LogIn className="size-4 text-primary" />
-            <span className="font-semibold text-foreground">{t("logIn")}</span>
+            <span className="font-semibold text-foreground" suppressHydrationWarning>{t("logIn")}</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
       )}

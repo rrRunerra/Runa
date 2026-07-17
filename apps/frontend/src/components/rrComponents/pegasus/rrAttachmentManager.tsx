@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { useRRCrypto } from "@/hooks/useRRCrypto";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useTranslation } from "react-i18next";
 
 interface AttachmentItem {
   id: string;
@@ -37,6 +38,7 @@ export default function RrAttachmentManager(): React.JSX.Element {
   const { data: session } = useSession();
   const router = useRouter();
   const { getPrivateKey, unwrapKey, decrypt } = useRRCrypto();
+  const { t } = useTranslation();
 
   const [loading, setLoading] = useState<boolean>(true);
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
@@ -77,7 +79,7 @@ export default function RrAttachmentManager(): React.JSX.Element {
           headers: { Authorization: `Bearer ${session.accessToken}` },
         },
       );
-      if (!accountsRes.ok) throw new Error("Failed to load accounts");
+      if (!accountsRes.ok) throw new Error(t("pegasus.attachments.failedLoadAccounts"));
       const accountsList = await accountsRes.json();
       setAccounts(accountsList);
 
@@ -158,7 +160,7 @@ export default function RrAttachmentManager(): React.JSX.Element {
       setAttachments(allFetched);
     } catch (err) {
       console.error(err);
-      toast.error("Failed to load attachments.");
+      toast.error(t("pegasus.attachments.failedLoad"));
     } finally {
       setLoading(false);
     }
@@ -171,7 +173,7 @@ export default function RrAttachmentManager(): React.JSX.Element {
   const handleDownloadAttachment = async (item: AttachmentItem) => {
     if (!session?.accessToken) return;
     try {
-      toast.info(`Starting download of ${item.filename}...`);
+      toast.info(t("pegasus.attachments.startingDownload", { filename: item.filename }));
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/emails/attachments/${item.id}`,
         {
@@ -203,10 +205,10 @@ export default function RrAttachmentManager(): React.JSX.Element {
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
-      toast.success(`${item.filename} downloaded successfully!`);
+      toast.success(t("pegasus.attachments.downloadSuccess", { filename: item.filename }));
     } catch (err: any) {
       console.error(err);
-      toast.error(`Download failed: ${err.message || String(err)}`);
+      toast.error(t("pegasus.attachments.downloadFailed", { message: err.message || String(err) }));
     }
   };
 
@@ -250,10 +252,10 @@ export default function RrAttachmentManager(): React.JSX.Element {
           </Button>
           <div>
             <h1 className="text-2xl font-bold text-zinc-100 tracking-tight">
-              Attachment Manager
+              {t("pegasus.attachments.managerTitle")}
             </h1>
             <p className="text-xs text-zinc-500">
-              Browse and download attachments across all user email folders.
+              {t("pegasus.attachments.managerDesc")}
             </p>
           </div>
         </div>
@@ -266,7 +268,7 @@ export default function RrAttachmentManager(): React.JSX.Element {
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search filename, sender, subject..."
+            placeholder={t("pegasus.attachments.searchPlaceholder")}
             className="w-full pl-9 pr-4 py-2 bg-zinc-950/60 border-zinc-800/80 rounded-xl text-zinc-200 placeholder-zinc-600 focus-visible:ring-1 focus-visible:ring-primary/45"
           />
         </div>
@@ -281,7 +283,7 @@ export default function RrAttachmentManager(): React.JSX.Element {
                   : "bg-zinc-900/60 border-zinc-800 hover:bg-zinc-800/60 text-zinc-400 hover:text-zinc-200"
               }`}
             >
-              {type}
+              {t("pegasus.attachments.type" + type.charAt(0).toUpperCase() + type.slice(1))}
             </button>
           ))}
         </div>
@@ -293,12 +295,12 @@ export default function RrAttachmentManager(): React.JSX.Element {
           <div className="flex flex-col items-center justify-center py-32 space-y-3">
             <Loader2 className="size-8 text-primary animate-spin" />
             <span className="text-sm text-zinc-500">
-              Extracting E2EE attachment files...
+              {t("pegasus.attachments.extracting")}
             </span>
           </div>
         ) : filteredAttachments.length === 0 ? (
           <div className="text-center py-32 border border-dashed border-zinc-800 rounded-3xl text-zinc-600">
-            No attachments found matching current criteria.
+            {t("pegasus.attachments.noAttachments")}
           </div>
         ) : (
           <motion.div
@@ -336,7 +338,7 @@ export default function RrAttachmentManager(): React.JSX.Element {
                 <div className="pt-2 border-t border-zinc-900/60 space-y-1.5">
                   <div className="flex items-center justify-between text-[11px] text-zinc-500">
                     <span className="font-medium text-zinc-400 truncate max-w-[120px]">
-                      From:{" "}
+                      {t("pegasus.attachments.from")}{" "}
                       {item.messageFrom.replace(/<.*>/, "").replace(/"/g, "")}
                     </span>
                     <span>
@@ -347,7 +349,7 @@ export default function RrAttachmentManager(): React.JSX.Element {
                     </span>
                   </div>
                   <div className="text-[10px] text-zinc-600 truncate max-w-[280px]">
-                    Subject: {item.messageSubject}
+                    {t("pegasus.attachments.subject")} {item.messageSubject}
                   </div>
                 </div>
 
@@ -358,7 +360,7 @@ export default function RrAttachmentManager(): React.JSX.Element {
                     className="flex-1 rounded-xl bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-300 hover:text-zinc-100 flex items-center justify-center gap-1.5 transition-colors cursor-pointer text-xs"
                   >
                     <Download className="size-3.5" />
-                    Download
+                    {t("pegasus.attachments.download")}
                   </Button>
                   <Button
                     size="sm"
@@ -369,7 +371,7 @@ export default function RrAttachmentManager(): React.JSX.Element {
                       )
                     }
                     className="rounded-xl border border-transparent hover:border-zinc-800 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer px-2"
-                    title="View Email"
+                    title={t("pegasus.attachments.viewEmail")}
                   >
                     <ExternalLink className="size-4" />
                   </Button>

@@ -3,8 +3,10 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export interface CharacterDOB {
   year?: number | null;
@@ -35,6 +37,7 @@ export interface CharacterEntity {
 
 interface RrMediaCharactersProps {
   characters?: CharacterEntity[] | null;
+  showVoiceActors?: boolean;
 }
 
 const itemVariants = {
@@ -48,7 +51,9 @@ const itemVariants = {
 
 export function RrMediaCharacters({
   characters,
+  showVoiceActors = true,
 }: RrMediaCharactersProps): React.JSX.Element {
+  const { t } = useTranslation();
   const [showAllCharacters, setShowAllCharacters] = useState<boolean>(false);
 
   if (!characters || characters.length === 0) {
@@ -62,9 +67,9 @@ export function RrMediaCharacters({
   return (
     <motion.div variants={itemVariants} className="space-y-3">
       <h3 className="text-base font-bold text-foreground">
-        Characters & Voice Actors
+        {showVoiceActors ? t("aquila.charactersAndActors") : t("aquila.characters", "Characters")}
       </h3>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className={cn("grid gap-4", showVoiceActors ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5")}>
         {displayedCharacters.map((char, qid) => (
           <div
             key={char.id || qid}
@@ -103,39 +108,41 @@ export function RrMediaCharacters({
             </Link>
 
             {/* Voice Actor / Actor Side (Right) */}
-            {char.voiceActor ? (
-              <Link
-                href={`/aquila/actors/${char.voiceActor.id}`}
-                className="flex items-center gap-3 p-3 min-w-0 flex-1 justify-end hover:text-primary group/actor text-right cursor-pointer border-l border-border/10 hover:bg-accent/5 transition-all duration-200"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold truncate text-foreground group-hover/actor:text-primary transition-colors duration-200">
-                    {char.voiceActor.name}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground capitalize">
-                    {char.voiceActor.role?.toLowerCase() || "actor"}
-                  </p>
+            {showVoiceActors && (
+              char.voiceActor ? (
+                <Link
+                  href={`/aquila/actors/${char.voiceActor.id}`}
+                  className="flex items-center gap-3 p-3 min-w-0 flex-1 justify-end hover:text-primary group/actor text-right cursor-pointer border-l border-border/10 hover:bg-accent/5 transition-all duration-200"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold truncate text-foreground group-hover/actor:text-primary transition-colors duration-200">
+                      {char.voiceActor.name}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground capitalize">
+                      {char.voiceActor.role?.toLowerCase() || t("aquila.actor")}
+                    </p>
+                  </div>
+                  <div className="relative size-12 rounded-lg overflow-hidden shrink-0 bg-muted border border-border/20">
+                    {char.voiceActor.image ? (
+                      <Image
+                        src={char.voiceActor.image}
+                        alt={char.voiceActor.name}
+                        fill
+                        sizes="48px"
+                        className="object-cover group-hover/actor:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="size-full flex items-center justify-center text-xs text-muted-foreground font-bold">
+                        ?
+                      </div>
+                    )}
+                  </div>
+                </Link>
+              ) : (
+                <div className="p-3 shrink-0 flex items-center justify-center border-l border-border/10 select-none">
+                  <span className="text-[10px] text-muted-foreground italic px-2">{t("aquila.noActorDetails")}</span>
                 </div>
-                <div className="relative size-12 rounded-lg overflow-hidden shrink-0 bg-muted border border-border/20">
-                  {char.voiceActor.image ? (
-                    <Image
-                      src={char.voiceActor.image}
-                      alt={char.voiceActor.name}
-                      fill
-                      sizes="48px"
-                      className="object-cover group-hover/actor:scale-105 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="size-full flex items-center justify-center text-xs text-muted-foreground font-bold">
-                      ?
-                    </div>
-                  )}
-                </div>
-              </Link>
-            ) : (
-              <div className="p-3 shrink-0 flex items-center justify-center border-l border-border/10 select-none">
-                <span className="text-[10px] text-muted-foreground italic px-2">No actor details</span>
-              </div>
+              )
             )}
           </div>
         ))}
@@ -149,8 +156,8 @@ export function RrMediaCharacters({
             className="rounded-xl cursor-pointer"
           >
             {showAllCharacters
-              ? "Show Less"
-              : `Show All (${characters.length})`}
+              ? t("aquila.showLess")
+              : t("aquila.showAll", { count: characters.length })}
           </Button>
         </div>
       )}

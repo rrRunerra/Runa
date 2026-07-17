@@ -25,6 +25,7 @@ import { RrMediaGenres } from "@/components/rrComponents/aquila/details/rrMediaG
 import { RrMediaCharacters } from "@/components/rrComponents/aquila/details/rrMediaCharacters";
 import { RrMediaRelations } from "@/components/rrComponents/aquila/details/rrMediaRelations";
 import { RrMediaInfoRow } from "@/components/rrComponents/aquila/details/rrMediaInfoRow";
+import { useTranslation } from "react-i18next";
 
 interface ListEntry {
   id: number | string;
@@ -55,6 +56,7 @@ const itemVariants = {
 };
 
 export default function MangaDetailsPage(): React.JSX.Element {
+  const { t } = useTranslation();
   const params = useParams();
   const id = params?.id as string;
   const session = useSession();
@@ -88,7 +90,7 @@ export default function MangaDetailsPage(): React.JSX.Element {
   const titleEnglish = manga?.titleEnglish ?? "";
   const titleRomaji = manga?.titleRomaji ?? "";
   const titleNative = manga?.titleNative ?? "";
-  const displayTitle = titleEnglish || titleRomaji || "Manga Details";
+  const displayTitle = titleEnglish || titleRomaji || t("aquila.mangaDetails", "Manga Details");
   const coverUrl = manga?.coverImageLarge ?? "";
   const bannerUrl = manga?.bannerImage ?? "";
 
@@ -132,7 +134,7 @@ export default function MangaDetailsPage(): React.JSX.Element {
         const name = [first, last].filter(Boolean).join(" ");
         return {
           id: char.id,
-          name: name || char.nameNative || "Unknown Character",
+          name: name || char.nameNative || t("aquila.unknownCharacter", "Unknown Character"),
           first,
           last,
           native: char.nameNative ?? "",
@@ -151,7 +153,7 @@ export default function MangaDetailsPage(): React.JSX.Element {
           nameAlternativeSpoiler: char.nameAlternativeSpoiler ?? [],
         };
       });
-  }, [manga]);
+  }, [manga, t]);
 
   const relations = useMemo(() => {
     if (!manga) return [];
@@ -205,10 +207,10 @@ export default function MangaDetailsPage(): React.JSX.Element {
       <div className="flex flex-col flex-1 min-h-screen bg-background relative overflow-hidden items-center justify-center gap-4">
         <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-primary/2 rounded-full blur-3xl pointer-events-none" />
         <h2 className="text-2xl font-bold text-foreground z-10">
-          Manga not found
+          {t("aquila.mangaNotFound", "Manga not found")}
         </h2>
         <Button asChild variant="default" className="z-10 rounded-xl">
-          <Link href="/aquila/browse">Back to Browse</Link>
+          <Link href="/aquila/browse">{t("aquila.backToBrowse", "Back to Browse")}</Link>
         </Button>
       </div>
     );
@@ -231,13 +233,13 @@ export default function MangaDetailsPage(): React.JSX.Element {
         },
       );
       if (res.ok) {
-        toast.success("Added to list!");
+        toast.success(t("aquila.addedToList", "Added to list!"));
         mutateListEntry();
       } else {
-        toast.error("Failed to add to list");
+        toast.error(t("aquila.failedAddToList", "Failed to add to list"));
       }
     } catch {
-      toast.error("Failed to add to list");
+      toast.error(t("aquila.failedAddToList", "Failed to add to list"));
     }
   };
 
@@ -323,7 +325,7 @@ export default function MangaDetailsPage(): React.JSX.Element {
                           size="lg"
                           onClick={handleQuickAdd}
                         >
-                          Quick Add
+                          {t("aquila.quickAdd", "Quick Add")}
                         </Button>
                         <Button
                           variant="outline"
@@ -331,7 +333,7 @@ export default function MangaDetailsPage(): React.JSX.Element {
                           size="lg"
                           onClick={(): void => setIsDialogOpen(true)}
                         >
-                          Add to List
+                          {t("aquila.addToList", "Add to List")}
                         </Button>
                       </>
                     ) : (
@@ -341,7 +343,7 @@ export default function MangaDetailsPage(): React.JSX.Element {
                         size="lg"
                         onClick={(): void => setIsDialogOpen(true)}
                       >
-                        Edit Entry
+                        {t("aquila.editEntry", "Edit Entry")}
                       </Button>
                     )}
                     <RrMediaEditDialog
@@ -378,24 +380,24 @@ export default function MangaDetailsPage(): React.JSX.Element {
             {/* Metadata Sidebar */}
             <div className="bg-card/65 border border-border/40 backdrop-blur-xl rounded-2xl p-5 space-y-4">
               <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                Information
+                {t("aquila.information", "Information")}
               </h3>
               <div className="space-y-3">
-                <RrMediaInfoRow label="Format" value={manga.format} />
-                <RrMediaInfoRow label="Chapters" value={manga.chapters || "?"} />
-                <RrMediaInfoRow label="Volumes" value={manga.volumes || "?"} />
+                <RrMediaInfoRow label={t("aquila.format", "Format")} value={manga.format} />
+                <RrMediaInfoRow label={t("aquila.chapters", "Chapters")} value={manga.chapters || "?"} />
+                <RrMediaInfoRow label={t("aquila.volumes", "Volumes")} value={manga.volumes || "?"} />
                 <RrMediaInfoRow
-                  label="Status"
+                  label={t("aquila.status", "Status")}
                   value={manga.status?.replace(/_/g, " ").toLowerCase()}
                   className="capitalize"
                 />
                 <RrMediaInfoRow
-                  label="Source"
+                  label={t("aquila.source", "Source")}
                   value={manga.source?.replace(/_/g, " ").toLowerCase() || "?"}
                   className="capitalize"
                 />
                 <RrMediaInfoRow
-                  label="Publishers"
+                  label={t("aquila.publishersLabel", "Publishers")}
                   value={
                     publishers && publishers.length > 0 ? (
                       <span
@@ -407,21 +409,21 @@ export default function MangaDetailsPage(): React.JSX.Element {
                     ) : null
                   }
                 />
-                <RrMediaInfoRow label="Start Date" value={mangaStartDate} />
-                <RrMediaInfoRow label="End Date" value={mangaEndDate} />
+                <RrMediaInfoRow label={t("aquila.startDate", "Start Date")} value={mangaStartDate} />
+                <RrMediaInfoRow label={t("aquila.endDate", "End Date")} value={mangaEndDate} />
                 <RrMediaInfoRow
-                  label="Country"
+                  label={t("aquila.country", "Country")}
                   value={manga.countryOfOrigin}
                   className="capitalize"
                 />
                 <RrMediaInfoRow
-                  label="Hashtag"
+                  label={t("aquila.hashtag", "Hashtag")}
                   value={manga.hashtag}
                   className="text-primary"
                 />
                 {manga.synonyms && manga.synonyms.length > 0 && (
                   <div className="flex flex-col gap-1 text-sm">
-                    <span className="text-muted-foreground">Synonyms</span>
+                    <span className="text-muted-foreground">{t("aquila.synonymsLabel", "Synonyms")}</span>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {manga.synonyms.slice(0, 4).map((syn, idx) => (
                         <Badge
@@ -449,7 +451,7 @@ export default function MangaDetailsPage(): React.JSX.Element {
               </h1>
               {(titleRomaji && titleRomaji !== titleEnglish) || titleNative ? (
                 <p className="text-xs text-muted-foreground italic">
-                  Also known as:{" "}
+                  {t("aquila.alsoKnownAs", "Also known as:")}{" "}
                   {[
                     titleRomaji !== titleEnglish ? titleRomaji : null,
                     titleNative,
@@ -484,6 +486,7 @@ export default function MangaDetailsPage(): React.JSX.Element {
             {characters && characters.length > 0 && (
               <RrMediaCharacters
                 characters={characters}
+                showVoiceActors={false}
               />
             )}
 

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { Trash2 } from "lucide-react";
-import { CanvasNode, Stroke, Point } from "../CanvasEditor";
+import { CanvasNode, Stroke, Point } from "../types";
 import { ramerDouglasPeucker } from "@/lib/coordinates";
 
 interface RrCanvasDrawingCardProps {

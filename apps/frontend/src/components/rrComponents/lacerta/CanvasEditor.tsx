@@ -29,6 +29,15 @@ import {
   FileDown,
   StickyNote,
   MessageSquare,
+  Video,
+  Film,
+  ExternalLink,
+  Download,
+  Check,
+  ChevronRight,
+  Grid3X3,
+  Lock,
+  Calculator,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -64,7 +73,6 @@ import { fetcher } from "@/lib/fetcher";
 import { useRRCrypto } from "@/hooks/useRRCrypto";
 import { useSession } from "next-auth/react";
 import UserProfileCard, { UserProfileInfo } from "./UserProfileCard";
-import { Video, Film, ExternalLink, Download, Check, ChevronRight, Grid3X3, Lock, Calculator } from "lucide-react";
 import mermaid from "mermaid";
 import {
   ContextMenu,
@@ -79,329 +87,26 @@ import {
   ContextMenuPortal,
 } from "@/components/ui/context-menu";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
-// -----------------------------------------------------------------------------
-// Canvas Types
-// -----------------------------------------------------------------------------
-export type CanvasNodeType =
-  | "text"
-  | "drawing"
-  | "graph"
-  | "image"
-  | "table"
-  | "mermaid"
-  | "uml"
-  | "gif"
-  | "video"
-  | "file"
-  | "emoji"
-  | "pdf"
-  | "callout"
-  | "annotation"
-  | "group"
-  | "rrImage"
-  | "scientific-calc"
-  | "graphing-calc";
-
-export interface Point {
-  x: number;
-  y: number;
-}
-
-export interface Stroke {
-  points: Point[];
-  color: string;
-  width: number;
-  dasharray?: string;
-  opacity?: number;
-  cap?: "round" | "square" | "butt";
-}
-
-export interface CanvasNode {
-  id: string;
-  type: CanvasNodeType;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  text?: string; // Holds HTML for Tiptap
-  lines?: Stroke[]; // Holds vector lines for drawing card
-  color?: string; // Color theme class preset (slate, blue, emerald, amber, rose)
-  graphType?: "bar" | "line" | "pie";
-  graphData?: { name: string; value: number }[];
-  cardStyle?: "document" | "sticky" | "header";
-  imageUrl?: string;
-  tableData?: string[][];
-
-  // Custom Card Properties
-  mermaidCode?: string;
-  gifUrl?: string;
-  videoUrl?: string;
-  lacertaFileId?: string;
-  lacertaFileName?: string;
-  lacertaFileSize?: number;
-  lacertaFileType?: string;
-  lacertaFileKey?: string;
-  lacertaWrappedKey?: string;
-  lacertaFileDecryptionKey?: string;
-
-  // New Custom Properties
-  emoji?: string;
-  calloutType?: "info" | "warning" | "success" | "error";
-  annotationPointer?: { x: number; y: number };
-  lockPosition?: boolean;
-
-  // rrImage card
-  rrImageId?: string; // SVG component key OR public image URL path
-  rrImageType?: "svg" | "image";
-
-  // Calculator properties
-  variables?: Record<string, string>;
-  memory?: number;
-  ans?: string;
-  equations?: string[];
-  angleMode?: "deg" | "rad" | "grad";
-}
-
-export interface CanvasEdge {
-  id: string;
-  fromNode: string;
-  fromSide: "top" | "right" | "bottom" | "left" | "top-left" | "top-right" | "bottom-left" | "bottom-right";
-  toNode: string;
-  toSide: "top" | "right" | "bottom" | "left" | "top-left" | "top-right" | "bottom-left" | "bottom-right";
-  label?: string;
-  color?: string;
-  arrowType?: "normal" | "association" | "composition" | "aggregation";
-  lineType?: "solid" | "dashed" | "dotted" | "dashed-dotted";
-  lineStyle?: "curved" | "straight";
-}
-
-interface Collaborator {
-  socketId: string;
-  userId?: string;
-  username: string;
-  cursor?: { x: number; y: number } | null;
-}
-
-interface CanvasFileItem {
-  id: string;
-  name: string;
-  key: string;
-  decryptedKey: CryptoKey | null;
-  wrappedKey?: string;
-  parentId?: string | null;
-  isPublic?: boolean;
-}
-
-interface CanvasEditorProps {
-  isOpen: boolean;
-  onClose: () => void;
-  file: CanvasFileItem | null;
-  initialContent: string; // Plaintext JSON canvas
-  accessToken: string;
-  onSaveSuccess: () => void;
-  guestMode?: boolean;
-  decryptionKeyStr?: string | null;
-}
-
-const COLOR_PRESETS = [
-  {
-    name: "slate",
-    border: "border-border",
-    bg: "bg-card/90",
-    tag: "bg-muted text-muted-foreground",
-    text: "text-foreground",
-  },
-  {
-    name: "blue",
-    border: "border-blue-500/50 dark:border-blue-400/40",
-    bg: "bg-blue-500/10 dark:bg-blue-400/5",
-    tag: "bg-primary/10 text-primary",
-    text: "text-blue-500 dark:text-blue-400",
-  },
-  {
-    name: "emerald",
-    border: "border-emerald-500/50 dark:border-emerald-400/40",
-    bg: "bg-emerald-500/10 dark:bg-emerald-400/5",
-    tag: "bg-success/10 text-success",
-    text: "text-emerald-500 dark:text-emerald-400",
-  },
-  {
-    name: "rose",
-    border: "border-rose-500/50 dark:border-rose-400/40",
-    bg: "bg-rose-500/10 dark:bg-rose-400/5",
-    tag: "bg-destructive/10 text-destructive",
-    text: "text-rose-500 dark:text-rose-400",
-  },
-  {
-    name: "purple",
-    border: "border-purple-500/50 dark:border-purple-400/40",
-    bg: "bg-purple-500/10 dark:bg-purple-400/5",
-    tag: "bg-purple-500/10 text-purple-600 dark:text-purple-400",
-    text: "text-purple-500 dark:text-purple-400",
-  },
-  {
-    name: "teal",
-    border: "border-teal-500/50 dark:border-teal-400/40",
-    bg: "bg-teal-500/10 dark:bg-teal-400/5",
-    tag: "bg-teal-500/10 text-teal-600 dark:text-teal-400",
-    text: "text-teal-500 dark:text-teal-400",
-  },
-  {
-    name: "fuchsia",
-    border: "border-fuchsia-500/50 dark:border-fuchsia-400/40",
-    bg: "bg-fuchsia-500/10 dark:bg-fuchsia-400/5",
-    tag: "bg-fuchsia-500/10 text-fuchsia-600 dark:text-fuchsia-400",
-    text: "text-fuchsia-500 dark:text-fuchsia-400",
-  },
-  {
-    name: "orange",
-    border: "border-orange-500/50 dark:border-orange-400/40",
-    bg: "bg-orange-500/10 dark:bg-orange-400/5",
-    tag: "bg-orange-500/10 text-orange-600 dark:text-orange-400",
-    text: "text-orange-500 dark:text-orange-400",
-  },
-  {
-    name: "indigo",
-    border: "border-indigo-500/50 dark:border-indigo-400/40",
-    bg: "bg-indigo-500/10 dark:bg-indigo-400/5",
-    tag: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
-    text: "text-indigo-500 dark:text-indigo-400",
-  },
-];
-
-const CURSOR_COLORS = [
-  {
-    text: "text-emerald-400",
-    fill: "fill-emerald-400",
-    bg: "bg-emerald-600 border-emerald-500 text-emerald-foreground",
-  },
-  {
-    text: "text-blue-400",
-    fill: "fill-blue-400",
-    bg: "bg-blue-600 border-blue-500 text-blue-foreground",
-  },
-  {
-    text: "text-rose-400",
-    fill: "fill-rose-400",
-    bg: "bg-rose-600 border-rose-500 text-rose-foreground",
-  },
-  {
-    text: "text-amber-400",
-    fill: "fill-amber-400",
-    bg: "bg-amber-600 border-amber-500 text-amber-foreground",
-  },
-  {
-    text: "text-purple-400",
-    fill: "fill-purple-400",
-    bg: "bg-purple-600 border-purple-500 text-purple-foreground",
-  },
-  {
-    text: "text-teal-400",
-    fill: "fill-teal-400",
-    bg: "bg-teal-600 border-teal-500 text-teal-foreground",
-  },
-  {
-    text: "text-pink-400",
-    fill: "fill-pink-400",
-    bg: "bg-pink-600 border-pink-500 text-pink-foreground",
-  },
-  {
-    text: "text-indigo-400",
-    fill: "fill-indigo-400",
-    bg: "bg-indigo-600 border-indigo-500 text-indigo-foreground",
-  },
-];
-
-const getCollaboratorColor = (identifier: string) => {
-  let hash = 0;
-  for (let i = 0; i < identifier.length; i++) {
-    hash = identifier.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  const index = Math.abs(hash) % CURSOR_COLORS.length;
-  return CURSOR_COLORS[index];
-};
-
-function CollaboratorProfileTrigger({
-  userId,
-  username,
-  accessToken,
-  isMe = false,
-}: {
-  userId: string;
-  username: string;
-  accessToken: string;
-  isMe?: boolean;
-}) {
-  const [profile, setProfile] = useState<UserProfileInfo | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const handleMouseEnter = async () => {
-    if (profile || loading) return;
-    setLoading(true);
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/users/${username}`,
-        {
-          headers: accessToken
-            ? { Authorization: `Bearer ${accessToken}` }
-            : {},
-        },
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setProfile({
-          id: data.id,
-          username: data.username,
-          email: data.email || `${data.username}@runerra.org`,
-          displayName: data.displayName,
-          avatarUrl: data.avatarUrl,
-          bannerUrl: data.bannerUrl,
-          bio: data.profileSettings?.bio || "",
-        });
-      }
-    } catch (err) {
-      console.error("Failed to load collaborator profile:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div onMouseEnter={handleMouseEnter}>
-      {profile ? (
-        <UserProfileCard user={profile}>
-          <button className="w-full text-left flex items-center justify-between p-1.5 rounded-lg hover:bg-muted/60 transition-colors text-xs font-semibold text-foreground">
-            <span className="truncate flex items-center gap-1.5">
-              <span
-                className={cn(
-                  "w-1.5 h-1.5 rounded-full",
-                  isMe ? "bg-primary" : "bg-success",
-                )}
-              />
-              {profile.displayName || profile.username} {isMe && "(You)"}
-            </span>
-          </button>
-        </UserProfileCard>
-      ) : (
-        <button
-          disabled={loading}
-          className="w-full text-left flex items-center justify-between p-1.5 rounded-lg hover:bg-muted/60 transition-colors text-xs font-semibold text-foreground"
-        >
-          <span className="truncate flex items-center gap-1.5">
-            <span
-              className={cn(
-                "w-1.5 h-1.5 rounded-full animate-pulse",
-                isMe ? "bg-primary" : "bg-success",
-              )}
-            />
-            {username} {isMe && "(You)"} {loading && "..."}
-          </span>
-        </button>
-      )}
-    </div>
-  );
-}
+// Modular Imports
+import {
+  CanvasNodeType,
+  Point,
+  Stroke,
+  CanvasNode,
+  CanvasEdge,
+  Collaborator,
+  CanvasFileItem,
+  CanvasEditorProps,
+  COLOR_PRESETS,
+  CURSOR_COLORS,
+  getCollaboratorColor,
+} from "./types";
+import CollaboratorProfileTrigger from "./CollaboratorProfileTrigger";
+import GraphSettingsPanel from "./panels/GraphSettingsPanel";
+import MermaidSettingsPanel from "./panels/MermaidSettingsPanel";
+import ScientificCalcSettingsPanel from "./panels/ScientificCalcSettingsPanel";
 
 export default function CanvasEditor({
   isOpen,
@@ -413,6 +118,7 @@ export default function CanvasEditor({
   guestMode = false,
   decryptionKeyStr = null,
 }: CanvasEditorProps): React.JSX.Element | null {
+  const { t } = useTranslation();
   const { data: session } = useSession();
   // Canvas viewport states
   const [pan, setPan] = useState<Point>({ x: 100, y: 100 });
@@ -427,10 +133,6 @@ export default function CanvasEditor({
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
   const selectedNodeId = selectedNodeIds[selectedNodeIds.length - 1] || null;
   const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
-
-  // Scientific Calculator adjacent settings panel states
-  const [calcVarName, setCalcVarName] = useState("");
-  const [calcVarVal, setCalcVarVal] = useState("");
 
   // Lasso rectangle selection state
   const [selectionBox, setSelectionBox] = useState<{
@@ -483,7 +185,9 @@ export default function CanvasEditor({
   // Collaboration States
   const [socket, setSocket] = useState<Socket | null>(null);
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
-  const [lockedElements, setLockedElements] = useState<Record<string, { username: string; senderId: string }>>({});
+  const [lockedElements, setLockedElements] = useState<
+    Record<string, { username: string; senderId: string }>
+  >({});
   const [guestName, setGuestName] = useState<string>("");
   const [showGuestPrompt, setShowGuestPrompt] = useState<boolean>(
     guestMode && !accessToken,
@@ -840,7 +544,13 @@ export default function CanvasEditor({
           if (prev.some((m) => m.socketId === member.socketId)) return prev;
           return [...prev, member];
         });
-        toast.info(`${member.username} joined the canvas`);
+        toast.info(
+          t(
+            "lacerta.canvasEditor.joinedCanvas",
+            "{{username}} joined the canvas",
+            { username: member.username },
+          ),
+        );
       });
 
       newSocket.on("user-left", (data: { socketId: string }) => {
@@ -870,9 +580,14 @@ export default function CanvasEditor({
           setLockedElements((prev) => {
             const next = { ...prev };
             if (data.isLocked) {
-              next[data.nodeId] = { username: data.username, senderId: data.senderId };
+              next[data.nodeId] = {
+                username: data.username,
+                senderId: data.senderId,
+              };
               // Deselect if currently selected by this client
-              setSelectedNodeIds((prevIds) => prevIds.filter((id) => id !== data.nodeId));
+              setSelectedNodeIds((prevIds) =>
+                prevIds.filter((id) => id !== data.nodeId),
+              );
             } else {
               delete next[data.nodeId];
             }
@@ -1089,16 +804,24 @@ export default function CanvasEditor({
         },
       );
 
-      if (!res.ok) throw new Error("Failed to save canvas file.");
+      if (!res.ok)
+        throw new Error(
+          t("lacerta.canvasEditor.saveFailed", "Failed to save canvas."),
+        );
 
-      toast.success("Canvas saved successfully!");
+      toast.success(
+        t("lacerta.canvasEditor.saveSuccess", "Canvas saved successfully!"),
+      );
       setIsDirty(false);
       onSaveSuccess();
       if (forceClose) {
         onClose();
       }
     } catch (err: any) {
-      toast.error(err.message || "Failed to save canvas.");
+      toast.error(
+        err.message ||
+          t("lacerta.canvasEditor.saveFailed", "Failed to save canvas."),
+      );
     } finally {
       setIsSaving(false);
     }
@@ -1867,13 +1590,13 @@ export default function CanvasEditor({
       newNode.emoji = "🎯";
     } else if (type === "callout") {
       newNode.calloutType = "info";
-      newNode.text = "<p>Callout alert...</p>";
+      newNode.text = "<p>" + t("lacerta.canvasEditor.defaultCalloutText", "Callout alert...") + "</p>";
     } else if (type === "annotation") {
       newNode.annotationPointer = { x: -60, y: -60 };
-      newNode.text = "<p>Pointer annotation...</p>";
+      newNode.text = "<p>" + t("lacerta.canvasEditor.defaultAnnotationText", "Pointer annotation...") + "</p>";
       newNode.color = "blue";
     } else if (type === "group") {
-      newNode.text = "Group";
+      newNode.text = t("lacerta.canvasEditor.defaultGroupText", "Group");
       newNode.color = "slate";
     }
 
@@ -2194,19 +1917,37 @@ export default function CanvasEditor({
     else if (edge.fromSide === "left") cp1x -= dx;
     else if (edge.fromSide === "bottom") cp1y += dy;
     else if (edge.fromSide === "top") cp1y -= dy;
-    else if (edge.fromSide === "top-left") { cp1x -= dx; cp1y -= dy; }
-    else if (edge.fromSide === "top-right") { cp1x += dx; cp1y -= dy; }
-    else if (edge.fromSide === "bottom-left") { cp1x -= dx; cp1y += dy; }
-    else if (edge.fromSide === "bottom-right") { cp1x += dx; cp1y += dy; }
+    else if (edge.fromSide === "top-left") {
+      cp1x -= dx;
+      cp1y -= dy;
+    } else if (edge.fromSide === "top-right") {
+      cp1x += dx;
+      cp1y -= dy;
+    } else if (edge.fromSide === "bottom-left") {
+      cp1x -= dx;
+      cp1y += dy;
+    } else if (edge.fromSide === "bottom-right") {
+      cp1x += dx;
+      cp1y += dy;
+    }
 
     if (edge.toSide === "right") cp2x += dx;
     else if (edge.toSide === "left") cp2x -= dx;
     else if (edge.toSide === "bottom") cp2y += dy;
     else if (edge.toSide === "top") cp2y -= dy;
-    else if (edge.toSide === "top-left") { cp2x -= dx; cp2y -= dy; }
-    else if (edge.toSide === "top-right") { cp2x += dx; cp2y -= dy; }
-    else if (edge.toSide === "bottom-left") { cp2x -= dx; cp2y += dy; }
-    else if (edge.toSide === "bottom-right") { cp2x += dx; cp2y += dy; }
+    else if (edge.toSide === "top-left") {
+      cp2x -= dx;
+      cp2y -= dy;
+    } else if (edge.toSide === "top-right") {
+      cp2x += dx;
+      cp2y -= dy;
+    } else if (edge.toSide === "bottom-left") {
+      cp2x -= dx;
+      cp2y += dy;
+    } else if (edge.toSide === "bottom-right") {
+      cp2x += dx;
+      cp2y += dy;
+    }
 
     const pathD = isStraight
       ? `M ${start.x} ${start.y} L ${end.x} ${end.y}`
@@ -2224,10 +1965,13 @@ export default function CanvasEditor({
 
     const strokeColor = edge.color || "var(--primary)";
     const strokeDash =
-      edge.lineType === "dashed" ? "6,4" :
-      edge.lineType === "dotted" ? "2,3" :
-      edge.lineType === "dashed-dotted" ? "6,4,2,4" :
-      undefined;
+      edge.lineType === "dashed"
+        ? "6,4"
+        : edge.lineType === "dotted"
+          ? "2,3"
+          : edge.lineType === "dashed-dotted"
+            ? "6,4,2,4"
+            : undefined;
 
     const chosenArrow = edge.arrowType || "normal";
     const mEnd = `url(#${chosenArrow})`;
@@ -2282,7 +2026,7 @@ export default function CanvasEditor({
           <g className="pointer-events-none select-none">
             {/* Background pill */}
             <rect
-              x={midX - (edge.label.length * 3.5) - 6}
+              x={midX - edge.label.length * 3.5 - 6}
               y={midY - 8}
               width={edge.label.length * 7 + 12}
               height={16}
@@ -2334,7 +2078,10 @@ export default function CanvasEditor({
         className="w-full h-full"
         onContextMenu={handleContextMenu}
       >
-        <div className="fixed inset-0 z-50 flex flex-col bg-background text-foreground font-sans overflow-hidden select-none" data-block-sidebar-gesture="true">
+        <div
+          className="fixed inset-0 z-50 flex flex-col bg-background text-foreground font-sans overflow-hidden select-none"
+          data-block-sidebar-gesture="true"
+        >
           {/* Top Banner Toolbar */}
           <div className="h-14 border-b border-border bg-card flex items-center justify-between px-6 shrink-0 z-10 shadow-sm">
             <div className="flex items-center gap-3">
@@ -2342,7 +2089,12 @@ export default function CanvasEditor({
                 onClick={() => {
                   if (
                     isDirty &&
-                    !confirm("You have unsaved changes. Exit anyway?")
+                    !confirm(
+                      t(
+                        "lacerta.canvasEditor.unsavedChanges",
+                        "You have unsaved changes. Exit anyway?",
+                      ),
+                    )
                   )
                     return;
                   onClose();
@@ -2360,7 +2112,10 @@ export default function CanvasEditor({
                     {file.name}
                   </span>
                   <span className="text-[10px] text-muted-foreground">
-                    E2EE Spatial Canvas
+                    {t(
+                      "lacerta.canvasEditor.spatialCanvas",
+                      "E2EE Spatial Canvas",
+                    )}
                   </span>
                 </div>
               </div>
@@ -2383,11 +2138,12 @@ export default function CanvasEditor({
                 >
                   <Users className="h-3 w-3 text-muted-foreground" />
                   <span className="font-semibold text-foreground">
-                    {collaborators.length + 1} online
+                    {collaborators.length + 1}{" "}
+                    {t("lacerta.canvasEditor.online", "online")}
                   </span>
                   <div className="flex items-center -space-x-1.5 ml-1">
                     <div className="h-4.5 w-4.5 rounded-full bg-primary border border-background flex items-center justify-center font-bold text-[8px] text-primary-foreground">
-                      You
+                      {t("lacerta.canvasEditor.you", "You")}
                     </div>
                     {collaborators.map((c) => {
                       const color = getCollaboratorColor(
@@ -2412,7 +2168,7 @@ export default function CanvasEditor({
                 {showOnlineDropdown && (
                   <div className="absolute right-0 mt-2 w-56 rounded-xl border border-border bg-popover text-popover-foreground shadow-xl p-2 z-50 flex flex-col gap-1">
                     <div className="text-[9px] uppercase font-bold text-muted-foreground tracking-wider px-2.5 py-1.5 border-b border-border/30">
-                      Collaborators
+                      {t("lacerta.canvasEditor.collaborators", "Collaborators")}
                     </div>
 
                     {/* The current user */}
@@ -2428,10 +2184,12 @@ export default function CanvasEditor({
                         <div className="w-full flex items-center justify-between p-1.5 text-xs text-muted-foreground font-semibold">
                           <span className="truncate flex items-center gap-1.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
-                            {guestName || "Guest"} (You)
+                            {guestName ||
+                              t("lacerta.canvasEditor.guest", "Guest")}{" "}
+                            ({t("lacerta.canvasEditor.you", "You")})
                           </span>
                           <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase">
-                            Guest
+                            {t("lacerta.canvasEditor.guest", "Guest")}
                           </span>
                         </div>
                       )}
@@ -2449,7 +2207,7 @@ export default function CanvasEditor({
                                 {c.username}
                               </span>
                               <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-muted text-muted-foreground uppercase">
-                                Guest
+                                {t("lacerta.canvasEditor.guest", "Guest")}
                               </span>
                             </div>
                           ) : (
@@ -2469,7 +2227,10 @@ export default function CanvasEditor({
               <div className="flex items-center gap-2">
                 {isDirty && (
                   <span className="text-[10px] text-warning italic mr-1">
-                    Unsaved Changes
+                    {t(
+                      "lacerta.canvasEditor.unsavedChangesLabel",
+                      "Unsaved Changes",
+                    )}
                   </span>
                 )}
                 <button
@@ -2482,7 +2243,9 @@ export default function CanvasEditor({
                   ) : (
                     <Save className="h-3.5 w-3.5" />
                   )}
-                  {isSaving ? "Saving..." : "Save"}
+                  {isSaving
+                    ? t("lacerta.canvasEditor.saving", "Saving...")
+                    : t("lacerta.canvasEditor.save", "Save")}
                 </button>
               </div>
             </div>
@@ -2492,24 +2255,50 @@ export default function CanvasEditor({
           {selectedNodeIds.length > 1 && (
             <div className="absolute top-16 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 bg-popover/95 backdrop-blur border border-border rounded-xl shadow-xl px-2 py-1.5 pointer-events-auto">
               <span className="text-[10px] text-muted-foreground font-semibold px-1 pr-2 border-r border-border">
-                {selectedNodeIds.length} selected
+                {selectedNodeIds.length}{" "}
+                {t("lacerta.canvasEditor.selected", "selected")}
               </span>
               {(
                 [
-                  { dir: "left" as const, label: "⇤", title: "Align Left" },
+                  {
+                    dir: "left" as const,
+                    label: "⇥",
+                    title: t("lacerta.canvasEditor.alignLeft", "Align Left"),
+                  },
                   {
                     dir: "center-h" as const,
                     label: "↔",
-                    title: "Center Horizontally",
+                    title: t(
+                      "lacerta.canvasEditor.centerHorizontally",
+                      "Center Horizontally",
+                    ),
                   },
-                  { dir: "right" as const, label: "⇥", title: "Align Right" },
-                  { dir: "top" as const, label: "⇡", title: "Align Top" },
+                  {
+                    dir: "right" as const,
+                    label: "⇤",
+                    title: t("lacerta.canvasEditor.alignRight", "Align Right"),
+                  },
+                  {
+                    dir: "top" as const,
+                    label: "⇡",
+                    title: t("lacerta.canvasEditor.alignTop", "Align Top"),
+                  },
                   {
                     dir: "center-v" as const,
                     label: "↕",
-                    title: "Center Vertically",
+                    title: t(
+                      "lacerta.canvasEditor.centerVertically",
+                      "Center Vertically",
+                    ),
                   },
-                  { dir: "bottom" as const, label: "⇣", title: "Align Bottom" },
+                  {
+                    dir: "bottom" as const,
+                    label: "⇣",
+                    title: t(
+                      "lacerta.canvasEditor.alignBottom",
+                      "Align Bottom",
+                    ),
+                  },
                 ] as const
               ).map(({ dir, label, title }) => (
                 <button
@@ -2592,7 +2381,14 @@ export default function CanvasEditor({
                       markerHeight="6"
                       orient="auto-start-reverse"
                     >
-                      <path d="M 0 1.5 L 8 5 L 0 8.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      <path
+                        d="M 0 1.5 L 8 5 L 0 8.5"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </marker>
                     <marker
                       id="composition"
@@ -2603,7 +2399,10 @@ export default function CanvasEditor({
                       markerHeight="6"
                       orient="auto-start-reverse"
                     >
-                      <path d="M 0 6 L 5 2 L 10 6 L 5 10 Z" fill="currentColor" />
+                      <path
+                        d="M 0 6 L 5 2 L 10 6 L 5 10 Z"
+                        fill="currentColor"
+                      />
                     </marker>
                     <marker
                       id="aggregation"
@@ -2614,7 +2413,12 @@ export default function CanvasEditor({
                       markerHeight="6"
                       orient="auto-start-reverse"
                     >
-                      <path d="M 0 6 L 5 2 L 10 6 L 5 10 Z" fill="var(--background)" stroke="currentColor" strokeWidth="1.5" />
+                      <path
+                        d="M 0 6 L 5 2 L 10 6 L 5 10 Z"
+                        fill="var(--background)"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                      />
                     </marker>
                   </defs>
 
@@ -2759,7 +2563,10 @@ export default function CanvasEditor({
                                   ? "border-primary/60 bg-primary/3"
                                   : `${preset.border} bg-transparent hover:bg-primary/2`,
                               );
-                            } else if (node.cardStyle === "header" || node.type === "rrImage") {
+                            } else if (
+                              node.cardStyle === "header" ||
+                              node.type === "rrImage"
+                            ) {
                               cls += cn(
                                 "border-0 bg-transparent shadow-none",
                                 node.color?.startsWith("#") ? "" : preset.text,
@@ -2777,14 +2584,17 @@ export default function CanvasEditor({
                               cls += cn(
                                 "rounded-2xl border bg-card text-card-foreground shadow-xl transition-all",
                                 node.color?.startsWith("#") ? "" : preset.bg,
-                                node.color?.startsWith("#") ? "" : preset.border,
+                                node.color?.startsWith("#")
+                                  ? ""
+                                  : preset.border,
                                 isSelected
                                   ? "ring-2 ring-primary shadow-lg"
                                   : "hover:shadow-md",
                               );
                             }
                             if (node.lockPosition) cls += " cursor-not-allowed";
-                            if (lockedElements[node.id]) cls += " opacity-80 border-destructive/30";
+                            if (lockedElements[node.id])
+                              cls += " opacity-80 border-destructive/30";
                             return cls;
                           })()}
                           style={{
@@ -2794,21 +2604,26 @@ export default function CanvasEditor({
                             height: node.height,
                             zIndex: node.type === "group" ? 0 : undefined,
                             // Inline styles for custom hex colors
-                            ...(node.color && node.color.startsWith("#") ? (
-                              node.type === "rrImage" || node.cardStyle === "header" ? {
-                                color: node.color,
-                              } : {
-                                backgroundColor: `${node.color}1a`, // 10% opacity
-                                borderColor: `${node.color}80`, // 50% opacity
-                              }
-                            ) : {}),
+                            ...(node.color && node.color.startsWith("#")
+                              ? node.type === "rrImage" ||
+                                node.cardStyle === "header"
+                                ? {
+                                    color: node.color,
+                                  }
+                                : {
+                                    backgroundColor: `${node.color}1a`, // 10% opacity
+                                    borderColor: `${node.color}80`, // 50% opacity
+                                  }
+                              : {}),
                           }}
                         >
                           {/* Lock indicator overlay */}
                           {lockedElements[node.id] && (
                             <div className="absolute top-2 right-2 z-40 bg-destructive text-destructive-foreground px-2 py-0.5 rounded-full text-[8px] font-bold flex items-center gap-1 shadow-md pointer-events-none select-none">
                               <Lock className="h-2.5 w-2.5 animate-pulse" />
-                              <span>Locked by {lockedElements[node.id].username}</span>
+                              <span>
+                                Locked by {lockedElements[node.id].username}
+                              </span>
                             </div>
                           )}
                           {/* Card Content Area */}
@@ -2953,382 +2768,35 @@ export default function CanvasEditor({
                         {/* Chart Settings Floating Panel */}
                         {node.type === "graph" &&
                           selectedNodeId === node.id && (
-                            <div
-                              className="absolute z-30 bg-popover border border-border text-popover-foreground rounded-2xl shadow-2xl p-4 flex flex-col pointer-events-auto transition-all w-[260px]"
-                              style={getPanelStyle(node, 260)}
-                              onMouseDown={(e) => e.stopPropagation()}
-                            >
-                              <div className="flex items-center justify-between border-b border-border pb-2 mb-2 shrink-0">
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                                  Chart Settings
-                                </span>
-                                <div className="flex gap-1">
-                                  {(["bar", "line", "pie"] as const).map(
-                                    (t) => (
-                                      <button
-                                        key={t}
-                                        type="button"
-                                        onClick={() => {
-                                          setNodes((prev) =>
-                                            prev.map((n) =>
-                                              n.id === node.id
-                                                ? { ...n, graphType: t }
-                                                : n,
-                                            ),
-                                          );
-                                          setIsDirty(true);
-                                        }}
-                                        className={cn(
-                                          "px-2 py-0.5 rounded text-[9px] font-bold transition-all uppercase",
-                                          node.graphType === t
-                                            ? "bg-primary text-primary-foreground"
-                                            : "bg-muted hover:bg-muted/80 text-muted-foreground",
-                                        )}
-                                      >
-                                        {t}
-                                      </button>
-                                    ),
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Editor list */}
-                              <div className="flex-1 overflow-y-auto pr-1">
-                                <div className="flex flex-col gap-1.5">
-                                  {(node.graphData || []).map((row, idx) => (
-                                    <div
-                                      key={idx}
-                                      className="flex gap-1.5 items-center"
-                                    >
-                                      <input
-                                        type="text"
-                                        value={row.name}
-                                        onChange={(e) => {
-                                          const val = e.target.value;
-                                          setNodes((prev) =>
-                                            prev.map((n) => {
-                                              if (n.id !== node.id) return n;
-                                              const nextData = [
-                                                ...(n.graphData || []),
-                                              ];
-                                              nextData[idx] = {
-                                                ...nextData[idx],
-                                                name: val,
-                                              };
-                                              return {
-                                                ...n,
-                                                graphData: nextData,
-                                              };
-                                            }),
-                                          );
-                                          setIsDirty(true);
-                                        }}
-                                        className="flex-1 bg-background border border-border rounded px-2 py-1 text-[9px] text-foreground focus:outline-none focus:border-primary font-medium"
-                                        placeholder="Label"
-                                      />
-                                      <input
-                                        type="number"
-                                        value={row.value}
-                                        onChange={(e) => {
-                                          const val = Number(e.target.value);
-                                          setNodes((prev) =>
-                                            prev.map((n) => {
-                                              if (n.id !== node.id) return n;
-                                              const nextData = [
-                                                ...(n.graphData || []),
-                                              ];
-                                              nextData[idx] = {
-                                                ...nextData[idx],
-                                                value: val,
-                                              };
-                                              return {
-                                                ...n,
-                                                graphData: nextData,
-                                              };
-                                            }),
-                                          );
-                                          setIsDirty(true);
-                                        }}
-                                        className="w-16 bg-background border border-border rounded px-2 py-1 text-[9px] text-foreground focus:outline-none focus:border-primary font-medium"
-                                        placeholder="Value"
-                                      />
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setNodes((prev) =>
-                                            prev.map((n) => {
-                                              if (n.id !== node.id) return n;
-                                              return {
-                                                ...n,
-                                                graphData: (
-                                                  n.graphData || []
-                                                ).filter((_, i) => i !== idx),
-                                              };
-                                            }),
-                                          );
-                                          setIsDirty(true);
-                                        }}
-                                        className="p-1 hover:bg-destructive/10 text-destructive hover:text-destructive rounded transition-all"
-                                        title="Delete Row"
-                                      >
-                                        <Trash2 className="h-3 w-3" />
-                                      </button>
-                                    </div>
-                                  ))}
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setNodes((prev) =>
-                                        prev.map((n) => {
-                                          if (n.id !== node.id) return n;
-                                          return {
-                                            ...n,
-                                            graphData: [
-                                              ...(n.graphData || []),
-                                              {
-                                                name: `Item ${String.fromCharCode(65 + (n.graphData || []).length)}`,
-                                                value: 50,
-                                              },
-                                            ],
-                                          };
-                                        }),
-                                      );
-                                      setIsDirty(true);
-                                    }}
-                                    className="mt-1 text-[9px] font-semibold text-primary hover:text-primary/80 flex items-center justify-center gap-1 py-1.5 border border-dashed border-border hover:border-muted-foreground/35 rounded transition-all"
-                                  >
-                                    <Plus className="h-3 w-3" /> Add Data Row
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
+                            <GraphSettingsPanel
+                              node={node}
+                              getPanelStyle={getPanelStyle}
+                              setNodes={setNodes}
+                              setIsDirty={setIsDirty}
+                            />
                           )}
 
                         {/* Mermaid / UML Settings Floating Panel */}
                         {(node.type === "mermaid" || node.type === "uml") &&
                           selectedNodeId === node.id && (
-                            <div
-                              className="absolute z-30 bg-popover border border-border text-popover-foreground rounded-2xl shadow-2xl p-4 flex flex-col pointer-events-auto transition-all w-[320px]"
-                              style={getPanelStyle(node, 320)}
-                              onMouseDown={(e) => e.stopPropagation()}
-                            >
-                              <div className="flex items-center justify-between border-b border-border pb-2 mb-2 shrink-0">
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                                  {node.type === "mermaid"
-                                    ? "Mermaid Diagram Code"
-                                    : "UML Diagram Code"}
-                                </span>
-                              </div>
-                              <div className="flex-1 flex flex-col min-h-0">
-                                <textarea
-                                  value={node.mermaidCode || ""}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
-                                    setNodes((prev) =>
-                                      prev.map((n) =>
-                                        n.id === node.id
-                                          ? { ...n, mermaidCode: val }
-                                          : n,
-                                      ),
-                                    );
-                                    setIsDirty(true);
-                                  }}
-                                  className="flex-1 w-full bg-background border border-border rounded-lg p-3 font-mono text-[10px] text-slate-300 focus:outline-none focus:border-primary resize-none leading-relaxed"
-                                  placeholder={
-                                    node.type === "mermaid"
-                                      ? "graph TD..."
-                                      : "classDiagram..."
-                                  }
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Tab") {
-                                      e.preventDefault();
-                                      const start =
-                                        e.currentTarget.selectionStart;
-                                      const end = e.currentTarget.selectionEnd;
-                                      const val = e.currentTarget.value;
-                                      const updated =
-                                        val.substring(0, start) +
-                                        "    " +
-                                        val.substring(end);
-                                      setNodes((prev) =>
-                                        prev.map((n) =>
-                                          n.id === node.id
-                                            ? { ...n, mermaidCode: updated }
-                                            : n,
-                                        ),
-                                      );
-                                      setTimeout(() => {
-                                        if (e.currentTarget) {
-                                          e.currentTarget.selectionStart =
-                                            e.currentTarget.selectionEnd =
-                                              start + 4;
-                                        }
-                                      }, 0);
-                                    }
-                                  }}
-                                />
-                              </div>
-                            </div>
+                            <MermaidSettingsPanel
+                              node={node}
+                              getPanelStyle={getPanelStyle}
+                              setNodes={setNodes}
+                              setIsDirty={setIsDirty}
+                            />
                           )}
 
                         {/* Scientific Calculator Settings Floating Panel */}
                         {node.type === "scientific-calc" &&
                           selectedNodeId === node.id && (
-                            <div
-                              className="absolute z-30 bg-popover border border-border text-popover-foreground rounded-2xl shadow-2xl p-3 flex flex-col pointer-events-auto transition-all w-[220px]"
-                              style={getPanelStyle(node, 220)}
-                              onMouseDown={(e) => e.stopPropagation()}
-                            >
-                              <div className="flex items-center justify-between border-b border-border pb-1.5 mb-2 shrink-0">
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                                  Shift & Variable Settings
-                                </span>
-                              </div>
-                              <div className="flex flex-col gap-2 min-h-0 text-[10px]">
-                                {/* Custom Variables Editor */}
-                                <div className="flex flex-col gap-1 bg-muted/40 border border-border/30 p-2 rounded-xl">
-                                  <span className="font-bold text-muted-foreground uppercase tracking-wide">
-                                    Variables
-                                  </span>
-                                  {!lockedElements[node.id] && (
-                                    <div className="flex gap-1">
-                                      <input
-                                        type="text"
-                                        placeholder="var"
-                                        value={calcVarName}
-                                        onChange={(e) => setCalcVarName(e.target.value)}
-                                        className="w-10 bg-background border border-border/50 rounded px-1 py-0.5 focus:outline-none text-[9px]"
-                                      />
-                                      <input
-                                        type="text"
-                                        placeholder="val"
-                                        value={calcVarVal}
-                                        onChange={(e) => setCalcVarVal(e.target.value)}
-                                        className="flex-1 bg-background border border-border/50 rounded px-1 py-0.5 focus:outline-none text-[9px]"
-                                      />
-                                      <button
-                                        onClick={() => {
-                                          if (!calcVarName.trim() || !calcVarVal.trim()) return;
-                                          if (!/^[a-zA-Z][a-zA-Z0-9]*$/.test(calcVarName)) return;
-                                          setNodes((prev) =>
-                                            prev.map((n) =>
-                                              n.id === node.id
-                                                ? {
-                                                    ...n,
-                                                    variables: {
-                                                      ...(n.variables || {}),
-                                                      [calcVarName.trim()]: calcVarVal.trim(),
-                                                    },
-                                                  }
-                                                : n,
-                                            ),
-                                          );
-                                          setIsDirty(true);
-                                          setCalcVarName("");
-                                          setCalcVarVal("");
-                                        }}
-                                        className="px-1 bg-primary text-primary-foreground rounded hover:bg-primary/95 font-bold text-[9px]"
-                                      >
-                                        +
-                                      </button>
-                                    </div>
-                                  )}
-                                  <div className="flex flex-col gap-1 max-h-[70px] overflow-y-auto pr-1 font-mono">
-                                    {Object.entries(node.variables || {}).map(([name, val]) => (
-                                      <div
-                                        key={name}
-                                        className="flex justify-between items-center bg-muted/70 px-1.5 py-0.5 rounded text-[8px]"
-                                      >
-                                        <span
-                                          onClick={() => {
-                                            setNodes((prev) =>
-                                              prev.map((n) =>
-                                                n.id === node.id
-                                                  ? { ...n, text: (n.text || "") + name }
-                                                  : n,
-                                              ),
-                                            );
-                                            setIsDirty(true);
-                                          }}
-                                          className="cursor-pointer font-bold text-primary hover:underline truncate max-w-[120px]"
-                                        >
-                                          {name} = {val}
-                                        </span>
-                                        {!lockedElements[node.id] && (
-                                          <button
-                                            onClick={() => {
-                                              const updatedVars = { ...(node.variables || {}) };
-                                              delete updatedVars[name];
-                                              setNodes((prev) =>
-                                                prev.map((n) =>
-                                                  n.id === node.id
-                                                    ? { ...n, variables: updatedVars }
-                                                    : n,
-                                                ),
-                                              );
-                                              setIsDirty(true);
-                                            }}
-                                            className="text-destructive font-bold hover:scale-115 px-1"
-                                          >
-                                            ×
-                                          </button>
-                                        )}
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-
-                                {/* Shift Symbols Reference Keypad */}
-                                <div className="flex flex-col gap-1.5 bg-muted/40 border border-border/30 p-2.5 rounded-xl">
-                                  <span className="font-bold text-muted-foreground uppercase tracking-wide">
-                                    Shift Options
-                                  </span>
-                                  <div className="grid grid-cols-3 gap-1">
-                                    {[
-                                      { label: "sin⁻¹", value: "asin(" },
-                                      { label: "cos⁻¹", value: "acos(" },
-                                      { label: "tan⁻¹", value: "atan(" },
-                                      { label: "sinh⁻¹", value: "asinh(" },
-                                      { label: "cosh⁻¹", value: "acosh(" },
-                                      { label: "tanh⁻¹", value: "atanh(" },
-                                      { label: "³√■", value: "nthRoot(■, 3)" },
-                                      { label: "x!", value: "!" },
-                                      { label: "Ran#", value: "random()" },
-                                      { label: "log_N", value: "log(■, N)" },
-                                      { label: "Mean", value: "mean(" },
-                                      { label: "StdDev", value: "std(" },
-                                      { label: "Derivative", value: "derivative(" },
-                                      { label: "Simplify", value: "simplify(" },
-                                      { label: "Integrate", value: "integrate(" },
-                                      { label: "Matrix", value: "[1, 2; 3, 4]" },
-                                      { label: "Complex", value: "3 + 2i" },
-                                      { label: "Unit Conv", value: "10 inch to cm" },
-                                    ].map((s) => (
-                                      <button
-                                        key={s.label}
-                                        disabled={!!lockedElements[node.id]}
-                                        onClick={() => {
-                                          setNodes((prev) =>
-                                            prev.map((n) =>
-                                              n.id === node.id
-                                                ? {
-                                                    ...n,
-                                                    text: (n.text || "") + s.value,
-                                                  }
-                                                : n,
-                                            ),
-                                          );
-                                          setIsDirty(true);
-                                        }}
-                                        className="py-1 text-[8px] bg-amber-500/10 hover:bg-amber-500/25 border border-amber-500/20 text-amber-500 rounded font-semibold active:scale-95 transition-transform"
-                                      >
-                                        {s.label}
-                                      </button>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
+                            <ScientificCalcSettingsPanel
+                              node={node}
+                              getPanelStyle={getPanelStyle}
+                              lockedElements={lockedElements}
+                              setNodes={setNodes}
+                              setIsDirty={setIsDirty}
+                            />
                           )}
                       </React.Fragment>
                     );
@@ -3398,7 +2866,7 @@ export default function CanvasEditor({
               }}
               className="px-2 py-1 hover:bg-muted hover:text-foreground rounded-lg text-[9px] font-bold transition-all"
             >
-              Reset
+              {t("lacerta.canvasEditor.reset", "Reset")}
             </button>
           </div>
 
@@ -3407,11 +2875,16 @@ export default function CanvasEditor({
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
               <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-xl flex flex-col">
                 <h3 className="text-sm font-bold text-card-foreground">
-                  Enter Guest Username
+                  {t(
+                    "lacerta.canvasEditor.enterGuestUsername",
+                    "Enter Guest Username",
+                  )}
                 </h3>
                 <p className="text-[11px] text-muted-foreground leading-normal mt-1 mb-4">
-                  This is a zero-knowledge collaborative spatial canvas. Choose
-                  a username to represent yourself to other editors in the room.
+                  {t(
+                    "lacerta.canvasEditor.guestUsernameDesc",
+                    "This is a zero-knowledge collaborative spatial canvas. Choose a username to represent yourself to other editors in the room.",
+                  )}
                 </p>
                 <input
                   type="text"
@@ -3425,12 +2898,20 @@ export default function CanvasEditor({
                     if (guestName.length > 0) {
                       setShowGuestPrompt(false);
                     } else {
-                      toast.error("Please enter a username");
+                      toast.error(
+                        t(
+                          "lacerta.canvasEditor.enterUsernameError",
+                          "Please enter a username",
+                        ),
+                      );
                     }
                   }}
                   className="py-2 bg-primary hover:bg-primary/90 font-semibold rounded-lg text-xs text-primary-foreground transition-all shadow-sm active:scale-98"
                 >
-                  Join Collaboration Session
+                  {t(
+                    "lacerta.canvasEditor.joinCollab",
+                    "Join Collaboration Session",
+                  )}
                 </button>
               </div>
             </div>
@@ -3498,7 +2979,7 @@ export default function CanvasEditor({
         {rightClickedNodeId ? (
           <>
             <ContextMenuLabel className="text-[10px] uppercase font-bold tracking-wider px-3 py-2 text-muted-foreground/75">
-              Card Actions
+              {t("lacerta.canvasEditor.cardActions", "Card Actions")}
             </ContextMenuLabel>
             <ContextMenuSeparator className="bg-border" />
 
@@ -3506,7 +2987,7 @@ export default function CanvasEditor({
             <ContextMenuSub>
               <ContextMenuSubTrigger className="focus:bg-accent focus:text-accent-foreground cursor-pointer text-xs font-semibold px-3 py-2">
                 <Palette className="h-3.5 w-3.5 mr-2 text-primary" />
-                Change Color
+                {t("lacerta.canvasEditor.changeColor", "Change Color")}
               </ContextMenuSubTrigger>
               <ContextMenuPortal>
                 <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-[120px]">
@@ -3545,15 +3026,24 @@ export default function CanvasEditor({
                   ))}
                   <ContextMenuSeparator className="bg-border/30" />
                   <div className="flex items-center justify-between px-3 py-1.5 text-[10px] font-semibold text-muted-foreground/80 hover:bg-accent/40 rounded transition-colors select-none relative">
-                    <span className="uppercase tracking-wider">Custom Color</span>
+                    <span className="uppercase tracking-wider">
+                      {t("lacerta.canvasEditor.customColor", "Custom Color")}
+                    </span>
                     <input
                       type="color"
                       value={(() => {
-                        const node = nodes.find((n) => n.id === rightClickedNodeId);
-                        return node?.color?.startsWith("#") ? node.color : "#3b82f6";
+                        const node = nodes.find(
+                          (n) => n.id === rightClickedNodeId,
+                        );
+                        return node?.color?.startsWith("#")
+                          ? node.color
+                          : "#3b82f6";
                       })()}
                       onChange={(e) =>
-                        handleNodeColorChange(rightClickedNodeId!, e.target.value)
+                        handleNodeColorChange(
+                          rightClickedNodeId!,
+                          e.target.value,
+                        )
                       }
                       className="w-5 h-5 rounded-md cursor-pointer border border-border bg-transparent p-0"
                     />
@@ -3568,7 +3058,7 @@ export default function CanvasEditor({
               <ContextMenuSub>
                 <ContextMenuSubTrigger className="focus:bg-accent focus:text-accent-foreground cursor-pointer text-xs font-semibold px-3 py-2">
                   <Smile className="h-3.5 w-3.5 mr-2 text-warning" />
-                  Change Sticker
+                  {t("lacerta.canvasEditor.changeSticker", "Change Sticker")}
                 </ContextMenuSubTrigger>
                 <ContextMenuPortal>
                   <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-[120px]">
@@ -3589,7 +3079,9 @@ export default function CanvasEditor({
                           className="focus:bg-accent focus:text-accent-foreground cursor-pointer flex items-center px-3 py-1.5 text-xs font-semibold"
                         >
                           <span className="text-base mr-2">{emoji}</span>
-                          <span>Sticker</span>
+                          <span>
+                            {t("lacerta.canvasEditor.sticker", "Sticker")}
+                          </span>
                         </ContextMenuItem>
                       ),
                     )}
@@ -3614,7 +3106,7 @@ export default function CanvasEditor({
                 className="focus:bg-accent focus:text-accent-foreground cursor-pointer text-xs font-semibold px-3 py-2"
               >
                 <ImageIcon className="h-3.5 w-3.5 mr-2 text-violet-500" />
-                Change Image
+                {t("lacerta.canvasEditor.changeImage", "Change Image")}
               </ContextMenuItem>
             )}
 
@@ -3624,7 +3116,7 @@ export default function CanvasEditor({
               <ContextMenuSub>
                 <ContextMenuSubTrigger className="focus:bg-accent focus:text-accent-foreground cursor-pointer text-xs font-semibold px-3 py-2">
                   <AlertCircle className="h-3.5 w-3.5 mr-2 text-rose-500" />
-                  Callout Style
+                  {t("lacerta.canvasEditor.calloutStyle", "Callout Style")}
                 </ContextMenuSubTrigger>
                 <ContextMenuPortal>
                   <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-[120px]">
@@ -3632,22 +3124,22 @@ export default function CanvasEditor({
                       {
                         type: "info",
                         colorClass: "text-blue-500",
-                        label: "Info",
+                        label: t("lacerta.canvasEditor.info", "Info"),
                       },
                       {
                         type: "warning",
                         colorClass: "text-amber-500",
-                        label: "Warning",
+                        label: t("lacerta.canvasEditor.warning", "Warning"),
                       },
                       {
                         type: "success",
                         colorClass: "text-emerald-500",
-                        label: "Success",
+                        label: t("lacerta.canvasEditor.success", "Success"),
                       },
                       {
                         type: "error",
                         colorClass: "text-rose-500",
-                        label: "Danger",
+                        label: t("lacerta.canvasEditor.danger", "Danger"),
                       },
                     ].map((style) => (
                       <ContextMenuItem
@@ -3682,7 +3174,7 @@ export default function CanvasEditor({
             <ContextMenuSub>
               <ContextMenuSubTrigger className="focus:bg-accent focus:text-accent-foreground cursor-pointer text-xs font-semibold px-3 py-2">
                 <Maximize2 className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                Arrange
+                {t("lacerta.canvasEditor.arrange", "Arrange")}
               </ContextMenuSubTrigger>
               <ContextMenuPortal>
                 <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-[160px]">
@@ -3690,13 +3182,13 @@ export default function CanvasEditor({
                     onClick={() => bringToFront(rightClickedNodeId!)}
                     className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
-                    Bring to Front
+                    {t("lacerta.canvasEditor.bringToFront", "Bring to Front")}
                   </ContextMenuItem>
                   <ContextMenuItem
                     onClick={() => sendToBack(rightClickedNodeId!)}
                     className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
-                    Send to Back
+                    {t("lacerta.canvasEditor.sendToBack", "Send to Back")}
                   </ContextMenuItem>
                   <ContextMenuSeparator className="bg-border/30" />
                   <ContextMenuItem
@@ -3705,8 +3197,8 @@ export default function CanvasEditor({
                   >
                     {nodes.find((n) => n.id === rightClickedNodeId)
                       ?.lockPosition
-                      ? "🔓 Unlock Position"
-                      : "🔒 Lock Position"}
+                      ? `🔓 ${t("lacerta.canvasEditor.unlockPosition", "Unlock Position")}`
+                      : `🔒 ${t("lacerta.canvasEditor.lockPosition", "Lock Position")}`}
                   </ContextMenuItem>
                 </ContextMenuSubContent>
               </ContextMenuPortal>
@@ -3717,13 +3209,13 @@ export default function CanvasEditor({
               className="focus:bg-destructive/10 text-destructive focus:text-destructive cursor-pointer text-xs font-semibold px-3 py-2"
             >
               <Trash2 className="h-3.5 w-3.5 mr-2" />
-              Delete Card
+              {t("lacerta.canvasEditor.deleteCard", "Delete Card")}
             </ContextMenuItem>
           </>
         ) : rightClickedEdgeId ? (
           <>
             <ContextMenuLabel className="text-[10px] uppercase font-bold tracking-wider px-3 py-2 text-muted-foreground/75">
-              Connector Actions
+              {t("lacerta.canvasEditor.connectorActions", "Connector Actions")}
             </ContextMenuLabel>
             <ContextMenuSeparator className="bg-border" />
 
@@ -3731,10 +3223,18 @@ export default function CanvasEditor({
             <ContextMenuItem
               onClick={() => {
                 const edge = edges.find((e) => e.id === rightClickedEdgeId);
-                const label = prompt("Enter connection label:", edge?.label || "");
+                const label = prompt(
+                  t(
+                    "lacerta.canvasEditor.enterConnectionLabel",
+                    "Enter connection label:",
+                  ),
+                  edge?.label || "",
+                );
                 if (label !== null) {
                   setEdges((prev) =>
-                    prev.map((ed) => (ed.id === rightClickedEdgeId ? { ...ed, label } : ed))
+                    prev.map((ed) =>
+                      ed.id === rightClickedEdgeId ? { ...ed, label } : ed,
+                    ),
                   );
                   setIsDirty(true);
                 }
@@ -3742,7 +3242,10 @@ export default function CanvasEditor({
               className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-2 text-xs font-semibold"
             >
               <Type className="h-3.5 w-3.5 mr-2 text-indigo-400" />
-              Set Connection Label
+              {t(
+                "lacerta.canvasEditor.setConnectionLabel",
+                "Set Connection Label",
+              )}
             </ContextMenuItem>
 
             <ContextMenuSeparator className="bg-border/30" />
@@ -3751,32 +3254,44 @@ export default function CanvasEditor({
             <ContextMenuSub>
               <ContextMenuSubTrigger className="focus:bg-accent focus:text-accent-foreground cursor-pointer text-xs font-semibold px-3 py-2">
                 <Palette className="h-3.5 w-3.5 mr-2 text-primary" />
-                Change Preset Color
+                {t(
+                  "lacerta.canvasEditor.changePresetColor",
+                  "Change Preset Color",
+                )}
               </ContextMenuSubTrigger>
               <ContextMenuPortal>
                 <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-[120px]">
-                  {([
-                    { name: "slate", color: "var(--muted-foreground)" },
-                    { name: "blue", color: "#3b82f6" },
-                    { name: "emerald", color: "#10b981" },
-                    { name: "rose", color: "#ef4444" },
-                    { name: "purple", color: "#a855f7" },
-                    { name: "teal", color: "#14b8a6" },
-                    { name: "fuchsia", color: "#d946ef" },
-                    { name: "orange", color: "#f97316" },
-                    { name: "indigo", color: "#6366f1" },
-                  ] as const).map((p) => (
+                  {(
+                    [
+                      { name: "slate", color: "var(--muted-foreground)" },
+                      { name: "blue", color: "#3b82f6" },
+                      { name: "emerald", color: "#10b981" },
+                      { name: "rose", color: "#ef4444" },
+                      { name: "purple", color: "#a855f7" },
+                      { name: "teal", color: "#14b8a6" },
+                      { name: "fuchsia", color: "#d946ef" },
+                      { name: "orange", color: "#f97316" },
+                      { name: "indigo", color: "#6366f1" },
+                    ] as const
+                  ).map((p) => (
                     <ContextMenuItem
                       key={p.name}
                       onClick={() => {
                         setEdges((prev) =>
-                          prev.map((ed) => (ed.id === rightClickedEdgeId ? { ...ed, color: p.color } : ed))
+                          prev.map((ed) =>
+                            ed.id === rightClickedEdgeId
+                              ? { ...ed, color: p.color }
+                              : ed,
+                          ),
                         );
                         setIsDirty(true);
                       }}
                       className="focus:bg-accent focus:text-accent-foreground cursor-pointer flex items-center px-3 py-1.5 text-xs font-semibold"
                     >
-                      <div className="w-2.5 h-2.5 rounded-full mr-2" style={{ backgroundColor: p.color }} />
+                      <div
+                        className="w-2.5 h-2.5 rounded-full mr-2"
+                        style={{ backgroundColor: p.color }}
+                      />
                       <span className="capitalize">{p.name}</span>
                     </ContextMenuItem>
                   ))}
@@ -3786,7 +3301,9 @@ export default function CanvasEditor({
 
             {/* Custom Color Selector */}
             <div className="flex items-center justify-between px-3 py-1.5 text-[10px] font-semibold text-muted-foreground/80 hover:bg-accent/40 rounded transition-colors select-none relative">
-              <span className="uppercase tracking-wider">Custom Color</span>
+              <span className="uppercase tracking-wider">
+                {t("lacerta.canvasEditor.customColor", "Custom Color")}
+              </span>
               <input
                 type="color"
                 value={(() => {
@@ -3796,7 +3313,9 @@ export default function CanvasEditor({
                 onChange={(e) => {
                   const color = e.target.value;
                   setEdges((prev) =>
-                    prev.map((ed) => (ed.id === rightClickedEdgeId ? { ...ed, color } : ed))
+                    prev.map((ed) =>
+                      ed.id === rightClickedEdgeId ? { ...ed, color } : ed,
+                    ),
                   );
                   setIsDirty(true);
                 }}
@@ -3806,22 +3325,29 @@ export default function CanvasEditor({
             <ContextMenuItem
               onClick={() => {
                 setEdges((prev) =>
-                  prev.map((ed) => (ed.id === rightClickedEdgeId ? { ...ed, color: undefined } : ed))
+                  prev.map((ed) =>
+                    ed.id === rightClickedEdgeId
+                      ? { ...ed, color: undefined }
+                      : ed,
+                  ),
                 );
                 setIsDirty(true);
               }}
               className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
             >
-              Reset to Theme Color
+              {t(
+                "lacerta.canvasEditor.resetToThemeColor",
+                "Reset to Theme Color",
+              )}
             </ContextMenuItem>
-            
+
             <ContextMenuSeparator className="bg-border/30" />
 
             {/* Line Shape (Curved / Straight) */}
             <ContextMenuSub>
               <ContextMenuSubTrigger className="focus:bg-accent focus:text-accent-foreground cursor-pointer text-xs font-semibold px-3 py-2">
                 <ChevronRight className="h-3.5 w-3.5 mr-2 text-warning" />
-                Line Shape
+                {t("lacerta.canvasEditor.lineShape", "Line Shape")}
               </ContextMenuSubTrigger>
               <ContextMenuPortal>
                 <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-[120px]">
@@ -3838,7 +3364,7 @@ export default function CanvasEditor({
                     }}
                     className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
-                    Curved
+                    {t("lacerta.canvasEditor.curved", "Curved")}
                   </ContextMenuItem>
                   <ContextMenuItem
                     onClick={() => {
@@ -3853,7 +3379,7 @@ export default function CanvasEditor({
                     }}
                     className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
-                    Straight
+                    {t("lacerta.canvasEditor.straight", "Straight")}
                   </ContextMenuItem>
                 </ContextMenuSubContent>
               </ContextMenuPortal>
@@ -3862,28 +3388,50 @@ export default function CanvasEditor({
             {/* Line styles */}
             <ContextMenuSub>
               <ContextMenuSubTrigger className="focus:bg-accent focus:text-accent-foreground cursor-pointer text-xs font-semibold px-3 py-2">
-                Line Style
+                {t("lacerta.canvasEditor.lineStyle", "Line Style")}
               </ContextMenuSubTrigger>
               <ContextMenuPortal>
                 <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-[120px]">
-                  {([
-                    { type: "solid" as const, label: "Solid" },
-                    { type: "dashed" as const, label: "Dashed" },
-                    { type: "dotted" as const, label: "Dotted" },
-                    { type: "dashed-dotted" as const, label: "Dashed & Dotted" },
-                  ] as const).map((t) => (
+                  {(
+                    [
+                      {
+                        type: "solid" as const,
+                        label: t("lacerta.canvasEditor.solid", "Solid"),
+                      },
+                      {
+                        type: "dashed" as const,
+                        label: t("lacerta.canvasEditor.dashed", "Dashed"),
+                      },
+                      {
+                        type: "dotted" as const,
+                        label: t("lacerta.canvasEditor.dotted", "Dotted"),
+                      },
+                      {
+                        type: "dashed-dotted" as const,
+                        label: t(
+                          "lacerta.canvasEditor.dashedDotted",
+                          "Dashed & Dotted",
+                        ),
+                      },
+                    ] as const
+                  ).map((tVal) => (
                     <ContextMenuItem
-                      key={t.type}
+                      key={tVal.type}
                       onClick={() => {
                         setEdges((prev) =>
-                          prev.map((ed) => (ed.id === rightClickedEdgeId ? { ...ed, lineType: t.type } : ed))
+                          prev.map((ed) =>
+                            ed.id === rightClickedEdgeId
+                              ? { ...ed, lineType: tVal.type }
+                              : ed,
+                          ),
                         );
                         setIsDirty(true);
                       }}
                       className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                     >
-                      <span>{t.label}</span>
-                      {(edges.find((ed) => ed.id === rightClickedEdgeId)?.lineType || "solid") === t.type && (
+                      <span>{tVal.label}</span>
+                      {(edges.find((ed) => ed.id === rightClickedEdgeId)
+                        ?.lineType || "solid") === tVal.type && (
                         <span className="ml-auto text-[8px]">✓</span>
                       )}
                     </ContextMenuItem>
@@ -3895,28 +3443,56 @@ export default function CanvasEditor({
             {/* Arrow Type */}
             <ContextMenuSub>
               <ContextMenuSubTrigger className="focus:bg-accent focus:text-accent-foreground cursor-pointer text-xs font-semibold px-3 py-2">
-                Arrow Type
+                {t("lacerta.canvasEditor.arrowType", "Arrow Type")}
               </ContextMenuSubTrigger>
               <ContextMenuPortal>
                 <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-[140px]">
-                  {([
-                    { type: "normal" as const, label: "Normal" },
-                    { type: "association" as const, label: "Association" },
-                    { type: "composition" as const, label: "Composition" },
-                    { type: "aggregation" as const, label: "Aggregation" },
-                  ] as const).map((t) => (
+                  {(
+                    [
+                      {
+                        type: "normal" as const,
+                        label: t("lacerta.canvasEditor.normal", "Normal"),
+                      },
+                      {
+                        type: "association" as const,
+                        label: t(
+                          "lacerta.canvasEditor.association",
+                          "Association",
+                        ),
+                      },
+                      {
+                        type: "composition" as const,
+                        label: t(
+                          "lacerta.canvasEditor.composition",
+                          "Composition",
+                        ),
+                      },
+                      {
+                        type: "aggregation" as const,
+                        label: t(
+                          "lacerta.canvasEditor.aggregation",
+                          "Aggregation",
+                        ),
+                      },
+                    ] as const
+                  ).map((tVal) => (
                     <ContextMenuItem
-                      key={t.type}
+                      key={tVal.type}
                       onClick={() => {
                         setEdges((prev) =>
-                          prev.map((ed) => (ed.id === rightClickedEdgeId ? { ...ed, arrowType: t.type } : ed))
+                          prev.map((ed) =>
+                            ed.id === rightClickedEdgeId
+                              ? { ...ed, arrowType: tVal.type }
+                              : ed,
+                          ),
                         );
                         setIsDirty(true);
                       }}
                       className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                     >
-                      <span>{t.label}</span>
-                      {(edges.find((ed) => ed.id === rightClickedEdgeId)?.arrowType || "normal") === t.type && (
+                      <span>{tVal.label}</span>
+                      {(edges.find((ed) => ed.id === rightClickedEdgeId)
+                        ?.arrowType || "normal") === tVal.type && (
                         <span className="ml-auto text-[8px]">✓</span>
                       )}
                     </ContextMenuItem>
@@ -3928,32 +3504,34 @@ export default function CanvasEditor({
             <ContextMenuSeparator className="bg-border" />
             <ContextMenuItem
               onClick={() => {
-                setEdges((prev) => prev.filter((ed) => ed.id !== rightClickedEdgeId));
+                setEdges((prev) =>
+                  prev.filter((ed) => ed.id !== rightClickedEdgeId),
+                );
                 setRightClickedEdgeId(null);
                 setIsDirty(true);
               }}
               className="focus:bg-destructive/10 text-destructive focus:text-destructive cursor-pointer text-xs font-semibold px-3 py-2"
             >
               <Trash2 className="h-3.5 w-3.5 mr-2" />
-              Delete Connector
+              {t("lacerta.canvasEditor.deleteConnector", "Delete Connector")}
             </ContextMenuItem>
           </>
         ) : (
           <>
             <ContextMenuLabel className="text-[10px] uppercase font-bold tracking-wider px-3 py-2 text-muted-foreground/75">
-              Canvas Actions
+              {t("lacerta.canvasEditor.canvasActions", "Canvas Actions")}
             </ContextMenuLabel>
             <ContextMenuSeparator className="bg-border" />
             <ContextMenuSub>
               <ContextMenuSubTrigger className="focus:bg-accent focus:text-accent-foreground cursor-pointer text-xs font-semibold px-3 py-2">
                 <Plus className="h-3.5 w-3.5 mr-2 text-primary" />
-                Insert
+                {t("lacerta.canvasEditor.insert", "Insert")}
               </ContextMenuSubTrigger>
               <ContextMenuPortal>
                 <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-[190px] max-h-[420px] overflow-y-auto no-scrollbar">
                   {/* Category: Text & Notes */}
                   <ContextMenuLabel className="text-[9px] font-bold text-muted-foreground px-3 py-1 uppercase tracking-wider">
-                    Text & Notes
+                    {t("lacerta.canvasEditor.textNotes", "Text & Notes")}
                   </ContextMenuLabel>
                   <ContextMenuSeparator className="bg-border/30" />
                   <ContextMenuItem
@@ -3969,7 +3547,7 @@ export default function CanvasEditor({
                     className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
                     <Type className="h-3.5 w-3.5 mr-2 text-primary" />
-                    Document Card
+                    {t("lacerta.canvasEditor.documentCard", "Document Card")}
                   </ContextMenuItem>
                   <ContextMenuItem
                     onClick={() =>
@@ -3984,7 +3562,7 @@ export default function CanvasEditor({
                     className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
                     <StickyNote className="h-3.5 w-3.5 mr-2 text-amber-500" />
-                    Sticky Note
+                    {t("lacerta.canvasEditor.stickyNote", "Sticky Note")}
                   </ContextMenuItem>
                   <ContextMenuItem
                     onClick={() =>
@@ -3999,7 +3577,7 @@ export default function CanvasEditor({
                     className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
                     <Heading className="h-3.5 w-3.5 mr-2 text-indigo-400" />
-                    Floating Title
+                    {t("lacerta.canvasEditor.floatingTitle", "Floating Title")}
                   </ContextMenuItem>
                   <ContextMenuItem
                     onClick={() =>
@@ -4012,7 +3590,7 @@ export default function CanvasEditor({
                     className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
                     <AlertCircle className="h-3.5 w-3.5 mr-2 text-rose-500" />
-                    Callout Card
+                    {t("lacerta.canvasEditor.calloutCard", "Callout Card")}
                   </ContextMenuItem>
                   <ContextMenuItem
                     onClick={() =>
@@ -4025,14 +3603,17 @@ export default function CanvasEditor({
                     className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
                     <MessageSquare className="h-3.5 w-3.5 mr-2 text-primary" />
-                    Annotation Card
+                    {t(
+                      "lacerta.canvasEditor.annotationCard",
+                      "Annotation Card",
+                    )}
                   </ContextMenuItem>
 
                   <ContextMenuSeparator className="bg-border" />
 
                   {/* Category: Media & Embeds */}
                   <ContextMenuLabel className="text-[9px] font-bold text-muted-foreground px-3 py-1 uppercase tracking-wider">
-                    Media & Embeds
+                    {t("lacerta.canvasEditor.mediaEmbeds", "Media & Embeds")}
                   </ContextMenuLabel>
                   <ContextMenuSeparator className="bg-border/30" />
                   <ContextMenuItem
@@ -4045,7 +3626,7 @@ export default function CanvasEditor({
                     className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
                     <ImageIcon className="h-3.5 w-3.5 mr-2 text-blue-500" />
-                    Image Card
+                    {t("lacerta.canvasEditor.imageCard", "Image Card")}
                   </ContextMenuItem>
                   <ContextMenuItem
                     onClick={() =>
@@ -4057,7 +3638,7 @@ export default function CanvasEditor({
                     className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
                     <ImageIcon className="h-3.5 w-3.5 mr-2 text-violet-500" />
-                    rrImage Card
+                    {t("lacerta.canvasEditor.rrImageCard", "rrImage Card")}
                   </ContextMenuItem>
                   <ContextMenuItem
                     onClick={() =>
@@ -4069,7 +3650,7 @@ export default function CanvasEditor({
                     className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
                     <Film className="h-3.5 w-3.5 mr-2 text-pink-400" />
-                    GIF Card
+                    {t("lacerta.canvasEditor.gifCard", "GIF Card")}
                   </ContextMenuItem>
                   <ContextMenuItem
                     onClick={() =>
@@ -4081,7 +3662,7 @@ export default function CanvasEditor({
                     className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
                     <Video className="h-3.5 w-3.5 mr-2 text-rose-500" />
-                    Video Card
+                    {t("lacerta.canvasEditor.videoCard", "Video Card")}
                   </ContextMenuItem>
                   <ContextMenuItem
                     onClick={() =>
@@ -4094,7 +3675,7 @@ export default function CanvasEditor({
                     className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
                     <FileDown className="h-3.5 w-3.5 mr-2 text-purple-400" />
-                    PDF Document Card
+                    {t("lacerta.canvasEditor.pdfCard", "PDF Document Card")}
                   </ContextMenuItem>
                   <ContextMenuItem
                     onClick={() =>
@@ -4107,14 +3688,17 @@ export default function CanvasEditor({
                     className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
                     <FileText className="h-3.5 w-3.5 mr-2 text-emerald-500" />
-                    Lacerta Vault File
+                    {t("lacerta.canvasEditor.vaultFile", "Lacerta Vault File")}
                   </ContextMenuItem>
 
                   <ContextMenuSeparator className="bg-border" />
 
                   {/* Category: Diagrams & Stickers */}
                   <ContextMenuLabel className="text-[9px] font-bold text-muted-foreground px-3 py-1 uppercase tracking-wider">
-                    Diagrams & Stickers
+                    {t(
+                      "lacerta.canvasEditor.diagramsStickers",
+                      "Diagrams & Stickers",
+                    )}
                   </ContextMenuLabel>
                   <ContextMenuSeparator className="bg-border/30" />
                   <ContextMenuItem
@@ -4128,7 +3712,10 @@ export default function CanvasEditor({
                     className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
                     <Paintbrush className="h-3.5 w-3.5 mr-2 text-success" />
-                    Whiteboard Sketchpad
+                    {t(
+                      "lacerta.canvasEditor.whiteboardSketchpad",
+                      "Whiteboard Sketchpad",
+                    )}
                   </ContextMenuItem>
                   <ContextMenuItem
                     onClick={() =>
@@ -4141,7 +3728,10 @@ export default function CanvasEditor({
                     className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
                     <Sparkles className="h-3.5 w-3.5 mr-2 text-pink-500" />
-                    Mermaid Diagram
+                    {t(
+                      "lacerta.canvasEditor.mermaidDiagram",
+                      "Mermaid Diagram",
+                    )}
                   </ContextMenuItem>
                   <ContextMenuItem
                     onClick={() =>
@@ -4154,7 +3744,7 @@ export default function CanvasEditor({
                     className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
                     <Network className="h-3.5 w-3.5 mr-2 text-purple-500" />
-                    UML Card
+                    {t("lacerta.canvasEditor.umlCard", "UML Card")}
                   </ContextMenuItem>
                   <ContextMenuItem
                     onClick={() =>
@@ -4167,7 +3757,7 @@ export default function CanvasEditor({
                     className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
                     <Smile className="h-3.5 w-3.5 mr-2 text-amber-400" />
-                    Emoji Sticker
+                    {t("lacerta.canvasEditor.emojiSticker", "Emoji Sticker")}
                   </ContextMenuItem>
                   <ContextMenuItem
                     onClick={() =>
@@ -4180,14 +3770,17 @@ export default function CanvasEditor({
                     className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
                     <Users className="h-3.5 w-3.5 mr-2 text-indigo-400" />
-                    Group Frame
+                    {t("lacerta.canvasEditor.groupFrame", "Group Frame")}
                   </ContextMenuItem>
 
                   <ContextMenuSeparator className="bg-border" />
 
                   {/* Category: Data & Analytics */}
                   <ContextMenuLabel className="text-[9px] font-bold text-muted-foreground px-3 py-1 uppercase tracking-wider">
-                    Data & Analytics
+                    {t(
+                      "lacerta.canvasEditor.dataAnalytics",
+                      "Data & Analytics",
+                    )}
                   </ContextMenuLabel>
                   <ContextMenuSeparator className="bg-border/30" />
                   <ContextMenuItem
@@ -4202,7 +3795,7 @@ export default function CanvasEditor({
                     className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
                     <Code className="h-3.5 w-3.5 mr-2 text-destructive" />
-                    Code Block
+                    {t("lacerta.canvasEditor.codeBlock", "Code Block")}
                   </ContextMenuItem>
                   <ContextMenuItem
                     onClick={() =>
@@ -4216,7 +3809,7 @@ export default function CanvasEditor({
                     className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
                     <CheckSquare className="h-3.5 w-3.5 mr-2 text-warning" />
-                    Tasks List
+                    {t("lacerta.canvasEditor.tasksList", "Tasks List")}
                   </ContextMenuItem>
                   <ContextMenuItem
                     onClick={() =>
@@ -4229,7 +3822,7 @@ export default function CanvasEditor({
                     className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
                     <TableIcon className="h-3.5 w-3.5 mr-2 text-success" />
-                    Table Card
+                    {t("lacerta.canvasEditor.tableCard", "Table Card")}
                   </ContextMenuItem>
                   <ContextMenuItem
                     onClick={() =>
@@ -4242,7 +3835,10 @@ export default function CanvasEditor({
                     className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
                     <BarChart2 className="h-3.5 w-3.5 mr-2 text-primary" />
-                    Interactive Graph
+                    {t(
+                      "lacerta.canvasEditor.interactiveGraph",
+                      "Interactive Graph",
+                    )}
                   </ContextMenuItem>
                   <ContextMenuItem
                     onClick={() =>
@@ -4255,7 +3851,10 @@ export default function CanvasEditor({
                     className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
                     <Calculator className="h-3.5 w-3.5 mr-2 text-indigo-400" />
-                    Scientific Calculator
+                    {t(
+                      "lacerta.canvasEditor.scientificCalculator",
+                      "Scientific Calculator",
+                    )}
                   </ContextMenuItem>
                   <ContextMenuItem
                     onClick={() =>
@@ -4268,7 +3867,10 @@ export default function CanvasEditor({
                     className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
                     <Calculator className="h-3.5 w-3.5 mr-2 text-emerald-400" />
-                    Graphing Calculator
+                    {t(
+                      "lacerta.canvasEditor.graphingCalculator",
+                      "Graphing Calculator",
+                    )}
                   </ContextMenuItem>
                 </ContextMenuSubContent>
               </ContextMenuPortal>

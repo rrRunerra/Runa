@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslation } from "react-i18next";
 
 interface ListsTabProps {
   name: string;
@@ -15,7 +16,7 @@ interface ListsTabProps {
 
 interface ListCategory {
   id: string;
-  title: string;
+  titleKey: string;
   icon: React.ComponentType<any>;
   redirect: string;
 }
@@ -33,6 +34,7 @@ function RrListCategoryCard({
   category: ListCategory;
   session: any;
 }): React.ReactElement {
+  const { t } = useTranslation();
   const Icon = category.icon;
   const url = username
     ? `${process.env.NEXT_PUBLIC_API_URL}/list/${category.id}/user/${username}?limit=1`
@@ -89,11 +91,11 @@ function RrListCategoryCard({
           <div className="p-2 rounded-lg bg-primary/10 text-primary border border-primary/20">
             <Icon className="size-4.5" aria-hidden="true" />
           </div>
-          <CardTitle className="text-sm font-semibold">{category.title}</CardTitle>
+          <CardTitle className="text-sm font-semibold">{t(`polaris.lists.${category.titleKey}`)}</CardTitle>
         </div>
         {isPrivate ? (
           <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 text-[10px] font-semibold py-0">
-            Private
+            {t("polaris.lists.private")}
           </Badge>
         ) : (
           <Badge variant="secondary" className="font-semibold text-xs">
@@ -106,7 +108,7 @@ function RrListCategoryCard({
         {isPrivate ? (
           <div className="flex flex-col items-center justify-center py-6 text-center text-muted-foreground/60 gap-1.5">
             <Lock className="size-6 text-destructive/40" aria-hidden="true" />
-            <span className="text-xs italic">User has set this tracker list to private.</span>
+            <span className="text-xs italic">{t("polaris.lists.privateDesc")}</span>
           </div>
         ) : total > 0 ? (
           <div className="flex flex-col gap-4">
@@ -116,28 +118,28 @@ function RrListCategoryCard({
                 <div
                   className="h-full bg-emerald-500 transition-all"
                   style={{ width: `${completedPct}%` }}
-                  title={`Completed: ${completedCount}`}
+                  title={`${t("polaris.lists.completed")}: ${completedCount}`}
                 />
               )}
               {activeCount > 0 && (
                 <div
                   className="h-full bg-blue-500 transition-all"
                   style={{ width: `${activePct}%` }}
-                  title={`Active: ${activeCount}`}
+                  title={`${t("polaris.lists.active")}: ${activeCount}`}
                 />
               )}
               {planningCount > 0 && (
                 <div
                   className="h-full bg-purple-500 transition-all"
                   style={{ width: `${planningPct}%` }}
-                  title={`Planning: ${planningCount}`}
+                  title={`${t("polaris.lists.planning")}: ${planningCount}`}
                 />
               )}
               {otherCount > 0 && (
                 <div
                   className="h-full bg-secondary transition-all"
                   style={{ width: `${otherPct}%` }}
-                  title={`On Hold/Dropped: ${otherCount}`}
+                  title={`${t("polaris.lists.other")}: ${otherCount}`}
                 />
               )}
             </div>
@@ -147,21 +149,21 @@ function RrListCategoryCard({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-muted-foreground">
                   <div className="size-1.5 rounded-full bg-emerald-500" />
-                  <span>Completed</span>
+                  <span>{t("polaris.lists.completed")}</span>
                 </div>
                 <span className="font-semibold text-foreground">{completedCount}</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-muted-foreground">
                   <div className="size-1.5 rounded-full bg-blue-500" />
-                  <span>Active</span>
+                  <span>{t("polaris.lists.active")}</span>
                 </div>
                 <span className="font-semibold text-foreground">{activeCount}</span>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5 text-muted-foreground">
                   <div className="size-1.5 rounded-full bg-purple-500" />
-                  <span>Planning</span>
+                  <span>{t("polaris.lists.planning")}</span>
                 </div>
                 <span className="font-semibold text-foreground">{planningCount}</span>
               </div>
@@ -169,7 +171,7 @@ function RrListCategoryCard({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-muted-foreground">
                     <div className="size-1.5 rounded-full bg-secondary" />
-                    <span>Other</span>
+                    <span>{t("polaris.lists.other")}</span>
                   </div>
                   <span className="font-semibold text-foreground">{otherCount}</span>
                 </div>
@@ -178,7 +180,7 @@ function RrListCategoryCard({
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center py-6 text-center text-muted-foreground/60">
-            <span className="text-xs italic">No items tracked yet.</span>
+            <span className="text-xs italic">{t("polaris.lists.noItems")}</span>
           </div>
         )}
         
@@ -189,7 +191,7 @@ function RrListCategoryCard({
               variant="outline"
               className="w-full justify-between items-center text-xs h-8 border border-input hover:text-foreground rounded-lg cursor-pointer"
             >
-              <span>View Tracker List</span>
+              <span>{t("polaris.lists.viewTrackerList")}</span>
               <ExternalLink className="size-3 text-muted-foreground group-hover:text-primary transition-colors" aria-hidden="true" />
             </Button>
           </Link>
@@ -201,12 +203,12 @@ function RrListCategoryCard({
 
 export default function RrListsTab({ name, session }: ListsTabProps): React.ReactNode {
   const categories: ListCategory[] = [
-    { id: "anime", title: "Anime List", icon: Tv, redirect: `/aquila/user/${name}/anime` },
-    { id: "manga", title: "Manga List", icon: BookOpen, redirect: `/aquila/user/${name}/manga` },
-    { id: "tv", title: "TV Shows", icon: Tv, redirect: `/aquila/user/${name}/tv` },
-    { id: "movie", title: "Movies", icon: Film, redirect: `/aquila/user/${name}/movies` },
-    { id: "game", title: "Video Games", icon: Gamepad2, redirect: `/aquila/user/${name}/games` },
-    { id: "book", title: "Books", icon: Book, redirect: `/aquila/user/${name}/books` },
+    { id: "anime", titleKey: "animeList", icon: Tv, redirect: `/aquila/user/${name}/anime` },
+    { id: "manga", titleKey: "mangaList", icon: BookOpen, redirect: `/aquila/user/${name}/manga` },
+    { id: "tv", titleKey: "tvShows", icon: Tv, redirect: `/aquila/user/${name}/tv` },
+    { id: "movie", titleKey: "movies", icon: Film, redirect: `/aquila/user/${name}/movies` },
+    { id: "game", titleKey: "videoGames", icon: Gamepad2, redirect: `/aquila/user/${name}/games` },
+    { id: "book", titleKey: "books", icon: Book, redirect: `/aquila/user/${name}/books` },
   ];
 
   return (

@@ -7,10 +7,11 @@ import { useParams, useRouter } from "next/navigation";
 import useSWR from "swr";
 import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
-import { ArrowLeft, User, Film, Tv, Award, HelpCircle, Heart } from "lucide-react";
+import { ArrowLeft, User, Film, Tv, Award, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { fetcher } from "@/lib/fetcher";
+import { useTranslation } from "react-i18next";
 
 interface RoleCharacter {
   id: number;
@@ -61,6 +62,7 @@ const itemVariants = {
 };
 
 export default function ActorPage() {
+  const { t } = useTranslation();
   const params = useParams();
   const router = useRouter();
   const id = params?.id as string;
@@ -114,9 +116,9 @@ export default function ActorPage() {
   };
 
   const displayName = useMemo(() => {
-    if (!actor) return "Actor Details";
-    return actor.name || actor.personName || "Unknown Actor";
-  }, [actor]);
+    if (!actor) return t("aquila.actorDetails", "Actor Details");
+    return actor.name || actor.personName || t("aquila.unknownActor", "Unknown Actor");
+  }, [actor, t]);
 
   if (isLoading) {
     return (
@@ -130,14 +132,14 @@ export default function ActorPage() {
     return (
       <div className="flex flex-col flex-1 min-h-screen bg-background items-center justify-center space-y-4">
         <h2 className="text-xl font-bold text-muted-foreground">
-          Actor not found
+          {t("aquila.actorNotFound", "Actor not found")}
         </h2>
         <Button
           variant="outline"
           onClick={() => router.back()}
           className="rounded-xl"
         >
-          <ArrowLeft className="mr-2 size-4" /> Go Back
+          <ArrowLeft className="mr-2 size-4" /> {t("aquila.goBack", "Go Back")}
         </Button>
       </div>
     );
@@ -173,12 +175,12 @@ export default function ActorPage() {
             {/* Profile Info Cards */}
             <div className="bg-card/30 border border-border/20 backdrop-blur-sm p-4 rounded-2xl space-y-3.5">
               <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground border-b border-border/20 pb-1.5">
-                Actor Info
+                {t("aquila.actorInfo", "Actor Info")}
               </h4>
               {actor.personName && actor.personName !== actor.name && (
                 <div>
                   <span className="text-[10px] font-semibold text-muted-foreground block">
-                    Full Name
+                    {t("aquila.fullName", "Full Name")}
                   </span>
                   <span className="text-sm font-medium text-foreground">
                     {actor.personName}
@@ -188,7 +190,7 @@ export default function ActorPage() {
               {actor.peopleType && (
                 <div>
                   <span className="text-[10px] font-semibold text-muted-foreground block">
-                    Primary Role
+                    {t("aquila.primaryRole", "Primary Role")}
                   </span>
                   <span className="text-sm font-medium text-foreground">
                     {actor.peopleType}
@@ -198,7 +200,7 @@ export default function ActorPage() {
               {actor.anilistStaffId && (
                 <div>
                   <span className="text-[10px] font-semibold text-muted-foreground block">
-                    AniList Staff ID
+                    {t("aquila.anilistStaffId", "AniList Staff ID")}
                   </span>
                   <span className="text-sm font-medium text-primary">
                     #{actor.anilistStaffId}
@@ -208,7 +210,7 @@ export default function ActorPage() {
               {actor.peopleId && (
                 <div>
                   <span className="text-[10px] font-semibold text-muted-foreground block">
-                    TVDB People ID
+                    {t("aquila.tvdbPeopleId", "TVDB People ID")}
                   </span>
                   <span className="text-sm font-medium text-primary">
                     #{actor.peopleId}
@@ -248,7 +250,7 @@ export default function ActorPage() {
             {/* Roles Section */}
             <div className="space-y-6">
               <h3 className="text-lg font-bold text-foreground border-b border-border/20 pb-2">
-                Roles & Appearances
+                {t("aquila.rolesAndAppearances", "Roles & Appearances")}
               </h3>
 
               <motion.div
@@ -260,7 +262,7 @@ export default function ActorPage() {
                 {/* Anime Section */}
                 {actor.animeRoles && actor.animeRoles.length > 0 && (
                   <RolesSection
-                    title="Anime Voiced"
+                    title={t("aquila.animeVoiced", "Anime Voiced")}
                     icon={<Tv className="size-4 text-primary" />}
                     roles={actor.animeRoles}
                     routePrefix="/aquila/anime"
@@ -270,7 +272,7 @@ export default function ActorPage() {
                 {/* Movie Section */}
                 {actor.movieRoles && actor.movieRoles.length > 0 && (
                   <RolesSection
-                    title="Movies Played"
+                    title={t("aquila.moviesPlayed", "Movies Played")}
                     icon={<Film className="size-4 text-primary" />}
                     roles={actor.movieRoles}
                     routePrefix="/aquila/movies"
@@ -280,7 +282,7 @@ export default function ActorPage() {
                 {/* TV Section */}
                 {actor.tvRoles && actor.tvRoles.length > 0 && (
                   <RolesSection
-                    title="TV Roles"
+                    title={t("aquila.tvRoles", "TV Roles")}
                     icon={<Tv className="size-4 text-primary" />}
                     roles={actor.tvRoles}
                     routePrefix="/aquila/tv"
@@ -294,7 +296,7 @@ export default function ActorPage() {
                     <div className="text-center py-12 bg-card/20 border border-border/10 rounded-2xl">
                       <Award className="size-12 text-muted-foreground/60 mx-auto stroke-[1.2] mb-3" />
                       <p className="text-muted-foreground text-sm">
-                        No mapped roles found for this actor.
+                        {t("aquila.noMappedRoles", "No mapped roles found for this actor.")}
                       </p>
                     </div>
                   )}
@@ -315,6 +317,7 @@ interface RolesSectionProps {
 }
 
 function RolesSection({ title, icon, roles, routePrefix }: RolesSectionProps) {
+  const { t } = useTranslation();
   return (
     <motion.div variants={itemVariants} className="space-y-3">
       <div className="flex items-center gap-2 font-bold text-sm text-foreground/90">
@@ -330,7 +333,7 @@ function RolesSection({ title, icon, roles, routePrefix }: RolesSectionProps) {
           const charName =
             [role.character.nameFirst, role.character.nameLast]
               .filter(Boolean)
-              .join(" ") || "Unknown Character";
+              .join(" ") || t("aquila.unknownCharacter", "Unknown Character");
 
           return (
             <div
@@ -385,7 +388,7 @@ function RolesSection({ title, icon, roles, routePrefix }: RolesSectionProps) {
                     {charName}
                   </p>
                   <p className="text-[9px] text-muted-foreground capitalize">
-                    Role: {role.role?.toLowerCase() || "cast"}
+                    {t("aquila.role", "Role: {{role}}", { role: role.role?.toLowerCase() || "cast" })}
                   </p>
                 </div>
                 <div className="relative size-9 rounded-lg overflow-hidden shrink-0 bg-muted border border-border/20">

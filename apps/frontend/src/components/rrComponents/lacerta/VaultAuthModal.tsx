@@ -10,6 +10,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 interface VaultAuthModalProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export default function VaultAuthModal({
   onAuthenticate,
   accessToken,
 }: VaultAuthModalProps): React.JSX.Element | null {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<Mode>("loading");
   const [pin, setPin] = useState<string>("");
   const [firstPin, setFirstPin] = useState<string>("");
@@ -69,7 +71,7 @@ export default function VaultAuthModal({
           headers: { Authorization: `Bearer ${accessToken}` },
         },
       );
-      if (!res.ok) throw new Error("Failed to load vault status.");
+      if (!res.ok) throw new Error(t("lacerta.vaultAuth.statusLoadError", "Failed to load vault status."));
       const data = await res.json();
       if (data.hasPin) {
         setMode("authenticate");
@@ -77,7 +79,7 @@ export default function VaultAuthModal({
         setMode("setup");
       }
     } catch (err: any) {
-      toast.error(err.message || "Failed to contact secure vault service.");
+      toast.error(err.message || t("lacerta.vaultAuth.secureVaultContactError", "Failed to contact secure vault service."));
       onClose();
     }
   };
@@ -94,14 +96,14 @@ export default function VaultAuthModal({
           setFirstPin(nextPin);
           setPin("");
           setMode("confirm");
-          toast.info("Please confirm your security PIN.");
+          toast.info(t("lacerta.vaultAuth.confirmPinToast", "Please confirm your security PIN."));
         } else if (mode === "confirm") {
           // Compare with first entered PIN
           if (nextPin === firstPin) {
             await handleSetupPin(nextPin);
           } else {
             setError(true);
-            toast.error("PINs do not match. Please start setup again.");
+            toast.error(t("lacerta.vaultAuth.pinsDoNotMatch", "PINs do not match. Please start setup again."));
             setPin("");
             setFirstPin("");
             setMode("setup");
@@ -127,14 +129,14 @@ export default function VaultAuthModal({
           body: JSON.stringify({ pin: finalPin }),
         },
       );
-      if (!res.ok) throw new Error("Failed to save PIN.");
+      if (!res.ok) throw new Error(t("lacerta.vaultAuth.savePinFailed", "Failed to save PIN."));
 
-      toast.success("Security PIN configured successfully!");
+      toast.success(t("lacerta.vaultAuth.pinSetupSuccess", "Security PIN configured successfully!"));
       onAuthenticate(finalPin);
       setPin("");
       setFirstPin("");
     } catch (err: any) {
-      toast.error(err.message || "Setup failed.");
+      toast.error(err.message || t("lacerta.vaultAuth.setupFailed", "Setup failed."));
       setPin("");
       setFirstPin("");
       setMode("setup");
@@ -157,20 +159,20 @@ export default function VaultAuthModal({
           body: JSON.stringify({ pin: enteredPin }),
         },
       );
-      if (!res.ok) throw new Error("Verification error.");
+      if (!res.ok) throw new Error(t("lacerta.vaultAuth.verificationError", "Verification error."));
       const data = await res.json();
 
       if (data.success) {
-        toast.success("Secure Vault unlocked!");
+        toast.success(t("lacerta.vaultAuth.vaultUnlocked", "Secure Vault unlocked!"));
         onAuthenticate(enteredPin);
         setPin("");
       } else {
         setError(true);
-        toast.error("Incorrect Vault PIN!");
+        toast.error(t("lacerta.vaultAuth.incorrectPin", "Incorrect Vault PIN!"));
         setPin("");
       }
     } catch (err: any) {
-      toast.error(err.message || "Verification failed.");
+      toast.error(err.message || t("lacerta.vaultAuth.verificationFailedGeneric", "Verification failed."));
       setPin("");
     } finally {
       setIsProcessing(false);
@@ -179,7 +181,7 @@ export default function VaultAuthModal({
 
   const handleResetVault = async () => {
     if (confirmInput.toUpperCase() !== "WIPE") {
-      toast.error("Please type WIPE to confirm.");
+      toast.error(t("lacerta.vaultAuth.typeWipeToConfirm", "Please type WIPE to confirm."));
       return;
     }
 
@@ -192,15 +194,15 @@ export default function VaultAuthModal({
           headers: { Authorization: `Bearer ${accessToken}` },
         },
       );
-      if (!res.ok) throw new Error("Failed to reset vault.");
+      if (!res.ok) throw new Error(t("lacerta.vaultAuth.resetFailed", "Failed to reset vault."));
 
-      toast.success("Vault wiped and PIN deleted successfully.");
+      toast.success(t("lacerta.vaultAuth.vaultWipedSuccess", "Vault wiped and PIN deleted successfully."));
       setConfirmInput("");
       setPin("");
       setFirstPin("");
       setMode("setup");
     } catch (err: any) {
-      toast.error(err.message || "Failed to reset vault.");
+      toast.error(err.message || t("lacerta.vaultAuth.resetFailed", "Failed to reset vault."));
     } finally {
       setIsProcessing(false);
     }
@@ -219,7 +221,7 @@ export default function VaultAuthModal({
             onClick={onClose}
             className="absolute right-4 top-4 text-muted-foreground hover:text-foreground text-sm"
           >
-            Cancel
+            {t("lacerta.vaultAuth.cancel", "Cancel")}
           </button>
         )}
 
@@ -227,7 +229,7 @@ export default function VaultAuthModal({
           <div className="flex flex-col items-center py-12">
             <Loader2 className="h-10 w-10 text-primary animate-spin mb-4" />
             <span className="text-sm font-semibold text-muted-foreground">
-              Connecting to Secure Vault...
+              {t("lacerta.vaultAuth.connecting", "Connecting to Secure Vault...")}
             </span>
           </div>
         )}
@@ -238,11 +240,10 @@ export default function VaultAuthModal({
               <KeyRound className="h-8 w-8" />
             </div>
             <h3 className="text-xl font-bold tracking-tight text-foreground">
-              Set PIN
+              {t("lacerta.vaultAuth.setPinTitle", "Set PIN")}
             </h3>
             <p className="mt-2 text-center text-xs text-muted-foreground max-w-[240px]">
-              Configure a 6-digit security PIN to protect your Secure Vault
-              storage.
+              {t("lacerta.vaultAuth.setPinDesc", "Configure a 6-digit security PIN to protect your Secure Vault storage.")}
             </p>
           </div>
         )}
@@ -253,10 +254,10 @@ export default function VaultAuthModal({
               <KeyRound className="h-8 w-8" />
             </div>
             <h3 className="text-xl font-bold tracking-tight text-foreground">
-              Confirm PIN
+              {t("lacerta.vaultAuth.confirmPinTitle", "Confirm PIN")}
             </h3>
             <p className="mt-2 text-center text-xs text-muted-foreground max-w-[240px]">
-              Please re-enter your 6-digit security PIN to confirm setup.
+              {t("lacerta.vaultAuth.confirmPinDesc", "Please re-enter your 6-digit security PIN to confirm setup.")}
             </p>
           </div>
         )}
@@ -273,11 +274,10 @@ export default function VaultAuthModal({
               )}
             </div>
             <h3 className="text-xl font-bold tracking-tight text-foreground">
-              Secure Vault
+              {t("lacerta.vaultAuth.secureVaultTitle", "Secure Vault")}
             </h3>
             <p className="mt-2 text-center text-xs text-muted-foreground max-w-[240px]">
-              Enter your 6-digit security PIN to decrypt and access vault
-              storage.
+              {t("lacerta.vaultAuth.secureVaultDesc", "Enter your 6-digit security PIN to decrypt and access vault storage.")}
             </p>
           </div>
         )}
@@ -288,19 +288,15 @@ export default function VaultAuthModal({
               <Trash2 className="h-8 w-8 animate-pulse" />
             </div>
             <h3 className="text-xl font-bold tracking-tight text-destructive">
-              Wipe Secure Vault?
+              {t("lacerta.vaultAuth.wipeVaultTitle", "Wipe Secure Vault?")}
             </h3>
             <p className="mt-2 text-xs text-muted-foreground max-w-[280px]">
-              Resetting your PIN will{" "}
-              <strong className="text-destructive">
-                permanently delete all files and folders
-              </strong>{" "}
-              in your Secure Vault. This action cannot be undone.
+              {t("lacerta.vaultAuth.resetWarning", "Resetting your PIN will permanently delete all files and folders in your Secure Vault. This action cannot be undone.")}
             </p>
             <div className="mt-6 w-full flex flex-col gap-3">
               <input
                 type="text"
-                placeholder="Type 'WIPE' to confirm"
+                placeholder={t("lacerta.vaultAuth.typeWipePlaceholder", "Type 'WIPE' to confirm")}
                 value={confirmInput}
                 onChange={(e) => setConfirmInput(e.target.value)}
                 className="w-full bg-muted/5 border border-destructive/30 rounded-lg px-3 py-2 text-center text-sm font-semibold tracking-wider uppercase text-destructive placeholder-muted-foreground/40 focus:outline-none focus:border-destructive transition-all"
@@ -315,7 +311,7 @@ export default function VaultAuthModal({
                 ) : (
                   <Trash2 className="h-4 w-4" />
                 )}
-                Wipe & Reset PIN
+                {t("lacerta.vaultAuth.wipeResetPinBtn", "Wipe & Reset PIN")}
               </button>
               <button
                 onClick={() => {
@@ -325,7 +321,7 @@ export default function VaultAuthModal({
                 className="w-full border border-border bg-transparent hover:bg-muted/10 font-semibold rounded-lg text-sm py-2.5 active:scale-98 transition-all flex items-center justify-center gap-1.5"
               >
                 <ArrowLeft className="h-4 w-4" />
-                Back to Login
+                {t("lacerta.vaultAuth.backToLoginBtn", "Back to Login")}
               </button>
             </div>
           </div>
@@ -363,7 +359,7 @@ export default function VaultAuthModal({
                 onClick={() => setPin("")}
                 className="flex h-14 w-14 items-center justify-center rounded-full text-xs font-medium text-muted-foreground hover:text-foreground mx-auto disabled:opacity-50"
               >
-                Clear
+                {t("lacerta.vaultAuth.clear", "Clear")}
               </button>
               <button
                 disabled={isProcessing}
@@ -377,7 +373,7 @@ export default function VaultAuthModal({
                 onClick={handleBackspace}
                 className="flex h-14 w-14 items-center justify-center rounded-full text-xs font-medium text-muted-foreground hover:text-foreground mx-auto disabled:opacity-50"
               >
-                Delete
+                {t("lacerta.vaultAuth.delete", "Delete")}
               </button>
             </div>
 
@@ -386,7 +382,7 @@ export default function VaultAuthModal({
                 onClick={() => setMode("reset-confirm")}
                 className="mt-6 text-xs text-destructive hover:underline font-semibold"
               >
-                Forgot PIN? Reset Vault
+                {t("lacerta.vaultAuth.forgotPin", "Forgot PIN? Reset Vault")}
               </button>
             )}
           </>

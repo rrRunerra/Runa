@@ -14,6 +14,7 @@ import {
   Loader2,
   Star,
 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { MediaItem } from "@/types/aquila";
@@ -60,6 +61,7 @@ const RrMediaCardComponent = ({
   showScore = true,
   score,
 }: RrMediaCardProps): React.JSX.Element => {
+  const { t } = useTranslation();
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const mediaType = item.type;
 
@@ -180,14 +182,14 @@ const RrMediaCardComponent = ({
                   <span className="truncate whitespace-nowrap">
                     {mediaType === "tv"
                       ? item.meta?.season
-                        ? `S${item.meta.season} E${item.meta.episode}`
-                        : `Ep ${item.progress}${item.episodes ? `/${item.episodes}` : ""}`
+                        ? `${t("aquila.seasonShort")}${item.meta.season} ${t("aquila.episodeShortAbbr")}${item.meta.episode}`
+                        : `${t("aquila.episodeShort")} ${item.progress}${item.episodes ? `/${item.episodes}` : ""}`
                       : `${
                           mediaType === "game"
-                            ? `${item.progress}h`
+                            ? t("aquila.hoursPlayedShort", { hours: item.progress })
                             : mediaType === "book"
-                              ? `Ch ${item.progress}`
-                              : `${mediaType === "manga" ? "Ch" : "Ep"} ${item.progress}`
+                              ? `${t("aquila.chapterShort")} ${item.progress}`
+                              : `${mediaType === "manga" ? t("aquila.chapterShort") : t("aquila.episodeShort")} ${item.progress}`
                         }${item.episodes ? `/${item.episodes}` : ""}`}
                   </span>
                 </span>

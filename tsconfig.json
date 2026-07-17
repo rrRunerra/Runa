@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
     "paths": {
       "@runa/ui": ["packages/ui/src/index.ts"],
       "@runa/connections": ["packages/connections/src/index.ts"],

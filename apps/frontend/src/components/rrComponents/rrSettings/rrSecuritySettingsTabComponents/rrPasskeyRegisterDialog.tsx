@@ -2,6 +2,7 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -27,26 +28,27 @@ export function RrPasskeyRegisterDialog({
   isSubmitting,
   onRegister,
 }: RrPasskeyRegisterDialogProps): React.JSX.Element {
+  const { t } = useTranslation();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-card border border-border shadow-2xl p-6 rounded-2xl">
         <DialogHeader className="pb-2">
           <DialogTitle className="text-md font-bold text-left">
-            Register a Passkey
+            {t("securitySettings.passkeyRegisterTitle")}
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground mt-1 text-left">
-            Assign a nickname for this device passkey to help manage it later.
+            {t("securitySettings.passkeyRegisterDesc")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-4 py-3 text-left">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="passkey-nickname">Passkey Name</Label>
+            <Label htmlFor="passkey-nickname">{t("securitySettings.passkeyNameLabel")}</Label>
             <Input
               id="passkey-nickname"
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
-              placeholder="e.g. MacBook Pro Chrome, My Phone Hello"
+              placeholder={t("securitySettings.passkeyNamePlaceholder")}
               className="h-10 px-3 text-xs"
             />
           </div>
@@ -59,17 +61,18 @@ export function RrPasskeyRegisterDialog({
             className="text-muted-foreground hover:text-foreground rounded-xl text-xs h-9 cursor-pointer"
             disabled={isSubmitting}
           >
-            Cancel
+            {t("cancel")}
           </Button>
           <Button
             onClick={onRegister}
             disabled={!nickname.trim() || isSubmitting}
             className="bg-primary hover:bg-primary/95 text-primary-foreground font-bold rounded-xl px-5 text-xs h-9 cursor-pointer"
           >
-            {isSubmitting ? "Registering..." : "Verify & Register"}
+            {isSubmitting ? t("securitySettings.registering") : t("securitySettings.verifyAndRegister")}
           </Button>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
+

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { CanvasNode } from "../CanvasEditor";
+import { CanvasNode } from "../types";
 import { create, all } from "mathjs";
 import {
   ResponsiveContainer,
@@ -13,6 +13,7 @@ import {
   Tooltip,
 } from "recharts";
 import { Calculator, Plus, Trash2, Clipboard, Settings2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const math = create(all);
 
@@ -26,7 +27,8 @@ export default function RrCanvasGraphingCalcCard({
   node,
   isLocked = false,
   onNodeUpdate,
-}: RrCanvasGraphingCalcCardProps) {
+}: RrCanvasGraphingCalcCardProps): React.JSX.Element {
+  const { t } = useTranslation();
   const equations = node.equations || ["x^2"];
   const variables = node.variables || {};
 
@@ -153,7 +155,7 @@ export default function RrCanvasGraphingCalcCard({
       <div className="flex items-center justify-between border-b border-border/40 pb-2 mb-3 shrink-0">
         <div className="flex items-center gap-1.5 text-emerald-400 font-bold text-xs uppercase tracking-wider">
           <Calculator className="h-4 w-4" />
-          <span>Graphing Calculator</span>
+          <span>{t("lacerta.canvasEditor.graphingCalculator", "Graphing Calculator")}</span>
         </div>
         <button
           onClick={() => setShowConfig(!showConfig)}
@@ -171,11 +173,11 @@ export default function RrCanvasGraphingCalcCard({
             {/* Axis Limits */}
             <div className="flex flex-col gap-2">
               <span className="font-bold text-muted-foreground uppercase tracking-wide">
-                Axes Limits
+                {t("lacerta.canvasEditor.axesLimits", "Axes Limits")}
               </span>
               <div className="grid grid-cols-2 gap-1.5 font-mono">
                 <div>
-                  <label className="text-[8px] text-muted-foreground">Min X</label>
+                  <label className="text-[8px] text-muted-foreground">{t("lacerta.canvasEditor.minX", "Min X")}</label>
                   <input
                     type="number"
                     value={minX}
@@ -185,7 +187,7 @@ export default function RrCanvasGraphingCalcCard({
                   />
                 </div>
                 <div>
-                  <label className="text-[8px] text-muted-foreground">Max X</label>
+                  <label className="text-[8px] text-muted-foreground">{t("lacerta.canvasEditor.maxX", "Max X")}</label>
                   <input
                     type="number"
                     value={maxX}
@@ -195,7 +197,7 @@ export default function RrCanvasGraphingCalcCard({
                   />
                 </div>
                 <div>
-                  <label className="text-[8px] text-muted-foreground">Min Y</label>
+                  <label className="text-[8px] text-muted-foreground">{t("lacerta.canvasEditor.minY", "Min Y")}</label>
                   <input
                     type="number"
                     value={minY}
@@ -205,7 +207,7 @@ export default function RrCanvasGraphingCalcCard({
                   />
                 </div>
                 <div>
-                  <label className="text-[8px] text-muted-foreground">Max Y</label>
+                  <label className="text-[8px] text-muted-foreground">{t("lacerta.canvasEditor.maxY", "Max Y")}</label>
                   <input
                     type="number"
                     value={maxY}
@@ -220,20 +222,20 @@ export default function RrCanvasGraphingCalcCard({
             {/* Custom Variables */}
             <div className="flex flex-col gap-2">
               <span className="font-bold text-muted-foreground uppercase tracking-wide">
-                Graph Variables
+                {t("lacerta.canvasEditor.graphVariables", "Graph Variables")}
               </span>
               {!isLocked && (
                 <div className="flex gap-1">
                   <input
                     type="text"
-                    placeholder="var"
+                    placeholder={t("lacerta.canvasEditor.varPlaceholder", "var")}
                     value={varNameInput}
                     onChange={(e) => setVarNameInput(e.target.value)}
                     className="w-12 bg-background border border-border/50 rounded px-1 py-0.5 focus:outline-none"
                   />
                   <input
                     type="text"
-                    placeholder="val"
+                    placeholder={t("lacerta.canvasEditor.valPlaceholder", "val")}
                     value={varValInput}
                     onChange={(e) => setVarValInput(e.target.value)}
                     className="flex-1 bg-background border border-border/50 rounded px-1 py-0.5 focus:outline-none"
@@ -278,7 +280,7 @@ export default function RrCanvasGraphingCalcCard({
                 type="text"
                 value={inputEq}
                 onChange={(e) => setInputEq(e.target.value)}
-                placeholder="Add equation... e.g. f(x) = 2 * sin(x)"
+                placeholder={t("lacerta.canvasEditor.addEquationPlaceholder", "Add equation... e.g. f(x) = 2 * sin(x)")}
                 className="flex-1 bg-muted/40 border border-border/50 rounded-xl px-3 py-1.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500/50"
                 onKeyDown={(e) => e.key === "Enter" && handleAddEquation()}
               />
@@ -304,7 +306,7 @@ export default function RrCanvasGraphingCalcCard({
                 <span className="truncate max-w-[160px]">{eq}</span>
                 <button
                   onClick={() => handleCopyLaTeX(eq)}
-                  title="Copy LaTeX"
+                  title={t("lacerta.canvasEditor.copyLatex", "Copy LaTeX")}
                   className="text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <Clipboard className="h-2.5 w-2.5" />

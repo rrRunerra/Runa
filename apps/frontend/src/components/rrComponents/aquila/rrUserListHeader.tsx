@@ -2,6 +2,7 @@
 
 import React from "react";
 import Image from "next/image";
+import { useTranslation } from "react-i18next";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { getSafeImageUrl } from "@/lib/inputValidation";
@@ -20,6 +21,8 @@ export function RrUserListHeader({
   userData,
   listTitle,
 }: RrUserListHeaderProps): React.JSX.Element | null {
+  const { t } = useTranslation();
+
   if (!userData) return null;
 
   return (
@@ -29,7 +32,7 @@ export function RrUserListHeader({
         {userData.bannerUrl ? (
           <Image
             src={getSafeImageUrl(userData.bannerUrl)}
-            alt={`${userData.displayName || userData.username}'s banner`}
+            alt={t("aquila.userBannerAlt", { name: userData.displayName || userData.username })}
             fill
             sizes="100vw"
             className="object-cover opacity-90 transition-all duration-700 hover:scale-105"

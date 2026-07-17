@@ -3,6 +3,7 @@
 import React, { useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import RrLapplandImageNotFound from "@/components/rrComponents/rrImages/rrLapplandImageNotFound";
@@ -34,6 +35,7 @@ const itemVariants = {
 };
 
 function RelationItem({ relation }: { relation: RelationEntity }): React.JSX.Element {
+  const { t } = useTranslation();
   let href: string;
   switch (relation.type) {
     case "ANIME":
@@ -59,7 +61,7 @@ function RelationItem({ relation }: { relation: RelationEntity }): React.JSX.Ele
             alt={
               relation.title.english ||
               relation.title.romaji ||
-              "Relation"
+              t("aquila.relation")
             }
             fill
             sizes="48px"
@@ -92,6 +94,7 @@ function RelationItem({ relation }: { relation: RelationEntity }): React.JSX.Ele
 export function RrMediaRelations({
   relations,
 }: RrMediaRelationsProps): React.JSX.Element {
+  const { t } = useTranslation();
   const { animeRelations, mangaRelations, otherRelations } = useMemo(() => {
     const anime: RelationEntity[] = [];
     const manga: RelationEntity[] = [];
@@ -119,7 +122,7 @@ export function RrMediaRelations({
       {animeRelations.length > 0 && (
         <div className="space-y-3">
           <h3 className="text-base font-bold text-foreground">
-            Related Anime
+            {t("aquila.relatedAnime")}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {animeRelations.map((relation, qid) => (
@@ -132,7 +135,7 @@ export function RrMediaRelations({
       {mangaRelations.length > 0 && (
         <div className="space-y-3">
           <h3 className="text-base font-bold text-foreground">
-            Related Manga
+            {t("aquila.relatedManga")}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {mangaRelations.map((relation, qid) => (
@@ -145,7 +148,7 @@ export function RrMediaRelations({
       {otherRelations.length > 0 && (
         <div className="space-y-3">
           <h3 className="text-base font-bold text-foreground">
-            Other Relations
+            {t("aquila.otherRelations")}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {otherRelations.map((relation, qid) => (

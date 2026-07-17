@@ -4,7 +4,7 @@ import React from "react";
 import Image from "next/image";
 import { ImageIcon, Loader2 } from "lucide-react";
 
-import { CanvasNode } from "../CanvasEditor";
+import { CanvasNode } from "../types";
 import { SVG_COMPONENTS } from "../rrImageRegistry";
 
 // ---------------------------------------------------------------------------

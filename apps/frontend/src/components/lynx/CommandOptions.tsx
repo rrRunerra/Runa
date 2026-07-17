@@ -16,6 +16,7 @@ import {
   CollapsibleTrigger,
 } from "../ui/collapsible";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface CommandOption {
   name: string;
@@ -106,6 +107,7 @@ export function CommandOptions({
   options: CommandOption[];
   level?: number;
 }) {
+  const { t } = useTranslation();
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   const toggle = (index: number) => {
@@ -154,7 +156,7 @@ export function CommandOptions({
                         variant="secondary"
                         className="text-[10px] bg-red-500/10 text-red-400 border border-red-500/20 h-5"
                       >
-                        Required
+                        {t("lynx.required")}
                       </Badge>
                     )}
                   </div>
@@ -181,32 +183,32 @@ export function CommandOptions({
                   {/* General Config */}
                   <div className="space-y-2">
                     <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">
-                      Configuration
+                      {t("lynx.configuration")}
                     </h4>
 
                     {/* Type & Required Explicitly */}
                     <div className="flex items-center justify-between py-1 border-b border-zinc-800/50">
-                      <span className="text-zinc-400">Type</span>
+                      <span className="text-zinc-400">{t("lynx.type")}</span>
                       <span className="text-zinc-200 font-mono text-xs">
                         {typeName}
                       </span>
                     </div>
 
                     <div className="flex items-center justify-between py-1 border-b border-zinc-800/50">
-                      <span className="text-zinc-400">Required</span>
+                      <span className="text-zinc-400">{t("lynx.required")}</span>
                       <span
                         className={cn(
                           "text-xs font-medium",
                           opt.required ? "text-red-400" : "text-zinc-500",
                         )}
                       >
-                        {opt.required ? "Yes" : "No"}
+                        {opt.required ? t("lynx.yes") : t("lynx.no")}
                       </span>
                     </div>
 
                     {opt.autocomplete !== undefined && (
                       <div className="flex items-center justify-between py-1 border-b border-zinc-800/50">
-                        <span className="text-zinc-400">Autocomplete</span>
+                        <span className="text-zinc-400">{t("lynx.autocomplete")}</span>
                         {opt.autocomplete ? (
                           <Check className="w-4 h-4 text-emerald-500" />
                         ) : (
@@ -218,9 +220,9 @@ export function CommandOptions({
                     {(opt.minLength !== undefined ||
                       opt.maxLength !== undefined) && (
                       <div className="flex items-center justify-between py-1 border-b border-zinc-800/50">
-                        <span className="text-zinc-400">Length</span>
+                        <span className="text-zinc-400">{t("lynx.length")}</span>
                         <span className="text-zinc-200 font-mono text-xs">
-                          {opt.minLength ?? 0} - {opt.maxLength ?? "Max"}
+                          {opt.minLength ?? 0} - {opt.maxLength ?? t("lynx.max")}
                         </span>
                       </div>
                     )}
@@ -228,9 +230,9 @@ export function CommandOptions({
                     {(opt.minValue !== undefined ||
                       opt.maxValue !== undefined) && (
                       <div className="flex items-center justify-between py-1 border-b border-zinc-800/50">
-                        <span className="text-zinc-400">Value Range</span>
+                        <span className="text-zinc-400">{t("lynx.valueRange")}</span>
                         <span className="text-zinc-200 font-mono text-xs">
-                          {opt.minValue ?? "Min"} - {opt.maxValue ?? "Max"}
+                          {opt.minValue ?? t("lynx.min")} - {opt.maxValue ?? t("lynx.max")}
                         </span>
                       </div>
                     )}
@@ -242,7 +244,7 @@ export function CommandOptions({
                       opt.minValue === undefined &&
                       opt.maxValue === undefined && (
                         <div className="text-zinc-600 italic text-xs">
-                          No extra configuration
+                          {t("lynx.noExtraConfig")}
                         </div>
                       )}
                   </div>
@@ -250,13 +252,13 @@ export function CommandOptions({
                   {/* Channel Types & Choices */}
                   <div className="space-y-2">
                     <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">
-                      Specifics
+                      {t("lynx.specifics")}
                     </h4>
 
                     {opt.channelTypes && opt.channelTypes.length > 0 && (
                       <div className="space-y-1">
                         <span className="text-zinc-400 block text-xs">
-                          Channel Types
+                          {t("lynx.channelTypes")}
                         </span>
                         <div className="flex flex-wrap gap-1">
                           {opt.channelTypes.map((t) => (
@@ -275,7 +277,7 @@ export function CommandOptions({
                     {opt.choices && opt.choices.length > 0 && (
                       <div className="space-y-1">
                         <span className="text-zinc-400 block text-xs">
-                          Choices
+                          {t("lynx.choices")}
                         </span>
                         <div className="flex flex-wrap gap-1">
                           {opt.choices.map((c, idx) => (
@@ -294,7 +296,7 @@ export function CommandOptions({
                     {(!opt.channelTypes || opt.channelTypes.length === 0) &&
                       (!opt.choices || opt.choices.length === 0) && (
                         <div className="text-zinc-600 italic text-xs">
-                          No specific settings
+                          {t("lynx.noSpecificSettings")}
                         </div>
                       )}
                   </div>
@@ -306,7 +308,7 @@ export function CommandOptions({
                     <div className="flex items-center gap-2 mb-3">
                       <Globe className="w-4 h-4 text-zinc-500" />
                       <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider">
-                        Localizations
+                        {t("lynx.localizations")}
                       </h4>
                     </div>
 
@@ -315,7 +317,7 @@ export function CommandOptions({
                         Object.keys(opt.nameLocalizations).length > 0 && (
                           <div className="space-y-2">
                             <span className="text-zinc-400 text-xs font-medium">
-                              Name Override
+                              {t("lynx.nameOverride")}
                             </span>
                             <div className="grid gap-1">
                               {Object.entries(opt.nameLocalizations).map(
@@ -330,7 +332,7 @@ export function CommandOptions({
                                     <span className="text-zinc-300 font-mono">
                                       {val || (
                                         <span className="text-zinc-600 italic">
-                                          Empty
+                                          {t("lynx.empty")}
                                         </span>
                                       )}
                                     </span>
@@ -346,7 +348,7 @@ export function CommandOptions({
                           0 && (
                           <div className="space-y-2">
                             <span className="text-zinc-400 text-xs font-medium">
-                              Description Override
+                              {t("lynx.descriptionOverride")}
                             </span>
                             <div className="grid gap-1">
                               {Object.entries(opt.descriptionLocalizations).map(
@@ -364,7 +366,7 @@ export function CommandOptions({
                                     >
                                       {val || (
                                         <span className="text-zinc-600 italic">
-                                          Empty
+                                          {t("lynx.empty")}
                                         </span>
                                       )}
                                     </span>
@@ -382,7 +384,7 @@ export function CommandOptions({
                 {opt.options && opt.options.length > 0 && (
                   <div className="mt-4 pt-4 border-t border-zinc-800/50">
                     <h4 className="text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-2">
-                      Sub-Options
+                      {t("lynx.subOptions")}
                     </h4>
                     <CommandOptions options={opt.options} level={level + 1} />
                   </div>

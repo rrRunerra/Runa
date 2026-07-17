@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/card";
 import { ImageCropperDialog } from "@/components/ui/image-cropper-dialog";
 import { getSafeImageUrl } from "@/lib/inputValidation";
+import { useTranslation } from "react-i18next";
 
 // Sub-components
 import { RrProfileBannerAvatar } from "./rrAccountSettingsTabComponents/rrProfileBannerAvatar";
@@ -41,6 +42,7 @@ export const RrAccountSettingsTab = ({
   onOpenChange,
 }: RrAccountSettingsTabProps): React.JSX.Element => {
   const { data: session, update } = useSession();
+  const { t } = useTranslation();
   const cardBgInputRef = useRef<HTMLInputElement>(null);
 
   // Form states
@@ -104,7 +106,7 @@ export const RrAccountSettingsTab = ({
   const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   const apiMutate = async (url: string, method: string = "POST", body?: any) => {
-    if (!session?.accessToken) throw new Error("No access token available");
+    if (!session?.accessToken) throw new Error(t("account.noAccessToken"));
     const headers: HeadersInit = {
       Authorization: `Bearer ${session.accessToken}`,
     };
@@ -146,12 +148,12 @@ export const RrAccountSettingsTab = ({
 
   const handleSave = async (): Promise<void> => {
     if (!session?.accessToken) {
-      toast.error("You must be logged in to update your profile.");
+      toast.error(t("account.mustBeLoggedIn"));
       return;
     }
 
     if (email && !EMAIL_REGEX.test(email)) {
-      setEmailError("Please enter a valid email address.");
+      setEmailError(t("account.invalidEmail"));
       return;
     }
 
@@ -242,11 +244,11 @@ export const RrAccountSettingsTab = ({
         );
       }
 
-      toast.success("Profile updated successfully!");
+      toast.success(t("account.profileUpdated"));
       setIsConfirmOpen(false);
       onOpenChange(false);
     } catch (err: any) {
-      toast.error(err.message || "Failed to update profile.");
+      toast.error(err.message || t("account.failedUpdateProfile"));
     } finally {
       setIsSubmitting(false);
     }
@@ -271,10 +273,9 @@ export const RrAccountSettingsTab = ({
       {/* Custom Sidebar Card Background Section */}
       <Card className="pr-2 pb-2">
         <CardHeader>
-          <CardTitle>Sidebar User Card Background</CardTitle>
+          <CardTitle>{t("account.sidebarCardBg")}</CardTitle>
           <CardDescription>
-            Upload a custom image to style the bottom user card in your sidebar
-            (recommended: 480x96px).
+            {t("account.sidebarCardBgDesc")}
           </CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -287,7 +288,7 @@ export const RrAccountSettingsTab = ({
                 className="h-8 rounded-lg cursor-pointer"
               >
                 <Camera className="size-3.5 mr-1" />
-                Choose Background
+                {t("account.chooseBackground")}
               </Button>
               {sidebarCardBackgroundUrl && (
                 <>
@@ -303,7 +304,7 @@ export const RrAccountSettingsTab = ({
                     className="h-8 rounded-lg cursor-pointer"
                   >
                     <Crop className="size-3.5 mr-1" />
-                    Fit
+                    {t("account.fit")}
                   </Button>
                   <Button
                     type="button"
@@ -315,7 +316,7 @@ export const RrAccountSettingsTab = ({
                     className="h-8 rounded-lg border-destructive/20 text-destructive hover:bg-destructive/10 hover:text-destructive cursor-pointer"
                   >
                     <Trash className="size-3.5 mr-1" />
-                    Remove
+                    {t("account.remove")}
                   </Button>
                 </>
               )}
@@ -339,17 +340,17 @@ export const RrAccountSettingsTab = ({
       <div className="p-1">
         <Card className="max-w-md">
           <CardHeader>
-            <CardTitle>Profile Information</CardTitle>
-            <CardDescription>Your public-facing details.</CardDescription>
+            <CardTitle>{t("account.profileInformation")}</CardTitle>
+            <CardDescription>{t("account.publicDetails")}</CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <div className="flex flex-col gap-1.5 text-left">
-              <Label htmlFor="display-name">Display Name</Label>
+              <Label htmlFor="display-name">{t("account.displayName")}</Label>
               <Input
                 id="display-name"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Enter display name"
+                placeholder={t("account.enterDisplayName")}
                 className="h-9 px-3"
               />
             </div>
@@ -359,7 +360,7 @@ export const RrAccountSettingsTab = ({
                 {emailError ? (
                   <span className="text-destructive">{emailError}</span>
                 ) : (
-                  "Email Address"
+                  t("account.emailAddress")
                 )}
               </Label>
               <Input
@@ -370,7 +371,7 @@ export const RrAccountSettingsTab = ({
                   setEmail(e.target.value);
                   if (emailError) setEmailError("");
                 }}
-                placeholder="Enter email address"
+                placeholder={t("account.enterEmailAddress")}
                 className={cn(
                   "h-9 px-3",
                   emailError &&
@@ -390,14 +391,14 @@ export const RrAccountSettingsTab = ({
           className="text-xs sm:text-sm text-muted-foreground hover:text-foreground rounded-xl h-9 cursor-pointer"
           disabled={isSubmitting}
         >
-          Cancel
+          {t("cancel")}
         </Button>
         <Button
           onClick={handleSave}
           disabled={isSubmitting}
           className="bg-primary hover:bg-primary/95 text-primary-foreground font-semibold rounded-xl px-5 shadow-lg text-xs sm:text-sm h-9 cursor-pointer"
         >
-          {isSubmitting ? "Saving..." : "Save Changes"}
+          {isSubmitting ? t("saving") : t("saveChanges")}
         </Button>
       </div>
 
@@ -406,17 +407,16 @@ export const RrAccountSettingsTab = ({
         <DialogContent className="max-w-md bg-card border border-border shadow-2xl p-6 rounded-2xl">
           <DialogHeader className="pb-2">
             <DialogTitle className="text-md font-bold text-left">
-              Confirm Account Changes
+              {t("account.confirmChanges")}
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground mt-1 text-left">
-              Please enter your current password to authorize changes to your
-              email.
+              {t("account.confirmChangesDesc")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex flex-col gap-4 py-3 text-left">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="confirm-current-password">Current Password</Label>
+              <Label htmlFor="confirm-current-password">{t("account.currentPassword")}</Label>
               <Input
                 id="confirm-current-password"
                 type="password"
@@ -446,14 +446,14 @@ export const RrAccountSettingsTab = ({
               className="text-muted-foreground hover:text-foreground rounded-lg text-sm"
               disabled={isSubmitting}
             >
-              Cancel
+              {t("cancel")}
             </Button>
             <Button
               onClick={() => executeSave(confirmPasswordInput)}
               disabled={!confirmPasswordInput || isSubmitting}
               className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-lg px-5 shadow-sm text-sm"
             >
-              {isSubmitting ? "Verifying..." : "Confirm"}
+              {isSubmitting ? t("account.verifying") : t("account.confirm")}
             </Button>
           </div>
         </DialogContent>
@@ -465,8 +465,8 @@ export const RrAccountSettingsTab = ({
         onOpenChange={setIsCropperOpen}
         imageSrc={cropImageSrc || ""}
         aspectRatio={5}
-        title="Edit Background"
-        description="Drag and zoom to fit your user card background."
+        title={t("account.editBackground")}
+        description={t("account.cropBackgroundDesc")}
         onCrop={handleCropComplete}
       />
 

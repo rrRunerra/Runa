@@ -34,7 +34,8 @@ import React from "react";
 function randomNormal(mean = 0, stdDev = 1): number {
   const u1 = Math.random();
   const u2 = Math.random();
-  const randStdNormal = Math.sqrt(-2.0 * Math.log(u1)) * Math.sin(2.0 * Math.PI * u2);
+  const randStdNormal =
+    Math.sqrt(-2.0 * Math.log(u1)) * Math.sin(2.0 * Math.PI * u2);
   return mean + stdDev * randStdNormal;
 }
 
@@ -74,7 +75,10 @@ interface StarMapProps {
   effects?: React.ReactNode;
   onMapClick?: (ra: number, dec: number) => void;
   onSelectConstellation?: (constellation: Constellation | null) => void;
-  onConstellationClick?: (constellation: Constellation, event: React.MouseEvent) => void;
+  onConstellationClick?: (
+    constellation: Constellation,
+    event: React.MouseEvent,
+  ) => void;
   customControls?: React.ReactNode;
   defaultZoom?: number;
   activeTransfers?: ActiveTransfer[];
@@ -180,14 +184,17 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
 
     useEffect(() => {
       const handleNavigateEvent = (e: Event) => {
-        const customEvent = e as CustomEvent<{ constellationName?: string; constellationId?: string }>;
+        const customEvent = e as CustomEvent<{
+          constellationName?: string;
+          constellationId?: string;
+        }>;
         const name = customEvent.detail?.constellationName;
         const id = customEvent.detail?.constellationId;
 
         const matched = constellations.find(
           (c) =>
             (name && c.name.toLowerCase() === name.toLowerCase()) ||
-            (id && c.id.toLowerCase() === id.toLowerCase())
+            (id && c.id.toLowerCase() === id.toLowerCase()),
         );
         if (matched) {
           navigateToConstellation(matched.name);
@@ -195,7 +202,10 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
       };
       window.addEventListener("runa-star-map-navigate", handleNavigateEvent);
       return () => {
-        window.removeEventListener("runa-star-map-navigate", handleNavigateEvent);
+        window.removeEventListener(
+          "runa-star-map-navigate",
+          handleNavigateEvent,
+        );
       };
     }, [navigateToConstellation, constellations]);
 
@@ -212,7 +222,15 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
     } | null>(null);
 
     // Generate random background stars with Spooklementary-style organic Gaussian clustering
-    const backgroundStars = useRef<Array<{ ra: number; dec: number; size: number; opacity: number; type: string }>>([]);
+    const backgroundStars = useRef<
+      Array<{
+        ra: number;
+        dec: number;
+        size: number;
+        opacity: number;
+        type: string;
+      }>
+    >([]);
     if (backgroundStars.current.length === 0) {
       const numClusters = 40;
       const clusters = Array.from({ length: numClusters }, () => ({
@@ -242,9 +260,10 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
         }
 
         // Spooklementary style: tiny, varying sizes, mostly circles
-        const size = Math.random() > 0.95
-          ? Math.random() * 1.2 + 0.8  // Few slightly larger stars
-          : Math.random() * 0.6 + 0.2; // Mostly very tiny stars
+        const size =
+          Math.random() > 0.95
+            ? Math.random() * 1.2 + 0.8 // Few slightly larger stars
+            : Math.random() * 0.6 + 0.2; // Mostly very tiny stars
 
         const opacity = Math.random() * 0.65 + 0.05;
 
@@ -305,8 +324,12 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
     const selectedConstellationRef = useRef<Constellation | null>(null);
 
     // Keep the hover/selection refs in sync with state
-    useEffect(() => { hoveredConstellationRef.current = hoveredConstellation; }, [hoveredConstellation]);
-    useEffect(() => { selectedConstellationRef.current = selectedConstellation; }, [selectedConstellation]);
+    useEffect(() => {
+      hoveredConstellationRef.current = hoveredConstellation;
+    }, [hoveredConstellation]);
+    useEffect(() => {
+      selectedConstellationRef.current = selectedConstellation;
+    }, [selectedConstellation]);
 
     // Animation Loop
     useEffect(() => {
@@ -323,12 +346,15 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
               const key = `${t.batchId}-${idx}`;
               const targetProgress = f.progress;
               const currentProgress = animatedProgressesRef.current[key] ?? 0;
-              
+
               if (currentProgress < targetProgress) {
                 const diff = targetProgress - currentProgress;
                 // Move faster when far, but slow down when near, using frame-delta timing
-                const step = Math.max(0.1, diff * 0.15) * (delta / 16.6); 
-                animatedProgressesRef.current[key] = Math.min(targetProgress, currentProgress + step);
+                const step = Math.max(0.1, diff * 0.15) * (delta / 16.6);
+                animatedProgressesRef.current[key] = Math.min(
+                  targetProgress,
+                  currentProgress + step,
+                );
               } else if (currentProgress > targetProgress) {
                 // Snap if progress resets or decreases
                 animatedProgressesRef.current[key] = targetProgress;
@@ -347,24 +373,31 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
           const current = intensitiesRef.current[c.name] || 0;
           const isHovered = hoveredConstellationRef.current?.name === c.name;
           const isSelected = selectedConstellationRef.current?.name === c.name;
-          
+
           // Check if this node is involved in any active transfers
-          const transferringForThisNode = activeTransfers?.filter((t) =>
-            (t.direction === "send" && t.constellationId === c.id) ||
-            (t.direction === "receive" && c.id === "self")
+          const transferringForThisNode = activeTransfers?.filter(
+            (t) =>
+              (t.direction === "send" && t.constellationId === c.id) ||
+              (t.direction === "receive" && c.id === "self"),
           );
-          const isTransferringThis = transferringForThisNode && transferringForThisNode.length > 0;
-          
+          const isTransferringThis =
+            transferringForThisNode && transferringForThisNode.length > 0;
+
           // Get average progress for the target intensity
           let avgProgress = 0;
           if (transferringForThisNode && transferringForThisNode.length > 0) {
             const total = transferringForThisNode.reduce((sum, t) => {
               const fileSum = t.files.reduce((fs, f) => fs + f.progress, 0);
-              return sum + (fileSum / t.files.length);
+              return sum + fileSum / t.files.length;
             }, 0);
             avgProgress = total / transferringForThisNode.length;
           }
-          const target = isHovered || isSelected ? 1 : (isTransferringThis ? (avgProgress / 100) : 0);
+          const target =
+            isHovered || isSelected
+              ? 1
+              : isTransferringThis
+                ? avgProgress / 100
+                : 0;
 
           if (current !== target) {
             if (target > current) {
@@ -538,14 +571,21 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
             if (hoverPointRef.current) {
               const d1 = distance(p1, hoverPointRef.current);
               const d2 = distance(p2, hoverPointRef.current);
-              if (d2 < d1) { startPoint = p2; targetPoint = p1; }
+              if (d2 < d1) {
+                startPoint = p2;
+                targetPoint = p1;
+              }
             }
 
             // Animated fill endpoint
             const currentLineIntensity = isHovered ? lineIntensity : 1;
             const endPoint = {
-              x: startPoint.x + (targetPoint.x - startPoint.x) * currentLineIntensity,
-              y: startPoint.y + (targetPoint.y - startPoint.y) * currentLineIntensity,
+              x:
+                startPoint.x +
+                (targetPoint.x - startPoint.x) * currentLineIntensity,
+              y:
+                startPoint.y +
+                (targetPoint.y - startPoint.y) * currentLineIntensity,
             };
 
             // A. Base/faint line — always visible at 0.45; dims to 0.2 when being hovered
@@ -565,7 +605,8 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
               ctx.save();
 
               ctx.shadowBlur = 15 * lineIntensity * zoom;
-              ctx.shadowColor = constellation.connectionColor || "rgba(255, 255, 255, 0.4)";
+              ctx.shadowColor =
+                constellation.connectionColor || "rgba(255, 255, 255, 0.4)";
               ctx.globalAlpha = lineIntensity * 0.25;
               ctx.strokeStyle = constellation.connectionColor || "#ffffff";
               ctx.lineWidth = (2 + 4 * lineIntensity) * zoom;
@@ -590,10 +631,13 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
         });
 
         // Draw progress ring if there is an active transfer for this constellation
-        const nodeTransfers = activeTransfers?.filter((t) =>
-          (t.direction === "send" && t.constellationId === constellation.id) ||
-          (t.direction === "receive" && constellation.id === "self")
-        ) || [];
+        const nodeTransfers =
+          activeTransfers?.filter(
+            (t) =>
+              (t.direction === "send" &&
+                t.constellationId === constellation.id) ||
+              (t.direction === "receive" && constellation.id === "self"),
+          ) || [];
 
         if (nodeTransfers.length > 0) {
           let sumRa = 0;
@@ -604,13 +648,13 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
           });
           const avgRa = sumRa / constellation.stars.length;
           const avgDec = sumDec / constellation.stars.length;
-          
+
           const centerPos = raDecToScreen(
             avgRa,
             avgDec,
             offset.x,
             offset.y,
-            currentScale
+            currentScale,
           );
 
           // 1. Dashed track
@@ -626,10 +670,12 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
 
           // 2. Active arc (average of all active transfers on this node)
           const totalProgress = nodeTransfers.reduce(
-            (acc, t) => acc + t.files.reduce((sum, f) => sum + f.progress, 0) / t.files.length,
-            0
+            (acc, t) =>
+              acc +
+              t.files.reduce((sum, f) => sum + f.progress, 0) / t.files.length,
+            0,
           );
-          const progressPct = (totalProgress / nodeTransfers.length) / 100;
+          const progressPct = totalProgress / nodeTransfers.length / 100;
           ctx.globalAlpha = 0.85;
           ctx.beginPath();
           ctx.arc(
@@ -637,7 +683,7 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
             centerPos.y,
             50 * zoom,
             -Math.PI / 2,
-            -Math.PI / 2 + 2 * Math.PI * progressPct
+            -Math.PI / 2 + 2 * Math.PI * progressPct,
           );
           ctx.strokeStyle = constellation.starColor || "#10b981";
           ctx.lineWidth = 3.5 * zoom;
@@ -662,10 +708,10 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
           const peerId = tTransfer.constellationId;
 
           const senderConst = constellations.find(
-            (c) => c.id === (isSending ? "self" : peerId)
+            (c) => c.id === (isSending ? "self" : peerId),
           );
           const receiverConst = constellations.find(
-            (c) => c.id === (isSending ? peerId : "self")
+            (c) => c.id === (isSending ? peerId : "self"),
           );
 
           if (senderConst && receiverConst) {
@@ -684,7 +730,7 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
                 sumDec / c.stars.length,
                 offset.x,
                 offset.y,
-                currentScale
+                currentScale,
               );
             };
 
@@ -694,17 +740,19 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
             // Draw a Bezier curve and meteor comet for EACH file in this transfer!
             tTransfer.files.forEach((file, fileIndex) => {
               const channelKey = `${tTransfer.batchId}-${fileIndex}`;
-              
+
               // 1. Compute a UNIQUE Bezier curve for each file index!
               // We can offset the control point based on fileIndex so they form unique curved paths
               const midX = (P_sender.x + P_receiver.x) / 2;
               const midY = (P_sender.y + P_receiver.y) / 2;
               const dx = P_receiver.x - P_sender.x;
               const dy = P_receiver.y - P_sender.y;
-              
+
               // We fan out the curves: fileIndex 0, 1, 2, ...
               // offsetFactor goes: 0.15, -0.15, 0.3, -0.3, 0.45, -0.45...
-              const offsetFactor = (fileIndex % 2 === 0 ? 1 : -1) * (0.12 + Math.floor(fileIndex / 2) * 0.08);
+              const offsetFactor =
+                (fileIndex % 2 === 0 ? 1 : -1) *
+                (0.12 + Math.floor(fileIndex / 2) * 0.08);
               const nx = -dy * offsetFactor;
               const ny = dx * offsetFactor;
               const P_control = { x: midX + nx, y: midY + ny };
@@ -713,11 +761,17 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
               const prevGlobalAlpha = ctx.globalAlpha;
               ctx.globalAlpha = 0.08;
               ctx.lineWidth = 1.0 * zoom;
-              ctx.strokeStyle = receiverConst.connectionColor || "rgba(255, 255, 255, 0.4)";
+              ctx.strokeStyle =
+                receiverConst.connectionColor || "rgba(255, 255, 255, 0.4)";
               ctx.setLineDash([3, 6]);
               ctx.beginPath();
               ctx.moveTo(P_sender.x, P_sender.y);
-              ctx.quadraticCurveTo(P_control.x, P_control.y, P_receiver.x, P_receiver.y);
+              ctx.quadraticCurveTo(
+                P_control.x,
+                P_control.y,
+                P_receiver.x,
+                P_receiver.y,
+              );
               ctx.stroke();
               ctx.setLineDash([]);
               ctx.globalAlpha = prevGlobalAlpha;
@@ -728,8 +782,14 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
 
               if (tVal > 0 && tVal < 1) {
                 // Compute head position (step 0 = head)
-                const headX = (1 - tVal) * (1 - tVal) * P_sender.x + 2 * (1 - tVal) * tVal * P_control.x + tVal * tVal * P_receiver.x;
-                const headY = (1 - tVal) * (1 - tVal) * P_sender.y + 2 * (1 - tVal) * tVal * P_control.y + tVal * tVal * P_receiver.y;
+                const headX =
+                  (1 - tVal) * (1 - tVal) * P_sender.x +
+                  2 * (1 - tVal) * tVal * P_control.x +
+                  tVal * tVal * P_receiver.x;
+                const headY =
+                  (1 - tVal) * (1 - tVal) * P_sender.y +
+                  2 * (1 - tVal) * tVal * P_control.y +
+                  tVal * tVal * P_receiver.y;
 
                 // Record position so parent can render a following card
                 meteorPositionsRef.current.push({
@@ -747,13 +807,19 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
                   const factor = step / trailLength; // 0 at head, 1 at tail end
                   // Sample points behind the current tVal
                   const trailT = Math.max(0, tVal - step * 0.007);
-                  
-                  const ttx = (1 - trailT) * (1 - trailT) * P_sender.x + 2 * (1 - trailT) * trailT * P_control.x + trailT * trailT * P_receiver.x;
-                  const tty = (1 - trailT) * (1 - trailT) * P_sender.y + 2 * (1 - trailT) * trailT * P_control.y + trailT * trailT * P_receiver.y;
-                  
-                  const trailSize = Math.max(0.5, (10 * (1 - factor)) * zoom);
+
+                  const ttx =
+                    (1 - trailT) * (1 - trailT) * P_sender.x +
+                    2 * (1 - trailT) * trailT * P_control.x +
+                    trailT * trailT * P_receiver.x;
+                  const tty =
+                    (1 - trailT) * (1 - trailT) * P_sender.y +
+                    2 * (1 - trailT) * trailT * P_control.y +
+                    trailT * trailT * P_receiver.y;
+
+                  const trailSize = Math.max(0.5, 10 * (1 - factor) * zoom);
                   const trailOpacity = 0.85 * Math.pow(1 - factor, 1.6);
-                  
+
                   // Meteor color: white core at head, fading to cyan/blue or matching constellation hue
                   if (step === 0) {
                     ctx.fillStyle = "#ffffff";
@@ -765,7 +831,7 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
                   } else {
                     ctx.fillStyle = receiverConst.starColor || "#00f0ff";
                   }
-                  
+
                   ctx.globalAlpha = trailOpacity;
                   ctx.beginPath();
                   ctx.arc(ttx, tty, trailSize * 0.5, 0, Math.PI * 2);
@@ -773,11 +839,13 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
                 }
               } else if (tVal === 1) {
                 // Completed star orbiting the receiver
-                const angle = (fileIndex * 2 * Math.PI) / tTransfer.files.length + (tick / 70);
+                const angle =
+                  (fileIndex * 2 * Math.PI) / tTransfer.files.length +
+                  tick / 70;
                 const radius = 35 * zoom;
                 const rx = P_receiver.x + radius * Math.cos(angle);
                 const ry = P_receiver.y + radius * Math.sin(angle);
-                
+
                 ctx.fillStyle = receiverConst.starColor || "#ffffff";
                 ctx.globalAlpha = 0.85;
                 ctx.beginPath();
@@ -785,11 +853,13 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
                 ctx.fill();
               } else {
                 // Pending star orbiting the sender
-                const angle = (fileIndex * 2 * Math.PI) / tTransfer.files.length + (tick / 150);
+                const angle =
+                  (fileIndex * 2 * Math.PI) / tTransfer.files.length +
+                  tick / 150;
                 const radius = 35 * zoom;
                 const sx = P_sender.x + radius * Math.cos(angle);
                 const sy = P_sender.y + radius * Math.sin(angle);
-                
+
                 ctx.fillStyle = senderConst.starColor || "#ffffff";
                 ctx.globalAlpha = 0.35;
                 ctx.beginPath();
@@ -1439,7 +1509,10 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
                     <div className="bg-card/65 backdrop-blur-xl border border-border/40 rounded-xl px-2.5 py-1 shadow-lg flex items-center gap-1.5">
                       <div
                         className="size-1.5 rounded-full animate-ping"
-                        style={{ backgroundColor: constellation.starColor || "var(--primary)" }}
+                        style={{
+                          backgroundColor:
+                            constellation.starColor || "var(--primary)",
+                        }}
                       />
                       <span className="text-[11px] font-bold text-foreground tracking-wide whitespace-nowrap">
                         {constellation.name}
@@ -1510,13 +1583,16 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
                     }}
                   >
                     <div
-                      className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-b-[6px]"
+                      className="w-0 h-0 border-l-4 border-l-transparent border-r-4 border-r-transparent border-b-[6px]"
                       style={{ borderBottomColor: accentColor }}
                     />
                   </div>
 
                   {/* Character representation */}
-                  <span className="text-[11px] font-extrabold uppercase" style={{ color: accentColor }}>
+                  <span
+                    className="text-[11px] font-extrabold uppercase"
+                    style={{ color: accentColor }}
+                  >
                     {constellation.name.slice(0, 1)}
                   </span>
                 </button>

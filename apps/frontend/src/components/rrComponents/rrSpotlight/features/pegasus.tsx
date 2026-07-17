@@ -20,10 +20,10 @@ export default class PegasusSpotlightFeature extends BaseSpotlightFeature {
     if (!context.isEncryptionUnlocked) {
       actions.push({
         id: "pegasus-unlock-warning",
-        label: "Unlock Encryption to search emails",
+        label: context.t("spotlight.unlockEmailsWarning"),
         category: "Actions",
         icon: <ShieldAlert className="size-4 text-warning" />,
-        badge: "Pegasus (Encrypted)",
+        badge: context.t("spotlight.pegasusEncrypted"),
         action: () => {
           context.setShowUnlockDialog(true);
         },

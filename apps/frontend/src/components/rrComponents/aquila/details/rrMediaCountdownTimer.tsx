@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { Calendar } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 
 interface RrMediaCountdownTimerProps {
@@ -22,6 +23,7 @@ export function RrMediaCountdownTimer({
   airingAt,
   episode,
 }: RrMediaCountdownTimerProps): React.JSX.Element {
+  const { t } = useTranslation();
   const [timeLeft, setTimeLeft] = useState<string | null>(null);
 
   useEffect((): (() => void) => {
@@ -31,7 +33,7 @@ export function RrMediaCountdownTimer({
       const now = Date.now();
       const diff = targetTime - now;
       if (diff <= 0) {
-        setTimeLeft("Airing now!");
+        setTimeLeft(t("aquila.airingNow"));
         return;
       }
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -47,7 +49,7 @@ export function RrMediaCountdownTimer({
     updateTimer();
     const interval = setInterval(updateTimer, 1000);
     return (): void => clearInterval(interval);
-  }, [airingAt]);
+  }, [airingAt, t]);
 
   if (!timeLeft) {
     return <></>;
@@ -61,7 +63,7 @@ export function RrMediaCountdownTimer({
       <div className="flex items-center gap-2">
         <Calendar className="size-4" />
         <span className="text-xs font-bold uppercase tracking-wider">
-          Next Episode: {episode}
+          {t("aquila.nextEpisode", { episode })}
         </span>
       </div>
       <span className="text-sm font-mono font-bold">{timeLeft}</span>

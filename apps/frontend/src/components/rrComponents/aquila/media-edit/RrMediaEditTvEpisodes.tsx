@@ -3,6 +3,7 @@
 import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import { useTranslation } from "react-i18next";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronDown, ChevronUp, Check, Info } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -31,6 +32,7 @@ export function RrMediaEditTvEpisodes({
   listStatus,
   hasListEntry,
 }: RrMediaEditTvEpisodesProps): React.JSX.Element {
+  const { t } = useTranslation();
   const canToggle =
     hasListEntry === true && ALLOWED_STATUSES.includes(listStatus ?? "");
   return (
@@ -40,8 +42,8 @@ export function RrMediaEditTvEpisodes({
           <Info className="size-3.5 shrink-0" />
           <span>
             {!hasListEntry
-              ? "Save this show to your list first to track episodes."
-              : "Set status to \"Watching\" or \"Completed\" to mark episodes as watched."}
+              ? t("aquila.saveThisShowToTrack")
+              : t("aquila.setStatusToTrack")}
           </span>
         </div>
       )}
@@ -89,7 +91,7 @@ export function RrMediaEditTvEpisodes({
                     className="font-bold text-xs sm:text-sm text-foreground cursor-pointer select-none"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    {season.name || `Season ${season.number}`}
+                    {season.name || t("aquila.seasonName", { number: season.number })}
                   </Label>
                 </div>
                 <div className="flex items-center gap-2">
@@ -147,7 +149,7 @@ export function RrMediaEditTvEpisodes({
                             )}
                           >
                             <span className="truncate pr-1">
-                              {ep.number}. {ep.name || `Episode ${ep.number}`}
+                              {ep.number}. {ep.name || t("aquila.episodeName", { number: ep.number })}
                             </span>
                             {isEpWatched && (
                               <Check className="size-3.5 shrink-0" />
@@ -164,7 +166,7 @@ export function RrMediaEditTvEpisodes({
         })
       ) : (
         <div className="text-center py-8 text-xs text-muted-foreground bg-muted/10 border border-dashed border-border rounded-xl">
-          No seasons/episodes details available for this show.
+          {t("aquila.noSeasonsAvailable")}
         </div>
       )}
     </div>

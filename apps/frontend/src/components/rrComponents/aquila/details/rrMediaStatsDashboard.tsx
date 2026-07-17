@@ -2,6 +2,7 @@
 
 import React, { useMemo } from "react";
 import { Star, Heart, Users, BarChart3, Award } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 import {
   BarChart,
@@ -52,6 +53,28 @@ export function RrMediaStatsDashboard({
   localStatusDistribution = {},
   localScoreDistribution = {},
 }: RrMediaStatsDashboardProps): React.JSX.Element {
+  const { t } = useTranslation();
+
+  // Helper to translate status distribution names
+  const getStatusLabel = (status: string) => {
+    switch (status.toUpperCase()) {
+      case "WATCHING":
+        return t("aquila.watching");
+      case "READING":
+        return t("aquila.reading");
+      case "PLAYING":
+        return t("aquila.playing");
+      case "ON_HOLD":
+        return t("aquila.onHold");
+      case "COMPLETED":
+        return t("aquila.completed");
+      case "DROPPED":
+        return t("aquila.dropped");
+      default:
+        return status.replace(/_/g, " ").toLowerCase();
+    }
+  };
+
   // 1. Prepare score data for Recharts
   const scoreData = useMemo(() => {
     const scores = Array.from({ length: 10 }, (_, i) => String(i + 1));
@@ -87,14 +110,14 @@ export function RrMediaStatsDashboard({
         <div className="bg-card/45 border border-border/30 backdrop-blur-md p-5 rounded-2xl flex flex-col gap-4">
           <div className="flex items-center gap-2 text-muted-foreground text-xs font-semibold uppercase tracking-wider">
             <Star className="size-4 text-primary fill-primary/20" />
-            <span>Average Rating</span>
+            <span>{t("aquila.averageRating")}</span>
           </div>
           <div className="border-t border-border/20 pt-3 flex flex-col">
             <span className="text-[10px] text-muted-foreground font-medium">
-              Local Rating
+              {t("aquila.localRating")}
             </span>
             <span className="text-2xl font-extrabold text-primary">
-              {localAverageScore ? `${localAverageScore.toFixed(1)} / 10` : "N/A"}
+              {localAverageScore ? `${localAverageScore.toFixed(1)} / 10` : t("aquila.notAvailable")}
             </span>
           </div>
         </div>
@@ -103,12 +126,12 @@ export function RrMediaStatsDashboard({
         <div className="bg-card/45 border border-border/30 backdrop-blur-md p-5 rounded-2xl flex flex-col gap-4">
           <div className="flex items-center gap-2 text-muted-foreground text-xs font-semibold uppercase tracking-wider">
             <Heart className="size-4 text-primary fill-primary/20" />
-            <span>Community Reach</span>
+            <span>{t("aquila.communityReach")}</span>
           </div>
           <div className="grid grid-cols-2 gap-4 border-t border-border/20 pt-3">
             <div className="flex flex-col">
               <span className="text-[10px] text-muted-foreground font-medium leading-none mb-1">
-                Local Favorites
+                {t("aquila.localFavorites")}
               </span>
               <span className="text-lg font-bold text-foreground">
                 {localFavoritesCount?.toLocaleString() || "0"}
@@ -116,7 +139,7 @@ export function RrMediaStatsDashboard({
             </div>
             <div className="flex flex-col border-l border-border/20 pl-4">
               <span className="text-[10px] text-muted-foreground font-medium leading-none mb-1">
-                List Count
+                {t("aquila.listCount")}
               </span>
               <span className="text-lg font-bold text-foreground flex items-center gap-1">
                 <Users className="size-3 text-muted-foreground" />
@@ -136,7 +159,7 @@ export function RrMediaStatsDashboard({
               <CardHeader className="pb-2">
                 <CardTitle className="text-foreground text-xs font-bold uppercase tracking-wider flex items-center gap-2">
                   <Award className="size-4 text-primary/80" />
-                  Status Distribution
+                  {t("aquila.statusDistribution")}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -149,7 +172,7 @@ export function RrMediaStatsDashboard({
                         STATUS_COLORS[entry.status] || "bg-muted-foreground/60"
                       }
                       style={{ width: `${entry.percent}%` }}
-                      title={`${entry.status}: ${entry.count} (${entry.percent.toFixed(1)}%)`}
+                      title={`${getStatusLabel(entry.status)}: ${entry.count} (${entry.percent.toFixed(1)}%)`}
                     />
                   ))}
                 </div>
@@ -165,7 +188,7 @@ export function RrMediaStatsDashboard({
                           className={`size-2 rounded-full ${STATUS_COLORS[entry.status] || "bg-muted-foreground/60"}`}
                         />
                         <span className="capitalize truncate text-muted-foreground text-[10px]">
-                          {entry.status.replace(/_/g, " ").toLowerCase()}
+                          {getStatusLabel(entry.status)}
                         </span>
                       </div>
                       <span className="font-bold text-[10px]">
@@ -184,7 +207,7 @@ export function RrMediaStatsDashboard({
               <CardHeader className="pb-2">
                 <CardTitle className="text-foreground text-xs font-bold uppercase tracking-wider flex items-center gap-2">
                   <BarChart3 className="size-4 text-primary/80" />
-                  Score Distribution
+                  {t("aquila.scoreDistribution")}
                 </CardTitle>
               </CardHeader>
               <CardContent>

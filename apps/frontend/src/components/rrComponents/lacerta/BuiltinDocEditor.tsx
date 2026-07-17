@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { encrypt } from "@runa/crypto/browser";
+import { useTranslation } from "react-i18next";
 
 interface DocFileItem {
   id: string;
@@ -45,6 +46,7 @@ export default function BuiltinDocEditor({
   accessToken,
   onSaveSuccess,
 }: BuiltinDocEditorProps): React.JSX.Element | null {
+  const { t } = useTranslation();
   const [htmlContent, setHtmlContent] = useState<string>("");
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [hasChanges, setHasChanges] = useState<boolean>(false);
@@ -58,20 +60,20 @@ export default function BuiltinDocEditor({
     if (isOpen) {
       // If content is empty or doesn't look like HTML, wrap it in paragraphs
       if (!initialContent.trim()) {
-        setHtmlContent("<p>Start typing your document here...</p>");
+        setHtmlContent(`<p>${t("lacerta.builtinDocEditor.startTyping", "Start typing your document here...")}</p>`);
       } else if (!initialContent.startsWith("<")) {
         setHtmlContent(
           initialContent
-            .split("\n\n")
-            .map((p) => `<p>${p.replace(/\n/g, "<br/>")}</p>`)
-            .join(""),
+             .split("\n\n")
+             .map((p) => `<p>${p.replace(/\n/g, "<br/>")}</p>`)
+             .join(""),
         );
       } else {
         setHtmlContent(initialContent);
       }
       setHasChanges(false);
     }
-  }, [isOpen, initialContent]);
+  }, [isOpen, initialContent, t]);
 
   if (!isOpen || !file) return null;
 
@@ -128,14 +130,14 @@ export default function BuiltinDocEditor({
           body: formData,
         },
       );
-      if (!res.ok) throw new Error("Failed to save document.");
+      if (!res.ok) throw new Error(t("lacerta.builtinDocEditor.saveFailed", "Failed to save document."));
 
-      toast.success("Document saved successfully!");
+      toast.success(t("lacerta.builtinDocEditor.saveSuccess", "Document saved successfully!"));
       setHasChanges(false);
       onSaveSuccess();
       onClose();
     } catch (err: any) {
-      toast.error(err.message || "Failed to save document.");
+      toast.error(err.message || t("lacerta.builtinDocEditor.saveFailed", "Failed to save document."));
     } finally {
       setIsSaving(false);
     }
@@ -150,7 +152,7 @@ export default function BuiltinDocEditor({
             onClick={() => {
               if (
                 hasChanges &&
-                !confirm("You have unsaved changes. Exit anyway?")
+                !confirm(t("lacerta.builtinDocEditor.unsavedChangesConfirm", "You have unsaved changes. Exit anyway?"))
               )
                 return;
               onClose();
@@ -166,7 +168,7 @@ export default function BuiltinDocEditor({
                 {file.name}
               </span>
               <span className="text-[10px] text-muted-foreground">
-                Collabora Document Editor
+                {t("lacerta.builtinDocEditor.editorTitle", "Collabora Document Editor")}
               </span>
             </div>
           </div>
@@ -177,19 +179,19 @@ export default function BuiltinDocEditor({
           <div className="flex items-center -space-x-2">
             <div
               className="h-6 w-6 rounded-full border border-card bg-emerald-500 text-[10px] font-bold text-white flex items-center justify-center cursor-pointer hover:scale-105 transition-all"
-              title="You (Editing)"
+              title={t("lacerta.builtinDocEditor.userEditing", "You (Editing)")}
             >
               Y
             </div>
             <div
               className="h-6 w-6 rounded-full border border-card bg-amber-500 text-[10px] font-bold text-white flex items-center justify-center cursor-pointer hover:scale-105 transition-all"
-              title="Alice (Active)"
+              title={t("lacerta.builtinDocEditor.aliceActive", "Alice (Active)")}
             >
               A
             </div>
             <div
               className="h-6 w-6 rounded-full border border-card bg-indigo-500 text-[10px] font-bold text-white flex items-center justify-center cursor-pointer hover:scale-105 transition-all"
-              title="Bob (Viewing)"
+              title={t("lacerta.builtinDocEditor.bobViewing", "Bob (Viewing)")}
             >
               B
             </div>
@@ -198,7 +200,7 @@ export default function BuiltinDocEditor({
           <div className="flex items-center gap-2">
             {hasChanges && (
               <span className="text-xs text-muted-foreground italic">
-                Unsaved
+                {t("lacerta.builtinDocEditor.unsaved", "Unsaved")}
               </span>
             )}
             <button
@@ -211,7 +213,7 @@ export default function BuiltinDocEditor({
               ) : (
                 <Save className="h-3.5 w-3.5" />
               )}
-              {isSaving ? "Saving..." : "Save"}
+              {isSaving ? t("lacerta.builtinDocEditor.saving", "Saving...") : t("lacerta.builtinDocEditor.save", "Save")}
             </button>
           </div>
         </div>
@@ -228,9 +230,9 @@ export default function BuiltinDocEditor({
           }}
           className="h-7 border border-border rounded bg-background px-2 text-xs text-foreground outline-none"
         >
-          <option value="sans-serif">Sans-Serif</option>
-          <option value="serif">Serif (A4 Standard)</option>
-          <option value="monospace">Monospace</option>
+          <option value="sans-serif">{t("lacerta.builtinDocEditor.sansSerif", "Sans-Serif")}</option>
+          <option value="serif">{t("lacerta.builtinDocEditor.serif", "Serif (A4 Standard)")}</option>
+          <option value="monospace">{t("lacerta.builtinDocEditor.monospace", "Monospace")}</option>
         </select>
 
         {/* Font Sizes */}
@@ -255,21 +257,21 @@ export default function BuiltinDocEditor({
         <button
           onClick={() => execCommand("bold")}
           className="p-1.5 hover:bg-muted/15 rounded text-muted-foreground hover:text-foreground transition-all"
-          title="Bold"
+          title={t("lacerta.builtinDocEditor.bold", "Bold")}
         >
           <Bold className="h-4 w-4" />
         </button>
         <button
           onClick={() => execCommand("italic")}
           className="p-1.5 hover:bg-muted/15 rounded text-muted-foreground hover:text-foreground transition-all"
-          title="Italic"
+          title={t("lacerta.builtinDocEditor.italic", "Italic")}
         >
           <Italic className="h-4 w-4" />
         </button>
         <button
           onClick={() => execCommand("underline")}
           className="p-1.5 hover:bg-muted/15 rounded text-muted-foreground hover:text-foreground transition-all"
-          title="Underline"
+          title={t("lacerta.builtinDocEditor.underline", "Underline")}
         >
           <Underline className="h-4 w-4" />
         </button>
@@ -279,21 +281,21 @@ export default function BuiltinDocEditor({
         <button
           onClick={() => execCommand("justifyLeft")}
           className="p-1.5 hover:bg-muted/15 rounded text-muted-foreground hover:text-foreground transition-all"
-          title="Align Left"
+          title={t("lacerta.builtinDocEditor.alignLeft", "Align Left")}
         >
           <AlignLeft className="h-4 w-4" />
         </button>
         <button
           onClick={() => execCommand("justifyCenter")}
           className="p-1.5 hover:bg-muted/15 rounded text-muted-foreground hover:text-foreground transition-all"
-          title="Align Center"
+          title={t("lacerta.builtinDocEditor.alignCenter", "Align Center")}
         >
           <AlignCenter className="h-4 w-4" />
         </button>
         <button
           onClick={() => execCommand("justifyRight")}
           className="p-1.5 hover:bg-muted/15 rounded text-muted-foreground hover:text-foreground transition-all"
-          title="Align Right"
+          title={t("lacerta.builtinDocEditor.alignRight", "Align Right")}
         >
           <AlignRight className="h-4 w-4" />
         </button>
@@ -324,7 +326,7 @@ export default function BuiltinDocEditor({
           <div className="absolute top-[200px] left-[350px] flex items-center pointer-events-none animate-pulse">
             <div className="h-4 w-[2px] bg-amber-500" />
             <span className="bg-amber-500 text-white font-bold text-[8px] px-1 py-0.5 rounded ml-0.5 whitespace-nowrap">
-              Alice typing
+              {t("lacerta.builtinDocEditor.aliceTyping", "Alice typing")}
             </span>
           </div>
         </div>

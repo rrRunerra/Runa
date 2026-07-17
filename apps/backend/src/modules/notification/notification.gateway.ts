@@ -50,7 +50,10 @@ export class NotificationGateway
         `WebSocket connected: User ${username} (${userId}) connected on socket ${client.id}`,
       );
     } catch (err) {
-      console.error('WebSocket connection authentication failed:', err.message);
+      console.error(
+        'WebSocket connection authentication failed:',
+        err instanceof Error ? err.message : String(err),
+      );
       client.disconnect();
     }
   }

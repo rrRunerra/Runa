@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner";
 import { encrypt, generateFileKey, exportRawKey, wrapKey } from "@runa/crypto/browser";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface UmlFileItem {
   id: string;
@@ -72,16 +73,6 @@ interface UmlEdge {
   label?: string;
 }
 
-const SHAPE_PRESETS = [
-  { type: "class", label: "Class Block", icon: ClassIcon },
-  { type: "actor", label: "Actor", icon: ActorIcon },
-  { type: "usecase", label: "Use Case", icon: UsecaseIcon },
-  { type: "state", label: "State Node", icon: StateIcon },
-  { type: "activity", label: "Activity", icon: ActivityIcon },
-  { type: "database", label: "Database", icon: Database },
-  { type: "note", label: "Note", icon: NoteIcon },
-];
-
 export default function UmlEditor({
   isOpen,
   onClose,
@@ -92,6 +83,7 @@ export default function UmlEditor({
   isReadOnly = false,
   userPublicKey = null,
 }: UmlEditorProps): React.JSX.Element | null {
+  const { t } = useTranslation();
   const [nodes, setNodes] = useState<UmlNode[]>([]);
   const [edges, setEdges] = useState<UmlEdge[]>([]);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -115,6 +107,16 @@ export default function UmlEditor({
   });
 
   const canvasRef = useRef<HTMLDivElement>(null);
+
+  const shapePresets = React.useMemo(() => [
+    { type: "class", label: t("lacerta.umlEditor.classBlock", "Class Block"), icon: ClassIcon },
+    { type: "actor", label: t("lacerta.umlEditor.actor", "Actor"), icon: ActorIcon },
+    { type: "usecase", label: t("lacerta.umlEditor.usecase", "Use Case"), icon: UsecaseIcon },
+    { type: "state", label: t("lacerta.umlEditor.stateNode", "State Node"), icon: StateIcon },
+    { type: "activity", label: t("lacerta.umlEditor.activity", "Activity"), icon: ActivityIcon },
+    { type: "database", label: t("lacerta.umlEditor.database", "Database"), icon: Database },
+    { type: "note", label: t("lacerta.umlEditor.note", "Note"), icon: NoteIcon },
+  ], [t]);
 
   useEffect(() => {
     if (isOpen) {
@@ -141,7 +143,7 @@ export default function UmlEditor({
 
       if (isReadOnly) {
         if (!userPublicKey) {
-          throw new Error("Unable to save copy: user cryptographic keys not loaded.");
+          throw new Error(t("lacerta.umlEditor.keysNotLoaded", "Unable to save copy: user cryptographic keys not loaded."));
         }
         // Generate new key for the copy
         const newFileKey = await generateFileKey();
@@ -151,7 +153,7 @@ export default function UmlEditor({
       }
 
       if (!fileKey) {
-        throw new Error("File key not found. Unlock E2EE storage first.");
+        throw new Error(t("lacerta.umlEditor.unlockE2ee", "File key not found. Unlock E2EE storage first."));
       }
 
       const dataStr = JSON.stringify({ nodes, edges });
@@ -188,8 +190,8 @@ export default function UmlEditor({
             body: formData,
           }
         );
-        if (!res.ok) throw new Error("Failed to save copy to server.");
-        toast.success(`Successfully saved copy of ${file.name} to your files!`);
+        if (!res.ok) throw new Error(t("lacerta.umlEditor.saveCopyFailed", "Failed to save copy to server."));
+        toast.success(t("lacerta.copySavedSuccess", { name: file.name, defaultValue: "Successfully saved copy of {{name}} to your files!" }));
       } else {
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${file.id}`,
@@ -199,14 +201,14 @@ export default function UmlEditor({
             body: formData,
           },
         );
-        if (!res.ok) throw new Error("Failed to save changes.");
-        toast.success("UML Diagram saved successfully!");
+        if (!res.ok) throw new Error(t("lacerta.umlEditor.saveChangesFailed", "Failed to save changes."));
+        toast.success(t("lacerta.umlEditor.saveSuccess", "UML Diagram saved successfully!"));
       }
 
       setHasUnsavedChanges(false);
       onSaveSuccess();
     } catch (err: any) {
-      toast.error(err.message || "Failed to save diagram.");
+      toast.error(err.message || t("lacerta.umlEditor.saveFailed", "Failed to save diagram."));
     } finally {
       setIsSaving(false);
     }
@@ -435,7 +437,7 @@ export default function UmlEditor({
               {file.name}
             </span>
             <span className="text-[10px] text-muted-foreground">
-              Visual UML Editor (Drag & Drop)
+              {t("lacerta.umlEditor.editorTitle", "Visual UML Editor (Drag & Drop)")}
             </span>
           </div>
         </div>
@@ -443,7 +445,7 @@ export default function UmlEditor({
         <div className="flex items-center gap-3">
           {hasUnsavedChanges && (
             <span className="text-[10px] bg-warning/10 text-warning px-2.5 py-0.5 rounded-full font-semibold border border-warning/20">
-              Unsaved Changes
+              {t("lacerta.umlEditor.unsavedChanges", "Unsaved Changes")}
             </span>
           )}
           <button
@@ -456,7 +458,7 @@ export default function UmlEditor({
             ) : (
               <Save className="h-3.5 w-3.5" />
             )}
-            {isReadOnly ? "Save Copy" : "Save Diagram"}
+            {isReadOnly ? t("lacerta.umlEditor.saveCopy", "Save Copy") : t("lacerta.umlEditor.saveDiagram", "Save Diagram")}
           </button>
         </div>
       </header>
@@ -467,10 +469,10 @@ export default function UmlEditor({
         <aside className="w-full md:w-56 border-b md:border-b-0 md:border-r border-border bg-card/25 backdrop-blur-md p-3 md:p-4 flex flex-col shrink-0 overflow-y-auto max-h-[140px] md:max-h-none">
           <div className="flex flex-col w-full">
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1.5 md:mb-2">
-              UML Shapes
+              {t("lacerta.umlEditor.umlShapes", "UML Shapes")}
             </span>
             <div className="flex flex-row md:flex-col gap-2 overflow-x-auto no-scrollbar pb-1 md:pb-0">
-              {SHAPE_PRESETS.map((shape) => {
+              {shapePresets.map((shape) => {
                 const Icon = shape.icon;
                 return (
                   <button
@@ -488,14 +490,13 @@ export default function UmlEditor({
 
           <div className="mt-auto border-t border-border/40 pt-4 text-[10px] text-muted-foreground leading-normal flex-col gap-1 hidden md:flex">
             <span className="font-bold uppercase tracking-wider">
-              Canvas Guide:
+              {t("lacerta.umlEditor.canvasGuideTitle", "Canvas Guide:")}
             </span>
-            <span>• Drag shapes to position them.</span>
+            <span>{t("lacerta.umlEditor.canvasGuideDrag", "• Drag shapes to position them.")}</span>
             <span>
-              • Drag the red anchor dot in the center of a node to another node
-              to connect them.
+              {t("lacerta.umlEditor.canvasGuideConnect", "• Drag the red anchor dot in the center of a node to another node to connect them.")}
             </span>
-            <span>• Double-click shapes to edit text/properties.</span>
+            <span>{t("lacerta.umlEditor.canvasGuideEdit", "• Double-click shapes to edit text/properties.")}</span>
           </div>
         </aside>
 
@@ -578,7 +579,7 @@ export default function UmlEditor({
                         prev.filter((ed) => ed.id !== edge.id),
                       );
                       setHasUnsavedChanges(true);
-                      toast.info("Relation deleted");
+                      toast.info(t("lacerta.umlEditor.relationDeleted", "Relation deleted"));
                     }}
                   />
                 </g>
@@ -627,7 +628,7 @@ export default function UmlEditor({
                   onMouseDown={(e) => handleAnchorMouseDown(e, node.id, node)}
                   onTouchStart={(e) => handleAnchorTouchStart(e, node.id, node)}
                   className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-red-500 hover:bg-red-600 cursor-crosshair z-10"
-                  title="Drag connection to another shape"
+                  title={t("lacerta.umlEditor.dragConnectionTooltip", "Drag connection to another shape")}
                 />
 
                 {/* Node Layouts depending on UML shape type */}
@@ -669,10 +670,10 @@ export default function UmlEditor({
                 ) : node.type === "note" ? (
                   <div className="flex-1 flex flex-col bg-warning/5 border-l-2 border-warning/50 p-1 text-[10px]">
                     <span className="font-bold text-[9px] uppercase tracking-wider text-warning mb-0.5">
-                      Note
+                      {t("lacerta.umlEditor.noteBadge", "Note")}
                     </span>
                     <span className="text-muted-foreground italic leading-normal select-none overflow-hidden text-ellipsis line-clamp-3">
-                      {node.notes || "Add text details..."}
+                      {node.notes || t("lacerta.umlEditor.addDetailsPlaceholder", "Add text details...")}
                     </span>
                   </div>
                 ) : (
@@ -702,12 +703,12 @@ export default function UmlEditor({
           <aside className="w-80 border-l border-border bg-card/25 backdrop-blur-md p-5 flex flex-col gap-5 shrink-0 overflow-y-auto">
             <div className="flex items-center justify-between border-b border-border pb-2">
               <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                Shape Settings
+                {t("lacerta.umlEditor.shapeSettings", "Shape Settings")}
               </span>
               <button
                 onClick={deleteSelectedNode}
                 className="p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-all"
-                title="Delete shape"
+                title={t("lacerta.umlEditor.deleteShape", "Delete shape")}
               >
                 <Trash2 className="h-4 w-4" />
               </button>
@@ -716,7 +717,7 @@ export default function UmlEditor({
             <div className="flex flex-col gap-4">
               <div>
                 <label className="text-[9px] font-bold text-muted-foreground block mb-1 uppercase tracking-wider">
-                  Name / Title
+                  {t("lacerta.umlEditor.nameTitle", "Name / Title")}
                 </label>
                 <input
                   type="text"
@@ -734,7 +735,7 @@ export default function UmlEditor({
                 <>
                   <div>
                     <label className="text-[9px] font-bold text-muted-foreground mb-1 uppercase tracking-wider flex items-center justify-between">
-                      <span>Fields (attributes)</span>
+                      <span>{t("lacerta.umlEditor.fieldsLabel", "Fields (attributes)")}</span>
                       <button
                         onClick={() => {
                           const f = selectedNode.fields || [];
@@ -744,7 +745,7 @@ export default function UmlEditor({
                         }}
                         className="text-[9px] font-bold text-primary hover:underline"
                       >
-                        + Add
+                        + {t("lacerta.umlEditor.add", "Add")}
                       </button>
                     </label>
                     <div className="flex flex-col gap-1.5 max-h-[140px] overflow-y-auto no-scrollbar">
@@ -782,7 +783,7 @@ export default function UmlEditor({
 
                   <div>
                     <label className="text-[9px] font-bold text-muted-foreground block mb-1 uppercase tracking-wider items-center justify-between">
-                      <span>Methods (functions)</span>
+                      <span>{t("lacerta.umlEditor.methodsLabel", "Methods (functions)")}</span>
                       <button
                         onClick={() => {
                           const m = selectedNode.methods || [];
@@ -792,7 +793,7 @@ export default function UmlEditor({
                         }}
                         className="text-[9px] font-bold text-primary hover:underline"
                       >
-                        + Add
+                        + {t("lacerta.umlEditor.add", "Add")}
                       </button>
                     </label>
                     <div className="flex flex-col gap-1.5 max-h-[140px] overflow-y-auto no-scrollbar">
@@ -835,7 +836,7 @@ export default function UmlEditor({
                 selectedNode.type === "activity") && (
                 <div>
                   <label className="text-[9px] font-bold text-muted-foreground block mb-1 uppercase tracking-wider">
-                    Detailed Notes / Description
+                    {t("lacerta.umlEditor.detailedNotes", "Detailed Notes / Description")}
                   </label>
                   <textarea
                     rows={4}
@@ -858,7 +859,7 @@ export default function UmlEditor({
               ) && (
                 <div className="mt-2 border-t border-border/40 pt-4">
                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2 block">
-                    Connections
+                    {t("lacerta.umlEditor.connections", "Connections")}
                   </span>
                   <div className="flex flex-col gap-2 max-h-[200px] overflow-y-auto no-scrollbar">
                     {edges
@@ -876,8 +877,8 @@ export default function UmlEditor({
                         if (!targetNode) return null;
                         const role =
                           edge.fromNode === selectedNode.id
-                            ? "Outgoing"
-                            : "Incoming";
+                            ? t("lacerta.umlEditor.outgoing", "Outgoing")
+                            : t("lacerta.umlEditor.incoming", "Incoming");
 
                         return (
                           <div
@@ -897,12 +898,12 @@ export default function UmlEditor({
                                 }}
                                 className="text-destructive hover:underline text-[9px]"
                               >
-                                Delete
+                                {t("lacerta.umlEditor.delete", "Delete")}
                               </button>
                             </div>
                             <div className="flex items-center gap-1.5">
                               <span className="text-muted-foreground text-[8px] uppercase font-bold shrink-0">
-                                Rel:
+                                {t("lacerta.umlEditor.relationPrefix", "Rel:")}
                               </span>
                               <select
                                 value={edge.type}
@@ -920,16 +921,16 @@ export default function UmlEditor({
                                 className="bg-background border border-border rounded px-1.5 py-0.5 text-[9px] font-medium text-foreground focus:outline-none cursor-pointer flex-1"
                               >
                                 <option value="association">
-                                  Association (Plain)
+                                  {t("lacerta.umlEditor.association", "Association (Plain)")}
                                 </option>
                                 <option value="inheritance">
-                                  Inheritance (Extends)
+                                  {t("lacerta.umlEditor.inheritance", "Inheritance (Extends)")}
                                 </option>
                                 <option value="realization">
-                                  Realization (Implements)
+                                  {t("lacerta.umlEditor.realization", "Realization (Implements)")}
                                 </option>
                                 <option value="dependency">
-                                  Dependency (Dashed)
+                                  {t("lacerta.umlEditor.dependency", "Dependency (Dashed)")}
                                 </option>
                               </select>
                             </div>

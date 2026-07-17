@@ -5,6 +5,7 @@ import { ArrowLeft, Save, Loader2, Play } from "lucide-react";
 import { toast } from "sonner";
 import { encrypt, generateFileKey, exportRawKey, wrapKey } from "@runa/crypto/browser";
 import mermaid from "mermaid";
+import { useTranslation } from "react-i18next";
 
 // Initialize Mermaid with safe/clean styling
 mermaid.initialize({
@@ -57,6 +58,7 @@ export default function MermaidEditor({
   isReadOnly = false,
   userPublicKey = null,
 }: MermaidEditorProps): React.JSX.Element | null {
+  const { t } = useTranslation();
   const [content, setContent] = useState<string>("");
   const [svgContent, setSvgContent] = useState<string>("");
   const [renderError, setRenderError] = useState<string | null>(null);
@@ -91,13 +93,13 @@ export default function MermaidEditor({
         if (tempEl) tempEl.remove();
         
         // Grab error message
-        setRenderError(err?.message || "Mermaid rendering compilation failed. Please check syntax.");
+        setRenderError(err?.message || t("lacerta.mermaidEditor.renderFailed", "Mermaid rendering compilation failed. Please check syntax."));
       }
     };
 
     const debounce = setTimeout(renderGraph, 300);
     return () => clearTimeout(debounce);
-  }, [content]);
+  }, [content, t]);
 
   if (!isOpen || !file) return null;
 
@@ -109,7 +111,7 @@ export default function MermaidEditor({
 
       if (isReadOnly) {
         if (!userPublicKey) {
-          throw new Error("Unable to save copy: user cryptographic keys not loaded.");
+          throw new Error(t("lacerta.mermaidEditor.keysNotLoaded", "Unable to save copy: user cryptographic keys not loaded."));
         }
         // Generate new key for the copy
         const newFileKey = await generateFileKey();
@@ -119,7 +121,7 @@ export default function MermaidEditor({
       }
 
       if (!fileKey) {
-        throw new Error("File key not found. Unlock E2EE storage first.");
+        throw new Error(t("lacerta.mermaidEditor.unlockE2ee", "File key not found. Unlock E2EE storage first."));
       }
 
       const encoder = new TextEncoder();
@@ -153,8 +155,8 @@ export default function MermaidEditor({
             body: formData,
           }
         );
-        if (!res.ok) throw new Error("Failed to save copy to server.");
-        toast.success(`Successfully saved copy of ${file.name} to your files!`);
+        if (!res.ok) throw new Error(t("lacerta.mermaidEditor.saveCopyFailed", "Failed to save copy to server."));
+        toast.success(t("lacerta.copySavedSuccess", { name: file.name, defaultValue: "Successfully saved copy of {{name}} to your files!" }));
       } else {
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${file.id}`,
@@ -164,14 +166,14 @@ export default function MermaidEditor({
             body: formData,
           }
         );
-        if (!res.ok) throw new Error("Failed to save changes.");
-        toast.success("Mermaid Diagram saved successfully!");
+        if (!res.ok) throw new Error(t("lacerta.mermaidEditor.saveChangesFailed", "Failed to save changes."));
+        toast.success(t("lacerta.mermaidEditor.saveSuccess", "Mermaid Diagram saved successfully!"));
       }
 
       setHasUnsavedChanges(false);
       onSaveSuccess();
     } catch (err: any) {
-      toast.error(err.message || "Failed to save file.");
+      toast.error(err.message || t("lacerta.mermaidEditor.saveFailed", "Failed to save file."));
     } finally {
       setIsSaving(false);
     }
@@ -185,7 +187,7 @@ export default function MermaidEditor({
           <button
             onClick={onClose}
             className="p-1.5 hover:bg-muted/30 rounded-lg text-muted-foreground hover:text-foreground transition-all"
-            title="Go back"
+            title={t("lacerta.mermaidEditor.goBack", "Go back")}
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
@@ -194,7 +196,7 @@ export default function MermaidEditor({
               {file.name}
             </span>
             <span className="text-[10px] text-muted-foreground">
-              Mermaid Diagram Editor
+              {t("lacerta.mermaidEditor.editorTitle", "Mermaid Diagram Editor")}
             </span>
           </div>
         </div>
@@ -202,7 +204,7 @@ export default function MermaidEditor({
         <div className="flex items-center gap-3">
           {hasUnsavedChanges && (
             <span className="text-[10px] bg-warning/10 text-warning px-2.5 py-0.5 rounded-full font-semibold border border-warning/20">
-              Unsaved Changes
+              {t("lacerta.mermaidEditor.unsavedChanges", "Unsaved Changes")}
             </span>
           )}
           <button
@@ -215,7 +217,7 @@ export default function MermaidEditor({
             ) : (
               <Save className="h-3.5 w-3.5" />
             )}
-            {isReadOnly ? "Save Copy" : "Save Diagram"}
+            {isReadOnly ? t("lacerta.mermaidEditor.saveCopy", "Save Copy") : t("lacerta.mermaidEditor.saveDiagram", "Save Diagram")}
           </button>
         </div>
       </header>
@@ -226,7 +228,7 @@ export default function MermaidEditor({
         <div className="w-1/2 border-r border-border flex flex-col h-full bg-slate-950/20">
           <div className="px-4 py-2 border-b border-border bg-card/10 shrink-0">
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-              Mermaid Code
+              {t("lacerta.mermaidEditor.mermaidCode", "Mermaid Code")}
             </span>
           </div>
           <textarea
@@ -258,11 +260,11 @@ export default function MermaidEditor({
         <div className="w-1/2 flex flex-col h-full bg-slate-950/5 relative">
           <div className="px-4 py-2 border-b border-border bg-card/10 shrink-0 flex items-center justify-between">
             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-              Live Preview
+              {t("lacerta.mermaidEditor.livePreview", "Live Preview")}
             </span>
             {renderError && (
               <span className="text-[9px] font-bold text-destructive animate-pulse">
-                Compilation Error
+                {t("lacerta.mermaidEditor.compilationError", "Compilation Error")}
               </span>
             )}
           </div>
@@ -279,7 +281,7 @@ export default function MermaidEditor({
               />
             ) : (
               <div className="text-xs text-muted-foreground">
-                Enter code to preview diagram
+                {t("lacerta.mermaidEditor.enterCodePreview", "Enter code to preview diagram")}
               </div>
             )}
           </div>

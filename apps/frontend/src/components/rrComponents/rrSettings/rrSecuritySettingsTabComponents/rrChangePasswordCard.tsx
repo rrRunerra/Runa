@@ -3,6 +3,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useTranslation } from "react-i18next";
 import {
   Card,
   CardHeader,
@@ -21,6 +22,7 @@ export function RrChangePasswordCard({
   isSubmitting,
   onChangePassword,
 }: RrChangePasswordCardProps): React.JSX.Element {
+  const { t } = useTranslation();
   const [currentPassword, setCurrentPassword] = useState<string>("");
   const [newPassword, setNewPassword] = useState<string>("");
   const [confirmPassword, setConfirmPassword] = useState<string>("");
@@ -82,12 +84,12 @@ export function RrChangePasswordCard({
     <div className="flex flex-col gap-4 text-left">
       <Card>
         <CardHeader>
-          <CardTitle>Change Password</CardTitle>
-          <CardDescription>Update your account password.</CardDescription>
+          <CardTitle>{t("securitySettings.changePasswordTitle")}</CardTitle>
+          <CardDescription>{t("securitySettings.changePasswordDesc")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="sec-current-password">Current Password</Label>
+            <Label htmlFor="sec-current-password">{t("securitySettings.currentPasswordLabel")}</Label>
             <div className="relative">
               <Input
                 id="sec-current-password"
@@ -103,7 +105,7 @@ export function RrChangePasswordCard({
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                 onClick={() => setShowCurrentPassword((v) => !v)}
                 aria-label={
-                  showCurrentPassword ? "Hide password" : "Show password"
+                  showCurrentPassword ? t("securitySettings.hidePassword") : t("securitySettings.showPassword")
                 }
               >
                 {showCurrentPassword ? (
@@ -116,7 +118,7 @@ export function RrChangePasswordCard({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="sec-new-password">New Password</Label>
+            <Label htmlFor="sec-new-password">{t("securitySettings.newPasswordLabel")}</Label>
             <div className="relative">
               <Input
                 id="sec-new-password"
@@ -146,7 +148,7 @@ export function RrChangePasswordCard({
                 tabIndex={-1}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                 onClick={() => setShowNewPassword((v) => !v)}
-                aria-label={showNewPassword ? "Hide password" : "Show password"}
+                aria-label={showNewPassword ? t("securitySettings.hidePassword") : t("securitySettings.showPassword")}
               >
                 {showNewPassword ? (
                   <EyeOff className="size-3.5" />
@@ -160,15 +162,15 @@ export function RrChangePasswordCard({
               (newPassword.length > 0 && !isPasswordValid)) && (
               <div className="mt-1.5 p-3 rounded-xl bg-muted/35 border border-border/50 animate-in fade-in slide-in-from-top-1 duration-150">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                  Password Criteria
+                  {t("securitySettings.passwordCriteria")}
                 </p>
                 <ul className="grid grid-cols-1 gap-1.5">
                   {[
-                    { key: "length", label: "Min 16 characters" },
-                    { key: "maxLength", label: "Max 64 characters" },
-                    { key: "uppercase", label: "One uppercase letter" },
-                    { key: "number", label: "Two numbers" },
-                    { key: "special", label: "One special character" },
+                    { key: "length", label: t("securitySettings.critMinLength") },
+                    { key: "maxLength", label: t("securitySettings.critMaxLength") },
+                    { key: "uppercase", label: t("securitySettings.critUppercase") },
+                    { key: "number", label: t("securitySettings.critNumbers") },
+                    { key: "special", label: t("securitySettings.critSpecial") },
                   ].map((item) => (
                     <li
                       key={item.key}
@@ -200,7 +202,7 @@ export function RrChangePasswordCard({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="sec-confirm-password">Confirm Password</Label>
+            <Label htmlFor="sec-confirm-password">{t("securitySettings.confirmPasswordLabel")}</Label>
             <div className="relative">
               <Input
                 id="sec-confirm-password"
@@ -221,7 +223,7 @@ export function RrChangePasswordCard({
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                 onClick={() => setShowConfirmPassword((v) => !v)}
                 aria-label={
-                  showConfirmPassword ? "Hide password" : "Show password"
+                  showConfirmPassword ? t("securitySettings.hidePassword") : t("securitySettings.showPassword")
                 }
               >
                 {showConfirmPassword ? (
@@ -233,7 +235,7 @@ export function RrChangePasswordCard({
             </div>
             {confirmPassword && newPassword !== confirmPassword && (
               <p className="text-[11px] text-destructive mt-1">
-                Passwords do not match.
+                {t("securitySettings.passwordsDoNotMatch")}
               </p>
             )}
           </div>
@@ -249,7 +251,7 @@ export function RrChangePasswordCard({
             className="text-xs h-9 cursor-pointer"
             disabled={isSubmitting}
           >
-            Clear Fields
+            {t("securitySettings.clearFieldsBtn")}
           </Button>
           <Button
             onClick={handleSave}
@@ -262,7 +264,7 @@ export function RrChangePasswordCard({
             }
             className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl px-5 text-xs h-9 cursor-pointer"
           >
-            {isSubmitting ? "Updating..." : "Update Password"}
+            {isSubmitting ? t("securitySettings.updating") : t("securitySettings.updatePasswordBtn")}
           </Button>
         </div>
       )}

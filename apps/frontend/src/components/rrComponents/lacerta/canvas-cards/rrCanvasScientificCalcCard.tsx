@@ -1,10 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { CanvasNode } from "../CanvasEditor";
+import { CanvasNode } from "../types";
 import { create, all } from "mathjs";
 import katex from "katex";
 import { Clipboard, RotateCcw, AlertTriangle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 const math = create(all);
 
@@ -18,7 +19,8 @@ export default function RrCanvasScientificCalcCard({
   node,
   isLocked = false,
   onNodeUpdate,
-}: RrCanvasScientificCalcCardProps) {
+}: RrCanvasScientificCalcCardProps): React.JSX.Element {
+  const { t } = useTranslation();
   const [result, setResult] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [latexHTML, setLatexHTML] = useState<string>("");
@@ -156,10 +158,12 @@ export default function RrCanvasScientificCalcCard({
         }
 
         if (variablesFound.size === 0) {
-          throw new Error("No algebraic variable found to solve (e.g. x).");
+          throw new Error(t("lacerta.canvasEditor.noAlgebraicVar", "No algebraic variable found to solve (e.g. x)."));
         }
         if (variablesFound.size > 1) {
-          throw new Error(`Multiple variables found: ${Array.from(variablesFound).join(", ")}`);
+          throw new Error(t("lacerta.canvasEditor.multipleVars", "Multiple variables found: {{vars}}", {
+            vars: Array.from(variablesFound).join(", "),
+          }));
         }
 
         const solveVar = Array.from(variablesFound)[0];
@@ -249,7 +253,7 @@ export default function RrCanvasScientificCalcCard({
           onNodeUpdate({ ans: results });
           return;
         }
-        throw new Error("No real roots found.");
+        throw new Error(t("lacerta.canvasEditor.noRealRoots", "No real roots found."));
       }
 
       const evalRes = math.evaluate(inputVal, buildScope());
@@ -257,7 +261,7 @@ export default function RrCanvasScientificCalcCard({
       setResult(resStr);
       onNodeUpdate({ ans: resStr });
     } catch (err: any) {
-      setError(err.message || "Math Error");
+      setError(err.message || t("lacerta.canvasEditor.mathError", "Math Error"));
     }
   };
 
@@ -364,7 +368,7 @@ export default function RrCanvasScientificCalcCard({
             readOnly={isLocked}
             onChange={(e) => setInputVal(e.target.value)}
             onKeyDown={handleKeyPress}
-            placeholder={isLocked ? "Locked" : "Expression..."}
+            placeholder={isLocked ? t("lacerta.canvasEditor.locked", "Locked") : t("lacerta.canvasEditor.expressionPlaceholder", "Expression...")}
             className="flex-1 bg-transparent border-none text-left font-mono text-[9px] text-slate-300 focus:outline-none focus:ring-0 p-0"
           />
           <div className="flex gap-1 shrink-0">
@@ -509,19 +513,19 @@ export default function RrCanvasScientificCalcCard({
           </button>
           <button
             onClick={() => addToken("sinh(")}
-            className="py-1 text-[8px] bg-slate-850 hover:bg-slate-800 rounded text-slate-300 font-semibold active:scale-95 transition-transform"
+            className="py-1 text-[8px] bg-slate-855 hover:bg-slate-800 rounded text-slate-300 font-semibold active:scale-95 transition-transform"
           >
             hyp
           </button>
           <button
             onClick={() => addToken("sin(")}
-            className="py-1 text-[8px] bg-slate-850 hover:bg-slate-800 rounded text-slate-300 font-semibold active:scale-95 transition-transform"
+            className="py-1 text-[8px] bg-slate-855 hover:bg-slate-800 rounded text-slate-300 font-semibold active:scale-95 transition-transform"
           >
             sin
           </button>
           <button
             onClick={() => addToken("cos(")}
-            className="py-1 text-[8px] bg-slate-850 hover:bg-slate-800 rounded text-slate-300 font-semibold active:scale-95 transition-transform"
+            className="py-1 text-[8px] bg-slate-855 hover:bg-slate-800 rounded text-slate-300 font-semibold active:scale-95 transition-transform"
           >
             cos
           </button>
@@ -531,37 +535,37 @@ export default function RrCanvasScientificCalcCard({
         <div className="grid grid-cols-6 gap-1 shrink-0">
           <button
             onClick={() => addToken("tan(")}
-            className="py-1 text-[8px] bg-slate-850 hover:bg-slate-800 rounded text-slate-300 font-semibold active:scale-95 transition-transform"
+            className="py-1 text-[8px] bg-slate-855 hover:bg-slate-800 rounded text-slate-300 font-semibold active:scale-95 transition-transform"
           >
             tan
           </button>
           <button
             onClick={() => addToken("combinations(")}
-            className="py-1 text-[8px] bg-slate-850 hover:bg-slate-800 rounded text-slate-300 font-semibold active:scale-95 transition-transform"
+            className="py-1 text-[8px] bg-slate-855 hover:bg-slate-800 rounded text-slate-300 font-semibold active:scale-95 transition-transform"
           >
             nCr
           </button>
           <button
             onClick={() => addToken("permutations(")}
-            className="py-1 text-[8px] bg-slate-850 hover:bg-slate-800 rounded text-slate-300 font-semibold active:scale-95 transition-transform"
+            className="py-1 text-[8px] bg-slate-855 hover:bg-slate-800 rounded text-slate-300 font-semibold active:scale-95 transition-transform"
           >
             nPr
           </button>
           <button
             onClick={() => addToken("(")}
-            className="py-1 text-[8px] bg-slate-850 hover:bg-slate-800 rounded text-slate-300 font-semibold active:scale-95 transition-transform"
+            className="py-1 text-[8px] bg-slate-855 hover:bg-slate-800 rounded text-slate-300 font-semibold active:scale-95 transition-transform"
           >
             (
           </button>
           <button
             onClick={() => addToken(")")}
-            className="py-1 text-[8px] bg-slate-850 hover:bg-slate-800 rounded text-slate-300 font-semibold active:scale-95 transition-transform"
+            className="py-1 text-[8px] bg-slate-855 hover:bg-slate-800 rounded text-slate-300 font-semibold active:scale-95 transition-transform"
           >
             )
           </button>
           <button
             onClick={() => addToken("i")}
-            className="py-1 text-[8px] bg-slate-850 hover:bg-slate-800 rounded text-slate-300 font-semibold active:scale-95 transition-transform"
+            className="py-1 text-[8px] bg-slate-855 hover:bg-slate-800 rounded text-slate-300 font-semibold active:scale-95 transition-transform"
           >
             i
           </button>

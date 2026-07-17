@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { CanvasNode } from "../CanvasEditor";
+import { CanvasNode } from "../types";
 
 interface RrCanvasEmojiCardProps {
   node: CanvasNode;

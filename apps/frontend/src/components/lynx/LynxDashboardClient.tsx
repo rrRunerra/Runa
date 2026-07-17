@@ -16,6 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 import { AuthOptions, Session } from "next-auth";
 import { hasPermission, LynxBitField } from "@runa/permissions";
+import { useTranslation } from "react-i18next";
 
 
 
@@ -54,6 +55,7 @@ export default function LynxDashboardClient({
   initialLogs,
   session
 }: LynxDashboardClientProps) {
+  const { t } = useTranslation();
   const [stats, setStats] = useState<StatsPayload | null>(initialStats);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -81,12 +83,12 @@ export default function LynxDashboardClient({
       if (res.ok) {
         const data = await res.json();
         setStats(data);
-        toast.success("Dashboard metrics updated successfully");
+        toast.success(t("lynx.metricsUpdated"));
       } else {
-        toast.error("Failed to fetch fresh bot stats");
+        toast.error(t("lynx.failedFetchStats"));
       }
     } catch {
-      toast.error("Error communicating with stats API");
+      toast.error(t("lynx.errorStatsApi"));
     } finally {
       setIsRefreshing(false);
     }
@@ -113,10 +115,10 @@ export default function LynxDashboardClient({
   }[activeStatus];
 
   const statusLabel = {
-    online: "Online",
-    idle: "Idle / AFK",
-    dnd: "Do Not Disturb",
-    offline: "Offline"
+    online: t("lynx.statusOnline"),
+    idle: t("lynx.statusIdle"),
+    dnd: t("lynx.statusDnd"),
+    offline: t("lynx.statusOffline")
   }[activeStatus];
 
   const containerVariants = {
@@ -145,10 +147,10 @@ export default function LynxDashboardClient({
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
             <Bot className="size-8 text-primary" />
-            Lynx Dashboard
+            {t("lynx.dashboardTitle")}
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Real-time status overview and system console for your Discord companion.
+            {t("lynx.dashboardDesc")}
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -160,7 +162,7 @@ export default function LynxDashboardClient({
             className="flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl bg-zinc-900/40 border border-zinc-800/60 hover:bg-zinc-800/30 hover:border-zinc-700/50 cursor-pointer transition-all duration-300 text-muted-foreground hover:text-foreground disabled:opacity-50"
           >
             <RefreshCw className={cn("size-3.5", isRefreshing && "animate-spin")} />
-            Sync Metrics
+            {t("lynx.syncMetrics")}
           </motion.button>}
         </div>
       </div>
@@ -206,7 +208,7 @@ export default function LynxDashboardClient({
             </div>
 
             <p className="text-xs text-muted-foreground mt-4 max-w-xs leading-relaxed">
-              {stats?.profile?.description || "A powerful Discord utility bot powering homework tracking, gaming list integrations, and automation."}
+              {stats?.profile?.description || t("lynx.botDefaultDescription")}
             </p>
           </motion.div>
 
@@ -222,7 +224,7 @@ export default function LynxDashboardClient({
             >
               <div className="absolute top-0 right-0 size-20 bg-primary/5 rounded-full blur-2xl pointer-events-none" />
               <div className="flex items-center justify-between relative z-10">
-                <span className="text-[10px] text-muted-foreground/60 uppercase font-bold tracking-wider">Discord Servers</span>
+                <span className="text-[10px] text-muted-foreground/60 uppercase font-bold tracking-wider">{t("lynx.discordServers")}</span>
                 <div className="size-8 rounded-lg border border-zinc-800 bg-zinc-900/50 text-primary flex items-center justify-center shadow-inner">
                   <Server className="size-4" />
                 </div>
@@ -238,7 +240,7 @@ export default function LynxDashboardClient({
             >
               <div className="absolute top-0 right-0 size-20 bg-primary/5 rounded-full blur-2xl pointer-events-none" />
               <div className="flex items-center justify-between relative z-10">
-                <span className="text-[10px] text-muted-foreground/60 uppercase font-bold tracking-wider">Registered Cmds</span>
+                <span className="text-[10px] text-muted-foreground/60 uppercase font-bold tracking-wider">{t("lynx.registeredCmds")}</span>
                 <div className="size-8 rounded-lg border border-zinc-800 bg-zinc-900/50 text-sky-400 flex items-center justify-center shadow-inner">
                   <Sliders className="size-4" />
                 </div>
@@ -254,7 +256,7 @@ export default function LynxDashboardClient({
             >
               <div className="absolute top-0 right-0 size-20 bg-primary/5 rounded-full blur-2xl pointer-events-none" />
               <div className="flex items-center justify-between relative z-10">
-                <span className="text-[10px] text-muted-foreground/60 uppercase font-bold tracking-wider">Active Events</span>
+                <span className="text-[10px] text-muted-foreground/60 uppercase font-bold tracking-wider">{t("lynx.activeEvents")}</span>
                 <div className="size-8 rounded-lg border border-zinc-800 bg-zinc-900/50 text-purple-400 flex items-center justify-center shadow-inner">
                   <Terminal className="size-4" />
                 </div>
@@ -270,7 +272,7 @@ export default function LynxDashboardClient({
             >
               <div className="absolute top-0 right-0 size-20 bg-primary/5 rounded-full blur-2xl pointer-events-none" />
               <div className="flex items-center justify-between relative z-10">
-                <span className="text-[10px] text-muted-foreground/60 uppercase font-bold tracking-wider">Gateway Ping</span>
+                <span className="text-[10px] text-muted-foreground/60 uppercase font-bold tracking-wider">{t("lynx.gatewayPing")}</span>
                 <div className="size-8 rounded-lg border border-zinc-800 bg-zinc-900/50 text-emerald-400 flex items-center justify-center shadow-inner">
                   <Activity className="size-4 animate-pulse" />
                 </div>
@@ -289,13 +291,13 @@ export default function LynxDashboardClient({
             <div className="flex items-center justify-between">
               <h3 className="text-xs uppercase tracking-wider font-bold text-muted-foreground flex items-center gap-2">
                 <Terminal className="size-4 text-primary" />
-                Active Log Terminal Preview
+                {t("lynx.logTerminalPreview")}
               </h3>
               <Link
                 href="/lynx/logs"
                 className="flex items-center gap-1.5 text-xs text-primary hover:text-primary-hover font-semibold transition-colors duration-200"
               >
-                Open Terminal
+                {t("lynx.openTerminal")}
                 <BookOpen className="size-3.5" />
               </Link>
             </div>
@@ -320,7 +322,7 @@ export default function LynxDashboardClient({
                 ))
               ) : (
                 <div className="text-center text-muted-foreground/50 py-8 italic select-none">
-                  No recent system logs available.
+                  {t("lynx.noRecentLogs")}
                 </div>
               )}
             </div>

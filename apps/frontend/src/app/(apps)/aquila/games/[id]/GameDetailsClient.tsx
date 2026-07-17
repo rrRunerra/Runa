@@ -20,6 +20,7 @@ import RrLapplandImageNotFound from "@/components/rrComponents/rrImages/rrLappla
 import { RrMediaRefreshButton } from "@/components/rrComponents/aquila/rrMediaRefreshButton";
 import { GameEntity } from "@/types/game.entities";
 import { RrMediaStatsDashboard } from "@/components/rrComponents/aquila/details/rrMediaStatsDashboard";
+import { useTranslation } from "react-i18next";
 
 interface ListEntry {
   id: number | string;
@@ -48,6 +49,7 @@ const itemVariants = {
 };
 
 export default function GameDetailsPage(): React.JSX.Element {
+  const { t } = useTranslation();
   const params = useParams();
   const id = params?.id as string;
   const session = useSession();
@@ -83,7 +85,7 @@ export default function GameDetailsPage(): React.JSX.Element {
     return url.replace(/\/media\/crop\/\d+\/\d+\//, "/media/");
   };
 
-  const displayTitle = game?.titleString ?? "Game Details";
+  const displayTitle = game?.titleString ?? t("aquila.gameDetails", "Game Details");
   const coverUrl = getHighResRawgUrl(game?.coverImage ?? "");
   const bannerUrl = getHighResRawgUrl(game?.backgroundImage ?? "");
 
@@ -149,10 +151,10 @@ export default function GameDetailsPage(): React.JSX.Element {
       <div className="flex flex-col flex-1 min-h-screen bg-background relative overflow-hidden items-center justify-center gap-4">
         <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-primary/2 rounded-full blur-3xl pointer-events-none" />
         <h2 className="text-2xl font-bold text-foreground z-10">
-          Game not found
+          {t("aquila.gameNotFound", "Game not found")}
         </h2>
         <Button asChild variant="default" className="z-10 rounded-xl">
-          <Link href="/aquila/browse?type=games">Back to Browse</Link>
+          <Link href="/aquila/browse?type=games">{t("aquila.backToBrowse", "Back to Browse")}</Link>
         </Button>
       </div>
     );
@@ -178,13 +180,13 @@ export default function GameDetailsPage(): React.JSX.Element {
         },
       );
       if (res.ok) {
-        toast.success("Added to list!");
+        toast.success(t("aquila.addedToList", "Added to list!"));
         mutateListEntry();
       } else {
-        toast.error("Failed to add to list");
+        toast.error(t("aquila.failedAddToList", "Failed to add to list"));
       }
     } catch {
-      toast.error("Failed to add to list");
+      toast.error(t("aquila.failedAddToList", "Failed to add to list"));
     }
   };
 
@@ -270,7 +272,7 @@ export default function GameDetailsPage(): React.JSX.Element {
                           size="lg"
                           onClick={handleQuickAdd}
                         >
-                          Quick Add
+                          {t("aquila.quickAdd", "Quick Add")}
                         </Button>
                         <Button
                           variant="outline"
@@ -278,7 +280,7 @@ export default function GameDetailsPage(): React.JSX.Element {
                           size="lg"
                           onClick={(): void => setIsDialogOpen(true)}
                         >
-                          Add to List
+                          {t("aquila.addToList", "Add to List")}
                         </Button>
                       </>
                     ) : (
@@ -288,7 +290,7 @@ export default function GameDetailsPage(): React.JSX.Element {
                         size="lg"
                         onClick={(): void => setIsDialogOpen(true)}
                       >
-                        Edit Entry
+                        {t("aquila.editEntry", "Edit Entry")}
                       </Button>
                     )}
                     <RrMediaEditDialog
@@ -323,12 +325,12 @@ export default function GameDetailsPage(): React.JSX.Element {
             {/* Metadata Sidebar */}
             <div className="bg-card/65 border border-border/40 backdrop-blur-xl rounded-2xl p-5 space-y-4">
               <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                Information
+                {t("aquila.information", "Information")}
               </h3>
               <div className="space-y-3">
                 {formattedReleaseDate && (
                   <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
-                    <span className="text-muted-foreground">Release Date</span>
+                    <span className="text-muted-foreground">{t("aquila.releaseDate", "Release Date")}</span>
                     <span className="font-medium text-foreground">
                       {formattedReleaseDate}
                     </span>
@@ -336,7 +338,7 @@ export default function GameDetailsPage(): React.JSX.Element {
                 )}
                 {game.developers && game.developers.length > 0 && (
                   <div className="flex flex-col gap-1 text-sm border-b border-border/50 pb-2">
-                    <span className="text-muted-foreground">Developer</span>
+                    <span className="text-muted-foreground">{t("aquila.developer", "Developer")}</span>
                     <span className="font-medium text-foreground">
                       {game.developers.join(", ")}
                     </span>
@@ -344,7 +346,7 @@ export default function GameDetailsPage(): React.JSX.Element {
                 )}
                 {game.publishers && game.publishers.length > 0 && (
                   <div className="flex flex-col gap-1 text-sm border-b border-border/50 pb-2">
-                    <span className="text-muted-foreground">Publisher</span>
+                    <span className="text-muted-foreground">{t("aquila.publisher", "Publisher")}</span>
                     <span className="font-medium text-foreground">
                       {game.publishers.join(", ")}
                     </span>
@@ -352,7 +354,7 @@ export default function GameDetailsPage(): React.JSX.Element {
                 )}
                 {game.esrbRating && (
                   <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
-                    <span className="text-muted-foreground">ESRB Rating</span>
+                    <span className="text-muted-foreground">{t("aquila.esrbRating", "ESRB Rating")}</span>
                     <Badge variant="outline" className="text-xs px-2 py-0.5">
                       {game.esrbRating}
                     </Badge>
@@ -360,7 +362,7 @@ export default function GameDetailsPage(): React.JSX.Element {
                 )}
                 {platforms.length > 0 && (
                   <div className="flex flex-col gap-1 text-sm">
-                    <span className="text-muted-foreground">Platforms</span>
+                    <span className="text-muted-foreground">{t("aquila.platforms", "Platforms")}</span>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {platforms.map((p, idx) => (
                         <Badge
@@ -381,7 +383,7 @@ export default function GameDetailsPage(): React.JSX.Element {
             {(game.rawgId || game.slug) && (
               <div className="bg-card/65 border border-border/40 backdrop-blur-xl rounded-2xl p-5">
                 <h4 className="font-semibold text-xs tracking-wide text-muted-foreground uppercase mb-3">
-                  External Links
+                  {t("aquila.externalLinks", "External Links")}
                 </h4>
                 <div className="flex flex-col gap-2">
                   {game.slug && (
@@ -409,7 +411,7 @@ export default function GameDetailsPage(): React.JSX.Element {
               </h1>
               {game.titleNative && (
                 <p className="text-xs text-muted-foreground italic">
-                  Also known as: {game.titleNative}
+                  {t("aquila.alsoKnownAs", "Also known as:")} {game.titleNative}
                 </p>
               )}
             </motion.div>
@@ -452,7 +454,7 @@ export default function GameDetailsPage(): React.JSX.Element {
               className="bg-card/30 border border-border/20 backdrop-blur-sm p-6 rounded-2xl"
             >
               <h3 className="text-base font-bold text-foreground mb-3">
-                About
+                {t("aquila.about", "About")}
               </h3>
               <div className="prose prose-neutral dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-sm prose-p:my-2 prose-a:text-primary hover:prose-a:text-primary transition-colors">
                 <p>{game.description}</p>
@@ -462,7 +464,7 @@ export default function GameDetailsPage(): React.JSX.Element {
             {/* Genres */}
             {cleanGenres.length > 0 && (
               <motion.div variants={itemVariants} className="space-y-3">
-                <h3 className="text-base font-bold text-foreground">Genres</h3>
+                <h3 className="text-base font-bold text-foreground">{t("aquila.genre", "Genre")}</h3>
                 <div className="flex flex-wrap gap-2">
                   {cleanGenres.map((genre) => (
                     <Badge

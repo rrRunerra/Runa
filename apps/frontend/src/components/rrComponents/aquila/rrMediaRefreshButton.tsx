@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
@@ -18,6 +19,7 @@ export function RrMediaRefreshButton({
   mediaId,
   onRefreshed,
 }: RrMediaRefreshButtonProps): React.JSX.Element | null {
+  const { t } = useTranslation();
   const session = useSession();
   const [loading, setLoading] = useState(false);
   const [cooldownRemaining, setCooldownRemaining] = useState<number>(0);
@@ -93,7 +95,7 @@ export function RrMediaRefreshButton({
       });
 
       if (res.ok) {
-        toast.success("Media successfully refreshed!");
+        toast.success(t("aquila.mediaRefreshedSuccess"));
 
         // Set 60 seconds cooldown
         const expiry = Date.now() + 60000;
@@ -105,14 +107,14 @@ export function RrMediaRefreshButton({
           onRefreshed();
         }
       } else if (res.status === 429) {
-        toast.error("This media was refreshed recently. Please wait.");
+        toast.error(t("aquila.mediaRefreshedRecently"));
       } else {
         const errorData = await res.json().catch(() => ({}));
-        const msg = errorData.message || "Failed to refresh media details.";
+        const msg = errorData.message || t("aquila.failedRefreshDetails");
         toast.error(msg);
       }
     } catch (e) {
-      toast.error("An error occurred while refreshing.");
+      toast.error(t("aquila.refreshError"));
     } finally {
       setLoading(false);
     }
@@ -139,8 +141,8 @@ export function RrMediaRefreshButton({
       )}
       <span>
         {cooldownRemaining > 0
-          ? `Refresh (${cooldownRemaining}s)`
-          : "Force Refresh"}
+          ? t("aquila.refreshSeconds", { seconds: cooldownRemaining })
+          : t("aquila.forceRefresh")}
       </span>
     </Button>
   );

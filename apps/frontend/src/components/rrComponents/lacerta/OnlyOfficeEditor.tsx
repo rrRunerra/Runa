@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Loader2, FileText, AlertCircle } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface OnlyOfficeFileItem {
   id: string;
@@ -21,7 +22,7 @@ interface OnlyOfficeEditorProps {
 }
 
 // Dynamically load ONLYOFFICE API script
-const loadOnlyOfficeScript = (url: string): Promise<void> => {
+const loadOnlyOfficeScript = (url: string, errorMsg: string): Promise<void> => {
   return new Promise((resolve, reject) => {
     // If script is already loaded
     if (document.querySelector(`script[src="${url}"]`)) {
@@ -33,7 +34,7 @@ const loadOnlyOfficeScript = (url: string): Promise<void> => {
     script.async = true;
     script.onload = () => resolve();
     script.onerror = () =>
-      reject(new Error(`Failed to load ONLYOFFICE script from ${url}`));
+      reject(new Error(`${errorMsg} ${url}`));
     document.head.appendChild(script);
   });
 };
@@ -105,6 +106,7 @@ export default function OnlyOfficeEditor({
   onSaveSuccess,
   guestUserDisplayName,
 }: OnlyOfficeEditorProps): React.JSX.Element | null {
+  const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const editorRef = useRef<any>(null);
@@ -123,14 +125,14 @@ export default function OnlyOfficeEditor({
         setError(null);
 
         // 1. Load ONLYOFFICE Script
-        await loadOnlyOfficeScript(scriptUrl);
+        await loadOnlyOfficeScript(scriptUrl, t("lacerta.onlyOffice.scriptLoadError", "Failed to load ONLYOFFICE script from"));
 
         if (!isMounted) return;
 
         // @ts-ignore
         if (!window.DocsAPI) {
           throw new Error(
-            "ONLYOFFICE DocsAPI is not available on window object",
+            t("lacerta.onlyOffice.docsApiUnavailable", "ONLYOFFICE DocsAPI is not available on window object"),
           );
         }
 
@@ -246,7 +248,7 @@ export default function OnlyOfficeEditor({
             onError: (event: any) => {
               console.error("ONLYOFFICE Editor Error:", event);
               setError(
-                "An error occurred within the ONLYOFFICE editor interface",
+                t("lacerta.onlyOffice.interfaceError", "An error occurred within the ONLYOFFICE editor interface"),
               );
             },
           },
@@ -257,7 +259,7 @@ export default function OnlyOfficeEditor({
       } catch (err: any) {
         console.error("ONLYOFFICE initialization failed:", err);
         if (isMounted) {
-          setError(err.message || "Failed to load ONLYOFFICE editor");
+          setError(err.message || t("lacerta.onlyOffice.loadFailed", "Failed to load ONLYOFFICE editor"));
           setIsLoading(false);
         }
       }
@@ -278,7 +280,7 @@ export default function OnlyOfficeEditor({
         editorRef.current = null;
       }
     };
-  }, [isOpen, file, fileKey, accessToken, guestUserDisplayName]);
+  }, [isOpen, file, fileKey, accessToken, guestUserDisplayName, t]);
 
   if (!isOpen || !file) return null;
 
@@ -299,7 +301,7 @@ export default function OnlyOfficeEditor({
               onClose();
             }}
             className="p-1.5 border border-border hover:bg-muted/10 rounded-lg text-muted-foreground hover:text-foreground transition-all"
-            title="Exit Editor"
+            title={t("lacerta.onlyOffice.exitEditor", "Exit Editor")}
           >
             <ArrowLeft className="h-4 w-4" />
           </button>
@@ -310,9 +312,9 @@ export default function OnlyOfficeEditor({
                 {file.name}
               </span>
               <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                ONLYOFFICE Document Editor •{" "}
+                {t("lacerta.onlyOffice.editorTitle", "ONLYOFFICE Document Editor")} •{" "}
                 <span className="text-emerald-500 font-semibold">
-                  E2EE Session Active
+                  {t("lacerta.onlyOffice.e2eeActive", "E2EE Session Active")}
                 </span>
               </span>
             </div>
@@ -324,13 +326,13 @@ export default function OnlyOfficeEditor({
           {isLoading && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-              <span>Connecting to ONLYOFFICE...</span>
+              <span>{t("lacerta.onlyOffice.connecting", "Connecting to ONLYOFFICE...")}</span>
             </div>
           )}
           {!isLoading && !error && (
             <div className="flex items-center gap-1.5 text-xs text-emerald-500 font-semibold">
               <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-              Connected
+              {t("lacerta.onlyOffice.connected", "Connected")}
             </div>
           )}
         </div>
@@ -342,17 +344,16 @@ export default function OnlyOfficeEditor({
           <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
             <AlertCircle className="h-12 w-12 text-destructive mb-3" />
             <h3 className="text-base font-bold text-foreground">
-              Failed to load editor
+              {t("lacerta.onlyOffice.loadFailedTitle", "Failed to load editor")}
             </h3>
             <p className="text-xs text-muted-foreground max-w-sm mt-1 mb-4 leading-normal">
-              {error}. Please check if the ONLYOFFICE server is running and
-              configured correctly.
+              {t("lacerta.onlyOffice.loadFailedDesc", { error: error, defaultValue: "{{error}}. Please check if the ONLYOFFICE server is running and configured correctly." })}
             </p>
             <button
               onClick={() => window.location.reload()}
               className="px-4 py-2 bg-primary hover:bg-primary/95 text-primary-foreground text-xs font-semibold rounded-lg transition-all"
             >
-              Retry Connection
+              {t("lacerta.onlyOffice.retryConnection", "Retry Connection")}
             </button>
           </div>
         ) : (

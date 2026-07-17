@@ -3,6 +3,7 @@
 import type React from "react";
 import { useState, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import { useTranslation } from "react-i18next";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import { toast } from "sonner";
@@ -94,6 +95,7 @@ export const RrApiKeysTab = ({
   onOpenChange: _onOpenChange,
 }: RrApiKeysTabProps): React.JSX.Element => {
   const { data: session } = useSession();
+  const { t } = useTranslation();
 
   const [newKeyName, setNewKeyName] = useState<string>("");
   const [isCreating, setIsCreating] = useState<boolean>(false);
@@ -173,7 +175,7 @@ export const RrApiKeysTab = ({
       );
       if (!res.ok) {
         const errJson = await res.json().catch(() => null);
-        throw new Error(errJson?.message || "Failed to create API key.");
+        throw new Error(errJson?.message || t("apiKeys.toastFailedCreate"));
       }
       const created = (await res.json()) as RevealedKey;
 
@@ -193,7 +195,7 @@ export const RrApiKeysTab = ({
       refetch();
     } catch (err: unknown) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to create API key.",
+        err instanceof Error ? err.message : t("apiKeys.toastFailedCreate"),
       );
     } finally {
       setIsCreating(false);
@@ -206,6 +208,7 @@ export const RrApiKeysTab = ({
     customExpiresDays,
     appOption,
     refetch,
+    t,
   ]);
 
   const handleDelete = useCallback(
@@ -226,20 +229,20 @@ export const RrApiKeysTab = ({
         );
         if (!res.ok) {
           const errJson = await res.json().catch(() => null);
-          throw new Error(errJson?.message || "Failed to delete API key.");
+          throw new Error(errJson?.message || t("apiKeys.toastFailedDelete"));
         }
 
-        toast.success("API key deleted.");
+        toast.success(t("apiKeys.toastDeleted"));
         refetch();
       } catch (err: unknown) {
         toast.error(
-          err instanceof Error ? err.message : "Failed to delete API key.",
+          err instanceof Error ? err.message : t("apiKeys.toastFailedDelete"),
         );
       } finally {
         setDeletingId(null);
       }
     },
-    [session, refetch],
+    [session, refetch, t],
   );
 
   const handleRegenerate = useCallback(
@@ -260,7 +263,7 @@ export const RrApiKeysTab = ({
         );
         if (!res.ok) {
           const errJson = await res.json().catch(() => null);
-          throw new Error(errJson?.message || "Failed to regenerate API key.");
+          throw new Error(errJson?.message || t("apiKeys.toastFailedRegenerate"));
         }
         const regenerated = (await res.json()) as RevealedKey;
 
@@ -276,13 +279,13 @@ export const RrApiKeysTab = ({
         refetch();
       } catch (err: unknown) {
         toast.error(
-          err instanceof Error ? err.message : "Failed to regenerate API key.",
+          err instanceof Error ? err.message : t("apiKeys.toastFailedRegenerate"),
         );
       } finally {
         setRegeneratingId(null);
       }
     },
-    [session, refetch],
+    [session, refetch, t],
   );
 
   const handleCopyKey = useCallback(async (): Promise<void> => {
@@ -293,7 +296,7 @@ export const RrApiKeysTab = ({
   }, [revealedKey]);
 
   const formatLastUsed = (lastUsedAt: string | null): string => {
-    if (!lastUsedAt) return "Never";
+    if (!lastUsedAt) return t("apiKeys.never");
     return formatDistanceToNow(new Date(lastUsedAt), { addSuffix: true });
   };
 
@@ -309,10 +312,10 @@ export const RrApiKeysTab = ({
             <div className="flex flex-col gap-1 min-w-0">
               <CardTitle className="flex items-center gap-2">
                 <KeyRound className="size-4 text-primary" />
-                API Keys
+                {t("apiKeys.title")}
               </CardTitle>
               <CardDescription className="truncate max-w-[280px] xs:max-w-[400px] sm:max-w-none">
-                Manage personal API keys for programmatic access.
+                {t("apiKeys.description")}
               </CardDescription>
             </div>
             <Button
@@ -326,7 +329,7 @@ export const RrApiKeysTab = ({
               className="cursor-pointer shrink-0"
             >
               <Plus data-icon="inline-start" />
-              Create API Key
+              {t("apiKeys.createBtn")}
             </Button>
           </CardHeader>
 
@@ -345,9 +348,9 @@ export const RrApiKeysTab = ({
                     <EmptyMedia variant="icon">
                       <KeyRound />
                     </EmptyMedia>
-                    <EmptyTitle>No API keys yet</EmptyTitle>
+                    <EmptyTitle>{t("apiKeys.noKeys")}</EmptyTitle>
                     <EmptyDescription>
-                      Create your first key using the button above.
+                      {t("apiKeys.noKeysDesc")}
                     </EmptyDescription>
                   </EmptyHeader>
                 </Empty>
@@ -388,7 +391,7 @@ export const RrApiKeysTab = ({
                                 variant="destructive"
                                 className="font-semibold text-[9px] h-4 bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/10 cursor-default shrink-0 px-1.5"
                               >
-                                Expired
+                                {t("apiKeys.expiredBadge")}
                               </Badge>
                             )}
                           </div>
@@ -403,7 +406,7 @@ export const RrApiKeysTab = ({
                           <div className="flex flex-wrap items-center gap-3">
                             <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
                               <Clock className="size-2.5" />
-                              Created{" "}
+                              {t("apiKeys.createdLabel")}{" "}
                               {formatDistanceToNow(new Date(apiKey.createdAt), {
                                 addSuffix: true,
                               })}
@@ -419,8 +422,8 @@ export const RrApiKeysTab = ({
                               >
                                 <Clock className="size-2.5" />
                                 {isExpired
-                                  ? `Expired ${formatDistanceToNow(new Date(apiKey.expiresAt), { addSuffix: true })}`
-                                  : `Expires ${formatDistanceToNow(new Date(apiKey.expiresAt), { addSuffix: true })}`}
+                                  ? `${t("apiKeys.expired")} ${formatDistanceToNow(new Date(apiKey.expiresAt), { addSuffix: true })}`
+                                  : `${t("apiKeys.expires")} ${formatDistanceToNow(new Date(apiKey.expiresAt), { addSuffix: true })}`}
                               </span>
                             )}
                             <span
@@ -432,7 +435,8 @@ export const RrApiKeysTab = ({
                               )}
                             >
                               <Clock className="size-2.5" />
-                              Last used: {formatLastUsed(apiKey.lastUsedAt)}
+                              {t("apiKeys.lastUsed")}{" "}
+                              {formatLastUsed(apiKey.lastUsedAt)}
                             </span>
                           </div>
                         </div>
@@ -453,7 +457,7 @@ export const RrApiKeysTab = ({
                             ) : (
                               <>
                                 <RefreshCw data-icon="inline-start" />
-                                Regenerate
+                                {t("apiKeys.regenerateBtn")}
                               </>
                             )}
                           </Button>
@@ -470,7 +474,7 @@ export const RrApiKeysTab = ({
                           ) : (
                             <>
                               <Trash2 data-icon="inline-start" />
-                              Delete
+                              {t("apiKeys.deleteBtn")}
                             </>
                           )}
                         </Button>
@@ -499,19 +503,18 @@ export const RrApiKeysTab = ({
       >
         <DialogContent className="max-w-md text-left">
           <DialogHeader>
-            <DialogTitle>Create API Key</DialogTitle>
+            <DialogTitle>{t("apiKeys.createTitle")}</DialogTitle>
             <DialogDescription>
-              Generate a new API key to access the Runa API. Keys are shown only
-              once upon creation.
+              {t("apiKeys.createDesc")}
             </DialogDescription>
           </DialogHeader>
 
           <div className="flex flex-col gap-4 py-2">
             <Field>
-              <FieldLabel htmlFor="new-api-key-name">API Key Name</FieldLabel>
+              <FieldLabel htmlFor="new-api-key-name">{t("apiKeys.keyNameLabel")}</FieldLabel>
               <Input
                 id="new-api-key-name"
-                placeholder="e.g. CLI, Production, Integration"
+                placeholder={t("apiKeys.keyNamePlaceholder")}
                 value={newKeyName}
                 onChange={(e) => setNewKeyName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleCreate()}
@@ -522,7 +525,7 @@ export const RrApiKeysTab = ({
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="api-key-app">Associated App</FieldLabel>
+              <FieldLabel htmlFor="api-key-app">{t("apiKeys.associatedApp")}</FieldLabel>
               <NativeSelect
                 id="api-key-app"
                 value={appOption}
@@ -539,7 +542,7 @@ export const RrApiKeysTab = ({
             </Field>
 
             <Field>
-              <FieldLabel htmlFor="api-key-expiration">Expiration</FieldLabel>
+              <FieldLabel htmlFor="api-key-expiration">{t("apiKeys.expiration")}</FieldLabel>
               <div className="flex flex-col gap-2">
                 <NativeSelect
                   id="api-key-expiration"
@@ -549,22 +552,22 @@ export const RrApiKeysTab = ({
                   className="w-full"
                 >
                   <NativeSelectOption value="never">
-                    Infinite (Never expires)
+                    {t("apiKeys.expNever")}
                   </NativeSelectOption>
-                  <NativeSelectOption value="1d">1 Day</NativeSelectOption>
+                  <NativeSelectOption value="1d">{t("apiKeys.exp1Day")}</NativeSelectOption>
                   <NativeSelectOption value="7d">
-                    1 Week (7 Days)
+                    {t("apiKeys.exp7Days")}
                   </NativeSelectOption>
                   <NativeSelectOption value="30d">
-                    1 Month (30 Days)
+                    {t("apiKeys.exp30Days")}
                   </NativeSelectOption>
-                  <NativeSelectOption value="90d">90 Days</NativeSelectOption>
-                  <NativeSelectOption value="180d">180 Days</NativeSelectOption>
+                  <NativeSelectOption value="90d">{t("apiKeys.exp90Days")}</NativeSelectOption>
+                  <NativeSelectOption value="180d">{t("apiKeys.exp180Days")}</NativeSelectOption>
                   <NativeSelectOption value="365d">
-                    1 Year (365 Days)
+                    {t("apiKeys.exp365Days")}
                   </NativeSelectOption>
                   <NativeSelectOption value="custom">
-                    Custom...
+                    {t("apiKeys.expCustom")}
                   </NativeSelectOption>
                 </NativeSelect>
 
@@ -573,13 +576,13 @@ export const RrApiKeysTab = ({
                     <Input
                       type="number"
                       min={1}
-                      placeholder="Number of days"
+                      placeholder={t("apiKeys.customDaysPlaceholder")}
                       value={customExpiresDays}
                       onChange={(e) => setCustomExpiresDays(e.target.value)}
                       disabled={isCreating}
                       className="h-9 text-sm w-32"
                     />
-                    <span className="text-xs text-muted-foreground">days</span>
+                    <span className="text-xs text-muted-foreground">{t("apiKeys.daysUnit")}</span>
                   </div>
                 )}
               </div>
@@ -593,14 +596,14 @@ export const RrApiKeysTab = ({
               disabled={isCreating}
               className="cursor-pointer"
             >
-              Cancel
+              {t("cancel")}
             </Button>
             <Button
               onClick={handleCreate}
               disabled={!newKeyName.trim() || isCreating}
               className="cursor-pointer"
             >
-              {isCreating ? <Spinner /> : "Generate Key"}
+              {isCreating ? <Spinner /> : t("apiKeys.generateBtn")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -622,12 +625,11 @@ export const RrApiKeysTab = ({
             <DialogTitle className="flex items-center gap-2">
               <KeyRound className="size-4 text-primary" />
               {revealedKey?.isRegenerate
-                ? "Key Regenerated"
-                : "Key Created"} — {revealedKey?.name} ({revealedKey?.app})
+                ? t("apiKeys.keyRegenerated")
+                : t("apiKeys.keyCreated")}{" — "}{revealedKey?.name} ({revealedKey?.app})
             </DialogTitle>
             <DialogDescription>
-              Copy your new API key now. For security, it will{" "}
-              <strong>not be shown again</strong> after you close this dialog.
+              {t("apiKeys.revealDesc")}
             </DialogDescription>
           </DialogHeader>
 
@@ -636,14 +638,13 @@ export const RrApiKeysTab = ({
             <Alert>
               <AlertTriangle />
               <AlertDescription>
-                Store this key somewhere safe immediately. Once closed, you can
-                only regenerate it — not retrieve it.
+                {t("apiKeys.revealWarning")}
               </AlertDescription>
             </Alert>
 
             {/* Key field */}
             <Field>
-              <FieldLabel>Your API Key</FieldLabel>
+              <FieldLabel>{t("apiKeys.revealLabel")}</FieldLabel>
               <div className="flex items-center gap-2">
                 <div className="relative flex-1">
                   <Input
@@ -657,7 +658,7 @@ export const RrApiKeysTab = ({
                     type="button"
                     onClick={() => setKeyVisible((v) => !v)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                    aria-label={keyVisible ? "Hide key" : "Show key"}
+                    aria-label={keyVisible ? t("apiKeys.hideKey") : t("apiKeys.showKey")}
                   >
                     {keyVisible ? (
                       <EyeOff className="size-3.5" />
@@ -676,12 +677,12 @@ export const RrApiKeysTab = ({
                   {keyCopied ? (
                     <>
                       <Check data-icon="inline-start" />
-                      Copied!
+                      {t("apiKeys.copied")}
                     </>
                   ) : (
                     <>
                       <Copy data-icon="inline-start" />
-                      Copy
+                      {t("apiKeys.copy")}
                     </>
                   )}
                 </Button>
@@ -699,7 +700,7 @@ export const RrApiKeysTab = ({
               }}
               className="cursor-pointer"
             >
-              I&apos;ve saved it, close
+              {t("apiKeys.savedCloseBtn")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -712,25 +713,24 @@ export const RrApiKeysTab = ({
       >
         <AlertDialogContent className="">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete API Key</AlertDialogTitle>
+            <AlertDialogTitle>{t("apiKeys.deleteTitle")}</AlertDialogTitle>
             <AlertDialogDescription className="text-left text-wrap w-full">
-              Are you sure you want to permanently delete{" "}
+              {t("apiKeys.deleteConfirmDesc1")}{" "}
               <strong className="text-primary">
                 &ldquo;{confirmDeleteKey?.name}&rdquo;
               </strong>
-              ? Any applications using this key will immediately lose access.
-              This action cannot be undone.
+              {t("apiKeys.deleteConfirmDesc2")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="w-full">
             <AlertDialogCancel className="cursor-pointer">
-              Cancel
+              {t("cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => confirmDeleteId && handleDelete(confirmDeleteId)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90 cursor-pointer"
             >
-              Delete Key
+              {t("apiKeys.deleteConfirmBtn")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -743,19 +743,18 @@ export const RrApiKeysTab = ({
       >
         <AlertDialogContent className="text-left">
           <AlertDialogHeader>
-            <AlertDialogTitle>Regenerate API Key</AlertDialogTitle>
+            <AlertDialogTitle>{t("apiKeys.regenerateTitle")}</AlertDialogTitle>
             <AlertDialogDescription className="text-left text-wrap w-full">
-              Regenerating{" "}
+              {t("apiKeys.regenerateConfirmDesc1")}{" "}
               <strong className="text-primary">
                 &ldquo;{confirmRegenerateKey?.name}&rdquo;
               </strong>{" "}
-              will invalidate the existing key immediately. Any integrations
-              using the old key will stop working.
+              {t("apiKeys.regenerateConfirmDesc2")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="w-full">
             <AlertDialogCancel className="cursor-pointer">
-              Cancel
+              {t("cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() =>
@@ -767,7 +766,7 @@ export const RrApiKeysTab = ({
               }
               className="cursor-pointer"
             >
-              Regenerate Key
+              {t("apiKeys.regenerateConfirmBtn")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

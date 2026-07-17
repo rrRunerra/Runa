@@ -3,14 +3,16 @@
 import React, { useState, useEffect } from "react";
 import { Loader2, ShieldAlert, FileText } from "lucide-react";
 import { importRawKey, decrypt } from "@runa/crypto/browser";
-import { CanvasNode } from "../CanvasEditor";
+import { CanvasNode } from "../types";
+import { useTranslation } from "react-i18next";
 
 interface RrCanvasPdfCardProps {
   node: CanvasNode;
   accessToken: string;
 }
 
-export default function RrCanvasPdfCard({ node, accessToken }: RrCanvasPdfCardProps) {
+export default function RrCanvasPdfCard({ node, accessToken }: RrCanvasPdfCardProps): React.JSX.Element {
+  const { t } = useTranslation();
   const [pdfUrl, setPdfUrl] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,12 +43,12 @@ export default function RrCanvasPdfCard({ node, accessToken }: RrCanvasPdfCardPr
           `${process.env.NEXT_PUBLIC_API_URL}/files/lacerta/${node.lacertaFileKey}`,
           { headers }
         );
-        if (!res.ok) throw new Error("Failed to fetch PDF file");
+        if (!res.ok) throw new Error(t("lacerta.canvasEditor.failedFetchPdf", "Failed to fetch PDF file"));
 
         const encBuffer = await res.arrayBuffer();
         const keyToImport =
           node.lacertaFileDecryptionKey || node.lacertaFileKey;
-        if (!keyToImport) throw new Error("No decryption key present");
+        if (!keyToImport) throw new Error(t("lacerta.canvasEditor.noDecryptionKey", "No decryption key present"));
         const fileKey = await importRawKey(keyToImport);
         const decBuffer = await decrypt(encBuffer, fileKey);
 
@@ -58,7 +60,7 @@ export default function RrCanvasPdfCard({ node, accessToken }: RrCanvasPdfCardPr
         setPdfUrl(url);
       } catch (err: any) {
         console.error("Failed to load E2EE PDF:", err);
-        if (active) setError(err.message || "Failed to decrypt PDF");
+        if (active) setError(err.message || t("lacerta.canvasEditor.failedDecryptPdf", "Failed to decrypt PDF"));
       } finally {
         if (active) setLoading(false);
       }
@@ -72,14 +74,14 @@ export default function RrCanvasPdfCard({ node, accessToken }: RrCanvasPdfCardPr
         URL.revokeObjectURL(pdfUrl);
       }
     };
-  }, [node.lacertaFileId, node.lacertaFileKey, node.videoUrl, accessToken]);
+  }, [node.lacertaFileId, node.lacertaFileKey, node.videoUrl, accessToken, t]);
 
   let content = null;
   if (loading) {
     content = (
       <div className="flex-1 flex flex-col items-center justify-center text-slate-500 gap-2 h-full w-full bg-slate-950/20">
         <Loader2 className="h-6 w-6 animate-spin text-slate-600" />
-        <span className="text-[9px] font-semibold">Decrypting PDF Document...</span>
+        <span className="text-[9px] font-semibold">{t("lacerta.canvasEditor.decryptingPdf", "Decrypting PDF Document...")}</span>
       </div>
     );
   } else if (error) {
@@ -95,7 +97,7 @@ export default function RrCanvasPdfCard({ node, accessToken }: RrCanvasPdfCardPr
     content = (
       <div className="flex-1 flex flex-col items-center justify-center text-slate-500 gap-2 h-full w-full bg-slate-950/20">
         <FileText className="h-8 w-8 text-slate-700" />
-        <span className="text-[10px] font-semibold">No PDF Document Loaded</span>
+        <span className="text-[10px] font-semibold">{t("lacerta.canvasEditor.noPdfLoaded", "No PDF Document Loaded")}</span>
       </div>
     );
   } else {
@@ -103,7 +105,7 @@ export default function RrCanvasPdfCard({ node, accessToken }: RrCanvasPdfCardPr
       <iframe
         src={`${pdfUrl}#toolbar=0&navpanes=0`}
         className="w-full flex-1 border-0 select-none bg-slate-900"
-        title="PDF Preview"
+        title={t("lacerta.canvasEditor.pdfPreview", "PDF Preview")}
       />
     );
   }
@@ -120,11 +122,11 @@ export default function RrCanvasPdfCard({ node, accessToken }: RrCanvasPdfCardPr
         <div className="flex items-center gap-2 min-w-0">
           <FileText className="h-4 w-4 text-rose-500 shrink-0" />
           <span className="text-[10px] font-bold truncate text-slate-100">
-            {node.lacertaFileName || "PDF Document"}
+            {node.lacertaFileName || t("lacerta.canvasEditor.pdfDocument", "PDF Document")}
           </span>
         </div>
         <div className="text-[8px] font-bold text-rose-400 bg-rose-500/10 px-1.5 py-0.5 rounded border border-rose-500/20 uppercase shrink-0">
-          E2EE Preview
+          {t("lacerta.canvasEditor.e2eePreview", "E2EE Preview")}
         </div>
       </div>
 

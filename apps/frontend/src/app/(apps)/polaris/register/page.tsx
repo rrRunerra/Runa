@@ -4,8 +4,11 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { RrRegisterForm } from "@/components/rrComponents/polaris/rrRegisterForm";
 import { RESERVED_KEYWORDS } from "@/lib/rrReservedKeywords";
+import { useTranslation } from "react-i18next";
+import { RrLanguageSelector } from "@/components/rrComponents/rrLanguageSelector";
 
 export default function Page() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -49,9 +52,6 @@ export default function Page() {
     setErrors(criteria);
   };
 
-  const noFieldErrors =
-    !fieldErrors?.email && !fieldErrors?.username && !fieldErrors?.password;
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -61,7 +61,7 @@ export default function Page() {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       setFieldErrors((prev: any) => ({
         ...prev,
-        email: "Invalid email format",
+        email: t("polaris.register.invalidEmailFormat", "Invalid email format"),
       }));
       setLoading(false);
       return;
@@ -73,7 +73,7 @@ export default function Page() {
     if (RESERVED_KEYWORDS.has(lowerUsername)) {
       setFieldErrors((prev) => ({
         ...prev,
-        username: `Username cannot be a reserved keyword ("${lowerUsername}")`,
+        username: t("polaris.register.usernameReserved", `Username cannot be a reserved keyword ("{{username}}")`, { username: lowerUsername }),
       }));
       setLoading(false);
       return;
@@ -84,8 +84,8 @@ export default function Page() {
         ...prev,
         username:
           sanitizedUsername.length < 3
-            ? "Username must be at least 3 characters long"
-            : "Username must be at most 32 characters long",
+            ? t("polaris.register.usernameMinLen", "Username must be at least 3 characters long")
+            : t("polaris.register.usernameMaxLen", "Username must be at most 32 characters long"),
       }));
       setLoading(false);
       return;
@@ -129,10 +129,10 @@ export default function Page() {
             } else if (code === "UrSve-C001") {
               const lowerMsg = msg.toLowerCase();
               if (lowerMsg.includes("email")) {
-                newFieldErrors.email = "Email is already taken.";
+                newFieldErrors.email = t("polaris.register.emailTaken", "Email is already taken.");
               }
               if (lowerMsg.includes("username")) {
-                newFieldErrors.username = "Username is already taken.";
+                newFieldErrors.username = t("polaris.register.usernameTaken", "Username is already taken.");
               }
             }
           });
@@ -141,7 +141,7 @@ export default function Page() {
         throw new Error(data.message || "Registration failed");
       }
 
-      setMessage("Registration successful! Redirecting to login...");
+      setMessage(t("polaris.register.successRedirect", "Registration successful! Redirecting to login..."));
       setEmail("");
       setPassword("");
       setUsername("");
@@ -159,7 +159,7 @@ export default function Page() {
       }, 2200);
     } catch (err: any) {
       console.error("Registration failed:", err);
-      setMessage(`❌ ${err.message || "Registration failed."}`);
+      setMessage(`❌ ${err.message || t("polaris.register.failed", "Registration failed.")}`);
     } finally {
       setLoading(false);
     }
@@ -167,6 +167,7 @@ export default function Page() {
 
   return (
     <div className="flex min-h-svh w-full flex-col items-center justify-center bg-zinc-950 p-6 md:p-10">
+      <RrLanguageSelector variant="floating" />
       <div className="w-full max-w-md md:max-w-4xl lg:max-w-5xl">
         <RrRegisterForm
           email={email}

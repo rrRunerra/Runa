@@ -2,6 +2,7 @@ import React, { useCallback } from "react";
 import QRCode from "qrcode";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -36,6 +37,7 @@ export function RrTotpSetupDialog({
   isSubmitting,
   onVerify,
 }: RrTotpSetupDialogProps): React.JSX.Element {
+  const { t } = useTranslation();
   const qrCanvasRef = useCallback(
     (node: HTMLCanvasElement | null) => {
       if (node && totpQrUrl) {
@@ -57,11 +59,10 @@ export function RrTotpSetupDialog({
       <DialogContent className="max-w-md bg-card border border-border shadow-2xl p-6 rounded-2xl flex flex-col items-center">
         <DialogHeader className="pb-2 text-center w-full">
           <DialogTitle className="text-md font-bold text-center">
-            Setup Authenticator App
+            {t("securitySettings.totpSetupTitle")}
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground text-center mt-1">
-            Scan the QR code below or enter the secret key manually into your
-            TOTP application.
+            {t("securitySettings.totpSetupDesc")}
           </DialogDescription>
         </DialogHeader>
 
@@ -72,7 +73,7 @@ export function RrTotpSetupDialog({
         <div className="w-full flex flex-col gap-3">
           <div className="p-3.5 rounded-xl bg-muted border border-border flex flex-col gap-1 text-center relative isolate">
             <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wide">
-              Manual Secret Key
+              {t("securitySettings.manualSecretKey")}
             </span>
             <span className="text-xs font-mono font-bold text-primary select-all break-all tracking-wider">
               {totpSecret}
@@ -84,7 +85,7 @@ export function RrTotpSetupDialog({
               htmlFor="totp-ver-code"
               className="text-xs text-muted-foreground uppercase tracking-wide mb-1.5"
             >
-              Verification Code
+              {t("securitySettings.verificationCodeLabel")}
             </Label>
             <InputOTP
               maxLength={6}
@@ -110,14 +111,14 @@ export function RrTotpSetupDialog({
             className="text-muted-foreground hover:text-foreground rounded-xl text-xs h-9 cursor-pointer"
             disabled={isSubmitting}
           >
-            Cancel
+            {t("cancel")}
           </Button>
           <Button
             onClick={onVerify}
             disabled={totpCode.length !== 6 || isSubmitting}
             className="bg-primary hover:bg-primary/95 text-primary-foreground font-bold rounded-xl px-5 text-xs h-9 cursor-pointer"
           >
-            {isSubmitting ? "Enabling..." : "Verify & Enable"}
+            {isSubmitting ? t("securitySettings.enabling") : t("securitySettings.verifyAndEnable")}
           </Button>
         </div>
       </DialogContent>

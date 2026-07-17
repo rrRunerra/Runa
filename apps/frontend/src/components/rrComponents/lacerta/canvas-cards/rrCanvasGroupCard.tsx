@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { CanvasNode } from "../CanvasEditor";
+import { CanvasNode } from "../types";
 
 interface RrCanvasGroupCardProps {
   node: CanvasNode;

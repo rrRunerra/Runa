@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { RotateCcw, Compass } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface StarMapControlsProps {
   onReset: () => void;
@@ -13,6 +14,7 @@ export function StarMapControls({
   showCompass,
   onToggleCompass,
 }: StarMapControlsProps) {
+  const { t } = useTranslation();
   return (
     <div className="absolute top-4 right-4 z-50">
       {/* Control Panel: StarCard style but using semantic classes */}
@@ -23,7 +25,7 @@ export function StarMapControls({
           size="icon"
           onClick={onReset}
           className="size-10 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-all duration-300"
-          title="Reset View"
+          title={t("stars.resetView")}
         >
           <RotateCcw className="size-5" />
         </Button>
@@ -40,7 +42,7 @@ export function StarMapControls({
             "size-10 rounded-lg text-muted-foreground hover:text-foreground transition-all duration-300 relative",
             showCompass ? "bg-accent text-accent-foreground shadow-[0_0_12px_rgba(255,255,255,0.1)] border-border" : "hover:bg-accent/50"
           )}
-          title={showCompass ? "Hide Waypoint" : "Show Waypoint"}
+          title={showCompass ? t("stars.hideWaypoint") : t("stars.showWaypoint")}
         >
           <Compass className="size-5" />
           {showCompass && (

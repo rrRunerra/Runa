@@ -3,8 +3,9 @@
 import React from "react";
 import { Info, AlertTriangle, CheckCircle, XCircle } from "lucide-react";
 import TiptapNode from "../TiptapNode";
-import { CanvasNode } from "../CanvasEditor";
+import { CanvasNode } from "../types";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 interface RrCanvasCalloutCardProps {
   node: CanvasNode;
@@ -12,7 +13,8 @@ interface RrCanvasCalloutCardProps {
   onNodeUpdate: (updates: Partial<CanvasNode>) => void;
 }
 
-export default function RrCanvasCalloutCard({ node, isLocked = false, onNodeUpdate }: RrCanvasCalloutCardProps) {
+export default function RrCanvasCalloutCard({ node, isLocked = false, onNodeUpdate }: RrCanvasCalloutCardProps): React.JSX.Element {
+  const { t } = useTranslation();
   const type = node.calloutType || "info";
 
   const config = {
@@ -20,31 +22,31 @@ export default function RrCanvasCalloutCard({ node, isLocked = false, onNodeUpda
       border: "border-l-[6px] border-l-blue-500 border-blue-500/20",
       bg: "bg-blue-500/[0.04]",
       icon: <Info className="h-4 w-4 text-blue-500 shrink-0" />,
-      title: "Information",
+      title: t("lacerta.canvasEditor.calloutInfo", "Information"),
     },
     warning: {
       border: "border-l-[6px] border-l-amber-500 border-amber-500/20",
       bg: "bg-amber-500/[0.04]",
       icon: <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />,
-      title: "Warning",
+      title: t("lacerta.canvasEditor.calloutWarning", "Warning"),
     },
     success: {
       border: "border-l-[6px] border-l-emerald-500 border-emerald-500/20",
       bg: "bg-emerald-500/[0.04]",
       icon: <CheckCircle className="h-4 w-4 text-emerald-500 shrink-0" />,
-      title: "Success",
+      title: t("lacerta.canvasEditor.calloutSuccess", "Success"),
     },
     error: {
       border: "border-l-[6px] border-l-rose-500 border-rose-500/20",
       bg: "bg-rose-500/[0.04]",
       icon: <XCircle className="h-4 w-4 text-rose-500 shrink-0" />,
-      title: "Danger",
+      title: t("lacerta.canvasEditor.calloutDanger", "Danger"),
     },
   }[type] || {
     border: "border-l-[6px] border-l-blue-500 border-blue-500/20",
     bg: "bg-blue-500/[0.04]",
     icon: <Info className="h-4 w-4 text-blue-500 shrink-0" />,
-    title: "Information",
+    title: t("lacerta.canvasEditor.calloutInfo", "Information"),
   };
 
   return (

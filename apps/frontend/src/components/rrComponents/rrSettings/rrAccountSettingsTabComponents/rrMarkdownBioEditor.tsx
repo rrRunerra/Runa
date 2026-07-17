@@ -19,6 +19,7 @@ import {
   CardDescription,
   CardContent,
 } from "@/components/ui/card";
+import { useTranslation } from "react-i18next";
 
 export interface RrMarkdownBioEditorProps {
   bio: string;
@@ -29,6 +30,7 @@ export function RrMarkdownBioEditor({
   bio,
   setBio,
 }: RrMarkdownBioEditorProps): React.JSX.Element {
+  const { t } = useTranslation();
   const [editorTab, setEditorTab] = useState<"write" | "preview">("write");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -83,9 +85,9 @@ export function RrMarkdownBioEditor({
     <Card>
       <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
         <div className="flex flex-col gap-0.5 pt-2 text-left">
-          <CardTitle>About Me (Markdown Bio)</CardTitle>
+          <CardTitle>{t("account.aboutMeTitle")}</CardTitle>
           <CardDescription>
-            Describe yourself using Markdown. Script/HTML tags are filtered.
+            {t("account.aboutMeDesc")}
           </CardDescription>
         </div>
         {/* Write/Preview Switcher */}
@@ -100,7 +102,7 @@ export function RrMarkdownBioEditor({
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
-            Write
+            {t("account.write")}
           </button>
           <button
             type="button"
@@ -112,7 +114,7 @@ export function RrMarkdownBioEditor({
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
-            Preview
+            {t("account.preview")}
           </button>
         </div>
       </CardHeader>
@@ -126,7 +128,7 @@ export function RrMarkdownBioEditor({
                 type="button"
                 onClick={() => insertMarkdown("bold", "bold text")}
                 className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                title="Bold"
+                title={t("account.toolbarBold")}
               >
                 <Bold className="size-3.5" />
               </button>
@@ -134,7 +136,7 @@ export function RrMarkdownBioEditor({
                 type="button"
                 onClick={() => insertMarkdown("italic", "italic text")}
                 className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                title="Italic"
+                title={t("account.toolbarItalic")}
               >
                 <Italic className="size-3.5" />
               </button>
@@ -142,7 +144,7 @@ export function RrMarkdownBioEditor({
                 type="button"
                 onClick={() => insertMarkdown("heading", "Heading")}
                 className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                title="Heading"
+                title={t("account.toolbarHeading")}
               >
                 <Heading className="size-3.5" />
               </button>
@@ -151,7 +153,7 @@ export function RrMarkdownBioEditor({
                 type="button"
                 onClick={() => insertMarkdown("link", "link text")}
                 className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                title="Insert Link"
+                title={t("account.toolbarLink")}
               >
                 <Link className="size-3.5" />
               </button>
@@ -159,7 +161,7 @@ export function RrMarkdownBioEditor({
                 type="button"
                 onClick={() => insertMarkdown("code", "code")}
                 className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                title="Code Block"
+                title={t("account.toolbarCode")}
               >
                 <Code className="size-3.5" />
               </button>
@@ -168,7 +170,7 @@ export function RrMarkdownBioEditor({
                 type="button"
                 onClick={() => insertMarkdown("bullet", "List item")}
                 className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                title="Bullet List"
+                title={t("account.toolbarBullet")}
               >
                 <List className="size-3.5" />
               </button>
@@ -176,7 +178,7 @@ export function RrMarkdownBioEditor({
                 type="button"
                 onClick={() => insertMarkdown("number", "List item")}
                 className="p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                title="Numbered List"
+                title={t("account.toolbarNumber")}
               >
                 <ListOrdered className="size-3.5" />
               </button>
@@ -188,7 +190,7 @@ export function RrMarkdownBioEditor({
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               maxLength={4000}
-              placeholder="Write a description about yourself... (supports markdown)"
+              placeholder={t("account.writeBioPlaceholder")}
               className="w-full h-36 md:h-44 p-3 bg-transparent text-xs md:text-sm text-foreground focus:outline-none placeholder:text-muted-foreground/50 resize-none font-sans"
             />
             <div className="flex justify-end px-3 py-1.5 bg-muted/30 border-t border-border text-[10px] text-muted-foreground font-semibold tabular-nums select-none">
@@ -276,7 +278,7 @@ export function RrMarkdownBioEditor({
               </ReactMarkdown>
             ) : (
               <p className="italic text-muted-foreground/60 text-xs">
-                Nothing to preview. Start writing in the edit tab.
+                {t("account.nothingToPreview")}
               </p>
             )}
           </div>

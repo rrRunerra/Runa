@@ -37,6 +37,7 @@ import RrLapplandCanvas from "../rrImages/rrLapplandCanvas";
 import RrLapplandMermaid from "../rrImages/rrLapplandMermaid";
 import RrLapplandUml from "../rrImages/rrLapplandUml";
 import RrLapplandFolder from "../rrImages/rrLapplandFolder";
+import { useTranslation } from "react-i18next";
 
 interface FileGridProps {
   items: RenderFileItem[];
@@ -78,6 +79,7 @@ export default function FileGrid({
   onLockEncryption,
   onSaveCopy,
 }: FileGridProps): React.JSX.Element {
+  const { t } = useTranslation();
   const [search, setSearch] = useState<string>("");
   const [sortField, setSortField] = useState<SortField>("date");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
@@ -129,7 +131,7 @@ export default function FileGrid({
   // Compute folder breadcrumbs
   const getBreadcrumbs = () => {
     const list: { id: string | null; name: string }[] = [
-      { id: null, name: "Root" },
+      { id: null, name: t("lacerta.fileGrid.rootFolder", "Root") },
     ];
     let currentId = currentFolderId;
 
@@ -235,7 +237,7 @@ export default function FileGrid({
   };
 
   const formatSize = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes";
+    if (bytes === 0) return t("lacerta.fileGrid.sizeBytesZero", "0 Bytes");
     const k = 1024;
     const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -325,13 +327,13 @@ export default function FileGrid({
           <button
             onClick={() => setSelectedIds(new Set())}
             className="p-1 hover:bg-neutral-800 rounded-full transition-all text-neutral-400 hover:text-white animate-in zoom-in duration-100"
-            title="Clear selection"
+            title={t("lacerta.fileGrid.clearSelection", "Clear selection")}
           >
             <X className="h-4 w-4" />
           </button>
 
           <span className="text-xs font-semibold text-neutral-200 shrink-0 border-r border-neutral-800 pr-3">
-            {selectedIds.size} selected
+            {t("lacerta.fileGrid.itemsSelected", { defaultValue: "{{count}} selected", count: selectedIds.size })}
           </span>
 
           <div className="flex items-center gap-1">
@@ -345,7 +347,7 @@ export default function FileGrid({
                     if (item) onShare(item);
                   }}
                   className="p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-all"
-                  title="Share"
+                  title={t("lacerta.fileGrid.share", "Share")}
                 >
                   <UserPlus className="h-4 w-4" />
                 </button>
@@ -359,7 +361,7 @@ export default function FileGrid({
                   if (item) onDownload(item);
                 }}
                 className="p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-all"
-                title="Download"
+                title={t("lacerta.fileGrid.download", "Download")}
               >
                 <Download className="h-4 w-4" />
               </button>
@@ -371,7 +373,7 @@ export default function FileGrid({
                 onClick={handleBulkToggleVault}
                 className="p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-all"
                 title={
-                  hasVaultSelected() ? "Remove from Vault" : "Move to Vault"
+                  hasVaultSelected() ? t("lacerta.fileGrid.removeFromVault", "Remove from Vault") : t("lacerta.fileGrid.moveToVault", "Move to Vault")
                 }
               >
                 <Shield className="h-4 w-4" />
@@ -382,7 +384,7 @@ export default function FileGrid({
             <button
               onClick={handleBulkToggleTrash}
               className="p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-all"
-              title={hasTrashSelected() ? "Restore items" : "Send to Trash"}
+              title={hasTrashSelected() ? t("lacerta.fileGrid.restoreItems", "Restore items") : t("lacerta.fileGrid.sendToTrash", "Send to Trash")}
             >
               {hasTrashSelected() ? (
                 <ArrowUpRight className="h-4 w-4" />
@@ -396,7 +398,7 @@ export default function FileGrid({
               <button
                 onClick={handleBulkDelete}
                 className="p-1.5 rounded-lg text-destructive hover:bg-destructive/10 transition-all"
-                title="Delete forever"
+                title={t("lacerta.fileGrid.deleteForever", "Delete forever")}
               >
                 <Trash2 className="h-4 w-4" />
               </button>
@@ -410,10 +412,10 @@ export default function FileGrid({
         <div className="absolute inset-0 bg-primary/10 border-2 border-dashed border-primary m-6 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm z-50 pointer-events-none">
           <Upload className="h-12 w-12 text-primary animate-bounce mb-3" />
           <span className="text-sm font-bold text-foreground">
-            Drop files to upload encrypted
+            {t("lacerta.fileGrid.dragOverTitle", "Drop files to upload encrypted")}
           </span>
           <span className="text-xs text-muted-foreground mt-1">
-            Files are fully encrypted locally in browser.
+            {t("lacerta.fileGrid.dragOverDesc", "Files are fully encrypted locally in browser.")}
           </span>
         </div>
       )}
@@ -467,7 +469,7 @@ export default function FileGrid({
             <Search className="absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground/60" />
             <input
               type="text"
-              placeholder="Search..."
+              placeholder={t("lacerta.fileGrid.searchPlaceholder", "Search...")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full bg-muted/5 border border-border rounded-lg pl-7 pr-2.5 py-1 sm:py-1.5 text-xs text-foreground placeholder-muted-foreground/60 focus:outline-none focus:border-primary transition-all"
@@ -485,7 +487,7 @@ export default function FileGrid({
                     ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/10"
                 }`}
-                title="Grid View"
+                title={t("lacerta.fileGrid.gridView", "Grid View")}
               >
                 <LayoutGrid className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
               </button>
@@ -496,7 +498,7 @@ export default function FileGrid({
                     ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/10"
                 }`}
-                title="List View"
+                title={t("lacerta.fileGrid.listView", "List View")}
               >
                 <List className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
               </button>
@@ -506,7 +508,7 @@ export default function FileGrid({
               <button
                 onClick={onLockEncryption}
                 className="p-1 sm:p-2 border border-border hover:bg-muted/10 text-muted-foreground hover:text-foreground rounded-lg transition-all"
-                title="Lock Cryptographic Session"
+                title={t("lacerta.fileGrid.lockCrypto", "Lock Cryptographic Session")}
               >
                 <Key className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </button>
@@ -517,7 +519,7 @@ export default function FileGrid({
                 <button
                   onClick={triggerUploadClick}
                   className="p-1 sm:p-2 border border-border hover:bg-muted/10 text-muted-foreground hover:text-foreground rounded-lg transition-all"
-                  title="Upload Files"
+                  title={t("lacerta.fileGrid.uploadFiles", "Upload Files")}
                 >
                   <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </button>
@@ -530,7 +532,7 @@ export default function FileGrid({
                     className="p-1.5 sm:px-3.5 sm:py-1.5 bg-primary hover:bg-primary/95 text-primary-foreground text-xs font-semibold rounded-lg flex items-center gap-1 transition-all shadow-md active:scale-98"
                   >
                     <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    <span className="hidden sm:inline">New</span>
+                    <span className="hidden sm:inline">{t("lacerta.fileGrid.newButton", "New")}</span>
                   </button>
 
                   {isNewDropdownOpen && (
@@ -543,7 +545,7 @@ export default function FileGrid({
                         className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
                       >
                         <RrLapplandFolder className="h-5 w-5 text-amber-500 dark:text-amber-400" />
-                        New Folder
+                        {t("lacerta.fileGrid.newFolder", "New Folder")}
                       </button>
                       <div className="h-px bg-border my-1" />
                       <button
@@ -554,7 +556,7 @@ export default function FileGrid({
                         className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
                       >
                         <RrLapplandTextFile className="h-5 w-5 text-slate-600 dark:text-slate-300" />
-                        Text File
+                        {t("lacerta.fileGrid.textFile", "Text File")}
                       </button>
                       <button
                         onClick={() => {
@@ -564,7 +566,7 @@ export default function FileGrid({
                         className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
                       >
                         <RrLapplandDocument className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                        Word Document
+                        {t("lacerta.fileGrid.wordDocument", "Word Document")}
                       </button>
                       <button
                         onClick={() => {
@@ -574,7 +576,7 @@ export default function FileGrid({
                         className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
                       >
                         <RrLapplandSpreadsheet className="h-5 w-5 text-green-600 dark:text-green-400" />
-                        Spreadsheet
+                        {t("lacerta.fileGrid.spreadsheet", "Spreadsheet")}
                       </button>
                       <button
                         onClick={() => {
@@ -584,7 +586,7 @@ export default function FileGrid({
                         className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
                       >
                         <RrLapplandCanvas className="h-5 w-5 text-violet-600 dark:text-violet-400" />
-                        Spatial Canvas
+                        {t("lacerta.fileGrid.spatialCanvas", "Spatial Canvas")}
                       </button>
                       <button
                         onClick={() => {
@@ -594,7 +596,7 @@ export default function FileGrid({
                         className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
                       >
                         <RrLapplandPresentation className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                        Presentation
+                        {t("lacerta.fileGrid.presentation", "Presentation")}
                       </button>
                       <button
                         onClick={() => {
@@ -604,7 +606,7 @@ export default function FileGrid({
                         className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
                       >
                         <RrLapplandMermaid className="h-5 w-5 text-teal-600 dark:text-teal-400" />
-                        Mermaid Diagram
+                        {t("lacerta.fileGrid.mermaidDiagram", "Mermaid Diagram")}
                       </button>
                       <button
                         onClick={() => {
@@ -614,7 +616,7 @@ export default function FileGrid({
                         className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
                       >
                         <RrLapplandUml className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                        UML Diagram
+                        {t("lacerta.fileGrid.umlDiagram", "UML Diagram")}
                       </button>
                     </div>
                   )}
@@ -632,7 +634,7 @@ export default function FileGrid({
             onClick={() => toggleSort("name")}
             className="flex items-center gap-1 hover:text-foreground transition-all"
           >
-            Name{" "}
+            {t("lacerta.fileGrid.nameColumn", "Name")}{" "}
             {sortField === "name" &&
               (sortOrder === "asc" ? (
                 <ArrowUp className="h-3 w-3" />
@@ -645,7 +647,7 @@ export default function FileGrid({
               onClick={() => toggleSort("size")}
               className="flex items-center gap-1 hover:text-foreground transition-all"
             >
-              Size{" "}
+              {t("lacerta.fileGrid.sizeColumn", "Size")}{" "}
               {sortField === "size" &&
                 (sortOrder === "asc" ? (
                   <ArrowUp className="h-3 w-3" />
@@ -657,7 +659,7 @@ export default function FileGrid({
               onClick={() => toggleSort("date")}
               className="flex items-center gap-1 hover:text-foreground transition-all"
             >
-              Date{" "}
+              {t("lacerta.fileGrid.dateColumn", "Date")}{" "}
               {sortField === "date" &&
                 (sortOrder === "asc" ? (
                   <ArrowUp className="h-3 w-3" />
@@ -675,10 +677,10 @@ export default function FileGrid({
           <div className="h-full flex flex-col items-center justify-center p-8 border border-dashed border-border/60 rounded-2xl bg-card/5">
             <RrLapplandFolder className="h-16 w-16 text-amber-500/40 dark:text-amber-400/30 mb-3" />
             <span className="text-xs font-semibold text-muted-foreground">
-              This folder is empty
+              {t("lacerta.fileGrid.emptyFolder", "This folder is empty")}
             </span>
             <span className="text-[10px] text-muted-foreground/60 mt-1">
-              Drag and drop files to upload encrypted.
+              {t("lacerta.fileGrid.emptyFolderDesc", "Drag and drop files to upload encrypted.")}
             </span>
           </div>
         ) : viewMode === "grid" ? (
@@ -720,7 +722,7 @@ export default function FileGrid({
                       onClick={() => toggleSort("name")}
                       className="flex items-center gap-1 hover:text-foreground transition-all"
                     >
-                      Name{" "}
+                      {t("lacerta.fileGrid.nameColumn", "Name")}{" "}
                       {sortField === "name" &&
                         (sortOrder === "asc" ? (
                           <ArrowUp className="h-3 w-3" />
@@ -735,7 +737,7 @@ export default function FileGrid({
                       onClick={() => toggleSort("size")}
                       className="flex items-center gap-1 hover:text-foreground transition-all"
                     >
-                      Size{" "}
+                      {t("lacerta.fileGrid.sizeColumn", "Size")}{" "}
                       {sortField === "size" &&
                         (sortOrder === "asc" ? (
                           <ArrowUp className="h-3 w-3" />
@@ -749,7 +751,7 @@ export default function FileGrid({
                       onClick={() => toggleSort("date")}
                       className="flex items-center gap-1 hover:text-foreground transition-all"
                     >
-                      {isSharedTab ? "Owner" : "Modified"}{" "}
+                      {isSharedTab ? t("lacerta.fileGrid.ownerColumn", "Owner") : t("lacerta.fileGrid.modifiedColumn", "Modified")}{" "}
                       {sortField === "date" &&
                         (sortOrder === "asc" ? (
                           <ArrowUp className="h-3 w-3" />
@@ -789,10 +791,10 @@ export default function FileGrid({
       {sortedItems.length > 0 && (
         <div className="flex items-center justify-between border-t border-border/40 pt-4 mt-4 text-[11px] font-medium text-muted-foreground shrink-0 px-1">
           <div>
-            {fileCount} {fileCount === 1 ? "file" : "files"} • {folderCount}{" "}
-            {folderCount === 1 ? "folder" : "folders"}
+            {fileCount} {fileCount === 1 ? t("lacerta.fileGrid.file", "file") : t("lacerta.fileGrid.files", "files")} • {folderCount}{" "}
+            {folderCount === 1 ? t("lacerta.fileGrid.folder", "folder") : t("lacerta.fileGrid.folders", "folders")}
           </div>
-          <div>Total size: {formatSize(totalSize)}</div>
+          <div>{t("lacerta.fileGrid.totalSize", { defaultValue: "Total size: {{size}}", size: formatSize(totalSize) })}</div>
         </div>
       )}
       {/* Bulk delete confirmation modal */}
@@ -800,15 +802,13 @@ export default function FileGrid({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="w-full max-w-sm rounded-2xl border border-destructive/30 bg-card p-6 shadow-2xl animate-in zoom-in duration-150">
             <h3 className="text-sm font-bold text-foreground mb-1">
-              Delete Selected Items?
+              {t("lacerta.fileGrid.deleteSelectedTitle", "Delete Selected Items?")}
             </h3>
             <p className="text-xs text-muted-foreground mb-4">
-              This will permanently delete the {selectedIds.size} selected item
-              {selectedIds.size === 1 ? "" : "s"} forever.
+              {t("lacerta.fileGrid.deleteSelectedDesc", { defaultValue: "This will permanently delete the {{count}} selected item(s) forever.", count: selectedIds.size })}
             </p>
             <p className="text-xs text-destructive/80 mb-5 font-medium">
-              This action is irreversible and all files will be removed from
-              storage permanently.
+              {t("lacerta.fileGrid.deleteSelectedWarning", "This action is irreversible and all files will be removed from storage permanently.")}
             </p>
             <div className="flex justify-end items-center gap-2">
               <button
@@ -816,7 +816,7 @@ export default function FileGrid({
                 disabled={isBulkDeleting}
                 className="px-3.5 py-1.5 border border-border hover:bg-muted/10 rounded-lg text-xs font-semibold text-foreground transition-all disabled:opacity-50"
               >
-                Cancel
+                {t("lacerta.fileGrid.cancel", "Cancel")}
               </button>
               <button
                 onClick={confirmBulkDelete}
@@ -826,7 +826,7 @@ export default function FileGrid({
                 {isBulkDeleting ? (
                   <Loader2 className="h-3 w-3 animate-spin" />
                 ) : null}
-                Delete Permanently
+                {t("lacerta.fileGrid.deletePermanently", "Delete Permanently")}
               </button>
             </div>
           </div>
@@ -838,16 +838,16 @@ export default function FileGrid({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl animate-in zoom-in duration-150">
             <h3 className="text-sm font-bold text-foreground mb-1">
-              Create New Folder
+              {t("lacerta.fileGrid.createFolderTitle", "Create New Folder")}
             </h3>
             <p className="text-xs text-muted-foreground mb-4">
-              Enter a name for your new encrypted folder.
+              {t("lacerta.fileGrid.createFolderDesc", "Enter a name for your new encrypted folder.")}
             </p>
             <input
               type="text"
               value={newFolderName}
               onChange={(e) => setNewFolderName(e.target.value)}
-              placeholder="Folder name"
+              placeholder={t("lacerta.fileGrid.folderNamePlaceholder", "Folder name")}
               className="w-full bg-muted/20 border border-border rounded-xl px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary mb-5"
               autoFocus
               onKeyDown={(e) => {
@@ -863,13 +863,13 @@ export default function FileGrid({
                 onClick={() => setIsCreateFolderModalOpen(false)}
                 className="px-3.5 py-1.5 border border-border hover:bg-muted/10 rounded-lg text-xs font-semibold text-foreground transition-all"
               >
-                Cancel
+                {t("lacerta.fileGrid.cancel", "Cancel")}
               </button>
               <button
                 onClick={handleCreateFolderConfirm}
                 className="px-3.5 py-1.5 bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-semibold rounded-lg transition-all shadow-md active:scale-98"
               >
-                Create
+                {t("lacerta.fileGrid.create", "Create")}
               </button>
             </div>
           </div>

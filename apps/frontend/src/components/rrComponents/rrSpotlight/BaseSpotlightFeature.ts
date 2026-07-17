@@ -44,6 +44,7 @@ export interface SpotlightActionContext {
   setSearchResults?: (results: any[] | null) => void;
   setSearchLoading?: (loading: boolean) => void;
   setBaseTheme?: (theme: string) => void;
+  t: (key: string, options?: any) => string;
 }
 
 export abstract class BaseSpotlightFeature {

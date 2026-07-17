@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import RrSenderProfileCard from "./rrSenderProfileCard";
@@ -97,6 +98,7 @@ export default function RrEmailReader({
   onSendReply,
   sendingReply,
 }: RrEmailReaderProps): React.JSX.Element {
+  const { t } = useTranslation();
   const [showProfilePanel, setShowProfilePanel] = useState<boolean>(false);
   const [loadRemoteContent, setLoadRemoteContent] = useState<boolean>(false);
 
@@ -299,7 +301,7 @@ export default function RrEmailReader({
           onClick={onGoBack}
           className="px-3 py-1.5 text-xs bg-muted border border-border hover:border-muted-foreground rounded-xl text-foreground transition-all cursor-pointer"
         >
-          Go back
+          {t("pegasus.reader.goBack")}
         </button>
       </div>
     );
@@ -313,11 +315,10 @@ export default function RrEmailReader({
         </div>
         <div className="space-y-1 max-w-xs">
           <h3 className="text-sm font-semibold text-foreground">
-            No message selected
+            {t("pegasus.reader.selectThread")}
           </h3>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Select a thread from the list to display decrypted content,
-            attachments, and profiles.
+            {t("pegasus.reader.selectThreadDesc")}
           </p>
         </div>
       </div>
@@ -340,7 +341,7 @@ export default function RrEmailReader({
               onClick={onMarkReadChange}
               className="px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl border border-border transition-all font-semibold cursor-pointer"
             >
-              Mark {message.read ? "Unread" : "Read"}
+              {message.read ? t("pegasus.reader.markUnread") : t("pegasus.reader.markRead")}
             </button>
 
             <div className="h-4 w-px bg-border mx-1" />
@@ -350,7 +351,7 @@ export default function RrEmailReader({
               className="px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl border border-border transition-all flex items-center gap-1.5 font-semibold cursor-pointer"
             >
               <Reply className="size-3.5" />
-              <span>Reply</span>
+              <span>{t("pegasus.reader.reply")}</span>
             </button>
             {((message.cc && message.cc.trim().length > 0) ||
               (message.to && message.to.includes(","))) && (
@@ -359,7 +360,7 @@ export default function RrEmailReader({
                 className="px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl border border-border transition-all flex items-center gap-1.5 font-semibold cursor-pointer"
               >
                 <ReplyAll className="size-3.5" />
-                <span>Reply All</span>
+                <span>{t("pegasus.reader.replyAll")}</span>
               </button>
             )}
             <button
@@ -367,7 +368,7 @@ export default function RrEmailReader({
               className="px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl border border-border transition-all flex items-center gap-1.5 font-semibold cursor-pointer"
             >
               <Forward className="size-3.5" />
-              <span>Forward</span>
+              <span>{t("pegasus.reader.forward")}</span>
             </button>
           </div>
 
@@ -379,7 +380,7 @@ export default function RrEmailReader({
                 title="Restore to Inbox"
               >
                 <RotateCcw className="size-4" />
-                <span>Restore</span>
+                <span>{t("pegasus.reader.restore")}</span>
               </button>
             )}
             {senderProfile && (
@@ -394,7 +395,7 @@ export default function RrEmailReader({
                 title="Toggle Profile Panel"
               >
                 <User className="size-4" />
-                <span className="hidden sm:inline">Profile</span>
+                <span className="hidden sm:inline">{t("pegasus.reader.profile")}</span>
               </button>
             )}
             <button
@@ -474,13 +475,13 @@ export default function RrEmailReader({
                   </span>
                 </div>
                 <div className="text-muted-foreground truncate">
-                  From:{" "}
+                  {t("pegasus.attachments.from")}{" "}
                   <span className="text-foreground">
                     {getSenderEmail(message.from)}
                   </span>
                 </div>
                 <div className="text-muted-foreground truncate">
-                  To: <span className="text-foreground">{message.to}</span>
+                  {t("pegasus.compose.to")}: <span className="text-foreground">{message.to}</span>
                 </div>
               </div>
             </div>
@@ -489,13 +490,13 @@ export default function RrEmailReader({
           {/* Remote content warning */}
           {hasRemoteContent && !loadRemoteContent && (
             <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 text-amber-500 text-[11px] rounded-xl flex items-center justify-between gap-4">
-              <span>Remote content in this message has been blocked.</span>
+              <span>{t("pegasus.reader.blockedRemoteImages")}</span>
               <div className="flex gap-2">
                 <button
                   onClick={() => setLoadRemoteContent(true)}
                   className="px-2 py-0.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-600 rounded-lg font-semibold cursor-pointer"
                 >
-                  Show once
+                  {t("pegasus.reader.showImages")}
                 </button>
                 <button
                   onClick={() => {
@@ -516,7 +517,7 @@ export default function RrEmailReader({
                   }}
                   className="px-2 py-0.5 bg-amber-500/30 hover:bg-amber-500/40 text-amber-600 rounded-lg font-semibold cursor-pointer"
                 >
-                  Always allow
+                  {t("pegasus.reader.alwaysShow")}
                 </button>
               </div>
             </div>
@@ -575,7 +576,7 @@ export default function RrEmailReader({
           {message.attachments && message.attachments.length > 0 && (
             <div className="space-y-3 pt-4 border-t border-border">
               <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                Attachments ({message.attachments.length})
+                {t("pegasus.reader.attachments")} ({message.attachments.length})
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {message.attachments.map((file) => (
@@ -612,7 +613,7 @@ export default function RrEmailReader({
               <div className="flex items-center justify-between border-b border-border pb-2 shrink-0">
                 <span className="text-xs font-bold text-foreground capitalize flex items-center gap-1.5">
                   <Reply className="size-3.5" />
-                  Inline {replyMode} Editor
+                  {t("pegasus.reader.inlineEditor", { mode: replyMode })}
                 </span>
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1 border border-border rounded-lg px-2 py-0.5 bg-muted/40">
@@ -627,7 +628,7 @@ export default function RrEmailReader({
                       htmlFor="use-markdown-reply"
                       className="text-[9px] font-bold text-muted-foreground select-none cursor-pointer"
                     >
-                      Markdown Mode
+                      {t("pegasus.reader.markdownMode")}
                     </label>
                   </div>
                   <button
@@ -643,7 +644,7 @@ export default function RrEmailReader({
               <div className="space-y-2 text-xs">
                 <div className="flex items-center gap-2 border-b border-border pb-1">
                   <span className="text-muted-foreground w-12 font-semibold select-none">
-                    To:
+                    {t("pegasus.compose.to")}:
                   </span>
                   <Input
                     value={replyTo}
@@ -655,14 +656,14 @@ export default function RrEmailReader({
                       onClick={() => setShowCcInput(true)}
                       className="text-[9px] font-bold text-muted-foreground hover:text-primary px-1"
                     >
-                      Add Cc
+                      {t("pegasus.reader.addCc", "Add Cc")}
                     </button>
                   )}
                 </div>
                 {showCcInput && (
                   <div className="flex items-center gap-2 border-b border-border pb-1">
                     <span className="text-muted-foreground w-12 font-semibold select-none">
-                      Cc:
+                      {t("pegasus.compose.cc")}:
                     </span>
                     <Input
                       value={replyCc}
@@ -682,7 +683,7 @@ export default function RrEmailReader({
                 )}
                 <div className="flex items-center gap-2 border-b border-border pb-1">
                   <span className="text-muted-foreground w-12 font-semibold select-none">
-                    Subject:
+                    {t("pegasus.compose.subject")}:
                   </span>
                   <Input
                     value={replySubject}
@@ -699,12 +700,12 @@ export default function RrEmailReader({
                     <textarea
                       value={replyBody}
                       onChange={(e) => setReplyBody(e.target.value)}
-                      placeholder="Type markdown response..."
+                      placeholder={t("pegasus.reader.typeMarkdownResponse")}
                       className="flex-1 min-h-[160px] p-3 text-xs bg-muted/20 border border-border rounded-xl resize-none outline-none focus:border-muted-foreground font-mono"
                     />
                     <div className="flex-1 min-h-[160px] p-3 border border-border rounded-xl overflow-y-auto bg-muted/10 prose prose-invert max-w-none text-xs leading-relaxed text-muted-foreground">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {replyBody || "*Markdown preview will render here...*"}
+                        {replyBody || t("pegasus.reader.markdownPreviewPlaceholder")}
                       </ReactMarkdown>
                     </div>
                   </div>
@@ -712,7 +713,7 @@ export default function RrEmailReader({
                   <textarea
                     value={replyBody}
                     onChange={(e) => setReplyBody(e.target.value)}
-                    placeholder="Type email response..."
+                    placeholder={t("pegasus.reader.typeEmailResponse")}
                     className="w-full min-h-[160px] p-3 text-xs bg-muted/20 border border-border rounded-xl resize-none outline-none focus:border-muted-foreground font-sans"
                   />
                 )}
@@ -727,7 +728,7 @@ export default function RrEmailReader({
                   disabled={sendingReply}
                   className="rounded-xl cursor-pointer"
                 >
-                  Cancel
+                  {t("pegasus.folderView.cancel")}
                 </Button>
                 <Button
                   size="sm"
@@ -740,7 +741,7 @@ export default function RrEmailReader({
                   ) : (
                     <Send className="size-3.5" />
                   )}
-                  Send Reply
+                  {t("pegasus.reader.sendReply")}
                 </Button>
               </div>
             </div>

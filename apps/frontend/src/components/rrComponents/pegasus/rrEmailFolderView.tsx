@@ -517,8 +517,8 @@ export default function RrEmailFolderView({
       if (data.folder.toLowerCase() === "inbox" && belongsToUs) {
         playNotificationSound();
         const decryptedMsg = await decryptMessageObj(data.message);
-        toast.info(`New E2EE mail: ${decryptedMsg.subject || "(No Subject)"}`, {
-          description: `From: ${decryptedMsg.from}`,
+        toast.info(t("pegasus.folderView.newMailSubject", { subject: decryptedMsg.subject || t("pegasus.folderView.noSubject") }), {
+          description: t("pegasus.folderView.fromSender", { sender: decryptedMsg.from }),
         });
       }
     };
@@ -881,9 +881,9 @@ export default function RrEmailFolderView({
         window.dispatchEvent(new Event("runa-sidebar-changed"));
       })(),
       {
-        loading: `Executing bulk action...`,
-        success: `Bulk action executed successfully!`,
-        error: `Failed to complete bulk action.`,
+        loading: t("pegasus.folderView.executingBulkAction"),
+        success: t("pegasus.folderView.bulkActionSuccess"),
+        error: t("pegasus.folderView.bulkActionFailed"),
       },
     );
   };
@@ -893,7 +893,7 @@ export default function RrEmailFolderView({
 
     if (
       !window.confirm(
-        "Are you sure you want to permanently delete all messages in the Trash? This action cannot be undone.",
+        t("pegasus.folderView.confirmEmptyTrash"),
       )
     ) {
       return;
@@ -919,9 +919,9 @@ export default function RrEmailFolderView({
         window.dispatchEvent(new Event("runa-sidebar-changed"));
       })(),
       {
-        loading: "Emptying trash...",
-        success: "Trash emptied successfully!",
-        error: "Failed to empty trash.",
+        loading: t("pegasus.folderView.emptyingTrash"),
+        success: t("pegasus.folderView.trashEmptied"),
+        error: t("pegasus.folderView.emptyTrashFailed"),
       },
     );
   };
@@ -959,10 +959,10 @@ export default function RrEmailFolderView({
         },
       );
       if (!res.ok) throw new Error("Reply SMTP send failed.");
-      toast.success("Reply sent successfully!");
+      toast.success(t("pegasus.folderView.replySent"));
     } catch (e: any) {
       console.error(e);
-      toast.error(e.message || "Failed to send inline reply.");
+      toast.error(e.message || t("pegasus.folderView.replyFailed"));
     }
   };
 

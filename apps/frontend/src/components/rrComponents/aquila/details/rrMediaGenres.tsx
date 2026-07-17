@@ -2,6 +2,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 
 interface MediaTag {
@@ -27,6 +28,7 @@ export function RrMediaGenres({
   genres,
   tags,
 }: RrMediaGenresProps): React.JSX.Element {
+  const { t } = useTranslation();
   const hasGenres = genres && genres.length > 0;
   const hasTags = tags && tags.length > 0;
 
@@ -37,7 +39,7 @@ export function RrMediaGenres({
   return (
     <motion.div variants={itemVariants} className="space-y-3">
       <h3 className="text-base font-bold text-foreground">
-        Genres & Tags
+        {t("aquila.genresAndTags")}
       </h3>
       <div className="flex flex-wrap gap-2">
         {genres?.map((genre, qid) => (

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -103,6 +104,7 @@ export function RrComposeEmailModal({
 }: RrComposeEmailModalProps): React.JSX.Element {
   const { data: session } = useSession();
   const { getPrivateKey, unwrapKey, decrypt } = useRRCrypto();
+  const { t } = useTranslation();
   const [internalOpen, setInternalOpen] = useState<boolean>(false);
 
   const isControlled = controlledOpen !== undefined;
@@ -406,7 +408,7 @@ export function RrComposeEmailModal({
         throw new Error(errorData?.message || "Failed to send email.");
       }
 
-      toast.success("Email sent successfully!");
+      toast.success(t("pegasus.compose.sendSuccess"));
       setOpen(false);
     } catch (err: any) {
       console.error(err);
@@ -609,14 +611,16 @@ export function RrComposeEmailModal({
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
-        throw new Error(errorData?.message || "Failed to save draft.");
+        throw new Error(
+          errorData?.message || t("pegasus.compose.failedSaveDraft"),
+        );
       }
 
-      toast.success("Draft saved successfully!");
+      toast.success(t("pegasus.compose.draftSaved"));
       setOpen(false);
     } catch (err: any) {
       console.error(err);
-      toast.error(err.message || "Failed to save draft.");
+      toast.error(err.message || t("pegasus.compose.failedSaveDraft"));
     } finally {
       setSending(false);
     }
@@ -644,18 +648,22 @@ export function RrComposeEmailModal({
     <Dialog open={open} onOpenChange={handleCloseAttempt}>
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent className="sm:max-w-3xl bg-background border-border shadow-2xl p-0 overflow-hidden flex flex-col h-[80vh] rounded-2xl">
-        <DialogTitle className="sr-only">Personal draft</DialogTitle>
+        <DialogTitle className="sr-only">
+          {t("pegasus.compose.personalDraft")}
+        </DialogTitle>
         <DialogDescription className="sr-only">
           Compose and edit your email draft.
         </DialogDescription>
-        
+
         {/* Unsaved Changes Confirmation Overlay */}
         {showConfirmClose && (
           <div className="absolute inset-0 bg-background/80 backdrop-blur-xs z-50 flex items-center justify-center p-6 animate-in fade-in duration-200">
             <div className="bg-popover border border-border shadow-2xl rounded-xl p-6 max-w-sm w-full flex flex-col gap-4 text-center">
-              <h3 className="text-sm font-semibold text-foreground">Save draft?</h3>
+              <h3 className="text-sm font-semibold text-foreground">
+                {t("pegasus.compose.saveDraftQuestion")}
+              </h3>
               <p className="text-xs text-muted-foreground">
-                You have unsaved changes in this draft. Would you like to save it before closing?
+                {t("pegasus.compose.unsavedChangesDesc")}
               </p>
               <div className="flex flex-col gap-2 mt-2">
                 <Button
@@ -665,7 +673,7 @@ export function RrComposeEmailModal({
                   }}
                   className="w-full bg-success text-success-foreground hover:bg-success/90 h-9 font-semibold text-xs rounded-lg cursor-pointer"
                 >
-                  Save Draft
+                  {t("pegasus.compose.saveDraftButton")}
                 </Button>
                 <Button
                   variant="destructive"
@@ -675,14 +683,14 @@ export function RrComposeEmailModal({
                   }}
                   className="w-full h-9 font-semibold text-xs rounded-lg cursor-pointer"
                 >
-                  Discard Changes
+                  {t("pegasus.compose.discardChanges")}
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => setShowConfirmClose(false)}
                   className="w-full h-9 text-xs rounded-lg cursor-pointer"
                 >
-                  Keep Editing
+                  {t("pegasus.compose.keepEditing")}
                 </Button>
               </div>
             </div>
@@ -693,13 +701,12 @@ export function RrComposeEmailModal({
           <div className="flex items-center gap-2">
             <FileText className="size-4 text-muted-foreground" />
             <span className="text-sm font-semibold text-foreground">
-              Personal draft
+              {t("pegasus.compose.personalDraft")}
             </span>
             <span className="text-xs text-muted-foreground/80 font-normal">
-              Only visible to you
+              {t("pegasus.compose.onlyVisibleToYou")}
             </span>
           </div>
-
         </div>
 
         {/* Fields Container */}
@@ -707,14 +714,14 @@ export function RrComposeEmailModal({
           {/* From */}
           <div className="flex items-center min-h-[44px] px-6 border-b border-border/50 gap-4">
             <span className="text-sm text-muted-foreground w-12 shrink-0">
-              From:
+              {t("pegasus.attachments.from")}
             </span>
             <Select
               value={selectedAccountId}
               onValueChange={setSelectedAccountId}
             >
               <SelectTrigger className="h-7 px-3 py-1 rounded-full border border-border bg-muted/40 text-xs font-semibold text-foreground hover:bg-muted [&_svg]:ml-1.5 shrink-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0 focus:outline-none">
-                <SelectValue placeholder="Select account" />
+                <SelectValue placeholder={t("pegasus.compose.selectAccount")} />
               </SelectTrigger>
               <SelectContent className="bg-popover border-border backdrop-blur-xl">
                 {accounts.map((acc) => (
@@ -750,7 +757,9 @@ export function RrComposeEmailModal({
                   }}
                 >
                   <SelectTrigger className="h-7 bg-background border-border rounded-md text-[11px] font-medium text-foreground">
-                    <SelectValue placeholder="Canned Responses" />
+                    <SelectValue
+                      placeholder={t("pegasus.compose.selectTemplate")}
+                    />
                   </SelectTrigger>
                   <SelectContent className="bg-popover border-border">
                     <SelectGroup>
@@ -773,7 +782,7 @@ export function RrComposeEmailModal({
           {/* To */}
           <div className="flex items-start min-h-[44px] py-1.5 px-6 border-b border-border/50 gap-4 bg-background">
             <span className="text-sm text-muted-foreground w-12 shrink-0 pt-1.5">
-              To:
+              {t("pegasus.compose.to")}
             </span>
             <div className="flex-1 flex flex-wrap gap-1.5 items-center min-h-[28px]">
               {toEmails.map((email, idx) => (
@@ -799,7 +808,7 @@ export function RrComposeEmailModal({
                 onChange={(e) => setToInput(e.target.value)}
                 onKeyDown={handleToKeyDown}
                 placeholder={
-                  toEmails.length === 0 ? "Type email addresses..." : ""
+                  toEmails.length === 0 ? t("pegasus.compose.toPlaceholder", "Type email addresses...") : ""
                 }
                 className="bg-transparent border-0 border-transparent shadow-none h-7 text-xs text-foreground focus-visible:ring-0 px-0 py-0 flex-1 min-w-[150px] outline-none"
               />
@@ -824,7 +833,7 @@ export function RrComposeEmailModal({
           {showCc && (
             <div className="flex items-start min-h-[44px] py-1.5 px-6 border-b border-border/50 gap-4 bg-background animate-in fade-in slide-in-from-top-1 duration-150">
               <span className="text-sm text-muted-foreground w-12 shrink-0 pt-1.5">
-                Cc:
+                {t("pegasus.compose.cc")}
               </span>
               <div className="flex-1 flex flex-wrap gap-1.5 items-center min-h-[28px]">
                 {ccEmails.map((email, idx) => (
@@ -871,7 +880,7 @@ export function RrComposeEmailModal({
           {showBcc && (
             <div className="flex items-start min-h-[44px] py-1.5 px-6 border-b border-border/50 gap-4 bg-background animate-in fade-in slide-in-from-top-1 duration-150">
               <span className="text-sm text-muted-foreground w-12 shrink-0 pt-1.5">
-                Bcc:
+                {t("pegasus.compose.bcc")}
               </span>
               <div className="flex-1 flex flex-wrap gap-1.5 items-center min-h-[28px]">
                 {bccEmails.map((email, idx) => (
@@ -917,12 +926,12 @@ export function RrComposeEmailModal({
           {/* Subject */}
           <div className="flex items-center min-h-[44px] px-6 border-b border-border/50 gap-4 bg-background">
             <span className="text-sm text-muted-foreground w-12 shrink-0">
-              Subject:
+              {t("pegasus.compose.subjectLabel")}
             </span>
             <Input
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-              placeholder="Subject Line"
+              placeholder={t("pegasus.compose.subjectPlaceholder", "Subject Line")}
               className="bg-transparent border-0 border-transparent shadow-none h-8 text-xs font-semibold text-foreground focus-visible:ring-0 px-0 w-full outline-none"
             />
           </div>
@@ -938,18 +947,18 @@ export function RrComposeEmailModal({
                     value="write"
                     className="text-xs px-3 h-7 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
                   >
-                    Write
+                    {t("pegasus.reader.write", "Write")}
                   </TabsTrigger>
                   <TabsTrigger
                     value="preview"
                     className="text-xs px-3 h-7 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
                   >
-                    Preview
+                    {t("pegasus.reader.preview", "Preview")}
                   </TabsTrigger>
                 </TabsList>
                 <div className="flex items-center gap-1.5">
                   <span className="text-[10px] text-muted-foreground font-medium">
-                    Markdown Enabled
+                    {t("pegasus.reader.markdownEnabled", "Markdown Enabled")}
                   </span>
                   <input
                     id="use-markdown-compose"
@@ -969,7 +978,7 @@ export function RrComposeEmailModal({
                   ref={textareaRef}
                   value={body}
                   onChange={(e) => setBody(e.target.value)}
-                  placeholder="Type / to insert a message template or start writing..."
+                  placeholder={t("pegasus.compose.editorPlaceholder", "Type / to insert a message template or start writing...")}
                   style={{
                     fontFamily:
                       fontFamily === "mono"
@@ -993,7 +1002,7 @@ export function RrComposeEmailModal({
                     </ReactMarkdown>
                   ) : (
                     <em className="text-muted-foreground/60 text-xs">
-                      No text written yet. Live preview will appear here.
+                      {t("pegasus.compose.emptyPreview", "No text written yet. Live preview will appear here.")}
                     </em>
                   )}
                 </div>
@@ -1003,14 +1012,14 @@ export function RrComposeEmailModal({
             <div className="flex-1 flex flex-col min-h-0">
               <div className="px-6 py-2 border-b border-border/40 bg-muted/5 flex items-center justify-between shrink-0">
                 <span className="text-[10px] text-muted-foreground/80 font-medium">
-                  Type / to insert template
+                  {t("pegasus.compose.typeSlashTemplate", "Type / to insert template")}
                 </span>
                 <div className="flex items-center gap-1.5">
                   <label
                     htmlFor="use-markdown-compose-plain"
                     className="text-[10px] text-muted-foreground font-semibold select-none cursor-pointer"
                   >
-                    Markdown Mode
+                    {t("pegasus.reader.markdownMode")}
                   </label>
                   <input
                     id="use-markdown-compose-plain"
@@ -1025,7 +1034,7 @@ export function RrComposeEmailModal({
                 ref={textareaRef}
                 value={body}
                 onChange={(e) => setBody(e.target.value)}
-                placeholder="Type / to insert a message template or start writing..."
+                placeholder={t("pegasus.compose.editorPlaceholder", "Type / to insert a message template or start writing...")}
                 style={{
                   fontFamily:
                     fontFamily === "mono"
@@ -1047,7 +1056,7 @@ export function RrComposeEmailModal({
             <div className="flex items-center gap-2">
               <Select value={fontFamily} onValueChange={setFontFamily}>
                 <SelectTrigger className="h-7 border border-border bg-background text-xs text-foreground px-2 py-1 rounded-md w-28 [&_svg]:size-3 shrink-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0">
-                  <SelectValue placeholder="Font Family" />
+                  <SelectValue placeholder={t("pegasus.compose.fontFamily", "Font Family")} />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border-border">
                   <SelectItem
@@ -1073,7 +1082,7 @@ export function RrComposeEmailModal({
 
               <Select value={fontSize} onValueChange={setFontSize}>
                 <SelectTrigger className="h-7 border border-border bg-background text-xs text-foreground px-2 py-1 rounded-md w-16 [&_svg]:size-3 shrink-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:ring-0">
-                  <SelectValue placeholder="Size" />
+                  <SelectValue placeholder={t("pegasus.compose.fontSize", "Size")} />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border-border">
                   <SelectItem
@@ -1109,7 +1118,7 @@ export function RrComposeEmailModal({
                 type="button"
                 onClick={() => insertFormatting("**", "**")}
                 className="p-1 hover:bg-muted text-muted-foreground hover:text-foreground rounded transition-colors cursor-pointer"
-                title="Bold"
+                title={t("pegasus.compose.bold", "Bold")}
               >
                 <Bold className="size-3.5" />
               </button>
@@ -1117,7 +1126,7 @@ export function RrComposeEmailModal({
                 type="button"
                 onClick={() => insertFormatting("*", "*")}
                 className="p-1 hover:bg-muted text-muted-foreground hover:text-foreground rounded transition-colors cursor-pointer"
-                title="Italic"
+                title={t("pegasus.compose.italic", "Italic")}
               >
                 <Italic className="size-3.5" />
               </button>
@@ -1125,7 +1134,7 @@ export function RrComposeEmailModal({
                 type="button"
                 onClick={() => insertFormatting("<u>", "</u>")}
                 className="p-1 hover:bg-muted text-muted-foreground hover:text-foreground rounded transition-colors cursor-pointer"
-                title="Underline"
+                title={t("pegasus.compose.underline", "Underline")}
               >
                 <Underline className="size-3.5" />
               </button>
@@ -1133,7 +1142,7 @@ export function RrComposeEmailModal({
                 type="button"
                 onClick={() => insertFormatting("~~", "~~")}
                 className="p-1 hover:bg-muted text-muted-foreground hover:text-foreground rounded transition-colors cursor-pointer"
-                title="Strikethrough"
+                title={t("pegasus.compose.strikethrough", "Strikethrough")}
               >
                 <Strikethrough className="size-3.5" />
               </button>
@@ -1141,7 +1150,7 @@ export function RrComposeEmailModal({
                 type="button"
                 onClick={() => insertFormatting("\n- ")}
                 className="p-1 hover:bg-muted text-muted-foreground hover:text-foreground rounded transition-colors cursor-pointer"
-                title="Bullet List"
+                title={t("pegasus.compose.bulletList", "Bullet List")}
               >
                 <List className="size-3.5" />
               </button>
@@ -1149,7 +1158,7 @@ export function RrComposeEmailModal({
                 type="button"
                 onClick={() => insertFormatting("[", "](url)")}
                 className="p-1 hover:bg-muted text-muted-foreground hover:text-foreground rounded transition-colors cursor-pointer"
-                title="Link"
+                title={t("pegasus.compose.link", "Link")}
               >
                 <LinkIcon className="size-3.5" />
               </button>
@@ -1157,7 +1166,7 @@ export function RrComposeEmailModal({
                 type="button"
                 onClick={() => insertFormatting("![alt](", ")")}
                 className="p-1 hover:bg-muted text-muted-foreground hover:text-foreground rounded transition-colors cursor-pointer"
-                title="Image"
+                title={t("pegasus.compose.image", "Image")}
               >
                 <ImageIcon className="size-3.5" />
               </button>
@@ -1165,7 +1174,7 @@ export function RrComposeEmailModal({
                 type="button"
                 onClick={() => insertFormatting("\n> ")}
                 className="p-1 hover:bg-muted text-muted-foreground hover:text-foreground rounded transition-colors cursor-pointer"
-                title="Blockquote"
+                title={t("pegasus.compose.blockquote", "Blockquote")}
               >
                 <Quote className="size-3.5" />
               </button>
@@ -1183,7 +1192,7 @@ export function RrComposeEmailModal({
                 showFormatting &&
                   "bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary",
               )}
-              title="Formatting Options"
+              title={t("pegasus.compose.formattingOptions", "Formatting Options")}
             >
               <span className="text-xs font-bold leading-none px-0.5">Aa</span>
             </button>
@@ -1200,7 +1209,7 @@ export function RrComposeEmailModal({
               ) : (
                 <Send className="size-3.5" />
               )}
-              Send
+              {t("pegasus.compose.send")}
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -1219,13 +1228,13 @@ export function RrComposeEmailModal({
                   onClick={handleSend}
                   className="text-xs cursor-pointer focus:bg-accent text-foreground"
                 >
-                  Send
+                  {t("pegasus.compose.send")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={handleSaveDraft}
                   className="text-xs cursor-pointer focus:bg-accent text-foreground"
                 >
-                  Save as Draft
+                  {t("pegasus.compose.saveAsDraft")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

@@ -45,6 +45,7 @@ import { useRRCrypto } from "@/hooks/useRRCrypto";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 import { useSpotlight } from "@/components/Providers/rrSpotlightProvider";
 import { spotlightRegistry } from "@/components/rrComponents/rrSpotlight/features";
 import {
@@ -69,13 +70,6 @@ interface SpotlightSearchItem {
 }
 
 type ActiveFilter = "all" | "apps" | "pages" | "actions";
-
-const FILTER_LABELS: Record<ActiveFilter, string> = {
-  all: "All",
-  apps: "Apps",
-  pages: "Pages",
-  actions: "Actions",
-};
 
 const FILTERS = ["all", "apps", "pages", "actions"] as const;
 
@@ -108,6 +102,7 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
   const { isEncryptionUnlocked, setShowUnlockDialog } = useRRCrypto();
 
   const { clipboardHistory, openPreview, openParameters } = useSpotlight();
+  const { t } = useTranslation();
 
   const [open, setOpen] = useState<boolean>(false);
   const [search, setSearch] = useState<string>("");
@@ -115,6 +110,16 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
   const [activeRoulette, setActiveRoulette] = useState<
     "anime" | "manga" | "tv" | "movie" | "game" | "book" | null
   >(null);
+
+  const filterLabels = useMemo<Record<ActiveFilter, string>>(
+    () => ({
+      all: t("spotlight.filterAll"),
+      apps: t("spotlight.filterApps"),
+      pages: t("spotlight.filterPages"),
+      actions: t("spotlight.filterActions"),
+    }),
+    [t],
+  );
 
   // Dynamic feature loading states
   const [loadedFeatures, setLoadedFeatures] = useState<BaseSpotlightFeature[]>(
@@ -213,6 +218,7 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
         setSearchResults,
         setSearchLoading,
         setBaseTheme,
+        t,
       };
 
       const allSearchItems: SpotlightSearchItem[] = [];
@@ -638,7 +644,7 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
               label: opt.label,
               category: "Actions",
               icon: opt.icon || parsedAction.action.icon,
-              badge: `Select ${param1.label}`,
+              badge: t("spotlight.selectParam", { param: param1.label }),
               action: () => {
                 const prefix = parsedAction.action.label.toLowerCase();
                 setSearch(`${prefix}: ${opt.value} `);
@@ -663,6 +669,7 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
                     setSearchResults,
                     setSearchLoading,
                     setBaseTheme,
+                    t,
                   };
                   parsedAction.action.action(params, context);
                   handleSetOpen(false);
@@ -691,7 +698,9 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
                 label: opt.label,
                 category: "Actions",
                 icon: opt.icon || parsedAction.action.icon,
-                badge: `Select ${param2.label} (Optional)`,
+                badge: t("spotlight.selectParamOptional", {
+                  param: param2.label,
+                }),
                 action: () => {
                   const prefix = parsedAction.action.label.toLowerCase();
                   setSearch(`${prefix}: ${matchedOpt1.value} ${opt.value} `);
@@ -717,6 +726,7 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
                     setSearchResults,
                     setSearchLoading,
                     setBaseTheme,
+                    t,
                   };
                   parsedAction.action.action(params, context);
                   handleSetOpen(false);
@@ -821,14 +831,14 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
         value={selectedValue}
         onValueChange={setSelectedValue}
         shouldFilter={false}
-        title="Spotlight Search"
-        description="Quickly switch apps, jump to navigation pages, or perform platform actions."
+        title={t("spotlight.title")}
+        description={t("spotlight.description")}
         className="sm:max-w-3xl bg-popover border border-border shadow-2xl p-0 overflow-hidden"
       >
         <div className="flex flex-col relative border-b border-border w-full bg-popover shrink-0">
           <div className="relative w-full">
             <CommandInput
-              placeholder="Search apps, pages, actions... (Double Shift to close)"
+              placeholder={t("spotlight.placeholder")}
               value={search}
               onValueChange={setSearch}
               onKeyDown={(e) => {
@@ -858,7 +868,9 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
                   if (mathResult !== null) {
                     e.preventDefault();
                     navigator.clipboard.writeText(String(mathResult));
-                    toast.success(`Copied "${mathResult}" to clipboard!`);
+                    toast.success(
+                      t("spotlight.copiedClipboard", { value: mathResult }),
+                    );
                     handleSetOpen(false);
                     setSearch("");
                     return;
@@ -894,6 +906,7 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
                       setSearchResults,
                       setSearchLoading,
                       setBaseTheme,
+                      t,
                     };
 
                     parsedAction.action.action(params, context);
@@ -1096,7 +1109,7 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
                     : "bg-muted/40 hover:bg-muted/70 text-muted-foreground hover:text-foreground border-border",
                 )}
               >
-                {FILTER_LABELS[filter]}
+                {filterLabels[filter]}
               </button>
             ))}
           </div>
@@ -1105,31 +1118,31 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
         <CommandList className="max-h-[480px] overflow-y-auto p-3 no-scrollbar bg-popover">
           {!hasValidType && (
             <CommandEmpty className="py-8 text-center text-sm text-muted-foreground">
-              No matches found for &ldquo;{search}&rdquo;
+              {t("spotlight.noMatches", { search })}
             </CommandEmpty>
           )}
 
           {/* Browse Media Results Section */}
           {hasValidType && parsedAction && (
             <CommandGroup
-              heading={`Browse ${parsedAction.val1}`}
+              heading={t("spotlight.browseMedia", { media: parsedAction.val1 })}
               className="px-2"
             >
               {searchLoading && (
                 <div className="py-6 text-center text-sm text-muted-foreground flex items-center justify-center gap-2">
-                  Searching media...
+                  {t("spotlight.searchingMedia")}
                 </div>
               )}
               {!searchLoading && !searchResults && (
                 <div className="py-6 text-center text-sm text-muted-foreground">
-                  Type a title and press Enter to search.
+                  {t("spotlight.typeToSearch")}
                 </div>
               )}
               {!searchLoading &&
                 searchResults &&
                 searchResults.length === 0 && (
                   <div className="py-6 text-center text-sm text-muted-foreground">
-                    No matching media found.
+                    {t("spotlight.noMediaFound")}
                   </div>
                 )}
               {!searchLoading &&
@@ -1188,7 +1201,7 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
 
           {/* Applications Section */}
           {applicationsGroup.length > 0 && (
-            <CommandGroup heading="Applications" className="px-2">
+            <CommandGroup heading={t("spotlight.filterApps")} className="px-2">
               {applicationsGroup.map((item) => (
                 <CommandItem
                   key={item.id}
@@ -1222,7 +1235,7 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
 
           {/* Navigation Section */}
           {navigationGroup.length > 0 && (
-            <CommandGroup heading="Navigation" className="px-2">
+            <CommandGroup heading={t("spotlight.filterPages")} className="px-2">
               {navigationGroup.map((item) => (
                 <CommandItem
                   key={item.id}
@@ -1252,7 +1265,10 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
 
           {/* Actions Section */}
           {actionsGroup.length > 0 && (
-            <CommandGroup heading="System Actions" className="px-2">
+            <CommandGroup
+              heading={t("spotlight.filterActions")}
+              className="px-2"
+            >
               {actionsGroup.map((item) => (
                 <CommandItem
                   key={item.id}
@@ -1282,7 +1298,10 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
               {actionsGroup.length > 0 && (
                 <CommandSeparator className="my-2.5 bg-border/40" />
               )}
-              <CommandGroup heading="Clipboard History" className="px-2">
+              <CommandGroup
+                heading={t("spotlight.clipboardHistory")}
+                className="px-2"
+              >
                 {clipboardGroup.map((item) => (
                   <CommandItem
                     key={item.id}
@@ -1310,24 +1329,24 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
 
         <div className="border-t border-border bg-muted/30 px-5 py-3 flex items-center justify-between text-xs text-muted-foreground select-none shrink-0">
           <div className="flex items-center gap-2">
-            <span>Navigate:</span>
+            <span>{t("spotlight.navigate")}:</span>
             <kbd className="px-1.5 py-0.5 rounded-sm bg-muted border border-border/50 font-mono text-[10px]">
               ↑
             </kbd>
             <kbd className="px-1.5 py-0.5 rounded-sm bg-muted border border-border/50 font-mono text-[10px]">
               ↓
             </kbd>
-            <span className="ml-1.5">Select:</span>
+            <span className="ml-1.5">{t("spotlight.select")}:</span>
             <kbd className="px-1.5 py-0.5 rounded-sm bg-muted border border-border/50 font-mono text-[10px]">
               ⏎
             </kbd>
           </div>
           <div className="flex items-center gap-1.5">
-            <span>Double-tap</span>
+            <span>{t("spotlight.doubleTap")}</span>
             <kbd className="px-1.5 py-0.5 rounded-sm bg-primary/10 border border-primary/20 font-sans font-semibold text-[10px] text-primary animate-pulse">
               Shift
             </kbd>
-            <span>to close</span>
+            <span>{t("spotlight.toClose")}</span>
           </div>
         </div>
       </CommandDialog>

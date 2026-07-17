@@ -8,6 +8,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Calendar, Mail, MessageSquare } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export interface UserProfileInfo {
   id: string;
@@ -32,6 +33,7 @@ export default function UserProfileCard({
   children,
   triggerMode = "click",
 }: UserProfileCardProps): React.JSX.Element {
+  const { t } = useTranslation();
   const [open, setOpen] = useState<boolean>(false);
   const openTimerRef = useRef<NodeJS.Timeout | null>(null);
   const closeTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -55,7 +57,7 @@ export default function UserProfileCard({
   };
 
   const getJoinDate = () => {
-    if (!user.createdAt) return "Unknown";
+    if (!user.createdAt) return t("lacerta.userProfile.joinDateUnknown", "Unknown");
     const date = new Date(user.createdAt);
     return date.toLocaleDateString("en-US", {
       month: "short",
@@ -151,7 +153,7 @@ export default function UserProfileCard({
           {user.bannerUrl ? (
             <Image
               src={user.bannerUrl}
-              alt="Profile Banner"
+              alt={t("lacerta.userProfile.bannerAlt", "Profile Banner")}
               fill
               className="object-cover"
             />
@@ -165,7 +167,7 @@ export default function UserProfileCard({
               {user.avatarUrl ? (
                 <Image
                   src={user.avatarUrl}
-                  alt={`${user.username}'s avatar`}
+                  alt={t("lacerta.userProfile.avatarAlt", { username: user.username, defaultValue: "{{username}}'s avatar" })}
                   width={72}
                   height={72}
                   className="object-cover"
@@ -197,10 +199,10 @@ export default function UserProfileCard({
             {/* About Me */}
             <div className="flex flex-col gap-1">
               <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
-                About Me
+                {t("lacerta.userProfile.aboutMe", "About Me")}
               </span>
               <div className="text-xs text-neutral-200 leading-normal text-left">
-                {user.bio || "No bio written yet."}
+                {user.bio || t("lacerta.userProfile.noBio", "No bio written yet.")}
               </div>
             </div>
           </div>
@@ -210,7 +212,7 @@ export default function UserProfileCard({
           {/* Mock Action Button */}
           <button className="w-full py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-md text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-98">
             <MessageSquare className="size-3.5" />
-            Send Message
+            {t("lacerta.userProfile.sendMessage", "Send Message")}
           </button>
         </div>
       </PopoverContent>

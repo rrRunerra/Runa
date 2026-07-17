@@ -5,6 +5,7 @@ import { FileText } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { wrapKey } from "@runa/crypto/browser";
 import { CanvasNodeType, CanvasNode } from "./CanvasEditor";
+import { useTranslation } from "react-i18next";
 
 interface RrCanvasFileInsertModalProps {
   isOpen: boolean;
@@ -38,6 +39,7 @@ export default function RrCanvasFileInsertModal({
   createNodeAtPos,
   setPendingFileShare,
 }: RrCanvasFileInsertModalProps) {
+  const { t } = useTranslation();
   const { data: session } = useSession();
 
   const shareFileWithCanvasCollaborators = async (f: any) => {
@@ -129,18 +131,18 @@ export default function RrCanvasFileInsertModal({
     >
       <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-xl flex flex-col select-text">
         <h3 className="text-sm font-bold text-card-foreground">
-          {embedType === "pdf" ? "Embed PDF Document" : "Embed Lacerta File"}
+          {embedType === "pdf" ? t("lacerta.canvasFileInsert.embedPdfTitle", "Embed PDF Document") : t("lacerta.canvasFileInsert.embedFileTitle", "Embed Lacerta File")}
         </h3>
         <p className="text-[11px] text-muted-foreground leading-normal mt-1 mb-4">
           {embedType === "pdf"
-            ? "Select a decrypted PDF file from your vault to display a live preview card."
-            : "Select a file from your decrypted vault to place as an E2EE file download card."}
+            ? t("lacerta.canvasFileInsert.embedPdfDesc", "Select a decrypted PDF file from your vault to display a live preview card.")
+            : t("lacerta.canvasFileInsert.embedFileDesc", "Select a file from your decrypted vault to place as an E2EE file download card.")}
         </p>
 
         <div className="max-h-[180px] overflow-y-auto border border-border/40 rounded-xl divide-y divide-border/20 no-scrollbar">
           {filteredFiles.length === 0 ? (
             <div className="p-4 text-center text-xs text-muted-foreground">
-              No matching decrypted files available.
+              {t("lacerta.canvasFileInsert.noFiles", "No matching decrypted files available.")}
             </div>
           ) : (
             filteredFiles.map((f) => (
@@ -191,7 +193,7 @@ export default function RrCanvasFileInsertModal({
                   <div className="text-[9px] text-muted-foreground">
                     {f.size
                       ? `${(f.size / 1024).toFixed(1)} KB`
-                      : "Size Unknown"}
+                      : t("lacerta.canvasFileInsert.sizeUnknown", "Size Unknown")}
                   </div>
                 </div>
               </button>
@@ -204,7 +206,7 @@ export default function RrCanvasFileInsertModal({
             onClick={onClose}
             className="px-3 py-1.5 bg-muted hover:bg-muted/80 rounded-lg text-xs font-semibold text-muted-foreground transition-all active:scale-98"
           >
-            Cancel
+            {t("lacerta.canvasFileInsert.cancel", "Cancel")}
           </button>
         </div>
       </div>

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { CanvasNodeType, CanvasNode } from "./CanvasEditor";
+import { useTranslation } from "react-i18next";
 
 interface RrCanvasGifInsertModalProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ export default function RrCanvasGifInsertModal({
   y,
   createNodeAtPos,
 }: RrCanvasGifInsertModalProps) {
+  const { t } = useTranslation();
   const [gifSearchQuery, setGifSearchQuery] = useState<string>("");
   const [gifResults, setGifResults] = useState<string[]>([]);
   const [gifLoading, setGifLoading] = useState<boolean>(false);
@@ -88,13 +90,13 @@ export default function RrCanvasGifInsertModal({
     >
       <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl flex flex-col select-text">
         <h3 className="text-sm font-bold text-card-foreground mb-4">
-          Embed GIF Card
+          {t("lacerta.canvasGifInsert.title", "Embed GIF Card")}
         </h3>
 
         <div className="flex gap-2 mb-4">
           <input
             type="text"
-            placeholder="Search Klipy..."
+            placeholder={t("lacerta.canvasGifInsert.placeholder", "Search Klipy...")}
             value={gifSearchQuery}
             onChange={(e) => setGifSearchQuery(e.target.value)}
             onKeyDown={(e) => {
@@ -108,7 +110,7 @@ export default function RrCanvasGifInsertModal({
             onClick={() => handleGifSearch(gifSearchQuery)}
             className="px-4 py-1.5 bg-primary hover:bg-primary/90 rounded-lg text-xs font-semibold text-primary-foreground transition-all shadow-sm active:scale-98"
           >
-            Search
+            {t("lacerta.canvasGifInsert.search", "Search")}
           </button>
         </div>
 
@@ -120,7 +122,7 @@ export default function RrCanvasGifInsertModal({
             </div>
           ) : gifResults.length === 0 ? (
             <div className="p-4 text-center text-xs text-muted-foreground">
-              No GIFs found.
+              {t("lacerta.canvasGifInsert.noGifs", "No GIFs found.")}
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-2">
@@ -146,7 +148,7 @@ export default function RrCanvasGifInsertModal({
                 >
                   <img
                     src={url}
-                    alt="gif preview"
+                    alt={t("lacerta.canvasGifInsert.gifPreviewAlt", "gif preview")}
                     className="w-full h-full object-cover"
                   />
                 </button>
@@ -159,7 +161,7 @@ export default function RrCanvasGifInsertModal({
           {/* Or Direct URL option */}
           <input
             type="text"
-            placeholder="Or enter direct GIF URL..."
+            placeholder={t("lacerta.canvasGifInsert.directUrlPlaceholder", "Or enter direct GIF URL...")}
             className="w-[200px] bg-background border border-border rounded-lg px-2.5 py-1 text-[10px] text-foreground focus:outline-none focus:border-primary"
             onKeyDown={(e) => {
               if (e.key === "Enter" && e.currentTarget.value.trim()) {
@@ -188,7 +190,7 @@ export default function RrCanvasGifInsertModal({
             }}
             className="px-3 py-1.5 bg-muted hover:bg-muted/80 rounded-lg text-xs font-semibold text-muted-foreground transition-all active:scale-98"
           >
-            Cancel
+            {t("lacerta.canvasGifInsert.cancel", "Cancel")}
           </button>
         </div>
       </div>

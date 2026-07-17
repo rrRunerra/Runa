@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { toast } from "sonner";
 import { CanvasNodeType, CanvasNode } from "./CanvasEditor";
+import { useTranslation } from "react-i18next";
 
 interface RrCanvasVideoInsertModalProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ export default function RrCanvasVideoInsertModal({
   y,
   createNodeAtPos,
 }: RrCanvasVideoInsertModalProps) {
+  const { t } = useTranslation();
   const [videoUrl, setVideoUrl] = useState<string>("");
 
   if (!isOpen) return null;
@@ -47,7 +49,7 @@ export default function RrCanvasVideoInsertModal({
       onClose();
       setVideoUrl("");
     } else {
-      toast.error("Please enter a video URL");
+      toast.error(t("lacerta.canvasVideoInsert.urlRequired", "Please enter a video URL"));
     }
   };
 
@@ -61,11 +63,10 @@ export default function RrCanvasVideoInsertModal({
     >
       <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-xl flex flex-col select-text">
         <h3 className="text-sm font-bold text-card-foreground">
-          Embed Video Card
+          {t("lacerta.canvasVideoInsert.title", "Embed Video Card")}
         </h3>
         <p className="text-[11px] text-muted-foreground leading-normal mt-1 mb-4">
-          Enter a YouTube/Vimeo link or direct video link (MP4/WebM) to place an
-          interactive video card on the canvas.
+          {t("lacerta.canvasVideoInsert.desc", "Enter a YouTube/Vimeo link or direct video link (MP4/WebM) to place an interactive video card on the canvas.")}
         </p>
 
         <input
@@ -84,13 +85,13 @@ export default function RrCanvasVideoInsertModal({
             }}
             className="px-3 py-1.5 bg-muted hover:bg-muted/80 rounded-lg text-xs font-semibold text-muted-foreground transition-all active:scale-98"
           >
-            Cancel
+            {t("lacerta.canvasVideoInsert.cancel", "Cancel")}
           </button>
           <button
             onClick={handleInsert}
             className="px-4 py-1.5 bg-primary hover:bg-primary/90 rounded-lg text-xs font-semibold text-primary-foreground transition-all shadow-sm active:scale-98"
           >
-            Embed Video
+            {t("lacerta.canvasVideoInsert.embed", "Embed Video")}
           </button>
         </div>
       </div>

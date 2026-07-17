@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
 import {
   Card,
   CardHeader,
@@ -26,6 +27,7 @@ export const RrPrivacySettingsTab = ({
   onOpenChange,
 }: RrPrivacySettingsTabProps): React.JSX.Element => {
   const { data: session } = useSession();
+  const { t } = useTranslation();
 
   // Privacy states
   const [profilePrivate, setProfilePrivate] = useState<boolean>(false);
@@ -65,7 +67,7 @@ export const RrPrivacySettingsTab = ({
 
   const handleSaveSettings = async (): Promise<void> => {
     if (!session?.accessToken) {
-      toast.error("You must be logged in to save settings.");
+      toast.error(t("privacy.mustBeLoggedIn"));
       return;
     }
 
@@ -91,15 +93,15 @@ export const RrPrivacySettingsTab = ({
       );
       if (!res.ok) {
         const errJson = await res.json().catch(() => null);
-        throw new Error(errJson?.message || "Failed to save privacy settings.");
+        throw new Error(errJson?.message || t("privacy.failedSaveSettings"));
       }
       const updated = await res.json();
       refetchPrivacy(updated);
 
-      toast.success("Privacy settings saved successfully!");
+      toast.success(t("privacy.settingsSaved"));
       onOpenChange(false);
     } catch (err: any) {
-      toast.error(err.message || "Failed to save privacy settings.");
+      toast.error(err.message || t("privacy.failedSaveSettings"));
     } finally {
       setIsSubmitting(false);
     }
@@ -110,7 +112,7 @@ export const RrPrivacySettingsTab = ({
       <div className="items-center justify-center py-12 flex flex-col gap-4">
         <div className="size-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
         <p className="text-xs text-muted-foreground">
-          Loading privacy settings...
+          {t("privacy.loadingSettings")}
         </p>
       </div>
     );
@@ -120,9 +122,9 @@ export const RrPrivacySettingsTab = ({
     <div className="p-2">
       <Card>
         <CardHeader>
-          <CardTitle>Privacy Preferences</CardTitle>
+          <CardTitle>{t("privacy.preferences")}</CardTitle>
           <CardDescription>
-            Manage who can view your profile and media lists.
+            {t("privacy.preferencesDesc")}
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-0 divide-y divide-border/40">
@@ -133,11 +135,10 @@ export const RrPrivacySettingsTab = ({
                 className="text-sm font-medium text-foreground cursor-pointer"
                 htmlFor="profile-private"
               >
-                Private Profile
+                {t("privacy.privateProfile")}
               </Label>
               <p className="text-xs text-muted-foreground">
-                Hides your entire profile page, public details, and all list
-                entries from other users.
+                {t("privacy.privateProfileDesc")}
               </p>
             </div>
             <Switch
@@ -155,11 +156,10 @@ export const RrPrivacySettingsTab = ({
                 className="text-sm font-medium text-foreground cursor-pointer"
                 htmlFor="anime-private"
               >
-                Private Anime List
+                {t("privacy.privateAnimeList")}
               </Label>
               <p className="text-xs text-muted-foreground">
-                Hides your anime list entries from other users on your profile
-                list page.
+                {t("privacy.privateAnimeListDesc")}
               </p>
             </div>
             <Switch
@@ -177,11 +177,10 @@ export const RrPrivacySettingsTab = ({
                 className="text-sm font-medium text-foreground cursor-pointer"
                 htmlFor="manga-private"
               >
-                Private Manga List
+                {t("privacy.privateMangaList")}
               </Label>
               <p className="text-xs text-muted-foreground">
-                Hides your manga list entries from other users on your profile
-                list page.
+                {t("privacy.privateMangaListDesc")}
               </p>
             </div>
             <Switch
@@ -199,11 +198,10 @@ export const RrPrivacySettingsTab = ({
                 className="text-sm font-medium text-foreground cursor-pointer"
                 htmlFor="tv-private"
               >
-                Private TV Show List
+                {t("privacy.privateTvList")}
               </Label>
               <p className="text-xs text-muted-foreground">
-                Hides your TV list entries from other users on your profile list
-                page.
+                {t("privacy.privateTvListDesc")}
               </p>
             </div>
             <Switch
@@ -221,11 +219,10 @@ export const RrPrivacySettingsTab = ({
                 className="text-sm font-medium text-foreground cursor-pointer"
                 htmlFor="movie-private"
               >
-                Private Movie List
+                {t("privacy.privateMovieList")}
               </Label>
               <p className="text-xs text-muted-foreground">
-                Hides your movie list entries from other users on your profile
-                list page.
+                {t("privacy.privateMovieListDesc")}
               </p>
             </div>
             <Switch
@@ -243,11 +240,10 @@ export const RrPrivacySettingsTab = ({
                 className="text-sm font-medium text-foreground cursor-pointer"
                 htmlFor="connections-private"
               >
-                Private Connections
+                {t("privacy.privateConnections")}
               </Label>
               <p className="text-xs text-muted-foreground">
-                Hides all of your linked third-party integrations/connections
-                from your public profile page.
+                {t("privacy.privateConnectionsDesc")}
               </p>
             </div>
             <Switch
@@ -266,14 +262,14 @@ export const RrPrivacySettingsTab = ({
             className="text-xs sm:text-sm text-muted-foreground hover:text-foreground rounded-xl h-9 cursor-pointer"
             disabled={isSubmitting}
           >
-            Cancel
+            {t("cancel")}
           </Button>
           <Button
             onClick={handleSaveSettings}
             disabled={isSubmitting}
             className="bg-primary hover:bg-primary/95 text-primary-foreground font-semibold rounded-xl px-5 shadow-lg text-xs sm:text-sm h-9 cursor-pointer"
           >
-            {isSubmitting ? "Saving..." : "Save Changes"}
+            {isSubmitting ? t("saving") : t("saveChanges")}
           </Button>
         </CardFooter>
       </Card>

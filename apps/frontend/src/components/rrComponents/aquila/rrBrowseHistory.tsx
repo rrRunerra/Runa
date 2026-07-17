@@ -3,6 +3,7 @@
 import React from "react";
 import { X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 
 export interface RrBrowseHistoryProps {
@@ -18,12 +19,14 @@ export const RrBrowseHistory = ({
   onDelete,
   onClear,
 }: RrBrowseHistoryProps): React.JSX.Element => {
+  const { t } = useTranslation();
+
   if (history.length === 0) return <></>;
 
   return (
     <div className="flex flex-wrap gap-2 items-center text-sm text-muted-foreground/80 mt-0.5 px-1">
       <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/60 mr-1 select-none">
-        Recent:
+        {t("aquila.recent")}
       </span>
       <div className="flex flex-wrap gap-1.5 items-center flex-1">
         <AnimatePresence mode="popLayout">
@@ -49,7 +52,7 @@ export const RrBrowseHistory = ({
                     onDelete(hQuery);
                   }}
                   className="text-muted-foreground/50 hover:text-foreground hover:bg-muted rounded-md p-0.5 transition-colors flex items-center justify-center ml-0.5 cursor-pointer size-4"
-                  title="Remove search"
+                  title={t("aquila.removeSearch")}
                 >
                   <X className="size-3" />
                 </button>
@@ -62,7 +65,7 @@ export const RrBrowseHistory = ({
           onClick={onClear}
           className="text-xs text-muted-foreground/60 hover:text-destructive transition-colors ml-auto font-semibold py-1 px-2.5 hover:bg-destructive/10 rounded-md cursor-pointer"
         >
-          Clear all
+          {t("aquila.clearAll")}
         </button>
       </div>
     </div>

@@ -205,7 +205,7 @@ export function RrSidebarSettingsTab({
     for (let i = 0; i < index; i++) {
       if (!tempPositions[positions[i]]) {
         toast.warning(
-          `Position ${positions[i]} must be filled before selecting Position ${pos}.`,
+          t("sidebar.positionMustBeFilled", { required: positions[i], target: pos }),
         );
         return;
       }
@@ -256,7 +256,7 @@ export function RrSidebarSettingsTab({
     const storageKey = `runa-phone-dock-items-${selectedAppHref}`;
     localStorage.setItem(storageKey, JSON.stringify(tempPositions));
     window.dispatchEvent(new Event("runa-sidebar-changed"));
-    toast.success("Phone shortcuts updated successfully!");
+    toast.success(t("sidebar.shortcutsUpdated"));
     onOpenChange(false);
   };
 
@@ -332,7 +332,7 @@ export function RrSidebarSettingsTab({
             <>
               <span className="text-[10px] font-bold opacity-45">+{pos}</span>
               <span className="text-[8px] tracking-tight opacity-30 font-medium">
-                Empty
+                {t("sidebar.emptySlot")}
               </span>
             </>
           )}
@@ -365,11 +365,9 @@ export function RrSidebarSettingsTab({
       <Card>
         <CardHeader className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
           <div className="flex flex-col gap-0.5">
-            <CardTitle>Customize Phone Sidebar / Dock</CardTitle>
+            <CardTitle>{t("sidebar.customizeSidebarTitle")}</CardTitle>
             <CardDescription>
-              Customize your shortcuts for mobile. Select a position slot (1 to
-              4) below, then click any item from the available list to assign
-              it.
+              {t("sidebar.customizeSidebarDesc")}
             </CardDescription>
           </div>
 
@@ -379,7 +377,7 @@ export function RrSidebarSettingsTab({
               htmlFor="app-select"
               className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider"
             >
-              Application
+              {t("sidebar.applicationLabel")}
             </label>
             <select
               id="app-select"
@@ -424,17 +422,17 @@ export function RrSidebarSettingsTab({
       {/* Available Items */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle>Available Navigation Shortcuts</CardTitle>
+          <CardTitle>{t("sidebar.availableShortcutsTitle")}</CardTitle>
           <CardDescription>
             {!focusedSlot ? (
               <span className="text-[10px] text-primary font-semibold animate-pulse">
-                Select a slot above to assign items
+                {t("sidebar.selectSlotAbove")}
               </span>
             ) : (
               <span className="text-[10px] text-muted-foreground">
-                Assigning to{" "}
+                {t("sidebar.assigningToPosition")}{" "}
                 <strong className="text-primary font-semibold">
-                  Position {focusedSlot}
+                  {t("sidebar.positionLabel")} {focusedSlot}
                 </strong>
               </span>
             )}
@@ -496,11 +494,11 @@ export function RrSidebarSettingsTab({
                       parentAssignedPos &&
                       assignedChildrenPositions.length > 0
                     ) {
-                      assignedPositionsText = `Pos ${parentAssignedPos}, ${assignedChildrenPositions.map((c) => c.pos).join(", ")}`;
+                      assignedPositionsText = `${t("sidebar.posLabel")} ${parentAssignedPos}, ${assignedChildrenPositions.map((c) => c.pos).join(", ")}`;
                     } else if (parentAssignedPos) {
-                      assignedPositionsText = `Pos ${parentAssignedPos}`;
+                      assignedPositionsText = `${t("sidebar.posLabel")} ${parentAssignedPos}`;
                     } else if (assignedChildrenPositions.length > 0) {
-                      assignedPositionsText = `Pos ${assignedChildrenPositions.map((c) => c.pos).join(", ")}`;
+                      assignedPositionsText = `${t("sidebar.posLabel")} ${assignedChildrenPositions.map((c) => c.pos).join(", ")}`;
                     }
 
                     return (
@@ -540,7 +538,7 @@ export function RrSidebarSettingsTab({
                           className="w-56 bg-card border border-border shadow-xl rounded-xl p-1 z-200"
                         >
                           <DropdownMenuLabel className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider px-2 py-1.5">
-                            Add to Position {focusedSlot}
+                            {t("sidebar.addToPosition", { pos: focusedSlot })}
                           </DropdownMenuLabel>
                           <DropdownMenuSeparator className="bg-border/40" />
 
@@ -555,7 +553,7 @@ export function RrSidebarSettingsTab({
                               </span>
                               {parentAssignedPos && (
                                 <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-bold uppercase">
-                                  Pos {parentAssignedPos}
+                                  {t("sidebar.posLabel")} {parentAssignedPos}
                                 </span>
                               )}
                             </DropdownMenuItem>
@@ -591,7 +589,7 @@ export function RrSidebarSettingsTab({
                                 </span>
                                 {childAssignedPos && (
                                   <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-bold uppercase">
-                                    Pos {childAssignedPos}
+                                    {t("sidebar.posLabel")} {childAssignedPos}
                                   </span>
                                 )}
                               </DropdownMenuItem>
@@ -626,7 +624,7 @@ export function RrSidebarSettingsTab({
                         <span className="truncate flex-1">{item.label}</span>
                         {isAssigned && (
                           <span className="text-[8px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-bold uppercase shrink-0">
-                            Pos {assignedPos}
+                            {t("sidebar.posLabel")} {assignedPos}
                           </span>
                         )}
                       </button>
@@ -647,13 +645,13 @@ export function RrSidebarSettingsTab({
             onClick={() => onOpenChange(false)}
             className="text-xs sm:text-sm text-muted-foreground hover:text-foreground rounded-xl h-9 cursor-pointer"
           >
-            Cancel
+            {t("cancel")}
           </Button>
           <Button
             onClick={handleSave}
             className="bg-primary hover:bg-primary/95 text-primary-foreground font-semibold rounded-xl px-5 shadow-lg text-xs sm:text-sm h-9 cursor-pointer"
           >
-            Save Changes
+            {t("saveChanges")}
           </Button>
         </CardFooter>
       </Card>

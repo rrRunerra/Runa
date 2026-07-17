@@ -68,6 +68,7 @@ export interface TvEntity {
   contentRating: string | null;
   locked: boolean;
   updatedAt: Date;
+  episodeCount?: number | null;
 
   localPopularity: number;
   localFavoritesCount: number;

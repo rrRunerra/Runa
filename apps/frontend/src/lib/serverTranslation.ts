@@ -16,7 +16,7 @@ import vi from "../locales/vi.json";
 import th from "../locales/th.json";
 import ms from "../locales/ms.json";
 
-const dictionaries: Record<string, Record<string, string>> = {
+const dictionaries: Record<string, any> = {
   en,
   ja,
   ko,
@@ -35,17 +35,24 @@ const dictionaries: Record<string, Record<string, string>> = {
   ms,
 };
 
+const getTranslationVal = (obj: any, path: string): any => {
+  if (!obj) return undefined;
+  return path.split(".").reduce((acc, part) => acc && acc[part], obj);
+};
+
 export async function getServerTranslation(): Promise<{
   t: (key: string, variables?: Record<string, string>) => string;
   lang: string;
 }> {
   const cookieStore = await cookies();
-  const lang = cookieStore.get("runa-language")?.value || "en";
+  const rawLang = cookieStore.get("runa-language")?.value || "en";
+  const lang = rawLang === "zh" ? "zh-CN" : rawLang;
   const dictionary = dictionaries[lang] || en;
 
   return {
     t: (key: string, variables?: Record<string, string>) => {
-      let text = dictionary[key] || (en as Record<string, string>)[key] || key;
+      const val = getTranslationVal(dictionary, key) || getTranslationVal(en, key);
+      let text = typeof val === "string" ? val : key;
       if (variables) {
         Object.entries(variables).forEach(([k, v]) => {
           text = text.replace(new RegExp(`{{\\s*${k}\\s*}}`, "g"), v);

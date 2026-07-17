@@ -34,6 +34,7 @@ import { RrMediaDescription } from "@/components/rrComponents/aquila/details/rrM
 import { RrMediaGenres } from "@/components/rrComponents/aquila/details/rrMediaGenres";
 import { RrMediaCharacters } from "@/components/rrComponents/aquila/details/rrMediaCharacters";
 import { RrMediaStatsDashboard } from "@/components/rrComponents/aquila/details/rrMediaStatsDashboard";
+import { useTranslation } from "react-i18next";
 
 interface ListEntry {
   id: number | string;
@@ -62,6 +63,7 @@ const itemVariants = {
 };
 
 export default function MovieDetailsPage(): React.JSX.Element {
+  const { t } = useTranslation();
   const params = useParams();
   const id = params?.id as string;
   const session = useSession();
@@ -96,7 +98,7 @@ export default function MovieDetailsPage(): React.JSX.Element {
   const titleEnglish = movie?.titleEnglish ?? "";
   const titleRomaji = movie?.titleRomaji ?? "";
   const titleNative = movie?.titleNative ?? "";
-  const displayTitle = titleEnglish || titleRomaji || "Movie Details";
+  const displayTitle = titleEnglish || titleRomaji || t("aquila.movieDetails", "Movie Details");
   const coverUrl = movie?.coverImage ?? "";
   const bannerUrl = movie?.bannerImage ?? "";
 
@@ -126,18 +128,18 @@ export default function MovieDetailsPage(): React.JSX.Element {
     if (!movie?.characters) return [];
     return movie.characters.map((mc) => ({
       id: mc.id,
-      name: mc.name || "Unknown Character",
+      name: mc.name || t("aquila.unknownCharacter", "Unknown Character"),
       native: "",
       role: mc.role || "Actor",
       image: mc.image || "",
       voiceActor: mc.actorId ? {
         id: mc.actorId,
-        name: mc.personName || "Unknown Actor",
+        name: mc.personName || t("aquila.unknownActor", "Unknown Actor"),
         image: mc.image || "",
         role: "Actor",
       } : null,
     }));
-  }, [movie]);
+  }, [movie, t]);
 
   useEffect((): void => {
     if (!movie) return;
@@ -159,10 +161,10 @@ export default function MovieDetailsPage(): React.JSX.Element {
       <div className="flex flex-col flex-1 min-h-screen bg-background relative overflow-hidden items-center justify-center gap-4">
         <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-primary/2 rounded-full blur-3xl pointer-events-none" />
         <h2 className="text-2xl font-bold text-foreground z-10">
-          Movie not found
+          {t("aquila.movieNotFound", "Movie not found")}
         </h2>
         <Button asChild variant="default" className="z-10 rounded-xl">
-          <Link href="/aquila/browse">Back to Browse</Link>
+          <Link href="/aquila/browse">{t("aquila.backToBrowse", "Back to Browse")}</Link>
         </Button>
       </div>
     );
@@ -185,13 +187,13 @@ export default function MovieDetailsPage(): React.JSX.Element {
         },
       );
       if (res.ok) {
-        toast.success("Added to list!");
+        toast.success(t("aquila.addedToList", "Added to list!"));
         mutateListEntry();
       } else {
-        toast.error("Failed to add to list");
+        toast.error(t("aquila.failedAddToList", "Failed to add to list"));
       }
     } catch {
-      toast.error("Failed to add to list");
+      toast.error(t("aquila.failedAddToList", "Failed to add to list"));
     }
   };
 
@@ -283,7 +285,7 @@ export default function MovieDetailsPage(): React.JSX.Element {
                           size="lg"
                           onClick={handleQuickAdd}
                         >
-                          Quick Add
+                          {t("aquila.quickAdd", "Quick Add")}
                         </Button>
                         <Button
                           variant="outline"
@@ -291,7 +293,7 @@ export default function MovieDetailsPage(): React.JSX.Element {
                           size="lg"
                           onClick={(): void => setIsDialogOpen(true)}
                         >
-                          Add to List
+                          {t("aquila.addToList", "Add to List")}
                         </Button>
                       </>
                     ) : (
@@ -301,7 +303,7 @@ export default function MovieDetailsPage(): React.JSX.Element {
                         size="lg"
                         onClick={(): void => setIsDialogOpen(true)}
                       >
-                        Edit Entry
+                        {t("aquila.editEntry", "Edit Entry")}
                       </Button>
                     )}
                     <RrMediaEditDialog
@@ -343,7 +345,7 @@ export default function MovieDetailsPage(): React.JSX.Element {
                       className="flex items-center justify-center gap-2"
                     >
                       <Play className="size-4 fill-current" />
-                      Watch Trailer
+                      {t("aquila.watchTrailer", "Watch Trailer")}
                     </a>
                   </Button>
                 )}
@@ -353,29 +355,29 @@ export default function MovieDetailsPage(): React.JSX.Element {
             {/* Info Sidebar */}
             <div className="bg-card/65 border border-border/40 backdrop-blur-xl rounded-2xl p-5 space-y-4">
               <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                Information
+                {t("aquila.information", "Information")}
               </h3>
               <div className="space-y-3">
                 <RrMediaInfoRow
-                  label="Runtime"
-                  value={movie.runtime ? `${movie.runtime} mins` : null}
+                  label={t("aquila.duration", "Runtime")}
+                  value={movie.runtime ? t("aquila.durationMinutes", "{{count}} mins", { count: movie.runtime }) : null}
                 />
                 <RrMediaInfoRow
-                  label="Status"
+                  label={t("aquila.status", "Status")}
                   value={movie.status?.replace(/_/g, " ").toLowerCase()}
                   className="capitalize"
                 />
-                <RrMediaInfoRow label="Release Date" value={formattedReleaseDate} />
-                <RrMediaInfoRow label="Budget" value={movie.budget} />
-                <RrMediaInfoRow label="Box Office" value={movie.boxOffice} />
-                <RrMediaInfoRow label="Country" value={movie.originalCountry} />
+                <RrMediaInfoRow label={t("aquila.releaseDate", "Release Date")} value={formattedReleaseDate} />
+                <RrMediaInfoRow label={t("aquila.budget", "Budget")} value={movie.budget} />
+                <RrMediaInfoRow label={t("aquila.boxOffice", "Box Office")} value={movie.boxOffice} />
+                <RrMediaInfoRow label={t("aquila.country", "Country")} value={movie.originalCountry} />
                 <RrMediaInfoRow
-                  label="Language"
+                  label={t("aquila.language", "Language")}
                   value={movie.originalLanguage}
                   className="uppercase"
                 />
                 <RrMediaInfoRow
-                  label="Rating"
+                  label={t("aquila.rating", "Rating")}
                   value={
                     movie.contentRating ? (
                       <Badge variant="outline" className="text-xs px-2 py-0.5">
@@ -391,7 +393,7 @@ export default function MovieDetailsPage(): React.JSX.Element {
             {movie.studios && movie.studios.length > 0 && (
               <div className="bg-card/65 border border-border/40 backdrop-blur-xl rounded-2xl p-5">
                 <h4 className="font-semibold text-xs tracking-wide text-muted-foreground uppercase mb-3">
-                  Studios
+                  {t("aquila.studiosLabel", "Studios")}
                 </h4>
                 <div className="flex flex-wrap gap-2">
                   {movie.studios.map((studio, idx) => {
@@ -417,7 +419,7 @@ export default function MovieDetailsPage(): React.JSX.Element {
             {movie.trailers && movie.trailers.length > 1 && (
               <div className="bg-card/65 border border-border/40 backdrop-blur-xl rounded-2xl p-5">
                 <h4 className="font-semibold text-xs tracking-wide text-muted-foreground uppercase mb-3">
-                  Trailers
+                  {t("aquila.trailers", "Trailers")}
                 </h4>
                 <div className="flex flex-col gap-2">
                   {movie.trailers.slice(1).map((trailer, idx) => (
@@ -429,7 +431,7 @@ export default function MovieDetailsPage(): React.JSX.Element {
                       className="flex items-center gap-2 text-xs bg-secondary hover:bg-secondary/80 text-secondary-foreground border border-border/40 px-3 py-2 rounded-xl transition-all"
                     >
                       <Play className="size-3 fill-current" />
-                      {trailer.name || `Trailer ${idx + 2}`}
+                      {trailer.name || t("aquila.trailerName", "Trailer {{number}}", { number: idx + 2 })}
                     </a>
                   ))}
                 </div>
@@ -440,7 +442,7 @@ export default function MovieDetailsPage(): React.JSX.Element {
             {(movie.tvdbId || movie.tmdbId || movie.imdbId) && (
               <div className="bg-card/65 border border-border/40 backdrop-blur-xl rounded-2xl p-5">
                 <h4 className="font-semibold text-xs tracking-wide text-muted-foreground uppercase mb-3">
-                  External Links
+                  {t("aquila.externalLinks", "External Links")}
                 </h4>
                 <div className="flex flex-col gap-2">
                   {movie.tvdbId && (
@@ -492,7 +494,7 @@ export default function MovieDetailsPage(): React.JSX.Element {
               (titleRomaji && titleRomaji !== displayTitle) ||
               titleNative ? (
                 <p className="text-xs text-muted-foreground italic">
-                  Also known as:{" "}
+                  {t("aquila.alsoKnownAs", "Also known as:")}{" "}
                   {[
                     titleEnglish && titleEnglish !== displayTitle
                       ? titleEnglish
@@ -525,7 +527,7 @@ export default function MovieDetailsPage(): React.JSX.Element {
                 <div className="bg-card/45 border border-border/30 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2">
                   <Clock className="size-4 text-primary" />
                   <span className="text-sm font-semibold text-foreground">
-                    {movie.runtime} min
+                    {t("aquila.durationMinutes", "{{count}} min", { count: movie.runtime })}
                   </span>
                 </div>
               )}

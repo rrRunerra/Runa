@@ -3,6 +3,7 @@
 import React from "react";
 import RrLapplandLayingRight from "@/components/rrComponents/rrImages/rrLapplandLayingRight";
 import useSWR from "swr";
+import { useTranslation } from "react-i18next";
 import { fetcher } from "@/lib/fetcher";
 import * as Lucide from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -52,8 +53,10 @@ export function RrUserListFilters({
   sortOptions,
   filters,
   setFilters,
-  searchPlaceholder = "Search...",
+  searchPlaceholder,
 }: RrUserListFiltersProps): React.JSX.Element {
+  const { t } = useTranslation();
+
   // Query dynamic filter options from backend
   const { data: filterOptions } = useSWR<{
     genres: string[];
@@ -103,6 +106,7 @@ export function RrUserListFilters({
   };
 
   const activeGenre = filters.genres?.[0] || "";
+  const resolvedSearchPlaceholder = searchPlaceholder ?? t("aquila.searchPlaceholder");
 
   return (
     <div className="relative flex flex-col gap-4 w-full bg-card/20 backdrop-blur-xl border border-border/40 p-4 rounded-2xl shadow-xl select-none">
@@ -111,7 +115,7 @@ export function RrUserListFilters({
         <div className="relative flex-1 max-w-full xl:max-w-xs">
           <Lucide.Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60" />
           <Input
-            placeholder={searchPlaceholder}
+            placeholder={resolvedSearchPlaceholder}
             className="pl-9 h-9.5 bg-background/40 border border-border/40 focus-visible:ring-1 focus-visible:ring-primary/30 rounded-xl placeholder:text-muted-foreground/40 text-xs"
             value={searchVal}
             onChange={(e) => setSearchVal(e.target.value)}
@@ -133,10 +137,10 @@ export function RrUserListFilters({
                 onValueChange={(v) => handleFilterChange("format", v)}
               >
                 <SelectTrigger className="h-9.5 min-w-[100px] bg-background/40 border border-border/40 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
-                  <SelectValue placeholder="Format" />
+                  <SelectValue placeholder={t("aquila.format")} />
                 </SelectTrigger>
                 <SelectContent className="bg-popover/95 backdrop-blur-md border border-border/40 rounded-xl">
-                  <SelectItem value="all">All Formats</SelectItem>
+                  <SelectItem value="all">{t("aquila.allFormats")}</SelectItem>
                   {availableFormats.map((f) => (
                     <SelectItem key={f} value={f}>
                       {f}
@@ -155,10 +159,10 @@ export function RrUserListFilters({
                 onValueChange={(v) => handleFilterChange("mediaStatus", v)}
               >
                 <SelectTrigger className="h-9.5 min-w-[100px] bg-background/40 border border-border/40 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
-                  <SelectValue placeholder="Status" />
+                  <SelectValue placeholder={t("aquila.status")} />
                 </SelectTrigger>
                 <SelectContent className="bg-popover/95 backdrop-blur-md border border-border/40 rounded-xl">
-                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="all">{t("aquila.allStatuses")}</SelectItem>
                   {availableStatuses.map((s) => (
                     <SelectItem key={s} value={s}>
                       {s.replace(/_/g, " ")}
@@ -177,10 +181,10 @@ export function RrUserListFilters({
                 onValueChange={(v) => handleFilterChange("genres", v)}
               >
                 <SelectTrigger className="h-9.5 min-w-[110px] bg-background/40 border border-border/40 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
-                  <SelectValue placeholder="Genre" />
+                  <SelectValue placeholder={t("aquila.genre")} />
                 </SelectTrigger>
                 <SelectContent className="bg-popover/95 backdrop-blur-md border border-border/40 rounded-xl max-h-60">
-                  <SelectItem value="all">All Genres</SelectItem>
+                  <SelectItem value="all">{t("aquila.allGenres")}</SelectItem>
                   {availableGenres.map((g) => (
                     <SelectItem key={g} value={g}>
                       {g}
@@ -199,10 +203,10 @@ export function RrUserListFilters({
                 onValueChange={(v) => handleFilterChange("year", v)}
               >
                 <SelectTrigger className="h-9.5 min-w-[90px] bg-background/40 border border-border/40 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
-                  <SelectValue placeholder="Year" />
+                  <SelectValue placeholder={t("aquila.year")} />
                 </SelectTrigger>
                 <SelectContent className="bg-popover/95 backdrop-blur-md border border-border/40 rounded-xl max-h-60">
-                  <SelectItem value="all">All Years</SelectItem>
+                  <SelectItem value="all">{t("aquila.allYears")}</SelectItem>
                   {availableYears.map((y) => (
                     <SelectItem key={y} value={y.toString()}>
                       {y}
@@ -216,11 +220,11 @@ export function RrUserListFilters({
           {/* Sort Dropdown */}
           <div className="flex items-center gap-1.5 border-l border-border/40 pl-2 ml-1">
             <span className="text-[10px] font-semibold text-muted-foreground/80 hidden sm:inline uppercase tracking-wider">
-              Sort
+              {t("aquila.sort")}
             </span>
             <Select value={sort} onValueChange={(v) => setSort(v as UserListSortType)}>
               <SelectTrigger className="h-9.5 min-w-[115px] bg-background/40 border border-border/40 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
-                <SelectValue placeholder="Sort By" />
+                <SelectValue placeholder={t("aquila.sortBy")} />
               </SelectTrigger>
               <SelectContent className="bg-popover/95 backdrop-blur-md border border-border/40 rounded-xl">
                 {sortOptions.map((opt) => (
@@ -239,7 +243,7 @@ export function RrUserListFilters({
               size="icon"
               onClick={handleReset}
               className="size-9.5 rounded-xl hover:bg-muted/30 text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
-              title="Reset all filters"
+              title={t("aquila.resetAllFilters")}
             >
               <Lucide.RotateCcw className="size-4" />
             </Button>

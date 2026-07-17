@@ -18,10 +18,10 @@ export default class PolarisSpotlightFeature extends BaseSpotlightFeature {
     if (context.username) {
       actions.push({
         id: "action-polaris-profile",
-        label: "My Profile",
+        label: context.t("spotlight.myProfile"),
         category: "Actions",
         icon: <User className="size-4 text-foreground/70" />,
-        badge: "Account Details",
+        badge: context.t("spotlight.accountDetails"),
         action: () => {
           window.location.href = `/polaris/user/${context.username}`;
         },
@@ -33,10 +33,10 @@ export default class PolarisSpotlightFeature extends BaseSpotlightFeature {
       for (const c of REFERENCE_CONSTELLATIONS) {
         actions.push({
           id: `action-polaris-navigate-${c.id}`,
-          label: `Navigate: ${c.name}`,
+          label: context.t("spotlight.navigateConstellation", { name: c.name }),
           category: "Navigation",
           icon: <Compass className="size-4 text-primary" />,
-          badge: `App constellation`,
+          badge: context.t("spotlight.appConstellation"),
           action: () => {
             if (typeof window !== "undefined") {
               window.dispatchEvent(
@@ -69,10 +69,10 @@ export default class PolarisSpotlightFeature extends BaseSpotlightFeature {
             for (const b of cachedBookmarks) {
               actions.push({
                 id: `action-polaris-bookmark-${b.id}`,
-                label: `Navigate: ${b.name}`,
+                label: context.t("spotlight.navigateConstellation", { name: b.name }),
                 category: "Navigation",
                 icon: <Bookmark className="size-4 text-primary" />,
-                badge: `Saved constellation`,
+                badge: context.t("spotlight.savedConstellation"),
                 action: () => handleBookmarkAction(b),
               });
             }
@@ -90,10 +90,10 @@ export default class PolarisSpotlightFeature extends BaseSpotlightFeature {
                 for (const b of bookmarks) {
                   actions.push({
                     id: `action-polaris-bookmark-${b.id}`,
-                    label: `Navigate: ${b.name}`,
+                    label: context.t("spotlight.navigateConstellation", { name: b.name }),
                     category: "Navigation",
                     icon: <Bookmark className="size-4 text-primary" />,
-                    badge: `Saved constellation`,
+                    badge: context.t("spotlight.savedConstellation"),
                     action: () => handleBookmarkAction(b),
                   });
                 }

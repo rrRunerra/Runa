@@ -14,26 +14,26 @@ export default class RunaSpotlightFeature extends BaseSpotlightFeature {
     // 1. Theme controls (parameterized)
     actions.push({
       id: "action-theme",
-      label: "Switch Theme",
+      label: context.t("spotlight.switchTheme"),
       category: "Actions",
       icon: <Palette className="size-4 text-foreground/70" />,
-      badge: "System UI Theme",
+      badge: context.t("spotlight.systemUiTheme"),
       parameters: [
         {
           name: "theme",
-          label: "Theme Mode",
+          label: context.t("spotlight.themeMode"),
           type: "select",
           options: [
-            { label: "Dark Mode", value: "dark" },
-            { label: "Light Mode", value: "light" },
-            { label: "System Settings", value: "system" },
+            { label: context.t("spotlight.darkMode"), value: "dark" },
+            { label: context.t("spotlight.lightMode"), value: "light" },
+            { label: context.t("spotlight.systemSettings"), value: "system" },
           ],
         },
         {
           name: "interfaceTheme",
-          label: "Interface Theme",
+          label: context.t("spotlight.interfaceTheme"),
           type: "select",
-          options: THEMES.map((t) => ({ label: `${t.name} Theme`, value: t.id })),
+          options: THEMES.map((t) => ({ label: context.t("spotlight.themeWithName", { name: t.name }), value: t.id })),
         },
       ],
       action: (params) => {
@@ -59,7 +59,7 @@ export default class RunaSpotlightFeature extends BaseSpotlightFeature {
     }).map((c) => {
       const Icon = c.icon;
       return {
-        label: c.name,
+        label: context.t("settingsDialog." + c.id, { defaultValue: c.name }),
         value: c.id,
         icon: <Icon className="size-4 text-foreground/70" />,
       };
@@ -68,14 +68,14 @@ export default class RunaSpotlightFeature extends BaseSpotlightFeature {
     actions.push(
       {
         id: "action-settings",
-        label: "Settings",
+        label: context.t("spotlight.settings"),
         category: "Actions",
         icon: <Settings className="size-4 text-foreground/70" />,
-        badge: "Configure Runa platform",
+        badge: context.t("spotlight.configurePlatform"),
         parameters: [
           {
             name: "category",
-            label: "Settings Tab",
+            label: context.t("spotlight.settingsTab"),
             type: "select",
             options: settingsOptions,
           },
@@ -87,20 +87,20 @@ export default class RunaSpotlightFeature extends BaseSpotlightFeature {
       },
       {
         id: "action-notifications",
-        label: "Open Notifications Feed",
+        label: context.t("spotlight.openNotifications"),
         category: "Actions",
         icon: <Bell className="size-4 text-foreground/70" />,
-        badge: "System Alerts",
+        badge: context.t("spotlight.systemAlerts"),
         action: () => {
           window.dispatchEvent(new CustomEvent("runa-open-notifications"));
         },
       },
       {
         id: "action-appearance",
-        label: "Open Appearance Customizer",
+        label: context.t("spotlight.openAppearance"),
         category: "Actions",
         icon: <Palette className="size-4 text-foreground/70" />,
-        badge: "Visual customizer",
+        badge: context.t("spotlight.visualCustomizer"),
         action: () => {
           window.dispatchEvent(new CustomEvent("runa-open-appearance"));
         },
@@ -110,10 +110,10 @@ export default class RunaSpotlightFeature extends BaseSpotlightFeature {
     // 3. Constellation builder workspace
     actions.push({
       id: "action-constellation-builder",
-      label: "Constellation Builder Workspace",
+      label: context.t("spotlight.constellationBuilder"),
       category: "Actions",
       icon: <Sparkles className="size-4 text-foreground/70" />,
-      badge: "Stars Editor",
+      badge: context.t("spotlight.starsEditor"),
       action: () => {
         window.dispatchEvent(new CustomEvent("runa-open-builder"));
       },
@@ -122,10 +122,10 @@ export default class RunaSpotlightFeature extends BaseSpotlightFeature {
     // 4. Toggle Left Sidebar
     actions.push({
       id: "action-sidebar-toggle",
-      label: "Toggle Left Sidebar",
+      label: context.t("spotlight.toggleSidebar"),
       category: "Actions",
       icon: <PanelLeft className="size-4 text-foreground/70" />,
-      badge: "UI Shortcut",
+      badge: context.t("spotlight.uiShortcut"),
       action: () => {
         context.toggleSidebar();
       },
@@ -135,10 +135,10 @@ export default class RunaSpotlightFeature extends BaseSpotlightFeature {
     if (!context.isEncryptionUnlocked) {
       actions.push({
         id: "action-unlock-encryption",
-        label: "Unlock Encryption",
+        label: context.t("spotlight.unlockEncryption"),
         category: "Actions",
         icon: <Shield className="size-4 text-warning" />,
-        badge: "Encryption Security",
+        badge: context.t("spotlight.encryptionSecurity"),
         action: () => {
           context.setShowUnlockDialog(true);
         },
@@ -148,10 +148,10 @@ export default class RunaSpotlightFeature extends BaseSpotlightFeature {
     // 6. Sign Out
     actions.push({
       id: "action-logout",
-      label: "Log Out",
+      label: context.t("spotlight.logOut"),
       category: "Actions",
       icon: <LogOut className="size-4 text-destructive" />,
-      badge: "Session logout",
+      badge: context.t("spotlight.sessionLogout"),
       action: () => {
         context.signOut();
       },

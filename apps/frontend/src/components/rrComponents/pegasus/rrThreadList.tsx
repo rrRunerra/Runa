@@ -23,6 +23,7 @@ import {
   Menu,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -103,6 +104,7 @@ export default function RrThreadList({
   onBulkAction,
   onEmptyTrash,
 }: RrThreadListProps): React.JSX.Element {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [expandedThreadSubjects, setExpandedThreadSubjects] = useState<
     string[]
@@ -239,7 +241,7 @@ export default function RrThreadList({
                 )}
               </button>
               <span className="text-xs font-bold text-foreground">
-                {selectedIds.length} Selected
+                {t("pegasus.folderView.selectedCount", { count: selectedIds.length })}
               </span>
             </div>
             <div className="flex items-center gap-1.5">
@@ -250,7 +252,7 @@ export default function RrThreadList({
                   onClick={() => onBulkAction("read")}
                   className="h-8 text-[10px] px-2.5 rounded-lg cursor-pointer"
                 >
-                  Mark Read
+                  {t("pegasus.folderView.bulkRead")}
                 </Button>
               )}
               {hasReadSelected && (
@@ -260,7 +262,7 @@ export default function RrThreadList({
                   onClick={() => onBulkAction("unread")}
                   className="h-8 text-[10px] px-2.5 rounded-lg cursor-pointer"
                 >
-                  Mark Unread
+                  {t("pegasus.folderView.bulkUnread")}
                 </Button>
               )}
               {folder.toLowerCase() === "trash" ? (
@@ -271,7 +273,7 @@ export default function RrThreadList({
                   className="h-8 text-[10px] px-2.5 rounded-lg text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/10 cursor-pointer flex items-center gap-1 font-bold"
                 >
                   <RotateCcw className="size-3" />
-                  Restore
+                  {t("pegasus.folderView.bulkRestore")}
                 </Button>
               ) : (
                 <>
@@ -281,7 +283,7 @@ export default function RrThreadList({
                     onClick={() => onBulkAction("archive")}
                     className="h-8 text-[10px] px-2.5 rounded-lg cursor-pointer"
                   >
-                    Archive
+                    {t("pegasus.folderView.bulkArchive")}
                   </Button>
                   <Button
                     variant="destructive"
@@ -289,7 +291,7 @@ export default function RrThreadList({
                     onClick={() => onBulkAction("trash")}
                     className="h-8 text-[10px] px-2.5 rounded-lg cursor-pointer"
                   >
-                    Delete
+                    {t("pegasus.folderView.bulkTrash")}
                   </Button>
                 </>
               )}
@@ -301,7 +303,7 @@ export default function RrThreadList({
               {getFolderIcon()}
               <span>{folder}</span>
               <span className="text-xs text-muted-foreground font-normal">
-                ({threadedGroupMessages.length} threads)
+                {t("pegasus.folderView.threadsCount", { count: threadedGroupMessages.length })}
               </span>
             </div>
             {accountId !== "unified" && (
@@ -323,7 +325,7 @@ export default function RrThreadList({
                         syncingEmails && "animate-spin text-primary",
                       )}
                     />
-                    <span>Sync Folder</span>
+                    <span>{t("pegasus.folderView.syncFolder")}</span>
                   </DropdownMenuItem>
                   {folder.toLowerCase() === "trash" &&
                     threadedGroupMessages.length > 0 && (
@@ -332,7 +334,7 @@ export default function RrThreadList({
                         className="cursor-pointer flex items-center gap-2 text-destructive focus:text-destructive focus:bg-destructive/10"
                       >
                         <Trash className="size-3.5" />
-                        <span>Empty Trash</span>
+                        <span>{t("pegasus.folderView.emptyTrash")}</span>
                       </DropdownMenuItem>
                     )}
                 </DropdownMenuContent>
@@ -347,7 +349,7 @@ export default function RrThreadList({
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search conversations..."
+              placeholder={t("pegasus.folderView.searchConversations")}
               className="w-full pl-9 pr-4 py-1.5 text-xs bg-muted/50 border border-border rounded-xl text-foreground placeholder-muted-foreground focus-visible:ring-1 focus-visible:ring-primary/45 focus-visible:border-primary/30"
             />
           </div>
@@ -360,7 +362,7 @@ export default function RrThreadList({
           <div className="flex flex-col items-center justify-center py-20 space-y-3">
             <Loader2 className="size-6 text-muted-foreground animate-spin" />
             <span className="text-xs text-muted-foreground">
-              Decrypting messages...
+              {t("pegasus.folderView.loading")}
             </span>
           </div>
         ) : error ? (
@@ -369,7 +371,7 @@ export default function RrThreadList({
           </div>
         ) : filteredThreads.length === 0 ? (
           <div className="text-center py-20 text-muted-foreground text-sm">
-            No threads found.
+            {t("pegasus.folderView.noMessages")}
           </div>
         ) : (
           <div className="flex flex-col gap-2">
@@ -552,7 +554,7 @@ export default function RrThreadList({
               {loadingMore && (
                 <Loader2 className="size-3.5 animate-spin mr-1.5" />
               )}
-              Load More Emails
+              {t("pegasus.folderView.loadMore")}
             </Button>
           </div>
         )}

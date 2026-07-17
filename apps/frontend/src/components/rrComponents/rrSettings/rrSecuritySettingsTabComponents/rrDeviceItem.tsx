@@ -1,6 +1,7 @@
 import * as React from "react";
 import { Smartphone, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
 
 export interface RrDeviceItemProps {
   device: {
@@ -16,6 +17,7 @@ export function RrDeviceItem({
   device,
   onRevoke,
 }: RrDeviceItemProps): React.JSX.Element {
+  const { t } = useTranslation();
   return (
     <div className="p-4 rounded-2xl border border-border bg-card/10 flex items-center justify-between gap-3 text-left">
       <div className="flex items-center gap-3 min-w-0">
@@ -30,10 +32,10 @@ export function RrDeviceItem({
             </span>
           </div>
           <span className="text-[10px] text-muted-foreground block truncate max-w-[200px] md:max-w-[300px]">
-            {device.userAgent || "Unknown User Agent"}
+            {device.userAgent || t("securitySettings.unknownUserAgent")}
           </span>
           <span className="text-[9px] text-muted-foreground/60 block">
-            Last Active: {new Date(device.lastActiveAt).toLocaleString()}
+            {t("securitySettings.lastActiveLabel")}: {new Date(device.lastActiveAt).toLocaleString()}
           </span>
         </div>
       </div>

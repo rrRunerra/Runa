@@ -18,7 +18,7 @@ import RrCanvasGroupCard from "./rrCanvasGroupCard";
 import RrCanvasRrImageCard from "./rrCanvasRrImageCard";
 import RrCanvasScientificCalcCard from "./rrCanvasScientificCalcCard";
 import RrCanvasGraphingCalcCard from "./rrCanvasGraphingCalcCard";
-import { CanvasNode } from "../CanvasEditor";
+import { CanvasNode } from "../types";
 
 interface RrCanvasCardContentProps {
   node: CanvasNode;

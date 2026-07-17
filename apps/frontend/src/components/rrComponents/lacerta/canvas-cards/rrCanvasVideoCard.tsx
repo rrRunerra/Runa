@@ -2,14 +2,17 @@
 
 import React from "react";
 import { Video } from "lucide-react";
-import { CanvasNode } from "../CanvasEditor";
+import { CanvasNode } from "../types";
+import { useTranslation } from "react-i18next";
 
 interface RrCanvasVideoCardProps {
   node: CanvasNode;
   selected: boolean;
 }
 
-export default function RrCanvasVideoCard({ node, selected }: RrCanvasVideoCardProps) {
+export default function RrCanvasVideoCard({ node, selected }: RrCanvasVideoCardProps): React.JSX.Element {
+  const { t } = useTranslation();
+
   return (
     <div
       className="relative w-full h-full flex flex-col bg-slate-950/50"
@@ -21,7 +24,7 @@ export default function RrCanvasVideoCard({ node, selected }: RrCanvasVideoCardP
       <div className="flex items-center justify-between px-3 py-1.5 bg-muted/25 border-b border-border shrink-0 text-[10px] select-none">
         <div className="flex items-center gap-1.5 font-bold text-muted-foreground">
           <Video className="h-3.5 w-3.5 text-rose-500" />
-          <span>Video Player</span>
+          <span>{t("lacerta.canvasEditor.videoPlayer", "Video Player")}</span>
         </div>
       </div>
 
@@ -57,7 +60,7 @@ export default function RrCanvasVideoCard({ node, selected }: RrCanvasVideoCardP
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 gap-2">
             <Video className="h-8 w-8 text-slate-700" />
-            <span className="text-[10px] font-semibold">No Video Loaded</span>
+            <span className="text-[10px] font-semibold">{t("lacerta.canvasEditor.noVideoLoaded", "No Video Loaded")}</span>
           </div>
         )}
 

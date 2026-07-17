@@ -67,7 +67,7 @@ async function runCheck() {
         extraKeys.forEach(k => console.log(`    - ${k}`));
       }
     } else {
-      console.log(`  ✅ [${lang}] passed (360/360 keys match)`);
+      console.log(`  ✅ [${lang}] passed (${langKeys.length}/${enKeys.size} keys match)`);
     }
   }
 

@@ -6,6 +6,7 @@ import { ImageIcon, X, Loader2, Code2 } from "lucide-react";
 
 import { CanvasNodeType, CanvasNode } from "./CanvasEditor";
 import { SVG_KEYS, SVG_COMPONENTS, svgKeyToLabel } from "./rrImageRegistry";
+import { useTranslation } from "react-i18next";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -46,6 +47,7 @@ export default function RrCanvasRrImageInsertModal({
   y,
   createNodeAtPos,
 }: RrCanvasRrImageInsertModalProps) {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<Tab>("svg");
   const [svgSearch, setSvgSearch] = useState("");
   const [imgSearch, setImgSearch] = useState("");
@@ -122,7 +124,7 @@ export default function RrCanvasRrImageInsertModal({
             <div className="h-6 w-6 rounded-md bg-primary/10 flex items-center justify-center">
               <ImageIcon className="h-3.5 w-3.5 text-primary" />
             </div>
-            <h3 className="text-sm font-bold text-card-foreground">Insert rrImage</h3>
+            <h3 className="text-sm font-bold text-card-foreground">{t("lacerta.canvasRrImageInsert.title", "Insert rrImage")}</h3>
           </div>
           <button
             onClick={handleClose}
@@ -146,14 +148,14 @@ export default function RrCanvasRrImageInsertModal({
             >
               {tab === "svg" ? (
                 <>
-                  <Code2 className="h-3 w-3" /> SVG Components
+                  <Code2 className="h-3 w-3" /> {t("lacerta.canvasRrImageInsert.tabSvg", "SVG Components")}
                   <span className="ml-1 text-[9px] font-bold bg-primary/10 text-primary px-1.5 py-0.5 rounded-full">
                     {SVG_KEYS.length}
                   </span>
                 </>
               ) : (
                 <>
-                  <ImageIcon className="h-3 w-3" /> Public Images
+                  <ImageIcon className="h-3 w-3" /> {t("lacerta.canvasRrImageInsert.tabPublic", "Public Images")}
                   {!imagesLoading && (
                     <span className="ml-1 text-[9px] font-bold bg-muted text-muted-foreground px-1.5 py-0.5 rounded-full">
                       {publicImages.length}
@@ -174,7 +176,7 @@ export default function RrCanvasRrImageInsertModal({
               <input
                 autoFocus
                 type="text"
-                placeholder="Search SVG components…"
+                placeholder={t("lacerta.canvasRrImageInsert.searchSvgPlaceholder", "Search SVG components…")}
                 value={svgSearch}
                 onChange={(e) => setSvgSearch(e.target.value)}
                 className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-all font-medium shrink-0"
@@ -182,7 +184,7 @@ export default function RrCanvasRrImageInsertModal({
               <div className="flex-1 overflow-y-auto no-scrollbar">
                 {filteredSvgs.length === 0 ? (
                   <div className="flex items-center justify-center text-xs text-muted-foreground h-full">
-                    No components match &ldquo;{svgSearch}&rdquo;
+                    {t("lacerta.canvasRrImageInsert.noComponents", { search: svgSearch, defaultValue: "No components match \"{{search}}\"" })}
                   </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-2 content-start">
@@ -234,7 +236,7 @@ export default function RrCanvasRrImageInsertModal({
               <input
                 autoFocus
                 type="text"
-                placeholder="Search images…"
+                placeholder={t("lacerta.canvasRrImageInsert.searchImagesPlaceholder", "Search images…")}
                 value={imgSearch}
                 onChange={(e) => setImgSearch(e.target.value)}
                 className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-all font-medium shrink-0"
@@ -243,11 +245,11 @@ export default function RrCanvasRrImageInsertModal({
                 {imagesLoading ? (
                   <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground h-full">
                     <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                    Scanning public directory…
+                    {t("lacerta.canvasRrImageInsert.scanning", "Scanning public directory…")}
                   </div>
                 ) : filteredImages.length === 0 ? (
                   <div className="flex items-center justify-center text-xs text-muted-foreground h-full">
-                    {imgSearch ? `No images match "${imgSearch}"` : "No images found"}
+                    {imgSearch ? t("lacerta.canvasRrImageInsert.noImagesMatch", { search: imgSearch, defaultValue: "No images match \"{{search}}\"" }) : t("lacerta.canvasRrImageInsert.noImagesFound", "No images found")}
                   </div>
                 ) : (
                   <div className="grid grid-cols-3 gap-2 content-start">
@@ -301,7 +303,7 @@ export default function RrCanvasRrImageInsertModal({
             onClick={handleClose}
             className="px-4 py-1.5 bg-muted hover:bg-muted/80 rounded-lg text-xs font-semibold text-muted-foreground transition-all"
           >
-            Cancel
+            {t("lacerta.canvasRrImageInsert.cancel", "Cancel")}
           </button>
         </div>
       </div>

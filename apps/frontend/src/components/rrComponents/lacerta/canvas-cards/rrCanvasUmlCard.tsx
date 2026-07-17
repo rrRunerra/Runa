@@ -2,7 +2,7 @@
 
 import React from "react";
 import RrCanvasMermaidRenderer from "./rrCanvasMermaidRenderer";
-import { CanvasNode } from "../CanvasEditor";
+import { CanvasNode } from "../types";
 
 interface RrCanvasUmlCardProps {
   node: CanvasNode;

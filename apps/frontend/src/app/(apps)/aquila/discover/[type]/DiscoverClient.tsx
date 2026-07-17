@@ -24,6 +24,7 @@ import { InfiniteScroll } from "@/components/aquila/media-list/InfiniteScroll";
 import RrLapplandDiscover from "@/components/rrComponents/rrImages/rrLapplandDiscover";
 import RrLapplandDiscoverNotFound from "@/components/rrComponents/rrImages/rrLapplandDiscoverNotFound";
 import RrLapplandLayingLeft from "@/components/rrComponents/rrImages/rrLapplandLayingLeft";
+import { useTranslation } from "react-i18next";
 
 interface DiscoverClientPageProps {
   type: string;
@@ -42,6 +43,7 @@ const containerVariants: Variants = {
 export default function DiscoverClientPage({
   type,
 }: DiscoverClientPageProps): React.JSX.Element {
+  const { t } = useTranslation();
   const router = useRouter();
 
   const [search, setSearch] = useState<string>("");
@@ -221,7 +223,9 @@ export default function DiscoverClientPage({
     addedWithin !== "all";
 
   const isNotFound = !isLoading && !error && accumulatedItems.length === 0;
-  const Wallpaper = isNotFound ? RrLapplandDiscoverNotFound : RrLapplandDiscover;
+  const Wallpaper = isNotFound
+    ? RrLapplandDiscoverNotFound
+    : RrLapplandDiscover;
 
   return (
     <div className="relative w-full p-4 md:p-6 lg:p-8 flex flex-col gap-4 min-h-full">
@@ -237,7 +241,7 @@ export default function DiscoverClientPage({
             <div className="flex items-center gap-2">
               <Compass className="size-6 text-primary" />
               <h1 className="text-3xl font-bold tracking-tight bg-linear-to-r from-foreground to-foreground/75 bg-clip-text text-transparent">
-                Discover
+                {t("aquila.discover", "Discover")}
               </h1>
             </div>
           </div>
@@ -254,7 +258,7 @@ export default function DiscoverClientPage({
           <RrLapplandLayingLeft className="absolute right-0 bottom-0 w-[200px] md:w-[280px] h-auto text-foreground opacity-[0.15] dark:opacity-[0.08] pointer-events-none select-none z-0" />
           <div className="flex items-center gap-2 text-sm font-semibold text-foreground/95 mb-1">
             <SlidersHorizontal className="size-4 text-primary" />
-            <span>Search Filters</span>
+            <span>{t("aquila.searchFilters", "Search Filters")}</span>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
@@ -262,7 +266,14 @@ export default function DiscoverClientPage({
             <div className="relative w-full sm:w-[220px]">
               <Search className="absolute left-3 top-2.5 size-4 text-muted-foreground/70" />
               <Input
-                placeholder={["characters", "actors"].includes(type) ? "Search names..." : "Search titles..."}
+                placeholder={
+                  ["characters", "actors"].includes(type)
+                    ? t("aquila.searchNamesPlaceholderShort", "Search names...")
+                    : t(
+                        "aquila.searchTitlesPlaceholderShort",
+                        "Search titles...",
+                      )
+                }
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="pl-9 h-10 bg-background/50 border-border/60 focus-visible:ring-primary rounded-xl"
@@ -279,70 +290,101 @@ export default function DiscoverClientPage({
             </div>
 
             {/* Year dynamic dropdown */}
-            {meta?.years && meta.years.length > 0 && !["characters", "actors"].includes(type) && (
-              <Select value={year} onValueChange={handleYearChange}>
-                <SelectTrigger className="h-10 bg-background/50 border-border/60 rounded-xl w-full sm:w-[130px]">
-                  <SelectValue placeholder="Year (All)" />
-                </SelectTrigger>
-                <SelectContent className="max-h-60" position="popper">
-                  <SelectItem value="all">Year (All)</SelectItem>
-                  {meta.years.map((y: number) => (
-                    <SelectItem key={y} value={y.toString()}>
-                      {y}
+            {meta?.years &&
+              meta.years.length > 0 &&
+              !["characters", "actors"].includes(type) && (
+                <Select value={year} onValueChange={handleYearChange}>
+                  <SelectTrigger className="h-10 bg-background/50 border-border/60 rounded-xl w-full sm:w-[130px]">
+                    <SelectValue
+                      placeholder={t("aquila.yearAll", "Year (All)")}
+                    />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60" position="popper">
+                    <SelectItem value="all">
+                      {t("aquila.yearAll", "Year (All)")}
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+                    {meta.years.map((y: number) => (
+                      <SelectItem key={y} value={y.toString()}>
+                        {y}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
 
             {/* Format dynamic dropdown (only anime/manga) */}
-            {meta?.formats && meta.formats.length > 0 && !["characters", "actors"].includes(type) && (
-              <Select value={format} onValueChange={handleFormatChange}>
-                <SelectTrigger className="h-10 bg-background/50 border-border/60 rounded-xl w-full sm:w-[140px]">
-                  <SelectValue placeholder="Format (All)" />
-                </SelectTrigger>
-                <SelectContent className="max-h-60" position="popper">
-                  <SelectItem value="all">Format (All)</SelectItem>
-                  {meta.formats.map((f: string) => (
-                    <SelectItem key={f} value={f}>
-                      {f.replace("_", " ")}
+            {meta?.formats &&
+              meta.formats.length > 0 &&
+              !["characters", "actors"].includes(type) && (
+                <Select value={format} onValueChange={handleFormatChange}>
+                  <SelectTrigger className="h-10 bg-background/50 border-border/60 rounded-xl w-full sm:w-[140px]">
+                    <SelectValue
+                      placeholder={t("aquila.formatAll", "Format (All)")}
+                    />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60" position="popper">
+                    <SelectItem value="all">
+                      {t("aquila.formatAll", "Format (All)")}
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+                    {meta.formats.map((f: string) => (
+                      <SelectItem key={f} value={f}>
+                        {f.replace("_", " ")}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
 
             {/* Status dynamic dropdown (only media with statuses) */}
-            {meta?.statuses && meta.statuses.length > 0 && !["characters", "actors"].includes(type) && (
-              <Select value={status} onValueChange={handleStatusChange}>
-                <SelectTrigger className="h-10 bg-background/50 border-border/60 rounded-xl w-full sm:w-[140px]">
-                  <SelectValue placeholder="Status (All)" />
-                </SelectTrigger>
-                <SelectContent className="max-h-60" position="popper">
-                  <SelectItem value="all">Status (All)</SelectItem>
-                  {meta.statuses.map((s: string) => (
-                    <SelectItem key={s} value={s}>
-                      {s
-                        .toLowerCase()
-                        .replace("_", " ")
-                        .replace(/\b\w/g, (c) => c.toUpperCase())}
+            {meta?.statuses &&
+              meta.statuses.length > 0 &&
+              !["characters", "actors"].includes(type) && (
+                <Select value={status} onValueChange={handleStatusChange}>
+                  <SelectTrigger className="h-10 bg-background/50 border-border/60 rounded-xl w-full sm:w-[140px]">
+                    <SelectValue
+                      placeholder={t("aquila.statusAll", "Status (All)")}
+                    />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60" position="popper">
+                    <SelectItem value="all">
+                      {t("aquila.statusAll", "Status (All)")}
                     </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+                    {meta.statuses.map((s: string) => (
+                      <SelectItem key={s} value={s}>
+                        {s
+                          .toLowerCase()
+                          .replace("_", " ")
+                          .replace(/\b\w/g, (c) => c.toUpperCase())}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
 
             {/* Added date filter dropdown */}
             {!["characters", "actors"].includes(type) && (
-              <Select value={addedWithin} onValueChange={handleAddedWithinChange}>
+              <Select
+                value={addedWithin}
+                onValueChange={handleAddedWithinChange}
+              >
                 <SelectTrigger className="h-10 bg-background/50 border-border/60 rounded-xl w-full sm:w-[160px]">
-                  <SelectValue placeholder="Added Time" />
+                  <SelectValue
+                    placeholder={t("aquila.addedTime", "Added Time")}
+                  />
                 </SelectTrigger>
                 <SelectContent className="max-h-60" position="popper">
-                  <SelectItem value="all">Added (Anytime)</SelectItem>
-                  <SelectItem value="1">Added 1 day ago</SelectItem>
-                  <SelectItem value="7">Added 7 days ago</SelectItem>
-                  <SelectItem value="30">Added 30 days ago</SelectItem>
+                  <SelectItem value="all">
+                    {t("aquila.addedAnytime", "Added (Anytime)")}
+                  </SelectItem>
+                  <SelectItem value="1">
+                    {t("aquila.added1DayAgo", "Added 1 day ago")}
+                  </SelectItem>
+                  <SelectItem value="7">
+                    {t("aquila.added7DaysAgo", "Added 7 days ago")}
+                  </SelectItem>
+                  <SelectItem value="30">
+                    {t("aquila.added30DaysAgo", "Added 30 days ago")}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             )}
@@ -351,15 +393,23 @@ export default function DiscoverClientPage({
             {!["characters", "actors"].includes(type) && (
               <Select value={sort} onValueChange={handleSortChange}>
                 <SelectTrigger className="h-10 bg-background/50 border-border/60 rounded-xl w-full sm:w-[160px]">
-                  <SelectValue placeholder="Sort By" />
+                  <SelectValue placeholder={t("aquila.sortBy", "Sort By")} />
                 </SelectTrigger>
                 <SelectContent className="max-h-60" position="popper">
-                  <SelectItem value="latest">Latest Release</SelectItem>
-                  <SelectItem value="oldest">Oldest Release</SelectItem>
+                  <SelectItem value="latest">
+                    {t("aquila.latestRelease", "Latest Release")}
+                  </SelectItem>
+                  <SelectItem value="oldest">
+                    {t("aquila.oldestRelease", "Oldest Release")}
+                  </SelectItem>
                   {type !== "movies" && type !== "tv" && (
-                    <SelectItem value="score">Highest Score</SelectItem>
+                    <SelectItem value="score">
+                      {t("aquila.highestScore", "Highest Score")}
+                    </SelectItem>
                   )}
-                  <SelectItem value="alphabetical">Alphabetical (A-Z)</SelectItem>
+                  <SelectItem value="alphabetical">
+                    {t("aquila.alphabetical", "Alphabetical (A-Z)")}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             )}
@@ -371,7 +421,7 @@ export default function DiscoverClientPage({
                 onClick={clearFilters}
                 className="text-xs text-muted-foreground hover:text-foreground h-10 cursor-pointer rounded-lg px-3"
               >
-                Clear Filters
+                {t("aquila.clearFilters", "Clear Filters")}
               </Button>
             )}
           </div>
@@ -390,44 +440,44 @@ export default function DiscoverClientPage({
         </motion.div>
         {/* Grid of Results */}
         {accumulatedItems.length > 0 ? (
-        <motion.div
-          variants={containerVariants}
-          initial="hidden"
-          animate="show"
-          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-4 gap-y-6"
-        >
-          {accumulatedItems.map((item) => (
-            <motion.div
-              key={item.id}
-              initial="hidden"
-              animate="show"
-              variants={{
-                hidden: { opacity: 0 },
-                show: { opacity: 1 },
-              }}
-            >
-              <RrBrowseCard item={item} type={type} />
-            </motion.div>
-          ))}
-        </motion.div>
-      ) : null}
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="show"
+            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-4 gap-y-6"
+          >
+            {accumulatedItems.map((item) => (
+              <motion.div
+                key={item.id}
+                initial="hidden"
+                animate="show"
+                variants={{
+                  hidden: { opacity: 0 },
+                  show: { opacity: 1 },
+                }}
+              >
+                <RrBrowseCard item={item} type={type} />
+              </motion.div>
+            ))}
+          </motion.div>
+        ) : null}
 
-      {/* Initial load spinner */}
-      {isLoading && page === 1 && (
-        <div className="flex flex-col justify-center items-center py-20 w-full gap-2">
-          <Loader2 className="animate-spin size-8 text-primary" />
-          <span className="text-sm text-muted-foreground font-semibold">
-            Loading media database...
-          </span>
-        </div>
-      )}
+        {/* Initial load spinner */}
+        {isLoading && page === 1 && (
+          <div className="flex flex-col justify-center items-center py-20 w-full gap-2">
+            <Loader2 className="animate-spin size-8 text-primary" />
+            <span className="text-sm text-muted-foreground font-semibold">
+              {t("aquila.loadingMediaDb", "Loading media database...")}
+            </span>
+          </div>
+        )}
 
-      {/* Infinite Scroll container */}
-      <InfiniteScroll
-        onLoadMore={loadMore}
-        hasMore={hasMore}
-        isLoading={isLoading}
-      />
+        {/* Infinite Scroll container */}
+        <InfiniteScroll
+          onLoadMore={loadMore}
+          hasMore={hasMore}
+          isLoading={isLoading}
+        />
       </div>
     </div>
   );

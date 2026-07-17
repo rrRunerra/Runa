@@ -2,13 +2,15 @@
 
 import React, { useState, useEffect } from "react";
 import mermaid from "mermaid";
+import { useTranslation } from "react-i18next";
 
 interface RrCanvasMermaidRendererProps {
   code: string;
   id: string;
 }
 
-export default function RrCanvasMermaidRenderer({ code, id }: RrCanvasMermaidRendererProps) {
+export default function RrCanvasMermaidRenderer({ code, id }: RrCanvasMermaidRendererProps): React.JSX.Element {
+  const { t } = useTranslation();
   const [svg, setSvg] = useState<string>("");
   const [err, setErr] = useState<string | null>(null);
 
@@ -23,11 +25,11 @@ export default function RrCanvasMermaidRenderer({ code, id }: RrCanvasMermaidRen
       } catch (e: any) {
         const badEl = document.getElementById(renderId);
         if (badEl) badEl.remove();
-        setErr("Syntax error");
+        setErr(t("lacerta.canvasEditor.syntaxError", "Syntax error"));
       }
     };
     renderGraph();
-  }, [code, id]);
+  }, [code, id, t]);
 
   if (err) {
     return (
@@ -40,7 +42,7 @@ export default function RrCanvasMermaidRenderer({ code, id }: RrCanvasMermaidRen
   if (!svg) {
     return (
       <div className="w-full h-full flex items-center justify-center text-[9px] text-muted-foreground animate-pulse">
-        Rendering...
+        {t("lacerta.canvasEditor.rendering", "Rendering...")}
       </div>
     );
   }

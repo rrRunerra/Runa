@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useSession } from "next-auth/react";
 import { wrapKey } from "@runa/crypto/browser";
 import { CanvasNodeType, CanvasNode } from "./CanvasEditor";
+import { useTranslation } from "react-i18next";
 
 interface RrCanvasImageInsertModalProps {
   isOpen: boolean;
@@ -38,6 +39,7 @@ export default function RrCanvasImageInsertModal({
   createNodeAtPos,
   setPendingFileShare,
 }: RrCanvasImageInsertModalProps) {
+  const { t } = useTranslation();
   const { data: session } = useSession();
   const [imageSelectionType, setImageSelectionType] = useState<
     "url" | "upload" | "lacerta"
@@ -123,7 +125,7 @@ export default function RrCanvasImageInsertModal({
       onClose();
       setImageUrl("");
     } else {
-      toast.error("Please enter a URL");
+      toast.error(t("lacerta.canvasImageInsert.urlRequired", "Please enter a URL"));
     }
   };
 
@@ -201,23 +203,23 @@ export default function RrCanvasImageInsertModal({
       onKeyDown={(e) => e.stopPropagation()}
     >
       <div className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-xl flex flex-col select-text">
-        <h3 className="text-sm font-bold text-card-foreground">Insert Image</h3>
+        <h3 className="text-sm font-bold text-card-foreground">{t("lacerta.canvasImageInsert.title", "Insert Image")}</h3>
 
         {/* Tabs */}
         <div className="flex gap-2 my-3 border-b border-border pb-1">
-          {(["url", "upload", "lacerta"] as const).map((t) => (
+          {(["url", "upload", "lacerta"] as const).map((tVal) => (
             <button
-              key={t}
+              key={tVal}
               type="button"
-              onClick={() => setImageSelectionType(t)}
+              onClick={() => setImageSelectionType(tVal)}
               className={cn(
                 "px-2.5 py-1 text-[10px] font-bold rounded-lg uppercase transition-all",
-                imageSelectionType === t
+                imageSelectionType === tVal
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:bg-muted/30",
               )}
             >
-              {t === "lacerta" ? "From Vault" : t === "url" ? "URL" : "Upload"}
+              {tVal === "lacerta" ? t("lacerta.canvasImageInsert.tabVault", "From Vault") : tVal === "url" ? t("lacerta.canvasImageInsert.tabUrl", "URL") : t("lacerta.canvasImageInsert.tabUpload", "Upload")}
             </button>
           ))}
         </div>
@@ -226,7 +228,7 @@ export default function RrCanvasImageInsertModal({
           {imageSelectionType === "url" && (
             <div>
               <label className="text-[10px] font-bold text-muted-foreground block mb-1">
-                IMAGE URL
+                {t("lacerta.canvasImageInsert.imageUrlLabel", "IMAGE URL")}
               </label>
               <input
                 type="text"
@@ -241,7 +243,7 @@ export default function RrCanvasImageInsertModal({
           {imageSelectionType === "upload" && (
             <div>
               <label className="text-[10px] font-bold text-muted-foreground block mb-1">
-                UPLOAD LOCAL FILE
+                {t("lacerta.canvasImageInsert.uploadLabel", "UPLOAD LOCAL FILE")}
               </label>
               <input
                 type="file"
@@ -256,14 +258,14 @@ export default function RrCanvasImageInsertModal({
           {imageSelectionType === "lacerta" && (
             <div className="flex flex-col gap-2">
               <label className="text-[10px] font-bold text-muted-foreground block uppercase tracking-wider">
-                Select E2EE Image
+                {t("lacerta.canvasImageInsert.selectE2ee", "Select E2EE Image")}
               </label>
               <div className="max-h-[140px] overflow-y-auto border border-border/40 rounded-xl divide-y divide-border/20 no-scrollbar">
                 {decryptedLacertaFiles.filter((f) =>
                   f.type?.startsWith("image/"),
                 ).length === 0 ? (
                   <div className="p-4 text-center text-xs text-muted-foreground">
-                    No decrypted images found in vault.
+                    {t("lacerta.canvasImageInsert.noImages", "No decrypted images found in vault.")}
                   </div>
                 ) : (
                   decryptedLacertaFiles
@@ -327,14 +329,14 @@ export default function RrCanvasImageInsertModal({
             }}
             className="px-3 py-1.5 bg-muted hover:bg-muted/80 rounded-lg text-xs font-semibold text-muted-foreground transition-all active:scale-98"
           >
-            Cancel
+            {t("lacerta.canvasImageInsert.cancel", "Cancel")}
           </button>
           {imageSelectionType === "url" && (
             <button
               onClick={handleUrlInsert}
               className="px-4 py-1.5 bg-primary hover:bg-primary/90 rounded-lg text-xs font-semibold text-primary-foreground transition-all shadow-sm active:scale-98"
             >
-              Insert URL
+              {t("lacerta.canvasImageInsert.insertUrl", "Insert URL")}
             </button>
           )}
         </div>

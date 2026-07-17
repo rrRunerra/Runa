@@ -3,6 +3,7 @@
 import React from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { useTranslation } from "react-i18next";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -65,53 +66,55 @@ export function RrMediaEditGeneralFields({
   notes,
   onNotesChange,
 }: RrMediaEditGeneralFieldsProps): React.JSX.Element {
+  const { t } = useTranslation();
+
   const getStatusOptions = (): { value: string; label: string }[] => {
     switch (mediaType) {
       case "anime":
         return [
-          { value: "WATCHING", label: "Watching" },
-          { value: "ON_HOLD", label: "On Hold" },
-          { value: "COMPLETED", label: "Completed" },
-          { value: "DROPPED", label: "Dropped" },
-          { value: "PLANNING", label: "Plan to Watch" },
+          { value: "WATCHING", label: t("aquila.watching") },
+          { value: "ON_HOLD", label: t("aquila.onHold") },
+          { value: "COMPLETED", label: t("aquila.completed") },
+          { value: "DROPPED", label: t("aquila.dropped") },
+          { value: "PLANNING", label: t("aquila.planToWatch") },
         ];
       case "manga":
         return [
-          { value: "READING", label: "Reading" },
-          { value: "ON_HOLD", label: "On Hold" },
-          { value: "COMPLETED", label: "Completed" },
-          { value: "DROPPED", label: "Dropped" },
-          { value: "PLANNING", label: "Plan to Read" },
+          { value: "READING", label: t("aquila.reading") },
+          { value: "ON_HOLD", label: t("aquila.onHold") },
+          { value: "COMPLETED", label: t("aquila.completed") },
+          { value: "DROPPED", label: t("aquila.dropped") },
+          { value: "PLANNING", label: t("aquila.planToRead") },
         ];
       case "tv":
         return [
-          { value: "WATCHING", label: "Watching" },
-          { value: "ON_HOLD", label: "On Hold" },
-          { value: "COMPLETED", label: "Completed" },
-          { value: "DROPPED", label: "Dropped" },
-          { value: "PLANNING", label: "Plan to Watch" },
+          { value: "WATCHING", label: t("aquila.watching") },
+          { value: "ON_HOLD", label: t("aquila.onHold") },
+          { value: "COMPLETED", label: t("aquila.completed") },
+          { value: "DROPPED", label: t("aquila.dropped") },
+          { value: "PLANNING", label: t("aquila.planToWatch") },
         ];
       case "movie":
         return [
-          { value: "COMPLETED", label: "Completed" },
-          { value: "DROPPED", label: "Dropped" },
-          { value: "PLANNING", label: "Plan to Watch" },
+          { value: "COMPLETED", label: t("aquila.completed") },
+          { value: "DROPPED", label: t("aquila.dropped") },
+          { value: "PLANNING", label: t("aquila.planToWatch") },
         ];
       case "game":
         return [
-          { value: "PLAYING", label: "Playing" },
-          { value: "ON_HOLD", label: "On Hold" },
-          { value: "COMPLETED", label: "Completed" },
-          { value: "DROPPED", label: "Dropped" },
-          { value: "PLANNING", label: "Plan to Play" },
+          { value: "PLAYING", label: t("aquila.playing") },
+          { value: "ON_HOLD", label: t("aquila.onHold") },
+          { value: "COMPLETED", label: t("aquila.completed") },
+          { value: "DROPPED", label: t("aquila.dropped") },
+          { value: "PLANNING", label: t("aquila.planToPlay") },
         ];
       case "book":
         return [
-          { value: "READING", label: "Reading" },
-          { value: "ON_HOLD", label: "On Hold" },
-          { value: "COMPLETED", label: "Completed" },
-          { value: "DROPPED", label: "Dropped" },
-          { value: "PLANNING", label: "Plan to Read" },
+          { value: "READING", label: t("aquila.reading") },
+          { value: "ON_HOLD", label: t("aquila.onHold") },
+          { value: "COMPLETED", label: t("aquila.completed") },
+          { value: "DROPPED", label: t("aquila.dropped") },
+          { value: "PLANNING", label: t("aquila.planToRead") },
         ];
       default:
         return [];
@@ -123,11 +126,11 @@ export function RrMediaEditGeneralFields({
       {/* Status */}
       <div className="col-span-6 sm:col-span-2 flex flex-col gap-2">
         <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">
-          Status
+          {t("aquila.status")}
         </Label>
         <Select value={listStatus} onValueChange={onStatusChange}>
           <SelectTrigger className="w-full bg-background border border-border text-foreground h-10 px-3 text-xs font-medium hover:bg-muted/50 rounded-xl transition-all cursor-pointer">
-            <SelectValue placeholder="Select status" />
+            <SelectValue placeholder={t("aquila.selectStatus")} />
           </SelectTrigger>
           <SelectContent className="bg-popover border border-border rounded-xl text-foreground">
             {getStatusOptions().map((opt) => (
@@ -142,7 +145,7 @@ export function RrMediaEditGeneralFields({
       {/* Score */}
       <div className="col-span-6 sm:col-span-2 flex flex-col gap-2">
         <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">
-          Score (0 - {scoreMax})
+          {t("aquila.score")} (0 - {scoreMax})
         </Label>
         <div className="flex bg-background border border-border rounded-xl overflow-hidden focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all h-10">
           <Input
@@ -162,8 +165,8 @@ export function RrMediaEditGeneralFields({
         <div className="col-span-6 sm:col-span-2 flex flex-col gap-2">
           <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">
             {mediaType === "manga" || mediaType === "book"
-              ? "Total Rereads"
-              : "Total Rewatches"}
+              ? t("aquila.totalRereads")
+              : t("aquila.totalRewatches")}
           </Label>
           <div className="flex bg-background border border-border rounded-xl overflow-hidden focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all h-10">
             <Input
@@ -186,10 +189,10 @@ export function RrMediaEditGeneralFields({
         <div className="col-span-6 sm:col-span-2 flex flex-col gap-2">
           <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">
             {mediaType === "anime"
-              ? "Episode Progress"
+              ? t("aquila.episodeProgress")
               : mediaType === "game"
-                ? "Hours Played"
-                : "Chapter Progress"}
+                ? t("aquila.hoursPlayed")
+                : t("aquila.chapterProgress")}
           </Label>
           <div className="flex bg-background border border-border rounded-xl overflow-hidden focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all h-10">
             <Input
@@ -221,7 +224,7 @@ export function RrMediaEditGeneralFields({
       {(mediaType === "manga" || mediaType === "book") && (
         <div className="col-span-6 sm:col-span-2 flex flex-col gap-2">
           <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">
-            Volume Progress
+            {t("aquila.volumeProgress")}
           </Label>
           <div className="flex bg-background border border-border rounded-xl overflow-hidden focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/20 transition-all h-10">
             <Input
@@ -242,7 +245,7 @@ export function RrMediaEditGeneralFields({
         {/* Start Date */}
         <div className="flex flex-col gap-2">
           <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">
-            Start Date
+            {t("aquila.startDate")}
           </Label>
           <Popover>
             <div className="relative w-full">
@@ -258,7 +261,7 @@ export function RrMediaEditGeneralFields({
                   {startDate ? (
                     format(startDate, "yyyy-MM-dd")
                   ) : (
-                    <span>Pick a date</span>
+                    <span>{t("aquila.pickDate")}</span>
                   )}
                 </Button>
               </PopoverTrigger>
@@ -295,7 +298,7 @@ export function RrMediaEditGeneralFields({
         {/* Finish Date */}
         <div className="flex flex-col gap-2">
           <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">
-            Finish Date
+            {t("aquila.finishDate")}
           </Label>
           <Popover>
             <div className="relative w-full">
@@ -311,7 +314,7 @@ export function RrMediaEditGeneralFields({
                   {finishDate ? (
                     format(finishDate, "yyyy-MM-dd")
                   ) : (
-                    <span>Pick a date</span>
+                    <span>{t("aquila.pickDate")}</span>
                   )}
                 </Button>
               </PopoverTrigger>
@@ -349,10 +352,10 @@ export function RrMediaEditGeneralFields({
       {/* Notes */}
       <div className="col-span-6 flex flex-col gap-2">
         <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">
-          Notes
+          {t("aquila.notes")}
         </Label>
         <Textarea
-          placeholder="Your thoughts, reviews, or private notes..."
+          placeholder={t("aquila.notesPlaceholder")}
           value={notes}
           onChange={(e) => onNotesChange(e.target.value)}
           className="bg-background border border-border text-foreground min-h-[80px] resize-y h-10 rounded-xl focus-visible:ring-1 focus-visible:ring-primary/30 focus-visible:border-primary/50 transition-all placeholder:text-muted-foreground/30 text-xs font-medium"

@@ -1,7 +1,6 @@
-"use client";
-
 import React from "react";
 import Image from "next/image";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -38,23 +37,13 @@ interface RrMediaCharacterDialogProps {
   character: CharacterEntity | null;
 }
 
-const formatDOB = (dob: CharacterDOB | null | undefined) => {
+const formatDOB = (dob: CharacterDOB | null | undefined, locale?: string) => {
   if (!dob || (!dob.month && !dob.day)) return null;
-  const months = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ];
-  const monthStr = dob.month ? months[dob.month - 1] : "";
+  let monthStr = "";
+  if (dob.month) {
+    const tempDate = new Date(2000, dob.month - 1, 1);
+    monthStr = new Intl.DateTimeFormat(locale || "en", { month: "long" }).format(tempDate);
+  }
   const dayStr = dob.day ? String(dob.day) : "";
   const yearStr = dob.year ? `, ${dob.year}` : "";
   return [monthStr, dayStr].filter(Boolean).join(" ") + yearStr;
@@ -65,11 +54,13 @@ export function RrMediaCharacterDialog({
   onOpenChange,
   character,
 }: RrMediaCharacterDialogProps): React.JSX.Element {
+  const { t, i18n } = useTranslation();
+
   if (!character) {
     return <></>;
   }
 
-  const dobStr = formatDOB(character.dateOfBirth);
+  const dobStr = formatDOB(character.dateOfBirth, i18n.language);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -88,7 +79,7 @@ export function RrMediaCharacterDialog({
                 />
               ) : (
                 <div className="size-full bg-muted flex items-center justify-center text-xs text-muted-foreground">
-                  No Image
+                  {t("aquila.noImage")}
                 </div>
               )}
             </div>
@@ -127,7 +118,7 @@ export function RrMediaCharacterDialog({
                     variant="outline"
                     className="text-[10px] rounded-lg"
                   >
-                    {character.age} y/o
+                    {t("aquila.yearsOld", { age: character.age })}
                   </Badge>
                 )}
                 {character.bloodType && (
@@ -135,7 +126,7 @@ export function RrMediaCharacterDialog({
                     variant="outline"
                     className="text-[10px] rounded-lg"
                   >
-                    Blood Type: {character.bloodType}
+                    {t("aquila.bloodTypeVal", { type: character.bloodType })}
                   </Badge>
                 )}
                 {dobStr && (
@@ -143,7 +134,7 @@ export function RrMediaCharacterDialog({
                     variant="outline"
                     className="text-[10px] rounded-lg"
                   >
-                    DOB: {dobStr}
+                    {t("aquila.dobVal", { dob: dobStr })}
                   </Badge>
                 )}
               </div>
@@ -153,7 +144,7 @@ export function RrMediaCharacterDialog({
             {character.nameAlternative && character.nameAlternative.length > 0 && (
               <div className="mb-4">
                 <span className="text-xs font-semibold text-muted-foreground block mb-1">
-                  Alternative Names:
+                  {t("aquila.alternativeNames")}
                 </span>
                 <div className="flex flex-wrap gap-1.5">
                   {character.nameAlternative.map((alt: string, idx: number) => (
@@ -173,14 +164,14 @@ export function RrMediaCharacterDialog({
             {character.nameAlternativeSpoiler && character.nameAlternativeSpoiler.length > 0 && (
               <div className="mb-4">
                 <span className="text-xs font-semibold text-muted-foreground block mb-1">
-                  Spoiler Names (Hover/Click to reveal):
+                  {t("aquila.spoilerNames")}
                 </span>
                 <div className="flex flex-wrap gap-1.5">
                   {character.nameAlternativeSpoiler.map((spoilerName: string, idx: number) => (
                     <span
                       key={`spoiler-${idx}`}
                       className="bg-foreground/85 hover:bg-transparent text-transparent hover:text-foreground px-2 py-0.5 rounded-lg cursor-pointer transition-colors duration-200 select-none border border-border/20 text-[10px] leading-relaxed inline-block"
-                      title="Spoiler: Hover/Click to reveal"
+                      title={t("aquila.spoilerAlt")}
                     >
                       {spoilerName}
                     </span>
@@ -193,10 +184,10 @@ export function RrMediaCharacterDialog({
             {character.description && (
               <div className="mt-4 border-t border-border/40 pt-4">
                 <span className="text-xs font-semibold text-muted-foreground block mb-2">
-                  Description:
+                  {t("aquila.descriptionLabel")}
                 </span>
                 <div className="prose prose-neutral dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-xs/relaxed prose-p:my-1.5 prose-strong:font-bold prose-a:text-primary hover:prose-a:underline select-text">
-                  {parseSafeDescription(character.description)}
+                  {parseSafeDescription(character.description, t)}
                 </div>
               </div>
             )}

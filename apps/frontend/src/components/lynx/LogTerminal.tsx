@@ -6,6 +6,7 @@ import { getLogs, type LogEntry } from "@/actions/getLogs";
 import { cn } from "@/lib/utils";
 import type { LynxLogType } from "@runa/database";
 import { Search, Terminal, Activity, Sliders } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface LogTerminalProps {
   initialLogs: LogEntry[];
@@ -18,6 +19,7 @@ export function LogTerminal({
   initialCursor,
   type,
 }: LogTerminalProps) {
+  const { t } = useTranslation();
   // Use a Map to ensure uniqueness by ID if StrictMode fires twice
   const [logs, setLogs] = useState<LogEntry[]>(initialLogs);
 
@@ -177,7 +179,7 @@ export function LogTerminal({
         <div className="flex flex-col gap-1">
           <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/50 flex items-center gap-1.5">
             <Activity className="size-3.5" />
-            Total Logs
+            {t("lynx.totalLogs")}
           </span>
           <span className="text-2xl text-foreground font-bold">
             {stats?.total ?? "-"}
@@ -190,14 +192,14 @@ export function LogTerminal({
             className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/50 flex items-center gap-1.5"
           >
             <Search className="size-3.5" />
-            Context Filter
+            {t("lynx.contextFilter")}
           </label>
           <input
             id="context-filter"
             type="text"
             value={contextFilter}
             onChange={(e) => setContextFilter(e.target.value)}
-            placeholder="Filter by context…"
+            placeholder={t("lynx.filterByContext")}
             className="bg-zinc-900/30 border border-zinc-800/50 rounded-xl px-3 py-1.5 text-xs text-foreground focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/25 transition-all w-full placeholder:text-muted-foreground/40"
           />
         </div>
@@ -237,9 +239,9 @@ export function LogTerminal({
         >
           {logs.length === 0 && !loading ? (
             <div className="flex flex-col items-center justify-center p-16 text-muted-foreground italic border-2 border-dashed border-zinc-800/40 rounded-xl bg-zinc-900/10">
-              <span className="text-base font-semibold">No logs found</span>
+              <span className="text-base font-semibold">{t("lynx.noLogsFound")}</span>
               <span className="text-xs mt-1 text-muted-foreground/60">
-                Try adjusting your filters or checking back later
+                {t("lynx.adjustFiltersOrCheckLater")}
               </span>
             </div>
           ) : (
@@ -280,7 +282,7 @@ export function LogTerminal({
             ref={observerTarget}
             className="h-6 py-3 flex items-center justify-center text-muted-foreground/60 text-[10px] font-bold uppercase select-none"
           >
-            {loading ? "Loading metrics..." : hasMore ? "" : "End of logs"}
+            {loading ? t("lynx.loadingMetrics") : hasMore ? "" : t("lynx.endOfLogs")}
           </div>
         </div>
       </div>

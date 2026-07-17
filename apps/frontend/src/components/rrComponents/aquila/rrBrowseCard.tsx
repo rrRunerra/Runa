@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { X } from "lucide-react";
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import RrLapplandImageNotFound from "../rrImages/rrLapplandImageNotFound";
 
@@ -32,6 +33,7 @@ const RrBrowseCardComponent = ({
   onDelete,
   onClick,
 }: RrBrowseCardProps): React.JSX.Element => {
+  const { t } = useTranslation();
   const primaryTitle = typeof item.title === "string" ? item.title : (item.title?.english || item.title?.romaji || "");
   const secondaryTitle = typeof item.title === "string" ? (item.secondaryTitle || null) : (item.title?.english ? item.title.romaji : null);
   const safeType = ["anime", "manga", "movies", "tv", "games", "books", "characters", "actors"].includes(type) ? type : "anime";
@@ -65,7 +67,7 @@ const RrBrowseCardComponent = ({
             onDelete();
           }}
           className="absolute top-2 right-2 z-20 bg-black/60 backdrop-blur-md text-white hover:text-destructive hover:bg-black/85 rounded-full p-1.5 transition-all opacity-0 group-hover:opacity-100 shadow-md flex items-center justify-center cursor-pointer size-7"
-          title="Remove from history"
+          title={t("aquila.removeFromHistory")}
         >
           <X className="size-3.5" />
         </button>

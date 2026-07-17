@@ -1,6 +1,7 @@
 import * as React from "react";
 import { ShieldCheck, AlertCircle, Check, Copy, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +27,7 @@ export function RrBackupCodesDialog({
   onDownload,
   copied,
 }: RrBackupCodesDialogProps): React.JSX.Element {
+  const { t } = useTranslation();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-card border border-border shadow-2xl p-6 rounded-2xl flex flex-col items-center">
@@ -34,11 +36,10 @@ export function RrBackupCodesDialog({
             <ShieldCheck className="size-5 animate-pulse" />
           </div>
           <DialogTitle className="text-md font-bold text-center">
-            Save Your Backup Codes
+            {t("securitySettings.backupCodesTitle")}
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground text-center mt-1">
-            Store these codes safely. They are your fallback recovery codes.
-            Each code can be used exactly once.
+            {t("securitySettings.backupCodesDesc")}
           </DialogDescription>
         </DialogHeader>
 
@@ -51,12 +52,11 @@ export function RrBackupCodesDialog({
           ))}
         </div>
 
-        {/* Warning text (success/warning custom properties map to text-warning, bg-warning/5, border-warning/10!) */}
+        {/* Warning text */}
         <div className="p-3 rounded-xl border border-warning/10 bg-warning/5 mb-3 flex items-start gap-2.5 text-left w-full text-[11px] text-warning/80">
           <AlertCircle className="size-4 shrink-0 mt-0.5 animate-bounce" />
           <p className="leading-relaxed">
-            Runa support cannot recover these codes for you. If you lose your
-            auth devices and backup codes, you will be permanently locked out.
+            {t("securitySettings.backupCodesWarning")}
           </p>
         </div>
 
@@ -71,7 +71,7 @@ export function RrBackupCodesDialog({
             ) : (
               <Copy className="size-3.5 mr-1.5" />
             )}
-            {copied ? "Copied" : "Copy Codes"}
+            {copied ? t("securitySettings.copied") : t("securitySettings.copyCodes")}
           </Button>
           <Button
             onClick={onDownload}
@@ -79,7 +79,7 @@ export function RrBackupCodesDialog({
             className="flex-1 h-9 rounded-xl border border-border hover:bg-muted text-xs font-semibold"
           >
             <Download className="size-3.5 mr-1.5" />
-            Download TXT
+            {t("securitySettings.downloadTxt")}
           </Button>
         </div>
 
@@ -87,9 +87,10 @@ export function RrBackupCodesDialog({
           onClick={() => onOpenChange(false)}
           className="w-full mt-3 h-9 rounded-xl bg-primary hover:bg-primary/95 text-primary-foreground font-semibold text-xs cursor-pointer"
         >
-          I Have Saved These Codes
+          {t("securitySettings.savedCodesBtn")}
         </Button>
       </DialogContent>
     </Dialog>
   );
 }
+

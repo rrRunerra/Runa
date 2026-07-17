@@ -4,6 +4,7 @@ import React from "react";
 import { ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { CanvasNodeType, CanvasNode } from "./CanvasEditor";
+import { useTranslation } from "react-i18next";
 
 interface RrCanvasPublicShareWarningModalProps {
   isOpen: boolean;
@@ -29,11 +30,12 @@ export default function RrCanvasPublicShareWarningModal({
   accessToken,
   createNodeAtPos,
 }: RrCanvasPublicShareWarningModalProps) {
+  const { t } = useTranslation();
   if (!isOpen || !pendingFileShare) return null;
 
   const handleProceedShare = async () => {
     const tId = toast.loading(
-      `Sharing "${pendingFileShare.fileObj.name}" publicly...`,
+      t("lacerta.canvasPublicWarning.sharingToast", { name: pendingFileShare.fileObj.name, defaultValue: "Sharing \"{{name}}\" publicly..." }),
     );
     try {
       const res = await fetch(
@@ -43,8 +45,8 @@ export default function RrCanvasPublicShareWarningModal({
           headers: { Authorization: `Bearer ${accessToken}` },
         },
       );
-      if (!res.ok) throw new Error("Failed to change visibility");
-      toast.success("File shared publicly", { id: tId });
+      if (!res.ok) throw new Error(t("lacerta.canvasPublicWarning.changeVisibilityError", "Failed to change visibility"));
+      toast.success(t("lacerta.canvasPublicWarning.fileSharedSuccess", "File shared publicly"), { id: tId });
 
       createNodeAtPos(
         pendingFileShare.type,
@@ -66,7 +68,7 @@ export default function RrCanvasPublicShareWarningModal({
       );
       onClose();
     } catch (err: any) {
-      toast.error(err.message || "Failed to share file", { id: tId });
+      toast.error(err.message || t("lacerta.canvasPublicWarning.shareFailed", "Failed to share file"), { id: tId });
     }
   };
 
@@ -82,19 +84,18 @@ export default function RrCanvasPublicShareWarningModal({
         <div className="flex items-center gap-2 text-rose-500 mb-2">
           <ShieldAlert className="h-5 w-5 text-rose-600 animate-bounce shrink-0" />
           <h3 className="text-sm font-bold text-card-foreground">
-            Public Sharing Warning
+            {t("lacerta.canvasPublicWarning.title", "Public Sharing Warning")}
           </h3>
         </div>
         <p className="text-[11px] text-muted-foreground leading-relaxed mt-1 mb-6">
-          This spatial canvas is **public**. If you embed the private file
+          {t("lacerta.canvasPublicWarning.descPart1", "This spatial canvas is **public**. If you embed the private file")}
           <strong className="text-foreground mx-1">
             "{pendingFileShare.fileObj.name}"
           </strong>
-          , it will be automatically shared publicly to allow visitors to
-          view/download it.
+          {t("lacerta.canvasPublicWarning.descPart2", ", it will be automatically shared publicly to allow visitors to view/download it.")}
           <br />
           <br />
-          Are you sure you want to proceed and make this file public?
+          {t("lacerta.canvasPublicWarning.descQuestion", "Are you sure you want to proceed and make this file public?")}
         </p>
 
         <div className="flex justify-end gap-2">
@@ -102,13 +103,13 @@ export default function RrCanvasPublicShareWarningModal({
             onClick={onClose}
             className="px-3.5 py-1.5 bg-muted hover:bg-muted/80 rounded-lg text-xs font-semibold text-muted-foreground transition-all active:scale-98"
           >
-            Cancel
+            {t("lacerta.canvasPublicWarning.cancel", "Cancel")}
           </button>
           <button
             onClick={handleProceedShare}
             className="px-4 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-semibold transition-all shadow-md active:scale-98"
           >
-            Proceed & Share Publicly
+            {t("lacerta.canvasPublicWarning.proceed", "Proceed & Share Publicly")}
           </button>
         </div>
       </div>

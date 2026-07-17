@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
@@ -61,6 +62,7 @@ export function RrMediaEditConnections({
   startDate,
   finishDate,
 }: RrMediaEditConnectionsProps): React.JSX.Element {
+  const { t } = useTranslation();
   const [expandedConnections, setExpandedConnections] = useState<
     Record<string, boolean>
   >({});
@@ -72,53 +74,80 @@ export function RrMediaEditConnections({
     }));
   };
 
+  const getListNameTranslation = (name: string) => {
+    switch (name.toUpperCase()) {
+      case "WATCHING":
+        return t("aquila.watching");
+      case "READING":
+        return t("aquila.reading");
+      case "PLAYING":
+        return t("aquila.playing");
+      case "PLANNING":
+      case "PLAN TO WATCH":
+        return t("aquila.planToWatch");
+      case "PLAN TO READ":
+        return t("aquila.planToRead");
+      case "PLAN TO PLAY":
+        return t("aquila.planToPlay");
+      case "ON_HOLD":
+      case "ON HOLD":
+        return t("aquila.onHold");
+      case "COMPLETED":
+        return t("aquila.completed");
+      case "DROPPED":
+        return t("aquila.dropped");
+      default:
+        return name;
+    }
+  };
+
   const getStatusOptions = (): { value: string; label: string }[] => {
     switch (mediaType) {
       case "anime":
         return [
-          { value: "WATCHING", label: "Watching" },
-          { value: "ON_HOLD", label: "On Hold" },
-          { value: "COMPLETED", label: "Completed" },
-          { value: "DROPPED", label: "Dropped" },
-          { value: "PLANNING", label: "Plan to Watch" },
+          { value: "WATCHING", label: t("aquila.watching") },
+          { value: "ON_HOLD", label: t("aquila.onHold") },
+          { value: "COMPLETED", label: t("aquila.completed") },
+          { value: "DROPPED", label: t("aquila.dropped") },
+          { value: "PLANNING", label: t("aquila.planToWatch") },
         ];
       case "manga":
         return [
-          { value: "READING", label: "Reading" },
-          { value: "ON_HOLD", label: "On Hold" },
-          { value: "COMPLETED", label: "Completed" },
-          { value: "DROPPED", label: "Dropped" },
-          { value: "PLANNING", label: "Plan to Read" },
+          { value: "READING", label: t("aquila.reading") },
+          { value: "ON_HOLD", label: t("aquila.onHold") },
+          { value: "COMPLETED", label: t("aquila.completed") },
+          { value: "DROPPED", label: t("aquila.dropped") },
+          { value: "PLANNING", label: t("aquila.planToRead") },
         ];
       case "tv":
         return [
-          { value: "WATCHING", label: "Watching" },
-          { value: "ON_HOLD", label: "On Hold" },
-          { value: "COMPLETED", label: "Completed" },
-          { value: "DROPPED", label: "Dropped" },
-          { value: "PLANNING", label: "Plan to Watch" },
+          { value: "WATCHING", label: t("aquila.watching") },
+          { value: "ON_HOLD", label: t("aquila.onHold") },
+          { value: "COMPLETED", label: t("aquila.completed") },
+          { value: "DROPPED", label: t("aquila.dropped") },
+          { value: "PLANNING", label: t("aquila.planToWatch") },
         ];
       case "movie":
         return [
-          { value: "COMPLETED", label: "Completed" },
-          { value: "DROPPED", label: "Dropped" },
-          { value: "PLANNING", label: "Plan to Watch" },
+          { value: "COMPLETED", label: t("aquila.completed") },
+          { value: "DROPPED", label: t("aquila.dropped") },
+          { value: "PLANNING", label: t("aquila.planToWatch") },
         ];
       case "game":
         return [
-          { value: "PLAYING", label: "Playing" },
-          { value: "ON_HOLD", label: "On Hold" },
-          { value: "COMPLETED", label: "Completed" },
-          { value: "DROPPED", label: "Dropped" },
-          { value: "PLANNING", label: "Plan to Play" },
+          { value: "PLAYING", label: t("aquila.playing") },
+          { value: "ON_HOLD", label: t("aquila.onHold") },
+          { value: "COMPLETED", label: t("aquila.completed") },
+          { value: "DROPPED", label: t("aquila.dropped") },
+          { value: "PLANNING", label: t("aquila.planToPlay") },
         ];
       case "book":
         return [
-          { value: "READING", label: "Reading" },
-          { value: "ON_HOLD", label: "On Hold" },
-          { value: "COMPLETED", label: "Completed" },
-          { value: "DROPPED", label: "Dropped" },
-          { value: "PLANNING", label: "Plan to Read" },
+          { value: "READING", label: t("aquila.reading") },
+          { value: "ON_HOLD", label: t("aquila.onHold") },
+          { value: "COMPLETED", label: t("aquila.completed") },
+          { value: "DROPPED", label: t("aquila.dropped") },
+          { value: "PLANNING", label: t("aquila.planToRead") },
         ];
       default:
         return [];
@@ -267,7 +296,7 @@ export function RrMediaEditConnections({
           onClick={() => onOpenSearchModal(provider)}
         >
           <Plus className="size-4" />
-          Link {label}
+          {t("aquila.linkConnection", { provider: label })}
         </Button>
       );
     }
@@ -345,7 +374,7 @@ export function RrMediaEditConnections({
                       htmlFor={`${provider}-override-status`}
                       className="text-xs font-semibold text-muted-foreground cursor-pointer select-none"
                     >
-                      Override status
+                      {t("aquila.overrideStatus")}
                     </Label>
                   </div>
                   {hasStatusOverride ? (
@@ -356,7 +385,7 @@ export function RrMediaEditConnections({
                       }
                     >
                       <SelectTrigger className="w-full bg-background border border-border text-foreground h-9 mt-1 px-3 text-xs font-normal hover:bg-muted/50 focus:ring-1 focus:ring-primary/30 rounded-xl transition-all">
-                        <SelectValue placeholder="Select status" />
+                        <SelectValue placeholder={t("aquila.selectStatus")} />
                       </SelectTrigger>
                       <SelectContent className="bg-popover border border-border rounded-xl text-foreground">
                         {getStatusOptions().map((opt) => (
@@ -368,7 +397,7 @@ export function RrMediaEditConnections({
                     </Select>
                   ) : (
                     <span className="text-[10px] text-muted-foreground/60 pl-6 italic">
-                      Inherited: {listStatus}
+                      {t("aquila.inheritedStatus", { status: getListNameTranslation(listStatus) })}
                     </span>
                   )}
                 </div>
@@ -387,8 +416,7 @@ export function RrMediaEditConnections({
                         htmlFor={`${provider}-override-progress`}
                         className="text-xs font-semibold text-muted-foreground cursor-pointer select-none"
                       >
-                        Override {mediaType === "anime" ? "episode" : "chapter"}{" "}
-                        progress
+                        {t("aquila.overrideProgress", { type: mediaType === "anime" ? t("aquila.episodeShort") : t("aquila.chapterShort") })}
                       </Label>
                     </div>
                     {hasProgressOverride ? (
@@ -408,7 +436,7 @@ export function RrMediaEditConnections({
                       </div>
                     ) : (
                       <span className="text-[10px] text-muted-foreground/60 pl-6 italic">
-                        Inherited: {progress || "0"}
+                        {t("aquila.inheritedProgress", { progress: progress || "0" })}
                       </span>
                     )}
                   </div>
@@ -428,7 +456,7 @@ export function RrMediaEditConnections({
                         htmlFor={`${provider}-override-volumes`}
                         className="text-xs font-semibold text-muted-foreground cursor-pointer select-none"
                       >
-                        Override volume progress
+                        {t("aquila.overrideVolume")}
                       </Label>
                     </div>
                     {hasVolumesOverride ? (
@@ -448,7 +476,7 @@ export function RrMediaEditConnections({
                       </div>
                     ) : (
                       <span className="text-[10px] text-muted-foreground/60 pl-6 italic">
-                        Inherited: {volumes || "0"}
+                        {t("aquila.inheritedVolume", { volume: volumes || "0" })}
                       </span>
                     )}
                   </div>
@@ -467,14 +495,14 @@ export function RrMediaEditConnections({
                       htmlFor={`${provider}-override-dates`}
                       className="text-xs font-semibold text-muted-foreground cursor-pointer select-none"
                     >
-                      Override dates
+                      {t("aquila.overrideDates")}
                     </Label>
                   </div>
                   {hasDatesOverride ? (
                     <div className="grid grid-cols-2 gap-3 mt-1">
                       <div className="flex flex-col gap-1">
                         <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                          Start Date
+                          {t("aquila.startDate")}
                         </span>
                         <Popover>
                           <PopoverTrigger asChild>
@@ -489,7 +517,7 @@ export function RrMediaEditConnections({
                               {connStartDate ? (
                                 format(connStartDate, "yyyy-MM-dd")
                               ) : (
-                                <span>Pick date</span>
+                                <span>{t("aquila.pickDate")}</span>
                               )}
                             </Button>
                           </PopoverTrigger>
@@ -514,7 +542,7 @@ export function RrMediaEditConnections({
                       </div>
                       <div className="flex flex-col gap-1">
                         <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                          Finish Date
+                          {t("aquila.finishDate")}
                         </span>
                         <Popover>
                           <PopoverTrigger asChild>
@@ -529,7 +557,7 @@ export function RrMediaEditConnections({
                               {connEndDate ? (
                                 format(connEndDate, "yyyy-MM-dd")
                               ) : (
-                                <span>Pick date</span>
+                                <span>{t("aquila.pickDate")}</span>
                               )}
                             </Button>
                           </PopoverTrigger>
@@ -555,14 +583,10 @@ export function RrMediaEditConnections({
                     </div>
                   ) : (
                     <span className="text-[10px] text-muted-foreground/60 pl-6 italic">
-                      Inherited:{" "}
-                      {startDate
-                        ? format(startDate, "yyyy-MM-dd")
-                        : "No Start Date"}{" "}
-                      -{" "}
-                      {finishDate
-                        ? format(finishDate, "yyyy-MM-dd")
-                        : "No Finish Date"}
+                      {t("aquila.inheritedDates", {
+                        start: startDate ? format(startDate, "yyyy-MM-dd") : t("aquila.noStartDate"),
+                        finish: finishDate ? format(finishDate, "yyyy-MM-dd") : t("aquila.noFinishDate")
+                      })}
                     </span>
                   )}
                 </div>
@@ -593,7 +617,7 @@ export function RrMediaEditConnections({
           htmlFor="media-update-connection"
           className="text-xs font-bold uppercase tracking-wider text-muted-foreground cursor-pointer select-none"
         >
-          Update list from connection
+          {t("aquila.updateListFromConnection")}
         </Label>
       </div>
 
@@ -607,8 +631,7 @@ export function RrMediaEditConnections({
             ))
           ) : (
             <div className="col-span-2 text-center py-4 text-xs text-muted-foreground bg-muted/10 border border-dashed border-border rounded-xl">
-              No active connections found. Please connect your accounts in
-              settings.
+              {t("aquila.noActiveConnections")}
             </div>
           )}
         </div>

@@ -1,6 +1,5 @@
-"use client";
-
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 
 interface RrMediaDescriptionProps {
@@ -26,7 +25,7 @@ const itemVariants = {
  * - Spoiler: ~!...!~
  * - Links: <a href="URL">TEXT</a>, [TEXT](URL)
  */
-export function parseSafeDescription(text: string): React.ReactNode {
+export function parseSafeDescription(text: string, t?: any): React.ReactNode {
   if (!text) return "";
 
   // Replace AniList spoilers ~!text!~ with unique tokens, and format bold/italic/links
@@ -45,7 +44,7 @@ export function parseSafeDescription(text: string): React.ReactNode {
         <span
           key={index}
           className="bg-foreground/85 hover:bg-transparent text-transparent hover:text-foreground px-2 py-0.5 rounded-lg cursor-pointer transition-colors duration-200 select-none border border-border/20"
-          title="Spoiler: Hover/Click to reveal"
+          title={t ? t("aquila.spoilerAlt") : "Spoiler: Hover/Click to reveal"}
         >
           {content}
         </span>
@@ -135,11 +134,14 @@ export function parseSafeDescription(text: string): React.ReactNode {
 
 export function RrMediaDescription({
   description,
-  title = "Synopsis",
+  title,
 }: RrMediaDescriptionProps): React.JSX.Element {
+  const { t } = useTranslation();
   if (!description) {
     return <></>;
   }
+
+  const resolvedTitle = title ?? t("aquila.synopsis");
 
   return (
     <motion.div
@@ -147,10 +149,10 @@ export function RrMediaDescription({
       className="bg-card/30 border border-border/20 backdrop-blur-sm p-6 rounded-2xl"
     >
       <h3 className="text-base font-bold text-foreground mb-3">
-        {title}
+        {resolvedTitle}
       </h3>
       <div className="prose prose-neutral dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-sm prose-p:my-2 prose-a:text-primary hover:prose-a:text-primary transition-colors">
-        <p>{parseSafeDescription(description)}</p>
+        <p>{parseSafeDescription(description, t)}</p>
       </div>
     </motion.div>
   );
