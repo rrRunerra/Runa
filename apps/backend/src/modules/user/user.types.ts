@@ -26,6 +26,7 @@ export interface PrivacySettings {
   tvList: boolean;
   movieList: boolean;
   connections: boolean;
+  friends: boolean;
 }
 
 // --- Connection Entity (safe, no tokens) ---

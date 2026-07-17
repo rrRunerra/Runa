@@ -30,6 +30,7 @@ import RrLapplandImageNotFound from "@/components/rrComponents/rrImages/rrLappla
 import { RrMediaRefreshButton } from "@/components/rrComponents/aquila/rrMediaRefreshButton";
 import { MovieEntity } from "@/types/movie.entities";
 import { RrMediaInfoRow } from "@/components/rrComponents/aquila/details/rrMediaInfoRow";
+import { RrMediaFriendsProgress } from "@/components/rrComponents/aquila/details/rrMediaFriendsProgress";
 import { RrMediaDescription } from "@/components/rrComponents/aquila/details/rrMediaDescription";
 import { RrMediaGenres } from "@/components/rrComponents/aquila/details/rrMediaGenres";
 import { RrMediaCharacters } from "@/components/rrComponents/aquila/details/rrMediaCharacters";
@@ -481,6 +482,8 @@ export default function MovieDetailsPage(): React.JSX.Element {
                 </div>
               </div>
             )}
+
+            <RrMediaFriendsProgress mediaId={movie.id.toString()} mediaType="movie" />
           </motion.div>
 
           {/* Right Column - Info */}

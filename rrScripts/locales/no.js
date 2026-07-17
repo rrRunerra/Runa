@@ -1889,7 +1889,29 @@ export default {
         "favorites": "Favoritter",
         "lists": "Lister",
         "stats": "Statistikk"
-      }
+      },
+      "friends": "Venner",
+      "friendList": "Venneliste",
+      "addFriend": "Legg til venn",
+      "removeFriend": "Fjern venn",
+      "pendingFriendRequest": "Venneporespørsel venter",
+      "acceptFriendRequest": "Godta venneporespørsel",
+      "declineFriendRequest": "Avslå venneporespørsel",
+      "cancelFriendRequest": "Avbryt forespørsel",
+      "friendNickname": "Kallenavn",
+      "friendNote": "Notat",
+      "editFriendSettings": "Rediger vennedetaljer",
+      "nicknamePlaceholder": "Skriv inn kallenavn",
+      "notePlaceholder": "Skriv inn privat notat",
+      "friendRequests": "Venneporespørsler",
+      "incomingRequests": "Innkommende forespørsler",
+      "outgoingRequests": "Utgående forespørsler",
+      "noFriends": "Ingen venner lagt til ennå",
+      "noIncomingRequests": "Ingen innkommende venneporespørsler",
+      "noOutgoingRequests": "Ingen utgående venneporespørsler",
+      "searchUsers": "Søk etter brukere",
+      "youAreFriends": "Dere er venner",
+      "friendPrivacyOption": "Privat venneliste"
     }
   },
   "pegasus": {

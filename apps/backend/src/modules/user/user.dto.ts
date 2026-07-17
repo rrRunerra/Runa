@@ -144,6 +144,10 @@ export class PrivacySettingsDto {
   @IsBoolean({ message: 'PySgDto-CMBAB001: Connections must be a boolean' })
   @IsOptional()
   connections?: boolean;
+
+  @IsBoolean({ message: 'PySgDto-FMBAB001: Friends list must be a boolean' })
+  @IsOptional()
+  friends?: boolean;
 }
 
 // --- Profile Settings ---

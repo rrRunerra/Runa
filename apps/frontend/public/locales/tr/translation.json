@@ -1889,7 +1889,29 @@
         "favorites": "Favoriler",
         "lists": "Listeler",
         "stats": "İstatistikler"
-      }
+      },
+      "friends": "Arkadaşlar",
+      "friendList": "Arkadaş Listesi",
+      "addFriend": "Arkadaş Ekle",
+      "removeFriend": "Arkadaşı Çıkar",
+      "pendingFriendRequest": "Arkadaşlık isteği beklemede",
+      "acceptFriendRequest": "Arkadaşlık İsteğini Kabul Et",
+      "declineFriendRequest": "Arkadaşlık İsteğini Reddet",
+      "cancelFriendRequest": "İsteği İptal Et",
+      "friendNickname": "Takma Ad",
+      "friendNote": "Not",
+      "editFriendSettings": "Arkadaş Detaylarını Düzenle",
+      "nicknamePlaceholder": "Arkadaşın takma adını girin",
+      "notePlaceholder": "Bu arkadaş hakkında özel not girin",
+      "friendRequests": "Arkadaşlık İstekleri",
+      "incomingRequests": "Gelen İstekler",
+      "outgoingRequests": "Giden İstekler",
+      "noFriends": "Henüz arkadaş eklenmedi",
+      "noIncomingRequests": "Gelen arkadaşlık isteği yok",
+      "noOutgoingRequests": "Giden arkadaşlık isteği yok",
+      "searchUsers": "Kullanıcı Ara",
+      "youAreFriends": "Arkadaşsınız",
+      "friendPrivacyOption": "Gizli Arkadaş Listesi"
     }
   },
   "pegasus": {

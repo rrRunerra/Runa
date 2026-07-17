@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 
 import {
@@ -15,6 +15,7 @@ import {
 
 import { NotificationGateway } from './notification.gateway';
 import { NotificationRepository } from './notification.repository';
+import { FriendsService } from '../friends/friends.service';
 
 @Injectable()
 export class NotificationService {
@@ -24,6 +25,8 @@ export class NotificationService {
   constructor(
     private readonly notificationRepository: NotificationRepository,
     private readonly gateway: NotificationGateway,
+    @Inject(forwardRef(() => FriendsService))
+    private readonly friendsService: FriendsService,
   ) {}
 
   async findAll(
@@ -49,7 +52,7 @@ export class NotificationService {
       title: string;
       message: string;
       type: NotificationType;
-      metadata?: DeviceApprovalMetadata;
+      metadata?: DeviceApprovalMetadata | Record<string, unknown>;
     },
   ): Promise<Notification> {
     const record = await this.notificationRepository.create({
@@ -83,10 +86,26 @@ export class NotificationService {
       });
     }
 
+    if (existing.status === status) {
+      return this.toEntity(existing);
+    }
+
     const updated = await this.notificationRepository.updateStatus(
       notificationId,
       status,
     );
+
+    // Execute side-effects for friend requests
+    if (existing.status === 'PENDING' && (status === 'APPROVED' || status === 'DENIED')) {
+      const metadata = existing.metadata as any;
+      if (metadata && metadata.type === 'friend_request' && metadata.requestId) {
+        if (status === 'APPROVED') {
+          await this.friendsService.acceptRequest(metadata.requestId, userId);
+        } else {
+          await this.friendsService.declineRequest(metadata.requestId, userId);
+        }
+      }
+    }
 
     const notification = this.toEntity(updated);
     this.gateway.sendToUser(userId, 'notification:updated', notification);

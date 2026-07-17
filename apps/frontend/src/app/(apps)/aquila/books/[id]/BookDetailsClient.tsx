@@ -30,6 +30,7 @@ import RrLapplandImageNotFound from "@/components/rrComponents/rrImages/rrLappla
 import { RrMediaRefreshButton } from "@/components/rrComponents/aquila/rrMediaRefreshButton";
 import { BookEntity } from "@/types/book.entities";
 import { RrMediaStatsDashboard } from "@/components/rrComponents/aquila/details/rrMediaStatsDashboard";
+import { RrMediaFriendsProgress } from "@/components/rrComponents/aquila/details/rrMediaFriendsProgress";
 import { useTranslation } from "react-i18next";
 
 interface ListEntry {
@@ -422,6 +423,8 @@ export default function BookDetailsPage(): React.JSX.Element {
                 )}
               </div>
             </div>
+
+            <RrMediaFriendsProgress mediaId={book.id.toString()} mediaType="book" />
           </motion.div>
 
           {/* Right Column - Info */}

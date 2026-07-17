@@ -1889,7 +1889,29 @@ export default {
         "favorites": "Yêu thích",
         "lists": "Danh sách",
         "stats": "Thống kê"
-      }
+      },
+      "friends": "Bạn bè",
+      "friendList": "Danh sách bạn bè",
+      "addFriend": "Thêm bạn bè",
+      "removeFriend": "Xóa bạn bè",
+      "pendingFriendRequest": "Yêu cầu kết bạn đang chờ",
+      "acceptFriendRequest": "Chấp nhận kết bạn",
+      "declineFriendRequest": "Từ chối kết bạn",
+      "cancelFriendRequest": "Hủy yêu cầu",
+      "friendNickname": "Biệt danh",
+      "friendNote": "Ghi chú",
+      "editFriendSettings": "Chỉnh sửa chi tiết bạn bè",
+      "nicknamePlaceholder": "Nhập biệt danh của bạn bè",
+      "notePlaceholder": "Nhập ghi chú riêng tư về người bạn này",
+      "friendRequests": "Yêu cầu kết bạn",
+      "incomingRequests": "Yêu cầu đã nhận",
+      "outgoingRequests": "Yêu cầu đã gửi",
+      "noFriends": "Chưa có bạn bè",
+      "noIncomingRequests": "Không có yêu cầu kết bạn nào",
+      "noOutgoingRequests": "Không có yêu cầu kết bạn nào đã gửi",
+      "searchUsers": "Tìm kiếm người dùng",
+      "youAreFriends": "Bạn và người này là bạn bè",
+      "friendPrivacyOption": "Danh sách bạn bè riêng tư"
     }
   },
   "pegasus": {

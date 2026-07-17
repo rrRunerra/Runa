@@ -1889,7 +1889,29 @@ export default {
         "favorites": "お気に入り",
         "lists": "リスト",
         "stats": "統計"
-      }
+      },
+      "friends": "フレンド",
+      "friendList": "フレンド一覧",
+      "addFriend": "フレンドを追加",
+      "removeFriend": "フレンドを削除",
+      "pendingFriendRequest": "フレンド申請中",
+      "acceptFriendRequest": "フレンド申請を承認",
+      "declineFriendRequest": "フレンド申請を拒否",
+      "cancelFriendRequest": "申請をキャンセル",
+      "friendNickname": "ニックネーム",
+      "friendNote": "メモ",
+      "editFriendSettings": "フレンド情報の編集",
+      "nicknamePlaceholder": "ニックネームを入力してください",
+      "notePlaceholder": "フレンドのメモを入力してください",
+      "friendRequests": "フレンド申請",
+      "incomingRequests": "受信した申請",
+      "outgoingRequests": "送信した申請",
+      "noFriends": "フレンドがまだいません",
+      "noIncomingRequests": "受信した申請はありません",
+      "noOutgoingRequests": "送信した申請はありません",
+      "searchUsers": "ユーザーを検索",
+      "youAreFriends": "フレンドです",
+      "friendPrivacyOption": "フレンド一覧を非公開にする"
     }
   },
   "pegasus": {

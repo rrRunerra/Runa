@@ -33,6 +33,11 @@ model User {
     laceraShares             LaceraShare[]
     vaultPinHash             String?
 
+    friends          Friend[]        @relation("UserFriends")
+    friendOf         Friend[]        @relation("FriendUsers")
+    sentRequests     FriendRequest[] @relation("SentFriendRequests")
+    receivedRequests FriendRequest[] @relation("ReceivedFriendRequests")
+
     // MFA Configuration Fields
     totpSecret      String?
     totpEnabled     Boolean   @default(false)

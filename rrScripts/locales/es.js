@@ -1889,7 +1889,29 @@ export default {
         "favorites": "Favoritos",
         "lists": "Listas",
         "stats": "Estadísticas"
-      }
+      },
+      "friends": "Amigos",
+      "friendList": "Lista de amigos",
+      "addFriend": "Añadir amigo",
+      "removeFriend": "Eliminar amigo",
+      "pendingFriendRequest": "Solicitud de amistad pendiente",
+      "acceptFriendRequest": "Aceptar solicitud",
+      "declineFriendRequest": "Rechazar solicitud",
+      "cancelFriendRequest": "Cancelar solicitud",
+      "friendNickname": "Apodo",
+      "friendNote": "Nota",
+      "editFriendSettings": "Editar detalles del amigo",
+      "nicknamePlaceholder": "Introduce el apodo",
+      "notePlaceholder": "Introduce una nota privada",
+      "friendRequests": "Solicitudes de amistad",
+      "incomingRequests": "Solicitudes recibidas",
+      "outgoingRequests": "Solicitudes enviadas",
+      "noFriends": "Aún no tienes amigos",
+      "noIncomingRequests": "No hay solicitudes recibidas",
+      "noOutgoingRequests": "No hay solicitudes enviadas",
+      "searchUsers": "Buscar usuarios",
+      "youAreFriends": "Sois amigos",
+      "friendPrivacyOption": "Lista de amigos privada"
     }
   },
   "pegasus": {
