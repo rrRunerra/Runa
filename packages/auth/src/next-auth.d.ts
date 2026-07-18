@@ -42,5 +42,7 @@ declare module "next-auth/jwt" {
     accessToken?: string;
     passwordChangedAt?: number | null;
     iat?: number;
+    permissionsLastChecked?: number;
+    permissionsCheckInterval?: number;
   }
 }

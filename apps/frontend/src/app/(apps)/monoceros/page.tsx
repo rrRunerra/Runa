@@ -11,11 +11,13 @@ import {
   Calendar,
   Layers,
   ChevronRight,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { hasPermission, RunaFlags } from "@runa/permissions";
 
 import { triggerMediaRefresh } from "@/actions/monocerosMediaActions";
+import { triggerGlobalSessionRefresh } from "@/actions/monocerosSessionActions";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -29,6 +31,7 @@ import {
 export default function MonocerosPage() {
   const { data: session, status } = useSession();
   const [isPending, startTransition] = useTransition();
+  const [isSessionPending, startSessionTransition] = useTransition();
 
   // Redirect unauthorized users
   useEffect(() => {
@@ -54,6 +57,23 @@ export default function MonocerosPage() {
           );
         } else {
           toast.error(res.error || "Failed to trigger media update.");
+        }
+      } catch (err: any) {
+        toast.error(err.message || "An unexpected error occurred.");
+      }
+    });
+  };
+
+  const handleSessionRefresh = () => {
+    startSessionTransition(async () => {
+      try {
+        const res = await triggerGlobalSessionRefresh();
+        if (res.success) {
+          toast.success(
+            `Session sync triggered! Refreshed ${res.processed} active sessions.`,
+          );
+        } else {
+          toast.error(res.error || "Failed to trigger session refresh.");
         }
       } catch (err: any) {
         toast.error(err.message || "An unexpected error occurred.");
@@ -142,6 +162,49 @@ export default function MonocerosPage() {
                 <RefreshCw className="size-4" />
               )}
               Trigger Now
+            </Button>
+          </CardFooter>
+        </Card>
+
+        {/* Session Refresh Card */}
+        <Card className="border border-zinc-200 dark:border-zinc-800 bg-card/60 backdrop-blur-sm shadow-sm overflow-hidden flex flex-col justify-between">
+          <div>
+            <CardHeader className="space-y-1 bg-linear-to-r from-indigo-500/5 to-transparent pb-4">
+              <CardTitle className="text-xl flex items-center gap-2 text-foreground font-semibold">
+                <Users className="size-5 text-indigo-400" />
+                Global Session Sync
+              </CardTitle>
+              <CardDescription>
+                Force client sessions to update with the latest permissions.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-5 text-sm text-muted-foreground space-y-2">
+              <p>
+                This operation clears the Redis authorization cache for all users
+                in batches.
+              </p>
+              <p>
+                Clients will silently reload and apply their new permissions within
+                30-90 seconds, without requiring them to log in again.
+              </p>
+            </CardContent>
+          </div>
+          <CardFooter className="border-t border-zinc-100 dark:border-zinc-900 bg-zinc-50/50 dark:bg-zinc-950/20 px-6 py-4 flex items-center justify-between">
+            <span className="text-xs text-muted-foreground font-mono">
+              batch size: 100
+            </span>
+            <Button
+              onClick={handleSessionRefresh}
+              disabled={isSessionPending}
+              size="sm"
+              className="gap-1.5 shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white dark:bg-indigo-600 dark:hover:bg-indigo-700"
+            >
+              {isSessionPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <RefreshCw className="size-4" />
+              )}
+              Sync Sessions
             </Button>
           </CardFooter>
         </Card>

@@ -58,6 +58,7 @@ These skills provide deeper guidance for specific domains. Consult them when the
 
 ### Route Access & UI Design
 
+- **Feature Permissions**: Every frontend feature, route, or interactive action must be guarded by a permission check (using `hasPermission` from `@runa/permissions`), unless the feature is intended to be public and usable without an account. Highly customize access so that every private action has its own granular permission.
 - **Public Routing**: Make routes publicly accessible where possible; conditionally render sensitive/permissioned UI elements.
 - **Providers for Data**: Leaf components must be reusable and remain independent of data fetching; pass data through Context Providers or custom hooks.
 - **Pessimistic Modals**: Always use a pessimistic approach for modals; keep the dialog open in a disabled/loading state during requests, and only close on success. Show validation or backend errors inline.

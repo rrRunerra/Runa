@@ -202,6 +202,7 @@ export class XxxController {
 ```
 
 ### Rules
+- **Permission Gates**: Every backend controller method/handler representing an operational action or feature must perform a permission check (using the appropriate `BitField` class like `AquilaBitField.fromRaw(req.user['permissions'])`), unless the feature is intended to be public and usable without an account. Every private feature/endpoint must correspond to a distinct permission for maximum configurability.
 - **Never** apply `@UseGuards(AuthGuard)` at the class level. Apply auth/permission guards selectively at the method/handler level to align with the public-first routing architecture.
 - **Strict Parameter Validation**: Every single parameter (e.g. `@Param('id')`), query parameter (`@Query()`), request body (`@Body()`), or properties injected/passed into controller methods **MUST** have its own dedicated DTO class with class-validator validation decorators. Never use unvalidated raw primitives (like `string`, `number`) directly without a validation DTO.
 - **Always** use entity types for return types (e.g. `Promise<XxxEntity>`).

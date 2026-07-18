@@ -12,6 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "@runa/database": "workspace:*",
+    "@runa/cache": "workspace:*",
     "next-auth": "^4.24.14"
   }
 }

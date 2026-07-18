@@ -10,7 +10,12 @@ for (const env of REQUIRED_ENVS) {
 
 const nextConfig: NextConfig = {
   reactCompiler: false,
-  transpilePackages: ["@runa/auth", "@runa/database"],
+  transpilePackages: [
+    "@runa/auth",
+    "@runa/database",
+    "@runa/cache",
+    "@runa/permissions"
+  ],
   allowedDevOrigins: ["192.168.0.56", "192.168.0.44"],
 
   experimental: {

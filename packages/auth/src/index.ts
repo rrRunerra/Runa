@@ -180,6 +180,47 @@ export const authOptions: NextAuthOptions = {
           : null;
       }
 
+      // Initialize randomized check interval for this session (jittered between 30 and 90 seconds)
+      if (!token.permissionsCheckInterval) {
+        token.permissionsCheckInterval =
+          Math.floor(Math.random() * (90000 - 30000 + 1)) + 30000;
+        token.permissionsLastChecked = Date.now();
+      }
+
+      // Check if it's time to verify permissions against Redis cache
+      const now = Date.now();
+      const lastChecked = token.permissionsLastChecked || 0;
+      const interval = token.permissionsCheckInterval || 60000;
+
+      if (token.id && (now - lastChecked > interval)) {
+        try {
+          const { createCacheClient } = await import("@runa/cache");
+          const cache = createCacheClient();
+          const cacheKey = `user:permissions:${token.id}`;
+
+          let permissions = await cache.get<number[]>(cacheKey);
+          if (permissions === null) {
+            // Redis cache was invalidated/cleared. Re-query from DB and rebuild cache.
+            const { prisma } = await import("@runa/database");
+            const dbUser = await prisma.user.findUnique({
+              where: { id: token.id as string },
+              select: { permissions: true },
+            });
+            if (dbUser) {
+              permissions = dbUser.permissions;
+              await cache.set(cacheKey, permissions, 86400); // 24h
+            }
+          }
+
+          if (permissions !== null) {
+            token.permissions = permissions;
+          }
+          token.permissionsLastChecked = now;
+        } catch (error) {
+          console.error("[AUTH] Background permission sync failed:", error);
+        }
+      }
+
       if (
         typeof token.passwordChangedAt === "number" &&
         typeof token.iat === "number" &&
