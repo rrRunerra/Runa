@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, memo } from "react";
+import React, { useState, memo, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -65,19 +65,91 @@ const RrMediaCardComponent = ({
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const mediaType = item.type;
 
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isLongPressActiveRef = useRef<boolean>(false);
+
+  const startLongPress = (e: React.TouchEvent | React.MouseEvent | React.KeyboardEvent) => {
+    isLongPressActiveRef.current = false;
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+    }
+    longPressTimerRef.current = setTimeout(() => {
+      isLongPressActiveRef.current = true;
+      setIsEditDialogOpen(true);
+      if (typeof window !== "undefined" && window.navigator && window.navigator.vibrate) {
+        window.navigator.vibrate(50);
+      }
+    }, 250);
+  };
+
+  const cancelLongPress = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
+  const handleLinkClick = (e: React.MouseEvent) => {
+    if (isLongPressActiveRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      isLongPressActiveRef.current = false;
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === " " || e.key === "Enter") {
+      if (e.repeat) return;
+      startLongPress(e);
+    }
+  };
+
+  const handleKeyUp = (e: React.KeyboardEvent) => {
+    if (e.key === " " || e.key === "Enter") {
+      cancelLongPress();
+    }
+  };
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    if (isLongPressActiveRef.current) {
+      e.preventDefault();
+    }
+  };
+
+  React.useEffect(() => {
+    return () => {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+      }
+    };
+  }, []);
+
   const progressPercentage = item.episodes
     ? Math.min((item.progress / item.episodes) * 100, 100)
     : 50;
 
   return (
     <>
-      <div className="group relative flex flex-col w-full bg-card hover:bg-accent/5 rounded-2xl border border-border/40 hover:border-primary/30 transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5">
+      <div
+        className="group relative flex flex-col w-full bg-card hover:bg-accent/5 rounded-2xl border border-border/40 hover:border-primary/30 transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5 select-none"
+        onTouchStart={startLongPress}
+        onTouchEnd={cancelLongPress}
+        onTouchMove={cancelLongPress}
+        onTouchCancel={cancelLongPress}
+        onMouseDown={startLongPress}
+        onMouseUp={cancelLongPress}
+        onMouseLeave={cancelLongPress}
+        onKeyDown={handleKeyDown}
+        onKeyUp={handleKeyUp}
+        onContextMenu={handleContextMenu}
+      >
         {/* Poster Image Container */}
         <div className="relative aspect-2/3 w-full rounded-t-2xl overflow-hidden bg-muted">
           <Link
             href={href}
             prefetch={false}
             className="absolute inset-0 block cursor-pointer z-10"
+            onClick={handleLinkClick}
           >
             {item.image ? (
               <Image
@@ -110,6 +182,9 @@ const RrMediaCardComponent = ({
                   e.stopPropagation();
                   setIsEditDialogOpen(true);
                 }}
+                onTouchStart={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
               >
                 <Menu className="size-4" />
               </Button>
@@ -130,6 +205,9 @@ const RrMediaCardComponent = ({
                   e.stopPropagation();
                   onIncrement();
                 }}
+                onTouchStart={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
                 disabled={isUpdating}
               >
                 {isUpdating ? (
@@ -162,6 +240,7 @@ const RrMediaCardComponent = ({
             href={href}
             prefetch={false}
             className="block flex-1 group/title cursor-pointer"
+            onClick={handleLinkClick}
           >
             <h4
               title={item.title}

@@ -968,6 +968,7 @@
     "episodesCountShort": "· {{count}} ตอน",
     "searchModalQueryPrompt": "พิมพ์คำค้นหาแล้วกด ค้นหา เพื่อหารหัสการเชื่อมต่อ",
     "linkProvider": "เชื่อมโยง {{provider}}",
+    "linkConnection": "เชื่อมโยง {{provider}}",
     "overrideStatus": "เขียนทับสถานะ",
     "selectStatus": "เลือกสถานะ",
     "inheritedStatus": "สืบทอดมา: {{status}}",

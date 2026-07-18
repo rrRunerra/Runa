@@ -968,6 +968,7 @@
     "episodesCountShort": "· {{count}} ep",
     "searchModalQueryPrompt": "Skriv inn et søk og trykk Søk for å finne tilkoblings-IDer.",
     "linkProvider": "Koble {{provider}}",
+    "linkConnection": "Koble {{provider}}",
     "overrideStatus": "Overstyr status",
     "selectStatus": "Velg status",
     "inheritedStatus": "Nedarvet: {{status}}",

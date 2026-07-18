@@ -895,7 +895,7 @@ export function RrMediaEditDialog({
   };
 
   const dialogContent = (
-    <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden bg-background/90 backdrop-blur-xl border border-border/60 text-foreground [&>button]:text-foreground [&>button]:z-60 [&>button]:hover:text-muted-foreground shadow-2xl rounded-2xl">
+    <DialogContent className="flex flex-col gap-0 max-h-[95dvh] sm:max-h-[90dvh] sm:max-w-[700px] p-0 overflow-hidden bg-background/90 backdrop-blur-xl border border-border/60 text-foreground [&>button]:text-foreground [&>button]:z-60 [&>button]:hover:text-muted-foreground shadow-2xl rounded-2xl">
       <DialogTitle className="sr-only">
         {hasListEntry ? t("aquila.editEntry", { type: mediaType }) : t("aquila.addToList", { type: mediaType })}
       </DialogTitle>
@@ -915,7 +915,7 @@ export function RrMediaEditDialog({
         onSave={handleSave}
       />
 
-      <div className="p-6 pt-4 bg-transparent flex flex-col gap-4">
+      <div className="p-6 pt-4 bg-transparent flex-1 flex flex-col gap-4 overflow-y-auto no-scrollbar">
         {saveError && (
           <div className="p-3 text-xs bg-destructive/10 border border-destructive/20 text-destructive rounded-xl flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
             <AlertCircle className="size-4 shrink-0" />

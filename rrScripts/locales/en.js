@@ -969,6 +969,7 @@ export default {
     "episodesCountShort": "· {{count}} eps",
     "searchModalQueryPrompt": "Type a query and press Search to find connection IDs.",
     "linkProvider": "Link {{provider}}",
+    "linkConnection": "Link {{provider}}",
     "overrideStatus": "Override status",
     "selectStatus": "Select status",
     "inheritedStatus": "Inherited: {{status}}",

@@ -968,6 +968,7 @@ export default {
     "episodesCountShort": "· {{count}} 話",
     "searchModalQueryPrompt": "検索ワードを入力し、検索ボタンを押して連携IDを見つけます。",
     "linkProvider": "{{provider}} を連携",
+    "linkConnection": "{{provider}} を連携",
     "overrideStatus": "ステータスを上書き",
     "selectStatus": "ステータスを選択",
     "inheritedStatus": "同期中: {{status}}",

@@ -968,6 +968,7 @@ export default {
     "episodesCountShort": "· {{count}} 集",
     "searchModalQueryPrompt": "输入搜索词并按搜索查找关联ID。",
     "linkProvider": "链接 {{provider}}",
+    "linkConnection": "链接 {{provider}}",
     "overrideStatus": "覆写状态",
     "selectStatus": "选择状态",
     "inheritedStatus": "继承自列表: {{status}}",

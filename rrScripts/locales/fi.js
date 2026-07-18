@@ -968,6 +968,7 @@ export default {
     "episodesCountShort": "· {{count}} jaksoa",
     "searchModalQueryPrompt": "Kirjoita hakusana ja paina Etsi löytääksesi ID-tunnukset.",
     "linkProvider": "Kytke {{provider}}",
+    "linkConnection": "Kytke {{provider}}",
     "overrideStatus": "Ylikirjoita tila",
     "selectStatus": "Valitse tila",
     "inheritedStatus": "Peritty: {{status}}",

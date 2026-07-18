@@ -968,6 +968,7 @@
     "episodesCountShort": "· {{count}} ep",
     "searchModalQueryPrompt": "Taip pertanyaan dan tekan Cari untuk mencari ID sambungan.",
     "linkProvider": "Pautkan {{provider}}",
+    "linkConnection": "Pautkan {{provider}}",
     "overrideStatus": "Pintas status",
     "selectStatus": "Pilih status",
     "inheritedStatus": "Warisan: {{status}}",

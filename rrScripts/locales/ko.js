@@ -968,6 +968,7 @@ export default {
     "episodesCountShort": "· {{count}}화",
     "searchModalQueryPrompt": "검색어를 입력하고 검색을 눌러 연결 ID를 찾으세요.",
     "linkProvider": "{{provider}} 연결",
+    "linkConnection": "{{provider}} 연결",
     "overrideStatus": "상태 개별 설정",
     "selectStatus": "상태 선택",
     "inheritedStatus": "동기화됨: {{status}}",

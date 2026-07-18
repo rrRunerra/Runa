@@ -968,6 +968,7 @@
     "episodesCountShort": "· {{count}} эп.",
     "searchModalQueryPrompt": "Введите запрос и нажмите поиск для нахождения ID подключения.",
     "linkProvider": "Связать с {{provider}}",
+    "linkConnection": "Связать с {{provider}}",
     "overrideStatus": "Переопределить статус",
     "selectStatus": "Выбрать статус",
     "inheritedStatus": "Унаследовано: {{status}}",

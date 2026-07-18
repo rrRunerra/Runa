@@ -968,6 +968,7 @@ export default {
     "episodesCountShort": "· {{count}} tập",
     "searchModalQueryPrompt": "Nhập từ khóa và nhấn Tìm kiếm để tìm ID kết nối.",
     "linkProvider": "Liên kết {{provider}}",
+    "linkConnection": "Liên kết {{provider}}",
     "overrideStatus": "Ghi đè trạng thái",
     "selectStatus": "Chọn trạng thái",
     "inheritedStatus": "Kế thừa: {{status}}",

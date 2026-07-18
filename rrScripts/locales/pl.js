@@ -968,6 +968,7 @@ export default {
     "episodesCountShort": "· {{count}} odc.",
     "searchModalQueryPrompt": "Wpisz zapytanie i naciśnij Szukaj, aby znaleźć identyfikatory połączeń.",
     "linkProvider": "Połącz z {{provider}}",
+    "linkConnection": "Połącz z {{provider}}",
     "overrideStatus": "Nadpisz status",
     "selectStatus": "Wybierz status",
     "inheritedStatus": "Odziedziczony: {{status}}",
