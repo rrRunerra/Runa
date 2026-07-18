@@ -610,7 +610,11 @@
     "unlockVaultFirst": "Пожалуйста, сначала разблокируйте хранилище.",
     "back": "Назад",
     "sharedBy": "Поделился",
-    "signInToSave": "Войдите, чтобы сохранить"
+    "signInToSave": "Войдите, чтобы сохранить",
+    "sidebarStorageUsage": "Использование хранилища",
+    "storageUsageTitle": "Хранилище",
+    "storageBlocked": "Заблокировано",
+    "storageUsedProgress": "{{used}} из {{limit}}"
   },
   "discordChannels": "Discord-каналы",
   "discordChannelsDesc": "Общайтесь в реальном времени на своих серверах Discord и в личных сообщениях.",

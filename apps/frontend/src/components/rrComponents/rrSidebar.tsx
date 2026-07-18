@@ -30,6 +30,8 @@ import { useEffect, useState, useMemo } from "react";
 import { ChevronRight, Command, LayoutGrid } from "lucide-react";
 import RrAppMenu from "./rrAppMenu";
 import RrUserMenu from "./rrUserMenu";
+
+
 import { LayoutGroup, motion } from "framer-motion";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -84,6 +86,8 @@ export default function RrSidebar({ sidebarConfig: initialSidebarConfig, ...prop
       }
     }
 
+    let config = sidebarConfig;
+
     if (customDockMap) {
       const phoneSectionIdx = sidebarConfig.findIndex(
         (s) => s.section?.toLowerCase().replace(/[^a-z]/g, "") === "phone",
@@ -122,8 +126,7 @@ export default function RrSidebar({ sidebarConfig: initialSidebarConfig, ...prop
             }
           }
         }
-
-        return sidebarConfig.map((section, idx) => {
+        config = sidebarConfig.map((section, idx) => {
           if (idx === phoneSectionIdx) {
             return {
               ...section,
@@ -134,7 +137,29 @@ export default function RrSidebar({ sidebarConfig: initialSidebarConfig, ...prop
         });
       }
     }
-    return sidebarConfig;
+
+    // Apply sorting by position (positive at the top, undefined in the middle, negative at the bottom)
+    return config.map((section) => {
+      const itemsWithIndex = section.items.map((item, index) => ({ item, index }));
+      itemsWithIndex.sort((a, b) => {
+        const posA = a.item.position !== undefined ? a.item.position : 0;
+        const posB = b.item.position !== undefined ? b.item.position : 0;
+
+        if (posA > 0 && posB > 0) return posA - posB || a.index - b.index;
+        if (posA > 0) return -1;
+        if (posB > 0) return 1;
+
+        if (posA < 0 && posB < 0) return posA - posB || a.index - b.index;
+        if (posA < 0) return 1;
+        if (posB < 0) return -1;
+
+        return a.index - b.index;
+      });
+      return {
+        ...section,
+        items: itemsWithIndex.map((x) => x.item),
+      };
+    });
   }, [sidebarConfig, dockTrigger]);
 
   return (
@@ -163,10 +188,12 @@ export default function RrSidebar({ sidebarConfig: initialSidebarConfig, ...prop
                   )}
 
                   <SidebarMenu>
-                    {section.items.map((item: SidebarItem, itemIdx: number) => {
-                      const hasChildren =
-                        item.children && item.children.length > 0;
-                      const hasHref = !!item.href;
+                    {section.items
+                      .filter((item: SidebarItem) => (item.position ?? 0) >= 0)
+                      .map((item: SidebarItem, itemIdx: number) => {
+                        const hasChildren =
+                          item.children && item.children.length > 0;
+                        const hasHref = !!item.href;
 
                       const truncate = (str: string, n: number) =>
                         str.length > n ? `${str.slice(0, n)}...` : str;
@@ -308,10 +335,24 @@ export default function RrSidebar({ sidebarConfig: initialSidebarConfig, ...prop
           </LayoutGroup>
         </SidebarContent>
         <SidebarFooter>
+          {resolvedSidebarConfig
+            .filter(
+              (section: SidebarSection) =>
+                section.section.toLowerCase() !== "#$phone",
+            )
+            .flatMap((section: SidebarSection) =>
+              section.items.filter((item: SidebarItem) => (item.position ?? 0) < 0),
+            )
+            .map((item: SidebarItem, idx: number) => (
+              <div key={idx} className="w-full">
+                {item.component ? item.component : null}
+              </div>
+            ))}
           <SidebarMenu>
             <RrUserMenu session={session} />
           </SidebarMenu>
         </SidebarFooter>
+
       </Sidebar>
       {isMobile && (
         <RrBottomDock

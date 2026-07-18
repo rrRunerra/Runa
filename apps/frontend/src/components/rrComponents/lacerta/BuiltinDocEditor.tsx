@@ -130,7 +130,16 @@ export default function BuiltinDocEditor({
           body: formData,
         },
       );
-      if (!res.ok) throw new Error(t("lacerta.builtinDocEditor.saveFailed", "Failed to save document."));
+      if (!res.ok) {
+        let errMsg = t("lacerta.builtinDocEditor.saveFailed", "Failed to save document.");
+        try {
+          const errData = await res.json();
+          if (errData && errData.message) {
+            errMsg = errData.message;
+          }
+        } catch (_) {}
+        throw new Error(errMsg);
+      }
 
       toast.success(t("lacerta.builtinDocEditor.saveSuccess", "Document saved successfully!"));
       setHasChanges(false);

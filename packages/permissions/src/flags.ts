@@ -47,7 +47,7 @@ export const AquilaFlags = defineFlags(
 
 export const PegasusFlags = defineFlags(["VIEW"], 300);
 
-export const LacertaFlags = defineFlags(["VIEW"], 400);
+export const LacertaFlags = defineFlags(["VIEW", "UPLOAD_FILES", "MANAGE_FILES"], 400);
 
 export const AquariusFlags = defineFlags(["VIEW"], 500);
 

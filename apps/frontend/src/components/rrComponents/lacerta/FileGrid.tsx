@@ -58,7 +58,10 @@ interface FileGridProps {
   isSharedTab: boolean;
   onLockEncryption?: () => void;
   onSaveCopy?: (item: RenderFileItem) => void;
+  canUpload?: boolean;
+  canManage?: boolean;
 }
+
 
 type SortField = "name" | "date" | "size";
 type SortOrder = "asc" | "desc";
@@ -80,7 +83,10 @@ export default function FileGrid({
   isSharedTab,
   onLockEncryption,
   onSaveCopy,
+  canUpload = true,
+  canManage = true,
 }: FileGridProps): React.JSX.Element {
+
   const { t } = useTranslation();
   const [search, setSearch] = useState<string>("");
   const [sortField, setSortField] = useState<SortField>("date");
@@ -152,7 +158,9 @@ export default function FileGrid({
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    setIsDragOver(true);
+    if (canUpload) {
+      setIsDragOver(true);
+    }
   };
 
   const handleDragLeave = () => {
@@ -162,7 +170,7 @@ export default function FileGrid({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+    if (canUpload && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       // Mock triggering file input change
       const fakeEvent = {
         target: {
@@ -172,6 +180,7 @@ export default function FileGrid({
       onUploadFile(fakeEvent);
     }
   };
+
 
   const triggerUploadClick = () => {
     fileInputRef.current?.click();
@@ -347,6 +356,7 @@ export default function FileGrid({
             {/* Quick Share (only if 1 item selected and not shared tab and not trash) */}
             {selectedIds.size === 1 &&
               !isSharedTab &&
+              canManage &&
               !selectedItem()?.isTrash && (
                 <button
                   onClick={() => {
@@ -359,6 +369,7 @@ export default function FileGrid({
                   <UserPlus className="h-4 w-4" />
                 </button>
               )}
+
 
             {/* Quick Download (only if 1 file selected and not folder) */}
             {selectedIds.size === 1 && !selectedItem()?.isFolder && (
@@ -375,7 +386,7 @@ export default function FileGrid({
             )}
 
             {/* Move to Vault (only if not shared tab and not trash) */}
-            {!isSharedTab && !hasTrashSelected() && (
+            {!isSharedTab && !hasTrashSelected() && canManage && (
               <button
                 onClick={handleBulkToggleVault}
                 className="p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-all"
@@ -387,21 +398,25 @@ export default function FileGrid({
               </button>
             )}
 
+
             {/* Move to Trash / Restore */}
-            <button
-              onClick={handleBulkToggleTrash}
-              className="p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-all"
-              title={hasTrashSelected() ? t("lacerta.fileGrid.restoreItems", "Restore items") : t("lacerta.fileGrid.sendToTrash", "Send to Trash")}
-            >
-              {hasTrashSelected() ? (
-                <ArrowUpRight className="h-4 w-4" />
-              ) : (
-                <Trash2 className="h-4 w-4" />
-              )}
-            </button>
+            {canManage && (
+              <button
+                onClick={handleBulkToggleTrash}
+                className="p-1.5 hover:bg-neutral-800 rounded-lg text-neutral-400 hover:text-white transition-all"
+                title={hasTrashSelected() ? t("lacerta.fileGrid.restoreItems", "Restore items") : t("lacerta.fileGrid.sendToTrash", "Send to Trash")}
+              >
+                {hasTrashSelected() ? (
+                  <ArrowUpRight className="h-4 w-4" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+              </button>
+            )}
+
 
             {/* Delete Forever (only if items are already in trash) */}
-            {hasTrashSelected() && (
+            {hasTrashSelected() && canManage && (
               <button
                 onClick={handleBulkDelete}
                 className="p-1.5 rounded-lg text-destructive hover:bg-destructive/10 transition-all"
@@ -410,14 +425,16 @@ export default function FileGrid({
                 <Trash2 className="h-4 w-4" />
               </button>
             )}
+
           </div>
         </div>
       )}
 
       {/* Drag & Drop Visual Overlay */}
-      {isDragOver && (
+      {isDragOver && canUpload && (
         <div className="absolute inset-0 bg-primary/10 border-2 border-dashed border-primary m-6 rounded-2xl flex flex-col items-center justify-center backdrop-blur-sm z-50 pointer-events-none">
           <Upload className="h-12 w-12 text-primary animate-bounce mb-3" />
+
           <span className="text-sm font-bold text-foreground">
             {t("lacerta.fileGrid.dragOverTitle", "Drop files to upload encrypted")}
           </span>
@@ -523,113 +540,126 @@ export default function FileGrid({
 
             {!isSharedTab && (
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <button
-                  onClick={triggerUploadClick}
-                  className="p-1 sm:p-2 border border-border hover:bg-muted/10 text-muted-foreground hover:text-foreground rounded-lg transition-all"
-                  title={t("lacerta.fileGrid.uploadFiles", "Upload Files")}
-                >
-                  <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                </button>
-
-                <div className="w-px h-6 bg-border mx-0.5 sm:mx-1" />
-
-                <div className="relative" ref={dropdownRef}>
+                {canUpload && (
                   <button
-                    onClick={() => setIsNewDropdownOpen(!isNewDropdownOpen)}
-                    className="p-1.5 sm:px-3.5 sm:py-1.5 bg-primary hover:bg-primary/95 text-primary-foreground text-xs font-semibold rounded-lg flex items-center gap-1 transition-all shadow-md active:scale-98"
+                    onClick={triggerUploadClick}
+                    className="p-1 sm:p-2 border border-border hover:bg-muted/10 text-muted-foreground hover:text-foreground rounded-lg transition-all"
+                    title={t("lacerta.fileGrid.uploadFiles", "Upload Files")}
                   >
-                    <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    <span className="hidden sm:inline">{t("lacerta.fileGrid.newButton", "New")}</span>
+                    <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                   </button>
+                )}
 
-                  {isNewDropdownOpen && (
-                    <div className="absolute right-0 mt-1.5 w-48 bg-card border border-border rounded-xl shadow-xl py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-100">
-                      <button
-                        onClick={() => {
-                          setIsNewDropdownOpen(false);
-                          handleCreateFolderPrompt();
-                        }}
-                        className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
-                      >
-                        <RrLapplandFolder className="h-5 w-5 text-amber-500 dark:text-amber-400" />
-                        {t("lacerta.fileGrid.newFolder", "New Folder")}
-                      </button>
-                      <div className="h-px bg-border my-1" />
-                      <button
-                        onClick={() => {
-                          setIsNewDropdownOpen(false);
-                          onCreateDoc("note");
-                        }}
-                        className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
-                      >
-                        <RrLapplandTextFile className="h-5 w-5 text-slate-600 dark:text-slate-300" />
-                        {t("lacerta.fileGrid.textFile", "Text File")}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setIsNewDropdownOpen(false);
-                          onCreateDoc("doc");
-                        }}
-                        className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
-                      >
-                        <RrLapplandDocument className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                        {t("lacerta.fileGrid.wordDocument", "Word Document")}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setIsNewDropdownOpen(false);
-                          onCreateDoc("sheet");
-                        }}
-                        className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
-                      >
-                        <RrLapplandSpreadsheet className="h-5 w-5 text-green-600 dark:text-green-400" />
-                        {t("lacerta.fileGrid.spreadsheet", "Spreadsheet")}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setIsNewDropdownOpen(false);
-                          onCreateDoc("canvas");
-                        }}
-                        className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
-                      >
-                        <RrLapplandCanvas className="h-5 w-5 text-violet-600 dark:text-violet-400" />
-                        {t("lacerta.fileGrid.spatialCanvas", "Spatial Canvas")}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setIsNewDropdownOpen(false);
-                          onCreateDoc("slide");
-                        }}
-                        className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
-                      >
-                        <RrLapplandPresentation className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                        {t("lacerta.fileGrid.presentation", "Presentation")}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setIsNewDropdownOpen(false);
-                          onCreateDoc("mermaid");
-                        }}
-                        className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
-                      >
-                        <RrLapplandMermaid className="h-5 w-5 text-teal-600 dark:text-teal-400" />
-                        {t("lacerta.fileGrid.mermaidDiagram", "Mermaid Diagram")}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setIsNewDropdownOpen(false);
-                          onCreateDoc("uml");
-                        }}
-                        className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
-                      >
-                        <RrLapplandUml className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                        {t("lacerta.fileGrid.umlDiagram", "UML Diagram")}
-                      </button>
-                    </div>
-                  )}
-                </div>
+                {canUpload && (canManage || canUpload) && (
+                  <div className="w-px h-6 bg-border mx-0.5 sm:mx-1" />
+                )}
+
+                {(canManage || canUpload) && (
+                  <div className="relative" ref={dropdownRef}>
+                    <button
+                      onClick={() => setIsNewDropdownOpen(!isNewDropdownOpen)}
+                      className="p-1.5 sm:px-3.5 sm:py-1.5 bg-primary hover:bg-primary/95 text-primary-foreground text-xs font-semibold rounded-lg flex items-center gap-1 transition-all shadow-md active:scale-98"
+                    >
+                      <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                      <span className="hidden sm:inline">{t("lacerta.fileGrid.newButton", "New")}</span>
+                    </button>
+
+                    {isNewDropdownOpen && (
+                      <div className="absolute right-0 mt-1.5 w-48 bg-card border border-border rounded-xl shadow-xl py-1.5 z-50 animate-in fade-in slide-in-from-top-1 duration-100">
+                        {canManage && (
+                          <button
+                            onClick={() => {
+                              setIsNewDropdownOpen(false);
+                              handleCreateFolderPrompt();
+                            }}
+                            className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
+                          >
+                            <RrLapplandFolder className="h-5 w-5 text-amber-500 dark:text-amber-400" />
+                            {t("lacerta.fileGrid.newFolder", "New Folder")}
+                          </button>
+                        )}
+                        {canManage && canUpload && <div className="h-px bg-border my-1" />}
+                        {canUpload && (
+                          <>
+                            <button
+                              onClick={() => {
+                                setIsNewDropdownOpen(false);
+                                onCreateDoc("note");
+                              }}
+                              className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
+                            >
+                              <RrLapplandTextFile className="h-5 w-5 text-slate-600 dark:text-slate-300" />
+                              {t("lacerta.fileGrid.textFile", "Text File")}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setIsNewDropdownOpen(false);
+                                onCreateDoc("doc");
+                              }}
+                              className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
+                            >
+                              <RrLapplandDocument className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                              {t("lacerta.fileGrid.wordDocument", "Word Document")}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setIsNewDropdownOpen(false);
+                                onCreateDoc("sheet");
+                              }}
+                              className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
+                            >
+                              <RrLapplandSpreadsheet className="h-5 w-5 text-green-600 dark:text-green-400" />
+                              {t("lacerta.fileGrid.spreadsheet", "Spreadsheet")}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setIsNewDropdownOpen(false);
+                                onCreateDoc("canvas");
+                              }}
+                              className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
+                            >
+                              <RrLapplandCanvas className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                              {t("lacerta.fileGrid.spatialCanvas", "Spatial Canvas")}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setIsNewDropdownOpen(false);
+                                onCreateDoc("slide");
+                              }}
+                              className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
+                            >
+                              <RrLapplandPresentation className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                              {t("lacerta.fileGrid.presentation", "Presentation")}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setIsNewDropdownOpen(false);
+                                onCreateDoc("mermaid");
+                              }}
+                              className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
+                            >
+                              <RrLapplandMermaid className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+                              {t("lacerta.fileGrid.mermaidDiagram", "Mermaid Diagram")}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setIsNewDropdownOpen(false);
+                                onCreateDoc("uml");
+                              }}
+                              className="w-full text-left px-4 py-2 text-xs hover:bg-muted/10 text-foreground flex items-center gap-2 transition-colors"
+                            >
+                              <RrLapplandUml className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                              {t("lacerta.fileGrid.umlDiagram", "UML Diagram")}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
+
           </div>
         </div>
       </div>

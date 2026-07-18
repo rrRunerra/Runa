@@ -4,6 +4,8 @@ import { Folder, Lock, Share2, Trash2, Radio } from "lucide-react";
 import { SidebarConfig } from "@/types/SidebarConfig";
 import { RunaFlags } from "@runa/permissions";
 
+import RrLacertaStorageBar from "@/components/rrComponents/lacerta/RrLacertaStorageBar";
+
 type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 
 export const getLacertaSidebarConfig = (
@@ -99,6 +101,13 @@ export const getLacertaSidebarConfig = (
         icon: <Radio className="h-4 w-4" />,
         preventRedirect: false,
         subtitle: t("lacerta.sidebarDirectSharing"),
+      },
+      {
+        dataKey: "StorageUsageBar",
+        label: t("lacerta.sidebarStorageUsage"),
+        component: <RrLacertaStorageBar />,
+        subtitle: t("lacerta.sidebarStorageUsage"),
+        position: -1,
       },
     ],
   },

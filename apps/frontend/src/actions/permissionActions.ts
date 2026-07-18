@@ -12,7 +12,10 @@ export interface SafeUser {
   displayName: string | null;
   avatarUrl: string | null;
   permissions: number[];
+  lacertaMaxStorage: number;
+  lacertaStorageUsed: number;
 }
+
 
 export interface GetAllUsersResult {
   success: boolean;
@@ -26,6 +29,7 @@ export interface UpdatePermissionsResult {
     id: string;
     username: string;
     permissions: number[];
+    lacertaMaxStorage: number;
   };
   error?: string;
 }
@@ -47,12 +51,35 @@ export async function getAllUsers(): Promise<GetAllUsersResult> {
         displayName: true,
         avatarUrl: true,
         permissions: true,
+        lacertaMaxStorage: true,
       },
       orderBy: {
         username: "asc",
       },
     });
-    return { success: true, users };
+
+    // Group files by user to compute total storage usage
+    const storageUsages = await prisma.laceraFile.groupBy({
+      by: ["userId"],
+      where: {
+        isFolder: false,
+      },
+      _sum: {
+        size: true,
+      },
+    });
+
+    const usageMap = new Map<string, number>(
+      storageUsages.map((item) => [item.userId, item._sum.size ?? 0])
+    );
+
+    const safeUsers: SafeUser[] = users.map((u) => ({
+      ...u,
+      lacertaStorageUsed: usageMap.get(u.id) ?? 0,
+    }));
+
+    return { success: true, users: safeUsers };
+
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Failed to fetch users";
     console.error("Failed to fetch users:", error);
@@ -62,7 +89,8 @@ export async function getAllUsers(): Promise<GetAllUsersResult> {
 
 export async function updateUserPermissions(
   userId: string,
-  newPermissions: number[]
+  newPermissions: number[],
+  lacertaMaxStorage?: number
 ): Promise<UpdatePermissionsResult> {
   const session = await auth();
   if (!session || !hasPermission(session.user.permissions, RunaFlags.ADMINISTRATOR)) {
@@ -75,13 +103,16 @@ export async function updateUserPermissions(
       where: { id: userId },
       data: {
         permissions: newPermissions,
+        lacertaMaxStorage: lacertaMaxStorage !== undefined ? lacertaMaxStorage : undefined,
       },
       select: {
         id: true,
         username: true,
         permissions: true,
+        lacertaMaxStorage: true,
       },
     });
+
 
     // 2. Invalidate cached permissions for the updated user
     const cacheKey = `user:permissions:${userId}`;

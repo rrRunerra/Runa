@@ -23,7 +23,10 @@ interface RrSingleUserEditorProps {
   onReset: () => void;
   isSaving: boolean;
   hasChanges: boolean;
+  editedMaxStorage: number;
+  setEditedMaxStorage: (val: number) => void;
 }
+
 
 export default function RrSingleUserEditor({
   user,
@@ -34,7 +37,10 @@ export default function RrSingleUserEditor({
   onReset,
   isSaving,
   hasChanges,
+  editedMaxStorage,
+  setEditedMaxStorage,
 }: RrSingleUserEditorProps): React.JSX.Element {
+
   const [filterQuery, setFilterQuery] = useState("");
 
   // Filter and compute legacy/unknown permissions
@@ -79,6 +85,24 @@ export default function RrSingleUserEditor({
     }
     return count;
   }, [availableGroups, editedPermissions]);
+
+  const formatBytes = (bytes: number): string => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  };
+
+  const userStorageLimitMb = Math.round(editedMaxStorage / (1024 * 1024));
+
+  const handleStorageLimitChange = (val: string) => {
+    const mb = parseInt(val, 10);
+    if (!isNaN(mb) && mb >= 1) {
+      setEditedMaxStorage(mb * 1024 * 1024);
+    }
+  };
+
 
   return (
     <div className="flex flex-col h-full bg-card border border-border rounded-xl shadow-sm overflow-hidden">
@@ -254,6 +278,43 @@ export default function RrSingleUserEditor({
             </div>
           </div>
         )}
+        {/* Cloud Storage Settings (Lacerta) */}
+        <div className="space-y-3 pt-4 border-t border-border/60">
+          <h3 className="text-xs font-bold text-foreground/80 tracking-wider uppercase pl-1 border-l-2 border-primary/50">
+            Cloud Storage Settings (Lacerta)
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border border-border bg-card rounded-xl">
+            {/* Max Storage Input */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-foreground/80">
+                Storage Limit (MB)
+              </label>
+              <Input
+                type="number"
+                min={1}
+                value={userStorageLimitMb}
+                onChange={(e) => handleStorageLimitChange(e.target.value)}
+                className="h-9 bg-background/50 border-border text-xs rounded-md focus-visible:ring-primary/20 focus-visible:ring-1"
+              />
+              <p className="text-[10px] text-muted-foreground">
+                Current DB Limit: {formatBytes(user.lacertaMaxStorage)}
+              </p>
+            </div>
+
+            {/* Storage Usage Info */}
+            <div className="flex flex-col justify-center space-y-1 p-2 rounded-lg bg-muted/20 border border-border/50">
+              <span className="text-xs font-semibold text-foreground/80">
+                Current Storage Used
+              </span>
+              <p className="text-sm font-bold text-foreground">
+                {formatBytes(user.lacertaStorageUsed)}
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                {((user.lacertaStorageUsed / user.lacertaMaxStorage) * 100).toFixed(1)}% of limit used
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

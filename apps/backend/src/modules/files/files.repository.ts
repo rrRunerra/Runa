@@ -249,4 +249,28 @@ export class FilesRepository {
   async deleteLaceraUpload(fileId: string): Promise<void> {
     await this.prisma.client.laceraUpload.deleteMany({ where: { fileId } });
   }
+
+  async findUserUploadLimits(userId: string) {
+    return this.prisma.client.user.findUnique({
+      where: { id: userId },
+      select: {
+        permissions: true,
+        lacertaMaxStorage: true,
+      },
+    });
+  }
+
+  async getUserStorageUsage(userId: string, excludeFileId?: string): Promise<number> {
+    const aggregate = await this.prisma.client.laceraFile.aggregate({
+      where: {
+        userId,
+        isFolder: false,
+        id: excludeFileId ? { not: excludeFileId } : undefined,
+      },
+      _sum: {
+        size: true,
+      },
+    });
+    return aggregate._sum.size ?? 0;
+  }
 }

@@ -110,22 +110,24 @@ export const authOptions: NextAuthOptions = {
       return baseUrl;
     },
     async jwt({ token, user, trigger, session }) {
-      if (trigger === "update" && session) {
-        if (session.displayName) token.displayName = session.displayName;
-        if (session.avatarUrl || session.avatarUrl === null)
-          token.avatarUrl = session.avatarUrl;
-        if (
-          session.sidebarCardBackgroundUrl ||
-          session.sidebarCardBackgroundUrl === null
-        ) {
-          token.sidebarCardBackgroundUrl = session.sidebarCardBackgroundUrl;
+      if (trigger === "update") {
+        if (session) {
+          if (session.displayName) token.displayName = session.displayName;
+          if (session.avatarUrl || session.avatarUrl === null)
+            token.avatarUrl = session.avatarUrl;
+          if (
+            session.sidebarCardBackgroundUrl ||
+            session.sidebarCardBackgroundUrl === null
+          ) {
+            token.sidebarCardBackgroundUrl = session.sidebarCardBackgroundUrl;
+          }
+          if (session.username) token.username = session.username;
+          if (session.email) token.email = session.email;
+          if (session.permissions) token.permissions = session.permissions;
+          if (session.accessToken) token.accessToken = session.accessToken;
+          if (session.passwordChangedAt)
+            token.passwordChangedAt = session.passwordChangedAt;
         }
-        if (session.username) token.username = session.username;
-        if (session.email) token.email = session.email;
-        if (session.permissions) token.permissions = session.permissions;
-        if (session.accessToken) token.accessToken = session.accessToken;
-        if (session.passwordChangedAt)
-          token.passwordChangedAt = session.passwordChangedAt;
 
         try {
           const { prisma } = await import("@runa/database");

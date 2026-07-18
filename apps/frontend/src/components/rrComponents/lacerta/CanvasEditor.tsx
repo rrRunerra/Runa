@@ -804,10 +804,16 @@ export default function CanvasEditor({
         },
       );
 
-      if (!res.ok)
-        throw new Error(
-          t("lacerta.canvasEditor.saveFailed", "Failed to save canvas."),
-        );
+      if (!res.ok) {
+        let errMsg = t("lacerta.canvasEditor.saveFailed", "Failed to save canvas.");
+        try {
+          const errData = await res.json();
+          if (errData && errData.message) {
+            errMsg = errData.message;
+          }
+        } catch (_) {}
+        throw new Error(errMsg);
+      }
 
       toast.success(
         t("lacerta.canvasEditor.saveSuccess", "Canvas saved successfully!"),
@@ -890,7 +896,14 @@ export default function CanvasEditor({
 
       console.log("saveCanvasSilently: response status:", res.status);
       if (!res.ok) {
-        throw new Error(`Server returned status ${res.status}`);
+        let errMsg = `Server returned status ${res.status}`;
+        try {
+          const errData = await res.json();
+          if (errData && errData.message) {
+            errMsg = errData.message;
+          }
+        } catch (_) {}
+        throw new Error(errMsg);
       }
 
       console.log("saveCanvasSilently successful! Mutating parent...");

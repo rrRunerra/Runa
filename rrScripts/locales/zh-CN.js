@@ -37,6 +37,7 @@ export default {
     "sidebarRecycleBin": "回收站",
     "sidebarLacertaDrop": "Lacerta 传送",
     "sidebarDirectSharing": "直接共享",
+    "sidebarStorageUsage": "存储使用量",
     "encryptionLocked": "加密已锁定",
     "encryptionLockedDesc": "您的数据已加密。请使用下方按钮解锁您的解密密钥",
     "builtinDocEditor": {
@@ -610,7 +611,10 @@ export default {
     "unlockVaultFirst": "请先解锁您的加密存储库以进行保存。",
     "back": "返回",
     "sharedBy": "共享者",
-    "signInToSave": "登录以保存"
+    "signInToSave": "登录以保存",
+    "storageUsageTitle": "存储",
+    "storageBlocked": "已禁用",
+    "storageUsedProgress": "已用 {{used}} / 共 {{limit}}"
   },
   "applications": "应用程序",
   "bookmarks": "书签",

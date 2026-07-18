@@ -362,7 +362,14 @@ export function useLaceraUpload(): UseLaceraUploadReturn {
             );
 
             if (!initResp.ok) {
-              throw new Error("Failed to initialise upload");
+              let errMsg = "Failed to initialise upload";
+              try {
+                const errData = await initResp.json();
+                if (errData && errData.message) {
+                  errMsg = errData.message;
+                }
+              } catch (_) {}
+              throw new Error(errMsg);
             }
 
             const { fileId, uploadId } = (await initResp.json()) as {

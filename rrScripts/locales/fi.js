@@ -610,7 +610,11 @@ export default {
     "unlockVaultFirst": "Avaa holvinsi lukitus ensin tallentaaksesi.",
     "back": "Takaisin",
     "sharedBy": "Jakanut",
-    "signInToSave": "Kirjaudu sisään tallentaaksesi"
+    "signInToSave": "Kirjaudu sisään tallentaaksesi",
+    "sidebarStorageUsage": "Tallennustilan käyttö",
+    "storageUsageTitle": "Tallennustila",
+    "storageBlocked": "Estetty",
+    "storageUsedProgress": "{{used}} / {{limit}}"
   },
   "discordChannels": "Discord-kanavat",
   "discordChannelsDesc": "Lähetä ja vastaanota viestejä reaaliajassa Discord-palvelimillasi ja suoraviesteissä.",

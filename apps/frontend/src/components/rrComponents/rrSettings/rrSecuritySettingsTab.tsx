@@ -801,7 +801,7 @@ export const RrSecuritySettingsTab = ({
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-1 gap-4">
+          <div className="max-h-[180px] overflow-y-auto pr-1 flex flex-col gap-3 no-scrollbar">
             {devices.map((device) => (
               <RrDeviceItem
                 key={device.id}
@@ -810,7 +810,7 @@ export const RrSecuritySettingsTab = ({
               />
             ))}
             {devices.length === 0 && (
-              <div className="col-span-full p-6 text-center rounded-2xl border border-dashed border-border text-xs text-muted-foreground">
+              <div className="p-6 text-center rounded-2xl border border-dashed border-border text-xs text-muted-foreground">
                 {t("securitySettings.noDevices")}
               </div>
             )}

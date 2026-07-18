@@ -610,7 +610,11 @@ export default {
     "unlockVaultFirst": "저장하려면 먼저 암호화를 해제하세요.",
     "back": "뒤로",
     "sharedBy": "공유자",
-    "signInToSave": "로그인하여 저장"
+    "signInToSave": "로그인하여 저장",
+    "sidebarStorageUsage": "스토리지 사용량",
+    "storageUsageTitle": "스토리지",
+    "storageBlocked": "차단됨",
+    "storageUsedProgress": "{{used}} / {{limit}}"
   },
   "applications": "애플리케이션",
   "bookmarks": "북마크",

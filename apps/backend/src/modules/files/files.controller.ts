@@ -25,9 +25,13 @@ import { memoryStorage } from 'multer';
 import type { Response, Request } from 'express';
 
 import { AuthGuard } from '../../common/guards/auth/auth.guard';
+import { PermissionsGuard } from '../../common/guards/permissions.guard';
+import { Permissions } from '../../common/decorators/permissions.decorator';
+import { LacertaFlags } from '@runa/permissions';
 import { Public } from '../../common/decorators/public.decorator';
 import {
   rrBadRequestException,
+
   rrUnauthorizedException,
 } from 'src/providers/error';
 import type { ExtendedRequest } from '../../common/guards/auth/auth.types';
@@ -63,7 +67,7 @@ const ALLOWED_IMAGE_TYPES = new Set([
 ]);
 
 @Controller()
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, PermissionsGuard)
 export class FilesController {
   private readonly moduleCode = 'FsCtr-';
   private readonly logger = new Logger(FilesController.name);
@@ -134,6 +138,7 @@ export class FilesController {
   // ---------------------------------------------------------------------------
 
   @Get('files/lacerta/list')
+  @Permissions([LacertaFlags.VIEW])
   async listLaceraFiles(@Req() req: ExtendedRequest) {
     const userId = req.user?.id;
     if (!userId) {
@@ -145,10 +150,28 @@ export class FilesController {
   }
 
   // ---------------------------------------------------------------------------
+  // GET /files/lacerta/storage-info — authenticated
+  // ---------------------------------------------------------------------------
+
+  @Get('files/lacerta/storage-info')
+  @Permissions([LacertaFlags.VIEW])
+  async getStorageInfo(@Req() req: ExtendedRequest) {
+    const userId = req.user?.id;
+    if (!userId) {
+      throw new rrUnauthorizedException(`${this.moduleCode}UA013`, {
+        message: 'Unauthenticated',
+      });
+    }
+    return this.filesService.getStorageInfo(userId);
+  }
+
+  // ---------------------------------------------------------------------------
   // Secure Vault management endpoints
+
   // ---------------------------------------------------------------------------
 
   @Get('files/lacerta/vault/status')
+  @Permissions([LacertaFlags.VIEW])
   async getVaultStatus(@Req() req: ExtendedRequest) {
     const userId = req.user?.id;
     if (!userId) {
@@ -161,6 +184,7 @@ export class FilesController {
   }
 
   @Post('files/lacerta/vault/setup')
+  @Permissions([LacertaFlags.MANAGE_FILES])
   async setupVaultPin(@Req() req: ExtendedRequest, @Body('pin') pin: string) {
     const userId = req.user?.id;
     if (!userId) {
@@ -178,6 +202,7 @@ export class FilesController {
   }
 
   @Post('files/lacerta/vault/verify')
+  @Permissions([LacertaFlags.VIEW])
   async verifyVaultPin(@Req() req: ExtendedRequest, @Body('pin') pin: string) {
     const userId = req.user?.id;
     if (!userId) {
@@ -195,6 +220,7 @@ export class FilesController {
   }
 
   @Delete('files/lacerta/vault/reset')
+  @Permissions([LacertaFlags.MANAGE_FILES])
   async resetVault(@Req() req: ExtendedRequest) {
     const userId = req.user?.id;
     if (!userId) {
@@ -211,6 +237,7 @@ export class FilesController {
   // ---------------------------------------------------------------------------
 
   @Post('files/lacerta/folder')
+  @Permissions([LacertaFlags.MANAGE_FILES])
   async createLaceraFolder(
     @Body('name') name: string,
     @Body('wrappedKey') wrappedKey: string,
@@ -243,6 +270,7 @@ export class FilesController {
   // ---------------------------------------------------------------------------
 
   @Post('files/lacerta/upload/init')
+  @Permissions([LacertaFlags.UPLOAD_FILES])
   @UseGuards(AuthGuard)
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   async initLaceraMultipartUpload(
@@ -273,6 +301,7 @@ export class FilesController {
   // ---------------------------------------------------------------------------
 
   @Post('files/lacerta/upload/part')
+  @Permissions([LacertaFlags.UPLOAD_FILES])
   @UseGuards(AuthGuard)
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   async uploadLaceraChunk(
@@ -315,6 +344,7 @@ export class FilesController {
   // ---------------------------------------------------------------------------
 
   @Post('files/lacerta/upload/complete')
+  @Permissions([LacertaFlags.UPLOAD_FILES])
   @UseGuards(AuthGuard)
   @UsePipes(new ValidationPipe({ transform: true, whitelist: true }))
   async completeLaceraMultipartUpload(
@@ -339,6 +369,7 @@ export class FilesController {
   // ---------------------------------------------------------------------------
 
   @Delete('files/lacerta/upload/:fileId/abort')
+  @Permissions([LacertaFlags.UPLOAD_FILES])
   @UseGuards(AuthGuard)
   async abortLaceraMultipartUpload(
     @Param('fileId') fileId: string,
@@ -359,6 +390,7 @@ export class FilesController {
   // ---------------------------------------------------------------------------
 
   @Post('files/lacerta/upload')
+  @Permissions([LacertaFlags.UPLOAD_FILES])
   @UseInterceptors(
     FileInterceptor('file', {
       storage: memoryStorage(),
@@ -413,6 +445,7 @@ export class FilesController {
   // ---------------------------------------------------------------------------
 
   @Patch('files/lacerta/:id/metadata')
+  @Permissions([LacertaFlags.MANAGE_FILES])
   async updateLaceraMetadata(
     @Param('id') id: string,
     @Body()
@@ -479,6 +512,7 @@ export class FilesController {
   // ---------------------------------------------------------------------------
 
   @Delete('files/lacerta/:id')
+  @Permissions([LacertaFlags.MANAGE_FILES])
   async deleteLaceraFile(@Param('id') id: string, @Req() req: ExtendedRequest) {
     const userId = req.user?.id;
     if (!userId) {
@@ -495,6 +529,7 @@ export class FilesController {
   // ---------------------------------------------------------------------------
 
   @Post('files/lacerta/:id/share')
+  @Permissions([LacertaFlags.MANAGE_FILES])
   async shareLaceraFile(
     @Param('id') id: string,
     @Body('recipientId') recipientId: string,
@@ -527,6 +562,7 @@ export class FilesController {
   // ---------------------------------------------------------------------------
 
   @Delete('files/lacerta/:id/share/:recipientId')
+  @Permissions([LacertaFlags.MANAGE_FILES])
   async unshareLaceraFile(
     @Param('id') id: string,
     @Param('recipientId') recipientId: string,
@@ -752,6 +788,7 @@ export class FilesController {
   // ---------------------------------------------------------------------------
 
   @Patch('files/lacerta/*path/visibility')
+  @Permissions([LacertaFlags.MANAGE_FILES])
   async toggleLaceraVisibility(
     @Param('path') file: string | string[],
     @Req() req: ExtendedRequest,

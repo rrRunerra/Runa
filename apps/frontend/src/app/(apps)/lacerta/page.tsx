@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import Image from "next/image";
 import { useLaceraUpload } from "@/hooks/useLaceraUpload";
+import { LacertaFlags, hasPermission } from "@runa/permissions";
+
 
 import {
   encrypt,
@@ -24,6 +26,8 @@ import {
 // Import local components
 import FileGrid from "@/components/rrComponents/lacerta/FileGrid";
 import { RrEncryptionLocked } from "@/components/rrComponents/rrEncryptionLocked";
+import RrLapplandUnauthorized from "@/components/rrComponents/rrImages/rrLapplandUnauthorized";
+
 
 import { LacertaTab, UploadQueueTask, DecryptedFileItem, RawFileItem } from "./types";
 export type { LacertaTab };
@@ -526,7 +530,16 @@ export default function LacertaPage({
         },
       );
 
-      if (!res.ok) throw new Error("Failed to create file");
+      if (!res.ok) {
+        let errMsg = "Failed to create file";
+        try {
+          const errData = await res.json();
+          if (errData && errData.message) {
+            errMsg = errData.message;
+          }
+        } catch (_) {}
+        throw new Error(errMsg);
+      }
 
       toast.success(`Created E2EE ${baseName}${ext} successfully!`, { id: createToast });
       mutate();
@@ -1065,6 +1078,31 @@ export default function LacertaPage({
     setIsShareModalOpen(true);
   };
 
+  // Permission checks
+  const userPermissions = session?.user?.permissions;
+  const canView = hasPermission(userPermissions, LacertaFlags.VIEW);
+  const canUpload = hasPermission(userPermissions, LacertaFlags.UPLOAD_FILES);
+  const canManage = hasPermission(userPermissions, LacertaFlags.MANAGE_FILES);
+
+  if (session && !canView) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center bg-background p-6 select-none animate-in fade-in duration-300">
+        <div className="w-full max-w-[320px] sm:max-w-[400px] aspect-square mb-4 drop-shadow-[0_0_15px_rgba(239,68,68,0.07)]">
+          <RrLapplandUnauthorized className="w-full h-full object-contain text-destructive" />
+        </div>
+        <h2 className="text-xl font-bold text-foreground mb-1">
+          {t("lacerta.accessDeniedTitle", "Access Denied")}
+        </h2>
+        <p className="text-sm text-muted-foreground text-center max-w-md">
+          {t(
+            "lacerta.accessDeniedDesc",
+            "You do not have permission to view files in Lacerta. Please contact your system administrator."
+          )}
+        </p>
+      </div>
+    );
+  }
+
   // Locked Landing Page UI
   if (!isEncryptionUnlocked) {
     return (
@@ -1100,7 +1138,10 @@ export default function LacertaPage({
           isSharedTab={currentTab === "shared"}
           onLockEncryption={lockEncryption}
           onSaveCopy={handleSaveCopy}
+          canUpload={canUpload}
+          canManage={canManage}
         />
+
       )}
 
       {/* Modals */}

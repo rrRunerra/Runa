@@ -21,7 +21,9 @@ import {
   rrInternalServerErrorException,
 } from 'src/providers/error';
 
+import { hasPermission, LacertaFlags } from '@runa/permissions';
 import { FilesRepository } from './files.repository';
+
 import type {
   UploadPublicEntity,
   UploadLaceraEntity,
@@ -131,6 +133,7 @@ export class FilesService {
     parentId?: string,
     isVault?: boolean,
   ): Promise<UploadLaceraEntity> {
+    await this.checkUploadPermissionsAndLimit(userId, size);
     const key = `${userId}/${crypto.randomUUID()}`;
 
     try {
@@ -184,6 +187,7 @@ export class FilesService {
     parentId?: string,
     isVault?: boolean,
   ): Promise<{ fileId: string; uploadId: string }> {
+    await this.checkUploadPermissionsAndLimit(userId, totalSize);
     const key = `${userId}/${crypto.randomUUID()}`;
 
     // 1. Start the S3 multipart upload session
@@ -540,6 +544,31 @@ export class FilesService {
       });
     }
 
+    if (userId) {
+      // Check if editor is blocked
+      const editor = await this.filesRepository.findUserUploadLimits(userId);
+      if (editor && !hasPermission(editor.permissions, LacertaFlags.UPLOAD_FILES)) {
+        throw new rrForbiddenException(`${this.moduleCode}UB001`, {
+          message: 'You do not have permission to upload files (blocked by administrator)',
+        });
+      }
+
+      // Check if owner's storage limit is exceeded
+      const owner = await this.filesRepository.findUserUploadLimits(record.userId);
+      if (owner) {
+        const currentUsage = await this.filesRepository.getUserStorageUsage(record.userId, id);
+        if (currentUsage + size > owner.lacertaMaxStorage) {
+          throw new rrForbiddenException(`${this.moduleCode}SLE001`, {
+            message: `Owner's storage limit exceeded. Allowed: ${this.formatBytes(
+              owner.lacertaMaxStorage,
+            )}, trying to upload: ${this.formatBytes(
+              size,
+            )}, currently using: ${this.formatBytes(currentUsage)}`,
+          });
+        }
+      }
+    }
+
     const isOwner = userId ? record.userId === userId : false;
     const shareRecord = userId
       ? record.shares.find((s) => s.userId === userId)
@@ -793,5 +822,69 @@ export class FilesService {
 
     await this.filesRepository.deleteUserVaultFiles(userId);
     await this.filesRepository.updateUserVaultPinHash(userId, null);
+  }
+
+  public async getStorageInfo(userId: string) {
+    const user = await this.filesRepository.findUserUploadLimits(userId);
+    if (!user) {
+      throw new rrNotFoundException(`${this.moduleCode}UNF001`, {
+        message: 'User not found',
+      });
+    }
+
+    const used = await this.filesRepository.getUserStorageUsage(userId);
+    return {
+      used,
+      limit: user.lacertaMaxStorage,
+      blocked: !hasPermission(user.permissions, LacertaFlags.UPLOAD_FILES),
+    };
+  }
+
+  public async getUserStorageUsage(userId: string): Promise<number> {
+    return this.filesRepository.getUserStorageUsage(userId);
+  }
+
+  private async checkUploadPermissionsAndLimit(
+    userId: string,
+    additionalSize: number,
+    excludeFileId?: string,
+  ): Promise<void> {
+    const user = await this.filesRepository.findUserUploadLimits(userId);
+    if (!user) {
+      throw new rrNotFoundException(`${this.moduleCode}UNF002`, {
+        message: 'User not found',
+      });
+    }
+
+    // Check block status via permission flags
+    if (!hasPermission(user.permissions, LacertaFlags.UPLOAD_FILES)) {
+      throw new rrForbiddenException(`${this.moduleCode}UB001`, {
+        message: 'You do not have permission to upload files (blocked by administrator)',
+      });
+    }
+
+    // Check limit
+    const currentUsage = await this.filesRepository.getUserStorageUsage(
+      userId,
+      excludeFileId,
+    );
+
+    if (currentUsage + additionalSize > user.lacertaMaxStorage) {
+      throw new rrForbiddenException(`${this.moduleCode}SLE001`, {
+        message: `Storage limit exceeded. Allowed: ${this.formatBytes(
+          user.lacertaMaxStorage,
+        )}, trying to upload: ${this.formatBytes(
+          additionalSize,
+        )}, currently using: ${this.formatBytes(currentUsage)}`,
+      });
+    }
+  }
+
+  private formatBytes(bytes: number): string {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 }

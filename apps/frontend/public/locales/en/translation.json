@@ -37,6 +37,7 @@
     "sidebarRecycleBin": "Recycle Bin",
     "sidebarLacertaDrop": "Lacerta Drop",
     "sidebarDirectSharing": "Direct Sharing",
+    "sidebarStorageUsage": "Storage Usage",
     "encryptionLocked": "Encryption Locked",
     "encryptionLockedDesc": "Your data is encrypted. Please unlock your decryption keys with button below",
     "builtinDocEditor": {
@@ -610,7 +611,10 @@
     "unlockVaultFirst": "Please unlock your vault first to save.",
     "back": "Back",
     "sharedBy": "Shared by",
-    "signInToSave": "Sign In to Save"
+    "signInToSave": "Sign In to Save",
+    "storageUsageTitle": "Storage",
+    "storageBlocked": "Blocked",
+    "storageUsedProgress": "{{used}} of {{limit}}"
   },
   "applications": "Applications",
   "bookmarks": "Bookmarks",

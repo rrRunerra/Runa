@@ -610,7 +610,11 @@ export default {
     "unlockVaultFirst": "保存するには、まず暗号化を解除してください。",
     "back": "戻る",
     "sharedBy": "共有者",
-    "signInToSave": "サインインして保存"
+    "signInToSave": "サインインして保存",
+    "sidebarStorageUsage": "ストレージ使用量",
+    "storageUsageTitle": "ストレージ",
+    "storageBlocked": "ブロック中",
+    "storageUsedProgress": "{{used}} / {{limit}}"
   },
   "applications": "アプリケーション",
   "bookmarks": "ブックマーク",

@@ -610,7 +610,11 @@
     "unlockVaultFirst": "Odblokuj najpierw swój skarbiec, aby zapisać.",
     "back": "Wstecz",
     "sharedBy": "Udostępnione przez",
-    "signInToSave": "Zaloguj się, aby zapisać"
+    "signInToSave": "Zaloguj się, aby zapisać",
+    "sidebarStorageUsage": "Zużycie pamięci",
+    "storageUsageTitle": "Pamięć",
+    "storageBlocked": "Zablokowany",
+    "storageUsedProgress": "{{used}} z {{limit}}"
   },
   "discordChannels": "Kanały Discord",
   "discordChannelsDesc": "Nadawaj i wchodź w interakcje w czasie rzeczywistym na swoich serwerach Discord i w wiadomościach prywatnych.",

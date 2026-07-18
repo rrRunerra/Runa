@@ -32,6 +32,8 @@ model User {
     laceraFiles              LaceraFile[]
     laceraShares             LaceraShare[]
     vaultPinHash             String?
+    lacertaMaxStorage        Float                  @default(104857600)
+
 
     friends          Friend[]        @relation("UserFriends")
     friendOf         Friend[]        @relation("FriendUsers")

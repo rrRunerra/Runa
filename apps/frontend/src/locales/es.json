@@ -610,7 +610,11 @@
     "unlockVaultFirst": "Por favor, desbloquee su bóveda primero para guardar.",
     "back": "Atrás",
     "sharedBy": "Compartido por",
-    "signInToSave": "Iniciar sesión para guardar"
+    "signInToSave": "Iniciar sesión para guardar",
+    "sidebarStorageUsage": "Uso de almacenamiento",
+    "storageUsageTitle": "Almacenamiento",
+    "storageBlocked": "Bloqueado",
+    "storageUsedProgress": "{{used}} de {{limit}}"
   },
   "discordChannels": "Canales de Discord",
   "discordChannelsDesc": "Transmite e interactúa en tiempo real con tus servidores de Discord y mensajes directos.",

@@ -610,7 +610,11 @@ export default {
     "unlockVaultFirst": "Vennligst lås opp hvelvet ditt først for å lagre.",
     "back": "Tilbake",
     "sharedBy": "Delt av",
-    "signInToSave": "Logg inn for å lagre"
+    "signInToSave": "Logg inn for å lagre",
+    "sidebarStorageUsage": "Lagringsbruk",
+    "storageUsageTitle": "Lagring",
+    "storageBlocked": "Blokkert",
+    "storageUsedProgress": "{{used}} av {{limit}}"
   },
   "discordChannels": "Discord-kanaler",
   "discordChannelsDesc": "Send og motta meldinger i sanntid på Discord-serverne dine og i direktemeldinger.",

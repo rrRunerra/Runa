@@ -150,7 +150,16 @@ export default function BuiltinSheetEditor({
         headers: { Authorization: `Bearer ${accessToken}` },
         body: formData,
       });
-      if (!res.ok) throw new Error(t("lacerta.builtinSheetEditor.saveFailed", "Failed to save spreadsheet."));
+      if (!res.ok) {
+        let errMsg = t("lacerta.builtinSheetEditor.saveFailed", "Failed to save spreadsheet.");
+        try {
+          const errData = await res.json();
+          if (errData && errData.message) {
+            errMsg = errData.message;
+          }
+        } catch (_) {}
+        throw new Error(errMsg);
+      }
 
       toast.success(t("lacerta.builtinSheetEditor.saveSuccess", "Spreadsheet saved successfully!"));
       setHasChanges(false);

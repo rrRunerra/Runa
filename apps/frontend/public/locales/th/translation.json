@@ -610,7 +610,11 @@
     "unlockVaultFirst": "กรุณาปลดล็อกห้องนิรภัยของคุณก่อนเพื่อบันทึก",
     "back": "ย้อนกลับ",
     "sharedBy": "แชร์โดย",
-    "signInToSave": "ลงชื่อเข้าใช้เพื่อบันทึก"
+    "signInToSave": "ลงชื่อเข้าใช้เพื่อบันทึก",
+    "sidebarStorageUsage": "การใช้งานพื้นที่จัดเก็บ",
+    "storageUsageTitle": "พื้นที่จัดเก็บ",
+    "storageBlocked": "ถูกบล็อก",
+    "storageUsedProgress": "{{used}} จาก {{limit}}"
   },
   "discordChannels": "ช่อง Discord",
   "discordChannelsDesc": "สื่อสารและโต้ตอบแบบเรียลไทม์บนเซิร์ฟเวอร์ Discord และข้อความตรง",

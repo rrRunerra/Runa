@@ -610,7 +610,11 @@ export default {
     "unlockVaultFirst": "Bitte entsperren Sie zuerst Ihren Tresor, um zu speichern.",
     "back": "Zurück",
     "sharedBy": "Geteilt von",
-    "signInToSave": "Anmelden zum Speichern"
+    "signInToSave": "Anmelden zum Speichern",
+    "sidebarStorageUsage": "Speichernutzung",
+    "storageUsageTitle": "Speicher",
+    "storageBlocked": "Blockiert",
+    "storageUsedProgress": "{{used}} von {{limit}}"
   },
   "discordChannels": "Discord-Kanäle",
   "discordChannelsDesc": "Sende und empfange Nachrichten in Echtzeit auf deinen Discord-Servern und in Direktnachrichten.",

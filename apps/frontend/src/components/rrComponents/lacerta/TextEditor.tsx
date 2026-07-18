@@ -115,10 +115,16 @@ export default function TextEditor({
           body: formData,
         },
       );
-      if (!res.ok)
-        throw new Error(
-          t("lacerta.textEditor.saveFailed", "Failed to save changes."),
-        );
+      if (!res.ok) {
+        let errMsg = t("lacerta.textEditor.saveFailed", "Failed to save changes.");
+        try {
+          const errData = await res.json();
+          if (errData && errData.message) {
+            errMsg = errData.message;
+          }
+        } catch (_) {}
+        throw new Error(errMsg);
+      }
 
       toast.success(
         t("lacerta.textEditor.saveSuccess", "File saved successfully!"),

@@ -190,7 +190,16 @@ export default function UmlEditor({
             body: formData,
           }
         );
-        if (!res.ok) throw new Error(t("lacerta.umlEditor.saveCopyFailed", "Failed to save copy to server."));
+        if (!res.ok) {
+          let errMsg = t("lacerta.umlEditor.saveCopyFailed", "Failed to save copy to server.");
+          try {
+            const errData = await res.json();
+            if (errData && errData.message) {
+              errMsg = errData.message;
+            }
+          } catch (_) {}
+          throw new Error(errMsg);
+        }
         toast.success(t("lacerta.copySavedSuccess", { name: file.name, defaultValue: "Successfully saved copy of {{name}} to your files!" }));
       } else {
         const res = await fetch(
@@ -201,7 +210,16 @@ export default function UmlEditor({
             body: formData,
           },
         );
-        if (!res.ok) throw new Error(t("lacerta.umlEditor.saveChangesFailed", "Failed to save changes."));
+        if (!res.ok) {
+          let errMsg = t("lacerta.umlEditor.saveChangesFailed", "Failed to save changes.");
+          try {
+            const errData = await res.json();
+            if (errData && errData.message) {
+              errMsg = errData.message;
+            }
+          } catch (_) {}
+          throw new Error(errMsg);
+        }
         toast.success(t("lacerta.umlEditor.saveSuccess", "UML Diagram saved successfully!"));
       }
 

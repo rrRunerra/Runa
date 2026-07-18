@@ -34,7 +34,9 @@ export default function MonocerosPermissionsPage(): React.JSX.Element {
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [activeUserId, setActiveUserId] = useState<string | null>(null);
   const [editedPermissions, setEditedPermissions] = useState<number[]>([]);
+  const [editedMaxStorage, setEditedMaxStorage] = useState<number>(100 * 1024 * 1024);
   const [searchQuery, setSearchQuery] = useState("");
+
 
   // Dynamically resolved permission groups from permissions package
   const availableGroups = useMemo(() => getDynamicPermissionGroups(), []);
@@ -71,11 +73,14 @@ export default function MonocerosPermissionsPage(): React.JSX.Element {
   useEffect(() => {
     if (activeUser) {
       setEditedPermissions([...activeUser.permissions]);
+      setEditedMaxStorage(activeUser.lacertaMaxStorage);
     } else {
       setEditedPermissions([]);
+      setEditedMaxStorage(100 * 1024 * 1024);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeUserId, dbPermissionsString]);
+  }, [activeUserId, dbPermissionsString, activeUser?.lacertaMaxStorage]);
+
 
   // Auth checking and redirects
   useEffect(() => {
@@ -95,7 +100,9 @@ export default function MonocerosPermissionsPage(): React.JSX.Element {
   const handleSelectUser = (user: SafeUser) => {
     setActiveUserId(user.id);
     setEditedPermissions([...user.permissions]);
+    setEditedMaxStorage(user.lacertaMaxStorage);
   };
+
 
   const handleTogglePermission = (flag: bigint) => {
     setEditedPermissions((prev) => togglePermissionInArray(prev, flag));
@@ -122,22 +129,29 @@ export default function MonocerosPermissionsPage(): React.JSX.Element {
     if (!activeUser) return;
 
     startTransition(async () => {
-      const result = await updateUserPermissions(activeUser.id, editedPermissions);
+      const result = await updateUserPermissions(
+        activeUser.id,
+        editedPermissions,
+        editedMaxStorage
+      );
       if (result.success && result.user) {
-        toast.success(`Permissions updated for ${activeUser.username}`);
+        toast.success(`User settings updated for ${activeUser.username}`);
         await mutate();
       } else {
-        toast.error(result.error || "Failed to update permissions");
+        toast.error(result.error || "Failed to update user settings");
       }
     });
   };
 
+
   const handleResetIndividualPermissions = () => {
     if (activeUser) {
       setEditedPermissions([...activeUser.permissions]);
-      toast.info("Permissions reset to database state");
+      setEditedMaxStorage(activeUser.lacertaMaxStorage);
+      toast.info("User settings reset to database state");
     }
   };
+
 
   const handleApplyBatchAction = (
     action: "grant" | "revoke" | "replace",
@@ -160,8 +174,10 @@ export default function MonocerosPermissionsPage(): React.JSX.Element {
   const hasIndividualChanges = useMemo(() => {
     if (!activeUser) return false;
     if (activeUser.permissions.length !== editedPermissions.length) return true;
+    if (activeUser.lacertaMaxStorage !== editedMaxStorage) return true;
     return activeUser.permissions.some((val, i) => val !== editedPermissions[i]);
-  }, [activeUser, editedPermissions]);
+  }, [activeUser, editedPermissions, editedMaxStorage]);
+
 
   const selectedUsers = useMemo(() => {
     return users.filter((u) => selectedUserIds.includes(u.id));
@@ -227,7 +243,10 @@ export default function MonocerosPermissionsPage(): React.JSX.Element {
             onReset={handleResetIndividualPermissions}
             isSaving={isPending}
             hasChanges={hasIndividualChanges}
+            editedMaxStorage={editedMaxStorage}
+            setEditedMaxStorage={setEditedMaxStorage}
           />
+
         ) : (
           <div className="flex flex-col items-center justify-center h-full bg-card border border-border/80 border-dashed rounded-xl p-8 text-center gap-3">
             <Shield className="size-10 text-muted-foreground/30 animate-pulse" />

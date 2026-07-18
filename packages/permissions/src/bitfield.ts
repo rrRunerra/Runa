@@ -1,4 +1,4 @@
-import { PolarisFlags, LynxFlags, AquilaFlags, RunaFlags } from "./flags";
+import { PolarisFlags, LynxFlags, AquilaFlags, RunaFlags, LacertaFlags, PegasusFlags } from "./flags";
 
 export type BitFieldResolvable =
   | bigint
@@ -190,7 +190,12 @@ export class BitField {
 
 export const DEFAULT_PERMISSIONS: readonly number[] = new BitField([
   PolarisFlags.VIEW,
-  RunaFlags.LOGGED_IN
+  RunaFlags.LOGGED_IN,
+  LacertaFlags.VIEW,
+  LacertaFlags.UPLOAD_FILES,
+  LacertaFlags.MANAGE_FILES,
+  PegasusFlags.VIEW,
+  
 ]).serialize();
 
 export function hasPermission(

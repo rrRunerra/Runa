@@ -610,7 +610,11 @@ export default {
     "unlockVaultFirst": "Vui lòng mở khóa kho lưu trữ của bạn trước khi lưu.",
     "back": "Quay lại",
     "sharedBy": "Được chia sẻ bởi",
-    "signInToSave": "Đăng nhập để lưu"
+    "signInToSave": "Đăng nhập để lưu",
+    "sidebarStorageUsage": "Dung lượng sử dụng",
+    "storageUsageTitle": "Bộ nhớ",
+    "storageBlocked": "Bị khóa",
+    "storageUsedProgress": "{{used}} trên {{limit}}"
   },
   "discordChannels": "Kênh Discord",
   "discordChannelsDesc": "Giao tiếp và tương tác thời gian thực trên các máy chủ Discord và tin nhắn trực tiếp.",

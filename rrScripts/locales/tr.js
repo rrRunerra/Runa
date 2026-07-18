@@ -610,7 +610,11 @@ export default {
     "unlockVaultFirst": "Kaydetmek için lütfen önce kasanızı açın.",
     "back": "Geri",
     "sharedBy": "Paylaşan",
-    "signInToSave": "Kaydetmek için Giriş Yapın"
+    "signInToSave": "Kaydetmek için Giriş Yapın",
+    "sidebarStorageUsage": "Depolama Kullanımı",
+    "storageUsageTitle": "Depolama",
+    "storageBlocked": "Engellendi",
+    "storageUsedProgress": "{{used}} / {{limit}}"
   },
   "discordChannels": "Discord Kanalları",
   "discordChannelsDesc": "Discord sunucularınızda ve doğrudan mesajlarda gerçek zamanlı olarak etkileşime geçin.",

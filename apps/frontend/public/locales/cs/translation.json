@@ -610,7 +610,11 @@
     "unlockVaultFirst": "Pro uložení nejprve odemkněte svůj trezor.",
     "back": "Zpět",
     "sharedBy": "Sdílí",
-    "signInToSave": "Přihlaste se pro uložení"
+    "signInToSave": "Přihlaste se pro uložení",
+    "sidebarStorageUsage": "Využití úložiště",
+    "storageUsageTitle": "Úložiště",
+    "storageBlocked": "Blokováno",
+    "storageUsedProgress": "{{used}} z {{limit}}"
   },
   "discordChannels": "Discord kanály",
   "discordChannelsDesc": "Komunikujte v reálném čase na svých Discord serverech a v přímých zprávách.",
