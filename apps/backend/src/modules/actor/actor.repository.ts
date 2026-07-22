@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { ActorDetailEntity, ActorRoleAppearance } from './actor.entities';
 import { rrError } from 'src/providers/error';
+import { Prisma } from '@runa/database';
 
 @Injectable()
 export class ActorRepository {
@@ -143,12 +144,30 @@ export class ActorRepository {
   public async search(query: string): Promise<any[]> {
     this.logger.debug(`Searching actors for query: ${query}`);
     try {
+      const trimmed = query.trim();
+      if (!trimmed) return [];
+
+      const words = trimmed.split(/\s+/).filter(Boolean);
+
+      const whereConditions: Prisma.AquilaActorWhereInput[] = [
+        { name: { contains: trimmed, mode: 'insensitive' } },
+        { personName: { contains: trimmed, mode: 'insensitive' } },
+      ];
+
+      if (words.length > 1) {
+        whereConditions.push({
+          AND: words.map((word) => ({
+            OR: [
+              { name: { contains: word, mode: 'insensitive' } },
+              { personName: { contains: word, mode: 'insensitive' } },
+            ],
+          })),
+        });
+      }
+
       const data = await this.prisma.client.aquilaActor.findMany({
         where: {
-          OR: [
-            { name: { contains: query, mode: 'insensitive' } },
-            { personName: { contains: query, mode: 'insensitive' } },
-          ],
+          OR: whereConditions,
         },
         take: 30,
       });

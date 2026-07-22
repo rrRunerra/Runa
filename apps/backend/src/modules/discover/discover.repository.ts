@@ -837,12 +837,31 @@ export class DiscoverRepository {
 
     if (search) {
       const searchStr = search.trim();
-      where.OR = [
+      const words = searchStr.split(/\s+/).filter(Boolean);
+
+      const searchConditions: Prisma.AquilaCharacterWhereInput[] = [
         { nameFirst: { contains: searchStr, mode: 'insensitive' } },
         { nameMiddle: { contains: searchStr, mode: 'insensitive' } },
         { nameLast: { contains: searchStr, mode: 'insensitive' } },
         { nameNative: { contains: searchStr, mode: 'insensitive' } },
+        { nameAlternative: { hasSome: [searchStr] } },
       ];
+
+      if (words.length > 1) {
+        searchConditions.push({
+          AND: words.map((word) => ({
+            OR: [
+              { nameFirst: { contains: word, mode: 'insensitive' } },
+              { nameMiddle: { contains: word, mode: 'insensitive' } },
+              { nameLast: { contains: word, mode: 'insensitive' } },
+              { nameNative: { contains: word, mode: 'insensitive' } },
+              { nameAlternative: { hasSome: [word] } },
+            ],
+          })),
+        });
+      }
+
+      where.OR = searchConditions;
     }
 
     const [data, totalCount] = await Promise.all([
@@ -878,10 +897,25 @@ export class DiscoverRepository {
 
     if (search) {
       const searchStr = search.trim();
-      where.OR = [
+      const words = searchStr.split(/\s+/).filter(Boolean);
+
+      const searchConditions: Prisma.AquilaActorWhereInput[] = [
         { name: { contains: searchStr, mode: 'insensitive' } },
         { personName: { contains: searchStr, mode: 'insensitive' } },
       ];
+
+      if (words.length > 1) {
+        searchConditions.push({
+          AND: words.map((word) => ({
+            OR: [
+              { name: { contains: word, mode: 'insensitive' } },
+              { personName: { contains: word, mode: 'insensitive' } },
+            ],
+          })),
+        });
+      }
+
+      where.OR = searchConditions;
     }
 
     const [data, totalCount] = await Promise.all([

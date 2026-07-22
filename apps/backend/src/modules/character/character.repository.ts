@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { CharacterDetailEntity, CharacterMediaAppearance } from './character.entities';
 import { rrError } from 'src/providers/error';
+import { Prisma } from '@runa/database';
 
 @Injectable()
 export class CharacterRepository {
@@ -140,14 +141,36 @@ export class CharacterRepository {
   public async search(query: string): Promise<any[]> {
     this.logger.debug(`Searching characters for query: ${query}`);
     try {
+      const trimmed = query.trim();
+      if (!trimmed) return [];
+
+      const words = trimmed.split(/\s+/).filter(Boolean);
+
+      const whereConditions: Prisma.AquilaCharacterWhereInput[] = [
+        { nameFirst: { contains: trimmed, mode: 'insensitive' } },
+        { nameMiddle: { contains: trimmed, mode: 'insensitive' } },
+        { nameLast: { contains: trimmed, mode: 'insensitive' } },
+        { nameNative: { contains: trimmed, mode: 'insensitive' } },
+        { nameAlternative: { hasSome: [trimmed] } },
+      ];
+
+      if (words.length > 1) {
+        whereConditions.push({
+          AND: words.map((word) => ({
+            OR: [
+              { nameFirst: { contains: word, mode: 'insensitive' } },
+              { nameMiddle: { contains: word, mode: 'insensitive' } },
+              { nameLast: { contains: word, mode: 'insensitive' } },
+              { nameNative: { contains: word, mode: 'insensitive' } },
+              { nameAlternative: { hasSome: [word] } },
+            ],
+          })),
+        });
+      }
+
       const data = await this.prisma.client.aquilaCharacter.findMany({
         where: {
-          OR: [
-            { nameFirst: { contains: query, mode: 'insensitive' } },
-            { nameMiddle: { contains: query, mode: 'insensitive' } },
-            { nameLast: { contains: query, mode: 'insensitive' } },
-            { nameNative: { contains: query, mode: 'insensitive' } },
-          ],
+          OR: whereConditions,
         },
         take: 30,
       });

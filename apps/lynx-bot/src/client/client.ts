@@ -74,20 +74,8 @@ export class LynxClient extends Client {
   }
 
   public override async login() {
-    let token: string;
-    switch (this.mode) {
-      case "development": {
-        token = process.env.DEV_LYNX_TOKEN!;
-        break;
-      }
-      case "production": {
-        token = process.env.PROD_LYNX_TOKEN!;
-        break;
-      }
-      default: {
-        throw new Error("Invalid mode");
-      }
-    }
+    
+    const token = process.env.LYNX_TOKEN
 
     if (!token) throw new Error("No token provided");
 

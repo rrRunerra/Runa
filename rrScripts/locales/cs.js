@@ -1271,7 +1271,9 @@ export default {
     "privateMovieList": "Soukromý seznam filmů",
     "privateMovieListDesc": "Skryje položky vašeho seznamu filmů před ostatními uživateli na vaší profilové stránce.",
     "privateConnections": "Soukromá připojení",
-    "privateConnectionsDesc": "Skryje všechna vaše propojená připojení/integrace třetích stran z vašeho veřejného profilu."
+    "privateConnectionsDesc": "Skryje všechna vaše propojená připojení/integrace třetích stran z vašeho veřejného profilu.",
+    "privateFriends": "Soukromý seznam přátel",
+    "privateFriendsDesc": "Skryje váš seznam přátel z vašeho veřejného profilu."
   },
   "settingsDialog": {
     "title": "Nastavení",

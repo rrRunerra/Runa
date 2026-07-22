@@ -209,9 +209,9 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
                         : "text-foreground",
                     )}
                   >
-                    {session.user?.username}
+                    {session.user.displayName ?? session.user?.username}
                   </span>
-                  <span
+                  {/* <span
                     className={cn(
                       "truncate text-xs",
                       session.user?.sidebarCardBackgroundUrl
@@ -220,7 +220,7 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
                     )}
                   >
                     {session.user?.email}
-                  </span>
+                  </span> */}
                 </div>
 
                 <ChevronsUpDown className="ml-auto" />

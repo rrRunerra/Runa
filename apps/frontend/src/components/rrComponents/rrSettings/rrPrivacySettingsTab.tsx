@@ -264,7 +264,7 @@ export const RrPrivacySettingsTab = ({
                 className="text-sm font-medium text-foreground cursor-pointer"
                 htmlFor="friends-private"
               >
-                {t("polaris.user.friendPrivacyOption")}
+                {t("privacy.privateFriends", t("polaris.user.friendPrivacyOption"))}
               </Label>
               <p className="text-xs text-muted-foreground">
                 {t("privacy.privateFriendsDesc", "Hide your friends list from your public profile.")}
