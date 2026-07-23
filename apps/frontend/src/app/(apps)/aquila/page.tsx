@@ -100,6 +100,7 @@ export default function AquilaHome(): React.JSX.Element {
       }
     >
   >({});
+  const inFlightKeysRef = useRef<Set<string>>(new Set());
 
   // Fetch watching list using standard SWR hook
   const {
@@ -171,13 +172,17 @@ export default function AquilaHome(): React.JSX.Element {
 
     if (updatingId === key) return;
 
-    // Optimistic Update of local SWR cache
+    // Optimistic Update: Update progress in place without modifying last_updated or re-sorting
     const updatedWatching = watching.map((i) => {
-      if (i.id === item.id && i.format === item.format) {
-        return { ...i, progress: (i.progress || 0) + 1 };
+      if (String(i.id) === String(item.id) && i.type === item.type) {
+        return {
+          ...i,
+          progress: (i.progress || 0) + 1,
+        };
       }
       return i;
     });
+
     mutate(updatedWatching, false);
 
     if (!pendingIncrementsRef.current[key]) {
@@ -198,6 +203,7 @@ export default function AquilaHome(): React.JSX.Element {
     pending.timeoutId = setTimeout(async () => {
       const { count } = pending;
       delete pendingIncrementsRef.current[key];
+      inFlightKeysRef.current.add(key);
       setUpdatingId(key);
 
       try {
@@ -217,20 +223,24 @@ export default function AquilaHome(): React.JSX.Element {
           const result = await res.json();
           if (result.success) {
             toast.success(t("aquila.progressUpdated", "Progress updated for {{title}}", { title: item.title }));
-            mutate();
           } else {
             toast.error(result.message);
-            mutate();
           }
         } else {
           toast.error(t("aquila.failedUpdateProgress", "Failed to update progress"));
-          mutate();
         }
       } catch (e) {
         toast.error(t("aquila.errorOccurred", "An error occurred"));
-        mutate();
       } finally {
+        inFlightKeysRef.current.delete(key);
         setUpdatingId(null);
+        // Only trigger server revalidation if no pending or in-flight requests remain
+        if (
+          Object.keys(pendingIncrementsRef.current).length === 0 &&
+          inFlightKeysRef.current.size === 0
+        ) {
+          mutate();
+        }
       }
     }, 1000);
   };

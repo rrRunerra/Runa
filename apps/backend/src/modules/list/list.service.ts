@@ -2516,9 +2516,11 @@ export class ListService {
       });
     });
 
-    return watchingList.sort(
-      (a, b) => b.last_updated.getTime() - a.last_updated.getTime(),
-    );
+    return watchingList.sort((a, b) => {
+      const diff = b.last_updated.getTime() - a.last_updated.getTime();
+      if (diff !== 0) return diff;
+      return String(b.id).localeCompare(String(a.id));
+    });
   }
 
   public async incrementProgress(
@@ -2793,15 +2795,14 @@ export class ListService {
       const totalWatched = entry.watchedEpisodes.length + nextEps.length;
       const isCompleted = totalWatched >= totalEpisodes;
 
-      if (isCompleted) {
-        await this.prisma.client.aquilaTvUserList.update({
-          where: { id: entry.id },
-          data: {
-            status: $Enums.TvListStatus.COMPLETED,
-            endDate: Math.floor(Date.now() / 1000),
-          },
-        });
-      }
+      await this.prisma.client.aquilaTvUserList.update({
+        where: { id: entry.id },
+        data: {
+          updatedAt: new Date(),
+          status: isCompleted ? $Enums.TvListStatus.COMPLETED : entry.status,
+          endDate: isCompleted ? Math.floor(Date.now() / 1000) : entry.endDate,
+        },
+      });
 
       if (entry.connections && typeof entry.connections === 'object') {
         await this.updateTvConnections(

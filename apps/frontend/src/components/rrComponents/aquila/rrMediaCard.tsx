@@ -25,7 +25,7 @@ export interface RrMediaCardProps {
   item: MediaItem;
   href: string;
   isOwner?: boolean;
-  onIncrement?: () => void;
+  onIncrement?: (item?: MediaItem) => void;
   isUpdating?: boolean;
   onRefresh?: () => void;
   showProgress?: boolean;
@@ -203,7 +203,7 @@ const RrMediaCardComponent = ({
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  onIncrement();
+                  onIncrement?.(item);
                 }}
                 onTouchStart={(e) => e.stopPropagation()}
                 onMouseDown={(e) => e.stopPropagation()}
@@ -304,25 +304,4 @@ const RrMediaCardComponent = ({
   );
 };
 
-export const RrMediaCard = memo(
-  RrMediaCardComponent,
-  (prevProps, nextProps) => {
-    return (
-      prevProps.isUpdating === nextProps.isUpdating &&
-      prevProps.isOwner === nextProps.isOwner &&
-      prevProps.showProgress === nextProps.showProgress &&
-      prevProps.showScore === nextProps.showScore &&
-      prevProps.score === nextProps.score &&
-      prevProps.href === nextProps.href &&
-      prevProps.item.id === nextProps.item.id &&
-      prevProps.item.progress === nextProps.item.progress &&
-      prevProps.item.image === nextProps.item.image &&
-      prevProps.item.title === nextProps.item.title &&
-      prevProps.item.episodes === nextProps.item.episodes &&
-      prevProps.item.type === nextProps.item.type &&
-      prevProps.item.status === nextProps.item.status &&
-      prevProps.item.meta?.season === nextProps.item.meta?.season &&
-      prevProps.item.meta?.episode === nextProps.item.meta?.episode
-    );
-  },
-);
+export const RrMediaCard = memo(RrMediaCardComponent);
