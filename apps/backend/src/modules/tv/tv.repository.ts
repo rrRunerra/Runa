@@ -104,6 +104,15 @@ export class TvRepository {
     tvdbId: number,
     data: Prisma.AquilaTvCreateInput,
   ): Promise<any> {
+    const existing = await this.prisma.client.aquilaTv.findUnique({
+      where: { tvdbId },
+      select: { id: true, locked: true },
+    });
+
+    if (existing?.locked) {
+      return existing;
+    }
+
     return this.prisma.client.aquilaTv.upsert({
       where: { tvdbId },
       update: data,

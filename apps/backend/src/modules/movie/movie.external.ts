@@ -56,7 +56,10 @@ export class MovieExternal {
     return res.json() as Promise<T>;
   }
 
-  public async fetchAndUpsertMovie(tvdbId: number): Promise<void> {
+  public async fetchAndUpsertMovie(
+    tvdbId: number,
+    force = false,
+  ): Promise<void> {
     try {
       const [movieData, transData] = await Promise.all([
         this.tvdbFetch<TvdbMovieResponse>(
@@ -73,7 +76,7 @@ export class MovieExternal {
         });
       }
 
-      await this.upsertMovie(movieData.data, transData.data);
+      await this.upsertMovie(movieData.data, transData.data, force);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(
@@ -101,33 +104,49 @@ export class MovieExternal {
           const tvdbId = parseInt(item.tvdb_id);
           if (isNaN(tvdbId)) return null;
 
-          const movie = await this.prisma.client.aquilaMovie.upsert({
+          const existing = await this.prisma.client.aquilaMovie.findUnique({
             where: { tvdbId },
-            update: {
-              titleEnglish: item.translations?.eng || item.name,
-              titleRomaji: item.name,
-              titleNative: item.name,
-              coverImage: item.image || item.thumbnail,
-              status: item.status || null,
-            },
-            create: {
-              tvdbId,
-              titleEnglish: item.translations?.eng || item.name,
-              titleRomaji: item.name,
-              titleNative: item.name,
-              coverImage: item.image || item.thumbnail,
-              status: item.status || null,
-            },
             select: {
               id: true,
               titleEnglish: true,
               titleRomaji: true,
-              titleNative: true,
               coverImage: true,
+              locked: true,
             },
           });
 
-          this.queueFetch(tvdbId);
+          let movie = existing;
+          if (!existing?.locked) {
+            movie = await this.prisma.client.aquilaMovie.upsert({
+              where: { tvdbId },
+              update: {
+                titleEnglish: item.translations?.eng || item.name,
+                titleRomaji: item.name,
+                titleNative: item.name,
+                coverImage: item.image || item.thumbnail,
+                status: item.status || null,
+              },
+              create: {
+                tvdbId,
+                titleEnglish: item.translations?.eng || item.name,
+                titleRomaji: item.name,
+                titleNative: item.name,
+                coverImage: item.image || item.thumbnail,
+                status: item.status || null,
+              },
+              select: {
+                id: true,
+                titleEnglish: true,
+                titleRomaji: true,
+                coverImage: true,
+                locked: true,
+              },
+            });
+
+            this.queueFetch(tvdbId);
+          }
+
+          if (!movie) return null;
 
           return {
             id: movie.id,
@@ -164,13 +183,14 @@ export class MovieExternal {
   private async upsertMovie(
     movie: TvdbMovieExtended,
     translation: { name?: string; overview?: string } | null,
+    force = false,
   ): Promise<void> {
     const existing = await this.prisma.client.aquilaMovie.findUnique({
       where: { tvdbId: movie.id },
       select: { locked: true },
     });
 
-    if (existing?.locked) {
+    if (existing?.locked && !force) {
       this.logger.debug(
         `Movie with TVDB ID ${movie.id} is locked, skipping upsert`,
       );

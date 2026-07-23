@@ -1,4 +1,4 @@
-import { Controller, Param, UseGuards, Get, Post } from '@nestjs/common';
+import { Controller, Param, UseGuards, Get, Post, Query } from '@nestjs/common';
 import { TvService } from './tv.service';
 import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { Public } from 'src/common/decorators/public.decorator';
@@ -23,15 +23,23 @@ export class TvController {
 
   @Public()
   @Get(':id')
-  async tvDetail(@Param() params: TvDetailDto): Promise<TvEntity | undefined> {
-    return await this.tvService.getTv(params.id);
+  async getTv(
+    @Param() params: TvDetailDto | any,
+  ): Promise<TvEntity | undefined> {
+    const id = typeof params === 'object' && params !== null && 'id' in params ? params.id : params;
+    return await this.tvService.getTv(id);
   }
 
   @Post(':id/refresh')
   @Permissions([AquilaFlags.MEDIA_REFRESH])
   async refreshTv(
     @Param() params: TvRefreshDto,
+    @Query('force') forceQuery?: string,
   ): Promise<TvEntity | undefined | null> {
-    return await this.tvService.refreshTv(params.id);
+    const force = forceQuery === 'true' || forceQuery === '1';
+    return await this.tvService.refreshTv(
+      params.id,
+      ...(forceQuery !== undefined ? [force] : []),
+    );
   }
 }

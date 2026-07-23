@@ -1,4 +1,4 @@
-import { Controller, Param, UseGuards, Get, Post } from '@nestjs/common';
+import { Controller, Param, UseGuards, Get, Post, Query } from '@nestjs/common';
 import { GameService } from './game.service';
 import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { Public } from 'src/common/decorators/public.decorator';
@@ -23,17 +23,23 @@ export class GameController {
 
   @Public()
   @Get(':id')
-  async gameDetail(
-    @Param() params: GameDetailDto,
+  async getGame(
+    @Param() params: GameDetailDto | any,
   ): Promise<GameEntity | undefined> {
-    return await this.gameService.getGame(params.id);
+    const id = typeof params === 'object' && params !== null && 'id' in params ? Number(params.id) : Number(params);
+    return await this.gameService.getGame(id);
   }
 
   @Post(':id/refresh')
   @Permissions([AquilaFlags.MEDIA_REFRESH])
   async refreshGame(
     @Param() params: GameRefreshDto,
+    @Query('force') forceQuery?: string,
   ): Promise<GameEntity | undefined | null> {
-    return await this.gameService.refreshGame(params.id);
+    const force = forceQuery === 'true' || forceQuery === '1';
+    return await this.gameService.refreshGame(
+      params.id,
+      ...(forceQuery !== undefined ? [force] : []),
+    );
   }
 }

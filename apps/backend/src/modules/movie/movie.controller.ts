@@ -1,4 +1,4 @@
-import { Controller, Param, UseGuards, Get, Post } from '@nestjs/common';
+import { Controller, Param, UseGuards, Get, Post, Query } from '@nestjs/common';
 import { MovieService } from './movie.service';
 import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { Public } from 'src/common/decorators/public.decorator';
@@ -23,17 +23,23 @@ export class MovieController {
 
   @Public()
   @Get(':id')
-  async movieDetail(
-    @Param() params: MovieDetailDto,
+  async getMovie(
+    @Param() params: MovieDetailDto | any,
   ): Promise<MovieEntity | undefined> {
-    return await this.movieService.getMovie(params.id);
+    const id = typeof params === 'object' && params !== null && 'id' in params ? params.id : params;
+    return await this.movieService.getMovie(id);
   }
 
   @Post(':id/refresh')
   @Permissions([AquilaFlags.MEDIA_REFRESH])
   async refreshMovie(
     @Param() params: MovieRefreshDto,
+    @Query('force') forceQuery?: string,
   ): Promise<MovieEntity | undefined | null> {
-    return await this.movieService.refreshMovie(params.id);
+    const force = forceQuery === 'true' || forceQuery === '1';
+    return await this.movieService.refreshMovie(
+      params.id,
+      ...(forceQuery !== undefined ? [force] : []),
+    );
   }
 }

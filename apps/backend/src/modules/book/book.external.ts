@@ -136,35 +136,46 @@ export class BookExternal {
           const coverImage = this.selectCoverImage(info.imageLinks);
           const { publishedYear } = this.parsePublishedDate(info.publishedDate);
 
-          const book = await this.prisma.client.aquilaBook.upsert({
+          const existing = await this.prisma.client.aquilaBook.findUnique({
             where: { googleBookId },
-            update: {
-              titleString: info.title || null,
-              subtitle: info.subtitle || null,
-              coverImage,
-              authors: info.authors || [],
-              publisher: info.publisher || null,
-              publishedDate: info.publishedDate || null,
-              publishedYear,
-            },
-            create: {
-              googleBookId,
-              titleString: info.title || null,
-              subtitle: info.subtitle || null,
-              coverImage,
-              authors: info.authors || [],
-              publisher: info.publisher || null,
-              publishedDate: info.publishedDate || null,
-              publishedYear,
-            },
-            select: {
-              id: true,
-              titleString: true,
-              coverImage: true,
-            },
+            select: { id: true, titleString: true, coverImage: true, locked: true },
           });
 
-          this.queueFetch(googleBookId);
+          let book = existing;
+          if (!existing?.locked) {
+            book = await this.prisma.client.aquilaBook.upsert({
+              where: { googleBookId },
+              update: {
+                titleString: info.title || null,
+                subtitle: info.subtitle || null,
+                coverImage,
+                authors: info.authors || [],
+                publisher: info.publisher || null,
+                publishedDate: info.publishedDate || null,
+                publishedYear,
+              },
+              create: {
+                googleBookId,
+                titleString: info.title || null,
+                subtitle: info.subtitle || null,
+                coverImage,
+                authors: info.authors || [],
+                publisher: info.publisher || null,
+                publishedDate: info.publishedDate || null,
+                publishedYear,
+              },
+              select: {
+                id: true,
+                titleString: true,
+                coverImage: true,
+                locked: true,
+              },
+            });
+
+            this.queueFetch(googleBookId);
+          }
+
+          if (!book) return null;
 
           return {
             id: book.id,
@@ -192,7 +203,10 @@ export class BookExternal {
     }
   }
 
-  public async fetchAndUpsertBook(googleBookId: string): Promise<void> {
+  public async fetchAndUpsertBook(
+    googleBookId: string,
+    force = false,
+  ): Promise<void> {
     try {
       const data = await this.gbooksFetch<GbooksVolume>(
         `${this.baseUrl}/volumes/${googleBookId}`,
@@ -204,7 +218,7 @@ export class BookExternal {
         });
       }
 
-      await this.upsertBook(data);
+      await this.upsertBook(data, force);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(
@@ -224,13 +238,13 @@ export class BookExternal {
     );
   }
 
-  private async upsertBook(volume: GbooksVolume): Promise<void> {
+  private async upsertBook(volume: GbooksVolume, force = false): Promise<void> {
     const existing = await this.prisma.client.aquilaBook.findUnique({
       where: { googleBookId: volume.id },
       select: { locked: true },
     });
 
-    if (existing?.locked) {
+    if (existing?.locked && !force) {
       this.logger.debug(
         `Book with Google Book ID ${volume.id} is locked, skipping upsert`,
       );

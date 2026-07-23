@@ -1,4 +1,4 @@
-import { Controller, Get, Param, UseGuards, Post } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards, Post, Query } from '@nestjs/common';
 import { MangaService } from './manga.service';
 import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { Public } from 'src/common/decorators/public.decorator';
@@ -30,7 +30,12 @@ export class MangaController {
   @Permissions([AquilaFlags.MEDIA_REFRESH])
   async refreshAnime(
     @Param() params: MangaRefreshDto,
+    @Query('force') forceQuery?: string,
   ): Promise<MangaEntity | undefined | null> {
-    return await this.mangaService.refreshManga(params.id);
+    const force = forceQuery === 'true' || forceQuery === '1';
+    return await this.mangaService.refreshManga(
+      params.id,
+      ...(forceQuery !== undefined ? [force] : []),
+    );
   }
 }

@@ -104,6 +104,15 @@ export class MangaRepository {
       coverImageLarge?: string | null;
     },
   ): Promise<any> {
+    const existing = await this.prisma.client.aquilaManga.findUnique({
+      where: { anilistId },
+      select: { id: true, locked: true },
+    });
+
+    if (existing?.locked) {
+      return existing;
+    }
+
     return this.prisma.client.aquilaManga.upsert({
       where: { anilistId },
       update: {},

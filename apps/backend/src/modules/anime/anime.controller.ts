@@ -1,4 +1,4 @@
-import { Controller, Param, UseGuards, Get, Post } from '@nestjs/common';
+import { Controller, Param, UseGuards, Get, Post, Query } from '@nestjs/common';
 import { AnimeService } from './anime.service';
 import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { Public } from 'src/common/decorators/public.decorator';
@@ -33,7 +33,12 @@ export class AnimeController {
   @Permissions([AquilaFlags.MEDIA_REFRESH])
   async refreshAnime(
     @Param() params: AnimeRefreshDto,
+    @Query('force') forceQuery?: string,
   ): Promise<AnimeEntity | undefined | null> {
-    return await this.animeService.refreshAnime(params.id);
+    const force = forceQuery === 'true' || forceQuery === '1';
+    return await this.animeService.refreshAnime(
+      params.id,
+      ...(forceQuery !== undefined ? [force] : []),
+    );
   }
 }

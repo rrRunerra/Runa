@@ -2,8 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { MovieService } from './movie.service';
 import { PrismaService } from '../../providers/database/prisma.service';
-import { MovieRepository } from './repositories/movie.repository';
-import { MovieQueueService } from './services/movie-queue.service';
+import { MovieRepository } from './movie.repository';
+import { MovieQueueService } from './movie-queue.service';
+import { CacheService } from 'src/providers/cache/cache.service';
+import { MovieExternal } from './movie.external';
 
 describe('MovieService', () => {
   let service: MovieService;
@@ -22,6 +24,17 @@ describe('MovieService', () => {
     addJob: jest.fn(),
   };
 
+  const mockCacheService = {
+    get: jest.fn(),
+    set: jest.fn(),
+    del: jest.fn(),
+  };
+
+  const mockMovieExternal = {
+    search: jest.fn(),
+    fetchAndUpsertMovie: jest.fn(),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
     global.fetch = jest.fn();
@@ -33,6 +46,8 @@ describe('MovieService', () => {
         { provide: PrismaService, useValue: mockPrisma },
         { provide: MovieRepository, useValue: mockMovieRepository },
         { provide: MovieQueueService, useValue: mockMovieQueueService },
+        { provide: CacheService, useValue: mockCacheService },
+        { provide: MovieExternal, useValue: mockMovieExternal },
       ],
     }).compile();
 

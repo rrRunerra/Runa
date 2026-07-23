@@ -108,6 +108,15 @@ export class MovieRepository {
     tvdbId: number,
     data: Prisma.AquilaMovieCreateInput,
   ): Promise<any> {
+    const existing = await this.prisma.client.aquilaMovie.findUnique({
+      where: { tvdbId },
+      select: { id: true, locked: true },
+    });
+
+    if (existing?.locked) {
+      return existing;
+    }
+
     return this.prisma.client.aquilaMovie.upsert({
       where: { tvdbId },
       update: data,

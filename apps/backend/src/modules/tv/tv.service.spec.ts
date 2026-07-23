@@ -2,8 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { TvService } from './tv.service';
 import { PrismaService } from '../../providers/database/prisma.service';
-import { TvRepository } from './repositories/tv.repository';
-import { TvQueueService } from './services/tv-queue.service';
+import { TvRepository } from './tv.repository';
+import { TvQueueService } from './tv-queue.service';
+import { CacheService } from 'src/providers/cache/cache.service';
+import { TvExternal } from './tv.external';
 
 describe('TvService', () => {
   let service: TvService;
@@ -22,6 +24,17 @@ describe('TvService', () => {
     addJob: jest.fn(),
   };
 
+  const mockCacheService = {
+    get: jest.fn(),
+    set: jest.fn(),
+    del: jest.fn(),
+  };
+
+  const mockTvExternal = {
+    search: jest.fn(),
+    fetchAndUpsertTv: jest.fn(),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
     global.fetch = jest.fn();
@@ -33,6 +46,8 @@ describe('TvService', () => {
         { provide: PrismaService, useValue: mockPrisma },
         { provide: TvRepository, useValue: mockTvRepository },
         { provide: TvQueueService, useValue: mockTvQueueService },
+        { provide: CacheService, useValue: mockCacheService },
+        { provide: TvExternal, useValue: mockTvExternal },
       ],
     }).compile();
 

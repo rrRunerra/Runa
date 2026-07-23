@@ -96,6 +96,15 @@ export class BookRepository {
     googleBookId: string,
     data: Prisma.AquilaBookCreateInput,
   ): Promise<Prisma.AquilaBookGetPayload<object>> {
+    const existing = await this.prisma.client.aquilaBook.findUnique({
+      where: { googleBookId },
+      select: { id: true, locked: true },
+    });
+
+    if (existing?.locked) {
+      return existing as Prisma.AquilaBookGetPayload<object>;
+    }
+
     return this.prisma.client.aquilaBook.upsert({
       where: { googleBookId },
       update: data,

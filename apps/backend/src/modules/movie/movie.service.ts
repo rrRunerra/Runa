@@ -108,6 +108,7 @@ export class MovieService {
 
   public async refreshMovie(
     id: number,
+    force = false,
   ): Promise<MovieEntity | undefined | null> {
     if (isNaN(id)) {
       throw new rrError(`${this.moduleCode}IMBAN002`, {
@@ -116,12 +117,15 @@ export class MovieService {
     }
 
     const cacheKey = `cooldown:refresh:movie:${id}`;
-    const onCooldown = await this.cacheService.get(cacheKey);
 
-    if (onCooldown) {
-      throw new rrTooManyRequestsException(`${this.moduleCode}TMWRR001`, {
-        message: 'This media was refreshed recently.',
-      });
+    if (!force) {
+      const onCooldown = await this.cacheService.get(cacheKey);
+
+      if (onCooldown) {
+        throw new rrTooManyRequestsException(`${this.moduleCode}TMWRR001`, {
+          message: 'This media was refreshed recently.',
+        });
+      }
     }
 
     // Look up the existing entry to get the TVDB ID
@@ -132,14 +136,17 @@ export class MovieService {
       });
     }
 
-    if (existing.locked) {
+    if (existing.locked && !force) {
       throw new rrConflictException(`${this.moduleCode}LKD001`, {
         message: 'Movie is locked, cannot refresh',
       });
     }
 
     // Fetch fresh data from TVDB
-    await this.movieExternal.fetchAndUpsertMovie(existing.tvdbId);
+    await this.movieExternal.fetchAndUpsertMovie(
+      existing.tvdbId,
+      ...(force ? [force] : []),
+    );
 
     // Bust the cache so next getMovie fetches fresh data
     await this.cacheService.del(`movie:${id}`);

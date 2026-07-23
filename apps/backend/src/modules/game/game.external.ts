@@ -101,36 +101,53 @@ export class GameExternal {
 
       const mapped = await Promise.all(
         results.map(async (item) => {
-          const dbGame = await this.prisma.client.aquilaGame.upsert({
+          const existing = await this.prisma.client.aquilaGame.findUnique({
             where: { rawgId: item.id },
-            update: {
-              titleString: item.name,
-              coverImage: item.background_image || null,
-              released: item.released || null,
-              rating: item.rating || null,
-              ratingsCount: item.ratings_count || null,
-              metacritic: item.metacritic || null,
-              slug: item.slug || null,
-            },
-            create: {
-              rawgId: item.id,
-              titleString: item.name,
-              coverImage: item.background_image || null,
-              released: item.released || null,
-              rating: item.rating || null,
-              ratingsCount: item.ratings_count || null,
-              metacritic: item.metacritic || null,
-              slug: item.slug || null,
-            },
             select: {
               id: true,
               titleString: true,
               titleNative: true,
               coverImage: true,
+              locked: true,
             },
           });
 
-          this.queueFetch(item.id);
+          let dbGame = existing;
+          if (!existing?.locked) {
+            dbGame = await this.prisma.client.aquilaGame.upsert({
+              where: { rawgId: item.id },
+              update: {
+                titleString: item.name,
+                coverImage: item.background_image || null,
+                released: item.released || null,
+                rating: item.rating || null,
+                ratingsCount: item.ratings_count || null,
+                metacritic: item.metacritic || null,
+                slug: item.slug || null,
+              },
+              create: {
+                rawgId: item.id,
+                titleString: item.name,
+                coverImage: item.background_image || null,
+                released: item.released || null,
+                rating: item.rating || null,
+                ratingsCount: item.ratings_count || null,
+                metacritic: item.metacritic || null,
+                slug: item.slug || null,
+              },
+              select: {
+                id: true,
+                titleString: true,
+                titleNative: true,
+                coverImage: true,
+                locked: true,
+              },
+            });
+
+            this.queueFetch(item.id);
+          }
+
+          if (!dbGame) return null;
 
           const esrbSlug = item.esrb_rating?.slug;
           const isAdult = esrbSlug === 'mature' || esrbSlug === 'adults-only';
@@ -148,7 +165,7 @@ export class GameExternal {
         }),
       );
 
-      return mapped;
+      return mapped.filter((m): m is NonNullable<typeof m> => m !== null);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Failed to search games in RAWG: ${message}`);
@@ -158,7 +175,10 @@ export class GameExternal {
     }
   }
 
-  public async fetchAndUpsertGame(rawgId: number): Promise<void> {
+  public async fetchAndUpsertGame(
+    rawgId: number,
+    force = false,
+  ): Promise<void> {
     try {
       const key = this.getApiKey();
       const url = `${this.baseUrl}/games/${rawgId}?key=${key}`;
@@ -171,7 +191,7 @@ export class GameExternal {
       }
 
       const game = (await res.json()) as RawgGameDetail;
-      await this.upsertGame(game);
+      await this.upsertGame(game, force);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Failed to fetch game ${rawgId} from RAWG: ${message}`);
@@ -189,13 +209,16 @@ export class GameExternal {
     );
   }
 
-  private async upsertGame(game: RawgGameDetail): Promise<void> {
+  private async upsertGame(
+    game: RawgGameDetail,
+    force = false,
+  ): Promise<void> {
     const existing = await this.prisma.client.aquilaGame.findUnique({
       where: { rawgId: game.id },
       select: { locked: true },
     });
 
-    if (existing?.locked) {
+    if (existing?.locked && !force) {
       this.logger.debug(
         `Game with RAWG ID ${game.id} is locked, skipping upsert`,
       );

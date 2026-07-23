@@ -2,8 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { GameService } from './game.service';
 import { PrismaService } from '../../providers/database/prisma.service';
-import { GameRepository } from './repositories/game.repository';
-import { GameQueueService } from './services/game-queue.service';
+import { GameRepository } from './game.repository';
+import { GameQueueService } from './game-queue.service';
+import { CacheService } from 'src/providers/cache/cache.service';
+import { GameExternal } from './game.external';
 
 describe('GameService', () => {
   let service: GameService;
@@ -21,6 +23,17 @@ describe('GameService', () => {
     addJob: jest.fn(),
   };
 
+  const mockCacheService = {
+    get: jest.fn(),
+    set: jest.fn(),
+    del: jest.fn(),
+  };
+
+  const mockGameExternal = {
+    search: jest.fn(),
+    fetchAndUpsertGame: jest.fn(),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
     global.fetch = jest.fn();
@@ -32,6 +45,8 @@ describe('GameService', () => {
         { provide: PrismaService, useValue: mockPrisma },
         { provide: GameRepository, useValue: mockGameRepository },
         { provide: GameQueueService, useValue: mockGameQueueService },
+        { provide: CacheService, useValue: mockCacheService },
+        { provide: GameExternal, useValue: mockGameExternal },
       ],
     }).compile();
 

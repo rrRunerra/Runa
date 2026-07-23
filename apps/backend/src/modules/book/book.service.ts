@@ -105,7 +105,10 @@ export class BookService {
     return data;
   }
 
-  public async refreshBook(id: number): Promise<BookEntity | undefined | null> {
+  public async refreshBook(
+    id: number,
+    force = false,
+  ): Promise<BookEntity | undefined | null> {
     if (isNaN(id)) {
       throw new rrError(`${this.moduleCode}IMBAN002`, {
         message: 'ID must be a number',
@@ -113,12 +116,15 @@ export class BookService {
     }
 
     const cacheKey = `cooldown:refresh:book:${id}`;
-    const onCooldown = await this.cacheService.get(cacheKey);
 
-    if (onCooldown) {
-      throw new rrTooManyRequestsException(`${this.moduleCode}TMWRR001`, {
-        message: 'This media was refreshed recently.',
-      });
+    if (!force) {
+      const onCooldown = await this.cacheService.get(cacheKey);
+
+      if (onCooldown) {
+        throw new rrTooManyRequestsException(`${this.moduleCode}TMWRR001`, {
+          message: 'This media was refreshed recently.',
+        });
+      }
     }
 
     // Look up the existing entry to get the Google Book ID
@@ -129,14 +135,17 @@ export class BookService {
       });
     }
 
-    if (existing.locked) {
+    if (existing.locked && !force) {
       throw new rrConflictException(`${this.moduleCode}LKD001`, {
         message: 'Book is locked, cannot refresh',
       });
     }
 
     // Fetch fresh data from Google Books
-    await this.bookExternal.fetchAndUpsertBook(existing.googleBookId);
+    await this.bookExternal.fetchAndUpsertBook(
+      existing.googleBookId,
+      ...(force ? [force] : []),
+    );
 
     // Bust the cache so next getBook fetches fresh data
     await this.cacheService.del(`book:${id}`);

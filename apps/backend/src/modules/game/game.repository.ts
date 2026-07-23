@@ -92,6 +92,15 @@ export class GameRepository {
     rawgId: number,
     data: Prisma.AquilaGameCreateInput,
   ): Promise<{ id: number }> {
+    const existing = await this.prisma.client.aquilaGame.findUnique({
+      where: { rawgId },
+      select: { id: true, locked: true },
+    });
+
+    if (existing?.locked) {
+      return { id: existing.id };
+    }
+
     return this.prisma.client.aquilaGame.upsert({
       where: { rawgId },
       update: data,

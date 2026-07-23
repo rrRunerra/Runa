@@ -1,8 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { BookService } from './book.service';
-import { BookRepository } from './repositories/book.repository';
-import { BookQueueService } from './services/book-queue.service';
+import { BookRepository } from './book.repository';
+import { BookQueueService } from './book-queue.service';
+import { CacheService } from 'src/providers/cache/cache.service';
+import { BookExternal } from './book.external';
 
 describe('BookService', () => {
   let service: BookService;
@@ -18,6 +20,17 @@ describe('BookService', () => {
     addJob: jest.fn(),
   };
 
+  const mockCacheService = {
+    get: jest.fn(),
+    set: jest.fn(),
+    del: jest.fn(),
+  };
+
+  const mockBookExternal = {
+    search: jest.fn(),
+    fetchAndUpsertBook: jest.fn(),
+  };
+
   beforeEach(async () => {
     jest.clearAllMocks();
     global.fetch = jest.fn();
@@ -27,6 +40,8 @@ describe('BookService', () => {
         BookService,
         { provide: BookRepository, useValue: mockBookRepository },
         { provide: BookQueueService, useValue: mockBookQueueService },
+        { provide: CacheService, useValue: mockCacheService },
+        { provide: BookExternal, useValue: mockBookExternal },
       ],
     }).compile();
 

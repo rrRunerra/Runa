@@ -105,7 +105,10 @@ export class TvService {
     return data;
   }
 
-  public async refreshTv(id: number): Promise<TvEntity | undefined | null> {
+  public async refreshTv(
+    id: number,
+    force = false,
+  ): Promise<TvEntity | undefined | null> {
     if (isNaN(id)) {
       throw new rrError(`${this.moduleCode}IMBAN002`, {
         message: 'ID must be a number',
@@ -113,12 +116,15 @@ export class TvService {
     }
 
     const cacheKey = `cooldown:refresh:tv:${id}`;
-    const onCooldown = await this.cacheService.get(cacheKey);
 
-    if (onCooldown) {
-      throw new rrTooManyRequestsException(`${this.moduleCode}TMWRR001`, {
-        message: 'This media was refreshed recently.',
-      });
+    if (!force) {
+      const onCooldown = await this.cacheService.get(cacheKey);
+
+      if (onCooldown) {
+        throw new rrTooManyRequestsException(`${this.moduleCode}TMWRR001`, {
+          message: 'This media was refreshed recently.',
+        });
+      }
     }
 
     const existing = await this.tvRepository.find(id);
@@ -133,13 +139,16 @@ export class TvService {
       });
     }
 
-    if (existing.locked) {
+    if (existing.locked && !force) {
       throw new rrConflictException(`${this.moduleCode}LKD001`, {
         message: 'TV series is locked, cannot refresh',
       });
     }
 
-    await this.tvExternal.fetchAndUpsertTv(existing.tvdbId);
+    await this.tvExternal.fetchAndUpsertTv(
+      existing.tvdbId,
+      ...(force ? [force] : []),
+    );
 
     await this.cacheService.del(`tv:${id}`);
 

@@ -100,6 +100,7 @@ export class MangaService {
 
   public async refreshManga(
     id: number,
+    force = false,
   ): Promise<MangaEntity | undefined | null> {
     if (isNaN(id)) {
       throw new rrError(`${this.moduleCode}IMBAN002`, {
@@ -108,12 +109,15 @@ export class MangaService {
     }
 
     const cacheKey = `cooldown:refresh:manga:${id}`;
-    const onCooldown = await this.cacheService.get(cacheKey);
 
-    if (onCooldown) {
-      throw new rrTooManyRequestsException(`${this.moduleCode}TMWRR001`, {
-        message: 'This media was refreshed recently.',
-      });
+    if (!force) {
+      const onCooldown = await this.cacheService.get(cacheKey);
+
+      if (onCooldown) {
+        throw new rrTooManyRequestsException(`${this.moduleCode}TMWRR001`, {
+          message: 'This media was refreshed recently.',
+        });
+      }
     }
 
     // Look up the existing entry to get the AniList ID
@@ -129,14 +133,17 @@ export class MangaService {
       });
     }
 
-    if (existing.locked) {
+    if (existing.locked && !force) {
       throw new rrConflictException(`${this.moduleCode}LKD001`, {
         message: 'Manga is locked, cannot refresh',
       });
     }
 
     // Fetch fresh data from AniList
-    await this.mangaExternal.fetchAndUpsertManga(existing.anilistId);
+    await this.mangaExternal.fetchAndUpsertManga(
+      existing.anilistId,
+      ...(force ? [force] : []),
+    );
 
     // Bust the cache so next getManga fetches fresh data
     await this.cacheService.del(`manga:${id}`);

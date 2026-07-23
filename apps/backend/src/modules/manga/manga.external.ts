@@ -284,7 +284,10 @@ export class MangaExternal {
     }
   `;
 
-  public async fetchAndUpsertManga(anilistId: number): Promise<void> {
+  public async fetchAndUpsertManga(
+    anilistId: number,
+    force = false,
+  ): Promise<void> {
     try {
       const data = (await this.fetchWithRateLimit(this.getQuery, {
         id: anilistId,
@@ -334,7 +337,7 @@ export class MangaExternal {
         }
       }
 
-      await this.upsertManga(media);
+      await this.upsertManga(media, force);
     } catch (error) {
       this.logger.error(
         `Failed to fetch manga ${anilistId} from AniList: ${error}`,
@@ -437,12 +440,12 @@ export class MangaExternal {
     });
   }
 
-  private async upsertManga(item: AniListMangaMedia) {
+  private async upsertManga(item: AniListMangaMedia, force = false) {
     const existing = await this.prisma.client.aquilaManga.findUnique({
       where: { anilistId: item.id },
     });
 
-    if (existing?.locked) {
+    if (existing?.locked && !force) {
       this.logger.debug(
         `Manga with AniList ID ${item.id} is locked, skipping upsert`,
       );
@@ -479,7 +482,6 @@ export class MangaExternal {
         isAdult: item.isAdult ?? false,
         tags: item.tags as Prisma.InputJsonValue,
         anilistUpdatedAt: item.updatedAt,
-        locked: false,
       },
       create: {
         anilistId: item.id,
@@ -677,6 +679,14 @@ export class MangaExternal {
   }
 
   private async upsertRelatedAnime(node: AniListRelationNode) {
+    const existing = await this.prisma.client.aquilaAnime.findUnique({
+      where: { anilistId: node.id },
+      select: { locked: true },
+    });
+    if (existing?.locked) {
+      return;
+    }
+
     await this.prisma.client.aquilaAnime.upsert({
       where: { anilistId: node.id },
       update: {
@@ -739,6 +749,14 @@ export class MangaExternal {
   }
 
   private async upsertRelatedManga(node: AniListRelationNode) {
+    const existing = await this.prisma.client.aquilaManga.findUnique({
+      where: { anilistId: node.id },
+      select: { locked: true },
+    });
+    if (existing?.locked) {
+      return;
+    }
+
     await this.prisma.client.aquilaManga.upsert({
       where: { anilistId: node.id },
       update: {

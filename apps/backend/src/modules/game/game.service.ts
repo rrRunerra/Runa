@@ -106,7 +106,10 @@ export class GameService {
     return data;
   }
 
-  public async refreshGame(id: number): Promise<GameEntity | undefined | null> {
+  public async refreshGame(
+    id: number,
+    force = false,
+  ): Promise<GameEntity | undefined | null> {
     if (isNaN(id)) {
       throw new rrError(`${this.moduleCode}IMBAN002`, {
         message: 'ID must be a number',
@@ -114,12 +117,15 @@ export class GameService {
     }
 
     const cacheKey = `cooldown:refresh:game:${id}`;
-    const onCooldown = await this.cacheService.get(cacheKey);
 
-    if (onCooldown) {
-      throw new rrTooManyRequestsException(`${this.moduleCode}TMWRR001`, {
-        message: 'This media was refreshed recently.',
-      });
+    if (!force) {
+      const onCooldown = await this.cacheService.get(cacheKey);
+
+      if (onCooldown) {
+        throw new rrTooManyRequestsException(`${this.moduleCode}TMWRR001`, {
+          message: 'This media was refreshed recently.',
+        });
+      }
     }
 
     // Look up the existing entry to get the RAWG ID
@@ -130,14 +136,17 @@ export class GameService {
       });
     }
 
-    if (existing.locked) {
+    if (existing.locked && !force) {
       throw new rrConflictException(`${this.moduleCode}LKD001`, {
         message: 'Game is locked, cannot refresh',
       });
     }
 
     // Fetch fresh data from RAWG
-    await this.gameExternal.fetchAndUpsertGame(existing.rawgId);
+    await this.gameExternal.fetchAndUpsertGame(
+      existing.rawgId,
+      ...(force ? [force] : []),
+    );
 
     // Bust the cache so next getGame fetches fresh data
     await this.cacheService.del(`game:${id}`);

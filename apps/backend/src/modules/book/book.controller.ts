@@ -1,4 +1,4 @@
-import { Controller, Param, UseGuards, Get, Post } from '@nestjs/common';
+import { Controller, Param, UseGuards, Get, Post, Query } from '@nestjs/common';
 import { BookService } from './book.service';
 import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { Public } from 'src/common/decorators/public.decorator';
@@ -23,17 +23,23 @@ export class BookController {
 
   @Public()
   @Get(':id')
-  async bookDetail(
-    @Param() params: BookDetailDto,
+  async getBook(
+    @Param() params: BookDetailDto | any,
   ): Promise<BookEntity | undefined> {
-    return await this.bookService.getBook(params.id);
+    const id = typeof params === 'object' && params !== null && 'id' in params ? params.id : params;
+    return await this.bookService.getBook(id);
   }
 
   @Post(':id/refresh')
   @Permissions([AquilaFlags.MEDIA_REFRESH])
   async refreshBook(
     @Param() params: BookRefreshDto,
+    @Query('force') forceQuery?: string,
   ): Promise<BookEntity | undefined | null> {
-    return await this.bookService.refreshBook(params.id);
+    const force = forceQuery === 'true' || forceQuery === '1';
+    return await this.bookService.refreshBook(
+      params.id,
+      ...(forceQuery !== undefined ? [force] : []),
+    );
   }
 }
