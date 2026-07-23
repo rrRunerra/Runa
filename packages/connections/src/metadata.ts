@@ -86,9 +86,70 @@ export const PROVIDERS_METADATA: ConnectionMetadata[] = [
     primaryApp: "aquila",
     async search(query: string, type: "ANIME" | "MANGA"): Promise<ConnectionSearchResult[]> {
       const path = type.toLowerCase(); // 'anime' or 'manga'
+
+      if (typeof window !== "undefined") {
+        const res = await fetch(`/api/mal/search?q=${encodeURIComponent(query)}&type=${path}`);
+        if (!res.ok) {
+          let details = res.statusText || `Status ${res.status}`;
+          try {
+            const errData = await res.json();
+            if (errData && typeof errData === "object") {
+              details = errData.error || errData.message || details;
+            }
+          } catch {}
+          throw new Error(`MyAnimeList search failed: ${details}`);
+        }
+        return await res.json();
+      }
+
+      const clientId =
+        typeof process !== "undefined"
+          ? process.env.NEXT_PUBLIC_MAL_CLIENT_ID || process.env.MAL_CLIENT_ID || ""
+          : "";
+      const fields =
+        path === "anime"
+          ? "id,title,main_picture,alternative_titles,media_type,num_episodes"
+          : "id,title,main_picture,alternative_titles,media_type,num_chapters,num_volumes";
+
+      if (clientId) {
+        const res = await fetch(
+          `https://api.myanimelist.net/v2/${path}?q=${encodeURIComponent(query)}&limit=10&fields=${fields}`,
+          {
+            headers: {
+              "X-MAL-CLIENT-ID": clientId,
+            },
+          }
+        );
+        if (!res.ok) {
+          let details = res.statusText || `Status ${res.status}`;
+          try {
+            const errData = await res.json();
+            if (errData && typeof errData === "object") {
+              details = errData.message || errData.error || details;
+            }
+          } catch {}
+          throw new Error(`MyAnimeList search failed: ${details}`);
+        }
+        const data = await res.json();
+        return (data.data || []).map((entry: any) => {
+          const item = entry.node || entry;
+          return {
+            id: item.id.toString(),
+            title: item.alternative_titles?.en || item.title,
+            image: item.main_picture?.medium || item.main_picture?.large,
+            format: item.media_type ? item.media_type.toUpperCase() : undefined,
+            episodes: item.num_episodes,
+            chapters: item.num_chapters,
+          };
+        });
+      }
+
       const res = await fetch(
         `https://api.jikan.moe/v4/${path}?q=${encodeURIComponent(query)}&limit=10`
       );
+      if (!res.ok) {
+        throw new Error(`Status ${res.status}`);
+      }
       const data = await res.json();
       return (data.data || []).map((item: any) => ({
         id: item.mal_id.toString(),
