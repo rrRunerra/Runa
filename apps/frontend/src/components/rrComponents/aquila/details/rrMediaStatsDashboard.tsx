@@ -187,7 +187,7 @@ export function RrMediaStatsDashboard({
           {/* Status Distribution */}
           <div>
             <h3 className="text-sm font-bold text-foreground mb-3">
-              {t("aquila.statusDistribution", "Status Distribution")}
+              {t("aquila.statusDistribution")}
             </h3>
             <div className="bg-card/45 border border-border/30 backdrop-blur-md p-5 rounded-2xl flex flex-col justify-between h-30 w-full shadow-sm">
               {/* Status Pill Columns */}
@@ -195,7 +195,7 @@ export function RrMediaStatsDashboard({
                 {/* Current */}
                 <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
                   <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded-lg bg-[#52d629] whitespace-nowrap">
-                    {t("aquila.current", "Current")}
+                    {t("aquila.current")}
                   </span>
                   <div className="text-[10px] whitespace-nowrap text-center">
                     <span className="font-bold text-[#52d629] mr-0.5">
@@ -205,36 +205,10 @@ export function RrMediaStatsDashboard({
                   </div>
                 </div>
 
-                {/* Planning */}
-                <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-                  <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded-lg bg-[#1ea6fc] whitespace-nowrap">
-                    {t("aquila.planning", "Planning")}
-                  </span>
-                  <div className="text-[10px] whitespace-nowrap text-center">
-                    <span className="font-bold text-[#1ea6fc] mr-0.5">
-                      {parsedStatusData.planning.count}
-                    </span>
-                    <span className="text-muted-foreground/80">Users</span>
-                  </div>
-                </div>
-
-                {/* Dropped */}
-                <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
-                  <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded-lg bg-[#8d4bf2] whitespace-nowrap">
-                    {t("aquila.dropped", "Dropped")}
-                  </span>
-                  <div className="text-[10px] whitespace-nowrap text-center">
-                    <span className="font-bold text-[#8d4bf2] mr-0.5">
-                      {parsedStatusData.dropped.count}
-                    </span>
-                    <span className="text-muted-foreground/80">Users</span>
-                  </div>
-                </div>
-
-                {/* Paused */}
+                {/* Paused (On Hold) */}
                 <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
                   <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded-lg bg-[#f75284] whitespace-nowrap">
-                    {t("aquila.paused", "Paused")}
+                    {t("aquila.paused")}
                   </span>
                   <div className="text-[10px] whitespace-nowrap text-center">
                     <span className="font-bold text-[#f75284] mr-0.5">
@@ -247,11 +221,37 @@ export function RrMediaStatsDashboard({
                 {/* Completed */}
                 <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
                   <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded-lg bg-[#e0415a] whitespace-nowrap">
-                    {t("aquila.completed", "Completed")}
+                    {t("aquila.completed")}
                   </span>
                   <div className="text-[10px] whitespace-nowrap text-center">
                     <span className="font-bold text-[#e0415a] mr-0.5">
                       {parsedStatusData.completed.count}
+                    </span>
+                    <span className="text-muted-foreground/80">Users</span>
+                  </div>
+                </div>
+
+                {/* Dropped */}
+                <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                  <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded-lg bg-[#8d4bf2] whitespace-nowrap">
+                    {t("aquila.dropped")}
+                  </span>
+                  <div className="text-[10px] whitespace-nowrap text-center">
+                    <span className="font-bold text-[#8d4bf2] mr-0.5">
+                      {parsedStatusData.dropped.count}
+                    </span>
+                    <span className="text-muted-foreground/80">Users</span>
+                  </div>
+                </div>
+
+                {/* Planning */}
+                <div className="flex flex-col items-center gap-1.5 flex-1 min-w-0">
+                  <span className="text-[10px] font-bold text-white px-2 py-0.5 rounded-lg bg-[#1ea6fc] whitespace-nowrap">
+                    {t("aquila.planning")}
+                  </span>
+                  <div className="text-[10px] whitespace-nowrap text-center">
+                    <span className="font-bold text-[#1ea6fc] mr-0.5">
+                      {parsedStatusData.planning.count}
                     </span>
                     <span className="text-muted-foreground/80">Users</span>
                   </div>
@@ -266,18 +266,6 @@ export function RrMediaStatsDashboard({
                     style={{ width: `${parsedStatusData.current.percent}%` }}
                   />
                 )}
-                {parsedStatusData.planning.percent > 0 && (
-                  <div
-                    className="bg-[#1ea6fc]"
-                    style={{ width: `${parsedStatusData.planning.percent}%` }}
-                  />
-                )}
-                {parsedStatusData.dropped.percent > 0 && (
-                  <div
-                    className="bg-[#8d4bf2]"
-                    style={{ width: `${parsedStatusData.dropped.percent}%` }}
-                  />
-                )}
                 {parsedStatusData.paused.percent > 0 && (
                   <div
                     className="bg-[#f75284]"
@@ -288,6 +276,18 @@ export function RrMediaStatsDashboard({
                   <div
                     className="bg-[#e0415a]"
                     style={{ width: `${parsedStatusData.completed.percent}%` }}
+                  />
+                )}
+                {parsedStatusData.dropped.percent > 0 && (
+                  <div
+                    className="bg-[#8d4bf2]"
+                    style={{ width: `${parsedStatusData.dropped.percent}%` }}
+                  />
+                )}
+                {parsedStatusData.planning.percent > 0 && (
+                  <div
+                    className="bg-[#1ea6fc]"
+                    style={{ width: `${parsedStatusData.planning.percent}%` }}
                   />
                 )}
               </div>

@@ -90,6 +90,21 @@ export function RrMediaListDisplay({
     return copy;
   }, [filteredData, sort]);
 
+  // Helper for status matching (normalizes spaces/underscores and status aliases)
+  const isStatusMatch = (listName: string, entryStatus: string) => {
+    const normList = listName.toLowerCase().replace(/[\s_]+/g, "");
+    const normStatus = entryStatus.toLowerCase().replace(/[\s_]+/g, "");
+    if (normList === normStatus) return true;
+    if (
+      normList === "planning" &&
+      ["plantowatch", "plantoread", "plantoplay"].includes(normStatus)
+    ) {
+      return true;
+    }
+    if (normList === "onhold" && normStatus === "paused") return true;
+    return false;
+  };
+
   // Derive grouped data for multiple lists efficiently
   const groupedData = useMemo(() => {
     const groups: Record<string, RrMediaEntry[]> = {};
@@ -100,10 +115,9 @@ export function RrMediaListDisplay({
     });
 
     sortedData.forEach((entry) => {
-      // Find matching group or fallback to a general status matching
+      // Find matching group or fallback to entry.status
       const targetList =
-        lists.find((l) => l.toLowerCase() === entry.status.toLowerCase()) ||
-        entry.status;
+        lists.find((l) => isStatusMatch(l, entry.status)) || entry.status;
       if (!groups[targetList]) groups[targetList] = [];
       groups[targetList].push(entry);
     });

@@ -82,6 +82,9 @@ These skills provide deeper guidance for specific domains. Consult them when the
 - **Always** make components reusable: export props interfaces, accept overrides via props, prefer composition over monolithic config objects.
 - **Always** split pages/tabs larger than ~150–200 lines of JSX into focused child components.
 - **Always** follow strict localization and internationalization (i18n) when building pages. Do not hardcode user-facing strings.
+- **Never** pass default fallback values to `t()` translation calls (e.g. `t("key", "Default Value")` — always use `t("key")` directly without a second string parameter to prevent hydration mismatches and translation overrides).
+- **Never** edit or update language JSON files (`apps/frontend/src/locales/*.json` or `apps/frontend/public/locales/*/translation.json`) directly.
+- **Always** add or modify translation keys in `rrScripts/locales/*.js` across all languages and run `node append-locales.js` (or `node generate-locales.js`) in `rrScripts/` to automatically compile and sync locale JSON files.
 - **Always** support the following 15 languages: English US, Japanese, Korean, Chinese simplified/traditional, Polish, Russian, Norwegian, Finnish, Spanish, German, Czech, Turkish, Vietnamise, Thai, Malay.
 
 ### TypeScript Types

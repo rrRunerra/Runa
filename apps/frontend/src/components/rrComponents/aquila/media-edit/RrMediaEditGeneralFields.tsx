@@ -12,7 +12,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, X } from "lucide-react";
@@ -76,7 +80,7 @@ export function RrMediaEditGeneralFields({
           { value: "ON_HOLD", label: t("aquila.onHold") },
           { value: "COMPLETED", label: t("aquila.completed") },
           { value: "DROPPED", label: t("aquila.dropped") },
-          { value: "PLANNING", label: t("aquila.planToWatch") },
+          { value: "PLANNING", label: t("aquila.planning", "Planning") },
         ];
       case "manga":
         return [
@@ -84,7 +88,7 @@ export function RrMediaEditGeneralFields({
           { value: "ON_HOLD", label: t("aquila.onHold") },
           { value: "COMPLETED", label: t("aquila.completed") },
           { value: "DROPPED", label: t("aquila.dropped") },
-          { value: "PLANNING", label: t("aquila.planToRead") },
+          { value: "PLANNING", label: t("aquila.planning", "Planning") },
         ];
       case "tv":
         return [
@@ -92,13 +96,13 @@ export function RrMediaEditGeneralFields({
           { value: "ON_HOLD", label: t("aquila.onHold") },
           { value: "COMPLETED", label: t("aquila.completed") },
           { value: "DROPPED", label: t("aquila.dropped") },
-          { value: "PLANNING", label: t("aquila.planToWatch") },
+          { value: "PLANNING", label: t("aquila.planning", "Planning") },
         ];
       case "movie":
         return [
           { value: "COMPLETED", label: t("aquila.completed") },
           { value: "DROPPED", label: t("aquila.dropped") },
-          { value: "PLANNING", label: t("aquila.planToWatch") },
+          { value: "PLANNING", label: t("aquila.planning", "Planning") },
         ];
       case "game":
         return [
@@ -106,7 +110,7 @@ export function RrMediaEditGeneralFields({
           { value: "ON_HOLD", label: t("aquila.onHold") },
           { value: "COMPLETED", label: t("aquila.completed") },
           { value: "DROPPED", label: t("aquila.dropped") },
-          { value: "PLANNING", label: t("aquila.planToPlay") },
+          { value: "PLANNING", label: t("aquila.planning", "Planning") },
         ];
       case "book":
         return [
@@ -114,7 +118,7 @@ export function RrMediaEditGeneralFields({
           { value: "ON_HOLD", label: t("aquila.onHold") },
           { value: "COMPLETED", label: t("aquila.completed") },
           { value: "DROPPED", label: t("aquila.dropped") },
-          { value: "PLANNING", label: t("aquila.planToRead") },
+          { value: "PLANNING", label: t("aquila.planning", "Planning") },
         ];
       default:
         return [];
@@ -358,7 +362,7 @@ export function RrMediaEditGeneralFields({
           placeholder={t("aquila.notesPlaceholder")}
           value={notes}
           onChange={(e) => onNotesChange(e.target.value)}
-          className="bg-background border border-border text-foreground min-h-[80px] resize-y h-10 rounded-xl focus-visible:ring-1 focus-visible:ring-primary/30 focus-visible:border-primary/50 transition-all placeholder:text-muted-foreground/30 text-xs font-medium"
+          className="bg-background border border-border text-foreground min-h-20 resize-y h-10 rounded-xl focus-visible:ring-1 focus-visible:ring-primary/30 focus-visible:border-primary/50 transition-all placeholder:text-muted-foreground/30 text-xs font-medium"
         />
       </div>
     </div>

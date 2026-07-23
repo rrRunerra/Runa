@@ -24,11 +24,7 @@ export interface RrUserListFilterState {
 }
 
 export type UserListSortType =
-  | "title"
-  | "score"
-  | "progress"
-  | "last_updated"
-  | "last_added";
+  "title" | "score" | "progress" | "last_updated" | "last_added";
 
 export interface RrUserListFiltersProps {
   username: string;
@@ -71,7 +67,7 @@ export function RrUserListFilters({
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
-    }
+    },
   );
 
   const availableGenres = filterOptions?.genres || [];
@@ -79,17 +75,27 @@ export function RrUserListFilters({
   const availableFormats = filterOptions?.formats || [];
   const availableStatuses = filterOptions?.statuses || [];
 
-  const handleFilterChange = (key: keyof RrUserListFilterState, value: string) => {
+  const handleFilterChange = (
+    key: keyof RrUserListFilterState,
+    value: string,
+  ) => {
     setFilters((prev) => ({
       ...prev,
-      [key]: value === "all" ? "" : key === "genres" ? (value ? [value] : []) : value,
+      [key]:
+        key === "genres"
+          ? value && value !== "all"
+            ? [value]
+            : []
+          : value === "all"
+            ? ""
+            : value,
     }));
   };
 
   const hasActiveFilters =
     searchVal !== "" ||
     filters.format ||
-    filters.genres?.length ||
+    (Array.isArray(filters.genres) && filters.genres.length > 0) ||
     filters.year ||
     filters.mediaStatus ||
     sort !== "last_updated";
@@ -105,8 +111,85 @@ export function RrUserListFilters({
     });
   };
 
-  const activeGenre = filters.genres?.[0] || "";
-  const resolvedSearchPlaceholder = searchPlaceholder ?? t("aquila.searchPlaceholder");
+  const activeGenre = Array.isArray(filters.genres) ? filters.genres[0] || "" : "";
+  const resolvedSearchPlaceholder =
+    searchPlaceholder ?? t("aquila.searchPlaceholder");
+
+  // Helpers for label translations
+  const getSortLabel = (val: string, fallbackLabel: string) => {
+    switch (val) {
+      case "title":
+        return t("aquila.sortTitle");
+      case "score":
+        return t("aquila.sortScore");
+      case "progress":
+        return t("aquila.sortProgress");
+      case "last_updated":
+        return t("aquila.sortLastUpdated");
+      case "last_added":
+        return t("aquila.sortLastAdded");
+      default:
+        return fallbackLabel;
+    }
+  };
+
+  const getFormatLabel = (format: string) => {
+    switch (format.toUpperCase().replace(/\s+/g, "_")) {
+      case "MOVIE":
+        return t("aquila.formatMovie");
+      case "TV":
+        return t("aquila.formatTV");
+      case "TV_SHORT":
+        return t("aquila.formatTVShort");
+      case "SPECIAL":
+        return t("aquila.formatSpecial");
+      case "OVA":
+        return t("aquila.formatOVA");
+      case "ONA":
+        return t("aquila.formatONA");
+      case "MANGA":
+        return t("aquila.formatManga");
+      case "NOVEL":
+        return t("aquila.formatNovel");
+      case "ONE_SHOT":
+        return t("aquila.formatOneShot");
+      case "LIGHT_NOVEL":
+        return t("aquila.formatLightNovel");
+      case "DOUJINSHI":
+        return t("aquila.formatDoujinshi");
+      case "GAME":
+        return t("aquila.formatGame");
+      case "BOOK":
+        return t("aquila.formatBook");
+      case "UNKNOWN":
+        return t("aquila.formatUnknown");
+      default:
+        return format.replace(/_/g, " ");
+    }
+  };
+
+  const getMediaStatusLabel = (status: string) => {
+    switch (status.toUpperCase().replace(/\s+/g, "_")) {
+      case "FINISHED":
+      case "ENDED":
+        return t("aquila.statusFinished");
+      case "RELEASING":
+      case "CONTINUING":
+        return t("aquila.statusReleasing");
+      case "RELEASED":
+        return t("aquila.statusReleased");
+      case "NOT_YET_RELEASED":
+      case "NOT YET RELEASED":
+      case "UPCOMING":
+        return t("aquila.statusNotYetReleased");
+      case "CANCELLED":
+        return t("aquila.statusCancelled");
+      case "HIATUS":
+        return t("aquila.statusHiatus");
+      default:
+        return status.replace(/_/g, " ");
+    }
+  };
 
   return (
     <div className="relative flex flex-col gap-4 w-full bg-card/20 backdrop-blur-xl border border-border/40 p-4 rounded-2xl shadow-xl select-none">
@@ -136,14 +219,14 @@ export function RrUserListFilters({
                 value={filters.format || "all"}
                 onValueChange={(v) => handleFilterChange("format", v)}
               >
-                <SelectTrigger className="h-9.5 min-w-[100px] bg-background/40 border border-border/40 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
+                <SelectTrigger className="h-9.5 min-w-25 bg-background/40 border border-border/40 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
                   <SelectValue placeholder={t("aquila.format")} />
                 </SelectTrigger>
                 <SelectContent className="bg-popover/95 backdrop-blur-md border border-border/40 rounded-xl">
                   <SelectItem value="all">{t("aquila.allFormats")}</SelectItem>
                   {availableFormats.map((f) => (
                     <SelectItem key={f} value={f}>
-                      {f}
+                      {getFormatLabel(f)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -158,14 +241,14 @@ export function RrUserListFilters({
                 value={filters.mediaStatus || "all"}
                 onValueChange={(v) => handleFilterChange("mediaStatus", v)}
               >
-                <SelectTrigger className="h-9.5 min-w-[100px] bg-background/40 border border-border/40 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
+                <SelectTrigger className="h-9.5 min-w-25 bg-background/40 border border-border/40 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
                   <SelectValue placeholder={t("aquila.status")} />
                 </SelectTrigger>
                 <SelectContent className="bg-popover/95 backdrop-blur-md border border-border/40 rounded-xl">
                   <SelectItem value="all">{t("aquila.allStatuses")}</SelectItem>
                   {availableStatuses.map((s) => (
                     <SelectItem key={s} value={s}>
-                      {s.replace(/_/g, " ")}
+                      {getMediaStatusLabel(s)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -180,7 +263,7 @@ export function RrUserListFilters({
                 value={activeGenre || "all"}
                 onValueChange={(v) => handleFilterChange("genres", v)}
               >
-                <SelectTrigger className="h-9.5 min-w-[110px] bg-background/40 border border-border/40 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
+                <SelectTrigger className="h-9.5 min-w-27.5 bg-background/40 border border-border/40 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
                   <SelectValue placeholder={t("aquila.genre")} />
                 </SelectTrigger>
                 <SelectContent className="bg-popover/95 backdrop-blur-md border border-border/40 rounded-xl max-h-60">
@@ -202,7 +285,7 @@ export function RrUserListFilters({
                 value={filters.year || "all"}
                 onValueChange={(v) => handleFilterChange("year", v)}
               >
-                <SelectTrigger className="h-9.5 min-w-[90px] bg-background/40 border border-border/40 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
+                <SelectTrigger className="h-9.5 min-w-22.5 bg-background/40 border border-border/40 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
                   <SelectValue placeholder={t("aquila.year")} />
                 </SelectTrigger>
                 <SelectContent className="bg-popover/95 backdrop-blur-md border border-border/40 rounded-xl max-h-60">
@@ -222,14 +305,17 @@ export function RrUserListFilters({
             <span className="text-[10px] font-semibold text-muted-foreground/80 hidden sm:inline uppercase tracking-wider">
               {t("aquila.sort")}
             </span>
-            <Select value={sort} onValueChange={(v) => setSort(v as UserListSortType)}>
-              <SelectTrigger className="h-9.5 min-w-[115px] bg-background/40 border border-border/40 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
+            <Select
+              value={sort}
+              onValueChange={(v) => setSort(v as UserListSortType)}
+            >
+              <SelectTrigger className="h-9.5 min-w-28.75 bg-background/40 border border-border/40 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
                 <SelectValue placeholder={t("aquila.sortBy")} />
               </SelectTrigger>
               <SelectContent className="bg-popover/95 backdrop-blur-md border border-border/40 rounded-xl">
                 {sortOptions.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
+                    {getSortLabel(opt.value, opt.label)}
                   </SelectItem>
                 ))}
               </SelectContent>

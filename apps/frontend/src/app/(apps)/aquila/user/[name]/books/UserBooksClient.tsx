@@ -19,6 +19,7 @@ import {
   UserListSortType,
   RrUserListFilterState,
 } from "@/components/rrComponents/aquila/rrUserListFilters";
+import { useTranslation } from "react-i18next";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 
@@ -58,9 +59,37 @@ const SORT_OPTIONS = [
 ];
 
 export default function UserBooksPage({ initialData }: { initialData?: any }) {
+  const { t } = useTranslation();
   const params = useParams();
   const username = params.name as string;
   const { data: session } = useSession();
+
+  const getListNameTranslation = (name: string) => {
+    switch (name.toUpperCase()) {
+      case "ALL":
+        return t("aquila.allTab");
+      case "WATCHING":
+        return t("aquila.watching");
+      case "READING":
+        return t("aquila.reading");
+      case "PLAYING":
+        return t("aquila.playing");
+      case "PLANNING":
+      case "PLAN TO WATCH":
+      case "PLAN TO READ":
+      case "PLAN TO PLAY":
+        return t("aquila.planning");
+      case "ON_HOLD":
+      case "ON HOLD":
+        return t("aquila.onHold");
+      case "COMPLETED":
+        return t("aquila.completed");
+      case "DROPPED":
+        return t("aquila.dropped");
+      default:
+        return name;
+    }
+  };
 
   if (!username) {
     return (
@@ -96,10 +125,12 @@ export default function UserBooksPage({ initialData }: { initialData?: any }) {
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
       revalidateIfStale: false,
-    }
+    },
   );
 
-  const [bookList, setBookList] = useState<MediaEntry[]>(initialData?.entries || []);
+  const [bookList, setBookList] = useState<MediaEntry[]>(
+    initialData?.entries || [],
+  );
   const [isPrivate, setIsPrivate] = useState(false);
 
   const getInitialPriorityState = () => {
@@ -115,10 +146,14 @@ export default function UserBooksPage({ initialData }: { initialData?: any }) {
   };
 
   const initialPState = getInitialPriorityState();
-  const [offset, setOffset] = useState(initialData ? initialData.entries?.length || 0 : 0);
+  const [offset, setOffset] = useState(
+    initialData ? initialData.entries?.length || 0 : 0,
+  );
   const [hasMore, setHasMore] = useState(initialPState.hasMore);
   const [loading, setLoading] = useState(false);
-  const [counts, setCounts] = useState<Record<string, number>>(initialData?.counts || {});
+  const [counts, setCounts] = useState<Record<string, number>>(
+    initialData?.counts || {},
+  );
   const [priorityIdx, setPriorityIdx] = useState(initialPState.index);
   const [priorityOff, setPriorityOff] = useState(initialPState.offset);
   const isFetchingRef = useRef(false);
@@ -130,8 +165,6 @@ export default function UserBooksPage({ initialData }: { initialData?: any }) {
     }, 300);
     return () => clearTimeout(handler);
   }, [searchVal]);
-
-
 
   const fetchBookList = (
     currentOffset = 0,
@@ -157,7 +190,7 @@ export default function UserBooksPage({ initialData }: { initialData?: any }) {
       status: effectiveStatus,
       search: debouncedSearch,
       format: filters.format || "",
-      genres: (filters.genres || []).join(","),
+      genres: Array.isArray(filters.genres) ? filters.genres.join(",") : "",
       year: filters.year || "",
       mediaStatus: filters.mediaStatus || "",
       sort: sort,
@@ -243,7 +276,7 @@ export default function UserBooksPage({ initialData }: { initialData?: any }) {
     debouncedSearch,
     activeList,
     filters.format,
-    filters.genres?.join(","),
+    Array.isArray(filters.genres) ? filters.genres.join(",") : "",
     filters.year,
     filters.mediaStatus,
     sort,
@@ -271,14 +304,14 @@ export default function UserBooksPage({ initialData }: { initialData?: any }) {
       className="relative flex flex-col w-full min-h-screen gap-6 p-4 lg:p-6 select-none"
     >
       {/* Ambient background glow */}
-      <div className="absolute top-0 right-0 h-[500px] w-[500px] bg-primary/5 rounded-full blur-3xl pointer-events-none z-0" />
+      <div className="absolute top-0 right-0 h-125 w-125 bg-primary/5 rounded-full blur-3xl pointer-events-none z-0" />
 
       {/* ── Main Content ────────────────────────── */}
       <motion.main
         variants={itemVariants}
         className="flex-1 flex flex-col gap-6 w-full z-10"
       >
-        <RrUserListHeader userData={userData || null} listTitle="Books List" />
+        <RrUserListHeader userData={userData || null} listTitle="Books List" entries={bookList} />
 
         {isPrivate ? (
           <div className="flex flex-col items-center justify-center py-20 bg-card/20 backdrop-blur-xl border border-border/40 rounded-2xl shadow-xl text-center p-6 mt-4">
@@ -307,7 +340,7 @@ export default function UserBooksPage({ initialData }: { initialData?: any }) {
 
               <RrUserListFilters
                 username={username}
-                mediaType="book"
+                mediaType="books"
                 searchVal={searchVal}
                 setSearchVal={setSearchVal}
                 sort={sort}
@@ -315,13 +348,14 @@ export default function UserBooksPage({ initialData }: { initialData?: any }) {
                 sortOptions={SORT_OPTIONS}
                 filters={filters}
                 setFilters={setFilters}
-                searchPlaceholder="Search books..."
+                searchPlaceholder={t("aquila.searchBooks")}
               />
             </div>
 
             <header className="flex items-center justify-between mt-4">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/75">
-                {activeList} Books (
+              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/75" suppressHydrationWarning>
+                {getListNameTranslation(activeList)}{" "}
+                {t("aquila.books")} (
                 {counts?.[activeList.toLowerCase().replace(/\s+/g, "_")] ??
                   bookList.length}
                 )

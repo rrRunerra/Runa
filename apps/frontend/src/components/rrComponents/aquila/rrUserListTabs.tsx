@@ -24,6 +24,8 @@ export function RrUserListTabs({
 
   const getListNameTranslation = (name: string) => {
     switch (name.toUpperCase()) {
+      case "ALL":
+        return t("aquila.allTab");
       case "WATCHING":
         return t("aquila.watching");
       case "READING":
@@ -32,11 +34,9 @@ export function RrUserListTabs({
         return t("aquila.playing");
       case "PLANNING":
       case "PLAN TO WATCH":
-        return t("aquila.planToWatch");
       case "PLAN TO READ":
-        return t("aquila.planToRead");
       case "PLAN TO PLAY":
-        return t("aquila.planToPlay");
+        return t("aquila.planning");
       case "ON_HOLD":
       case "ON HOLD":
         return t("aquila.onHold");
@@ -79,7 +79,9 @@ export function RrUserListTabs({
                   }}
                 />
               )}
-              <span className="relative z-10">{getListNameTranslation(list)}</span>
+              <span className="relative z-10" suppressHydrationWarning>
+                {getListNameTranslation(list)}
+              </span>
               <span
                 className={cn(
                   "relative z-10 text-[10px] px-1.5 py-0.5 rounded-md bg-muted/60 text-muted-foreground transition-colors",

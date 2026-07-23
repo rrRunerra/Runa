@@ -30,6 +30,8 @@ export function RrMediaListGroup({
 
   const getListNameTranslation = (name: string) => {
     switch (name.toUpperCase()) {
+      case "ALL":
+        return t("aquila.allTab");
       case "WATCHING":
         return t("aquila.watching");
       case "READING":
@@ -38,11 +40,9 @@ export function RrMediaListGroup({
         return t("aquila.playing");
       case "PLANNING":
       case "PLAN TO WATCH":
-        return t("aquila.planToWatch");
       case "PLAN TO READ":
-        return t("aquila.planToRead");
       case "PLAN TO PLAY":
-        return t("aquila.planToPlay");
+        return t("aquila.planning");
       case "ON_HOLD":
       case "ON HOLD":
         return t("aquila.onHold");
@@ -60,7 +60,10 @@ export function RrMediaListGroup({
       className="mb-10 w-full select-none"
       style={{ contentVisibility: "auto", containIntrinsicSize: "0 600px" }}
     >
-      <h3 className="mb-4 text-base font-bold uppercase tracking-wider text-muted-foreground/80 pl-1">
+      <h3
+        className="mb-4 text-base font-bold uppercase tracking-wider text-muted-foreground/80 pl-1"
+        suppressHydrationWarning
+      >
         {getListNameTranslation(title)}
       </h3>
 
@@ -99,7 +102,7 @@ export function RrMediaListGroup({
           <div className="flex items-center justify-between w-full pr-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 border-b border-border/20 pb-2 mb-2">
             <div className="flex-1 flex items-center justify-between gap-4 px-2">
               <span className="flex-1 text-left">{t("aquila.title")}</span>
-              <div className="flex items-center gap-4 md:gap-6 justify-end w-[100px] md:w-[120px] shrink-0">
+              <div className="flex items-center gap-4 md:gap-6 justify-end w-25 md:w-30 shrink-0">
                 <span className="w-8 text-right">{t("aquila.score")}</span>
                 <span className="w-12 text-right">{t("aquila.progress")}</span>
               </div>
@@ -125,10 +128,12 @@ export function RrMediaListGroup({
           <div className="flex items-center justify-between w-full pr-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 border-b border-border/20 pb-2 mb-2">
             <div className="flex-1 flex items-center justify-between gap-4 px-2">
               <span className="flex-1 text-left">{t("aquila.title")}</span>
-              <div className="flex items-center gap-4 md:gap-6 justify-end w-[100px] sm:w-[180px] shrink-0">
+              <div className="flex items-center gap-4 md:gap-6 justify-end w-25 sm:w-45 shrink-0">
                 <span className="w-8 text-right">{t("aquila.score")}</span>
                 <span className="w-12 text-right">{t("aquila.progress")}</span>
-                <span className="w-16 text-right hidden sm:block">{t("aquila.type")}</span>
+                <span className="w-16 text-right hidden sm:block">
+                  {t("aquila.type")}
+                </span>
               </div>
             </div>
             {isOwner && <div className="w-8 pr-1 shrink-0" />}
