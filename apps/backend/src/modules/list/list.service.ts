@@ -3134,7 +3134,7 @@ export class ListService {
         await this.prisma.client.aquilaAnimeUserList.findMany({
           where: {
             username: username.toLowerCase(),
-            status: 'PLANNING',
+            status: "PLANNING",
           },
           select: {
             id: true,
@@ -3150,6 +3150,7 @@ export class ListService {
             },
           },
         });
+
 
       for (const entry of animeEntries) {
         if (!entry.animeId) continue;

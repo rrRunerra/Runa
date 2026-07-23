@@ -20,7 +20,10 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "db:backfill-stats": "dotenvx run -f ../../.env -- ts-node -r tsconfig-paths/register src/scripts/backfill-stats.ts",
-    "db:assign-admin": "dotenvx run -f ../../.env -- ts-node -r tsconfig-paths/register src/scripts/assign-admin.ts"
+    "db:assign-admin": "dotenvx run -f ../../.env -- ts-node -r tsconfig-paths/register src/scripts/assign-admin.ts",
+    "db:update-anime-tvdb": "dotenvx run -f ../../.env -- ts-node -r tsconfig-paths/register src/scripts/update-anime-tvdb.ts",
+    "db:update-media-stats": "dotenvx run -f ../../.env -- ts-node -r tsconfig-paths/register src/scripts/update-media-stats.ts",
+    "db:seed-random-stats": "dotenvx run -f ../../.env -- ts-node -r tsconfig-paths/register src/scripts/seed-random-stats.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1088.0",
