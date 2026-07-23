@@ -44,8 +44,9 @@ export class TvRepository {
   }
 
   public async find(id: number): Promise<TvEntity | null> {
+    const numericId = typeof id === 'number' ? id : Number(id);
     const result = await this.prisma.client.aquilaTv.findUnique({
-      where: { id },
+      where: { id: numericId },
       include: {
         tvCharacters: {
           include: {
@@ -91,6 +92,13 @@ export class TvRepository {
       contentRating: result.contentRating,
       locked: result.locked,
       updatedAt: result.updatedAt,
+      localPopularity: result.localPopularity ?? 0,
+      localFavoritesCount: result.localFavoritesCount ?? 0,
+      localAverageScore: result.localAverageScore ?? 0,
+      localStatusDistribution:
+        (result.localStatusDistribution as Record<string, number>) ?? {},
+      localScoreDistribution:
+        (result.localScoreDistribution as Record<string, number>) ?? {},
     };
   }
 

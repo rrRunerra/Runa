@@ -51,9 +51,10 @@ export class AnimeRepository {
   }
 
   public async find(id: number): Promise<AnimeEntity | null> {
+    const numericId = typeof id === 'number' ? id : Number(id);
     const result = await this.prisma.client.aquilaAnime.findUnique({
       where: {
-        id,
+        id: numericId,
       },
       include: {
         animeCharacters: {

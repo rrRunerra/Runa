@@ -69,4 +69,10 @@ export interface TvEntity {
   locked: boolean;
   updatedAt: Date;
   episodeCount?: number | null;
+
+  localPopularity: number;
+  localFavoritesCount: number;
+  localAverageScore: number;
+  localStatusDistribution: Record<string, number>;
+  localScoreDistribution: Record<string, number>;
 }

@@ -51,9 +51,10 @@ export class MangaRepository {
   }
 
   public async find(id: number): Promise<MangaEntity | null> {
+    const numericId = typeof id === 'number' ? id : Number(id);
     const result = await this.prisma.client.aquilaManga.findUnique({
       where: {
-        id,
+        id: numericId,
       },
       include: {
         mangaCharacters: {

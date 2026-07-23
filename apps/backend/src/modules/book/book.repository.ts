@@ -44,8 +44,9 @@ export class BookRepository {
   }
 
   public async find(id: number): Promise<BookEntity | null> {
+    const numericId = typeof id === 'number' ? id : Number(id);
     const result = await this.prisma.client.aquilaBook.findUnique({
-      where: { id },
+      where: { id: numericId },
     });
 
     if (!result) return null;
@@ -81,6 +82,13 @@ export class BookRepository {
       publisher: result.publisher,
       locked: result.locked,
       updatedAt: result.updatedAt,
+      localPopularity: result.localPopularity ?? 0,
+      localFavoritesCount: result.localFavoritesCount ?? 0,
+      localAverageScore: result.localAverageScore ?? 0,
+      localStatusDistribution:
+        (result.localStatusDistribution as Record<string, number>) ?? {},
+      localScoreDistribution:
+        (result.localScoreDistribution as Record<string, number>) ?? {},
     };
   }
 

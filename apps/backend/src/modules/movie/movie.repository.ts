@@ -44,8 +44,9 @@ export class MovieRepository {
   }
 
   public async find(id: number): Promise<MovieEntity | null> {
+    const numericId = typeof id === 'number' ? id : Number(id);
     const result = await this.prisma.client.aquilaMovie.findUnique({
-      where: { id },
+      where: { id: numericId },
       include: {
         movieCharacters: {
           include: {
@@ -95,6 +96,13 @@ export class MovieRepository {
       startDateDay: result.startDateDay,
       locked: result.locked,
       updatedAt: result.updatedAt,
+      localPopularity: result.localPopularity ?? 0,
+      localFavoritesCount: result.localFavoritesCount ?? 0,
+      localAverageScore: result.localAverageScore ?? 0,
+      localStatusDistribution:
+        (result.localStatusDistribution as Record<string, number>) ?? {},
+      localScoreDistribution:
+        (result.localScoreDistribution as Record<string, number>) ?? {},
     };
   }
 

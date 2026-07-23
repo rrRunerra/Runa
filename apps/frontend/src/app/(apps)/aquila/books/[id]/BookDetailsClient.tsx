@@ -1,17 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import {
-  Star,
-  TrendingUp,
-  Heart,
-  BookOpen,
-  User,
-  Globe,
-  ShoppingBag,
-  Calendar,
-  ExternalLink,
-} from "lucide-react";
+import { Star, Heart, Users, ChevronDown, ChevronUp } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -24,14 +14,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 import { fetcher } from "@/lib/fetcher";
-import { Media } from "@/types/aquila";
 import { RrMediaEditDialog } from "@/components/rrComponents/aquila/rrMediaEditDialog";
 import RrLapplandImageNotFound from "@/components/rrComponents/rrImages/rrLapplandImageNotFound";
 import { RrMediaRefreshButton } from "@/components/rrComponents/aquila/rrMediaRefreshButton";
 import { BookEntity } from "@/types/book.entities";
-import { RrMediaStatsDashboard } from "@/components/rrComponents/aquila/details/rrMediaStatsDashboard";
+import { RrMediaInfoRow } from "@/components/rrComponents/aquila/details/rrMediaInfoRow";
 import { RrMediaFriendsProgress } from "@/components/rrComponents/aquila/details/rrMediaFriendsProgress";
+import { RrMediaDescription } from "@/components/rrComponents/aquila/details/rrMediaDescription";
+import { RrMediaGenres } from "@/components/rrComponents/aquila/details/rrMediaGenres";
+import { RrMediaStatsDashboard } from "@/components/rrComponents/aquila/details/rrMediaStatsDashboard";
+import { RrMediaFooter } from "@/components/rrComponents/aquila/details/rrMediaFooter";
 import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
 
 interface ListEntry {
   id: number | string;
@@ -59,6 +53,20 @@ const itemVariants = {
   },
 };
 
+const formatCompactNumber = (num: number | null | undefined): string => {
+  if (num == null || isNaN(num)) return "0";
+  if (num >= 1_000_000_000) {
+    return (num / 1_000_000_000).toFixed(1).replace(/\.0$/, "") + "b";
+  }
+  if (num >= 1_000_000) {
+    return (num / 1_000_000).toFixed(1).replace(/\.0$/, "") + "m";
+  }
+  if (num >= 1_000) {
+    return (num / 1_000).toFixed(1).replace(/\.0$/, "") + "k";
+  }
+  return num.toString();
+};
+
 export default function BookDetailsPage(): React.JSX.Element {
   const { t } = useTranslation();
   const params = useParams();
@@ -66,6 +74,7 @@ export default function BookDetailsPage(): React.JSX.Element {
   const session = useSession();
 
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
+  const [showMoreInfo, setShowMoreInfo] = useState<boolean>(false);
 
   // SWR queries replacing sequential imperative fetching
   const {
@@ -91,29 +100,34 @@ export default function BookDetailsPage(): React.JSX.Element {
 
   const hasListEntry = !!listEntry;
 
-  const displayTitle = book?.titleString ?? t("aquila.bookDetails", "Book Details");
+  const displayTitle = book?.titleString ?? t("aquila.bookDetails");
   const displaySubtitle = book?.subtitle ?? null;
   const coverUrl = book?.coverImage ?? "";
+
+  const providers = useMemo(() => {
+    const list: { name: string; url: string }[] = [];
+    if (book?.infoLink) {
+      list.push({
+        name: "Google Books",
+        url: book.infoLink,
+      });
+    }
+    return list;
+  }, [book]);
 
   const formattedPublishedDate = useMemo((): string | null => {
     if (!book?.publishedDate) return null;
     try {
-      return new Date(book.publishedDate).toLocaleDateString("en-US", {
+      const date = new Date(book.publishedDate);
+      if (isNaN(date.getTime())) return book.publishedDate;
+      return date.toLocaleDateString("en-US", {
         year: "numeric",
         month: "long",
         day: "numeric",
+        timeZone: "UTC",
       });
     } catch {
       return book.publishedDate;
-    }
-  }, [book?.publishedDate]);
-
-  const publishedYear = useMemo((): string | null => {
-    if (!book?.publishedDate) return null;
-    try {
-      return new Date(book.publishedDate).getFullYear().toString();
-    } catch {
-      return null;
     }
   }, [book?.publishedDate]);
 
@@ -122,12 +136,12 @@ export default function BookDetailsPage(): React.JSX.Element {
     const items: any[] = [];
     if (book.authors) {
       book.authors.forEach((author: string, idx: number) => {
-        items.push({ id: `author-${idx}`, name: author, role: t("aquila.author", "Author") });
+        items.push({ id: `author-${idx}`, name: author, role: t("aquila.author") });
       });
     }
     if (book.artists) {
       book.artists.forEach((artist: string, idx: number) => {
-        items.push({ id: `artist-${idx}`, name: artist, role: t("aquila.artist", "Artist") });
+        items.push({ id: `artist-${idx}`, name: artist, role: t("aquila.artist") });
       });
     }
     return items;
@@ -141,8 +155,8 @@ export default function BookDetailsPage(): React.JSX.Element {
   if (bookLoading) {
     return (
       <div className="flex flex-col flex-1 min-h-screen bg-background relative overflow-hidden items-center justify-center">
-        <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-primary/2 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-primary/2 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-75 h-75 bg-primary/2 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-75 h-75 bg-primary/2 rounded-full blur-3xl pointer-events-none" />
         <div className="w-12 h-12 rounded-full border-2 border-dashed border-primary animate-spin z-10" />
       </div>
     );
@@ -151,12 +165,12 @@ export default function BookDetailsPage(): React.JSX.Element {
   if (bookError || !book) {
     return (
       <div className="flex flex-col flex-1 min-h-screen bg-background relative overflow-hidden items-center justify-center gap-4">
-        <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-primary/2 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-75 h-75 bg-primary/2 rounded-full blur-3xl pointer-events-none" />
         <h2 className="text-2xl font-bold text-foreground z-10">
-          {t("aquila.bookNotFound", "Book not found")}
+          {t("aquila.bookNotFound")}
         </h2>
         <Button asChild variant="default" className="z-10 rounded-xl">
-          <Link href="/aquila/browse?type=books">{t("aquila.backToBrowse", "Back to Browse")}</Link>
+          <Link href="/aquila/browse?type=books">{t("aquila.backToBrowse")}</Link>
         </Button>
       </div>
     );
@@ -179,45 +193,26 @@ export default function BookDetailsPage(): React.JSX.Element {
         },
       );
       if (res.ok) {
-        toast.success(t("aquila.addedToList", "Added to list!"));
+        toast.success(t("aquila.addedToList"));
         mutateListEntry();
       } else {
-        toast.error(t("aquila.failedAddToList", "Failed to add to list"));
+        toast.error(t("aquila.failedAddToList"));
       }
     } catch {
-      toast.error(t("aquila.failedAddToList", "Failed to add to list"));
+      toast.error(t("aquila.failedAddToList"));
     }
   };
 
   return (
-    <div className="flex flex-col flex-1 min-h-screen bg-background text-foreground relative overflow-x-hidden p-0">
+    <div className="flex flex-col flex-1 min-h-screen bg-background text-foreground relative overflow-x-hidden">
       {/* Background Radial Glowing Auras */}
-      <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-primary/2 rounded-full blur-3xl pointer-events-none z-0" />
-      <div className="absolute top-[20%] left-[-100px] w-[300px] h-[300px] bg-cyan-600/2 rounded-full blur-3xl pointer-events-none z-0" />
+      <div className="absolute top-0 right-0 w-75 h-75 bg-primary/2 rounded-full blur-3xl pointer-events-none z-0" />
+      <div className="absolute top-[20%] -left-25 w-75 h-75 bg-primary/2 rounded-full blur-3xl pointer-events-none z-0" />
 
       {/* Banner Section */}
-      <div className="relative h-[240px] md:h-[360px] w-full overflow-hidden shrink-0 z-10">
+      <div className="relative h-60 md:h-90 w-full overflow-hidden shrink-0 z-10">
         <div className="absolute inset-x-0 bottom-0 h-48 bg-linear-to-t from-background to-transparent z-10" />
-
         <div className="w-full h-full bg-muted/10" />
-
-        {/* Google Books Attribution */}
-        <div className="absolute inset-x-0 top-0 z-20 pointer-events-none">
-          <div className="mx-auto px-4 pt-4 flex justify-end items-start pointer-events-auto">
-            <div className="flex flex-col gap-1 bg-card/85 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-white/10 shadow-md">
-              <span className="text-[8px] text-muted-foreground uppercase font-bold tracking-widest leading-none">
-                Data Provided By
-              </span>
-              <Link
-                href="https://books.google.com"
-                target="_blank"
-                className="text-xs font-bold text-muted-foreground hover:text-foreground transition-colors hover:underline"
-              >
-                Google Books
-              </Link>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Details layout container */}
@@ -228,19 +223,19 @@ export default function BookDetailsPage(): React.JSX.Element {
           animate="show"
           className="flex flex-col lg:flex-row gap-8 w-full"
         >
-          {/* Left Column - Cover & Actions */}
+          {/* Left Column - Cover & Main Actions */}
           <motion.div
             variants={itemVariants}
-            className="shrink-0 w-full lg:w-[260px] flex flex-col gap-4"
+            className="shrink-0 w-full lg:w-65 flex flex-col gap-4"
           >
-            <div className="bg-card/75 border border-border/40 backdrop-blur-xl shadow-2xl rounded-2xl p-4 flex flex-col sm:flex-row lg:flex-col gap-4 items-center sm:items-start lg:items-stretch">
-              <div className="relative aspect-2/3 w-36 sm:w-40 lg:w-full rounded-xl overflow-hidden shadow-lg border border-border/30 shrink-0 bg-muted flex items-center justify-center">
+            <div className="flex flex-row lg:flex-col gap-4 items-end lg:items-stretch lg:bg-card/75 lg:border lg:border-border/40 lg:backdrop-blur-xl lg:shadow-2xl lg:rounded-2xl lg:p-4">
+              <div className="relative aspect-2/3 w-28 sm:w-36 lg:w-full rounded-xl overflow-hidden shadow-2xl border border-border/40 shrink-0 bg-card flex items-center justify-center">
                 {coverUrl ? (
                   <Image
                     src={coverUrl}
                     alt={displayTitle}
                     fill
-                    sizes="(max-width: 640px) 150px, 260px"
+                    sizes="(max-width: 640px) 112px, (max-width: 1024px) 144px, 260px"
                     className="object-cover"
                     priority
                   />
@@ -251,35 +246,35 @@ export default function BookDetailsPage(): React.JSX.Element {
                 )}
               </div>
 
-              <div className="flex-1 flex flex-col gap-3 w-full justify-center">
+              <div className="flex-1 flex flex-col gap-2.5 w-full justify-end lg:justify-center mb-1 lg:mb-0">
                 {session.status === "authenticated" && session.data?.user && (
                   <>
                     {!hasListEntry ? (
                       <>
                         <Button
-                          className="w-full cursor-pointer rounded-xl transition-all shadow-md"
-                          size="lg"
+                          className="w-full cursor-pointer rounded-xl transition-all shadow-md font-semibold"
+                          size="default"
                           onClick={handleQuickAdd}
                         >
-                          {t("aquila.quickAdd", "Quick Add")}
+                          {t("aquila.quickAdd")}
                         </Button>
                         <Button
                           variant="outline"
-                          className="w-full cursor-pointer rounded-xl"
-                          size="lg"
+                          className="w-full cursor-pointer rounded-xl bg-card/80 backdrop-blur-sm"
+                          size="default"
                           onClick={(): void => setIsDialogOpen(true)}
                         >
-                          {t("aquila.addToList", "Add to List")}
+                          {t("aquila.addToList")}
                         </Button>
                       </>
                     ) : (
                       <Button
                         variant="secondary"
-                        className="w-full cursor-pointer rounded-xl"
-                        size="lg"
+                        className="w-full cursor-pointer rounded-xl font-semibold"
+                        size="default"
                         onClick={(): void => setIsDialogOpen(true)}
                       >
-                        {t("aquila.editEntry", "Edit Entry")}
+                        {t("aquila.editEntry")}
                       </Button>
                     )}
                     <RrMediaEditDialog
@@ -308,129 +303,148 @@ export default function BookDetailsPage(): React.JSX.Element {
                     />
                   </>
                 )}
-
-                {book.previewLink && (
-                  <Button
-                    variant="outline"
-                    className="w-full cursor-pointer rounded-xl flex items-center justify-center gap-2 mt-2"
-                    asChild
-                  >
-                    <a
-                      href={book.previewLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <BookOpen className="size-4" />
-                      {t("aquila.previewBook", "Preview Book")}
-                    </a>
-                  </Button>
-                )}
-
-                {book.infoLink && (
-                  <Button
-                    variant="outline"
-                    className="w-full cursor-pointer rounded-xl flex items-center justify-center gap-2"
-                    asChild
-                  >
-                    <a
-                      href={book.infoLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <TrendingUp className="size-4" />
-                      Google Books
-                    </a>
-                  </Button>
-                )}
-
-                {book.buyLink && (
-                  <Button
-                    variant="outline"
-                    className="w-full cursor-pointer rounded-xl flex items-center justify-center gap-2"
-                    asChild
-                  >
-                    <a
-                      href={book.buyLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <ShoppingBag className="size-4" />
-                      {t("aquila.buyBook", "Buy Book")}
-                    </a>
-                  </Button>
-                )}
               </div>
             </div>
 
-            {/* Metadata Sidebar */}
+            {/* Mobile Header / Title */}
+            <div className="space-y-1 lg:hidden mt-1">
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+                {displayTitle}
+              </h1>
+              {displaySubtitle && displaySubtitle !== displayTitle && (
+                <p className="text-sm text-muted-foreground font-semibold">
+                  {displaySubtitle}
+                </p>
+              )}
+            </div>
+
+            {/* Media Metadata Stats Sidebar */}
             <div className="bg-card/65 border border-border/40 backdrop-blur-xl rounded-2xl p-5 space-y-4">
-              <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                {t("aquila.information", "Information")}
-              </h3>
-              <div className="space-y-3">
-                {book.publisher && (
-                  <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
-                    <span className="text-muted-foreground">{t("aquila.publisher", "Publisher")}</span>
-                    <span
-                      className="font-medium text-foreground text-right text-xs max-w-[150px] truncate"
-                      title={book.publisher}
-                    >
-                      {book.publisher}
-                    </span>
+              {/* Top Key Stats Block */}
+              <div className="space-y-2.5">
+                {/* Average Score Card (Full Width) */}
+                <div className="flex items-center gap-3 p-3.5 rounded-xl bg-primary/10 border border-primary/20 transition-all shadow-xs">
+                  <div className="p-2.5 rounded-xl bg-primary/20 text-primary shrink-0">
+                    <Star className="size-5 fill-primary/40" />
                   </div>
-                )}
-                {formattedPublishedDate && (
-                  <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
-                    <span className="text-muted-foreground">
-                      {t("aquila.publishedDate", "Published Date")}
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[10px] font-bold text-primary uppercase tracking-wider">
+                      {t("aquila.averageScore")}
                     </span>
-                    <span className="font-medium text-foreground">
-                      {formattedPublishedDate}
-                    </span>
+                    <div className="flex items-baseline gap-1 mt-0.5">
+                      <span className="text-2xl font-black text-primary leading-none">
+                        {book.localAverageScore
+                          ? book.localAverageScore.toFixed(1)
+                          : book.averageRating
+                            ? book.averageRating.toFixed(1)
+                            : "N/A"}
+                      </span>
+                      <span className="text-xs font-semibold text-muted-foreground">
+                        / 10
+                      </span>
+                    </div>
                   </div>
-                )}
-                {book.chapters && (
-                  <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
-                    <span className="text-muted-foreground">{t("aquila.chapters", "Chapters")}</span>
-                    <span className="font-medium text-foreground">
-                      {book.chapters}
-                    </span>
+                </div>
+
+                {/* Favorites & Popularity (2 Columns) */}
+                <div className="grid grid-cols-2 gap-2.5">
+                  {/* Favorites */}
+                  <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 transition-colors min-w-0">
+                    <div className="p-2 rounded-lg bg-rose-500/20 text-rose-500 shrink-0">
+                      <Heart className="size-4 fill-rose-500/40" />
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-[10px] font-bold text-rose-500/90 uppercase tracking-wider truncate">
+                        {t("aquila.favorites")}
+                      </span>
+                      <span
+                        className="text-base font-extrabold text-foreground tracking-tight leading-none mt-0.5"
+                        title={
+                          book.localFavoritesCount != null
+                            ? book.localFavoritesCount.toLocaleString()
+                            : "0"
+                        }
+                      >
+                        {formatCompactNumber(book.localFavoritesCount)}
+                      </span>
+                    </div>
                   </div>
-                )}
-                {book.retailPrice && (
-                  <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
-                    <span className="text-muted-foreground">{t("aquila.price", "Price")}</span>
-                    <span className="font-medium text-foreground">
-                      {book.retailPrice} {book.retailPriceCurrency}
-                    </span>
+
+                  {/* Popularity */}
+                  <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 transition-colors min-w-0">
+                    <div className="p-2 rounded-lg bg-blue-500/20 text-blue-500 shrink-0">
+                      <Users className="size-4 fill-blue-500/40" />
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-[10px] font-bold text-blue-500/90 uppercase tracking-wider truncate">
+                        {t("aquila.popularity")}
+                      </span>
+                      <span
+                        className="text-base font-extrabold text-foreground tracking-tight leading-none mt-0.5"
+                        title={
+                          book.localPopularity != null
+                            ? book.localPopularity.toLocaleString()
+                            : "0"
+                        }
+                      >
+                        {formatCompactNumber(book.localPopularity)}
+                      </span>
+                    </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Show More / Show Less Toggle Button (Mobile/Tablet only) */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground flex lg:hidden items-center justify-center gap-1.5 py-2 border border-border/30 hover:border-border/60 bg-muted/20 cursor-pointer"
+                onClick={() => setShowMoreInfo(!showMoreInfo)}
+              >
+                <span>
+                  {showMoreInfo ? t("aquila.showLess") : t("aquila.showMore")}
+                </span>
+                {showMoreInfo ? (
+                  <ChevronUp className="size-3.5" />
+                ) : (
+                  <ChevronDown className="size-3.5" />
                 )}
-                {book.isbn10 && (
-                  <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
-                    <span className="text-muted-foreground">ISBN-10</span>
-                    <span className="font-medium text-foreground font-mono text-xs">
-                      {book.isbn10}
-                    </span>
-                  </div>
+              </Button>
+
+              {/* Information Details (Collapsible on mobile, always shown on desktop) */}
+              <div
+                className={cn(
+                  "space-y-4 pt-2 border-t border-border/40",
+                  showMoreInfo ? "block" : "hidden lg:block",
                 )}
-                {book.isbn13 && (
-                  <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
-                    <span className="text-muted-foreground">ISBN-13</span>
-                    <span className="font-medium text-foreground font-mono text-xs">
-                      {book.isbn13}
-                    </span>
-                  </div>
-                )}
+              >
+                <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                  {t("aquila.information")}
+                </h3>
+                <div className="space-y-3">
+                  <RrMediaInfoRow label={t("aquila.publisher")} value={book.publisher} />
+                  <RrMediaInfoRow label={t("aquila.publishedDate")} value={formattedPublishedDate} />
+                  <RrMediaInfoRow label={t("aquila.chapters")} value={book.chapters} />
+                  <RrMediaInfoRow
+                    label={t("aquila.price")}
+                    value={book.retailPrice ? `${book.retailPrice} ${book.retailPriceCurrency || ""}` : null}
+                  />
+                  <RrMediaInfoRow label="ISBN-10" value={book.isbn10} className="font-mono" />
+                  <RrMediaInfoRow label="ISBN-13" value={book.isbn13} className="font-mono" />
+                  <RrMediaInfoRow label={t("aquila.pages")} value={book.pages} />
+                  <RrMediaInfoRow label={t("aquila.language")} value={book.language} className="uppercase" />
+                </div>
               </div>
             </div>
-
-            <RrMediaFriendsProgress mediaId={book.id.toString()} mediaType="book" />
           </motion.div>
 
           {/* Right Column - Info */}
           <div className="flex-1 space-y-6 lg:pt-8 min-w-0">
-            {/* Header */}
-            <motion.div variants={itemVariants} className="space-y-2">
+            {/* Header (Desktop) */}
+            <motion.div
+              variants={itemVariants}
+              className="space-y-2 hidden lg:block"
+            >
               <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">
                 {displayTitle}
               </h1>
@@ -441,93 +455,18 @@ export default function BookDetailsPage(): React.JSX.Element {
               )}
             </motion.div>
 
-            {/* Quick Info Badges */}
-            <motion.div
-              variants={itemVariants}
-              className="flex flex-wrap gap-3"
-            >
-              {publishedYear && (
-                <div className="bg-card/45 border border-border/30 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2">
-                  <Calendar className="size-4 text-primary" />
-                  <span className="text-sm font-semibold text-foreground">
-                    {publishedYear}
-                  </span>
-                </div>
-              )}
-              {book.pages && (
-                <div className="bg-card/45 border border-border/30 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2">
-                  <BookOpen className="size-4 text-primary" />
-                  <span className="text-sm font-semibold text-foreground">
-                    {t("aquila.pagesCount", "{{count}} pages", { count: book.pages })}
-                  </span>
-                </div>
-              )}
-              {book.chapters && (
-                <div className="bg-card/45 border border-border/30 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2">
-                  <BookOpen className="size-4 text-primary" />
-                  <span className="text-sm font-semibold text-foreground">
-                    {t("aquila.chaptersCount", "{{count}} chapters", { count: book.chapters })}
-                  </span>
-                </div>
-              )}
-              {book.averageRating && (
-                <div className="bg-card/45 border border-border/30 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2">
-                  <Star className="size-4 text-amber-500 fill-amber-500" />
-                  <span className="text-sm font-semibold text-foreground">
-                    {book.averageRating} ({t("aquila.reviewsCount", "{{count}} reviews", { count: book.ratingsCount || 0 })})
-                  </span>
-                </div>
-              )}
-              {book.language && (
-                <div className="bg-card/45 border border-border/30 backdrop-blur-md px-4 py-2 rounded-xl flex items-center gap-2">
-                  <Globe className="size-4 text-primary" />
-                  <span className="text-sm font-semibold text-foreground uppercase">
-                    {book.language}
-                  </span>
-                </div>
-              )}
-              {book.maturityRating && (
-                <Badge
-                  variant="outline"
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-muted-foreground"
-                >
-                  {book.maturityRating.replace(/_/g, " ")}
-                </Badge>
-              )}
-            </motion.div>
-
-            {/* Stats Dashboard */}
-            <RrMediaStatsDashboard
-              localAverageScore={book.localAverageScore}
-              localPopularity={book.localPopularity}
-              localFavoritesCount={book.localFavoritesCount}
-              localStatusDistribution={book.localStatusDistribution}
-              localScoreDistribution={book.localScoreDistribution}
-            />
-
             {/* Description */}
-            <motion.div
-              variants={itemVariants}
-              className="bg-card/30 border border-border/20 backdrop-blur-sm p-6 rounded-2xl"
-            >
-              <h3 className="text-base font-bold text-foreground mb-3">
-                {t("aquila.about", "About")}
-              </h3>
-              {book.description ? (
-                <div className="prose prose-neutral dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-sm prose-p:my-2 prose-a:text-primary hover:prose-a:text-primary transition-colors">
-                  <p>{book.description}</p>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground italic">
-                  {t("aquila.noDescriptionAvailable", "No description available.")}
-                </p>
-              )}
-            </motion.div>
+            <RrMediaDescription description={book.description} />
+
+            {/* Genres / Subjects */}
+            {book.subjects && book.subjects.length > 0 && (
+              <RrMediaGenres genres={book.subjects} />
+            )}
 
             {/* Staff */}
             {staff && staff.length > 0 && (
               <motion.div variants={itemVariants} className="space-y-3">
-                <h3 className="text-base font-bold text-foreground">{t("aquila.staff", "Staff")}</h3>
+                <h3 className="text-base font-bold text-foreground">{t("aquila.staff")}</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {staff.map((person) => (
                     <div
@@ -545,8 +484,27 @@ export default function BookDetailsPage(): React.JSX.Element {
                 </div>
               </motion.div>
             )}
+
+            {/* Stats Dashboard (Score & Status distribution charts) */}
+            <RrMediaStatsDashboard
+              localAverageScore={book.localAverageScore}
+              localPopularity={book.localPopularity}
+              localFavoritesCount={book.localFavoritesCount}
+              localStatusDistribution={book.localStatusDistribution}
+              localScoreDistribution={book.localScoreDistribution}
+              showCounters={false}
+            />
+
+            {/* Friends Progress */}
+            <RrMediaFriendsProgress
+              mediaId={book.id.toString()}
+              mediaType="book"
+            />
           </div>
         </motion.div>
+
+        {/* Media Footer */}
+        <RrMediaFooter providers={providers} updatedAt={book.updatedAt} />
       </div>
     </div>
   );

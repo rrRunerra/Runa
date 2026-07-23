@@ -17,9 +17,16 @@ export function RrMediaInfoRow({
   }
 
   return (
-    <div className="flex justify-between items-center text-sm border-b border-border/50 pb-2">
-      <span className="text-muted-foreground">{label}</span>
-      <span className={cn("font-medium text-foreground", className)}>
+    <div className="flex justify-between items-start text-sm border-b border-border/50 pb-2 gap-3">
+      <span className="text-muted-foreground shrink-0 font-medium">
+        {label}
+      </span>
+      <span
+        className={cn(
+          "font-medium text-foreground text-right min-w-0 wrap-break-word",
+          className,
+        )}
+      >
         {value}
       </span>
     </div>
