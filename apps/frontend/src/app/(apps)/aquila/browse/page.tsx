@@ -334,36 +334,40 @@ export default function BrowsePage(): React.JSX.Element {
           </div>
 
           {/* Animated Glassmorphic Category Selector Pills */}
-          <div className="flex p-1 bg-muted/40 backdrop-blur-xs border border-border/30 rounded-2xl w-full md:w-auto flex-wrap gap-1 shadow-2xs">
-            {categories.map((cat) => {
-              const isActive = type === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => handleTypeChange(cat.id)}
-                  className={cn(
-                    "relative px-4 py-1.5 rounded-xl text-xs font-semibold transition-colors duration-200 select-none cursor-pointer flex-1 md:flex-none text-center outline-hidden",
-                    isActive
-                      ? "text-primary-foreground"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeCategoryHighlight"
-                      className="absolute inset-0 bg-primary rounded-xl shadow-md shadow-primary/20"
-                      transition={{
-                        type: "spring",
-                        stiffness: 350,
-                        damping: 25,
-                      }}
-                    />
-                  )}
-                  <span className="relative z-10">{cat.label}</span>
-                </button>
-              );
-            })}
+          <div className="w-full md:w-auto overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden max-w-full">
+            <div className="flex flex-row flex-nowrap shrink-0 gap-1 p-1 bg-muted/40 backdrop-blur-xs border border-border/30 rounded-2xl w-max min-w-full shadow-2xs">
+              {categories.map((cat) => {
+                const isActive = type === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => handleTypeChange(cat.id)}
+                    className={cn(
+                      "relative px-4 py-1.5 rounded-xl text-xs font-semibold transition-colors duration-200 select-none cursor-pointer shrink-0 whitespace-nowrap text-center outline-hidden flex-1 md:flex-none",
+                      isActive
+                        ? "text-primary-foreground"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {isActive && (
+                      <motion.div
+                        layoutId="activeCategoryHighlight"
+                        className="absolute inset-0 bg-primary rounded-xl shadow-md shadow-primary/20"
+                        transition={{
+                          type: "spring",
+                          stiffness: 350,
+                          damping: 25,
+                        }}
+                      />
+                    )}
+                    <span className="relative z-10 whitespace-nowrap">
+                      {cat.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </motion.div>
 
@@ -382,6 +386,11 @@ export default function BrowsePage(): React.JSX.Element {
                   "aquila.searchPlaceholder",
                   "Search titles... (try @anime, @manga to switch type)",
                 )
+          }
+          shortPlaceholder={
+            ["characters", "actors"].includes(type)
+              ? t("aquila.shortSearchNamesPlaceholder", "Search names...")
+              : t("aquila.shortSearchPlaceholder", "Search titles...")
           }
         />
 

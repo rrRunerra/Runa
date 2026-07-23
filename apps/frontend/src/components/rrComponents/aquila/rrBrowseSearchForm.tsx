@@ -4,6 +4,7 @@ import React, { useRef, useState } from "react";
 import { Search, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +13,7 @@ export interface RrBrowseSearchFormProps {
   onChange: (val: string) => void;
   onSubmit: (e: React.FormEvent) => void;
   placeholder?: string;
+  shortPlaceholder?: string;
 }
 
 export const RrBrowseSearchForm = ({
@@ -19,12 +21,17 @@ export const RrBrowseSearchForm = ({
   onChange,
   onSubmit,
   placeholder,
+  shortPlaceholder,
 }: RrBrowseSearchFormProps): React.JSX.Element => {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   const [isFocused, setIsFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const resolvedPlaceholder = placeholder ?? t("aquila.searchPlaceholder");
+  const fullPlaceholder = placeholder ?? t("aquila.searchPlaceholder");
+  const fallbackShort =
+    shortPlaceholder ?? t("aquila.shortSearchPlaceholder", "Search titles...");
+  const resolvedPlaceholder = isMobile ? fallbackShort : fullPlaceholder;
 
   return (
     <motion.form
