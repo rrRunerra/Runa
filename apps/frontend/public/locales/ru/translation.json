@@ -1202,7 +1202,18 @@
     "noDescriptionAvailable": "Описание отсутствует.",
     "staff": "Авторы",
     "author": "Автор",
-    "artist": "Художник"
+    "artist": "Художник",
+    "averageScore": "Средняя оценка",
+    "favorites": "Избранное",
+    "popularity": "Популярность",
+    "showMore": "Показать больше",
+    "description": "Описание",
+    "friendsActivity": "Активность друзей",
+    "dataProvidedBy": "Данные предоставлены",
+    "trailer": "Трейлер",
+    "lastUpdated": "Последнее обновление",
+    "genres": "Жанры",
+    "planning": "В планах"
   },
   "lynx": {
     "returnToSafety": "Вернуться в безопасность",
@@ -1271,7 +1282,9 @@
     "privateMovieList": "Приватный список фильмов",
     "privateMovieListDesc": "Скрывает ваш список фильмов от других пользователей на странице профиля.",
     "privateConnections": "Приватные интеграции",
-    "privateConnectionsDesc": "Скрывает все подключенные сторонние интеграции/аккаунты на вашей публичной странице профиля."
+    "privateConnectionsDesc": "Скрывает все подключенные сторонние интеграции/аккаунты на вашей публичной странице профиля.",
+    "privateFriends": "Скрытый список друзей",
+    "privateFriendsDesc": "Скрыть список друзей из вашего публичного профиля."
   },
   "settingsDialog": {
     "title": "Settings",

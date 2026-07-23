@@ -72,7 +72,7 @@ export function RrMediaFriendsProgress({
   const { data = [], isLoading } = useSWR<FriendProgressEntry[]>(
     fetchUrl ? [fetchUrl, session?.accessToken] : null,
     fetcher,
-    { shouldRetryOnError: false }
+    { shouldRetryOnError: false },
   );
 
   if (authStatus !== "authenticated" || (!isLoading && data.length === 0)) {
@@ -83,19 +83,19 @@ export function RrMediaFriendsProgress({
     const statusUpper = status.toUpperCase();
     switch (statusUpper) {
       case "WATCHING":
-        return t("aquila.watching", "Watching");
+        return t("aquila.watching");
       case "PLAYING":
-        return t("aquila.playing", "Playing");
+        return t("aquila.playing");
       case "READING":
-        return t("aquila.reading", "Reading");
+        return t("aquila.reading");
       case "COMPLETED":
-        return t("aquila.completed", "Completed");
+        return t("aquila.completed");
       case "ON_HOLD":
-        return t("aquila.onHold", "On Hold");
+        return t("aquila.onHold");
       case "DROPPED":
-        return t("aquila.dropped", "Dropped");
+        return t("aquila.dropped");
       case "PLANNING":
-        return t("aquila.planning", "Planning");
+        return t("aquila.planning");
       default:
         return status;
     }
@@ -105,13 +105,13 @@ export function RrMediaFriendsProgress({
     if (progress === null) return "";
     const typeLower = type.toLowerCase();
     if (typeLower === "anime" || typeLower === "tv") {
-      return `${t("aquila.episodeShort", "Ep.")} ${progress}`;
+      return `${t("aquila.episodeShort")} ${progress}`;
     }
     if (typeLower === "manga" || typeLower === "book") {
-      return `${t("aquila.chapterShort", "Ch.")} ${progress}`;
+      return `${t("aquila.chapterShort")} ${progress}`;
     }
     if (typeLower === "game") {
-      return `${progress} ${t("aquila.hoursShort", "hrs")}`;
+      return `${progress} ${t("aquila.hoursShort")}`;
     }
     return `${progress}`;
   };
@@ -127,7 +127,7 @@ export function RrMediaFriendsProgress({
     <Card className="bg-card/65 border border-border/40 backdrop-blur-xl rounded-2xl p-4 space-y-3.5 shadow-sm hover:shadow-md transition-all duration-200">
       <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase flex items-center gap-1.5 border-b border-border/20 pb-2">
         <Users className="size-3.5 text-primary shrink-0" />
-        <span>{t("aquila.friendsActivity", "Friends Activity")}</span>
+        <span>{t("aquila.friendsActivity")}</span>
       </h3>
 
       {isLoading && data.length === 0 ? (
@@ -136,23 +136,27 @@ export function RrMediaFriendsProgress({
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          <ScrollArea className="max-h-[260px] pr-1.5">
+          <ScrollArea className="max-h-65 pr-1.5">
             <div className="flex flex-col gap-2">
               {data.map((entry) => {
                 const friend = entry.friend;
                 if (!friend) return null;
 
-                const nameToDisplay = friend.nickname || friend.displayName || friend.username;
+                const nameToDisplay =
+                  friend.nickname || friend.displayName || friend.username;
                 const statusLabel = getStatusLabel(entry.status);
                 const progressLabel = showProgress(entry.status)
                   ? getProgressLabel(entry.progress, mediaType)
                   : "";
-                const watchlistUrl = getWatchlistUrl(friend.username, mediaType);
+                const watchlistUrl = getWatchlistUrl(
+                  friend.username,
+                  mediaType,
+                );
 
                 return (
                   <div
                     key={friend.username}
-                    className="relative flex items-center justify-between gap-2.5 py-2 px-2.5 rounded-xl border border-border/10 bg-muted/15 hover:bg-muted/40 transition-all duration-200"
+                    className="relative flex items-center justify-between gap-2 py-2 px-3 rounded-xl border border-border/10 bg-muted/15 hover:bg-muted/40 transition-all duration-200"
                   >
                     {/* Card-wide Link to friend's watchlist */}
                     <Link
@@ -161,35 +165,49 @@ export function RrMediaFriendsProgress({
                       aria-label={`${nameToDisplay}'s watchlist`}
                     />
 
-                    {/* Left: Avatar & Info */}
-                    <div className="flex items-center gap-2.5 min-w-0 pointer-events-none z-10">
+                    {/* Left: Avatar & Username */}
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1 z-10">
                       <Avatar className="h-8 w-8 border shrink-0">
-                        <AvatarImage src={friend.avatarUrl ? getSafeImageUrl(friend.avatarUrl) : ""} />
+                        <AvatarImage
+                          src={
+                            friend.avatarUrl
+                              ? getSafeImageUrl(friend.avatarUrl)
+                              : ""
+                          }
+                        />
                         <AvatarFallback className="text-[10px] font-bold uppercase">
                           {friend.username.charAt(0)}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="min-w-0 leading-tight">
-                        {/* Username links to profile page */}
-                        <Link
-                          href={`/polaris/user/${friend.username}`}
-                          className="text-[13px] font-semibold text-foreground truncate block hover:text-primary transition-colors pointer-events-auto relative z-20"
-                        >
-                          {nameToDisplay}
-                        </Link>
-                        <span className="text-[10px] text-muted-foreground truncate block whitespace-nowrap">
-                          {statusLabel} {progressLabel && `• ${progressLabel}`}
-                        </span>
-                      </div>
+                      <Link
+                        href={`/polaris/user/${friend.username}`}
+                        className="text-[13px] font-semibold text-foreground truncate hover:text-primary transition-colors pointer-events-auto z-20"
+                        title={nameToDisplay}
+                      >
+                        {nameToDisplay}
+                      </Link>
+                    </div>
+
+                    {/* Middle: Status & Progress */}
+                    <div className="flex items-center justify-center text-center px-2 z-10 shrink-0">
+                      <span className="text-xs font-medium text-muted-foreground bg-accent/20 border border-border/20 px-2.5 py-1 rounded-lg truncate">
+                        {statusLabel} {progressLabel && `• ${progressLabel}`}
+                      </span>
                     </div>
 
                     {/* Right: Score */}
-                    {entry.score && (
-                      <span className="shrink-0 flex items-center gap-0.5 text-[10px] font-bold text-amber-500 bg-amber-500/5 px-1.5 py-0.5 rounded border border-amber-500/15 pointer-events-none z-10">
-                        <Star className="size-2.5 fill-amber-500 shrink-0" />
-                        {entry.score}
-                      </span>
-                    )}
+                    <div className="flex items-center justify-end z-10 min-w-10 shrink-0">
+                      {entry.score ? (
+                        <span className="flex items-center gap-0.5 text-xs font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/20">
+                          <Star className="size-3 fill-amber-500 shrink-0" />
+                          {entry.score}
+                        </span>
+                      ) : (
+                        <span className="text-[11px] text-muted-foreground/60 italic">
+                          -
+                        </span>
+                      )}
+                    </div>
                   </div>
                 );
               })}

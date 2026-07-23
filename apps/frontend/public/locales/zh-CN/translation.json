@@ -1202,7 +1202,18 @@
     "noDescriptionAvailable": "暂无描述。",
     "staff": "演职人员",
     "author": "作者",
-    "artist": "画师"
+    "artist": "画师",
+    "averageScore": "平均评分",
+    "favorites": "收藏数",
+    "popularity": "热度",
+    "showMore": "显示更多",
+    "description": "简介",
+    "friendsActivity": "好友动态",
+    "dataProvidedBy": "数据由",
+    "trailer": "预告片",
+    "lastUpdated": "最后更新",
+    "genres": "类型",
+    "planning": "计划中"
   },
   "lynx": {
     "returnToSafety": "返回安全区域",
@@ -1271,7 +1282,9 @@
     "privateMovieList": "私密电影列表",
     "privateMovieListDesc": "在您的个人资料列表中向其他用户隐藏您的电影列表项。",
     "privateConnections": "私密连接",
-    "privateConnectionsDesc": "在您的公开个人资料页面中隐藏所有已绑定的第三方集成/连接。"
+    "privateConnectionsDesc": "在您的公开个人资料页面中隐藏所有已绑定的第三方集成/连接。",
+    "privateFriends": "私密好友列表",
+    "privateFriendsDesc": "在你的公开个人资料中隐藏好友列表。"
   },
   "settingsDialog": {
     "title": "Settings",

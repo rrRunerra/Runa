@@ -26,7 +26,6 @@ model AquilaAnime {
     episodes Int?
     duration Int?
     genres   String[] @db.Text
-    tags     Json?    @db.Json
 
     source  String?
     format  AnimeFormat @default(UNKNOWN)

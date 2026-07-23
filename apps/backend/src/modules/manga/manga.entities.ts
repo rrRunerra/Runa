@@ -51,7 +51,6 @@ export interface MangaEntity {
   chapters: number | null;
   volumes: number | null;
   genres: string[];
-  tags: MediaTag[] | null;
   source: string | null;
   format: MangaFormat;
   status: MangaStatus;

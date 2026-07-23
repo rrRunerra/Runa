@@ -1202,7 +1202,18 @@
     "noDescriptionAvailable": "Kuvausta ei ole saatavilla.",
     "staff": "Tekijät",
     "author": "Kirjailija",
-    "artist": "Kuvittaja"
+    "artist": "Kuvittaja",
+    "averageScore": "Keskiarvo",
+    "favorites": "Suosikit",
+    "popularity": "Suosio",
+    "showMore": "Näytä lisää",
+    "description": "Kuvaus",
+    "friendsActivity": "Ystävien toiminta",
+    "dataProvidedBy": "Tiedot tarjoaa",
+    "trailer": "Traileri",
+    "lastUpdated": "Viimeksi päivitetty",
+    "genres": "Genret",
+    "planning": "Suunnitteilla"
   },
   "lynx": {
     "returnToSafety": "Palaa turvallisuuteen",
@@ -1271,7 +1282,9 @@
     "privateMovieList": "Yksityinen elokuvalista",
     "privateMovieListDesc": "Piilottaa elokuvalistasi merkinnät muilta käyttäjiltä profiilisivullasi.",
     "privateConnections": "Yksityiset yhteydet",
-    "privateConnectionsDesc": "Piilottaa kaikki linkitetyt kolmannen osapuolen integraatiot/yhteydet julkiselta profiilisivultasi."
+    "privateConnectionsDesc": "Piilottaa kaikki linkitetyt kolmannen osapuolen integraatiot/yhteydet julkiselta profiilisivultasi.",
+    "privateFriends": "Yksityinen ystävälista",
+    "privateFriendsDesc": "Piilota ystävälistasi julkisesta profiilistasi."
   },
   "settingsDialog": {
     "title": "Settings",

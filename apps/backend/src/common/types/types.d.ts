@@ -101,7 +101,6 @@ export interface Media {
   boxOffice?: string | null;
   genres: string[] | null;
   source?: string | null;
-  tags?: { name: string; rank?: number }[] | null;
   averageScore?: number | null;
   popularity?: number | null;
   favourites?: number | null;
@@ -240,13 +239,6 @@ export interface AniListGetResponse {
       favourites: number;
       genres: string[];
       synonyms: string[];
-      tags: {
-        id?: number;
-        name: string;
-        description?: string;
-        rank: number;
-        isGeneralSpoiler?: boolean;
-      }[];
       isAdult?: boolean;
       relations: {
         edges: {

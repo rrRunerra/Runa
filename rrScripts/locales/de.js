@@ -1202,7 +1202,18 @@ export default {
     "noDescriptionAvailable": "Keine Beschreibung verfügbar.",
     "staff": "Mitwirkende",
     "author": "Autor",
-    "artist": "Zeichner"
+    "artist": "Zeichner",
+    "averageScore": "Durchschnittsbewertung",
+    "favorites": "Favoriten",
+    "popularity": "Beliebtheit",
+    "showMore": "Mehr anzeigen",
+    "description": "Beschreibung",
+    "friendsActivity": "Aktivitäten von Freunden",
+    "dataProvidedBy": "Daten bereitgestellt von",
+    "trailer": "Trailer",
+    "lastUpdated": "Zuletzt aktualisiert",
+    "genres": "Genres",
+    "planning": "Geplant"
   },
   "lynx": {
     "returnToSafety": "Zurück zur Sicherheit",
@@ -1271,7 +1282,9 @@ export default {
     "privateMovieList": "Private Film-Liste",
     "privateMovieListDesc": "Blendet Ihre Film-Listeneinträge für andere Benutzer auf Ihrer Profilseite aus.",
     "privateConnections": "Private Verbindungen",
-    "privateConnectionsDesc": "Blendet alle Ihre verknüpften Drittanbieter-Integrationen/-Verbindungen auf Ihrer öffentlichen Profilseite aus."
+    "privateConnectionsDesc": "Blendet alle Ihre verknüpften Drittanbieter-Integrationen/-Verbindungen auf Ihrer öffentlichen Profilseite aus.",
+    "privateFriends": "Private Freundesliste",
+    "privateFriendsDesc": "Blende deine Freundesliste auf deinem öffentlichen Profil aus."
   },
   "settingsDialog": {
     "title": "Settings",

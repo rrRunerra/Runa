@@ -24,7 +24,6 @@ model AquilaManga {
     volumes  Int?
 
     genres String[] @db.Text
-    tags   Json?    @db.Json
 
     source  String?
     format  MangaFormat @default(UNKNOWN)

@@ -28,12 +28,14 @@ export class AnimeService {
   ) {}
 
   public async search(name: string): Promise<AnimeSearchEntity[]> {
-    const normalized = name.trim().toLowerCase();
-    const cacheKey = `anime-search:${normalized.replaceAll(' ', '')}`;
+    const cleanName = decodeURIComponent(name).replace(/\+/g, ' ').trim();
+    const cacheKey = CacheService.keys.animeSearch(cleanName);
 
-    const cached = await this.cacheService.get<AnimeSearchEntity[]>(cacheKey);
+    const rawCached = await this.cacheService.get<any>(cacheKey);
+    const cached: AnimeSearchEntity[] | null =
+      typeof rawCached === 'string' ? JSON.parse(rawCached) : rawCached;
 
-    if (cached) {
+    if (cached && Array.isArray(cached)) {
       this.logger.debug(`Anime search cache hit ${cached.length} entries`);
       return cached;
     }
@@ -42,28 +44,24 @@ export class AnimeService {
     let usedExternal = false;
 
     if (this.useLocalMedia) {
-      result = await this.animeRepository.search(name);
+      result = await this.animeRepository.search(cleanName);
     }
 
     if (!this.useLocalMedia || result.length === 0) {
-      result = await this.animeExternal.search(name);
+      result = await this.animeExternal.search(cleanName);
       usedExternal = true;
     }
 
     this.logger.debug(`Anime found: ${result.length}`);
 
     if (result.length > 0) {
-      await this.cacheService.set(
-        cacheKey,
-        JSON.stringify(result),
-        this.cacheDuration,
-      );
+      await this.cacheService.set(cacheKey, result, this.cacheDuration);
     }
 
     // Queue a background refresh only when local results were returned
     if (this.useLocalMedia && !usedExternal && result.length > 0) {
       this.logger.debug(`Queuing background refresh for anime`);
-      this.animeQueueService.addSearchRefresh(name, cacheKey);
+      this.animeQueueService.addSearchRefresh(cleanName, cacheKey);
     }
 
     return result;

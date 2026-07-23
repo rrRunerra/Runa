@@ -1203,7 +1203,18 @@
     "noDescriptionAvailable": "No description available.",
     "staff": "Staff",
     "author": "Author",
-    "artist": "Artist"
+    "artist": "Artist",
+    "averageScore": "Average Score",
+    "favorites": "Favorites",
+    "popularity": "Popularity",
+    "showMore": "Show More",
+    "description": "Description",
+    "friendsActivity": "Friends Activity",
+    "dataProvidedBy": "Data provided by",
+    "trailer": "Trailer",
+    "lastUpdated": "Last updated",
+    "genres": "Genres",
+    "planning": "Planning"
   },
   "lynx": {
     "returnToSafety": "Návrat do bezpečí",

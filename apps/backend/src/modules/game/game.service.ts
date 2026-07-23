@@ -36,12 +36,14 @@ export class GameService {
   ) {}
 
   public async search(name: string): Promise<GameSearchEntity[]> {
-    const normalized = name.trim().toLowerCase();
-    const cacheKey = `game-search:${normalized.replaceAll(' ', '')}`;
+    const cleanName = decodeURIComponent(name).replace(/\+/g, ' ').trim();
+    const cacheKey = CacheService.keys.gameSearch(cleanName);
 
-    const cached = await this.cacheService.get<GameSearchEntity[]>(cacheKey);
+    const rawCached = await this.cacheService.get<any>(cacheKey);
+    const cached: GameSearchEntity[] | null =
+      typeof rawCached === 'string' ? JSON.parse(rawCached) : rawCached;
 
-    if (cached) {
+    if (cached && Array.isArray(cached)) {
       this.logger.debug(`Game search cache hit ${cached.length} entries`);
       return cached;
     }
@@ -50,28 +52,24 @@ export class GameService {
     let usedExternal = false;
 
     if (this.useLocalMedia) {
-      result = await this.gameRepository.search(name);
+      result = await this.gameRepository.search(cleanName);
     }
 
     if (!this.useLocalMedia || result.length === 0) {
-      result = await this.gameExternal.search(name);
+      result = await this.gameExternal.search(cleanName);
       usedExternal = true;
     }
 
     this.logger.debug(`Games found: ${result.length}`);
 
     if (result.length > 0) {
-      await this.cacheService.set(
-        cacheKey,
-        JSON.stringify(result),
-        this.cacheDuration,
-      );
+      await this.cacheService.set(cacheKey, result, this.cacheDuration);
     }
 
     // Queue a background refresh only when local results were returned
     if (this.useLocalMedia && !usedExternal && result.length > 0) {
       this.logger.debug('Queuing background refresh for games');
-      this.gameQueueService.addSearchRefresh(name, cacheKey);
+      this.gameQueueService.addSearchRefresh(cleanName, cacheKey);
     }
 
     return result;

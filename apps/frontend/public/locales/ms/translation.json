@@ -1202,7 +1202,18 @@
     "noDescriptionAvailable": "Tiada keterangan tersedia.",
     "staff": "Krew / Kakitangan",
     "author": "Penulis",
-    "artist": "Pelukis"
+    "artist": "Pelukis",
+    "averageScore": "Skor Purata",
+    "favorites": "Kegemaran",
+    "popularity": "Populariti",
+    "showMore": "Tunjukkan lagi",
+    "description": "Penerangan",
+    "friendsActivity": "Aktiviti Rakan",
+    "dataProvidedBy": "Data disediakan oleh",
+    "trailer": "Treler",
+    "lastUpdated": "Terakhir dikemas kini",
+    "genres": "Genre",
+    "planning": "Perancangan"
   },
   "lynx": {
     "returnToSafety": "Kembali ke keselamatan",
@@ -1271,7 +1282,9 @@
     "privateMovieList": "Senarai Filem Peribadi",
     "privateMovieListDesc": "Sembunyikan entri senarai filem anda daripada pengguna lain di halaman profil anda.",
     "privateConnections": "Sambungan Peribadi",
-    "privateConnectionsDesc": "Sembunyikan semua sambungan/integrasi pihak ketiga yang anda pautkan daripada halaman profil awam anda."
+    "privateConnectionsDesc": "Sembunyikan semua sambungan/integrasi pihak ketiga yang anda pautkan daripada halaman profil awam anda.",
+    "privateFriends": "Senarai Rakan Peribadi",
+    "privateFriendsDesc": "Sembunyikan senarai rakan anda daripada profil awam anda."
   },
   "settingsDialog": {
     "title": "Settings",

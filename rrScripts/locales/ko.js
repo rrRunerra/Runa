@@ -1202,7 +1202,18 @@ export default {
     "noDescriptionAvailable": "설명이 제공되지 않습니다.",
     "staff": "제작진",
     "author": "작가",
-    "artist": "삽화가"
+    "artist": "삽화가",
+    "averageScore": "평균 평점",
+    "favorites": "즐겨찾기",
+    "popularity": "인기",
+    "showMore": "더 보기",
+    "description": "설명",
+    "friendsActivity": "친구 활동",
+    "dataProvidedBy": "데이터 제공:",
+    "trailer": "트레일러",
+    "lastUpdated": "최근 업데이트",
+    "genres": "장르",
+    "planning": "볼 예정"
   },
   "lynx": {
     "returnToSafety": "안전한 곳으로 돌아가기",
@@ -1271,7 +1282,9 @@ export default {
     "privateMovieList": "비공개 영화 목록",
     "privateMovieListDesc": "프로필 목록 페이지에서 다른 사용자에게 영화 목록 항목을 숨깁니다.",
     "privateConnections": "비공개 연결",
-    "privateConnectionsDesc": "공개 프로필 페이지에서 연결된 모든 타사 통합/연결을 숨깁니다."
+    "privateConnectionsDesc": "공개 프로필 페이지에서 연결된 모든 타사 통합/연결을 숨깁니다.",
+    "privateFriends": "비공개 친구 목록",
+    "privateFriendsDesc": "공개 프로필에서 친구 목록을 숨깁니다."
   },
   "settingsDialog": {
     "title": "Settings",

@@ -35,12 +35,14 @@ export class BookService {
   ) {}
 
   public async search(name: string): Promise<BookSearchEntity[]> {
-    const normalized = name.trim().toLowerCase();
-    const cacheKey = `book-search:${normalized.replaceAll(' ', '')}`;
+    const cleanName = decodeURIComponent(name).replace(/\+/g, ' ').trim();
+    const cacheKey = CacheService.keys.bookSearch(cleanName);
 
-    const cached = await this.cacheService.get<BookSearchEntity[]>(cacheKey);
+    const rawCached = await this.cacheService.get<any>(cacheKey);
+    const cached: BookSearchEntity[] | null =
+      typeof rawCached === 'string' ? JSON.parse(rawCached) : rawCached;
 
-    if (cached) {
+    if (cached && Array.isArray(cached)) {
       this.logger.debug(`Book search cache hit ${cached.length} entries`);
       return cached;
     }
@@ -49,28 +51,24 @@ export class BookService {
     let usedExternal = false;
 
     if (this.useLocalMedia) {
-      result = await this.bookRepository.search(name);
+      result = await this.bookRepository.search(cleanName);
     }
 
     if (!this.useLocalMedia || result.length === 0) {
-      result = await this.bookExternal.search(name);
+      result = await this.bookExternal.search(cleanName);
       usedExternal = true;
     }
 
     this.logger.debug(`Books found: ${result.length}`);
 
     if (result.length > 0) {
-      await this.cacheService.set(
-        cacheKey,
-        JSON.stringify(result),
-        this.cacheDuration,
-      );
+      await this.cacheService.set(cacheKey, result, this.cacheDuration);
     }
 
     // Queue a background refresh only when local results were returned
     if (this.useLocalMedia && !usedExternal && result.length > 0) {
       this.logger.debug('Queuing background refresh for books');
-      this.bookQueueService.addSearchRefresh(name, cacheKey);
+      this.bookQueueService.addSearchRefresh(cleanName, cacheKey);
     }
 
     return result;

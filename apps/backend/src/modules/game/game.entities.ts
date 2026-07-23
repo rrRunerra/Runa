@@ -26,7 +26,6 @@ export interface GameEntity {
   platforms: string[];
   developers: string[];
   publishers: string[];
-  tags: Record<string, unknown> | null;
   averageScore: number | null;
   popularity: number | null;
   metacritic: number | null;

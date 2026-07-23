@@ -54,15 +54,36 @@ export default function BrowsePage(): React.JSX.Element {
     isLoading,
   } = useSWR<any>(
     trimmedQuery
-      ? `${process.env.NEXT_PUBLIC_API_URL}/${mediaType}/search/${encodeURIComponent(trimmedQuery)}`
+      ? `${process.env.NEXT_PUBLIC_API_URL}/${mediaType}/search/${encodeURIComponent(trimmedQuery.replace(/\+/g, " "))}`
       : null,
     fetcher,
   );
 
-  const searchResults = rawData ? (rawData.data ?? rawData) : null;
+  const parsedRawData =
+    typeof rawData === "string"
+      ? (() => {
+          try {
+            return JSON.parse(rawData);
+          } catch {
+            return null;
+          }
+        })()
+      : rawData;
+  const searchResults = parsedRawData
+    ? (parsedRawData.data ?? parsedRawData)
+    : null;
   const data: SearchResult[] = Array.isArray(searchResults)
     ? searchResults
-    : [];
+    : typeof searchResults === "string"
+      ? (() => {
+          try {
+            const parsed = JSON.parse(searchResults);
+            return Array.isArray(parsed) ? parsed : [];
+          } catch {
+            return [];
+          }
+        })()
+      : [];
 
   const isNotFound =
     !isLoading && !error && data.length === 0 && trimmedQuery !== "";
@@ -83,8 +104,9 @@ export default function BrowsePage(): React.JSX.Element {
       }
     }
     if (urlQuery) {
-      setQuery(urlQuery);
-      setDebouncedQuery(urlQuery);
+      const cleanQuery = urlQuery.replace(/\+/g, " ");
+      setQuery(cleanQuery);
+      setDebouncedQuery(cleanQuery);
     }
     setTimeout(() => {
       isLoadedRef.current = true;
@@ -101,14 +123,14 @@ export default function BrowsePage(): React.JSX.Element {
   useEffect(() => {
     if (!isLoadedRef.current) return;
 
-    const url = new URL(window.location.href);
-    if (query.trim()) {
-      url.searchParams.set("q", query);
-    } else {
-      url.searchParams.delete("q");
-    }
-    url.searchParams.set("type", type);
-    window.history.replaceState(null, "", url.pathname + url.search);
+    const formattedQuery = encodeURIComponent(query.trim()).replace(
+      /%20/g,
+      "+",
+    );
+    const searchStr = query.trim()
+      ? `?type=${encodeURIComponent(type)}&q=${formattedQuery}`
+      : `?type=${encodeURIComponent(type)}`;
+    window.history.replaceState(null, "", window.location.pathname + searchStr);
   }, [query, type]);
 
   // Load history and recently opened items when category (type) changes
@@ -304,7 +326,10 @@ export default function BrowsePage(): React.JSX.Element {
               {t("aquila.browse", "Browse")}
             </h1>
             <p className="text-muted-foreground mt-1">
-              {t("aquila.browseSubtitle", "Search for your favorite anime, manga, and more.")}
+              {t(
+                "aquila.browseSubtitle",
+                "Search for your favorite anime, manga, and more.",
+              )}
             </p>
           </div>
 
@@ -349,8 +374,14 @@ export default function BrowsePage(): React.JSX.Element {
           onSubmit={handleSearchSubmit}
           placeholder={
             ["characters", "actors"].includes(type)
-              ? t("aquila.searchNamesPlaceholder", "Search names... (try @anime, @manga to switch type)")
-              : t("aquila.searchPlaceholder", "Search titles... (try @anime, @manga to switch type)")
+              ? t(
+                  "aquila.searchNamesPlaceholder",
+                  "Search names... (try @anime, @manga to switch type)",
+                )
+              : t(
+                  "aquila.searchPlaceholder",
+                  "Search titles... (try @anime, @manga to switch type)",
+                )
           }
         />
 
@@ -366,7 +397,7 @@ export default function BrowsePage(): React.JSX.Element {
         />
       </div>
 
-      <div className="relative z-10 min-h-[400px]">
+      <div className="relative z-10 min-h-100">
         {isLoading && (
           <div className="flex justify-center items-center h-48">
             <Spinner className="size-8 text-primary" />
@@ -380,7 +411,7 @@ export default function BrowsePage(): React.JSX.Element {
         )}
 
         {!isLoading && !error && data.length === 0 && trimmedQuery === "" && (
-          <div className="relative min-h-[400px]">
+          <div className="relative min-h-100">
             {/* The watermark background sits behind */}
             <motion.div
               initial={{ opacity: 0, scale: 0.98 }}
@@ -388,7 +419,7 @@ export default function BrowsePage(): React.JSX.Element {
               transition={{ duration: 0.3 }}
               className="absolute left-1/2 -translate-x-1/2 top-0 select-none z-0 pointer-events-none"
             >
-              <Wallpaper className="w-[550px] h-[550px] md:w-[850px] md:h-[850px] text-foreground opacity-[0.05] dark:opacity-[0.03]" />
+              <Wallpaper className="w-137.5 h-137.5 md:w-212.5 md:h-212.5 text-foreground opacity-[0.05] dark:opacity-[0.03]" />
             </motion.div>
 
             {/* The recently viewed items sit on top */}
@@ -434,9 +465,11 @@ export default function BrowsePage(): React.JSX.Element {
             className="flex flex-col items-center justify-center py-6 select-none gap-6"
           >
             <div className="text-center text-muted-foreground/60 text-sm font-medium">
-              {t("aquila.noResultsFound", "No results found for \"{{query}}\"", { query })}
+              {t("aquila.noResultsFound", 'No results found for "{{query}}"', {
+                query,
+              })}
             </div>
-            <RrLapplandBrowseNotFound className="w-[550px] h-[550px] md:w-[850px] md:h-[850px] text-foreground opacity-[0.05] dark:opacity-[0.03] pointer-events-none" />
+            <RrLapplandBrowseNotFound className="w-137.5 h-137.5 md:w-212.5 md:h-212.5 text-foreground opacity-[0.05] dark:opacity-[0.03] pointer-events-none" />
           </motion.div>
         )}
 

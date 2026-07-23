@@ -1,6 +1,7 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 interface RrMediaDescriptionProps {
   description?: string | null;
@@ -137,23 +138,58 @@ export function RrMediaDescription({
   title,
 }: RrMediaDescriptionProps): React.JSX.Element {
   const { t } = useTranslation();
+  const [isExpanded, setIsExpanded] = React.useState<boolean>(false);
+
   if (!description) {
     return <></>;
   }
 
-  const resolvedTitle = title ?? t("aquila.synopsis");
+  const resolvedTitle = title ?? t("aquila.description");
+  const isLong = description.length > 350;
 
   return (
     <motion.div
       variants={itemVariants}
-      className="bg-card/30 border border-border/20 backdrop-blur-sm p-6 rounded-2xl"
+      className="bg-card/30 border border-border/20 backdrop-blur-sm p-6 rounded-2xl space-y-3"
     >
-      <h3 className="text-base font-bold text-foreground mb-3">
+      <h3 className="text-base font-bold text-foreground">
         {resolvedTitle}
       </h3>
-      <div className="prose prose-neutral dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-sm prose-p:my-2 prose-a:text-primary hover:prose-a:text-primary transition-colors">
-        <p>{parseSafeDescription(description, t)}</p>
+
+      <div className="relative">
+        <div
+          className={`prose prose-neutral dark:prose-invert max-w-none text-foreground/90 leading-relaxed text-sm prose-p:my-2 prose-a:text-primary hover:prose-a:text-primary transition-all duration-300 ${
+            isLong && !isExpanded
+              ? "max-h-20 sm:max-h-28 md:max-h-48 lg:max-h-56 overflow-hidden"
+              : ""
+          }`}
+        >
+          <p>{parseSafeDescription(description, t)}</p>
+        </div>
+
+        {isLong && !isExpanded && (
+          <div className="absolute inset-x-0 bottom-0 h-12 md:h-20 bg-linear-to-t from-card via-card/70 to-transparent pointer-events-none" />
+        )}
       </div>
+
+      {isLong && (
+        <button
+          type="button"
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="text-xs font-semibold text-primary hover:text-primary/80 cursor-pointer flex items-center gap-1 pt-1 transition-colors"
+        >
+          <span>
+            {isExpanded
+              ? t("aquila.showLess")
+              : t("aquila.showMore")}
+          </span>
+          {isExpanded ? (
+            <ChevronUp className="size-3.5" />
+          ) : (
+            <ChevronDown className="size-3.5" />
+          )}
+        </button>
+      )}
     </motion.div>
   );
 }

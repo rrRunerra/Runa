@@ -1202,7 +1202,18 @@ export default {
     "noDescriptionAvailable": "Açıklama mevcut değil.",
     "staff": "Yapım Kadrosu",
     "author": "Yazar",
-    "artist": "Çizer"
+    "artist": "Çizer",
+    "averageScore": "Ortalama Puan",
+    "favorites": "Favoriler",
+    "popularity": "Popülerlik",
+    "showMore": "Daha Fazla Göster",
+    "description": "Açıklama",
+    "friendsActivity": "Arkadaş Aktivitesi",
+    "dataProvidedBy": "Veri sağlayan:",
+    "trailer": "Fragman",
+    "lastUpdated": "Son güncellenme",
+    "genres": "Türler",
+    "planning": "Planlanan"
   },
   "lynx": {
     "returnToSafety": "Güvenli bölgeye dön",
@@ -1271,7 +1282,9 @@ export default {
     "privateMovieList": "Gizli Film Listesi",
     "privateMovieListDesc": "Film listesi öğelerinizi profil sayfanızdaki diğer kullanıcılardan gizler.",
     "privateConnections": "Gizli Bağlantılar",
-    "privateConnectionsDesc": "Bağlı tüm üçüncü taraf entegrasyonlarınızı/bağlantılarınızı genel profil sayfanızdan gizler."
+    "privateConnectionsDesc": "Bağlı tüm üçüncü taraf entegrasyonlarınızı/bağlantılarınızı genel profil sayfanızdan gizler.",
+    "privateFriends": "Gizli Arkadaş Listesi",
+    "privateFriendsDesc": "Arkadaş listenizi herkese açık profilinizden gizleyin."
   },
   "settingsDialog": {
     "title": "Settings",

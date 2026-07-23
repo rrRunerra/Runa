@@ -50,7 +50,6 @@ export interface AniListMangaMedia {
   genres: string[];
   synonyms: string[];
   averageScore: number | null;
-  tags: { name: string; rank: number }[];
   trailer: { id: string; site: string; thumbnail: string } | null;
   relations: {
     edges: {

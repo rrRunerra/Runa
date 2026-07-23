@@ -1202,7 +1202,18 @@
     "noDescriptionAvailable": "Žádný popis není k dispozici.",
     "staff": "Autoři",
     "author": "Autor",
-    "artist": "Ilustrátor"
+    "artist": "Ilustrátor",
+    "averageScore": "Průměrné hodnocení",
+    "favorites": "Oblíbené",
+    "popularity": "Popularita",
+    "showMore": "Zobrazit více",
+    "description": "Popis",
+    "friendsActivity": "Aktivita přátel",
+    "dataProvidedBy": "Data poskytuje",
+    "trailer": "Upoutávka",
+    "lastUpdated": "Naposledy aktualizováno",
+    "genres": "Žánry",
+    "planning": "Plánováno"
   },
   "lynx": {
     "returnToSafety": "Návrat do bezpečí",

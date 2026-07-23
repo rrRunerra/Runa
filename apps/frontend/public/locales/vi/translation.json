@@ -1202,7 +1202,18 @@
     "noDescriptionAvailable": "Không có mô tả.",
     "staff": "Tác giả / Kíp thực hiện",
     "author": "Tác giả",
-    "artist": "Họa sĩ"
+    "artist": "Họa sĩ",
+    "averageScore": "Điểm trung bình",
+    "favorites": "Yêu thích",
+    "popularity": "Độ phổ biến",
+    "showMore": "Xem thêm",
+    "description": "Mô tả",
+    "friendsActivity": "Hoạt động của bạn bè",
+    "dataProvidedBy": "Dữ liệu được cung cấp bởi",
+    "trailer": "Trailer",
+    "lastUpdated": "Cập nhật lần cuối",
+    "genres": "Thể loại",
+    "planning": "Kế hoạch"
   },
   "lynx": {
     "returnToSafety": "Quay lại an toàn",
@@ -1271,7 +1282,9 @@
     "privateMovieList": "Danh sách Phim riêng tư",
     "privateMovieListDesc": "Ẩn các mục danh sách phim của bạn khỏi người dùng khác trên trang hồ sơ.",
     "privateConnections": "Kết nối riêng tư",
-    "privateConnectionsDesc": "Ẩn tất cả các tích hợp/kết nối của bên thứ ba đã liên kết khỏi trang hồ sơ công khai của bạn."
+    "privateConnectionsDesc": "Ẩn tất cả các tích hợp/kết nối của bên thứ ba đã liên kết khỏi trang hồ sơ công khai của bạn.",
+    "privateFriends": "Danh sách bạn bè riêng tư",
+    "privateFriendsDesc": "Ẩn danh sách bạn bè khỏi trang cá nhân công khai của bạn."
   },
   "settingsDialog": {
     "title": "Settings",

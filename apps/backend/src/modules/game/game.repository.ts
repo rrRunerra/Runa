@@ -68,7 +68,6 @@ export class GameRepository {
       platforms: result.platforms,
       developers: result.developers,
       publishers: result.publishers,
-      tags: result.tags as Record<string, unknown> | null,
       averageScore: result.averageScore,
       popularity: result.popularity,
       metacritic: result.metacritic,

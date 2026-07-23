@@ -1202,7 +1202,18 @@ export default {
     "noDescriptionAvailable": "Ingen beskrivelse tilgjengelig.",
     "staff": "Medvirkende",
     "author": "Forfatter",
-    "artist": "Tegner"
+    "artist": "Tegner",
+    "averageScore": "Gjennomsnittsscore",
+    "favorites": "Favoritter",
+    "popularity": "Popularitet",
+    "showMore": "Vis mer",
+    "description": "Beskrivelse",
+    "friendsActivity": "Venners aktivitet",
+    "dataProvidedBy": "Data levert av",
+    "trailer": "Trailer",
+    "lastUpdated": "Sist oppdatert",
+    "genres": "Sjangere",
+    "planning": "Planlagt"
   },
   "lynx": {
     "returnToSafety": "Gå tilbake til sikkerhet",
@@ -1271,7 +1282,9 @@ export default {
     "privateMovieList": "Privat filmliste",
     "privateMovieListDesc": "Skjuler filmlisteoppføringene dine fra andre brukere på profilsiden din.",
     "privateConnections": "Private tilkoblinger",
-    "privateConnectionsDesc": "Skjuler alle koblede tredjepartsintegrasjoner/-tilkoblinger fra den offentlige profilsiden din."
+    "privateConnectionsDesc": "Skjuler alle koblede tredjepartsintegrasjoner/-tilkoblinger fra den offentlige profilsiden din.",
+    "privateFriends": "Privat venneliste",
+    "privateFriendsDesc": "Skjul vennelisten din fra den offentlige profilen din."
   },
   "settingsDialog": {
     "title": "Settings",

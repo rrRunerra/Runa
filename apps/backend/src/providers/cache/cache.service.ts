@@ -26,48 +26,48 @@ export class CacheService implements OnModuleDestroy {
   public static readonly keys = {
     // Anime
     animeSearch: (name: string) =>
-      `anime-search:${name.trim().toLowerCase().replaceAll(' ', '')}`,
+      `anime-search:${name.replace(/\+/g, ' ').trim().toLowerCase().replaceAll(' ', '')}`,
     animeDetail: (id: number) => `anime:${id}`,
     animeRefreshCooldown: (id: number) => `cooldown:refresh:anime:${id}`,
 
     // TV
     tvSearch: (name: string) =>
-      `tv-search:${name.trim().toLowerCase().replaceAll(' ', '')}`,
+      `tv-search:${name.replace(/\+/g, ' ').trim().toLowerCase().replaceAll(' ', '')}`,
     tvDetail: (id: number) => `tv:${id}`,
     tvRefreshCooldown: (id: number) => `cooldown:refresh:tv:${id}`,
 
     // Movie
     movieSearch: (name: string) =>
-      `movie-search:${name.trim().toLowerCase().replaceAll(' ', '')}`,
+      `movie-search:${name.replace(/\+/g, ' ').trim().toLowerCase().replaceAll(' ', '')}`,
     movieDetail: (id: number) => `movie:${id}`,
     movieRefreshCooldown: (id: number) => `cooldown:refresh:movie:${id}`,
 
     // Manga
     mangaSearch: (name: string) =>
-      `manga-search:${name.trim().toLowerCase().replaceAll(' ', '')}`,
+      `manga-search:${name.replace(/\+/g, ' ').trim().toLowerCase().replaceAll(' ', '')}`,
     mangaDetail: (id: number) => `manga:${id}`,
     mangaRefreshCooldown: (id: number) => `cooldown:refresh:manga:${id}`,
 
     // Game
     gameSearch: (name: string) =>
-      `game-search:${name.trim().toLowerCase().replaceAll(' ', '')}`,
+      `game-search:${name.replace(/\+/g, ' ').trim().toLowerCase().replaceAll(' ', '')}`,
     gameDetail: (id: number) => `game:${id}`,
     gameRefreshCooldown: (id: number) => `cooldown:refresh:game:${id}`,
 
     // Book
     bookSearch: (name: string) =>
-      `book-search:${name.trim().toLowerCase().replaceAll(' ', '')}`,
+      `book-search:${name.replace(/\+/g, ' ').trim().toLowerCase().replaceAll(' ', '')}`,
     bookDetail: (id: string) => `book:${id}`,
     bookRefreshCooldown: (id: string) => `cooldown:refresh:book:${id}`,
 
     // Character
     characterSearch: (name: string) =>
-      `character-search:${name.trim().toLowerCase().replaceAll(' ', '')}`,
+      `character-search:${name.replace(/\+/g, ' ').trim().toLowerCase().replaceAll(' ', '')}`,
     characterDetail: (id: number) => `character:${id}`,
 
     // Actor
     actorSearch: (name: string) =>
-      `actor-search:${name.trim().toLowerCase().replaceAll(' ', '')}`,
+      `actor-search:${name.replace(/\+/g, ' ').trim().toLowerCase().replaceAll(' ', '')}`,
     actorDetail: (id: number) => `actor:${id}`,
 
     // Email

@@ -119,7 +119,6 @@ export interface AnimeEntity {
   episodes: number | null;
   duration: number | null;
   genres: string[];
-  tags: MediaTag[] | null;
   source: string | null;
   format: AnimeFormat;
   status: AnimeStatus;

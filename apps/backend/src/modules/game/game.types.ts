@@ -10,7 +10,6 @@ export interface RawgSearchResult {
   genres?: { name: string }[];
   platforms?: { platform: { name: string } }[];
   esrb_rating?: { slug: string };
-  tags?: { name: string; slug: string }[];
 }
 
 export interface RawgSearchResponse {
@@ -35,7 +34,6 @@ export interface RawgGameDetail {
   platforms?: { platform: { name: string } }[];
   developers?: { name: string }[];
   publishers?: { name: string }[];
-  tags?: { name: string; slug: string; language?: string }[];
   esrb_rating?: { slug: string; name?: string };
   added?: number;
   playtime?: number;

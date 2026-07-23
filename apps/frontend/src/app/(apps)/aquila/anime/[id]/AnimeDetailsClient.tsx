@@ -8,6 +8,7 @@ import useSWR from "swr";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import Image from "next/image";
+import { Star, Heart, Users, ChevronDown, ChevronUp } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,7 +28,10 @@ import { RrMediaCharacters } from "@/components/rrComponents/aquila/details/rrMe
 import { RrMediaRelations } from "@/components/rrComponents/aquila/details/rrMediaRelations";
 import { RrMediaInfoRow } from "@/components/rrComponents/aquila/details/rrMediaInfoRow";
 import { RrMediaFriendsProgress } from "@/components/rrComponents/aquila/details/rrMediaFriendsProgress";
+import { RrMediaTrailer } from "@/components/rrComponents/aquila/details/rrMediaTrailer";
+import { RrMediaFooter } from "@/components/rrComponents/aquila/details/rrMediaFooter";
 import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
 
 interface ListEntry {
   id: number | string;
@@ -55,6 +59,20 @@ const itemVariants = {
   },
 };
 
+const formatCompactNumber = (num: number | null | undefined): string => {
+  if (num == null || isNaN(num)) return "0";
+  if (num >= 1_000_000_000) {
+    return (num / 1_000_000_000).toFixed(1).replace(/\.0$/, "") + "b";
+  }
+  if (num >= 1_000_000) {
+    return (num / 1_000_000).toFixed(1).replace(/\.0$/, "") + "m";
+  }
+  if (num >= 1_000) {
+    return (num / 1_000).toFixed(1).replace(/\.0$/, "") + "k";
+  }
+  return num.toString();
+};
+
 export default function AnimeDetailsPage(): React.JSX.Element {
   const { t } = useTranslation();
   const params = useParams();
@@ -62,6 +80,7 @@ export default function AnimeDetailsPage(): React.JSX.Element {
   const session = useSession();
 
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
+  const [showMoreInfo, setShowMoreInfo] = useState<boolean>(false);
 
   // SWR queries replacing sequential imperative fetching
   const {
@@ -90,9 +109,27 @@ export default function AnimeDetailsPage(): React.JSX.Element {
   const titleEnglish = anime?.titleEnglish ?? "";
   const titleRomaji = anime?.titleRomaji ?? "";
   const titleNative = anime?.titleNative ?? "";
-  const displayTitle = titleEnglish || titleRomaji || t("aquila.animeDetails", "Anime Details");
+  const displayTitle =
+    titleEnglish || titleRomaji || t("aquila.animeDetails", "Anime Details");
   const coverUrl = anime?.coverImageLarge ?? "";
   const bannerUrl = anime?.bannerImage ?? "";
+
+  const providers = useMemo(() => {
+    const list: { name: string; url: string }[] = [];
+    if (anime?.anilistId) {
+      list.push({
+        name: "AniList",
+        url: `https://anilist.co/anime/${anime.anilistId}`,
+      });
+    }
+    if (anime?.malId) {
+      list.push({
+        name: "MyAnimeList",
+        url: `https://myanimelist.net/anime/${anime.malId}`,
+      });
+    }
+    return list;
+  }, [anime]);
 
   const studios = useMemo(() => {
     if (!anime) return [];
@@ -134,7 +171,10 @@ export default function AnimeDetailsPage(): React.JSX.Element {
         const name = [first, last].filter(Boolean).join(" ");
         return {
           id: char.id,
-          name: name || char.nameNative || t("aquila.unknownCharacter", "Unknown Character"),
+          name:
+            name ||
+            char.nameNative ||
+            t("aquila.unknownCharacter", "Unknown Character"),
           first,
           last,
           native: char.nameNative ?? "",
@@ -151,12 +191,17 @@ export default function AnimeDetailsPage(): React.JSX.Element {
           },
           nameAlternative: char.nameAlternative ?? [],
           nameAlternativeSpoiler: char.nameAlternativeSpoiler ?? [],
-          voiceActor: ac.voiceActor ? {
-            id: ac.voiceActor.id,
-            name: ac.voiceActor.name || ac.voiceActor.personName || t("aquila.unknownActor", "Unknown Actor"),
-            image: ac.voiceActor.image ?? "",
-            role: ac.voiceActor.peopleType ?? "Voice Actor",
-          } : null,
+          voiceActor: ac.voiceActor
+            ? {
+                id: ac.voiceActor.id,
+                name:
+                  ac.voiceActor.name ||
+                  ac.voiceActor.personName ||
+                  t("aquila.unknownActor", "Unknown Actor"),
+                image: ac.voiceActor.image ?? "",
+                role: ac.voiceActor.peopleType ?? "Voice Actor",
+              }
+            : null,
         };
       });
   }, [anime, t]);
@@ -216,7 +261,9 @@ export default function AnimeDetailsPage(): React.JSX.Element {
           {t("aquila.animeNotFound", "Anime not found")}
         </h2>
         <Button asChild variant="default" className="z-10 rounded-xl">
-          <Link href="/aquila/browse">{t("aquila.backToBrowse", "Back to Browse")}</Link>
+          <Link href="/aquila/browse">
+            {t("aquila.backToBrowse", "Back to Browse")}
+          </Link>
         </Button>
       </div>
     );
@@ -270,24 +317,6 @@ export default function AnimeDetailsPage(): React.JSX.Element {
         ) : (
           <div className="w-full h-full bg-muted/10" />
         )}
-
-        {/* AniList Attribution */}
-        <div className="absolute inset-x-0 top-0 z-20 pointer-events-none">
-          <div className="mx-auto px-4 pt-4 flex justify-end items-start pointer-events-auto">
-            <div className="flex flex-col gap-1 bg-card/85 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-border/40 shadow-md">
-              <span className="text-[8px] text-muted-foreground uppercase font-bold tracking-widest leading-none">
-                Data Provided By
-              </span>
-              <Link
-                href="https://anilist.co"
-                target="_blank"
-                className="text-xs font-bold text-muted-foreground hover:text-foreground transition-colors hover:underline"
-              >
-                AniList
-              </Link>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Details layout container */}
@@ -303,14 +332,14 @@ export default function AnimeDetailsPage(): React.JSX.Element {
             variants={itemVariants}
             className="shrink-0 w-full lg:w-65 flex flex-col gap-4"
           >
-            <div className="bg-card/75 border border-border/40 backdrop-blur-xl shadow-2xl rounded-2xl p-4 flex flex-col sm:flex-row lg:flex-col gap-4 items-center sm:items-start lg:items-stretch">
-              <div className="relative aspect-2/3 w-36 sm:w-40 lg:w-full rounded-xl overflow-hidden shadow-lg border border-border/30 shrink-0 bg-muted flex items-center justify-center">
+            <div className="flex flex-row lg:flex-col gap-4 items-end lg:items-stretch lg:bg-card/75 lg:border lg:border-border/40 lg:backdrop-blur-xl lg:shadow-2xl lg:rounded-2xl lg:p-4">
+              <div className="relative aspect-2/3 w-28 sm:w-36 lg:w-full rounded-xl overflow-hidden shadow-2xl border border-border/40 shrink-0 bg-card flex items-center justify-center">
                 {coverUrl ? (
                   <Image
                     src={coverUrl}
                     alt={titleRomaji || "Cover"}
                     fill
-                    sizes="(max-width: 640px) 150px, 260px"
+                    sizes="(max-width: 640px) 112px, (max-width: 1024px) 144px, 260px"
                     className="object-cover"
                     priority
                   />
@@ -321,22 +350,22 @@ export default function AnimeDetailsPage(): React.JSX.Element {
                 )}
               </div>
 
-              <div className="flex-1 flex flex-col gap-3 w-full justify-center">
+              <div className="flex-1 flex flex-col gap-2.5 w-full justify-end lg:justify-center mb-1 lg:mb-0">
                 {session.status === "authenticated" && session.data?.user && (
                   <>
                     {!hasListEntry ? (
                       <>
                         <Button
-                          className="w-full cursor-pointer rounded-xl transition-all shadow-md"
-                          size="lg"
+                          className="w-full cursor-pointer rounded-xl transition-all shadow-md font-semibold"
+                          size="default"
                           onClick={handleQuickAdd}
                         >
                           {t("aquila.quickAdd", "Quick Add")}
                         </Button>
                         <Button
                           variant="outline"
-                          className="w-full cursor-pointer rounded-xl"
-                          size="lg"
+                          className="w-full cursor-pointer rounded-xl bg-card/80 backdrop-blur-sm"
+                          size="default"
                           onClick={(): void => setIsDialogOpen(true)}
                         >
                           {t("aquila.addToList", "Add to List")}
@@ -345,8 +374,8 @@ export default function AnimeDetailsPage(): React.JSX.Element {
                     ) : (
                       <Button
                         variant="secondary"
-                        className="w-full cursor-pointer rounded-xl"
-                        size="lg"
+                        className="w-full cursor-pointer rounded-xl font-semibold"
+                        size="default"
                         onClick={(): void => setIsDialogOpen(true)}
                       >
                         {t("aquila.editEntry", "Edit Entry")}
@@ -382,83 +411,218 @@ export default function AnimeDetailsPage(): React.JSX.Element {
               </div>
             </div>
 
-            {/* Media Metadata Stats Sidebar */}
-            <div className="bg-card/65 border border-border/40 backdrop-blur-xl rounded-2xl p-5 space-y-4">
-              <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                {t("aquila.information", "Information")}
-              </h3>
-              <div className="space-y-3">
-                <RrMediaInfoRow label={t("aquila.format", "Format")} value={anime.format} />
-                <RrMediaInfoRow label={t("aquila.episodes", "Episodes")} value={anime.episodes || "?"} />
-                <RrMediaInfoRow
-                  label={t("aquila.duration", "Duration")}
-                  value={anime.duration ? t("aquila.durationMinutes", "{{count}} mins", { count: anime.duration }) : "?"}
-                />
-                <RrMediaInfoRow
-                  label={t("aquila.status", "Status")}
-                  value={anime.status?.replace(/_/g, " ").toLowerCase()}
-                  className="capitalize"
-                />
-                <RrMediaInfoRow
-                  label={t("aquila.season", "Season")}
-                  value={
-                    anime.season
-                      ? `${anime.season.toLowerCase()} ${anime.seasonYear ?? ""}`
-                      : null
-                  }
-                  className="capitalize"
-                />
-                <RrMediaInfoRow
-                  label={t("aquila.source", "Source")}
-                  value={anime.source?.replace(/_/g, " ").toLowerCase() || "?"}
-                  className="capitalize"
-                />
-                <RrMediaInfoRow
-                  label={t("aquila.studiosLabel", "Studios")}
-                  value={
-                    studios && studios.length > 0 ? (
-                      <span
-                        className="text-right text-xs max-w-[150px] truncate block"
-                        title={studios.join(", ")}
-                      >
-                        {studios.join(", ")}
-                      </span>
-                    ) : null
-                  }
-                />
-                <RrMediaInfoRow label={t("aquila.startDate", "Start Date")} value={animeStartDate} />
-                <RrMediaInfoRow label={t("aquila.endDate", "End Date")} value={animeEndDate} />
-                <RrMediaInfoRow
-                  label={t("aquila.country", "Country")}
-                  value={anime.countryOfOrigin}
-                  className="capitalize"
-                />
-                <RrMediaInfoRow
-                  label={t("aquila.hashtag", "Hashtag")}
-                  value={anime.hashtag}
-                  className="text-primary"
-                />
-                {anime.synonyms && anime.synonyms.length > 0 && (
-                  <div className="flex flex-col gap-1 text-sm">
-                    <span className="text-muted-foreground">{t("aquila.synonymsLabel", "Synonyms")}</span>
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {anime.synonyms.slice(0, 4).map((syn, idx) => (
-                        <Badge
-                          key={idx}
-                          variant="outline"
-                          className="text-[10px] max-w-full truncate block"
-                          title={syn}
-                        >
-                          {syn}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+            {/* Mobile Header / Title */}
+            <div className="space-y-1 lg:hidden mt-1">
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+                {displayTitle}
+              </h1>
+              {(titleRomaji && titleRomaji !== titleEnglish) || titleNative ? (
+                <p className="text-xs text-muted-foreground italic">
+                  {t("aquila.alsoKnownAs", "Also known as:")}{" "}
+                  {[
+                    titleRomaji !== titleEnglish ? titleRomaji : null,
+                    titleNative,
+                  ]
+                    .filter(Boolean)
+                    .join(", ")}
+                </p>
+              ) : null}
             </div>
 
-            <RrMediaFriendsProgress mediaId={anime.id.toString()} mediaType="anime" />
+            {/* Media Metadata Stats Sidebar */}
+            <div className="bg-card/65 border border-border/40 backdrop-blur-xl rounded-2xl p-5 space-y-4">
+              {/* Top Key Stats Block */}
+              <div className="space-y-2.5">
+                {/* Average Score Card (Full Width) */}
+                <div className="flex items-center gap-3 p-3.5 rounded-xl bg-primary/10 border border-primary/20 transition-all shadow-xs">
+                  <div className="p-2.5 rounded-xl bg-primary/20 text-primary shrink-0">
+                    <Star className="size-5 fill-primary/40" />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[10px] font-bold text-primary uppercase tracking-wider">
+                      {t("aquila.averageScore")}
+                    </span>
+                    <div className="flex items-baseline gap-1 mt-0.5">
+                      <span className="text-2xl font-black text-primary leading-none">
+                        {anime.localAverageScore
+                          ? anime.localAverageScore.toFixed(1)
+                          : "N/A"}
+                      </span>
+                      <span className="text-xs font-semibold text-muted-foreground">
+                        / 10
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Favorites & Popularity (2 Columns) */}
+                <div className="grid grid-cols-2 gap-2.5">
+                  {/* Favorites */}
+                  <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 transition-colors min-w-0">
+                    <div className="p-2 rounded-lg bg-rose-500/20 text-rose-500 shrink-0">
+                      <Heart className="size-4 fill-rose-500/40" />
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-[10px] font-bold text-rose-500/90 uppercase tracking-wider truncate">
+                        {t("aquila.favorites")}
+                      </span>
+                      <span
+                        className="text-base font-extrabold text-foreground tracking-tight leading-none mt-0.5"
+                        title={
+                          anime.localFavoritesCount != null
+                            ? anime.localFavoritesCount.toLocaleString()
+                            : "0"
+                        }
+                      >
+                        {formatCompactNumber(anime.localFavoritesCount)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Popularity */}
+                  <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 transition-colors min-w-0">
+                    <div className="p-2 rounded-lg bg-blue-500/20 text-blue-500 shrink-0">
+                      <Users className="size-4 fill-blue-500/40" />
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-[10px] font-bold text-blue-500/90 uppercase tracking-wider truncate">
+                        {t("aquila.popularity")}
+                      </span>
+                      <span
+                        className="text-base font-extrabold text-foreground tracking-tight leading-none mt-0.5"
+                        title={
+                          anime.localPopularity != null
+                            ? anime.localPopularity.toLocaleString()
+                            : "0"
+                        }
+                      >
+                        {formatCompactNumber(anime.localPopularity)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Show More / Show Less Toggle Button (Mobile/Tablet only) */}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground flex lg:hidden items-center justify-center gap-1.5 py-2 border border-border/30 hover:border-border/60 bg-muted/20 cursor-pointer"
+                onClick={() => setShowMoreInfo(!showMoreInfo)}
+              >
+                <span>
+                  {showMoreInfo ? t("aquila.showLess") : t("aquila.showMore")}
+                </span>
+                {showMoreInfo ? (
+                  <ChevronUp className="size-3.5" />
+                ) : (
+                  <ChevronDown className="size-3.5" />
+                )}
+              </Button>
+
+              {/* Information Details (Collapsible on mobile, always shown on desktop) */}
+              <div
+                className={cn(
+                  "space-y-4 pt-2 border-t border-border/40",
+                  showMoreInfo ? "block" : "hidden lg:block",
+                )}
+              >
+                <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                  {t("aquila.information")}
+                </h3>
+                <div className="space-y-3">
+                  <RrMediaInfoRow
+                    label={t("aquila.format", "Format")}
+                    value={anime.format}
+                  />
+                  <RrMediaInfoRow
+                    label={t("aquila.episodes", "Episodes")}
+                    value={anime.episodes || "?"}
+                  />
+                  <RrMediaInfoRow
+                    label={t("aquila.duration", "Duration")}
+                    value={
+                      anime.duration
+                        ? t("aquila.durationMinutes", "{{count}} mins", {
+                            count: anime.duration,
+                          })
+                        : "?"
+                    }
+                  />
+                  <RrMediaInfoRow
+                    label={t("aquila.status", "Status")}
+                    value={anime.status?.replace(/_/g, " ").toLowerCase()}
+                    className="capitalize"
+                  />
+                  <RrMediaInfoRow
+                    label={t("aquila.season", "Season")}
+                    value={
+                      anime.season
+                        ? `${anime.season.toLowerCase()} ${anime.seasonYear ?? ""}`
+                        : null
+                    }
+                    className="capitalize"
+                  />
+                  <RrMediaInfoRow
+                    label={t("aquila.source", "Source")}
+                    value={
+                      anime.source?.replace(/_/g, " ").toLowerCase() || "?"
+                    }
+                    className="capitalize"
+                  />
+                  <RrMediaInfoRow
+                    label={t("aquila.studiosLabel", "Studios")}
+                    value={
+                      studios && studios.length > 0 ? (
+                        <span
+                          className="text-right text-xs max-w-37.5 truncate block"
+                          title={studios.join(", ")}
+                        >
+                          {studios.join(", ")}
+                        </span>
+                      ) : null
+                    }
+                  />
+                  <RrMediaInfoRow
+                    label={t("aquila.startDate", "Start Date")}
+                    value={animeStartDate}
+                  />
+                  <RrMediaInfoRow
+                    label={t("aquila.endDate", "End Date")}
+                    value={animeEndDate}
+                  />
+                  <RrMediaInfoRow
+                    label={t("aquila.country", "Country")}
+                    value={anime.countryOfOrigin}
+                    className="capitalize"
+                  />
+                  <RrMediaInfoRow
+                    label={t("aquila.hashtag", "Hashtag")}
+                    value={anime.hashtag}
+                    className="text-primary"
+                  />
+                  {anime.synonyms && anime.synonyms.length > 0 && (
+                    <div className="flex flex-col gap-1 text-sm">
+                      <span className="text-muted-foreground">
+                        {t("aquila.synonymsLabel", "Synonyms")}
+                      </span>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {anime.synonyms.slice(0, 4).map((syn, idx) => (
+                          <Badge
+                            key={idx}
+                            variant="outline"
+                            className="text-[10px] max-w-full truncate block"
+                            title={syn}
+                          >
+                            {syn}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
           </motion.div>
 
           {/* Right Column - Info */}
@@ -471,8 +635,11 @@ export default function AnimeDetailsPage(): React.JSX.Element {
               />
             )}
 
-            {/* Header */}
-            <motion.div variants={itemVariants} className="space-y-2">
+            {/* Header (Desktop) */}
+            <motion.div
+              variants={itemVariants}
+              className="space-y-2 hidden lg:block"
+            >
               <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">
                 {displayTitle}
               </h1>
@@ -489,41 +656,45 @@ export default function AnimeDetailsPage(): React.JSX.Element {
               ) : null}
             </motion.div>
 
-            {/* Stats Dashboard */}
+            {/* Description */}
+            <RrMediaDescription description={anime.description} />
+
+            {/* Genres */}
+            <RrMediaGenres genres={anime.genres} />
+
+            {/* Characters */}
+            {characters && characters.length > 0 && (
+              <RrMediaCharacters characters={characters} />
+            )}
+
+            {/* Relations */}
+            {relations && relations.length > 0 && (
+              <RrMediaRelations relations={relations} />
+            )}
+
+            {/* Stats Dashboard (Score & Status distribution charts) */}
             <RrMediaStatsDashboard
               localAverageScore={anime.localAverageScore}
               localPopularity={anime.localPopularity}
               localFavoritesCount={anime.localFavoritesCount}
               localStatusDistribution={anime.localStatusDistribution}
               localScoreDistribution={anime.localScoreDistribution}
+              showCounters={false}
             />
 
-            {/* Description */}
-            <RrMediaDescription
-              description={anime.description}
-            />
-
-            {/* Genres & Tags */}
-            <RrMediaGenres
-              genres={anime.genres}
-              tags={anime.tags}
-            />
-
-            {/* Characters */}
-            {characters && characters.length > 0 && (
-              <RrMediaCharacters
-                characters={characters}
+            {/* Trailer & Friend Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+              <RrMediaTrailer trailer={anime.trailers} />
+              <RrMediaFriendsProgress
+                mediaId={anime.id.toString()}
+                mediaType="anime"
               />
-            )}
-
-            {/* Relations */}
-            {relations && relations.length > 0 && (
-              <RrMediaRelations
-                relations={relations}
-              />
-            )}
+            </div>
           </div>
         </motion.div>
+
+        {/* Media Footer */}
+        <RrMediaFooter providers={providers} updatedAt={anime.updatedAt} />
       </div>
     </div>
   );

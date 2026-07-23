@@ -52,7 +52,7 @@ function RelationItem({ relation }: { relation: RelationEntity }): React.JSX.Ele
     <Link
       href={href}
       prefetch={false}
-      className="flex items-center gap-3 bg-card/35 border border-border/30 p-3 rounded-xl hover:bg-accent/50 hover:border-border/50 transition-all group"
+      className="flex items-center gap-3 bg-card/35 border border-border/30 p-3 rounded-xl hover:bg-accent/50 hover:border-border/50 transition-all group shrink-0 w-[260px] sm:w-auto snap-start"
     >
       <div className="relative w-12 aspect-2/3 rounded-lg overflow-hidden shrink-0 bg-muted">
         {relation.coverImage ? (
@@ -124,7 +124,7 @@ export function RrMediaRelations({
           <h3 className="text-base font-bold text-foreground">
             {t("aquila.relatedAnime")}
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1.5 pt-0.5 snap-x snap-mandatory sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:pb-0">
             {animeRelations.map((relation, qid) => (
               <RelationItem key={`anime-${relation.id}-${qid}`} relation={relation} />
             ))}
@@ -137,7 +137,7 @@ export function RrMediaRelations({
           <h3 className="text-base font-bold text-foreground">
             {t("aquila.relatedManga")}
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1.5 pt-0.5 snap-x snap-mandatory sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:pb-0">
             {mangaRelations.map((relation, qid) => (
               <RelationItem key={`manga-${relation.id}-${qid}`} relation={relation} />
             ))}
@@ -150,7 +150,7 @@ export function RrMediaRelations({
           <h3 className="text-base font-bold text-foreground">
             {t("aquila.otherRelations")}
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1.5 pt-0.5 snap-x snap-mandatory sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:pb-0">
             {otherRelations.map((relation, qid) => (
               <RelationItem key={`other-${relation.id}-${qid}`} relation={relation} />
             ))}

@@ -40,11 +40,7 @@ export class TvQueueService implements OnModuleInit {
             this.logger.log(`Processing search refresh: "${job.query}"`);
             const fresh = (await this.tvExternal.search(job.query)) ?? [];
             if (fresh.length > 0) {
-              await this.cacheService.set(
-                job.cacheKey,
-                JSON.stringify(fresh),
-                60 * 60,
-              );
+              await this.cacheService.set(job.cacheKey, fresh, 60 * 60);
             }
             this.logger.log(`Completed search refresh: "${job.query}"`);
           } catch (error) {

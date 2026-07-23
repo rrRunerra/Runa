@@ -91,7 +91,8 @@ export default function MangaDetailsPage(): React.JSX.Element {
   const titleEnglish = manga?.titleEnglish ?? "";
   const titleRomaji = manga?.titleRomaji ?? "";
   const titleNative = manga?.titleNative ?? "";
-  const displayTitle = titleEnglish || titleRomaji || t("aquila.mangaDetails", "Manga Details");
+  const displayTitle =
+    titleEnglish || titleRomaji || t("aquila.mangaDetails", "Manga Details");
   const coverUrl = manga?.coverImageLarge ?? "";
   const bannerUrl = manga?.bannerImage ?? "";
 
@@ -135,7 +136,10 @@ export default function MangaDetailsPage(): React.JSX.Element {
         const name = [first, last].filter(Boolean).join(" ");
         return {
           id: char.id,
-          name: name || char.nameNative || t("aquila.unknownCharacter", "Unknown Character"),
+          name:
+            name ||
+            char.nameNative ||
+            t("aquila.unknownCharacter", "Unknown Character"),
           first,
           last,
           native: char.nameNative ?? "",
@@ -196,8 +200,8 @@ export default function MangaDetailsPage(): React.JSX.Element {
   if (mangaLoading) {
     return (
       <div className="flex flex-col flex-1 min-h-screen bg-background relative overflow-hidden items-center justify-center">
-        <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-primary/2 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-primary/2 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-75 h-75 bg-primary/2 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-75 h-75 bg-primary/2 rounded-full blur-3xl pointer-events-none" />
         <div className="w-12 h-12 rounded-full border-2 border-dashed border-primary animate-spin z-10" />
       </div>
     );
@@ -206,12 +210,14 @@ export default function MangaDetailsPage(): React.JSX.Element {
   if (mangaError || !manga) {
     return (
       <div className="flex flex-col flex-1 min-h-screen bg-background relative overflow-hidden items-center justify-center gap-4">
-        <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-primary/2 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-75 h-75 bg-primary/2 rounded-full blur-3xl pointer-events-none" />
         <h2 className="text-2xl font-bold text-foreground z-10">
           {t("aquila.mangaNotFound", "Manga not found")}
         </h2>
         <Button asChild variant="default" className="z-10 rounded-xl">
-          <Link href="/aquila/browse">{t("aquila.backToBrowse", "Back to Browse")}</Link>
+          <Link href="/aquila/browse">
+            {t("aquila.backToBrowse", "Back to Browse")}
+          </Link>
         </Button>
       </div>
     );
@@ -247,8 +253,8 @@ export default function MangaDetailsPage(): React.JSX.Element {
   return (
     <div className="flex flex-col flex-1 min-h-screen bg-background text-foreground relative overflow-x-hidden">
       {/* Background Radial Glowing Auras */}
-      <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-primary/2 rounded-full blur-3xl pointer-events-none z-0" />
-      <div className="absolute top-[20%] -left-25 w-[300px] h-[300px] bg-primary/2 rounded-full blur-3xl pointer-events-none z-0" />
+      <div className="absolute top-0 right-0 w-75 h-75 bg-primary/2 rounded-full blur-3xl pointer-events-none z-0" />
+      <div className="absolute top-[20%] -left-25 w-75 h-75 bg-primary/2 rounded-full blur-3xl pointer-events-none z-0" />
 
       {/* Banner Section */}
       <div className="relative h-60 md:h-90 w-full overflow-hidden shrink-0 z-10">
@@ -384,9 +390,18 @@ export default function MangaDetailsPage(): React.JSX.Element {
                 {t("aquila.information", "Information")}
               </h3>
               <div className="space-y-3">
-                <RrMediaInfoRow label={t("aquila.format", "Format")} value={manga.format} />
-                <RrMediaInfoRow label={t("aquila.chapters", "Chapters")} value={manga.chapters || "?"} />
-                <RrMediaInfoRow label={t("aquila.volumes", "Volumes")} value={manga.volumes || "?"} />
+                <RrMediaInfoRow
+                  label={t("aquila.format", "Format")}
+                  value={manga.format}
+                />
+                <RrMediaInfoRow
+                  label={t("aquila.chapters", "Chapters")}
+                  value={manga.chapters || "?"}
+                />
+                <RrMediaInfoRow
+                  label={t("aquila.volumes", "Volumes")}
+                  value={manga.volumes || "?"}
+                />
                 <RrMediaInfoRow
                   label={t("aquila.status", "Status")}
                   value={manga.status?.replace(/_/g, " ").toLowerCase()}
@@ -402,7 +417,7 @@ export default function MangaDetailsPage(): React.JSX.Element {
                   value={
                     publishers && publishers.length > 0 ? (
                       <span
-                        className="text-right text-xs max-w-[150px] truncate block"
+                        className="text-right text-xs max-w-37.5 truncate block"
                         title={publishers.join(", ")}
                       >
                         {publishers.join(", ")}
@@ -410,8 +425,14 @@ export default function MangaDetailsPage(): React.JSX.Element {
                     ) : null
                   }
                 />
-                <RrMediaInfoRow label={t("aquila.startDate", "Start Date")} value={mangaStartDate} />
-                <RrMediaInfoRow label={t("aquila.endDate", "End Date")} value={mangaEndDate} />
+                <RrMediaInfoRow
+                  label={t("aquila.startDate", "Start Date")}
+                  value={mangaStartDate}
+                />
+                <RrMediaInfoRow
+                  label={t("aquila.endDate", "End Date")}
+                  value={mangaEndDate}
+                />
                 <RrMediaInfoRow
                   label={t("aquila.country", "Country")}
                   value={manga.countryOfOrigin}
@@ -424,7 +445,9 @@ export default function MangaDetailsPage(): React.JSX.Element {
                 />
                 {manga.synonyms && manga.synonyms.length > 0 && (
                   <div className="flex flex-col gap-1 text-sm">
-                    <span className="text-muted-foreground">{t("aquila.synonymsLabel", "Synonyms")}</span>
+                    <span className="text-muted-foreground">
+                      {t("aquila.synonymsLabel", "Synonyms")}
+                    </span>
                     <div className="flex flex-wrap gap-1 mt-1">
                       {manga.synonyms.slice(0, 4).map((syn, idx) => (
                         <Badge
@@ -442,7 +465,10 @@ export default function MangaDetailsPage(): React.JSX.Element {
               </div>
             </div>
 
-            <RrMediaFriendsProgress mediaId={manga.id.toString()} mediaType="manga" />
+            <RrMediaFriendsProgress
+              mediaId={manga.id.toString()}
+              mediaType="manga"
+            />
           </motion.div>
 
           {/* Right Column - Info */}
@@ -475,15 +501,10 @@ export default function MangaDetailsPage(): React.JSX.Element {
             />
 
             {/* Description */}
-            <RrMediaDescription
-              description={manga.description}
-            />
+            <RrMediaDescription description={manga.description} />
 
-            {/* Genres & Tags */}
-            <RrMediaGenres
-              genres={manga.genres}
-              tags={manga.tags}
-            />
+            {/* Genres */}
+            <RrMediaGenres genres={manga.genres} />
 
             {/* Characters */}
             {characters && characters.length > 0 && (
@@ -495,9 +516,7 @@ export default function MangaDetailsPage(): React.JSX.Element {
 
             {/* Relations */}
             {relations && relations.length > 0 && (
-              <RrMediaRelations
-                relations={relations}
-              />
+              <RrMediaRelations relations={relations} />
             )}
           </div>
         </motion.div>

@@ -1202,7 +1202,18 @@ export default {
     "noDescriptionAvailable": "ไม่มีคำอธิบายข้อมูลของสื่อนี้",
     "staff": "ผู้จัดทำ/นักเขียน",
     "author": "ผู้เขียน/ผู้แต่ง",
-    "artist": "ภาพประกอบ/ผู้วาด"
+    "artist": "ภาพประกอบ/ผู้วาด",
+    "averageScore": "คะแนนเฉลี่ย",
+    "favorites": "รายการโปรด",
+    "popularity": "ความนิยม",
+    "showMore": "แสดงเพิ่มเติม",
+    "description": "คำอธิบาย",
+    "friendsActivity": "กิจกรรมของเพื่อน",
+    "dataProvidedBy": "ข้อมูลโดย",
+    "trailer": "ตัวอย่าง",
+    "lastUpdated": "อัปเดตล่าสุด",
+    "genres": "แนว",
+    "planning": "วางแผนไว้"
   },
   "lynx": {
     "returnToSafety": "กลับสู่ความปลอดภัย",
@@ -1271,7 +1282,9 @@ export default {
     "privateMovieList": "รายการภาพยนตร์ส่วนตัว",
     "privateMovieListDesc": "ซ่อนรายการภาพยนตร์ของคุณจากผู้ใช้อื่นในหน้าโปรไฟล์ของคุณ",
     "privateConnections": "การเชื่อมต่อส่วนตัว",
-    "privateConnectionsDesc": "ซ่อนการเชื่อมต่อ/การบูรณาการของบุคคลที่สามทั้งหมดที่คุณเชื่อมโยงไว้จากหน้าโปรไฟล์สาธารณะของคุณ"
+    "privateConnectionsDesc": "ซ่อนการเชื่อมต่อ/การบูรณาการของบุคคลที่สามทั้งหมดที่คุณเชื่อมโยงไว้จากหน้าโปรไฟล์สาธารณะของคุณ",
+    "privateFriends": "รายชื่อเพื่อนแบบส่วนตัว",
+    "privateFriendsDesc": "ซ่อนรายชื่อเพื่อนของคุณจากโปรไฟล์สาธารณะ"
   },
   "settingsDialog": {
     "title": "Settings",

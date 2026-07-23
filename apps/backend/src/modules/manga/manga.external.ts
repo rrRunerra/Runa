@@ -47,7 +47,6 @@ export class MangaExternal {
         genres
         synonyms
         averageScore
-        tags { name rank }
         trailer { id site thumbnail }
         relations {
           edges {
@@ -202,7 +201,6 @@ export class MangaExternal {
           genres
           synonyms
           averageScore
-          tags { name rank }
           trailer { id site thumbnail }
           relations {
             edges {
@@ -480,7 +478,6 @@ export class MangaExternal {
         format: (item.format ?? 'UNKNOWN') as MangaFormat,
         status: (item.status ?? 'NOT_YET_RELEASED') as MangaStatus,
         isAdult: item.isAdult ?? false,
-        tags: item.tags as Prisma.InputJsonValue,
         anilistUpdatedAt: item.updatedAt,
       },
       create: {
@@ -509,7 +506,6 @@ export class MangaExternal {
         format: (item.format ?? 'UNKNOWN') as MangaFormat,
         status: (item.status ?? 'NOT_YET_RELEASED') as MangaStatus,
         isAdult: item.isAdult ?? false,
-        tags: item.tags as Prisma.InputJsonValue,
         anilistUpdatedAt: item.updatedAt,
       },
       select: {

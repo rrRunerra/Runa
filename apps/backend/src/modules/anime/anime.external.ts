@@ -50,7 +50,6 @@ export class AnimeExternal {
         synonyms
         averageScore
         favourites
-        tags { name rank }
         trailer { id site thumbnail }
         relations {
           edges {
@@ -208,7 +207,6 @@ export class AnimeExternal {
           synonyms
           averageScore
           favourites
-          tags { name rank }
           trailer { id site thumbnail }
           relations {
             edges {
@@ -489,7 +487,6 @@ export class AnimeExternal {
         format: (item.format ?? 'UNKNOWN') as AnimeFormat,
         status: (item.status ?? 'NOT_YET_RELEASED') as AnimeStatus,
         isAdult: item.isAdult ?? false,
-        tags: item.tags as Prisma.InputJsonValue,
         trailers: (item.trailer ?? Prisma.DbNull) as Prisma.InputJsonValue,
         nextAiringEpisode: (item.nextAiringEpisode ??
           Prisma.DbNull) as Prisma.InputJsonValue,
@@ -524,7 +521,6 @@ export class AnimeExternal {
         format: (item.format ?? 'UNKNOWN') as AnimeFormat,
         status: (item.status ?? 'NOT_YET_RELEASED') as AnimeStatus,
         isAdult: item.isAdult ?? false,
-        tags: item.tags as Prisma.InputJsonValue,
         trailers: (item.trailer ?? Prisma.DbNull) as Prisma.InputJsonValue,
         nextAiringEpisode: (item.nextAiringEpisode ??
           Prisma.DbNull) as Prisma.InputJsonValue,

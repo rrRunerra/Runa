@@ -28,12 +28,14 @@ export class MangaService {
   ) {}
 
   public async search(name: string): Promise<MangaSearchEntity[]> {
-    const normalized = name.trim().toLowerCase();
-    const cacheKey = `manga-search:${normalized.replaceAll(' ', '')}`;
+    const cleanName = decodeURIComponent(name).replace(/\+/g, ' ').trim();
+    const cacheKey = CacheService.keys.mangaSearch(cleanName);
 
-    const cached = await this.cacheService.get<MangaSearchEntity[]>(cacheKey);
+    const rawCached = await this.cacheService.get<any>(cacheKey);
+    const cached: MangaSearchEntity[] | null =
+      typeof rawCached === 'string' ? JSON.parse(rawCached) : rawCached;
 
-    if (cached) {
+    if (cached && Array.isArray(cached)) {
       this.logger.debug(`Manga search cache hit ${cached.length} entries`);
       return cached;
     }
@@ -42,28 +44,24 @@ export class MangaService {
     let externalUsed = false;
 
     if (this.useLocalMedia) {
-      result = await this.mangaRepository.search(name);
+      result = await this.mangaRepository.search(cleanName);
     }
 
     if (!this.useLocalMedia || result.length === 0) {
-      result = await this.mangaExternal.search(name);
+      result = await this.mangaExternal.search(cleanName);
       externalUsed = true;
     }
 
     this.logger.debug(`Manga found: ${result.length}`);
 
     if (result.length > 0) {
-      await this.cacheService.set(
-        cacheKey,
-        JSON.stringify(result),
-        this.cacheDuration,
-      );
+      await this.cacheService.set(cacheKey, result, this.cacheDuration);
     }
 
     // Queue a background refresh only when local results were returned
     if (this.useLocalMedia && !externalUsed && result.length > 0) {
       this.logger.debug(`Queuing background refresh for manga`);
-      this.mangaQueueService.addSearchRefresh(name, cacheKey);
+      this.mangaQueueService.addSearchRefresh(cleanName, cacheKey);
     }
 
     return result;

@@ -70,18 +70,7 @@ export class GameExternal {
       .trim();
   }
 
-  private static mapTags(
-    tags: { name: string; slug: string }[] | undefined,
-  ): Prisma.InputJsonValue {
-    if (!tags || tags.length === 0) {
-      return Prisma.DbNull as unknown as Prisma.InputJsonValue;
-    }
-    const record: Record<string, string> = {};
-    for (const tag of tags) {
-      record[tag.slug] = tag.name;
-    }
-    return record;
-  }
+
 
   public async search(query: string): Promise<GameSearchEntity[]> {
     try {
@@ -254,7 +243,6 @@ export class GameExternal {
         platforms,
         developers,
         publishers,
-        tags: GameExternal.mapTags(game.tags),
         averageScore: game.metacritic ?? null,
         popularity: game.added || null,
         metacritic: game.metacritic ?? null,
@@ -278,7 +266,6 @@ export class GameExternal {
         platforms,
         developers,
         publishers,
-        tags: GameExternal.mapTags(game.tags),
         averageScore: game.metacritic ?? null,
         popularity: game.added || null,
         metacritic: game.metacritic ?? null,

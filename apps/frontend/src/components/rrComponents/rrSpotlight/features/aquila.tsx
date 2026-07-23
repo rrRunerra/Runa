@@ -78,7 +78,8 @@ export default class AquilaSpotlightFeature extends BaseSpotlightFeature {
       action: (params) => {
         if (!params || !params.type) return;
         const query = params.title || "";
-        window.location.href = `/aquila/browse?type=${params.type}&q=${encodeURIComponent(query)}`;
+        const formattedQuery = encodeURIComponent(query.trim()).replace(/%20/g, "+");
+        window.location.href = `/aquila/browse?type=${params.type}&q=${formattedQuery}`;
       },
     });
 

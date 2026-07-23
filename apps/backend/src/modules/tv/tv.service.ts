@@ -36,12 +36,14 @@ export class TvService {
   ) {}
 
   public async search(name: string): Promise<TvSearchEntity[]> {
-    const normalized = name.trim().toLowerCase();
-    const cacheKey = `tv-search:${normalized.replaceAll(' ', '')}`;
+    const cleanName = decodeURIComponent(name).replace(/\+/g, ' ').trim();
+    const cacheKey = CacheService.keys.tvSearch(cleanName);
 
-    const cached = await this.cacheService.get<TvSearchEntity[]>(cacheKey);
+    const rawCached = await this.cacheService.get<any>(cacheKey);
+    const cached: TvSearchEntity[] | null =
+      typeof rawCached === 'string' ? JSON.parse(rawCached) : rawCached;
 
-    if (cached) {
+    if (cached && Array.isArray(cached)) {
       this.logger.debug(`TV search cache hit ${cached.length} entries`);
       return cached;
     }
@@ -50,27 +52,23 @@ export class TvService {
     let usedExternal = false;
 
     if (this.useLocalMedia) {
-      result = await this.tvRepository.search(name);
+      result = await this.tvRepository.search(cleanName);
     }
 
     if (!this.useLocalMedia || result.length === 0) {
-      result = (await this.tvExternal.search(name)) ?? [];
+      result = (await this.tvExternal.search(cleanName)) ?? [];
       usedExternal = true;
     }
 
     this.logger.debug(`TV series found: ${result.length}`);
 
     if (result.length > 0) {
-      await this.cacheService.set(
-        cacheKey,
-        JSON.stringify(result),
-        this.cacheDuration,
-      );
+      await this.cacheService.set(cacheKey, result, this.cacheDuration);
     }
 
     if (this.useLocalMedia && !usedExternal && result.length > 0) {
       this.logger.debug(`Queuing background refresh for TV series`);
-      this.tvQueueService.addSearchRefresh(name, cacheKey);
+      this.tvQueueService.addSearchRefresh(cleanName, cacheKey);
     }
 
     return result;

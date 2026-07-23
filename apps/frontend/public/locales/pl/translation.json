@@ -1202,7 +1202,18 @@
     "noDescriptionAvailable": "Brak dostępnego opisu.",
     "staff": "Twórcy",
     "author": "Autor",
-    "artist": "Ilustrator"
+    "artist": "Ilustrator",
+    "averageScore": "Średnia ocena",
+    "favorites": "Ulubione",
+    "popularity": "Popularność",
+    "showMore": "Pokaż więcej",
+    "description": "Opis",
+    "friendsActivity": "Aktywność znajomych",
+    "dataProvidedBy": "Dane dostarczone przez",
+    "trailer": "Zwiastun",
+    "lastUpdated": "Ostatnia aktualizacja",
+    "genres": "Gatunki",
+    "planning": "Planowane"
   },
   "lynx": {
     "returnToSafety": "Powrót do bezpieczeństwa",
@@ -1271,7 +1282,9 @@
     "privateMovieList": "Prywatna lista filmów",
     "privateMovieListDesc": "Ukrywa Twoje wpisy na liście filmów przed innymi użytkownikami.",
     "privateConnections": "Prywatne połączenia",
-    "privateConnectionsDesc": "Ukrywa wszystkie połączone integracje/konta zewnętrznych serwisów na Twoim publicznym profilu."
+    "privateConnectionsDesc": "Ukrywa wszystkie połączone integracje/konta zewnętrznych serwisów na Twoim publicznym profilu.",
+    "privateFriends": "Prywatna lista znajomych",
+    "privateFriendsDesc": "Ukryj listę znajomych na swoim publicznym profilu."
   },
   "settingsDialog": {
     "title": "Settings",

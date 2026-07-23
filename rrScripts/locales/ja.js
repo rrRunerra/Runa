@@ -1202,7 +1202,18 @@ export default {
     "noDescriptionAvailable": "説明はありません。",
     "staff": "スタッフ一覧",
     "author": "著者",
-    "artist": "作画"
+    "artist": "作画",
+    "averageScore": "平均スコア",
+    "favorites": "お気に入り",
+    "popularity": "人気度",
+    "showMore": "もっと見る",
+    "description": "概要",
+    "friendsActivity": "フレンドのアクティビティ",
+    "dataProvidedBy": "データ提供:",
+    "trailer": "予告編",
+    "lastUpdated": "最終更新",
+    "genres": "ジャンル",
+    "planning": "視聴予定"
   },
   "lynx": {
     "returnToSafety": "安全な場所に戻る",
@@ -1271,7 +1282,9 @@ export default {
     "privateMovieList": "映画リストを非公開にする",
     "privateMovieListDesc": "プロフィール上で、他のユーザーに映画リストを表示しないようにします。",
     "privateConnections": "外部連携を非公開にする",
-    "privateConnectionsDesc": "公開プロフィール上で、連携済みの外部サービス接続を表示しないようにします。"
+    "privateConnectionsDesc": "公開プロフィール上で、連携済みの外部サービス接続を表示しないようにします。",
+    "privateFriends": "非公開フレンドリスト",
+    "privateFriendsDesc": "公開プロフィールでフレンドリストを非公開にします。"
   },
   "settingsDialog": {
     "title": "設定",

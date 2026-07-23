@@ -20,7 +20,6 @@ model AquilaGame {
     platforms  String[] @db.Text
     developers String[] @db.Text
     publishers String[] @db.Text
-    tags       Json?    @db.Json
 
     averageScore Float?
     popularity   Int?

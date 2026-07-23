@@ -1202,7 +1202,18 @@ export default {
     "noDescriptionAvailable": "暫無描述。",
     "staff": "演職人員",
     "author": "作者",
-    "artist": "畫師"
+    "artist": "畫師",
+    "averageScore": "平均評分",
+    "favorites": "收藏數",
+    "popularity": "熱度",
+    "showMore": "顯示更多",
+    "description": "簡介",
+    "friendsActivity": "好友動態",
+    "dataProvidedBy": "數據由",
+    "trailer": "預告片",
+    "lastUpdated": "最後更新",
+    "genres": "類型",
+    "planning": "計劃中"
   },
   "lynx": {
     "returnToSafety": "返回安全區域",
@@ -1271,7 +1282,9 @@ export default {
     "privateMovieList": "不公開電影清單",
     "privateMovieListDesc": "在您的個人檔案清單中向其他使用者隱藏您的電影清單項目。",
     "privateConnections": "不公開連接",
-    "privateConnectionsDesc": "在您的公開個人檔案頁面中隱藏所有已綁定的第三方整合/連接。"
+    "privateConnectionsDesc": "在您的公開個人檔案頁面中隱藏所有已綁定的第三方整合/連接。",
+    "privateFriends": "私密好友列表",
+    "privateFriendsDesc": "在你的公開個人資料中隱藏好友列表。"
   },
   "settingsDialog": {
     "title": "Settings",

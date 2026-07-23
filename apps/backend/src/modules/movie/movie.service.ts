@@ -36,12 +36,14 @@ export class MovieService {
   ) {}
 
   public async search(name: string): Promise<MovieSearchEntity[]> {
-    const normalized = name.trim().toLowerCase();
-    const cacheKey = `movie-search:${normalized.replaceAll(' ', '')}`;
+    const cleanName = decodeURIComponent(name).replace(/\+/g, ' ').trim();
+    const cacheKey = CacheService.keys.movieSearch(cleanName);
 
-    const cached = await this.cacheService.get<MovieSearchEntity[]>(cacheKey);
+    const rawCached = await this.cacheService.get<any>(cacheKey);
+    const cached: MovieSearchEntity[] | null =
+      typeof rawCached === 'string' ? JSON.parse(rawCached) : rawCached;
 
-    if (cached) {
+    if (cached && Array.isArray(cached)) {
       this.logger.debug(`Movie search cache hit ${cached.length} entries`);
       return cached;
     }
@@ -50,28 +52,24 @@ export class MovieService {
     let usedExternal = false;
 
     if (this.useLocalMedia) {
-      result = await this.movieRepository.search(name);
+      result = await this.movieRepository.search(cleanName);
     }
 
     if (!this.useLocalMedia || result.length === 0) {
-      result = await this.movieExternal.search(name);
+      result = await this.movieExternal.search(cleanName);
       usedExternal = true;
     }
 
     this.logger.debug(`Movies found: ${result.length}`);
 
     if (result.length > 0) {
-      await this.cacheService.set(
-        cacheKey,
-        JSON.stringify(result),
-        this.cacheDuration,
-      );
+      await this.cacheService.set(cacheKey, result, this.cacheDuration);
     }
 
     // Queue a background refresh only when local results were returned
     if (this.useLocalMedia && !usedExternal && result.length > 0) {
       this.logger.debug('Queuing background refresh for movies');
-      this.movieQueueService.addSearchRefresh(name, cacheKey);
+      this.movieQueueService.addSearchRefresh(cleanName, cacheKey);
     }
 
     return result;

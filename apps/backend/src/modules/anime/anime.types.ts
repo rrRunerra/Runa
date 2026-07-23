@@ -103,7 +103,6 @@ export interface AniListMedia {
   synonyms: string[];
   averageScore: number | null;
   favourites: number | null;
-  tags: { name: string; rank: number }[];
   trailer: { id: string; site: string; thumbnail: string } | null;
   relations: {
     edges: {

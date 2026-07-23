@@ -36,17 +36,20 @@ export class CharacterService {
   }
 
   public async search(query: string): Promise<any[]> {
-    const trimmed = query.trim();
-    if (!trimmed) return [];
+    const cleanName = decodeURIComponent(query).replace(/\+/g, ' ').trim();
+    if (!cleanName) return [];
 
-    const cacheKey = CacheService.keys.characterSearch(trimmed);
-    const cached = await this.cacheService.get<any[]>(cacheKey);
-    if (cached) {
-      this.logger.debug(`Character search cache hit for query: ${trimmed}`);
+    const cacheKey = CacheService.keys.characterSearch(cleanName);
+    const rawCached = await this.cacheService.get<any>(cacheKey);
+    const cached: any[] | null =
+      typeof rawCached === 'string' ? JSON.parse(rawCached) : rawCached;
+
+    if (cached && Array.isArray(cached)) {
+      this.logger.debug(`Character search cache hit for query: ${cleanName}`);
       return cached;
     }
 
-    const data = await this.characterRepository.search(trimmed);
+    const data = await this.characterRepository.search(cleanName);
     await this.cacheService.set(cacheKey, data, 60); // cache for 1 minute
     return data;
   }

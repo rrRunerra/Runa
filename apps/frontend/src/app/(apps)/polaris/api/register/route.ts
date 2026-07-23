@@ -11,12 +11,6 @@ export async function POST(req: Request) {
     username: string;
   };
 
-  if (process.env.ENABLE_REGISTRATION !== "true") {
-    return NextResponse.json(
-      { message: ["Registration is disabled"] },
-      { status: 403 },
-    );
-  }
 
   const res = await fetch(`${API_URL}/users`, {
     method: "POST",
