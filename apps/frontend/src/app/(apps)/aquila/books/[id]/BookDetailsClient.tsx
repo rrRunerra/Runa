@@ -24,6 +24,7 @@ import { RrMediaDescription } from "@/components/rrComponents/aquila/details/rrM
 import { RrMediaGenres } from "@/components/rrComponents/aquila/details/rrMediaGenres";
 import { RrMediaStatsDashboard } from "@/components/rrComponents/aquila/details/rrMediaStatsDashboard";
 import { RrMediaFooter } from "@/components/rrComponents/aquila/details/rrMediaFooter";
+import { RrMediaDetailsSkeleton } from "@/components/rrComponents/aquila/details/rrMediaDetailsSkeleton";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
@@ -153,13 +154,7 @@ export default function BookDetailsPage(): React.JSX.Element {
   }, [book, displayTitle]);
 
   if (bookLoading) {
-    return (
-      <div className="flex flex-col flex-1 min-h-screen bg-background relative overflow-hidden items-center justify-center">
-        <div className="absolute top-0 right-0 w-75 h-75 bg-primary/2 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-75 h-75 bg-primary/2 rounded-full blur-3xl pointer-events-none" />
-        <div className="w-12 h-12 rounded-full border-2 border-dashed border-primary animate-spin z-10" />
-      </div>
-    );
+    return <RrMediaDetailsSkeleton />;
   }
 
   if (bookError || !book) {

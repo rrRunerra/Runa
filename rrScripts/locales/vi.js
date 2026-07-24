@@ -1206,6 +1206,8 @@ export default {
     "averageScore": "Điểm trung bình",
     "favorites": "Yêu thích",
     "popularity": "Độ phổ biến",
+    "current": "Đang xem",
+    "paused": "Tạm dừng",
     "showMore": "Xem thêm",
     "description": "Mô tả",
     "friendsActivity": "Hoạt động của bạn bè",

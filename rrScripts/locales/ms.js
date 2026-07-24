@@ -1206,6 +1206,8 @@ export default {
     "averageScore": "Skor Purata",
     "favorites": "Kegemaran",
     "popularity": "Populariti",
+    "current": "Sedang Ditonton",
+    "paused": "Ditangguhkan",
     "showMore": "Tunjukkan lagi",
     "description": "Penerangan",
     "friendsActivity": "Aktiviti Rakan",

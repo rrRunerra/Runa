@@ -1206,6 +1206,8 @@
     "averageScore": "평균 평점",
     "favorites": "즐겨찾기",
     "popularity": "인기",
+    "current": "시청 중",
+    "paused": "일시 정지",
     "showMore": "더 보기",
     "description": "설명",
     "friendsActivity": "친구 활동",

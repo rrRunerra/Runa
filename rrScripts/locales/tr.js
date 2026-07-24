@@ -1206,6 +1206,8 @@ export default {
     "averageScore": "Ortalama Puan",
     "favorites": "Favoriler",
     "popularity": "Popülerlik",
+    "current": "İzleniyor",
+    "paused": "Duraklatıldı",
     "showMore": "Daha Fazla Göster",
     "description": "Açıklama",
     "friendsActivity": "Arkadaş Aktivitesi",

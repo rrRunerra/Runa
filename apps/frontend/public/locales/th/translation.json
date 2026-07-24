@@ -1206,6 +1206,8 @@
     "averageScore": "คะแนนเฉลี่ย",
     "favorites": "รายการโปรด",
     "popularity": "ความนิยม",
+    "current": "กำลังรับชม",
+    "paused": "พักไว้",
     "showMore": "แสดงเพิ่มเติม",
     "description": "คำอธิบาย",
     "friendsActivity": "กิจกรรมของเพื่อน",

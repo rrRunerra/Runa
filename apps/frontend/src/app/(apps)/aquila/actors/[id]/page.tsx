@@ -11,6 +11,7 @@ import { ArrowLeft, User, Film, Tv, Award, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { fetcher } from "@/lib/fetcher";
+import { RrMediaDetailsSkeleton } from "@/components/rrComponents/aquila/details/rrMediaDetailsSkeleton";
 import { useTranslation } from "react-i18next";
 
 interface RoleCharacter {
@@ -121,11 +122,7 @@ export default function ActorPage() {
   }, [actor, t]);
 
   if (isLoading) {
-    return (
-      <div className="flex flex-col flex-1 min-h-screen bg-background items-center justify-center">
-        <div className="w-12 h-12 rounded-full border-2 border-dashed border-primary animate-spin" />
-      </div>
-    );
+    return <RrMediaDetailsSkeleton type="actor" />;
   }
 
   if (error || !actor) {

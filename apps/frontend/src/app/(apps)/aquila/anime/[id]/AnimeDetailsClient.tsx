@@ -30,6 +30,7 @@ import { RrMediaInfoRow } from "@/components/rrComponents/aquila/details/rrMedia
 import { RrMediaFriendsProgress } from "@/components/rrComponents/aquila/details/rrMediaFriendsProgress";
 import { RrMediaTrailer } from "@/components/rrComponents/aquila/details/rrMediaTrailer";
 import { RrMediaFooter } from "@/components/rrComponents/aquila/details/rrMediaFooter";
+import { RrMediaDetailsSkeleton } from "@/components/rrComponents/aquila/details/rrMediaDetailsSkeleton";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
@@ -122,12 +123,7 @@ export default function AnimeDetailsPage(): React.JSX.Element {
         url: `https://anilist.co/anime/${anime.anilistId}`,
       });
     }
-    if (anime?.malId) {
-      list.push({
-        name: "MyAnimeList",
-        url: `https://myanimelist.net/anime/${anime.malId}`,
-      });
-    }
+
     return list;
   }, [anime]);
 
@@ -244,13 +240,7 @@ export default function AnimeDetailsPage(): React.JSX.Element {
   }, [anime, titleEnglish, titleRomaji]);
 
   if (animeLoading) {
-    return (
-      <div className="flex flex-col flex-1 min-h-screen bg-background relative overflow-hidden items-center justify-center">
-        <div className="absolute top-0 right-0 w-75 h-75 bg-primary/2 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-75 h-75 bg-primary/2 rounded-full blur-3xl pointer-events-none" />
-        <div className="w-12 h-12 rounded-full border-2 border-dashed border-primary animate-spin z-10" />
-      </div>
-    );
+    return <RrMediaDetailsSkeleton />;
   }
 
   if (animeError || !anime) {

@@ -26,6 +26,7 @@ import { RrMediaCharacters } from "@/components/rrComponents/aquila/details/rrMe
 import { RrMediaStatsDashboard } from "@/components/rrComponents/aquila/details/rrMediaStatsDashboard";
 import { RrMediaTrailer } from "@/components/rrComponents/aquila/details/rrMediaTrailer";
 import { RrMediaFooter } from "@/components/rrComponents/aquila/details/rrMediaFooter";
+import { RrMediaDetailsSkeleton } from "@/components/rrComponents/aquila/details/rrMediaDetailsSkeleton";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
@@ -117,18 +118,7 @@ export default function MovieDetailsPage(): React.JSX.Element {
         url: `https://thetvdb.com/dereferrer/movie/${movie.tvdbId}`,
       });
     }
-    if (movie?.tmdbId) {
-      list.push({
-        name: "TMDB",
-        url: `https://www.themoviedb.org/movie/${movie.tmdbId}`,
-      });
-    }
-    if (movie?.imdbId) {
-      list.push({
-        name: "IMDb",
-        url: `https://www.imdb.com/title/${movie.imdbId}`,
-      });
-    }
+
     return list;
   }, [movie]);
 
@@ -165,12 +155,14 @@ export default function MovieDetailsPage(): React.JSX.Element {
       native: "",
       role: mc.role || "Actor",
       image: mc.image || "",
-      voiceActor: mc.actorId ? {
-        id: mc.actorId,
-        name: mc.personName || t("aquila.unknownActor"),
-        image: mc.image || "",
-        role: "Actor",
-      } : null,
+      voiceActor: mc.actorId
+        ? {
+            id: mc.actorId,
+            name: mc.personName || t("aquila.unknownActor"),
+            image: mc.image || "",
+            role: "Actor",
+          }
+        : null,
     }));
   }, [movie, t]);
 
@@ -180,13 +172,7 @@ export default function MovieDetailsPage(): React.JSX.Element {
   }, [movie, titleEnglish, titleRomaji]);
 
   if (movieLoading) {
-    return (
-      <div className="flex flex-col flex-1 min-h-screen bg-background relative overflow-hidden items-center justify-center">
-        <div className="absolute top-0 right-0 w-75 h-75 bg-primary/2 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-75 h-75 bg-primary/2 rounded-full blur-3xl pointer-events-none" />
-        <div className="w-12 h-12 rounded-full border-2 border-dashed border-primary animate-spin z-10" />
-      </div>
-    );
+    return <RrMediaDetailsSkeleton />;
   }
 
   if (movieError || !movie) {
@@ -479,17 +465,33 @@ export default function MovieDetailsPage(): React.JSX.Element {
                 <div className="space-y-3">
                   <RrMediaInfoRow
                     label={t("aquila.duration")}
-                    value={movie.runtime ? t("aquila.durationMinutes", { count: movie.runtime }) : null}
+                    value={
+                      movie.runtime
+                        ? t("aquila.durationMinutes", { count: movie.runtime })
+                        : null
+                    }
                   />
                   <RrMediaInfoRow
                     label={t("aquila.status")}
                     value={movie.status?.replace(/_/g, " ").toLowerCase()}
                     className="capitalize"
                   />
-                  <RrMediaInfoRow label={t("aquila.releaseDate")} value={formattedReleaseDate} />
-                  <RrMediaInfoRow label={t("aquila.budget")} value={movie.budget} />
-                  <RrMediaInfoRow label={t("aquila.boxOffice")} value={movie.boxOffice} />
-                  <RrMediaInfoRow label={t("aquila.country")} value={movie.originalCountry} />
+                  <RrMediaInfoRow
+                    label={t("aquila.releaseDate")}
+                    value={formattedReleaseDate}
+                  />
+                  <RrMediaInfoRow
+                    label={t("aquila.budget")}
+                    value={movie.budget}
+                  />
+                  <RrMediaInfoRow
+                    label={t("aquila.boxOffice")}
+                    value={movie.boxOffice}
+                  />
+                  <RrMediaInfoRow
+                    label={t("aquila.country")}
+                    value={movie.originalCountry}
+                  />
                   <RrMediaInfoRow
                     label={t("aquila.language")}
                     value={movie.originalLanguage}
@@ -499,7 +501,10 @@ export default function MovieDetailsPage(): React.JSX.Element {
                     label={t("aquila.rating")}
                     value={
                       movie.contentRating ? (
-                        <Badge variant="outline" className="text-[10px] px-2 py-0.5">
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] px-2 py-0.5"
+                        >
                           {movie.contentRating}
                         </Badge>
                       ) : null
@@ -509,7 +514,10 @@ export default function MovieDetailsPage(): React.JSX.Element {
                     <RrMediaInfoRow
                       label={t("aquila.studiosLabel")}
                       value={
-                        <span className="text-right text-xs max-w-37.5 truncate block" title={studios.join(", ")}>
+                        <span
+                          className="text-right text-xs max-w-37.5 truncate block"
+                          title={studios.join(", ")}
+                        >
                           {studios.join(", ")}
                         </span>
                       }

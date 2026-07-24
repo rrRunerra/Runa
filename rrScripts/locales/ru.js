@@ -1206,6 +1206,8 @@ export default {
     "averageScore": "Средняя оценка",
     "favorites": "Избранное",
     "popularity": "Популярность",
+    "current": "Смотрю",
+    "paused": "На паузе",
     "showMore": "Показать больше",
     "description": "Описание",
     "friendsActivity": "Активность друзей",

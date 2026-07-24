@@ -1206,6 +1206,8 @@ export default {
     "averageScore": "平均スコア",
     "favorites": "お気に入り",
     "popularity": "人気度",
+    "current": "視聴中",
+    "paused": "一時中断",
     "showMore": "もっと見る",
     "description": "概要",
     "friendsActivity": "フレンドのアクティビティ",

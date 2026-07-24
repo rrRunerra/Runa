@@ -1206,6 +1206,8 @@ export default {
     "averageScore": "Gjennomsnittsscore",
     "favorites": "Favoritter",
     "popularity": "Popularitet",
+    "current": "Ser på",
+    "paused": "Pauset",
     "showMore": "Vis mer",
     "description": "Beskrivelse",
     "friendsActivity": "Venners aktivitet",

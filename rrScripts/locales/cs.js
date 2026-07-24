@@ -1206,6 +1206,8 @@ export default {
     "averageScore": "Průměrné hodnocení",
     "favorites": "Oblíbené",
     "popularity": "Popularita",
+    "current": "Sledováno",
+    "paused": "Pozastaveno",
     "showMore": "Zobrazit více",
     "description": "Popis",
     "friendsActivity": "Aktivita přátel",

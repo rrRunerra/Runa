@@ -1206,6 +1206,8 @@ export default {
     "averageScore": "平均評分",
     "favorites": "收藏數",
     "popularity": "熱度",
+    "current": "在看",
+    "paused": "擱置",
     "showMore": "顯示更多",
     "description": "簡介",
     "friendsActivity": "好友動態",

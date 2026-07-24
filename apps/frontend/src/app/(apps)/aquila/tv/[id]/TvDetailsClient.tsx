@@ -1,7 +1,14 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { Check, Star, Heart, Users, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Check,
+  Star,
+  Heart,
+  Users,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -12,18 +19,20 @@ import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { fetcher } from "@/lib/fetcher";
 import { RrMediaEditDialog } from "@/components/rrComponents/aquila/rrMediaEditDialog";
 import RrLapplandImageNotFound from "@/components/rrComponents/rrImages/rrLapplandImageNotFound";
 import { RrMediaRefreshButton } from "@/components/rrComponents/aquila/rrMediaRefreshButton";
+import { RrMediaDetailsSkeleton } from "@/components/rrComponents/aquila/details/rrMediaDetailsSkeleton";
 import { TvEntity } from "@/types/tv.entities";
 import { RrMediaInfoRow } from "@/components/rrComponents/aquila/details/rrMediaInfoRow";
 import { RrMediaFriendsProgress } from "@/components/rrComponents/aquila/details/rrMediaFriendsProgress";
@@ -84,6 +93,7 @@ export default function TvDetailsPage(): React.JSX.Element {
 
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
   const [showMoreInfo, setShowMoreInfo] = useState<boolean>(false);
+  const [selectedSeason, setSelectedSeason] = useState<any | null>(null);
 
   // SWR queries replacing sequential imperative fetching
   const {
@@ -125,18 +135,6 @@ export default function TvDetailsPage(): React.JSX.Element {
         url: `https://thetvdb.com/dereferrer/series/${tv.tvdbId}`,
       });
     }
-    if (tv?.tmdbId) {
-      list.push({
-        name: "TMDB",
-        url: `https://www.themoviedb.org/tv/${tv.tmdbId}`,
-      });
-    }
-    if (tv?.imdbId) {
-      list.push({
-        name: "IMDb",
-        url: `https://www.imdb.com/title/${tv.imdbId}`,
-      });
-    }
     return list;
   }, [tv]);
 
@@ -173,12 +171,14 @@ export default function TvDetailsPage(): React.JSX.Element {
       native: "",
       role: tc.role || "Actor",
       image: tc.image || "",
-      voiceActor: tc.actorId ? {
-        id: tc.actorId,
-        name: tc.personName || t("aquila.unknownActor"),
-        image: tc.image || "",
-        role: "Actor",
-      } : null,
+      voiceActor: tc.actorId
+        ? {
+            id: tc.actorId,
+            name: tc.personName || t("aquila.unknownActor"),
+            image: tc.image || "",
+            role: "Actor",
+          }
+        : null,
     }));
   }, [tv, t]);
 
@@ -219,13 +219,7 @@ export default function TvDetailsPage(): React.JSX.Element {
   }, [tv]);
 
   if (tvLoading) {
-    return (
-      <div className="flex flex-col flex-1 min-h-screen bg-background relative overflow-hidden items-center justify-center">
-        <div className="absolute top-0 right-0 w-75 h-75 bg-primary/2 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-75 h-75 bg-primary/2 rounded-full blur-3xl pointer-events-none" />
-        <div className="w-12 h-12 rounded-full border-2 border-dashed border-primary animate-spin z-10" />
-      </div>
-    );
+    return <RrMediaDetailsSkeleton />;
   }
 
   if (tvError || !tv) {
@@ -517,15 +511,27 @@ export default function TvDetailsPage(): React.JSX.Element {
                   {t("aquila.information")}
                 </h3>
                 <div className="space-y-3">
-                  <RrMediaInfoRow label={t("aquila.episodes")} value={totalEpisodes || "?"} />
-                  <RrMediaInfoRow label={t("aquila.seasons")} value={tv.seasons?.length || "?"} />
+                  <RrMediaInfoRow
+                    label={t("aquila.episodes")}
+                    value={totalEpisodes || "?"}
+                  />
+                  <RrMediaInfoRow
+                    label={t("aquila.seasons")}
+                    value={tv.seasons?.length || "?"}
+                  />
                   <RrMediaInfoRow
                     label={t("aquila.status")}
                     value={tv.status?.replace(/_/g, " ").toLowerCase()}
                     className="capitalize"
                   />
-                  <RrMediaInfoRow label={t("aquila.firstAired")} value={formattedFirstAired} />
-                  <RrMediaInfoRow label={t("aquila.country")} value={tv.originalCountry} />
+                  <RrMediaInfoRow
+                    label={t("aquila.firstAired")}
+                    value={formattedFirstAired}
+                  />
+                  <RrMediaInfoRow
+                    label={t("aquila.country")}
+                    value={tv.originalCountry}
+                  />
                   <RrMediaInfoRow
                     label={t("aquila.language")}
                     value={tv.originalLanguage}
@@ -533,13 +539,22 @@ export default function TvDetailsPage(): React.JSX.Element {
                   />
                   <RrMediaInfoRow
                     label={t("aquila.avgRuntime")}
-                    value={tv.averageRuntime ? t("aquila.durationMinutes", { count: tv.averageRuntime }) : null}
+                    value={
+                      tv.averageRuntime
+                        ? t("aquila.durationMinutes", {
+                            count: tv.averageRuntime,
+                          })
+                        : null
+                    }
                   />
                   <RrMediaInfoRow
                     label={t("aquila.rating")}
                     value={
                       tv.contentRating ? (
-                        <Badge variant="outline" className="text-[10px] px-2 py-0.5">
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] px-2 py-0.5"
+                        >
                           {tv.contentRating}
                         </Badge>
                       ) : null
@@ -549,7 +564,10 @@ export default function TvDetailsPage(): React.JSX.Element {
                     <RrMediaInfoRow
                       label={t("aquila.networks")}
                       value={
-                        <span className="text-right text-xs max-w-37.5 truncate block" title={networks.join(", ")}>
+                        <span
+                          className="text-right text-xs max-w-37.5 truncate block"
+                          title={networks.join(", ")}
+                        >
                           {networks.join(", ")}
                         </span>
                       }
@@ -601,11 +619,13 @@ export default function TvDetailsPage(): React.JSX.Element {
               <RrMediaCharacters characters={characters} />
             )}
 
-            {/* Seasons Accordion */}
+            {/* Seasons List & Modal */}
             {tv.seasons && tv.seasons.length > 0 && (
               <motion.div variants={itemVariants} className="space-y-3">
-                <h3 className="text-lg font-bold text-foreground">{t("aquila.seasons")}</h3>
-                <Accordion type="multiple" className="w-full space-y-3">
+                <h3 className="text-lg font-bold text-foreground">
+                  {t("aquila.seasons")}
+                </h3>
+                <div className="max-h-96.25 overflow-y-auto pr-1 space-y-3 custom-scrollbar">
                   {tv.seasons.map((season) => {
                     const watchedInSeason = watchedEpisodes.filter(
                       (ep: any) => ep.seasonNum === season.number,
@@ -618,122 +638,168 @@ export default function TvDetailsPage(): React.JSX.Element {
                         : 0;
 
                     return (
-                      <AccordionItem
+                      <div
                         key={season.id}
-                        value={season.id.toString()}
-                        className="border border-border/30 rounded-2xl overflow-hidden bg-card/25 backdrop-blur-md shadow-none"
+                        onClick={() => setSelectedSeason(season)}
+                        className="flex items-center justify-between border border-border/30 rounded-2xl p-3 bg-card/25 backdrop-blur-md hover:bg-muted/30 transition-all cursor-pointer group"
                       >
-                        <AccordionTrigger className="hover:no-underline px-4 py-3 transition-colors hover:bg-muted/30">
-                          <div className="flex items-center gap-6 w-full pr-8">
-                            <div className="shrink-0 w-12 aspect-2/3 rounded-lg overflow-hidden border border-border/50 bg-muted relative flex items-center justify-center">
-                              {season.image || coverUrl ? (
-                                <Image
-                                  src={season.image || coverUrl}
-                                  alt={season.name || t("aquila.seasonName", { number: season.number })}
-                                  fill
-                                  sizes="48px"
-                                  className="object-cover"
-                                />
-                              ) : (
-                                <div className="size-full bg-muted/30 text-muted-foreground/60 overflow-hidden flex items-center justify-center">
-                                  <RrLapplandImageNotFound className="size-full object-cover scale-150" />
-                                </div>
-                              )}
+                        <div className="flex items-center gap-6 w-full">
+                          <div className="shrink-0 w-12 aspect-2/3 rounded-lg overflow-hidden border border-border/50 bg-muted relative flex items-center justify-center">
+                            {season.image || coverUrl ? (
+                              <Image
+                                src={season.image || coverUrl}
+                                alt={
+                                  season.name ||
+                                  t("aquila.seasonName", {
+                                    number: season.number,
+                                  })
+                                }
+                                fill
+                                sizes="48px"
+                                className="object-cover group-hover:scale-105 transition-transform"
+                              />
+                            ) : (
+                              <div className="size-full bg-muted/30 text-muted-foreground/60 overflow-hidden flex items-center justify-center">
+                                <RrLapplandImageNotFound className="size-full object-cover scale-150" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 flex items-center gap-8 text-left min-w-0">
+                            <div className="flex flex-col">
+                              <h4 className="text-sm font-bold text-foreground truncate group-hover:text-primary transition-colors">
+                                {t("aquila.seasonName", {
+                                  number: season.number,
+                                })}
+                              </h4>
+                              <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-tight">
+                                {t("aquila.episodesCount", {
+                                  count: season.episodeCount,
+                                })}
+                              </span>
                             </div>
-                            <div className="flex-1 flex items-center gap-8 text-left min-w-0">
-                              <div className="flex flex-col">
-                                <h4 className="text-sm font-bold text-foreground truncate">
-                                  {t("aquila.seasonName", { number: season.number })}
-                                </h4>
-                                <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-tight">
-                                  {t("aquila.episodesCount", { count: season.episodeCount })}
+
+                            {hasListEntry && (
+                              <div className="flex-1 flex items-center gap-4 max-w-75">
+                                <div className="flex-1 bg-muted/60 h-1 rounded-full overflow-hidden">
+                                  <div
+                                    className="bg-primary h-full transition-all duration-700 rounded-full"
+                                    style={{
+                                      width: `${seasonProgress}%`,
+                                    }}
+                                  />
+                                </div>
+                                <span className="text-[11px] font-bold text-primary/80 tabular-nums">
+                                  {watchedInSeason} / {season.episodeCount}
                                 </span>
                               </div>
-
-                              {hasListEntry && (
-                                <div className="flex-1 flex items-center gap-4 max-w-75">
-                                  <div className="flex-1 bg-muted/60 h-1 rounded-full overflow-hidden">
-                                    <div
-                                      className="bg-primary h-full transition-all duration-700 rounded-full"
-                                      style={{
-                                        width: `${seasonProgress}%`,
-                                      }}
-                                    />
-                                  </div>
-                                  <span className="text-[11px] font-bold text-primary/80 tabular-nums">
-                                    {watchedInSeason} / {season.episodeCount}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
+                            )}
                           </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="p-0 border-t border-border/20">
-                          <div className="divide-y divide-border/20">
-                            {season.episodes.map((episode) => {
-                              const watched = watchedEpisodes.some(
-                                (ep: any) =>
-                                  ep.seasonNum === season.number &&
-                                  ep.episodeNum === episode.number,
-                              );
-                              return (
-                                <div
-                                  key={episode.id}
-                                  className={cn(
-                                    "flex items-center gap-4 p-3 hover:bg-muted/20 transition-colors group cursor-pointer",
-                                    watched && "bg-primary/5",
-                                  )}
-                                  onClick={(): Promise<void> =>
-                                    toggleEpisode(season.number, episode.number)
-                                  }
-                                >
-                                  <div
-                                    className={cn(
-                                      "shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
-                                      watched
-                                        ? "bg-primary border-primary text-primary-foreground"
-                                        : "border-border",
-                                    )}
-                                  >
-                                    {watched && <Check className="size-3.5" />}
-                                  </div>
-                                  {episode.image && (
-                                    <div className="relative w-16 md:w-24 aspect-16/10 rounded-lg overflow-hidden shrink-0 border border-border/30 bg-muted">
-                                      <Image
-                                        src={`https://www.imdb.com${episode.image}`}
-                                        alt={episode.name}
-                                        fill
-                                        sizes="(max-width: 768px) 64px, 96px"
-                                        className="object-cover group-hover:scale-105 transition-transform duration-300"
-                                      />
-                                    </div>
-                                  )}
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-3">
-                                      <span className="text-xs font-bold text-foreground">
-                                        {episode.number}. {episode.name}
-                                      </span>
-                                      {episode.airDate && (
-                                        <span className="text-[10px] text-muted-foreground font-medium">
-                                          {episode.airDate}
-                                        </span>
-                                      )}
-                                    </div>
-                                    {episode.overview && (
-                                      <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">
-                                        {episode.overview}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
+                        </div>
+                      </div>
                     );
                   })}
-                </Accordion>
+                </div>
+
+                {/* Season Episodes Modal */}
+                <Dialog
+                  open={!!selectedSeason}
+                  onOpenChange={(open) => !open && setSelectedSeason(null)}
+                >
+                  <DialogContent className="w-[95vw] max-w-lg sm:max-w-xl md:max-w-2xl lg:max-w-4xl xl:max-w-5xl max-h-[85vh] flex flex-col p-6 bg-card border border-border/50 rounded-2xl shadow-2xl overflow-hidden">
+                    {selectedSeason && (
+                      <>
+                        <DialogHeader className="pb-4 border-b border-border/20">
+                          <DialogTitle className="text-xl font-bold flex items-center gap-3">
+                            <span>
+                              {t("aquila.seasonName", {
+                                number: selectedSeason.number,
+                              })}
+                            </span>
+                            <Badge
+                              variant="outline"
+                              className="text-xs font-medium"
+                            >
+                              {t("aquila.episodesCount", {
+                                count: selectedSeason.episodeCount,
+                              })}
+                            </Badge>
+                          </DialogTitle>
+                          <DialogDescription className="text-xs text-muted-foreground">
+                            {titleEnglish}
+                          </DialogDescription>
+                        </DialogHeader>
+
+                        <div className="flex-1 overflow-y-auto custom-scrollbar my-2 divide-y divide-border/20 pr-1">
+                          {selectedSeason.episodes?.map((episode: any) => {
+                            const watched = watchedEpisodes.some(
+                              (ep: any) =>
+                                ep.seasonNum === selectedSeason.number &&
+                                ep.episodeNum === episode.number,
+                            );
+                            return (
+                              <div
+                                key={episode.id}
+                                className={cn(
+                                  "flex items-center gap-4 p-3 hover:bg-muted/20 transition-colors group cursor-pointer rounded-lg",
+                                  watched && "bg-primary/5",
+                                )}
+                                onClick={(): Promise<void> =>
+                                  toggleEpisode(
+                                    selectedSeason.number,
+                                    episode.number,
+                                  )
+                                }
+                              >
+                                <div
+                                  className={cn(
+                                    "shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
+                                    watched
+                                      ? "bg-primary border-primary text-primary-foreground"
+                                      : "border-border",
+                                  )}
+                                >
+                                  {watched && <Check className="size-3.5" />}
+                                </div>
+                                {episode.image && (
+                                  <div className="relative w-16 md:w-24 aspect-16/10 rounded-lg overflow-hidden shrink-0 border border-border/30 bg-muted">
+                                    <Image
+                                      src={
+                                        episode.image.startsWith("http")
+                                          ? episode.image
+                                          : `https://www.thetvdb.com${episode.image}`
+                                      }
+                                      alt={episode.name}
+                                      fill
+                                      sizes="(max-width: 768px) 64px, 96px"
+                                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                    />
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-3">
+                                    <span className="text-xs font-bold text-foreground">
+                                      {episode.number}. {episode.name}
+                                    </span>
+                                    {episode.airDate && (
+                                      <span className="text-[10px] text-muted-foreground font-medium">
+                                        {episode.airDate}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {episode.overview && (
+                                    <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">
+                                      {episode.overview}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </>
+                    )}
+                  </DialogContent>
+                </Dialog>
               </motion.div>
             )}
 

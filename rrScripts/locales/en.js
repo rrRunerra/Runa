@@ -1208,6 +1208,8 @@ export default {
     "averageScore": "Average Score",
     "favorites": "Favorites",
     "popularity": "Popularity",
+    "current": "Current",
+    "paused": "Paused",
     "showMore": "Show More",
     "description": "Description",
     "friendsActivity": "Friends Activity",

@@ -1206,6 +1206,8 @@ export default {
     "averageScore": "Keskiarvo",
     "favorites": "Suosikit",
     "popularity": "Suosio",
+    "current": "Katsellaan",
+    "paused": "Tauolla",
     "showMore": "Näytä lisää",
     "description": "Kuvaus",
     "friendsActivity": "Ystävien toiminta",

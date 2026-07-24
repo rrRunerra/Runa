@@ -28,6 +28,7 @@ import { RrMediaRelations } from "@/components/rrComponents/aquila/details/rrMed
 import { RrMediaInfoRow } from "@/components/rrComponents/aquila/details/rrMediaInfoRow";
 import { RrMediaFriendsProgress } from "@/components/rrComponents/aquila/details/rrMediaFriendsProgress";
 import { RrMediaFooter } from "@/components/rrComponents/aquila/details/rrMediaFooter";
+import { RrMediaDetailsSkeleton } from "@/components/rrComponents/aquila/details/rrMediaDetailsSkeleton";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
@@ -109,8 +110,7 @@ export default function MangaDetailsPage(): React.JSX.Element {
   const titleEnglish = manga?.titleEnglish ?? "";
   const titleRomaji = manga?.titleRomaji ?? "";
   const titleNative = manga?.titleNative ?? "";
-  const displayTitle =
-    titleEnglish || titleRomaji || t("aquila.mangaDetails");
+  const displayTitle = titleEnglish || titleRomaji || t("aquila.mangaDetails");
   const coverUrl = manga?.coverImageLarge ?? "";
   const bannerUrl = manga?.bannerImage ?? "";
 
@@ -120,12 +120,6 @@ export default function MangaDetailsPage(): React.JSX.Element {
       list.push({
         name: "AniList",
         url: `https://anilist.co/manga/${manga.anilistId}`,
-      });
-    }
-    if (manga?.malId) {
-      list.push({
-        name: "MyAnimeList",
-        url: `https://myanimelist.net/manga/${manga.malId}`,
       });
     }
     return list;
@@ -171,10 +165,7 @@ export default function MangaDetailsPage(): React.JSX.Element {
         const name = [first, last].filter(Boolean).join(" ");
         return {
           id: char.id,
-          name:
-            name ||
-            char.nameNative ||
-            t("aquila.unknownCharacter"),
+          name: name || char.nameNative || t("aquila.unknownCharacter"),
           first,
           last,
           native: char.nameNative ?? "",
@@ -233,13 +224,7 @@ export default function MangaDetailsPage(): React.JSX.Element {
   }, [manga, titleEnglish, titleRomaji]);
 
   if (mangaLoading) {
-    return (
-      <div className="flex flex-col flex-1 min-h-screen bg-background relative overflow-hidden items-center justify-center">
-        <div className="absolute top-0 right-0 w-75 h-75 bg-primary/2 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-75 h-75 bg-primary/2 rounded-full blur-3xl pointer-events-none" />
-        <div className="w-12 h-12 rounded-full border-2 border-dashed border-primary animate-spin z-10" />
-      </div>
-    );
+    return <RrMediaDetailsSkeleton />;
   }
 
   if (mangaError || !manga) {
@@ -250,9 +235,7 @@ export default function MangaDetailsPage(): React.JSX.Element {
           {t("aquila.mangaNotFound")}
         </h2>
         <Button asChild variant="default" className="z-10 rounded-xl">
-          <Link href="/aquila/browse">
-            {t("aquila.backToBrowse")}
-          </Link>
+          <Link href="/aquila/browse">{t("aquila.backToBrowse")}</Link>
         </Button>
       </div>
     );
@@ -540,7 +523,9 @@ export default function MangaDetailsPage(): React.JSX.Element {
                   />
                   <RrMediaInfoRow
                     label={t("aquila.source")}
-                    value={manga.source?.replace(/_/g, " ").toLowerCase() || "?"}
+                    value={
+                      manga.source?.replace(/_/g, " ").toLowerCase() || "?"
+                    }
                     className="capitalize"
                   />
                   <RrMediaInfoRow

@@ -26,5 +26,9 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "test", "**/*.spec.ts"],
+  "watchOptions": {
+    "excludeDirectories": ["**/node_modules", "dist", "test"]
+  }
 }

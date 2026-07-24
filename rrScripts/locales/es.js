@@ -1206,6 +1206,8 @@ export default {
     "averageScore": "Puntuación media",
     "favorites": "Favoritos",
     "popularity": "Popularidad",
+    "current": "Viendo",
+    "paused": "Pausado",
     "showMore": "Mostrar más",
     "description": "Descripción",
     "friendsActivity": "Actividad de amigos",

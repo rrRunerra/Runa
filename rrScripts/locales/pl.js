@@ -1206,6 +1206,8 @@ export default {
     "averageScore": "Średnia ocena",
     "favorites": "Ulubione",
     "popularity": "Popularność",
+    "current": "W trakcie",
+    "paused": "Wstrzymane",
     "showMore": "Pokaż więcej",
     "description": "Opis",
     "friendsActivity": "Aktywność znajomych",

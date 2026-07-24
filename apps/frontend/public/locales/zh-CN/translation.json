@@ -1206,6 +1206,8 @@
     "averageScore": "平均评分",
     "favorites": "收藏数",
     "popularity": "热度",
+    "current": "在看",
+    "paused": "搁置",
     "showMore": "显示更多",
     "description": "简介",
     "friendsActivity": "好友动态",
