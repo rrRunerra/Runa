@@ -204,6 +204,39 @@ export class LacertaCollabGateway
     });
   }
 
+  @SubscribeMessage('laser-move')
+  handleLaserMove(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { fileId: string; x: number; y: number },
+  ): void {
+    const { fileId, x, y } = data;
+    if (!fileId) return;
+
+    const member = this.socketIdentity.get(client.id);
+    if (!member) return;
+
+    client.to(fileId).emit('laser-move', {
+      x,
+      y,
+      username: member.username,
+      senderId: client.id,
+    });
+  }
+
+  @SubscribeMessage('whiteboard-draw')
+  handleWhiteboardDraw(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { fileId: string; stroke: any },
+  ): void {
+    const { fileId, stroke } = data;
+    if (!fileId) return;
+
+    client.to(fileId).emit('whiteboard-draw', {
+      stroke,
+      senderId: client.id,
+    });
+  }
+
   @SubscribeMessage('tiptap-update')
   handleTiptapUpdate(
     @ConnectedSocket() client: Socket,

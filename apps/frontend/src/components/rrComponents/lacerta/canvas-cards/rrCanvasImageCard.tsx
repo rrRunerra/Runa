@@ -105,11 +105,32 @@ export default function RrCanvasImageCard({ node, accessToken }: RrCanvasImageCa
     );
   }
 
+  const transform = node.imageTransform;
+  const transformStyle: React.CSSProperties = transform
+    ? {
+        transform: `rotate(${transform.rotation || 0}deg) scaleX(${transform.flipX ? -1 : 1}) scaleY(${transform.flipY ? -1 : 1})`,
+        objectFit: transform.objectFit || "contain",
+        filter: [
+          transform.brightness !== undefined ? `brightness(${transform.brightness}%)` : "",
+          transform.contrast !== undefined ? `contrast(${transform.contrast}%)` : "",
+          transform.saturation !== undefined ? `saturate(${transform.saturation}%)` : "",
+          transform.blur !== undefined ? `blur(${transform.blur}px)` : "",
+          transform.grayscale !== undefined ? `grayscale(${transform.grayscale}%)` : "",
+          transform.sepia !== undefined ? `sepia(${transform.sepia}%)` : "",
+        ].filter(Boolean).join(" ") || undefined,
+        opacity: transform.opacity !== undefined ? transform.opacity / 100 : undefined,
+        borderRadius: transform.borderRadius !== undefined ? `${transform.borderRadius}px` : undefined,
+      }
+    : { objectFit: "contain" };
+
   return (
-    <img
-      src={src}
-      alt={t("lacerta.canvasEditor.spatialImage", "Spatial Image")}
-      className="w-full h-full object-contain select-none pointer-events-none"
-    />
+    <div className="w-full h-full overflow-hidden flex items-center justify-center">
+      <img
+        src={src}
+        alt={t("lacerta.canvasEditor.spatialImage", "Spatial Image")}
+        className="w-full h-full select-none pointer-events-none transition-all duration-150"
+        style={transformStyle}
+      />
+    </div>
   );
 }

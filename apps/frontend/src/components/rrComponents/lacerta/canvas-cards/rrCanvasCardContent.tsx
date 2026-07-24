@@ -29,7 +29,7 @@ interface RrCanvasCardContentProps {
   onNodeUpdate: (updates: Partial<CanvasNode>) => void;
 }
 
-export default function RrCanvasCardContent({
+function RrCanvasCardContent({
   node,
   selected,
   accessToken,
@@ -76,3 +76,5 @@ export default function RrCanvasCardContent({
       return null;
   }
 }
+
+export default React.memo(RrCanvasCardContent);

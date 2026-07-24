@@ -33,6 +33,21 @@ export interface Stroke {
   cap?: "round" | "square" | "butt";
 }
 
+export interface ImageTransformOptions {
+  rotation?: number;
+  flipX?: boolean;
+  flipY?: boolean;
+  objectFit?: "contain" | "cover" | "fill" | "scale-down";
+  brightness?: number;
+  contrast?: number;
+  saturation?: number;
+  blur?: number;
+  grayscale?: number;
+  sepia?: number;
+  opacity?: number;
+  borderRadius?: number;
+}
+
 export interface CanvasNode {
   id: string;
   type: CanvasNodeType;
@@ -77,6 +92,9 @@ export interface CanvasNode {
   ans?: string;
   equations?: string[];
   angleMode?: "deg" | "rad" | "grad";
+
+  // Image Transformation Options
+  imageTransform?: ImageTransformOptions;
 }
 
 export interface CanvasEdge {
@@ -97,6 +115,7 @@ export interface Collaborator {
   userId?: string;
   username: string;
   cursor?: { x: number; y: number } | null;
+  laserTrail?: { x: number; y: number; time: number }[];
 }
 
 export interface CanvasFileItem {

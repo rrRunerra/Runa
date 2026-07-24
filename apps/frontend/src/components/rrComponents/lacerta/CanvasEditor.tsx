@@ -38,7 +38,16 @@ import {
   Grid3X3,
   Lock,
   Calculator,
+  MousePointer,
+  PenTool,
+  Zap,
+  Eraser,
+  RotateCw,
+  FlipHorizontal,
+  FlipVertical,
+  SlidersHorizontal,
 } from "lucide-react";
+import { ramerDouglasPeucker } from "@/lib/coordinates";
 import {
   ResponsiveContainer,
   BarChart,
@@ -107,6 +116,7 @@ import CollaboratorProfileTrigger from "./CollaboratorProfileTrigger";
 import GraphSettingsPanel from "./panels/GraphSettingsPanel";
 import MermaidSettingsPanel from "./panels/MermaidSettingsPanel";
 import ScientificCalcSettingsPanel from "./panels/ScientificCalcSettingsPanel";
+import ImageSettingsPanel from "./panels/ImageSettingsPanel";
 
 export default function CanvasEditor({
   isOpen,
@@ -126,6 +136,38 @@ export default function CanvasEditor({
   const [isSpacePressed, setIsSpacePressed] = useState<boolean>(false);
   const [isPanning, setIsPanning] = useState<boolean>(false);
   const [panStart, setPanStart] = useState<Point>({ x: 0, y: 0 });
+
+  // Canvas Tools (select, pen, laser, eraser)
+  const [activeCanvasTool, setActiveCanvasTool] = useState<
+    "select" | "pen" | "laser" | "eraser"
+  >("select");
+  const [whiteboardColor, setWhiteboardColor] =
+    useState<string>("var(--primary)");
+  const [whiteboardWidth, setWhiteboardWidth] = useState<number>(4);
+  const [whiteboardBrushType, setWhiteboardBrushType] = useState<
+    "pencil" | "calligraphy" | "highlighter" | "dashed" | "dotted"
+  >("pencil");
+  const [eraserSize, setEraserSize] = useState<number>(32);
+  const [eraserCursorPos, setEraserCursorPos] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [whiteboardStrokes, setWhiteboardStrokes] = useState<Stroke[]>([]);
+  const [activeWhiteboardStroke, setActiveWhiteboardStroke] =
+    useState<Stroke | null>(null);
+
+  // Laser Pointer Trail State
+  const [myLaserTrail, setMyLaserTrail] = useState<
+    { x: number; y: number; time: number }[]
+  >([]);
+  const [collaboratorLaserTrails, setCollaboratorLaserTrails] = useState<
+    Record<string, { x: number; y: number; time: number }[]>
+  >({});
+  const [collaboratorActiveStrokes, setCollaboratorActiveStrokes] = useState<
+    Record<string, Stroke | null>
+  >({});
+  const lastWhiteboardEmitRef = useRef<number>(0);
+  const lastLaserEmitRef = useRef<number>(0);
 
   // Node manipulation states
   const [nodes, setNodes] = useState<CanvasNode[]>([]);
@@ -384,6 +426,46 @@ export default function CanvasEditor({
   }, [accessToken]);
 
   // -----------------------------------------------------------------------------
+  // Laser Pointer Smooth Decay Loop (RAF)
+  // -----------------------------------------------------------------------------
+  useEffect(() => {
+    let animId: number;
+    const animateLaser = () => {
+      const now = Date.now();
+      const LASER_MAX_AGE = 1200; // 1.2 seconds decay
+
+      setMyLaserTrail((prev) => {
+        const filtered = prev.filter((p) => now - p.time < LASER_MAX_AGE);
+        return filtered.length === prev.length ? prev : filtered;
+      });
+
+      setCollaboratorLaserTrails((prev) => {
+        let changed = false;
+        const next: Record<string, { x: number; y: number; time: number }[]> = {};
+        for (const [key, trail] of Object.entries(prev)) {
+          const filtered = trail.filter((p) => now - p.time < LASER_MAX_AGE);
+          if (filtered.length > 0) {
+            next[key] = filtered;
+          }
+          if (filtered.length !== trail.length) changed = true;
+        }
+        return changed ? next : prev;
+      });
+
+      animId = requestAnimationFrame(animateLaser);
+    };
+
+    animId = requestAnimationFrame(animateLaser);
+    return () => cancelAnimationFrame(animId);
+  }, []);
+
+  useEffect(() => {
+    if (activeCanvasTool !== "laser") {
+      setMyLaserTrail([]);
+    }
+  }, [activeCanvasTool]);
+
+  // -----------------------------------------------------------------------------
   // Load initial canvas state
   // -----------------------------------------------------------------------------
   useEffect(() => {
@@ -392,6 +474,7 @@ export default function CanvasEditor({
         const parsed = JSON.parse(initialContent);
         setNodes(parsed.nodes || []);
         setEdges(parsed.edges || []);
+        setWhiteboardStrokes(parsed.strokes || []);
       } catch (err) {
         console.warn(
           "Failed to parse canvas file content, starting empty:",
@@ -399,6 +482,7 @@ export default function CanvasEditor({
         );
         setNodes([]);
         setEdges([]);
+        setWhiteboardStrokes([]);
       }
       setIsDirty(false);
     }
@@ -597,6 +681,37 @@ export default function CanvasEditor({
       );
 
       newSocket.on(
+        "laser-move",
+        (data: {
+          x: number;
+          y: number;
+          senderId: string;
+          username?: string;
+        }) => {
+          setCollaboratorLaserTrails((prev) => {
+            const existing = prev[data.senderId] || [];
+            return {
+              ...prev,
+              [data.senderId]: [
+                ...existing,
+                { x: data.x, y: data.y, time: Date.now() },
+              ],
+            };
+          });
+        },
+      );
+
+      newSocket.on(
+        "whiteboard-draw",
+        (data: { stroke: Stroke | null; senderId: string }) => {
+          setCollaboratorActiveStrokes((prev) => ({
+            ...prev,
+            [data.senderId]: data.stroke,
+          }));
+        },
+      );
+
+      newSocket.on(
         "cursor-move",
         (data: {
           x: number;
@@ -647,6 +762,9 @@ export default function CanvasEditor({
               });
             });
             setEdges(decrypted.edges || []);
+            if (decrypted.strokes) {
+              setWhiteboardStrokes(decrypted.strokes);
+            }
             setTimeout(() => {
               isSyncingRef.current = false;
             }, 50);
@@ -740,7 +858,7 @@ export default function CanvasEditor({
         return nodeToSync;
       });
 
-      const payload = { nodes: cleanNodes, edges };
+      const payload = { nodes: cleanNodes, edges, strokes: whiteboardStrokes };
       const encrypted = await encryptDataRef.current(payload);
       if (encrypted) {
         socket.emit("canvas-update", {
@@ -752,7 +870,7 @@ export default function CanvasEditor({
 
     const timer = setTimeout(syncCanvas, 300); // Debounce real-time broadcast slightly
     return () => clearTimeout(timer);
-  }, [nodes, edges, socket, file?.id]);
+  }, [nodes, edges, whiteboardStrokes, socket, file?.id]);
 
   // -----------------------------------------------------------------------------
   // E2EE File Saving Function
@@ -762,7 +880,7 @@ export default function CanvasEditor({
     setIsSaving(true);
 
     try {
-      const canvasState = { nodes, edges };
+      const canvasState = { nodes, edges, strokes: whiteboardStrokes };
       const encoder = new TextEncoder();
       const rawBuffer = encoder.encode(JSON.stringify(canvasState)).buffer;
 
@@ -848,7 +966,7 @@ export default function CanvasEditor({
     }
 
     try {
-      const canvasState = { nodes, edges };
+      const canvasState = { nodes, edges, strokes: whiteboardStrokes };
       console.log(
         "saveCanvasSilently: encrypting canvas state...",
         canvasState,
@@ -1012,14 +1130,13 @@ export default function CanvasEditor({
     e.preventDefault();
 
     if (e.shiftKey && selectedNodeId) {
-      // Resize the selected node
+      // Resize the selected node without min size caps
       const resizeDelta = e.deltaY < 0 ? 20 : -20;
       setNodes((prev) =>
         prev.map((n) => {
           if (n.id === selectedNodeId) {
-            const isRrImage = n.type === "rrImage";
-            const minW = isRrImage ? 10 : 220;
-            const minH = isRrImage ? 10 : 160;
+            const minW = 10;
+            const minH = 10;
             return {
               ...n,
               width: Math.max(minW, n.width + resizeDelta),
@@ -1056,6 +1173,57 @@ export default function CanvasEditor({
     const isBackgroundClicked =
       e.target === containerRef.current ||
       (e.target as HTMLElement).classList.contains("canvas-background");
+
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const localX = (e.clientX - rect.left - pan.x) / zoom;
+      const localY = (e.clientY - rect.top - pan.y) / zoom;
+
+      // Handle Transparent Whiteboard Pen tool start
+      if (activeCanvasTool === "pen" && e.button === 0) {
+        let dasharray: string | undefined = undefined;
+        let opacity: number | undefined = undefined;
+        let cap: "round" | "square" | "butt" = "round";
+
+        if (whiteboardBrushType === "dashed") dasharray = "8 8";
+        else if (whiteboardBrushType === "dotted") dasharray = "1 8";
+        else if (whiteboardBrushType === "highlighter") {
+          opacity = 0.45;
+          cap = "square";
+        } else if (whiteboardBrushType === "calligraphy") {
+          opacity = 0.85;
+          cap = "square";
+        }
+
+        setActiveWhiteboardStroke({
+          points: [{ x: localX, y: localY }],
+          color: whiteboardColor,
+          width: whiteboardWidth,
+          dasharray,
+          opacity,
+          cap,
+        });
+        return;
+      }
+
+      // Handle Laser Pointer tool start (only when Shift is pressed)
+      if (activeCanvasTool === "laser") {
+        if (e.shiftKey) {
+          setMyLaserTrail((prev) => [
+            ...prev,
+            { x: localX, y: localY, time: Date.now() },
+          ]);
+          if (socket) {
+            socket.emit("laser-move", {
+              fileId: file?.id,
+              x: localX,
+              y: localY,
+            });
+          }
+        }
+        return;
+      }
+    }
 
     // Left-click on canvas background deselects any active card (similar to Escape)
     if (isBackgroundClicked && e.button === 0) {
@@ -1102,6 +1270,92 @@ export default function CanvasEditor({
       const localX = (e.clientX - rect.left - pan.x) / zoom;
       const localY = (e.clientY - rect.top - pan.y) / zoom;
 
+      // Broadcast cursor move to socket collaborators (throttled to 30ms to prevent flooding)
+      if (socket) {
+        const now = Date.now();
+        if (now - lastCursorEmitRef.current > 30) {
+          socket.emit("cursor-move", {
+            fileId: file?.id,
+            x: localX,
+            y: localY,
+          });
+          lastCursorEmitRef.current = now;
+        }
+      }
+
+      // Handle Laser Pointer movement (only when Shift is pressed)
+      if (activeCanvasTool === "laser") {
+        if (e.shiftKey) {
+          const now = Date.now();
+          setMyLaserTrail((prev) => [
+            ...prev,
+            { x: localX, y: localY, time: now },
+          ]);
+          if (socket && now - lastLaserEmitRef.current > 30) {
+            socket.emit("laser-move", {
+              fileId: file?.id,
+              x: localX,
+              y: localY,
+            });
+            lastLaserEmitRef.current = now;
+          }
+        }
+        return;
+      }
+
+      // Handle Whiteboard Pen drawing (emits live stroke to collaborators in real time)
+      if (activeCanvasTool === "pen" && activeWhiteboardStroke) {
+        const nextStroke = {
+          ...activeWhiteboardStroke,
+          points: [...activeWhiteboardStroke.points, { x: localX, y: localY }],
+        };
+        setActiveWhiteboardStroke(nextStroke);
+
+        const now = Date.now();
+        if (socket && now - lastWhiteboardEmitRef.current > 30) {
+          socket.emit("whiteboard-draw", {
+            fileId: file?.id,
+            stroke: nextStroke,
+          });
+          lastWhiteboardEmitRef.current = now;
+        }
+        return;
+      }
+
+      // Handle Whiteboard Eraser
+      if (activeCanvasTool === "eraser") {
+        setEraserCursorPos({ x: localX, y: localY });
+        if (e.buttons === 1 || e.buttons === 2) {
+          const ERASE_RADIUS = eraserSize / 2;
+          setWhiteboardStrokes((prev) => {
+            const updated: Stroke[] = [];
+            let changed = false;
+            for (const stroke of prev) {
+              const segs: Point[][] = [];
+              let currentSeg: Point[] = [];
+              for (const p of stroke.points) {
+                if (Math.hypot(p.x - localX, p.y - localY) <= ERASE_RADIUS) {
+                  if (currentSeg.length > 0) {
+                    segs.push(currentSeg);
+                    currentSeg = [];
+                  }
+                  changed = true;
+                } else {
+                  currentSeg.push(p);
+                }
+              }
+              if (currentSeg.length > 0) segs.push(currentSeg);
+              for (const s of segs) {
+                if (s.length > 0) updated.push({ ...stroke, points: s });
+              }
+            }
+            if (changed) setIsDirty(true);
+            return changed ? updated : prev;
+          });
+        }
+        return;
+      }
+
       // Update lasso selection box
       if (selectionBox) {
         const nextBox = { ...selectionBox, currentX: localX, currentY: localY };
@@ -1123,19 +1377,6 @@ export default function CanvasEditor({
           .map((n) => n.id);
         setSelectedNodeIds(inside);
         return;
-      }
-
-      // Broadcast cursor move to socket collaborators (throttled to 50ms to prevent flooding)
-      if (socket) {
-        const now = Date.now();
-        if (now - lastCursorEmitRef.current > 50) {
-          socket.emit("cursor-move", {
-            fileId: file?.id,
-            x: localX,
-            y: localY,
-          });
-          lastCursorEmitRef.current = now;
-        }
       }
 
       // Update dragging node position
@@ -1176,16 +1417,15 @@ export default function CanvasEditor({
         setIsDirty(true);
       }
 
-      // Update resizing node dimensions
+      // Update resizing node dimensions (unconstrained)
       if (resizeNodeId) {
         const dx = (e.clientX - resizeStart.x) / zoom;
         const dy = (e.clientY - resizeStart.y) / zoom;
         setNodes((prev) =>
           prev.map((n) => {
             if (n.id === resizeNodeId) {
-              const isRrImage = n.type === "rrImage";
-              const minW = isRrImage ? 10 : 220;
-              const minH = isRrImage ? 10 : 160;
+              const minW = 10;
+              const minH = 10;
               return {
                 ...n,
                 width: Math.max(minW, resizeInitialSize.w + dx),
@@ -1224,6 +1464,28 @@ export default function CanvasEditor({
   };
 
   const handleMouseUp = () => {
+    // Complete active whiteboard stroke if drawing
+    if (activeWhiteboardStroke && activeWhiteboardStroke.points.length > 1) {
+      const simplifiedPoints = ramerDouglasPeucker(
+        activeWhiteboardStroke.points,
+        1.5,
+      );
+      setWhiteboardStrokes((prev) => [
+        ...prev,
+        { ...activeWhiteboardStroke, points: simplifiedPoints },
+      ]);
+      setIsDirty(true);
+      saveCanvasSilently();
+
+      if (socket) {
+        socket.emit("whiteboard-draw", {
+          fileId: file?.id,
+          stroke: null,
+        });
+      }
+    }
+    setActiveWhiteboardStroke(null);
+
     const wasDraggingOrResizing =
       dragNodeId !== null ||
       resizeNodeId !== null ||
@@ -1237,8 +1499,8 @@ export default function CanvasEditor({
     setDragGroupChildren([]);
     setDragMultiNodes([]);
 
-    if (wasDraggingOrResizing && isDirtyRef.current) {
-      console.log("Drag/resize/pointer end autosave triggered!");
+    if (isDirtyRef.current) {
+      console.log("MouseUp autosave triggered!");
       saveCanvasSilently();
     }
   };
@@ -1360,9 +1622,8 @@ export default function CanvasEditor({
         setNodes((prev) =>
           prev.map((n) => {
             if (n.id === resizeNodeId) {
-              const isRrImage = n.type === "rrImage";
-              const minW = isRrImage ? 10 : 220;
-              const minH = isRrImage ? 10 : 160;
+              const minW = 10;
+              const minH = 10;
               return {
                 ...n,
                 width: Math.max(minW, resizeInitialSize.w + dx),
@@ -2134,8 +2395,195 @@ export default function CanvasEditor({
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              {/* Toolbar removed, insertion handled by right-click menu */}
+            {/* Center Canvas Tools Dock */}
+            <div className="flex items-center gap-1 bg-muted/60 backdrop-blur p-1 rounded-xl border border-border shadow-inner">
+              {/* Select Tool */}
+              <button
+                type="button"
+                onClick={() => setActiveCanvasTool("select")}
+                className={cn(
+                  "flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                  activeCanvasTool === "select"
+                    ? "bg-background text-foreground shadow-sm border border-border"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/80",
+                )}
+                title="Select & Navigate (V)"
+              >
+                <MousePointer className="h-3.5 w-3.5" />
+                <span>{t("lacerta.canvasEditor.toolSelect", "Select")}</span>
+              </button>
+
+              {/* Whiteboard Pen Tool */}
+              <button
+                type="button"
+                onClick={() => setActiveCanvasTool("pen")}
+                className={cn(
+                  "flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                  activeCanvasTool === "pen"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/80",
+                )}
+                title="Transparent Whiteboard Pen (P)"
+              >
+                <PenTool className="h-3.5 w-3.5" />
+                <span>{t("lacerta.canvasEditor.toolPen", "Whiteboard")}</span>
+              </button>
+
+              {/* Laser Pointer Tool */}
+              <button
+                type="button"
+                onClick={() => setActiveCanvasTool("laser")}
+                className={cn(
+                  "flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                  activeCanvasTool === "laser"
+                    ? "bg-rose-500 text-white shadow-sm shadow-rose-500/30"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/80",
+                )}
+                title="Laser Pointer (Hold Shift to Draw)"
+              >
+                <Zap className="h-3.5 w-3.5 fill-current" />
+                <span>{t("lacerta.canvasEditor.toolLaser", "Laser")}</span>
+              </button>
+
+              {/* Eraser Tool */}
+              <button
+                type="button"
+                onClick={() => setActiveCanvasTool("eraser")}
+                className={cn(
+                  "flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                  activeCanvasTool === "eraser"
+                    ? "bg-amber-500 text-white shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/80",
+                )}
+                title="Eraser (E)"
+              >
+                <Eraser className="h-3.5 w-3.5" />
+                <span>{t("lacerta.canvasEditor.toolEraser", "Eraser")}</span>
+              </button>
+
+              {/* Eraser Sub-Options Bar */}
+              {activeCanvasTool === "eraser" && (
+                <div className="flex items-center gap-1 ml-2 pl-2 border-l border-border/60">
+                  {[
+                    { label: "S", size: 16 },
+                    { label: "M", size: 32 },
+                    { label: "L", size: 64 },
+                    { label: "XL", size: 128 },
+                  ].map(({ label, size }) => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => setEraserSize(size)}
+                      className={cn(
+                        "px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer",
+                        eraserSize === size
+                          ? "bg-amber-500 text-white shadow-sm"
+                          : "bg-muted/80 hover:bg-muted text-muted-foreground",
+                      )}
+                      title={`Eraser Size: ${size}px`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                  <select
+                    value={eraserSize}
+                    onChange={(e) => setEraserSize(Number(e.target.value))}
+                    className="bg-transparent border-0 font-bold text-[10px] focus:outline-none cursor-pointer ml-0.5"
+                  >
+                    <option value={16}>16px</option>
+                    <option value={24}>24px</option>
+                    <option value={32}>32px</option>
+                    <option value={48}>48px</option>
+                    <option value={64}>64px</option>
+                    <option value={96}>96px</option>
+                    <option value={128}>128px</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Whiteboard Drawing Sub-Options Bar */}
+              {activeCanvasTool === "pen" && (
+                <div className="flex items-center gap-1.5 ml-2 pl-2 border-l border-border/60">
+                  {/* Colors */}
+                  {[
+                    "var(--primary)",
+                    "#10b981",
+                    "#f59e0b",
+                    "#ef4444",
+                    "#3b82f6",
+                    "#a855f7",
+                    "#ffffff",
+                  ].map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setWhiteboardColor(c)}
+                      className={cn(
+                        "w-3.5 h-3.5 rounded-full border transition-transform cursor-pointer",
+                        whiteboardColor === c
+                          ? "scale-125 border-foreground shadow-sm"
+                          : "border-transparent hover:scale-110",
+                      )}
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                  <div className="relative w-3.5 h-3.5 rounded-full overflow-hidden border border-border bg-gradient-to-tr from-rose-500 via-green-500 to-blue-500 cursor-pointer shrink-0">
+                    <input
+                      type="color"
+                      value={
+                        whiteboardColor.startsWith("var")
+                          ? "#3b82f6"
+                          : whiteboardColor
+                      }
+                      onChange={(e) => setWhiteboardColor(e.target.value)}
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                    />
+                  </div>
+
+                  {/* Width */}
+                  <select
+                    value={whiteboardWidth}
+                    onChange={(e) => setWhiteboardWidth(Number(e.target.value))}
+                    className="bg-transparent border-0 font-bold text-[10px] focus:outline-none cursor-pointer"
+                  >
+                    <option value={2}>2px</option>
+                    <option value={4}>4px</option>
+                    <option value={8}>8px</option>
+                    <option value={14}>14px</option>
+                  </select>
+
+                  {/* Brush type */}
+                  <select
+                    value={whiteboardBrushType}
+                    onChange={(e) =>
+                      setWhiteboardBrushType(e.target.value as any)
+                    }
+                    className="bg-transparent border-0 font-bold text-[10px] focus:outline-none cursor-pointer"
+                  >
+                    <option value="pencil">Pencil</option>
+                    <option value="calligraphy">Chisel</option>
+                    <option value="highlighter">Highlighter</option>
+                    <option value="dashed">Dashed</option>
+                    <option value="dotted">Dotted</option>
+                  </select>
+                </div>
+              )}
+
+              {/* Clear Whiteboard Strokes button */}
+              {whiteboardStrokes.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWhiteboardStrokes([]);
+                    setIsDirty(true);
+                  }}
+                  className="ml-1 px-1.5 py-0.5 text-[9px] font-bold text-destructive hover:bg-destructive/10 rounded transition-colors cursor-pointer"
+                  title="Clear Whiteboard Strokes"
+                >
+                  <Trash2 className="h-3 w-3 inline mr-0.5" />
+                  Clear Whiteboard
+                </button>
+              )}
             </div>
 
             {/* Action controls & Collaborators */}
@@ -2520,6 +2968,142 @@ export default function CanvasEditor({
                       className="pointer-events-none"
                     />
                   )}
+
+                  {/* Transparent Whiteboard Layer */}
+                  <g className="pointer-events-none">
+                    {whiteboardStrokes.map((stroke, idx) => (
+                      <path
+                        key={`wb-stroke-${idx}`}
+                        d={`M ${stroke.points.map((p) => `${p.x} ${p.y}`).join(" L ")}`}
+                        fill="none"
+                        stroke={stroke.color}
+                        strokeWidth={stroke.width}
+                        strokeDasharray={stroke.dasharray}
+                        strokeLinecap={stroke.cap || "round"}
+                        strokeLinejoin="round"
+                        opacity={stroke.opacity ?? 1}
+                      />
+                    ))}
+                    {activeWhiteboardStroke &&
+                      activeWhiteboardStroke.points.length > 1 && (
+                        <path
+                          d={`M ${activeWhiteboardStroke.points.map((p) => `${p.x} ${p.y}`).join(" L ")}`}
+                          fill="none"
+                          stroke={activeWhiteboardStroke.color}
+                          strokeWidth={activeWhiteboardStroke.width}
+                          strokeDasharray={activeWhiteboardStroke.dasharray}
+                          strokeLinecap={activeWhiteboardStroke.cap || "round"}
+                          strokeLinejoin="round"
+                          opacity={activeWhiteboardStroke.opacity ?? 1}
+                        />
+                      )}
+                    {/* Collaborators Live Active Strokes */}
+                    {Object.entries(collaboratorActiveStrokes).map(
+                      ([collabId, stroke]) => {
+                        if (!stroke || stroke.points.length < 2) return null;
+                        return (
+                          <path
+                            key={`collab-wb-${collabId}`}
+                            d={`M ${stroke.points.map((p) => `${p.x} ${p.y}`).join(" L ")}`}
+                            fill="none"
+                            stroke={stroke.color}
+                            strokeWidth={stroke.width}
+                            strokeDasharray={stroke.dasharray}
+                            strokeLinecap={stroke.cap || "round"}
+                            strokeLinejoin="round"
+                            opacity={stroke.opacity ?? 1}
+                          />
+                        );
+                      },
+                    )}
+                  </g>
+
+                  {/* Eraser Cursor Area Indicator Overlay */}
+                  {activeCanvasTool === "eraser" && eraserCursorPos && (
+                    <g className="pointer-events-none z-30">
+                      <circle
+                        cx={eraserCursorPos.x}
+                        cy={eraserCursorPos.y}
+                        r={eraserSize / 2}
+                        fill="#f59e0b"
+                        fillOpacity={0.15}
+                        stroke="#f59e0b"
+                        strokeWidth={2 / zoom}
+                        strokeDasharray={`${4 / zoom} ${4 / zoom}`}
+                      />
+                      <circle
+                        cx={eraserCursorPos.x}
+                        cy={eraserCursorPos.y}
+                        r={2.5 / zoom}
+                        fill="#f59e0b"
+                      />
+                    </g>
+                  )}
+
+                  {/* Real-time Laser Pointer Trails Layer */}
+                  <g className="pointer-events-none">
+                    {/* Local User Laser Pointer */}
+                    {myLaserTrail.length > 0 && (
+                      <g>
+                        {myLaserTrail.length > 1 && (
+                          <path
+                            d={`M ${myLaserTrail.map((p) => `${p.x} ${p.y}`).join(" L ")}`}
+                            fill="none"
+                            stroke="#ef4444"
+                            strokeWidth={6 / zoom}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            opacity={0.85}
+                          />
+                        )}
+                        <circle
+                          cx={myLaserTrail[myLaserTrail.length - 1].x}
+                          cy={myLaserTrail[myLaserTrail.length - 1].y}
+                          r={6 / zoom}
+                          fill="#ef4444"
+                        />
+                      </g>
+                    )}
+                    {/* Collaborators Laser Pointer Trails */}
+                    {Object.entries(collaboratorLaserTrails).map(
+                      ([collabId, trail]) => {
+                        if (trail.length < 1) return null;
+                        const lastP = trail[trail.length - 1];
+                        const collab = collaborators.find(
+                          (c) => c.socketId === collabId,
+                        );
+                        return (
+                          <g key={`laser-collab-${collabId}`}>
+                            {trail.length > 1 && (
+                              <path
+                                d={`M ${trail.map((p) => `${p.x} ${p.y}`).join(" L ")}`}
+                                fill="none"
+                                stroke="#f59e0b"
+                                strokeWidth={6 / zoom}
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                opacity={0.85}
+                              />
+                            )}
+                            <circle
+                              cx={lastP.x}
+                              cy={lastP.y}
+                              r={6 / zoom}
+                              fill="#f59e0b"
+                            />
+                            <text
+                              x={lastP.x + 10 / zoom}
+                              y={lastP.y + 4 / zoom}
+                              fill="#f59e0b"
+                              className="text-[10px] font-extrabold select-none"
+                            >
+                              {collab?.username || "Laser"}
+                            </text>
+                          </g>
+                        );
+                      },
+                    )}
+                  </g>
                 </svg>
 
                 {/* Render Nodes (groups first so they render behind other cards) */}
@@ -2807,6 +3391,19 @@ export default function CanvasEditor({
                               node={node}
                               getPanelStyle={getPanelStyle}
                               lockedElements={lockedElements}
+                              setNodes={setNodes}
+                              setIsDirty={setIsDirty}
+                            />
+                          )}
+
+                        {/* Image Transformations Floating Panel */}
+                        {(node.type === "image" ||
+                          node.type === "gif" ||
+                          node.type === "rrImage") &&
+                          selectedNodeId === node.id && (
+                            <ImageSettingsPanel
+                              node={node}
+                              getPanelStyle={getPanelStyle}
                               setNodes={setNodes}
                               setIsDirty={setIsDirty}
                             />
