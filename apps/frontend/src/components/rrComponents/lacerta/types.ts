@@ -17,7 +17,94 @@ export type CanvasNodeType =
   | "group"
   | "rrImage"
   | "scientific-calc"
-  | "graphing-calc";
+  | "graphing-calc"
+  | "object3d";
+
+export type Object3DType =
+  | "box"
+  | "sphere"
+  | "cylinder"
+  | "cone"
+  | "torus"
+  | "plane"
+  | "ring"
+  | "capsule"
+  | "dodecahedron"
+  | "gltf"
+  | "obj";
+
+export interface EditableMeshData {
+  vertices: number[][]; // [x, y, z] per vertex
+  faces: number[][]; // [v1, v2, v3] vertex indices per face
+  selectedVertices?: number[];
+  selectedFaces?: number[];
+}
+
+export interface Object3DItem {
+  id: string;
+  name: string;
+  type: Object3DType | "light" | "group";
+  position: [number, number, number];
+  rotation: [number, number, number]; // in degrees
+  scale: [number, number, number];
+  color: string;
+  metalness: number;
+  roughness: number;
+  wireframe: boolean;
+  opacity: number;
+  visible: boolean;
+  modelUrl?: string; // for uploaded GLTF/OBJ or external URL
+
+  // Hierarchy & Lock
+  parentId?: string | null;
+  locked?: boolean;
+
+  // Advanced Blender PBR Properties & Textures
+  emissiveColor?: string;
+  emissiveIntensity?: number;
+  flatShading?: boolean;
+  transmission?: number;
+  mapUrl?: string;
+  normalMapUrl?: string;
+  roughnessMapUrl?: string;
+
+  // Dynamic Light Object Properties
+  lightType?: "point" | "directional" | "spot" | "ambient";
+  lightColor?: string;
+  lightIntensity?: number;
+  castShadow?: boolean;
+  spotAngle?: number;
+  spotPenumbra?: number;
+
+  // Custom Mesh Edit Mode Topology
+  meshData?: EditableMeshData;
+}
+
+export interface HistoryStep3D {
+  id: string;
+  timestamp: number;
+  actionName: string;
+  objectsState: Object3DItem[];
+  environmentState: Scene3DEnvironment;
+}
+
+export interface Scene3DEnvironment {
+  backgroundColor: string;
+  gridVisible: boolean;
+  autoRotate: boolean;
+  autoRotateSpeed: number;
+  ambientLightColor: string;
+  ambientLightIntensity: number;
+  directionalLightColor: string;
+  directionalLightIntensity: number;
+  directionalLightPosition: [number, number, number];
+  cameraPosition?: [number, number, number];
+}
+
+export interface Scene3DData {
+  objects: Object3DItem[];
+  environment: Scene3DEnvironment;
+}
 
 export interface Point {
   x: number;
@@ -95,6 +182,9 @@ export interface CanvasNode {
 
   // Image Transformation Options
   imageTransform?: ImageTransformOptions;
+
+  // 3D Scene Properties
+  scene3dData?: Scene3DData;
 }
 
 export interface CanvasEdge {

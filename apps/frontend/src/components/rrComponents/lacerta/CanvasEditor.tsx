@@ -46,6 +46,8 @@ import {
   FlipHorizontal,
   FlipVertical,
   SlidersHorizontal,
+  Boxes,
+  Box,
 } from "lucide-react";
 import { ramerDouglasPeucker } from "@/lib/coordinates";
 import {
@@ -77,6 +79,7 @@ import RrCanvasGifInsertModal from "./rrCanvasGifInsertModal";
 import RrCanvasFileInsertModal from "./rrCanvasFileInsertModal";
 import RrCanvasPublicShareWarningModal from "./rrCanvasPublicShareWarningModal";
 import RrCanvasRrImageInsertModal from "./rrCanvasRrImageInsertModal";
+import RrCanvas3DEditorModal from "./RrCanvas3DEditorModal";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import { useRRCrypto } from "@/hooks/useRRCrypto";
@@ -117,6 +120,7 @@ import GraphSettingsPanel from "./panels/GraphSettingsPanel";
 import MermaidSettingsPanel from "./panels/MermaidSettingsPanel";
 import ScientificCalcSettingsPanel from "./panels/ScientificCalcSettingsPanel";
 import ImageSettingsPanel from "./panels/ImageSettingsPanel";
+import Object3DSettingsPanel from "./panels/Object3DSettingsPanel";
 
 export default function CanvasEditor({
   isOpen,
@@ -296,6 +300,10 @@ export default function CanvasEditor({
     x: number;
     y: number;
   } | null>(null);
+
+  // 3D Object Studio Editor State
+  const [is3DEditorOpen, setIs3DEditorOpen] = useState<boolean>(false);
+  const [editing3DNode, setEditing3DNode] = useState<CanvasNode | null>(null);
 
   // Fetch and decrypt Lacerta files for embedding selection
   const { data: rawFiles, isLoading: rawFilesLoading } = useSWR<any[]>(
@@ -1872,6 +1880,54 @@ export default function CanvasEditor({
     } else if (type === "group") {
       newNode.text = t("lacerta.canvasEditor.defaultGroupText", "Group");
       newNode.color = "slate";
+    } else if (type === "object3d") {
+      newNode.width = 420;
+      newNode.height = 320;
+      newNode.x = x - 210;
+      newNode.y = y - 160;
+      newNode.scene3dData = {
+        objects: [
+          {
+            id: `obj-${Date.now()}-1`,
+            name: "Core Cube",
+            type: "box",
+            position: [0, 0, 0],
+            rotation: [25, 45, 0],
+            scale: [1.2, 1.2, 1.2],
+            color: "#6366f1",
+            metalness: 0.4,
+            roughness: 0.2,
+            wireframe: false,
+            opacity: 1,
+            visible: true,
+          },
+          {
+            id: `obj-${Date.now()}-2`,
+            name: "Orbit Ring",
+            type: "torus",
+            position: [0, 0, 0],
+            rotation: [70, 15, 0],
+            scale: [1.1, 1.1, 1.1],
+            color: "#ec4899",
+            metalness: 0.9,
+            roughness: 0.1,
+            wireframe: true,
+            opacity: 0.8,
+            visible: true,
+          },
+        ],
+        environment: {
+          backgroundColor: "#0f172a",
+          gridVisible: true,
+          autoRotate: false,
+          autoRotateSpeed: 1.5,
+          ambientLightColor: "#ffffff",
+          ambientLightIntensity: 0.8,
+          directionalLightColor: "#38bdf8",
+          directionalLightIntensity: 1.5,
+          directionalLightPosition: [5, 8, 5],
+        },
+      };
     }
 
     setNodes((prev) => {
@@ -3269,6 +3325,10 @@ export default function CanvasEditor({
                                   );
                                   setIsDirty(true);
                                 }}
+                                onOpen3DEditor={(n) => {
+                                  setEditing3DNode(n);
+                                  setIs3DEditorOpen(true);
+                                }}
                               />
                             )}
                           </div>
@@ -3370,6 +3430,21 @@ export default function CanvasEditor({
                               getPanelStyle={getPanelStyle}
                               setNodes={setNodes}
                               setIsDirty={setIsDirty}
+                            />
+                          )}
+
+                        {/* 3D Scene Controls Floating Panel */}
+                        {node.type === "object3d" &&
+                          selectedNodeId === node.id && (
+                            <Object3DSettingsPanel
+                              node={node}
+                              getPanelStyle={getPanelStyle}
+                              setNodes={setNodes}
+                              setIsDirty={setIsDirty}
+                              onOpenStudio={(n) => {
+                                setEditing3DNode(n);
+                                setIs3DEditorOpen(true);
+                              }}
                             />
                           )}
 
@@ -3581,6 +3656,37 @@ export default function CanvasEditor({
             x={rrImagePrompt?.x ?? 0}
             y={rrImagePrompt?.y ?? 0}
             createNodeAtPos={createNodeAtPos}
+          />
+
+          <RrCanvas3DEditorModal
+            isOpen={is3DEditorOpen}
+            onClose={() => {
+              setIs3DEditorOpen(false);
+              setEditing3DNode(null);
+            }}
+            node={editing3DNode}
+            allNodes={nodes}
+            onSave={(nodeId, updatedSceneData) => {
+              setNodes((prev) =>
+                prev.map((n) =>
+                  n.id === nodeId ? { ...n, scene3dData: updatedSceneData } : n
+                )
+              );
+              setIsDirty(true);
+            }}
+            onCreateNewNode={(newSceneData) => {
+              const newNode: CanvasNode = {
+                id: `node-${Date.now()}`,
+                type: "object3d",
+                x: 100 + (nodes.length % 5) * 30,
+                y: 100 + (nodes.length % 5) * 30,
+                width: 480,
+                height: 360,
+                scene3dData: newSceneData,
+              };
+              setNodes((prev) => [...prev, newNode]);
+              setIsDirty(true);
+            }}
           />
         </div>
       </ContextMenuTrigger>
@@ -4355,6 +4461,19 @@ export default function CanvasEditor({
                   >
                     <Network className="h-3.5 w-3.5 mr-2 text-purple-500" />
                     {t("lacerta.canvasEditor.umlCard", "UML Card")}
+                  </ContextMenuItem>
+                  <ContextMenuItem
+                    onClick={() =>
+                      createNodeAtPos(
+                        "object3d",
+                        rightClickPosition.x,
+                        rightClickPosition.y,
+                      )
+                    }
+                    className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
+                  >
+                    <Boxes className="h-3.5 w-3.5 mr-2 text-indigo-400" />
+                    {t("lacerta.canvasEditor.object3dCard", "3D Scene / Objects")}
                   </ContextMenuItem>
                   <ContextMenuItem
                     onClick={() =>

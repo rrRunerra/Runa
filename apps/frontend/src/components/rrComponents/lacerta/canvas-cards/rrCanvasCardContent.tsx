@@ -18,6 +18,7 @@ import RrCanvasGroupCard from "./rrCanvasGroupCard";
 import RrCanvasRrImageCard from "./rrCanvasRrImageCard";
 import RrCanvasScientificCalcCard from "./rrCanvasScientificCalcCard";
 import RrCanvasGraphingCalcCard from "./rrCanvasGraphingCalcCard";
+import RrCanvas3DCard from "./rrCanvas3DCard";
 import { CanvasNode } from "../types";
 
 interface RrCanvasCardContentProps {
@@ -27,6 +28,7 @@ interface RrCanvasCardContentProps {
   zoom: number;
   isLocked?: boolean;
   onNodeUpdate: (updates: Partial<CanvasNode>) => void;
+  onOpen3DEditor?: (node: CanvasNode) => void;
 }
 
 function RrCanvasCardContent({
@@ -36,6 +38,7 @@ function RrCanvasCardContent({
   zoom,
   isLocked = false,
   onNodeUpdate,
+  onOpen3DEditor,
 }: RrCanvasCardContentProps) {
   switch (node.type) {
     case "image":
@@ -72,6 +75,8 @@ function RrCanvasCardContent({
       return <RrCanvasScientificCalcCard node={node} isLocked={isLocked} onNodeUpdate={onNodeUpdate} />;
     case "graphing-calc":
       return <RrCanvasGraphingCalcCard node={node} isLocked={isLocked} onNodeUpdate={onNodeUpdate} />;
+    case "object3d":
+      return <RrCanvas3DCard node={node} onOpenEditor={onOpen3DEditor} />;
     default:
       return null;
   }
