@@ -20,7 +20,8 @@ export interface FavoriteItem {
   id: string;
   userId: string;
   type: string;
-  mediaId: string;
+  targetId?: string;
+  mediaId?: string;
   createdAt: string;
   title: string;
   image: string;
@@ -31,7 +32,8 @@ interface FavoritesTabProps {
   session: any;
 }
 
-function getMediaUrl(type: string, mediaId: string): string {
+function getMediaUrl(type: string, mediaId?: string): string {
+  if (!mediaId) return "/aquila/browse";
   const t = type.toUpperCase();
   if (t === "ANIME") return `/aquila/anime/${mediaId}`;
   if (t === "MANGA") return `/aquila/manga/${mediaId}`;
@@ -41,6 +43,7 @@ function getMediaUrl(type: string, mediaId: string): string {
   if (t === "BOOK") return `/aquila/books/${mediaId}`;
   if (t === "CHARACTER") return `/aquila/characters/${mediaId}`;
   if (t === "STAFF") return `/aquila/actors/${mediaId}`;
+  if (t === "USER") return `/polaris/user/${mediaId}`;
   return `/aquila/browse`;
 }
 
@@ -142,46 +145,50 @@ export default function RrFavoritesTab({
                     aria-hidden="true"
                   />
                   <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
-                    {t(`polaris.favorites.${grp.titleKey}`)} ({grp.items.length})
+                    {t(`polaris.favorites.${grp.titleKey}`)} ({grp.items.length}
+                    )
                   </h3>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-4">
-                  {grp.items.map((fav) => (
-                    <Link
-                      key={fav.id}
-                      href={getMediaUrl(fav.type, fav.mediaId)}
-                      prefetch={false}
-                      className="block focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 rounded-xl transition-all"
-                    >
-                      <motion.div
-                        whileHover={{ y: -4 }}
-                        whileTap={{ scale: 0.98 }}
-                        className="group relative aspect-2/3 rounded-xl overflow-hidden border bg-card cursor-pointer shadow-sm"
+                  {grp.items.map((fav) => {
+                    const itemMediaId = fav.targetId || fav.mediaId;
+                    return (
+                      <Link
+                        key={fav.id}
+                        href={getMediaUrl(fav.type, itemMediaId)}
+                        prefetch={false}
+                        className="block focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 rounded-xl transition-all"
                       >
-                        {fav.image ? (
-                          <Image
-                            src={getSafeImageUrl(fav.image)}
-                            alt={fav.title}
-                            fill
-                            sizes="(max-width: 640px) 50vw, (max-width: 768px) 25vw, (max-width: 1024px) 16vw, 12vw"
-                            className="object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center p-3 text-center text-xs text-muted-foreground/60 bg-muted italic">
-                            {fav.title || t("polaris.favorites.noImage")}
-                          </div>
-                        )}
+                        <motion.div
+                          whileHover={{ y: -4 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="group relative aspect-2/3 rounded-xl overflow-hidden border bg-card cursor-pointer shadow-sm"
+                        >
+                          {fav.image ? (
+                            <Image
+                              src={getSafeImageUrl(fav.image)}
+                              alt={fav.title}
+                              fill
+                              sizes="(max-width: 640px) 50vw, (max-width: 768px) 25vw, (max-width: 1024px) 16vw, 12vw"
+                              className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center p-3 text-center text-xs text-muted-foreground/60 bg-muted italic">
+                              {fav.title || t("polaris.favorites.noImage")}
+                            </div>
+                          )}
 
-                        {/* Hover overlay for title */}
-                        <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-background via-background/80 to-transparent p-3 pt-6 z-10 transition-opacity duration-200">
-                          <p className="text-xs font-semibold text-white line-clamp-2 leading-snug">
-                            {fav.title}
-                          </p>
-                        </div>
-                      </motion.div>
-                    </Link>
-                  ))}
+                          {/* Hover overlay for title */}
+                          <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-background via-background/80 to-transparent p-3 pt-6 z-10 transition-opacity duration-200">
+                            <p className="text-xs font-semibold text-white line-clamp-2 leading-snug">
+                              {fav.title}
+                            </p>
+                          </div>
+                        </motion.div>
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
             ))}
