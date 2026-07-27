@@ -1141,7 +1141,7 @@ export default {
     "animeNotFound": "Anime ikke funnet",
     "backToBrowse": "Tilbake til søk",
     "addedToList": "Lagt til i listen!",
-    "failedAddToList": "Kunne ikke legge til i listen",
+    "failedAddToList": "Kunne ikke legge til",
     "quickAdd": "Hurtiglegg til",
     "addToList": "Legg til i liste",
     "editEntry": "Rediger oppføring",
@@ -1248,7 +1248,14 @@ export default {
     "searchBooks": "Search books...",
     "searchGames": "Search games...",
     "searchTv": "Search TV shows...",
-    "searchMovies": "Search movies..."
+    "searchMovies": "Search movies...",
+    "similar": "Lignende",
+    "searchSimilarPlaceholder": "Søk etter lignende titler...",
+    "includeItemsInList": "Inkluder elementer i listen",
+    "noSimilarFound": "Ingen lignende titler funnet",
+    "noSimilarFoundDesc": "Ingen lignende titler som passer filteret.",
+    "loginRequired": "Logg inn for å legge til",
+    "addedToPlanning": "Lagt til i planlagt"
   },
   "lynx": {
     "returnToSafety": "Gå tilbake til sikkerhet",

@@ -1141,7 +1141,7 @@
     "animeNotFound": "未找到该动漫",
     "backToBrowse": "返回浏览",
     "addedToList": "已添加到列表！",
-    "failedAddToList": "添加至列表失败",
+    "failedAddToList": "添加到列表失败",
     "quickAdd": "快速添加",
     "addToList": "添加到列表",
     "editEntry": "编辑记录",
@@ -1248,7 +1248,14 @@
     "searchBooks": "搜索图书...",
     "searchGames": "搜索游戏...",
     "searchTv": "搜索剧集...",
-    "searchMovies": "搜索电影..."
+    "searchMovies": "搜索电影...",
+    "similar": "相似作品",
+    "searchSimilarPlaceholder": "搜索相似作品或原标题...",
+    "includeItemsInList": "包含列表中的项目",
+    "noSimilarFound": "未找到相似作品",
+    "noSimilarFoundDesc": "当前筛选条件下未找到匹配的相似作品。",
+    "loginRequired": "请登录以添加项目到列表",
+    "addedToPlanning": "已添加到计划观看"
   },
   "lynx": {
     "returnToSafety": "返回安全区域",

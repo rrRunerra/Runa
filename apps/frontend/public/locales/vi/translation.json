@@ -1248,7 +1248,14 @@
     "searchBooks": "Search books...",
     "searchGames": "Search games...",
     "searchTv": "Search TV shows...",
-    "searchMovies": "Search movies..."
+    "searchMovies": "Search movies...",
+    "similar": "Tương tự",
+    "searchSimilarPlaceholder": "Tìm kiếm tác phẩm tương tự...",
+    "includeItemsInList": "Bao gồm mục trong danh sách",
+    "noSimilarFound": "Không tìm thấy tác phẩm tương tự",
+    "noSimilarFoundDesc": "Không có tác phẩm tương tự phù hợp với bộ lọc.",
+    "loginRequired": "Vui lòng đăng nhập",
+    "addedToPlanning": "Đã thêm vào kế hoạch"
   },
   "lynx": {
     "returnToSafety": "Quay lại an toàn",

@@ -1141,8 +1141,8 @@ export default {
     "animeNotFound": "未找到該動漫",
     "backToBrowse": "返回瀏覽",
     "addedToList": "已添加到列表！",
-    "failedAddToList": "添加至列表失敗",
-    "quickAdd": "快速添加",
+    "failedAddToList": "新增至清單失敗",
+    "quickAdd": "快速新增",
     "addToList": "添加到列表",
     "editEntry": "編輯記錄",
     "information": "信息",
@@ -1248,7 +1248,14 @@ export default {
     "searchBooks": "搜尋圖書...",
     "searchGames": "搜尋遊戲...",
     "searchTv": "搜尋劇集...",
-    "searchMovies": "搜尋電影..."
+    "searchMovies": "搜尋電影...",
+    "similar": "相似作品",
+    "searchSimilarPlaceholder": "搜尋相似作品或原標題...",
+    "includeItemsInList": "包含清單中的項目",
+    "noSimilarFound": "未找到相似作品",
+    "noSimilarFoundDesc": "目前篩選條件下未找到匹配的相似作品。",
+    "loginRequired": "請登入以新增項目至清單",
+    "addedToPlanning": "已新增至計劃觀看"
   },
   "lynx": {
     "returnToSafety": "返回安全區域",

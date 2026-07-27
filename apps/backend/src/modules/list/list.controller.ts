@@ -487,6 +487,31 @@ export class ListController {
     return this.listService.getUserListFilters(username, mediaType);
   }
 
+  @Public()
+  @Get('/:mediaType/user/:username/sequels')
+  public async getUserListSequels(
+    @Param('mediaType') mediaType: string,
+    @Param('username') username: string,
+    @Req() req: any,
+    @Query('relationType') relationType?: string,
+    @Query('releaseStatus') releaseStatus?: string,
+    @Query('includeInList') includeInList?: string,
+    @Query('search') search?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ): Promise<any> {
+    return this.listService.getMediaSequels(username, mediaType, req.user?.username, {
+      relationType,
+      releaseStatus,
+      includeInList: includeInList === 'true',
+      search,
+      limit: limit ? Number(limit) : 50,
+      offset: offset ? Number(offset) : 0,
+    });
+  }
+
+
+
   // ─────────────────────────── RADARR/SONARR ───────────────────────────
 
   @Get('*api/v3/movie')

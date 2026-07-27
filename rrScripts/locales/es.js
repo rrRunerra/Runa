@@ -1248,7 +1248,14 @@ export default {
     "searchBooks": "Search books...",
     "searchGames": "Search games...",
     "searchTv": "Search TV shows...",
-    "searchMovies": "Search movies..."
+    "searchMovies": "Search movies...",
+    "similar": "Similares",
+    "searchSimilarPlaceholder": "Buscar títulos similares...",
+    "includeItemsInList": "Incluir elementos de la lista",
+    "noSimilarFound": "No se encontraron títulos similares",
+    "noSimilarFoundDesc": "No hay entradas similares que coincidan con los filtros.",
+    "loginRequired": "Inicia sesión para añadir elementos",
+    "addedToPlanning": "Añadido a Planeados"
   },
   "lynx": {
     "returnToSafety": "Volver a la seguridad",

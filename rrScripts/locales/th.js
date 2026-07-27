@@ -1141,7 +1141,7 @@ export default {
     "animeNotFound": "ไม่พบข้อมูลอนิเมะ",
     "backToBrowse": "กลับไปหน้าค้นหา",
     "addedToList": "เพิ่มลงในรายการแล้ว!",
-    "failedAddToList": "เพิ่มลงในรายการล้มเหลว",
+    "failedAddToList": "เพิ่มในลิสต์ไม่สำเร็จ",
     "quickAdd": "เพิ่มรายการด่วน",
     "addToList": "เพิ่มลงในรายการ",
     "editEntry": "แก้ไขรายการ",
@@ -1248,7 +1248,14 @@ export default {
     "searchBooks": "Search books...",
     "searchGames": "Search games...",
     "searchTv": "Search TV shows...",
-    "searchMovies": "Search movies..."
+    "searchMovies": "Search movies...",
+    "similar": "ที่คล้ายกัน",
+    "searchSimilarPlaceholder": "ค้นหารายการที่คล้ายกัน...",
+    "includeItemsInList": "รวมรายการในลิสต์",
+    "noSimilarFound": "ไม่พบรายการที่คล้ายกัน",
+    "noSimilarFoundDesc": "ไม่พบรายการที่คล้ายกันตรงกับเงื่อนไขการค้นหา",
+    "loginRequired": "กรุณาเข้าสู่ระบบก่อน",
+    "addedToPlanning": "เพิ่มในแผนแล้ว"
   },
   "lynx": {
     "returnToSafety": "กลับสู่ความปลอดภัย",

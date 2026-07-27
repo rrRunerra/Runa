@@ -1141,7 +1141,7 @@
     "animeNotFound": "Anime bulunamadı",
     "backToBrowse": "Aramaya Geri Dön",
     "addedToList": "Listeye eklendi!",
-    "failedAddToList": "Listeye eklenemedi",
+    "failedAddToList": "Listeye ekleme başarısız",
     "quickAdd": "Hızlı Ekle",
     "addToList": "Listeye Ekle",
     "editEntry": "Kaydı Düzenle",
@@ -1248,7 +1248,14 @@
     "searchBooks": "Kitap ara...",
     "searchGames": "Oyun ara...",
     "searchTv": "Dizi ara...",
-    "searchMovies": "Film ara..."
+    "searchMovies": "Film ara...",
+    "similar": "Benzerler",
+    "searchSimilarPlaceholder": "Benzer başlıkları ara...",
+    "includeItemsInList": "Listedeki öğeleri dahil et",
+    "noSimilarFound": "Benzer başlık bulunamadı",
+    "noSimilarFoundDesc": "Filtrelere uygun benzer başlık bulunamadı.",
+    "loginRequired": "Eklemek için giriş yapın",
+    "addedToPlanning": "Planlananlara eklendi"
   },
   "lynx": {
     "returnToSafety": "Güvenli bölgeye dön",

@@ -1141,7 +1141,7 @@
     "animeNotFound": "Anime nicht gefunden",
     "backToBrowse": "Zurück zum Stöbern",
     "addedToList": "Zur Liste hinzugefügt!",
-    "failedAddToList": "Hinzufügen zur Liste fehlgeschlagen",
+    "failedAddToList": "Hinzufügen fehlgeschlagen",
     "quickAdd": "Schnelles Hinzufügen",
     "addToList": "Zur Liste hinzufügen",
     "editEntry": "Eintrag bearbeiten",
@@ -1248,7 +1248,14 @@
     "searchBooks": "Search books...",
     "searchGames": "Search games...",
     "searchTv": "Search TV shows...",
-    "searchMovies": "Search movies..."
+    "searchMovies": "Search movies...",
+    "similar": "Ähnlich",
+    "searchSimilarPlaceholder": "Ähnliche Titel suchen...",
+    "includeItemsInList": "Einträge aus der Liste einschließen",
+    "noSimilarFound": "Keine ähnlichen Einträge gefunden",
+    "noSimilarFoundDesc": "Es wurden keine passenden ähnlichen Einträge gefunden.",
+    "loginRequired": "Bitte melden Sie sich an",
+    "addedToPlanning": "Zu Geplant hinzugefügt"
   },
   "lynx": {
     "returnToSafety": "Zurück zur Sicherheit",

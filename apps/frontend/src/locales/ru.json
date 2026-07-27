@@ -1141,7 +1141,7 @@
     "animeNotFound": "Аниме не найдено",
     "backToBrowse": "Вернуться к поиску",
     "addedToList": "Добавлено в список!",
-    "failedAddToList": "Не удалось добавить в список",
+    "failedAddToList": "Ошибка добавления в список",
     "quickAdd": "Быстрое добавление",
     "addToList": "Добавить в список",
     "editEntry": "Редактировать запись",
@@ -1248,7 +1248,14 @@
     "searchBooks": "Search books...",
     "searchGames": "Search games...",
     "searchTv": "Search TV shows...",
-    "searchMovies": "Search movies..."
+    "searchMovies": "Search movies...",
+    "similar": "Похожие",
+    "searchSimilarPlaceholder": "Поиск похожих тайтлов...",
+    "includeItemsInList": "Включая элементы из списка",
+    "noSimilarFound": "Похожие тайтлы не найдены",
+    "noSimilarFoundDesc": "По вашему запросу похожих тайтлов не найдено.",
+    "loginRequired": "Войдите, чтобы добавить в список",
+    "addedToPlanning": "Добавлено в планах"
   },
   "lynx": {
     "returnToSafety": "Вернуться в безопасность",

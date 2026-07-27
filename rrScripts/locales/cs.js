@@ -1141,7 +1141,7 @@ export default {
     "animeNotFound": "Anime nebylo nalezeno",
     "backToBrowse": "Zpět na vyhledávání",
     "addedToList": "Přidáno do seznamu!",
-    "failedAddToList": "Nepodařilo se přidat do seznamu",
+    "failedAddToList": "Přidání do seznamu selhalo",
     "quickAdd": "Rychlé přidání",
     "addToList": "Přidat do seznamu",
     "editEntry": "Upravit záznam",
@@ -1248,7 +1248,14 @@ export default {
     "searchBooks": "Hledat knihy...",
     "searchGames": "Hledat hry...",
     "searchTv": "Hledat seriály...",
-    "searchMovies": "Hledat filmy..."
+    "searchMovies": "Hledat filmy...",
+    "similar": "Podobné",
+    "searchSimilarPlaceholder": "Hledat podobné tituly...",
+    "includeItemsInList": "Zahrnout položky ze seznamu",
+    "noSimilarFound": "Nenalezeny žádné podobné tituly",
+    "noSimilarFoundDesc": "Nenalezeny žádné odpovídající podobné tituly.",
+    "loginRequired": "Přihlaste se pro přidání do seznamu",
+    "addedToPlanning": "Přidáno do plánovaných"
   },
   "lynx": {
     "returnToSafety": "Návrat do bezpečí",

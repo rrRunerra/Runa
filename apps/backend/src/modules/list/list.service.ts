@@ -24,6 +24,13 @@ import { BookService } from '../book/book.service';
 import { NotificationService } from '../notification/notification.service';
 import { MediaStatsService } from './media-stats.service';
 
+function toPrismaStatus(status: any): any {
+  if (!status) return 'PLANNING';
+  const s = String(status).toUpperCase().replace(/\s+/g, '_');
+  if (s === 'PLAN_TO_WATCH' || s === 'PLAN_TO_READ' || s === 'PLAN_TO_PLAY') return 'PLANNING';
+  return s;
+}
+
 export interface ListQueryOptions {
   limit?: number;
   offset?: number;
@@ -400,11 +407,14 @@ export class ListService {
       const privacy = parsePrivacy(user?.privacy);
       const isPrivate = !!(privacy.profile || privacy.animeList);
 
+      const animeId = Number(body.animeId);
+      const status = toPrismaStatus(body.status);
+
       const oldEntry = await this.prisma.client.aquilaAnimeUserList.findUnique({
         where: {
           username_animeId: {
             username: username.toLowerCase(),
-            animeId: body.animeId,
+            animeId,
           },
         },
       });
@@ -413,11 +423,11 @@ export class ListService {
         where: {
           username_animeId: {
             username: username.toLowerCase(),
-            animeId: body.animeId,
+            animeId,
           },
         },
         update: {
-          status: body.status,
+          status,
           progress: body.progress,
           score: body.score,
           startDate: body.startDate,
@@ -428,8 +438,8 @@ export class ListService {
         },
         create: {
           username: username.toLowerCase(),
-          animeId: body.animeId,
-          status: body.status,
+          animeId,
+          status,
           progress: body.progress,
           score: body.score,
           startDate: body.startDate,
@@ -460,11 +470,11 @@ export class ListService {
         where: {
           username_animeId: {
             username: username.toLowerCase(),
-            animeId: body.animeId,
+            animeId,
           },
         },
       });
-      void this.mediaStatsService.updateStatsIncremental('anime', body.animeId, oldEntry, newEntry);
+      void this.mediaStatsService.updateStatsIncremental('anime', animeId, oldEntry, newEntry);
     } catch (error) {
       this.logger.error(error);
       return {
@@ -829,11 +839,11 @@ export class ListService {
         where: {
           username_mangaId: {
             username: username.toLowerCase(),
-            mangaId: body.mangaId,
+            mangaId,
           },
         },
       });
-      void this.mediaStatsService.updateStatsIncremental('manga', body.mangaId, oldEntry, newEntry);
+      void this.mediaStatsService.updateStatsIncremental('manga', mangaId, oldEntry, newEntry);
     } catch (error) {
       this.logger.error(error);
       return {
@@ -1249,11 +1259,14 @@ export class ListService {
       const privacy = parsePrivacy(user?.privacy);
       const isPrivate = !!(privacy.profile || privacy.movieList);
 
+      const movieId = Number(body.movieId);
+      const status = toPrismaStatus(body.status);
+
       const oldEntry = await this.prisma.client.aquilaMovieUserList.findUnique({
         where: {
           username_movieId: {
             username: username.toLowerCase(),
-            movieId: body.movieId,
+            movieId,
           },
         },
       });
@@ -1262,11 +1275,11 @@ export class ListService {
         where: {
           username_movieId: {
             username: username.toLowerCase(),
-            movieId: body.movieId,
+            movieId,
           },
         },
         update: {
-          status: body.status,
+          status,
           score: body.score,
           startDate: body.startDate,
           endDate: body.endDate,
@@ -1276,8 +1289,8 @@ export class ListService {
         },
         create: {
           username: username.toLowerCase(),
-          movieId: body.movieId,
-          status: body.status,
+          movieId,
+          status,
           score: body.score,
           startDate: body.startDate,
           endDate: body.endDate,
@@ -1306,11 +1319,11 @@ export class ListService {
         where: {
           username_movieId: {
             username: username.toLowerCase(),
-            movieId: body.movieId,
+            movieId,
           },
         },
       });
-      void this.mediaStatsService.updateStatsIncremental('movie', body.movieId, oldEntry, newEntry);
+      void this.mediaStatsService.updateStatsIncremental('movie', movieId, oldEntry, newEntry);
     } catch (error) {
       this.logger.error(error);
       return {
@@ -1551,11 +1564,14 @@ export class ListService {
       const privacy = parsePrivacy(user?.privacy);
       const isPrivate = !!(privacy.profile || privacy.tvList);
 
+      const tvId = Number(body.tvId);
+      const status = toPrismaStatus(body.status);
+
       const oldEntry = await this.prisma.client.aquilaTvUserList.findUnique({
         where: {
           username_tvId: {
             username: username.toLowerCase(),
-            tvId: body.tvId,
+            tvId,
           },
         },
       });
@@ -1564,11 +1580,11 @@ export class ListService {
         where: {
           username_tvId: {
             username: username.toLowerCase(),
-            tvId: body.tvId,
+            tvId,
           },
         },
         update: {
-          status: body.status,
+          status,
           score: body.score,
           startDate: body.startDate,
           endDate: body.endDate,
@@ -1578,8 +1594,8 @@ export class ListService {
         },
         create: {
           username: username.toLowerCase(),
-          tvId: body.tvId,
-          status: body.status,
+          tvId,
+          status,
           score: body.score,
           startDate: body.startDate,
           endDate: body.endDate,
@@ -1623,11 +1639,11 @@ export class ListService {
         where: {
           username_tvId: {
             username: username.toLowerCase(),
-            tvId: body.tvId,
+            tvId,
           },
         },
       });
-      void this.mediaStatsService.updateStatsIncremental('tv', body.tvId, oldEntry, newEntry);
+      void this.mediaStatsService.updateStatsIncremental('tv', tvId, oldEntry, newEntry);
     } catch (error) {
       this.logger.error(error);
       return {
@@ -2000,11 +2016,14 @@ export class ListService {
       const privacy = parsePrivacy(user?.privacy);
       const isPrivate = !!(privacy.profile || privacy.gameList);
 
+      const gameId = Number(body.gameId);
+      const status = toPrismaStatus(body.status);
+
       const oldEntry = await this.prisma.client.aquilaGameUserList.findUnique({
         where: {
           username_gameId: {
             username: username.toLowerCase(),
-            gameId: body.gameId,
+            gameId,
           },
         },
       });
@@ -2013,11 +2032,11 @@ export class ListService {
         where: {
           username_gameId: {
             username: username.toLowerCase(),
-            gameId: body.gameId,
+            gameId,
           },
         },
         update: {
-          status: body.status,
+          status,
           progress: body.progress,
           score: body.score,
           startDate: body.startDate,
@@ -2026,8 +2045,8 @@ export class ListService {
         },
         create: {
           username: username.toLowerCase(),
-          gameId: body.gameId,
-          status: body.status,
+          gameId,
+          status,
           progress: body.progress,
           score: body.score,
           startDate: body.startDate,
@@ -2041,11 +2060,11 @@ export class ListService {
         where: {
           username_gameId: {
             username: username.toLowerCase(),
-            gameId: body.gameId,
+            gameId,
           },
         },
       });
-      void this.mediaStatsService.updateStatsIncremental('game', body.gameId, oldEntry, newEntry);
+      void this.mediaStatsService.updateStatsIncremental('game', gameId, oldEntry, newEntry);
     } catch (error) {
       this.logger.error(error);
       return {
@@ -2249,7 +2268,9 @@ export class ListService {
       const privacy = parsePrivacy(user?.privacy);
       const isPrivate = !!(privacy.profile || privacy.bookList);
 
-      const intBookId = parseInt(body.bookId, 10);
+      const intBookId = Number(body.bookId);
+      const status = toPrismaStatus(body.status);
+
       const oldEntry = await this.prisma.client.aquilaBookUserList.findUnique({
         where: {
           username_bookId: {
@@ -2267,7 +2288,7 @@ export class ListService {
           },
         },
         update: {
-          status: body.status,
+          status,
           chapters: body.chapters,
           volumes: body.volumes,
           score: body.score,
@@ -2278,7 +2299,7 @@ export class ListService {
         create: {
           username: username.toLowerCase(),
           bookId: intBookId,
-          status: body.status,
+          status,
           chapters: body.chapters,
           volumes: body.volumes,
           score: body.score,
@@ -2837,6 +2858,9 @@ export class ListService {
 
   public async getUserListFilters(username: string, mediaType: string) {
     username = username.toLowerCase();
+    if (mediaType === 'movies') mediaType = 'movie';
+    if (mediaType === 'games') mediaType = 'game';
+    if (mediaType === 'books') mediaType = 'book';
     switch (mediaType) {
       case 'anime': {
         const list = await this.prisma.client.aquilaAnimeUserList.findMany({
@@ -3729,4 +3753,450 @@ export class ListService {
       );
     }
   }
+
+  public async getMediaSequels(
+    targetUsername: string,
+    mediaTypeRaw: string,
+    viewerUsername: string | null,
+    options: {
+      relationType?: string;
+      releaseStatus?: string;
+      includeInList?: boolean;
+      search?: string;
+      limit?: number;
+      offset?: number;
+    } = {},
+  ): Promise<{ items: any[]; totalCount: number }> {
+    const mediaType = mediaTypeRaw.toLowerCase();
+    const normalizedUsername = targetUsername.toLowerCase();
+
+    let baseListEntries: any[] = [];
+    const allUserListMediaIds = new Set<string | number>();
+    const userListMap = new Map<string | number, { status: string; score?: number }>();
+
+    if (mediaType === 'anime') {
+      const userList = await this.prisma.client.aquilaAnimeUserList.findMany({
+        where: { username: normalizedUsername },
+        include: { anime: true },
+      });
+      for (const entry of userList) {
+        if (!entry.anime) continue;
+        allUserListMediaIds.add(entry.animeId);
+        userListMap.set(entry.animeId, { status: entry.status, score: entry.score });
+        if (entry.status !== 'DROPPED') {
+          baseListEntries.push(entry.anime);
+        }
+      }
+    } else if (mediaType === 'manga') {
+      const userList = await this.prisma.client.aquilaMangaUserList.findMany({
+        where: { username: normalizedUsername },
+        include: { manga: true },
+      });
+      for (const entry of userList) {
+        if (!entry.manga) continue;
+        allUserListMediaIds.add(entry.mangaId);
+        userListMap.set(entry.mangaId, { status: entry.status, score: entry.score });
+        if (entry.status !== 'DROPPED') {
+          baseListEntries.push(entry.manga);
+        }
+      }
+    } else if (mediaType === 'tv') {
+      const userList = await this.prisma.client.aquilaTvUserList.findMany({
+        where: { username: normalizedUsername },
+        include: { tv: true },
+      });
+      for (const entry of userList) {
+        if (!entry.tv) continue;
+        allUserListMediaIds.add(entry.tvId);
+        userListMap.set(entry.tvId, { status: entry.status, score: entry.score });
+        if (entry.status !== 'DROPPED') {
+          baseListEntries.push(entry.tv);
+        }
+      }
+    } else if (mediaType === 'movie' || mediaType === 'movies') {
+      const userList = await this.prisma.client.aquilaMovieUserList.findMany({
+        where: { username: normalizedUsername },
+        include: { movie: true },
+      });
+      for (const entry of userList) {
+        if (!entry.movie) continue;
+        allUserListMediaIds.add(entry.movieId);
+        userListMap.set(entry.movieId, { status: entry.status, score: entry.score });
+        if (entry.status !== 'DROPPED') {
+          baseListEntries.push(entry.movie);
+        }
+      }
+    } else if (mediaType === 'game' || mediaType === 'games') {
+      const userList = await this.prisma.client.aquilaGameUserList.findMany({
+        where: { username: normalizedUsername },
+        include: { game: true },
+      });
+      for (const entry of userList) {
+        if (!entry.game) continue;
+        allUserListMediaIds.add(entry.gameId);
+        userListMap.set(entry.gameId, { status: entry.status, score: entry.score });
+        if (entry.status !== 'DROPPED') {
+          baseListEntries.push(entry.game);
+        }
+      }
+    } else if (mediaType === 'book' || mediaType === 'books') {
+      const userList = await this.prisma.client.aquilaBookUserList.findMany({
+        where: { username: normalizedUsername },
+        include: { book: true },
+      });
+      for (const entry of userList) {
+        if (!entry.book) continue;
+        allUserListMediaIds.add(entry.bookId);
+        userListMap.set(entry.bookId, { status: entry.status, score: entry.score });
+        if (entry.status !== 'DROPPED') {
+          baseListEntries.push(entry.book);
+        }
+      }
+    }
+
+    if (baseListEntries.length === 0) {
+      return { items: [], totalCount: 0 };
+    }
+
+    const candidateMap = new Map<string | number, any>();
+
+    if (mediaType === 'anime') {
+      const baseIds = baseListEntries.map((e) => e.id);
+      const relations = await this.prisma.client.aquilaMediaRelation.findMany({
+        where: {
+          OR: [{ animeId: { in: baseIds } }, { relatedAnimeId: { in: baseIds } }],
+        },
+        include: {
+          anime: true,
+          relatedAnime: true,
+        },
+      });
+
+      const baseMap = new Map(baseListEntries.map((e) => [e.id, e]));
+
+      for (const rel of relations) {
+        let baseMedia: any = null;
+        let targetMedia: any = null;
+        let relType = rel.relationType || 'SEQUEL';
+
+        if (rel.animeId && baseMap.has(rel.animeId) && rel.relatedAnime) {
+          baseMedia = baseMap.get(rel.animeId);
+          targetMedia = rel.relatedAnime;
+        } else if (
+          rel.relatedAnimeId &&
+          baseMap.has(rel.relatedAnimeId) &&
+          rel.anime
+        ) {
+          baseMedia = baseMap.get(rel.relatedAnimeId);
+          targetMedia = rel.anime;
+          if (relType.toUpperCase() === 'PREQUEL') relType = 'SEQUEL';
+          else if (relType.toUpperCase() === 'SEQUEL') relType = 'PREQUEL';
+        }
+
+        if (targetMedia && baseMedia && targetMedia.id !== baseMedia.id) {
+          if (!candidateMap.has(targetMedia.id)) {
+            candidateMap.set(targetMedia.id, {
+              id: targetMedia.id,
+              mediaType: 'anime',
+              title:
+                targetMedia.titleEnglish ||
+                targetMedia.titleRomaji ||
+                targetMedia.titleNative ||
+                'Untitled',
+              titleEnglish: targetMedia.titleEnglish,
+              titleRomaji: targetMedia.titleRomaji,
+              coverImage: targetMedia.coverImageLarge || targetMedia.bannerImage,
+              format: targetMedia.format,
+              status: targetMedia.status,
+              score: targetMedia.averageScore,
+              episodes: targetMedia.episodes,
+              year: targetMedia.startDateYear || targetMedia.seasonYear,
+              relationType: relType.toUpperCase(),
+              baseMedia: {
+                id: baseMedia.id,
+                title:
+                  baseMedia.titleEnglish ||
+                  baseMedia.titleRomaji ||
+                  'Untitled',
+                coverImage: baseMedia.coverImageLarge,
+              },
+            });
+          }
+        }
+      }
+    } else if (mediaType === 'manga') {
+      const baseIds = baseListEntries.map((e) => e.id);
+      const relations = await this.prisma.client.aquilaMediaRelation.findMany({
+        where: {
+          OR: [{ mangaId: { in: baseIds } }, { relatedMangaId: { in: baseIds } }],
+        },
+        include: {
+          manga: true,
+          relatedManga: true,
+        },
+      });
+
+      const baseMap = new Map(baseListEntries.map((e) => [e.id, e]));
+
+      for (const rel of relations) {
+        let baseMedia: any = null;
+        let targetMedia: any = null;
+        let relType = rel.relationType || 'SEQUEL';
+
+        if (rel.mangaId && baseMap.has(rel.mangaId) && rel.relatedManga) {
+          baseMedia = baseMap.get(rel.mangaId);
+          targetMedia = rel.relatedManga;
+        } else if (
+          rel.relatedMangaId &&
+          baseMap.has(rel.relatedMangaId) &&
+          rel.manga
+        ) {
+          baseMedia = baseMap.get(rel.relatedMangaId);
+          targetMedia = rel.manga;
+          if (relType.toUpperCase() === 'PREQUEL') relType = 'SEQUEL';
+          else if (relType.toUpperCase() === 'SEQUEL') relType = 'PREQUEL';
+        }
+
+        if (targetMedia && baseMedia && targetMedia.id !== baseMedia.id) {
+          if (!candidateMap.has(targetMedia.id)) {
+            candidateMap.set(targetMedia.id, {
+              id: targetMedia.id,
+              mediaType: 'manga',
+              title:
+                targetMedia.titleEnglish ||
+                targetMedia.titleRomaji ||
+                targetMedia.titleNative ||
+                'Untitled',
+              titleEnglish: targetMedia.titleEnglish,
+              titleRomaji: targetMedia.titleRomaji,
+              coverImage: targetMedia.coverImageLarge || targetMedia.bannerImage,
+              format: targetMedia.format,
+              status: targetMedia.status,
+              score: targetMedia.averageScore,
+              chapters: targetMedia.chapters,
+              volumes: targetMedia.volumes,
+              year: targetMedia.startDateYear,
+              relationType: relType.toUpperCase(),
+              baseMedia: {
+                id: baseMedia.id,
+                title:
+                  baseMedia.titleEnglish ||
+                  baseMedia.titleRomaji ||
+                  'Untitled',
+                coverImage: baseMedia.coverImageLarge,
+              },
+            });
+          }
+        }
+      }
+    }
+
+    if (
+      candidateMap.size === 0 ||
+      ['tv', 'movie', 'movies', 'game', 'games', 'book', 'books'].includes(mediaType)
+    ) {
+      for (const baseItem of baseListEntries) {
+        const baseTitle = (
+          baseItem.titleEnglish ||
+          baseItem.titleRomaji ||
+          baseItem.titleName ||
+          baseItem.titleString ||
+          baseItem.title ||
+          ''
+        ).trim();
+
+        if (baseTitle.length < 3) continue;
+
+        const cleanTitle = baseTitle
+          .replace(/(\s*:\s*|\s+)(season|part|vol|volume|chapter|s)\s*\d+/gi, '')
+          .replace(/\s+\d+$/g, '')
+          .trim();
+
+        if (cleanTitle.length < 3) continue;
+
+        let dbResults: any[] = [];
+        if (mediaType === 'tv') {
+          dbResults = await this.prisma.client.aquilaTv.findMany({
+            where: {
+              id: { not: baseItem.id },
+              OR: [
+                { titleEnglish: { contains: cleanTitle, mode: 'insensitive' } },
+                { titleRomaji: { contains: cleanTitle, mode: 'insensitive' } },
+                { titleNative: { contains: cleanTitle, mode: 'insensitive' } },
+              ],
+            },
+            take: 10,
+          });
+          for (const item of dbResults) {
+            if (!candidateMap.has(item.id)) {
+              candidateMap.set(item.id, {
+                id: item.id,
+                mediaType: 'tv',
+                title: item.titleEnglish || item.titleRomaji || item.titleNative || 'Untitled',
+                coverImage: item.coverImage || item.bannerImage,
+                status: item.status,
+                score: item.localAverageScore,
+                year: item.startDateYear,
+                relationType: 'SEQUEL',
+                baseMedia: {
+                  id: baseItem.id,
+                  title: baseTitle,
+                  coverImage: baseItem.coverImage,
+                },
+              });
+            }
+          }
+        } else if (mediaType === 'movie' || mediaType === 'movies') {
+          dbResults = await this.prisma.client.aquilaMovie.findMany({
+            where: {
+              id: { not: baseItem.id },
+              OR: [
+                { titleEnglish: { contains: cleanTitle, mode: 'insensitive' } },
+                { titleRomaji: { contains: cleanTitle, mode: 'insensitive' } },
+                { titleNative: { contains: cleanTitle, mode: 'insensitive' } },
+              ],
+            },
+            take: 10,
+          });
+          for (const item of dbResults) {
+            if (!candidateMap.has(item.id)) {
+              candidateMap.set(item.id, {
+                id: item.id,
+                mediaType: 'movie',
+                title: item.titleEnglish || item.titleRomaji || item.titleNative || 'Untitled',
+                coverImage: item.coverImage || item.bannerImage,
+                status: item.status,
+                score: item.localAverageScore,
+                year: item.startDateYear,
+                relationType: 'SEQUEL',
+                baseMedia: {
+                  id: baseItem.id,
+                  title: baseTitle,
+                  coverImage: baseItem.coverImage,
+                },
+              });
+            }
+          }
+        } else if (mediaType === 'game' || mediaType === 'games') {
+          dbResults = await this.prisma.client.aquilaGame.findMany({
+            where: {
+              id: { not: baseItem.id },
+              OR: [
+                { titleString: { contains: cleanTitle, mode: 'insensitive' } },
+                { titleNative: { contains: cleanTitle, mode: 'insensitive' } },
+              ],
+            },
+            take: 10,
+          });
+          for (const item of dbResults) {
+            if (!candidateMap.has(item.id)) {
+              candidateMap.set(item.id, {
+                id: item.id,
+                mediaType: 'game',
+                title: item.titleString || item.titleNative || 'Untitled',
+                coverImage: item.coverImage || item.backgroundImage,
+                score: item.localAverageScore || item.averageScore,
+                year: item.releasedYear,
+                relationType: 'SEQUEL',
+                baseMedia: {
+                  id: baseItem.id,
+                  title: baseTitle,
+                  coverImage: baseItem.coverImage,
+                },
+              });
+            }
+          }
+        } else if (mediaType === 'book' || mediaType === 'books') {
+          dbResults = await this.prisma.client.aquilaBook.findMany({
+            where: {
+              id: { not: baseItem.id },
+              OR: [
+                { titleString: { contains: cleanTitle, mode: 'insensitive' } },
+                { subtitle: { contains: cleanTitle, mode: 'insensitive' } },
+              ],
+            },
+            take: 10,
+          });
+          for (const item of dbResults) {
+            if (!candidateMap.has(item.id)) {
+              candidateMap.set(item.id, {
+                id: item.id,
+                mediaType: 'book',
+                title: item.titleString || 'Untitled',
+                coverImage: item.coverImage,
+                score: item.localAverageScore || item.averageRating,
+                year: item.publishedYear,
+                relationType: 'SEQUEL',
+                baseMedia: {
+                  id: baseItem.id,
+                  title: baseTitle,
+                  coverImage: baseItem.coverImage,
+                },
+              });
+            }
+          }
+        }
+      }
+    }
+
+    let results = Array.from(candidateMap.values()).map((candidate) => {
+      const isAdded = allUserListMediaIds.has(candidate.id);
+      const listInfo = userListMap.get(candidate.id);
+      return {
+        ...candidate,
+        isAddedToList: isAdded,
+        userListStatus: listInfo ? listInfo.status : null,
+        userListScore: listInfo ? listInfo.score : null,
+      };
+    });
+
+    if (!options.includeInList) {
+      results = results.filter((item) => !item.isAddedToList);
+    }
+
+    if (options.relationType && options.relationType.toUpperCase() !== 'ALL') {
+      results = results.filter(
+        (item) => item.relationType === options.relationType.toUpperCase(),
+      );
+    }
+
+    if (options.releaseStatus && options.releaseStatus.toUpperCase() !== 'ALL') {
+      const relStat = options.releaseStatus.toUpperCase();
+      results = results.filter((item) => {
+        if (!item.status) return true;
+        const statStr = String(item.status).toUpperCase();
+        if (relStat === 'AIRING' || relStat === 'RELEASING') {
+          return statStr.includes('RELEASING') || statStr.includes('AIRING');
+        }
+        if (relStat === 'FINISHED') {
+          return statStr.includes('FINISHED') || statStr.includes('ENDED');
+        }
+        if (relStat === 'UPCOMING' || relStat === 'NOT_YET_RELEASED') {
+          return (
+            statStr.includes('NOT_YET_RELEASED') ||
+            statStr.includes('UPCOMING') ||
+            statStr.includes('CANCELLED')
+          );
+        }
+        return true;
+      });
+    }
+
+    if (options.search && options.search.trim().length > 0) {
+      const query = options.search.toLowerCase().trim();
+      results = results.filter(
+        (item) =>
+          item.title?.toLowerCase().includes(query) ||
+          item.baseMedia?.title?.toLowerCase().includes(query),
+      );
+    }
+
+    const totalCount = results.length;
+    const offset = options.offset || 0;
+    const limit = options.limit || 50;
+    const paginatedItems = results.slice(offset, offset + limit);
+
+    return { items: paginatedItems, totalCount };
+  }
 }
+

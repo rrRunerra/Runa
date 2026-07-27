@@ -1248,7 +1248,14 @@ export default {
     "searchBooks": "Search books...",
     "searchGames": "Search games...",
     "searchTv": "Search TV shows...",
-    "searchMovies": "Search movies..."
+    "searchMovies": "Search movies...",
+    "similar": "Serupa",
+    "searchSimilarPlaceholder": "Cari tajuk serupa...",
+    "includeItemsInList": "Sertakan item dalam senarai",
+    "noSimilarFound": "Tiada tajuk serupa ditemui",
+    "noSimilarFoundDesc": "Tiada carian serupa yang sepadan dengan penapis.",
+    "loginRequired": "Sila log masuk untuk menambah",
+    "addedToPlanning": "Ditambah ke Perancangan"
   },
   "lynx": {
     "returnToSafety": "Kembali ke keselamatan",

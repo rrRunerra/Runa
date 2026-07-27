@@ -3,6 +3,7 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
+import { Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface RrUserListTabsProps {
@@ -44,6 +45,10 @@ export function RrUserListTabs({
         return t("aquila.completed");
       case "DROPPED":
         return t("aquila.dropped");
+      case "SIMILAR":
+      case "SEQUELS":
+      case "SEQUEL":
+        return t("aquila.similar");
       default:
         return name;
     }
@@ -79,7 +84,10 @@ export function RrUserListTabs({
                   }}
                 />
               )}
-              <span className="relative z-10" suppressHydrationWarning>
+              <span className="relative z-10 flex items-center gap-1.5" suppressHydrationWarning>
+                {(list.toUpperCase() === "SIMILAR" || list.toUpperCase() === "SEQUELS") && (
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                )}
                 {getListNameTranslation(list)}
               </span>
               <span

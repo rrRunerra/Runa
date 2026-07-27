@@ -14,6 +14,7 @@ import { motion } from "framer-motion";
 import { RrUserListHeader } from "@/components/rrComponents/aquila/rrUserListHeader";
 import { RrUserListTabs } from "@/components/rrComponents/aquila/rrUserListTabs";
 import { RrMediaRoulette } from "@/components/rrComponents/aquila/rrMediaRoulette";
+import { RrUserListSequelsTab } from "@/components/rrComponents/aquila/rrUserListSequelsTab";
 import {
   RrUserListFilters,
   UserListSortType,
@@ -281,7 +282,7 @@ export default function UserMoviesPage({ initialData }: { initialData?: any }) {
     document.title = `Aquila > User > ${userData?.displayName || userData?.username} > Movies List`;
   }, [userData]);
 
-  const lists = ["All", "Completed", "Dropped", "Planning"];
+  const lists = ["All", "Completed", "Dropped", "Planning", "Similar"];
 
   return (
     <motion.div
@@ -315,7 +316,7 @@ export default function UserMoviesPage({ initialData }: { initialData?: any }) {
           </div>
         ) : (
           <>
-            {/* Horizontal Lists & Filters Toolbar */}
+            {/* Horizontal Lists Toolbar */}
             <div className="flex flex-col gap-4 w-full bg-card/20 backdrop-blur-xl border border-border/40 p-4 rounded-2xl shadow-xl">
               <RrUserListTabs
                 lists={lists}
@@ -325,87 +326,88 @@ export default function UserMoviesPage({ initialData }: { initialData?: any }) {
                 mediaType="movie"
               />
 
-              <RrUserListFilters
-                username={username}
-                mediaType="movies"
-                searchVal={searchVal}
-                setSearchVal={setSearchVal}
-                sort={sort}
-                setSort={setSort}
-                sortOptions={SORT_OPTIONS}
-                filters={filters}
-                setFilters={setFilters}
-                searchPlaceholder={t("aquila.searchMovies")}
-              />
+              {activeList !== "Similar" && activeList !== "Sequels" && (
+                <RrUserListFilters
+                  username={username}
+                  mediaType="movies"
+                  searchVal={searchVal}
+                  setSearchVal={setSearchVal}
+                  sort={sort}
+                  setSort={setSort}
+                  sortOptions={SORT_OPTIONS}
+                  filters={filters}
+                  setFilters={setFilters}
+                  searchPlaceholder={t("aquila.searchMovies")}
+                />
+              )}
             </div>
 
-            <header className="flex items-center justify-between mt-4">
-              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/75" suppressHydrationWarning>
-                {getListNameTranslation(activeList)}{" "}
-                {t("aquila.movies")} (
-                {counts?.[activeList.toLowerCase().replace(/\s+/g, "_")] ??
-                  moviesList.length}
-                )
-              </h3>
-              <div className="flex items-center gap-2 ml-auto">
-                <RrMediaRoulette
-                  username={username}
-                  mediaType="movie"
+            {activeList === "Similar" || activeList === "Sequels" ? (
+              <RrUserListSequelsTab username={username} mediaType="movie" />
+            ) : (
+              <>
+                <header className="flex items-center justify-between mt-4">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/75" suppressHydrationWarning>
+                    {getListNameTranslation(activeList)}{" "}
+                    {t("aquila.movies")} (
+                    {counts?.[activeList.toLowerCase().replace(/\s+/g, "_")] ??
+                      moviesList.length}
+                    )
+                  </h3>
+                  <div className="flex items-center gap-2 ml-auto">
+                    <RrMediaRoulette
+                      username={username}
+                      mediaType="movie"
+                      baseUrl="/aquila/movies"
+                    />
+                    <div className="flex items-center gap-1.5 bg-muted/20 p-1 rounded-xl border border-border/30 shadow-inner">
+                      {[
+                        { type: "list", icon: <Lucide.List size={16} /> },
+                        { type: "compact", icon: <Lucide.LayoutList size={16} /> },
+                        { type: "grid", icon: <Lucide.LayoutGrid size={16} /> },
+                      ].map((view) => (
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          key={view.type}
+                          onClick={() => setDisplayType(view.type as DisplayType)}
+                          className={`flex items-center justify-center size-8 rounded-lg transition-all cursor-pointer ${displayType === view.type ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:bg-muted/30 hover:text-foreground"}`}
+                        >
+                          {view.icon}
+                        </motion.button>
+                      ))}
+                    </div>
+                  </div>
+                </header>
+
+                <RrMediaListDisplay
+                  lists={
+                    activeList === "All"
+                      ? ["Completed", "Dropped", "Planning"]
+                      : [activeList]
+                  }
+                  data={moviesList}
+                  displayType={displayType}
+                  filters={{}}
+                  sort={sort}
                   baseUrl="/aquila/movies"
+                  isOwner={isOwner}
+                  onRefresh={() => fetchMoviesList(0, true)}
                 />
-                <div className="flex items-center gap-1.5 bg-muted/20 p-1 rounded-xl border border-border/30 shadow-inner">
-                  {[
-                    { type: "list", icon: <Lucide.List size={16} /> },
-                    { type: "compact", icon: <Lucide.LayoutList size={16} /> },
-                    { type: "grid", icon: <Lucide.LayoutGrid size={16} /> },
-                  ].map((view) => (
-                    <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      key={view.type}
-                      onClick={() => setDisplayType(view.type as DisplayType)}
-                      className={`flex items-center justify-center size-8 rounded-lg transition-all cursor-pointer ${displayType === view.type ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:bg-muted/30 hover:text-foreground"}`}
-                    >
-                      {view.icon}
-                    </motion.button>
-                  ))}
-                </div>
-              </div>
-            </header>
 
-            <RrMediaListDisplay
-              lists={
-                activeList === "All"
-                  ? ["Completed", "Dropped", "Planning"]
-                  : [activeList]
-              }
-              data={moviesList}
-              displayType={displayType}
-              filters={{}}
-              sort={sort}
-              baseUrl="/aquila/movies"
-              isOwner={isOwner}
-              onRefresh={() => fetchMoviesList(0, true)}
-            />
-
-            <InfiniteScroll
-              onLoadMore={() => {
-                if (activeList === "All") {
-                  fetchMoviesList(
-                    priorityOff,
-                    false,
-                    MOVIES_PRIORITY_STATUSES[priorityIdx],
-                  );
-                } else {
-                  fetchMoviesList(offset, false);
-                }
-              }}
-              hasMore={hasMore}
-              isLoading={loading}
-            />
+                <InfiniteScroll
+                  onLoadMore={() => {
+                    fetchMoviesList(offset, false);
+                  }}
+                  hasMore={hasMore}
+                  isLoading={loading}
+                />
+              </>
+            )}
           </>
         )}
       </motion.main>
     </motion.div>
   );
 }
+

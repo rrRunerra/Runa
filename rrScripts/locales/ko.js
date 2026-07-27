@@ -1248,7 +1248,14 @@ export default {
     "searchBooks": "Search books...",
     "searchGames": "Search games...",
     "searchTv": "Search TV shows...",
-    "searchMovies": "Search movies..."
+    "searchMovies": "Search movies...",
+    "similar": "유사 작품",
+    "searchSimilarPlaceholder": "유사 작품 또는 원작 타이틀 검색...",
+    "includeItemsInList": "목록에 있는 항목 포함",
+    "noSimilarFound": "유사 작품을 찾을 수 없습니다",
+    "noSimilarFoundDesc": "현재 필터 조건에 일치하는 유사 작품이 없습니다.",
+    "loginRequired": "목록에 추가하려면 로그인하세요",
+    "addedToPlanning": "볼 예정 목록에 추가됨"
   },
   "lynx": {
     "returnToSafety": "안전한 곳으로 돌아가기",

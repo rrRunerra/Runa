@@ -199,6 +199,7 @@ export function RrUserListFilters({
           <Lucide.Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60" />
           <Input
             placeholder={resolvedSearchPlaceholder}
+            suppressHydrationWarning
             className="pl-9 h-9.5 bg-background/40 border border-border/40 focus-visible:ring-1 focus-visible:ring-primary/30 rounded-xl placeholder:text-muted-foreground/40 text-xs"
             value={searchVal}
             onChange={(e) => setSearchVal(e.target.value)}
@@ -302,7 +303,10 @@ export function RrUserListFilters({
 
           {/* Sort Dropdown */}
           <div className="flex items-center gap-1.5 border-l border-border/40 pl-2 ml-1">
-            <span className="text-[10px] font-semibold text-muted-foreground/80 hidden sm:inline uppercase tracking-wider">
+            <span
+              className="text-[10px] font-semibold text-muted-foreground/80 hidden sm:inline uppercase tracking-wider"
+              suppressHydrationWarning
+            >
               {t("aquila.sort")}
             </span>
             <Select
@@ -315,7 +319,9 @@ export function RrUserListFilters({
               <SelectContent className="bg-popover/95 backdrop-blur-md border border-border/40 rounded-xl">
                 {sortOptions.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
-                    {getSortLabel(opt.value, opt.label)}
+                    <span suppressHydrationWarning>
+                      {getSortLabel(opt.value, opt.label)}
+                    </span>
                   </SelectItem>
                 ))}
               </SelectContent>

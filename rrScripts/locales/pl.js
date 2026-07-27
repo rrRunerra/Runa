@@ -1248,7 +1248,14 @@ export default {
     "searchBooks": "Search books...",
     "searchGames": "Search games...",
     "searchTv": "Search TV shows...",
-    "searchMovies": "Search movies..."
+    "searchMovies": "Search movies...",
+    "similar": "Podobne",
+    "searchSimilarPlaceholder": "Szukaj podobnych tytułów...",
+    "includeItemsInList": "Uwzględnij pozycje z listy",
+    "noSimilarFound": "Nie znaleziono podobnych tytułów",
+    "noSimilarFoundDesc": "Brak podobnych pozycji spełniających kryteria wyszukiwania.",
+    "loginRequired": "Zaloguj się, aby dodać pozycje do listy",
+    "addedToPlanning": "Dodano do planowanych"
   },
   "lynx": {
     "returnToSafety": "Powrót do bezpieczeństwa",

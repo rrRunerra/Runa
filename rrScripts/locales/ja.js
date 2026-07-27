@@ -1141,7 +1141,7 @@ export default {
     "animeNotFound": "アニメが見つかりません",
     "backToBrowse": "検索に戻る",
     "addedToList": "リストに追加しました！",
-    "failedAddToList": "リスト追加に失敗しました",
+    "failedAddToList": "リストへの追加に失敗しました",
     "quickAdd": "クイック追加",
     "addToList": "リストに追加",
     "editEntry": "登録情報を編集",
@@ -1248,7 +1248,14 @@ export default {
     "searchBooks": "本を検索...",
     "searchGames": "ゲームを検索...",
     "searchTv": "TV番組を検索...",
-    "searchMovies": "映画を検索..."
+    "searchMovies": "映画を検索...",
+    "similar": "類似作品",
+    "searchSimilarPlaceholder": "類似作品または元タイトルを検索...",
+    "includeItemsInList": "リスト内の項目を含める",
+    "noSimilarFound": "類似作品が見つかりません",
+    "noSimilarFoundDesc": "現在のフィルター条件に一致する類似作品が見つかりませんでした。",
+    "loginRequired": "リストに追加するにはログインしてください",
+    "addedToPlanning": "視聴予定に追加しました"
   },
   "lynx": {
     "returnToSafety": "安全な場所に戻る",

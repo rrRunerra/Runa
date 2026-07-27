@@ -1141,7 +1141,7 @@ export default {
     "animeNotFound": "Animea ei löytynyt",
     "backToBrowse": "Takaisin hakuun",
     "addedToList": "Lisätty listalle!",
-    "failedAddToList": "Lisääminen listalle epäonnistui",
+    "failedAddToList": "Lisääminen epäonnistui",
     "quickAdd": "Pikalistäys",
     "addToList": "Lisää listalle",
     "editEntry": "Muokkaa merkintää",
@@ -1248,7 +1248,14 @@ export default {
     "searchBooks": "Search books...",
     "searchGames": "Search games...",
     "searchTv": "Search TV shows...",
-    "searchMovies": "Search movies..."
+    "searchMovies": "Search movies...",
+    "similar": "Samankaltaiset",
+    "searchSimilarPlaceholder": "Etsi samankaltaisia nimikkeitä...",
+    "includeItemsInList": "Sisällytä listalla olevat",
+    "noSimilarFound": "Ei samankaltaisia nimikkeitä",
+    "noSimilarFoundDesc": "Ei hakuehtoja vastaavia samankaltaisia nimikkeitä.",
+    "loginRequired": "Kirjaudu sisään lisätäksesi listalle",
+    "addedToPlanning": "Lisätty suunniteltuihin"
   },
   "lynx": {
     "returnToSafety": "Palaa turvallisuuteen",
