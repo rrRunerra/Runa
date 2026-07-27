@@ -4,10 +4,13 @@ import { Home, Lock, Database, Zap, FileText } from "lucide-react";
 import { SidebarConfig } from "@/types/SidebarConfig";
 import { RunaFlags } from "@runa/permissions";
 
-type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
+type TranslateFn = (
+  key: string,
+  options?: Record<string, unknown> | string,
+) => string;
 
 export const getMonocerosSidebarConfig = (
-  t: TranslateFn = (key) => key,
+  t: TranslateFn = (key, options) => (typeof options === "string" ? options : key),
 ): SidebarConfig => [
   {
     section: "#$Phone",
