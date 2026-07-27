@@ -4,13 +4,10 @@ import { Home, Lock, Database, Zap, FileText } from "lucide-react";
 import { SidebarConfig } from "@/types/SidebarConfig";
 import { RunaFlags } from "@runa/permissions";
 
-type TranslateFn = (
-  key: string,
-  options?: Record<string, unknown> | string,
-) => string;
+type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 
 export const getMonocerosSidebarConfig = (
-  t: TranslateFn = (key, options) => (typeof options === "string" ? options : key),
+  t: TranslateFn = (key) => key,
 ): SidebarConfig => [
   {
     section: "#$Phone",
@@ -47,11 +44,11 @@ export const getMonocerosSidebarConfig = (
       },
       {
         dataKey: "Submissions",
-        label: t("sidebarSubmissions", "Submissions"),
+        label: t("sidebarSubmissions"),
         href: "/monoceros/submissions",
         icon: <FileText className="h-4 w-4" />,
         preventRedirect: false,
-        subtitle: t("sidebarSubmissionsSubtitle", "Review Media Submissions"),
+        subtitle: t("sidebarSubmissionsSubtitle"),
       },
       {
         dataKey: "Databases",
