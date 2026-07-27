@@ -1255,7 +1255,8 @@ export default {
     "noSimilarFound": "Keine ähnlichen Einträge gefunden",
     "noSimilarFoundDesc": "Es wurden keine passenden ähnlichen Einträge gefunden.",
     "loginRequired": "Bitte melden Sie sich an",
-    "addedToPlanning": "Zu Geplant hinzugefügt"
+    "addedToPlanning": "Zu Geplant hinzugefügt",
+    "similarSeries": "Ähnliche Serien"
   },
   "lynx": {
     "returnToSafety": "Zurück zur Sicherheit",

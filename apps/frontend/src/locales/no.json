@@ -1255,7 +1255,8 @@
     "noSimilarFound": "Ingen lignende titler funnet",
     "noSimilarFoundDesc": "Ingen lignende titler som passer filteret.",
     "loginRequired": "Logg inn for å legge til",
-    "addedToPlanning": "Lagt til i planlagt"
+    "addedToPlanning": "Lagt til i planlagt",
+    "similarSeries": "Lignende serier"
   },
   "lynx": {
     "returnToSafety": "Gå tilbake til sikkerhet",

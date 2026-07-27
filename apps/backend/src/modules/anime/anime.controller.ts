@@ -22,12 +22,22 @@ export class AnimeController {
   }
 
   @Public()
+  @Get(':id/similar')
+  async getSimilar(@Param() params: AnimeDetailDto | any): Promise<any[]> {
+    const rawId = typeof params === 'object' && params !== null && 'id' in params ? params.id : params;
+    return await this.animeService.getSimilarAnime(Number(rawId));
+  }
+
+  @Public()
   @Get(':id')
   async animeDetail(
     @Param() params: AnimeDetailDto,
   ): Promise<AnimeEntity | undefined> {
     return await this.animeService.getAnime(params.id);
   }
+
+
+
 
   @Post(':id/refresh')
   @Permissions([AquilaFlags.MEDIA_REFRESH])

@@ -1255,7 +1255,8 @@ export default {
     "noSimilarFound": "ไม่พบรายการที่คล้ายกัน",
     "noSimilarFoundDesc": "ไม่พบรายการที่คล้ายกันตรงกับเงื่อนไขการค้นหา",
     "loginRequired": "กรุณาเข้าสู่ระบบก่อน",
-    "addedToPlanning": "เพิ่มในแผนแล้ว"
+    "addedToPlanning": "เพิ่มในแผนแล้ว",
+    "similarSeries": "ซีรีส์ที่คล้ายกัน"
   },
   "lynx": {
     "returnToSafety": "กลับสู่ความปลอดภัย",

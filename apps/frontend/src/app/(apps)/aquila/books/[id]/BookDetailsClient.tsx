@@ -23,6 +23,8 @@ import { RrMediaFriendsProgress } from "@/components/rrComponents/aquila/details
 import { RrMediaDescription } from "@/components/rrComponents/aquila/details/rrMediaDescription";
 import { RrMediaGenres } from "@/components/rrComponents/aquila/details/rrMediaGenres";
 import { RrMediaStatsDashboard } from "@/components/rrComponents/aquila/details/rrMediaStatsDashboard";
+import { RrMediaSimilar } from "@/components/rrComponents/aquila/details/rrMediaSimilar";
+
 import { RrMediaFooter } from "@/components/rrComponents/aquila/details/rrMediaFooter";
 import { RrMediaDetailsSkeleton } from "@/components/rrComponents/aquila/details/rrMediaDetailsSkeleton";
 import { useTranslation } from "react-i18next";
@@ -480,8 +482,12 @@ export default function BookDetailsPage(): React.JSX.Element {
               </motion.div>
             )}
 
+            {/* Similar Series Carousel */}
+            <RrMediaSimilar mediaType="book" mediaId={id} />
+
             {/* Stats Dashboard (Score & Status distribution charts) */}
             <RrMediaStatsDashboard
+
               localAverageScore={book.localAverageScore}
               localPopularity={book.localPopularity}
               localFavoritesCount={book.localFavoritesCount}

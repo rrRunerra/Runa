@@ -25,6 +25,8 @@ import { RrMediaDescription } from "@/components/rrComponents/aquila/details/rrM
 import { RrMediaGenres } from "@/components/rrComponents/aquila/details/rrMediaGenres";
 import { RrMediaCharacters } from "@/components/rrComponents/aquila/details/rrMediaCharacters";
 import { RrMediaRelations } from "@/components/rrComponents/aquila/details/rrMediaRelations";
+import { RrMediaSimilar } from "@/components/rrComponents/aquila/details/rrMediaSimilar";
+
 import { RrMediaInfoRow } from "@/components/rrComponents/aquila/details/rrMediaInfoRow";
 import { RrMediaFriendsProgress } from "@/components/rrComponents/aquila/details/rrMediaFriendsProgress";
 import { RrMediaFooter } from "@/components/rrComponents/aquila/details/rrMediaFooter";
@@ -624,6 +626,10 @@ export default function MangaDetailsPage(): React.JSX.Element {
             {relations && relations.length > 0 && (
               <RrMediaRelations relations={relations} />
             )}
+
+            {/* Similar Series Carousel */}
+            <RrMediaSimilar mediaType="manga" mediaId={id} />
+
 
             {/* Stats Dashboard (Score & Status distribution charts) */}
             <RrMediaStatsDashboard

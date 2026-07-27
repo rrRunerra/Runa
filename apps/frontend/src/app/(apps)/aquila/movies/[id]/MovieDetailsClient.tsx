@@ -24,6 +24,8 @@ import { RrMediaDescription } from "@/components/rrComponents/aquila/details/rrM
 import { RrMediaGenres } from "@/components/rrComponents/aquila/details/rrMediaGenres";
 import { RrMediaCharacters } from "@/components/rrComponents/aquila/details/rrMediaCharacters";
 import { RrMediaStatsDashboard } from "@/components/rrComponents/aquila/details/rrMediaStatsDashboard";
+import { RrMediaSimilar } from "@/components/rrComponents/aquila/details/rrMediaSimilar";
+
 import { RrMediaTrailer } from "@/components/rrComponents/aquila/details/rrMediaTrailer";
 import { RrMediaFooter } from "@/components/rrComponents/aquila/details/rrMediaFooter";
 import { RrMediaDetailsSkeleton } from "@/components/rrComponents/aquila/details/rrMediaDetailsSkeleton";
@@ -569,8 +571,12 @@ export default function MovieDetailsPage(): React.JSX.Element {
               <RrMediaCharacters characters={characters} />
             )}
 
+            {/* Similar Series Carousel */}
+            <RrMediaSimilar mediaType="movie" mediaId={id} />
+
             {/* Stats Dashboard (Score & Status distribution charts) */}
             <RrMediaStatsDashboard
+
               localAverageScore={movie.localAverageScore}
               localPopularity={movie.localPopularity}
               localFavoritesCount={movie.localFavoritesCount}

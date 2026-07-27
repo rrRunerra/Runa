@@ -1253,9 +1253,10 @@ export default {
     "searchSimilarPlaceholder": "Cari tajuk serupa...",
     "includeItemsInList": "Sertakan item dalam senarai",
     "noSimilarFound": "Tiada tajuk serupa ditemui",
-    "noSimilarFoundDesc": "Tiada carian serupa yang sepadan dengan penapis.",
+    "noSimilarFoundDesc": "Tiada carian serupa yang sepadanกับ penapis.",
     "loginRequired": "Sila log masuk untuk menambah",
-    "addedToPlanning": "Ditambah ke Perancangan"
+    "addedToPlanning": "Ditambah ke Perancangan",
+    "similarSeries": "Siri Serupa"
   },
   "lynx": {
     "returnToSafety": "Kembali ke keselamatan",

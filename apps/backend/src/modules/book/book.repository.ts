@@ -119,4 +119,100 @@ export class BookRepository {
       create: data,
     });
   }
+
+  public async findSimilar(id: any): Promise<any[]> {
+    const numericId = typeof id === 'number' ? id : parseInt(String(id), 10);
+    if (isNaN(numericId)) return [];
+
+    try {
+      const target = await this.prisma.client.aquilaBook.findUnique({
+        where: { id: numericId },
+        select: {
+          id: true,
+          titleString: true,
+          subjects: true,
+        },
+      });
+
+      if (!target) return [];
+
+      const targetTitle = target.titleString || '';
+      const firstWord = targetTitle.trim().split(/\s+/)[0]?.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '');
+      const titleKey = firstWord && firstWord.length >= 2 ? firstWord : null;
+
+      const whereConditions: any[] = [];
+      if (target.subjects && target.subjects.length > 0) {
+        whereConditions.push({ subjects: { hasSome: target.subjects } });
+      }
+      if (titleKey) {
+        whereConditions.push({ titleString: { contains: titleKey, mode: 'insensitive' } });
+      }
+
+      const candidates = await this.prisma.client.aquilaBook.findMany({
+        where: {
+          id: { not: numericId },
+          ...(whereConditions.length > 0 ? { OR: whereConditions } : {}),
+        },
+        select: {
+          id: true,
+          titleString: true,
+          coverImage: true,
+          subjects: true,
+          averageRating: true,
+        },
+        take: 40,
+      });
+
+      if (candidates.length < 6) {
+        const fallback = await this.prisma.client.aquilaBook.findMany({
+          where: { id: { not: numericId } },
+          select: {
+            id: true,
+            titleString: true,
+            coverImage: true,
+            subjects: true,
+            averageRating: true,
+          },
+          take: 12,
+        });
+
+        const existingIds = new Set(candidates.map((c) => c.id));
+        for (const fb of fallback) {
+          if (!existingIds.has(fb.id)) {
+            candidates.push(fb);
+          }
+        }
+      }
+
+      const scored = candidates.map((item) => {
+        let score = 0;
+        const itemTitle = (item.titleString || '').toLowerCase();
+        if (titleKey && itemTitle.includes(titleKey.toLowerCase())) {
+          score += 10;
+        }
+        if (target.subjects && item.subjects) {
+          const overlap = item.subjects.filter((s) => target.subjects.includes(s)).length;
+          score += overlap * 3;
+        }
+        if (item.averageRating) {
+          score += item.averageRating;
+        }
+        return { item, score };
+      });
+
+      scored.sort((a, b) => b.score - a.score);
+
+      return scored.slice(0, 12).map(({ item }) => ({
+        id: item.id,
+        title: item.titleString || 'Untitled',
+        coverImage: item.coverImage || null,
+        type: 'BOOK',
+      }));
+    } catch (err) {
+      this.logger.error(`Book findSimilar error: ${err}`);
+      return [];
+    }
+  }
 }
+
+

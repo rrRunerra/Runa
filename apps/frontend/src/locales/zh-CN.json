@@ -1255,7 +1255,8 @@
     "noSimilarFound": "未找到相似作品",
     "noSimilarFoundDesc": "当前筛选条件下未找到匹配的相似作品。",
     "loginRequired": "请登录以添加项目到列表",
-    "addedToPlanning": "已添加到计划观看"
+    "addedToPlanning": "已添加到计划观看",
+    "similarSeries": "相似系列"
   },
   "lynx": {
     "returnToSafety": "返回安全区域",

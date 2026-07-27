@@ -22,6 +22,13 @@ export class GameController {
   }
 
   @Public()
+  @Get(':id/similar')
+  async getSimilar(@Param() params: GameDetailDto | any): Promise<any[]> {
+    const id = typeof params === 'object' && params !== null && 'id' in params ? Number(params.id) : Number(params);
+    return await this.gameService.getSimilarGame(id);
+  }
+
+  @Public()
   @Get(':id')
   async getGame(
     @Param() params: GameDetailDto | any,
@@ -29,6 +36,8 @@ export class GameController {
     const id = typeof params === 'object' && params !== null && 'id' in params ? Number(params.id) : Number(params);
     return await this.gameService.getGame(id);
   }
+
+
 
   @Post(':id/refresh')
   @Permissions([AquilaFlags.MEDIA_REFRESH])

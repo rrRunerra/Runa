@@ -1255,7 +1255,8 @@ export default {
     "noSimilarFound": "Ei samankaltaisia nimikkeitä",
     "noSimilarFoundDesc": "Ei hakuehtoja vastaavia samankaltaisia nimikkeitä.",
     "loginRequired": "Kirjaudu sisään lisätäksesi listalle",
-    "addedToPlanning": "Lisätty suunniteltuihin"
+    "addedToPlanning": "Lisätty suunniteltuihin",
+    "similarSeries": "Samankaltaiset sarjat"
   },
   "lynx": {
     "returnToSafety": "Palaa turvallisuuteen",

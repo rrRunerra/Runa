@@ -1255,7 +1255,8 @@
     "noSimilarFound": "Không tìm thấy tác phẩm tương tự",
     "noSimilarFoundDesc": "Không có tác phẩm tương tự phù hợp với bộ lọc.",
     "loginRequired": "Vui lòng đăng nhập",
-    "addedToPlanning": "Đã thêm vào kế hoạch"
+    "addedToPlanning": "Đã thêm vào kế hoạch",
+    "similarSeries": "Series tương tự"
   },
   "lynx": {
     "returnToSafety": "Quay lại an toàn",

@@ -1255,7 +1255,8 @@ export default {
     "noSimilarFound": "Benzer başlık bulunamadı",
     "noSimilarFoundDesc": "Filtrelere uygun benzer başlık bulunamadı.",
     "loginRequired": "Eklemek için giriş yapın",
-    "addedToPlanning": "Planlananlara eklendi"
+    "addedToPlanning": "Planlananlara eklendi",
+    "similarSeries": "Benzer Seriler"
   },
   "lynx": {
     "returnToSafety": "Güvenli bölgeye dön",

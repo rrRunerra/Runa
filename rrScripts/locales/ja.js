@@ -1255,7 +1255,8 @@ export default {
     "noSimilarFound": "類似作品が見つかりません",
     "noSimilarFoundDesc": "現在のフィルター条件に一致する類似作品が見つかりませんでした。",
     "loginRequired": "リストに追加するにはログインしてください",
-    "addedToPlanning": "視聴予定に追加しました"
+    "addedToPlanning": "視聴予定に追加しました",
+    "similarSeries": "類似シリーズ"
   },
   "lynx": {
     "returnToSafety": "安全な場所に戻る",

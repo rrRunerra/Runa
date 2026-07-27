@@ -1255,7 +1255,8 @@
     "noSimilarFound": "Nenalezeny žádné podobné tituly",
     "noSimilarFoundDesc": "Nenalezeny žádné odpovídající podobné tituly.",
     "loginRequired": "Přihlaste se pro přidání do seznamu",
-    "addedToPlanning": "Přidáno do plánovaných"
+    "addedToPlanning": "Přidáno do plánovaných",
+    "similarSeries": "Podobné série"
   },
   "lynx": {
     "returnToSafety": "Návrat do bezpečí",

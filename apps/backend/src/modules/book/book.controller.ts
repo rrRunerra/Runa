@@ -22,6 +22,13 @@ export class BookController {
   }
 
   @Public()
+  @Get(':id/similar')
+  async getSimilar(@Param() params: BookDetailDto | any): Promise<any[]> {
+    const id = typeof params === 'object' && params !== null && 'id' in params ? params.id : params;
+    return await this.bookService.getSimilarBook(Number(id));
+  }
+
+  @Public()
   @Get(':id')
   async getBook(
     @Param() params: BookDetailDto | any,
@@ -29,6 +36,8 @@ export class BookController {
     const id = typeof params === 'object' && params !== null && 'id' in params ? params.id : params;
     return await this.bookService.getBook(id);
   }
+
+
 
   @Post(':id/refresh')
   @Permissions([AquilaFlags.MEDIA_REFRESH])

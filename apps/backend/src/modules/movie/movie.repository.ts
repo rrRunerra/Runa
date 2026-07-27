@@ -131,4 +131,99 @@ export class MovieRepository {
       create: data,
     });
   }
+
+  public async findSimilar(id: any): Promise<any[]> {
+    const numericId = typeof id === 'number' ? id : parseInt(String(id), 10);
+    if (isNaN(numericId)) return [];
+
+    try {
+      const target = await this.prisma.client.aquilaMovie.findUnique({
+        where: { id: numericId },
+        select: {
+          id: true,
+          titleEnglish: true,
+          titleRomaji: true,
+          genres: true,
+        },
+      });
+
+      if (!target) return [];
+
+      const targetTitle = target.titleEnglish || target.titleRomaji || '';
+      const firstWord = targetTitle.trim().split(/\s+/)[0]?.replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '');
+      const titleKey = firstWord && firstWord.length >= 2 ? firstWord : null;
+
+      const whereConditions: any[] = [];
+      if (target.genres && target.genres.length > 0) {
+        whereConditions.push({ genres: { hasSome: target.genres } });
+      }
+      if (titleKey) {
+        whereConditions.push({ titleEnglish: { contains: titleKey, mode: 'insensitive' } });
+        whereConditions.push({ titleRomaji: { contains: titleKey, mode: 'insensitive' } });
+      }
+
+      const candidates = await this.prisma.client.aquilaMovie.findMany({
+        where: {
+          id: { not: numericId },
+          ...(whereConditions.length > 0 ? { OR: whereConditions } : {}),
+        },
+        select: {
+          id: true,
+          titleEnglish: true,
+          titleRomaji: true,
+          coverImage: true,
+          genres: true,
+        },
+        take: 40,
+      });
+
+      if (candidates.length < 6) {
+        const fallback = await this.prisma.client.aquilaMovie.findMany({
+          where: { id: { not: numericId } },
+          select: {
+            id: true,
+            titleEnglish: true,
+            titleRomaji: true,
+            coverImage: true,
+            genres: true,
+          },
+          take: 12,
+        });
+
+        const existingIds = new Set(candidates.map((c) => c.id));
+        for (const fb of fallback) {
+          if (!existingIds.has(fb.id)) {
+            candidates.push(fb);
+          }
+        }
+      }
+
+      const scored = candidates.map((item) => {
+        let score = 0;
+        const itemTitle = (item.titleEnglish || item.titleRomaji || '').toLowerCase();
+        if (titleKey && itemTitle.includes(titleKey.toLowerCase())) {
+          score += 10;
+        }
+        if (target.genres && item.genres) {
+          const overlap = item.genres.filter((g) => target.genres.includes(g)).length;
+          score += overlap * 3;
+        }
+        return { item, score };
+      });
+
+      scored.sort((a, b) => b.score - a.score);
+
+      return scored.slice(0, 12).map(({ item }) => ({
+        id: item.id,
+        title: item.titleEnglish || item.titleRomaji || 'Untitled',
+        coverImage: item.coverImage || null,
+        type: 'MOVIE',
+      }));
+    } catch (err) {
+      this.logger.error(`Movie findSimilar error: ${err}`);
+      return [];
+    }
+  }
 }
+
+

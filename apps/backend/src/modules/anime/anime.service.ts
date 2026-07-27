@@ -178,4 +178,21 @@ export class AnimeService {
     }
     return anime;
   }
+
+  public async getSimilarAnime(id: number): Promise<any[]> {
+    if (isNaN(id)) {
+      return [];
+    }
+    const cacheKey = `anime:similar:${id}`;
+    const cached = await this.cacheService.get<any[]>(cacheKey);
+    if (cached && Array.isArray(cached)) {
+      return cached;
+    }
+    const result = await this.animeRepository.findSimilar(id);
+    if (result && result.length > 0) {
+      await this.cacheService.set(cacheKey, result, this.cacheDuration);
+    }
+    return result;
+  }
 }
+

@@ -19,12 +19,22 @@ export class MangaController {
   }
 
   @Public()
+  @Get(':id/similar')
+  async getSimilar(@Param() params: MangaDetailDto | any): Promise<any[]> {
+    const rawId = typeof params === 'object' && params !== null && 'id' in params ? params.id : params;
+    return await this.mangaService.getSimilarManga(Number(rawId));
+  }
+
+  @Public()
   @Get(':id')
   async mangaDetail(
     @Param() params: MangaDetailDto,
   ): Promise<MangaEntity | undefined> {
     return await this.mangaService.getManga(params.id);
   }
+
+
+
 
   @Post(':id/refresh')
   @Permissions([AquilaFlags.MEDIA_REFRESH])

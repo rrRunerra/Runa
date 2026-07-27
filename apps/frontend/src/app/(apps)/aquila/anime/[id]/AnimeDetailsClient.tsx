@@ -26,6 +26,8 @@ import { RrMediaDescription } from "@/components/rrComponents/aquila/details/rrM
 import { RrMediaGenres } from "@/components/rrComponents/aquila/details/rrMediaGenres";
 import { RrMediaCharacters } from "@/components/rrComponents/aquila/details/rrMediaCharacters";
 import { RrMediaRelations } from "@/components/rrComponents/aquila/details/rrMediaRelations";
+import { RrMediaSimilar } from "@/components/rrComponents/aquila/details/rrMediaSimilar";
+
 import { RrMediaInfoRow } from "@/components/rrComponents/aquila/details/rrMediaInfoRow";
 import { RrMediaFriendsProgress } from "@/components/rrComponents/aquila/details/rrMediaFriendsProgress";
 import { RrMediaTrailer } from "@/components/rrComponents/aquila/details/rrMediaTrailer";
@@ -661,6 +663,10 @@ export default function AnimeDetailsPage(): React.JSX.Element {
             {relations && relations.length > 0 && (
               <RrMediaRelations relations={relations} />
             )}
+
+            {/* Similar Series Carousel */}
+            <RrMediaSimilar mediaType="anime" mediaId={id} />
+
 
             {/* Stats Dashboard (Score & Status distribution charts) */}
             <RrMediaStatsDashboard

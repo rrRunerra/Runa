@@ -1255,7 +1255,8 @@
     "noSimilarFound": "Похожие тайтлы не найдены",
     "noSimilarFoundDesc": "По вашему запросу похожих тайтлов не найдено.",
     "loginRequired": "Войдите, чтобы добавить в список",
-    "addedToPlanning": "Добавлено в планах"
+    "addedToPlanning": "Добавлено в планах",
+    "similarSeries": "Похожие серии"
   },
   "lynx": {
     "returnToSafety": "Вернуться в безопасность",

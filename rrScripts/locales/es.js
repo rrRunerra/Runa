@@ -1255,7 +1255,8 @@ export default {
     "noSimilarFound": "No se encontraron títulos similares",
     "noSimilarFoundDesc": "No hay entradas similares que coincidan con los filtros.",
     "loginRequired": "Inicia sesión para añadir elementos",
-    "addedToPlanning": "Añadido a Planeados"
+    "addedToPlanning": "Añadido a Planeados",
+    "similarSeries": "Series similares"
   },
   "lynx": {
     "returnToSafety": "Volver a la seguridad",

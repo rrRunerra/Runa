@@ -177,4 +177,21 @@ export class GameService {
     }
     return game ? { id: game.id } : null;
   }
+
+  public async getSimilarGame(id: number): Promise<any[]> {
+    if (isNaN(id)) {
+      return [];
+    }
+    const cacheKey = `game:similar:${id}`;
+    const cached = await this.cacheService.get<any[]>(cacheKey);
+    if (cached && Array.isArray(cached)) {
+      return cached;
+    }
+    const result = await this.gameRepository.findSimilar(id);
+    if (result && result.length > 0) {
+      await this.cacheService.set(cacheKey, result, this.cacheDuration);
+    }
+    return result;
+  }
 }
+

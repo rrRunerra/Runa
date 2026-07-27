@@ -176,4 +176,21 @@ export class BookService {
     }
     return book;
   }
+
+  public async getSimilarBook(id: number): Promise<any[]> {
+    if (isNaN(id)) {
+      return [];
+    }
+    const cacheKey = `book:similar:${id}`;
+    const cached = await this.cacheService.get<any[]>(cacheKey);
+    if (cached && Array.isArray(cached)) {
+      return cached;
+    }
+    const result = await this.bookRepository.findSimilar(id);
+    if (result && result.length > 0) {
+      await this.cacheService.set(cacheKey, result, this.cacheDuration);
+    }
+    return result;
+  }
 }
+

@@ -22,6 +22,13 @@ export class TvController {
   }
 
   @Public()
+  @Get(':id/similar')
+  async getSimilar(@Param() params: TvDetailDto | any): Promise<any[]> {
+    const id = typeof params === 'object' && params !== null && 'id' in params ? params.id : params;
+    return await this.tvService.getSimilarTv(Number(id));
+  }
+
+  @Public()
   @Get(':id')
   async getTv(
     @Param() params: TvDetailDto | any,
@@ -29,6 +36,8 @@ export class TvController {
     const id = typeof params === 'object' && params !== null && 'id' in params ? params.id : params;
     return await this.tvService.getTv(id);
   }
+
+
 
   @Post(':id/refresh')
   @Permissions([AquilaFlags.MEDIA_REFRESH])

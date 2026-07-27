@@ -1255,7 +1255,8 @@ export default {
     "noSimilarFound": "Nie znaleziono podobnych tytułów",
     "noSimilarFoundDesc": "Brak podobnych pozycji spełniających kryteria wyszukiwania.",
     "loginRequired": "Zaloguj się, aby dodać pozycje do listy",
-    "addedToPlanning": "Dodano do planowanych"
+    "addedToPlanning": "Dodano do planowanych",
+    "similarSeries": "Podobne serie"
   },
   "lynx": {
     "returnToSafety": "Powrót do bezpieczeństwa",

@@ -12,6 +12,7 @@ const frontendPublicLocales = path.join(__dirname, '../apps/frontend/public/loca
 const newTranslations = {
   en: {
     similar: 'Similar',
+    similarSeries: 'Similar Series',
     searchSimilarPlaceholder: 'Search similar entries or base titles...',
     includeItemsInList: 'Include items in list',
     noSimilarFound: 'No Similar Entries Found',
@@ -23,6 +24,7 @@ const newTranslations = {
   },
   ja: {
     similar: '類似作品',
+    similarSeries: '類似シリーズ',
     searchSimilarPlaceholder: '類似作品または元タイトルを検索...',
     includeItemsInList: 'リスト内の項目を含める',
     noSimilarFound: '類似作品が見つかりません',
@@ -34,6 +36,7 @@ const newTranslations = {
   },
   ko: {
     similar: '유사 작품',
+    similarSeries: '유사 시리즈',
     searchSimilarPlaceholder: '유사 작품 또는 원작 타이틀 검색...',
     includeItemsInList: '목록에 있는 항목 포함',
     noSimilarFound: '유사 작품을 찾을 수 없습니다',
@@ -45,6 +48,7 @@ const newTranslations = {
   },
   'zh-CN': {
     similar: '相似作品',
+    similarSeries: '相似系列',
     searchSimilarPlaceholder: '搜索相似作品或原标题...',
     includeItemsInList: '包含列表中的项目',
     noSimilarFound: '未找到相似作品',
@@ -56,6 +60,7 @@ const newTranslations = {
   },
   'zh-TW': {
     similar: '相似作品',
+    similarSeries: '相似系列',
     searchSimilarPlaceholder: '搜尋相似作品或原標題...',
     includeItemsInList: '包含清單中的項目',
     noSimilarFound: '未找到相似作品',
@@ -67,6 +72,7 @@ const newTranslations = {
   },
   pl: {
     similar: 'Podobne',
+    similarSeries: 'Podobne serie',
     searchSimilarPlaceholder: 'Szukaj podobnych tytułów...',
     includeItemsInList: 'Uwzględnij pozycje z listy',
     noSimilarFound: 'Nie znaleziono podobnych tytułów',
@@ -78,6 +84,7 @@ const newTranslations = {
   },
   ru: {
     similar: 'Похожие',
+    similarSeries: 'Похожие серии',
     searchSimilarPlaceholder: 'Поиск похожих тайтлов...',
     includeItemsInList: 'Включая элементы из списка',
     noSimilarFound: 'Похожие тайтлы не найдены',
@@ -88,6 +95,7 @@ const newTranslations = {
   },
   de: {
     similar: 'Ähnlich',
+    similarSeries: 'Ähnliche Serien',
     searchSimilarPlaceholder: 'Ähnliche Titel suchen...',
     includeItemsInList: 'Einträge aus der Liste einschließen',
     noSimilarFound: 'Keine ähnlichen Einträge gefunden',
@@ -98,6 +106,7 @@ const newTranslations = {
   },
   es: {
     similar: 'Similares',
+    similarSeries: 'Series similares',
     searchSimilarPlaceholder: 'Buscar títulos similares...',
     includeItemsInList: 'Incluir elementos de la lista',
     noSimilarFound: 'No se encontraron títulos similares',
@@ -108,6 +117,7 @@ const newTranslations = {
   },
   cs: {
     similar: 'Podobné',
+    similarSeries: 'Podobné série',
     searchSimilarPlaceholder: 'Hledat podobné tituly...',
     includeItemsInList: 'Zahrnout položky ze seznamu',
     noSimilarFound: 'Nenalezeny žádné podobné tituly',
@@ -118,6 +128,7 @@ const newTranslations = {
   },
   fi: {
     similar: 'Samankaltaiset',
+    similarSeries: 'Samankaltaiset sarjat',
     searchSimilarPlaceholder: 'Etsi samankaltaisia nimikkeitä...',
     includeItemsInList: 'Sisällytä listalla olevat',
     noSimilarFound: 'Ei samankaltaisia nimikkeitä',
@@ -128,6 +139,7 @@ const newTranslations = {
   },
   no: {
     similar: 'Lignende',
+    similarSeries: 'Lignende serier',
     searchSimilarPlaceholder: 'Søk etter lignende titler...',
     includeItemsInList: 'Inkluder elementer i listen',
     noSimilarFound: 'Ingen lignende titler funnet',
@@ -138,6 +150,7 @@ const newTranslations = {
   },
   tr: {
     similar: 'Benzerler',
+    similarSeries: 'Benzer Seriler',
     searchSimilarPlaceholder: 'Benzer başlıkları ara...',
     includeItemsInList: 'Listedeki öğeleri dahil et',
     noSimilarFound: 'Benzer başlık bulunamadı',
@@ -148,6 +161,7 @@ const newTranslations = {
   },
   vi: {
     similar: 'Tương tự',
+    similarSeries: 'Series tương tự',
     searchSimilarPlaceholder: 'Tìm kiếm tác phẩm tương tự...',
     includeItemsInList: 'Bao gồm mục trong danh sách',
     noSimilarFound: 'Không tìm thấy tác phẩm tương tự',
@@ -158,6 +172,7 @@ const newTranslations = {
   },
   th: {
     similar: 'ที่คล้ายกัน',
+    similarSeries: 'ซีรีส์ที่คล้ายกัน',
     searchSimilarPlaceholder: 'ค้นหารายการที่คล้ายกัน...',
     includeItemsInList: 'รวมรายการในลิสต์',
     noSimilarFound: 'ไม่พบรายการที่คล้ายกัน',
@@ -168,15 +183,17 @@ const newTranslations = {
   },
   ms: {
     similar: 'Serupa',
+    similarSeries: 'Siri Serupa',
     searchSimilarPlaceholder: 'Cari tajuk serupa...',
     includeItemsInList: 'Sertakan item dalam senarai',
     noSimilarFound: 'Tiada tajuk serupa ditemui',
-    noSimilarFoundDesc: 'Tiada carian serupa yang sepadan dengan penapis.',
+    noSimilarFoundDesc: 'Tiada carian serupa yang sepadanกับ penapis.',
     loginRequired: 'Sila log masuk untuk menambah',
     addedToPlanning: 'Ditambah ke Perancangan',
     failedAddToList: 'Gagal menambah ke senarai',
   },
 };
+
 
 async function main() {
   const files = fs.readdirSync(localesSrcDir).filter((f) => f.endsWith('.js'));

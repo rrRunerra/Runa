@@ -41,6 +41,8 @@ import { RrMediaGenres } from "@/components/rrComponents/aquila/details/rrMediaG
 import { RrMediaCharacters } from "@/components/rrComponents/aquila/details/rrMediaCharacters";
 import { RrMediaStatsDashboard } from "@/components/rrComponents/aquila/details/rrMediaStatsDashboard";
 import { RrMediaTrailer } from "@/components/rrComponents/aquila/details/rrMediaTrailer";
+import { RrMediaSimilar } from "@/components/rrComponents/aquila/details/rrMediaSimilar";
+
 import { RrMediaFooter } from "@/components/rrComponents/aquila/details/rrMediaFooter";
 import { useTranslation } from "react-i18next";
 
@@ -803,8 +805,12 @@ export default function TvDetailsPage(): React.JSX.Element {
               </motion.div>
             )}
 
+            {/* Similar Series Carousel */}
+            <RrMediaSimilar mediaType="tv" mediaId={id} />
+
             {/* Stats Dashboard (Score & Status distribution charts) */}
             <RrMediaStatsDashboard
+
               localAverageScore={tv.localAverageScore}
               localPopularity={tv.localPopularity}
               localFavoritesCount={tv.localFavoritesCount}

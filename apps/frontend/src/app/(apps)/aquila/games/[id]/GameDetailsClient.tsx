@@ -19,6 +19,8 @@ import RrLapplandImageNotFound from "@/components/rrComponents/rrImages/rrLappla
 import { RrMediaRefreshButton } from "@/components/rrComponents/aquila/rrMediaRefreshButton";
 import { GameEntity } from "@/types/game.entities";
 import { RrMediaStatsDashboard } from "@/components/rrComponents/aquila/details/rrMediaStatsDashboard";
+import { RrMediaSimilar } from "@/components/rrComponents/aquila/details/rrMediaSimilar";
+
 import { RrMediaDescription } from "@/components/rrComponents/aquila/details/rrMediaDescription";
 import { RrMediaGenres } from "@/components/rrComponents/aquila/details/rrMediaGenres";
 import { RrMediaInfoRow } from "@/components/rrComponents/aquila/details/rrMediaInfoRow";
@@ -514,8 +516,12 @@ export default function GameDetailsPage(): React.JSX.Element {
             {/* Genres */}
             <RrMediaGenres genres={cleanGenres} />
 
+            {/* Similar Series Carousel */}
+            <RrMediaSimilar mediaType="game" mediaId={id} />
+
             {/* Stats Dashboard (Score & Status distribution charts) */}
             <RrMediaStatsDashboard
+
               localAverageScore={game.localAverageScore}
               localPopularity={game.localPopularity}
               localFavoritesCount={game.localFavoritesCount}

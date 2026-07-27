@@ -776,11 +776,14 @@ export class ListService {
       const privacy = parsePrivacy(user?.privacy);
       const isPrivate = !!(privacy.profile || privacy.mangaList);
 
+      const mangaId = Number(body.mangaId);
+      const status = toPrismaStatus(body.status);
+
       const oldEntry = await this.prisma.client.aquilaMangaUserList.findUnique({
         where: {
           username_mangaId: {
             username: username.toLowerCase(),
-            mangaId: body.mangaId,
+            mangaId,
           },
         },
       });
@@ -789,11 +792,11 @@ export class ListService {
         where: {
           username_mangaId: {
             username: username.toLowerCase(),
-            mangaId: body.mangaId,
+            mangaId,
           },
         },
         update: {
-          status: body.status,
+          status,
           chapters: body.chapters,
           volumes: body.volumes,
           score: body.score,
@@ -805,8 +808,8 @@ export class ListService {
         },
         create: {
           username: username.toLowerCase(),
-          mangaId: body.mangaId,
-          status: body.status,
+          mangaId,
+          status,
           chapters: body.chapters,
           volumes: body.volumes,
           score: body.score,
@@ -822,9 +825,9 @@ export class ListService {
       if (body.updateConnection) {
         await this.updateMangaConnections(
           username.toLowerCase(),
-          body.mangaId,
+          mangaId,
           body.connections || {},
-          body.status,
+          status,
           body.chapters,
           body.volumes,
           body.score,

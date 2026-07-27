@@ -22,6 +22,13 @@ export class MovieController {
   }
 
   @Public()
+  @Get(':id/similar')
+  async getSimilar(@Param() params: MovieDetailDto | any): Promise<any[]> {
+    const id = typeof params === 'object' && params !== null && 'id' in params ? params.id : params;
+    return await this.movieService.getSimilarMovie(Number(id));
+  }
+
+  @Public()
   @Get(':id')
   async getMovie(
     @Param() params: MovieDetailDto | any,
@@ -29,6 +36,8 @@ export class MovieController {
     const id = typeof params === 'object' && params !== null && 'id' in params ? params.id : params;
     return await this.movieService.getMovie(id);
   }
+
+
 
   @Post(':id/refresh')
   @Permissions([AquilaFlags.MEDIA_REFRESH])
