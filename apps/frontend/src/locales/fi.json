@@ -2120,6 +2120,27 @@
       "typeSlashTemplate": "Kirjoita / lisätäksesi mallin",
       "editorPlaceholder": "Kirjoita / lisätäksesi mallin tai aloita kirjoitus...",
       "subjectPlaceholder": "Aihe"
+    },
+    "packageTracker": {
+      "detectedTitle": "Pakettien seurantanumero havaittu",
+      "multiPackages": "{{count}} pakettia",
+      "copyTracking": "Kopioi seurantanumero",
+      "copy": "Kopioi",
+      "copied": "Kopioitu!",
+      "trackOnWeb": "Seuraa pakettia",
+      "fetchingDetails": "Haetaan reaaliaikaista tilaa...",
+      "status_DELIVERED": "Toimitettu",
+      "status_OUT_FOR_DELIVERY": "Jakelussa",
+      "status_IN_TRANSIT": "Kuljetuksessa",
+      "status_SHIPPED": "Lähetetty",
+      "status_LABEL_CREATED": "Osoitekortti luotu",
+      "stepPlaced": "Tilattu",
+      "stepShipped": "Lähetetty",
+      "stepInTransit": "Kuljetuksessa",
+      "stepDelivered": "Toimitettu",
+      "estDelivery": "Arvioitu toimitus",
+      "viewDetailedHistory": "Yksityiskohtainen historia",
+      "failedLoadDetails": "Seurantatietoja ei voitu ladata."
     }
   },
   "spotlight": {

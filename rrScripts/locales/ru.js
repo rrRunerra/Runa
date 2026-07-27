@@ -2120,6 +2120,27 @@ export default {
       "typeSlashTemplate": "Введите / для вставки шаблона",
       "editorPlaceholder": "Введите / для вставки шаблона или начните писать...",
       "subjectPlaceholder": "Тема письма"
+    },
+    "packageTracker": {
+      "detectedTitle": "Обнаружен трек-номер посылки",
+      "multiPackages": "{{count}} посылок",
+      "copyTracking": "Копировать трек-номер",
+      "copy": "Копировать",
+      "copied": "Скопировано!",
+      "trackOnWeb": "Отследить посылку",
+      "fetchingDetails": "Загрузка статуса отслеживания...",
+      "status_DELIVERED": "Доставлено",
+      "status_OUT_FOR_DELIVERY": "Вручение курьеру",
+      "status_IN_TRANSIT": "В пути",
+      "status_SHIPPED": "Отправлено",
+      "status_LABEL_CREATED": "Создана накладная",
+      "stepPlaced": "Оформлено",
+      "stepShipped": "Отправлено",
+      "stepInTransit": "В пути",
+      "stepDelivered": "Доставлено",
+      "estDelivery": "Ожидаемая доставка",
+      "viewDetailedHistory": "Подробная история",
+      "failedLoadDetails": "Не удалось загрузить данные отслеживания."
     }
   },
   "spotlight": {

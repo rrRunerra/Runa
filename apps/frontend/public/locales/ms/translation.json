@@ -2120,6 +2120,27 @@
       "typeSlashTemplate": "Taip / untuk memasukkan templat",
       "editorPlaceholder": "Taip / untuk memasukkan templat atau mula menulis...",
       "subjectPlaceholder": "Talian Subjek"
+    },
+    "packageTracker": {
+      "detectedTitle": "Nombor jejak bungkusan dikesan",
+      "multiPackages": "{{count}} bungkusan",
+      "copyTracking": "Salin nombor jejak",
+      "copy": "Salin",
+      "copied": "Disalin!",
+      "trackOnWeb": "Jejak Bungkusan",
+      "fetchingDetails": "Mengambil status jejak langsung...",
+      "status_DELIVERED": "Dihantar",
+      "status_OUT_FOR_DELIVERY": "Dalam penghantaran",
+      "status_IN_TRANSIT": "Dalam transit",
+      "status_SHIPPED": "Dihantar keluar",
+      "status_LABEL_CREATED": "Label dicipta",
+      "stepPlaced": "Dipesan",
+      "stepShipped": "Dihantar",
+      "stepInTransit": "Dalam transit",
+      "stepDelivered": "Dihantar",
+      "estDelivery": "Anggaran Penghantaran",
+      "viewDetailedHistory": "Sejarah Terperinci",
+      "failedLoadDetails": "Gagal memuatkan butiran jejak bungkusan."
     }
   },
   "spotlight": {

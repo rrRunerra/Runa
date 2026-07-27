@@ -2120,6 +2120,27 @@
       "typeSlashTemplate": "Escriba / para insertar plantilla",
       "editorPlaceholder": "Escriba / para insertar plantilla o comience a redactar...",
       "subjectPlaceholder": "Línea de asunto"
+    },
+    "packageTracker": {
+      "detectedTitle": "Número de seguimiento detectado",
+      "multiPackages": "{{count}} paquetes",
+      "copyTracking": "Copiar número de seguimiento",
+      "copy": "Copiar",
+      "copied": "¡Copiado!",
+      "trackOnWeb": "Rastrear paquete",
+      "fetchingDetails": "Obteniendo estado de seguimiento en vivo...",
+      "status_DELIVERED": "Entregado",
+      "status_OUT_FOR_DELIVERY": "En reparto",
+      "status_IN_TRANSIT": "En tránsito",
+      "status_SHIPPED": "Enviado",
+      "status_LABEL_CREATED": "Etiqueta creada",
+      "stepPlaced": "Pedido",
+      "stepShipped": "Enviado",
+      "stepInTransit": "En tránsito",
+      "stepDelivered": "Entregado",
+      "estDelivery": "Entrega estimada",
+      "viewDetailedHistory": "Historial detallado",
+      "failedLoadDetails": "No se pudieron cargar los detalles del seguimiento."
     }
   },
   "spotlight": {

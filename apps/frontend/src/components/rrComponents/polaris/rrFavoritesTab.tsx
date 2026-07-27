@@ -93,6 +93,10 @@ export default function RrFavoritesTab({
     () => favorites?.filter((f) => f.type === "STAFF") || [],
     [favorites],
   );
+  const userFavs = useMemo(
+    () => favorites?.filter((f) => f.type === "USER") || [],
+    [favorites],
+  );
 
   if (loading) {
     return (
@@ -123,6 +127,7 @@ export default function RrFavoritesTab({
       ) : (
         <>
           {[
+            { titleKey: "favoriteUsers", items: userFavs, type: "user" },
             { titleKey: "favoriteAnime", items: animeFavs, type: "anime" },
             { titleKey: "favoriteManga", items: mangaFavs, type: "manga" },
             {

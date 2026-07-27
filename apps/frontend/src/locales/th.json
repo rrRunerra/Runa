@@ -2120,6 +2120,27 @@
       "typeSlashTemplate": "พิมพ์ / เพื่อแทรกเทมเพลต",
       "editorPlaceholder": "พิมพ์ / เพื่อแทรกเทมเพลตหรือเริ่มเขียน...",
       "subjectPlaceholder": "บรรทัดหัวข้อ"
+    },
+    "packageTracker": {
+      "detectedTitle": "ตรวจพบหมายเลขพัสดุ",
+      "multiPackages": "{{count}} พัสดุ",
+      "copyTracking": "คัดลอกหมายเลขพัสดุ",
+      "copy": "คัดลอก",
+      "copied": "คัดลอกแล้ว!",
+      "trackOnWeb": "ติดตามพัสดุ",
+      "fetchingDetails": "กำลังโหลดสถานะติดตามพัสดุ...",
+      "status_DELIVERED": "จัดส่งสำเร็จ",
+      "status_OUT_FOR_DELIVERY": "กำลังนำจ่าย",
+      "status_IN_TRANSIT": "อยู่ระหว่างขนส่ง",
+      "status_SHIPPED": "จัดส่งแล้ว",
+      "status_LABEL_CREATED": "สร้างสลากจัดส่งแล้ว",
+      "stepPlaced": "สั่งซื้อแล้ว",
+      "stepShipped": "จัดส่งแล้ว",
+      "stepInTransit": "อยู่ระหว่างขนส่ง",
+      "stepDelivered": "จัดส่งสำเร็จ",
+      "estDelivery": "ประมาณการจัดส่ง",
+      "viewDetailedHistory": "ประวัติการเดินทางโดยละเอียด",
+      "failedLoadDetails": "ไม่สามารถโหลดข้อมูลการติดตามพัสดุได้"
     }
   },
   "spotlight": {

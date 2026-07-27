@@ -13,12 +13,13 @@ import {
   X,
   Send,
   Loader2,
-  Eye,
   Download,
   FileText,
-  EyeOff,
   RotateCcw,
   Mail,
+  Sparkles,
+  ShieldCheck,
+  Calendar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +28,9 @@ import { useTranslation } from "react-i18next";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import RrSenderProfileCard from "./rrSenderProfileCard";
+import RrSanitizedEmailIframe from "./rrSanitizedEmailIframe";
+import RrPackageTrackerCard from "./rrPackageTrackerCard";
+import { detectPackageTrackingNumbers } from "./rrPackageTrackerDetector";
 
 interface Attachment {
   id: string;
@@ -125,12 +129,22 @@ export default function RrEmailReader({
 
   const senderEmail = message ? getSenderEmail(message.from) : "";
 
+  // Package tracking numbers detection
+  const detectedPackages = useMemo(() => {
+    if (!message) return [];
+    return detectPackageTrackingNumbers(
+      message.subject || "",
+      message.bodyText || "",
+      message.bodyHtml || "",
+    );
+  }, [message]);
+
   // Reset states when email selection changes
   useEffect(() => {
     setReplyMode(null);
     if (senderEmail) {
       const allowedSenders = JSON.parse(
-        localStorage.getItem("pegasus_allowed_remote_content_senders") || "[]"
+        localStorage.getItem("pegasus_allowed_remote_content_senders") || "[]",
       );
       setLoadRemoteContent(allowedSenders.includes(senderEmail.toLowerCase()));
     } else {
@@ -142,9 +156,9 @@ export default function RrEmailReader({
     if (!message) return;
     setReplyMode(mode);
 
-    const senderEmail = getSenderEmail(message.from);
+    const sEmail = getSenderEmail(message.from);
     if (mode === "reply") {
-      setReplyTo(senderEmail);
+      setReplyTo(sEmail);
       setReplyCc("");
       setShowCcInput(false);
       setReplySubject(
@@ -156,7 +170,7 @@ export default function RrEmailReader({
         `\n\n--- On ${new Date(message.date).toLocaleString()}, ${message.from} wrote:\n> ${message.bodyText.split("\n").join("\n> ")}`,
       );
     } else if (mode === "replyAll") {
-      const recipients = [senderEmail];
+      const recipients = [sEmail];
       if (message.to) {
         const toList = message.to
           .split(",")
@@ -209,75 +223,12 @@ export default function RrEmailReader({
     return hasRemoteImg || hasStyleUrl;
   }, [message]);
 
-  const parsedEmailContent = useMemo(() => {
-    if (!message) return "";
-
-    const getSanitizedHtmlContent = (
-      html: string,
-      allowRemote: boolean,
-    ): string => {
-      if (!html) return "";
-      if (allowRemote) return html;
-      let temp = html.replace(
-        /\bsrc=(["'])(https?:)?\/\/([^"']+)\1/gi,
-        'src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" data-blocked-src="$2//$3"',
-      );
-      temp = temp.replace(
-        /\burl\((["']?)(https?:)?\/\/([^"')]+)\1\)/gi,
-        'url("data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7")',
-      );
-      return temp;
-    };
-
-    if (message.bodyHtml) {
-      if (typeof window === "undefined") return message.bodyHtml;
-      try {
-        const cleanHtml = getSanitizedHtmlContent(
-          message.bodyHtml,
-          loadRemoteContent,
-        );
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(cleanHtml, "text/html");
-
-        // Strip styles, scripts, links, meta to prevent leaks
-        const styleElements = doc.querySelectorAll("style, script, link, meta");
-        styleElements.forEach((el) => el.remove());
-
-        // Remove bgcolor and clean inline background overrides
-        const allElements = doc.querySelectorAll("*");
-        allElements.forEach((el) => {
-          if (el.hasAttribute("bgcolor")) {
-            el.removeAttribute("bgcolor");
-          }
-          const style = el.getAttribute("style");
-          if (style) {
-            const cleanStyle = style
-              .replace(/background-color\s*:\s*[^;]+;?/gi, "")
-              .replace(/background\s*:\s*[^;]+;?/gi, "");
-            el.setAttribute("style", cleanStyle);
-          }
-        });
-
-        return doc.body ? doc.body.innerHTML : doc.documentElement.innerHTML;
-      } catch (err) {
-        console.error("Failed to parse bodyHtml", err);
-        return message.bodyHtml;
-      }
-    }
-
-    const escapedText = (message.bodyText || "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-    return `<pre class="whitespace-pre-wrap break-all text-xs font-mono">${escapedText}</pre>`;
-  }, [message, loadRemoteContent]);
-
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center flex-1 space-y-3 h-full">
-        <Loader2 className="size-6 text-muted-foreground animate-spin" />
-        <span className="text-xs text-muted-foreground">
-          Decrypting mail details...
+      <div className="flex flex-col items-center justify-center flex-1 space-y-3 h-full bg-card/50">
+        <Loader2 className="size-6 text-primary animate-spin" />
+        <span className="text-xs text-muted-foreground font-medium">
+          {t("pegasus.reader.loading", "Decrypting mail details...")}
         </span>
       </div>
     );
@@ -291,7 +242,7 @@ export default function RrEmailReader({
         </div>
         <div className="space-y-1 max-w-xs">
           <h3 className="text-sm font-semibold text-foreground">
-            Email not found
+            {t("pegasus.reader.messageNotFound")}
           </h3>
           <p className="text-xs text-muted-foreground leading-relaxed">
             This email may have been deleted or moved.
@@ -299,7 +250,7 @@ export default function RrEmailReader({
         </div>
         <button
           onClick={onGoBack}
-          className="px-3 py-1.5 text-xs bg-muted border border-border hover:border-muted-foreground rounded-xl text-foreground transition-all cursor-pointer"
+          className="px-3 py-1.5 text-xs bg-muted border border-border hover:border-muted-foreground rounded-xl text-foreground transition-all cursor-pointer font-semibold"
         >
           {t("pegasus.reader.goBack")}
         </button>
@@ -310,7 +261,7 @@ export default function RrEmailReader({
   if (!message) {
     return (
       <div className="flex flex-col items-center justify-center flex-1 text-center p-8 space-y-4 h-full bg-card">
-        <div className="size-16 rounded-full bg-muted border border-border flex items-center justify-center text-muted-foreground">
+        <div className="size-16 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
           <Mail className="size-8" />
         </div>
         <div className="space-y-1 max-w-xs">
@@ -326,53 +277,58 @@ export default function RrEmailReader({
   }
 
   return (
-    <div className="flex flex-1 h-full overflow-hidden bg-card text-card-foreground border border-border rounded-2xl">
+    <div className="flex flex-1 h-full overflow-hidden bg-card text-card-foreground border border-border/80 rounded-2xl shadow-xs">
       <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
-        {/* Toolbar */}
-        <div className="flex items-center justify-between p-3 border-b border-border bg-card/60 backdrop-blur-md shrink-0">
-          <div className="flex items-center gap-2">
+        {/* Sleek Action Toolbar */}
+        <div className="flex items-center justify-between p-3 border-b border-border/70 bg-card/80 backdrop-blur-xl shrink-0">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={onGoBack}
-              className="md:hidden p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg"
+              className="md:hidden p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl"
             >
               <ChevronLeft className="size-5" />
             </button>
+
             <button
               onClick={onMarkReadChange}
-              className="px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl border border-border transition-all font-semibold cursor-pointer"
+              className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/80 rounded-xl border border-border transition-all font-semibold cursor-pointer shadow-2xs"
             >
-              {message.read ? t("pegasus.reader.markUnread") : t("pegasus.reader.markRead")}
+              {message.read
+                ? t("pegasus.reader.markUnread")
+                : t("pegasus.reader.markRead")}
             </button>
 
-            <div className="h-4 w-px bg-border mx-1" />
+            <div className="h-4 w-px bg-border/60 mx-1 hidden sm:block" />
 
             <button
               onClick={() => initiateReply("reply")}
-              className="px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl border border-border transition-all flex items-center gap-1.5 font-semibold cursor-pointer"
+              className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/80 rounded-xl border border-border transition-all flex items-center gap-1.5 font-semibold cursor-pointer shadow-2xs"
             >
-              <Reply className="size-3.5" />
+              <Reply className="size-3.5 text-primary" />
               <span>{t("pegasus.reader.reply")}</span>
             </button>
+
             {((message.cc && message.cc.trim().length > 0) ||
               (message.to && message.to.includes(","))) && (
               <button
                 onClick={() => initiateReply("replyAll")}
-                className="px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl border border-border transition-all flex items-center gap-1.5 font-semibold cursor-pointer"
+                className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/80 rounded-xl border border-border transition-all flex items-center gap-1.5 font-semibold cursor-pointer shadow-2xs"
               >
-                <ReplyAll className="size-3.5" />
+                <ReplyAll className="size-3.5 text-primary" />
                 <span>{t("pegasus.reader.replyAll")}</span>
               </button>
             )}
+
             <button
               onClick={() => initiateReply("forward")}
-              className="px-2.5 py-1 text-xs text-muted-foreground hover:text-foreground hover:bg-muted rounded-xl border border-border transition-all flex items-center gap-1.5 font-semibold cursor-pointer"
+              className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground hover:bg-muted/80 rounded-xl border border-border transition-all flex items-center gap-1.5 font-semibold cursor-pointer shadow-2xs"
             >
-              <Forward className="size-3.5" />
+              <Forward className="size-3.5 text-primary" />
               <span>{t("pegasus.reader.forward")}</span>
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {message.folder.toLowerCase() === "trash" && onRestoreMessage && (
               <button
                 onClick={onRestoreMessage}
@@ -380,30 +336,36 @@ export default function RrEmailReader({
                 title="Restore to Inbox"
               >
                 <RotateCcw className="size-4" />
-                <span>{t("pegasus.reader.restore")}</span>
+                <span className="hidden sm:inline">
+                  {t("pegasus.reader.restore")}
+                </span>
               </button>
             )}
+
             {senderProfile && (
               <button
                 onClick={() => setShowProfilePanel((p) => !p)}
                 className={cn(
-                  "p-1.5 rounded-xl border border-border hover:bg-muted transition-all flex items-center gap-1 text-xs font-semibold cursor-pointer",
+                  "p-1.5 rounded-xl border border-border hover:bg-muted transition-all flex items-center gap-1.5 text-xs font-semibold cursor-pointer shadow-2xs",
                   showProfilePanel
-                    ? "text-primary border-primary/20 bg-primary/5"
+                    ? "text-primary border-primary/30 bg-primary/10"
                     : "text-muted-foreground",
                 )}
                 title="Toggle Profile Panel"
               >
                 <User className="size-4" />
-                <span className="hidden sm:inline">{t("pegasus.reader.profile")}</span>
+                <span className="hidden sm:inline">
+                  {t("pegasus.reader.profile")}
+                </span>
               </button>
             )}
+
             <button
               onClick={onFlaggedChange}
               className={cn(
-                "p-1.5 rounded-xl border border-border hover:bg-muted transition-all cursor-pointer",
+                "p-2 rounded-xl border border-border hover:bg-muted transition-all cursor-pointer shadow-2xs",
                 message.flagged
-                  ? "text-amber-500 border-amber-500/20 bg-amber-500/5"
+                  ? "text-amber-500 border-amber-500/30 bg-amber-500/10"
                   : "text-muted-foreground",
               )}
             >
@@ -411,9 +373,10 @@ export default function RrEmailReader({
                 className={cn("size-4", message.flagged && "fill-amber-500")}
               />
             </button>
+
             <button
               onClick={onDeleteMessage}
-              className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/5 hover:border-destructive/20 border border-border rounded-xl transition-all cursor-pointer"
+              className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 hover:border-destructive/30 border border-border rounded-xl transition-all cursor-pointer shadow-2xs"
             >
               <Trash2 className="size-4" />
             </button>
@@ -422,19 +385,26 @@ export default function RrEmailReader({
 
         {/* Scrollable Reader Pane */}
         <div className="flex-1 overflow-y-auto no-scrollbar p-6 space-y-6">
-          {/* Header Info */}
-          <div className="space-y-4 border-b border-border pb-6">
-            <h1 className="text-xl font-bold text-foreground tracking-tight leading-snug">
-              {message.subject || "(No Subject)"}
-            </h1>
-            <div className="flex items-start gap-3">
+          {/* Header Info Block */}
+          <div className="space-y-4 border-b border-border/60 pb-6">
+            <div className="flex items-start justify-between gap-4">
+              <h1 className="text-xl sm:text-2xl font-extrabold text-foreground tracking-tight leading-snug">
+                {message.subject || "(No Subject)"}
+              </h1>
+              <span className="px-2.5 py-1 rounded-full bg-muted/60 text-muted-foreground text-[10px] font-bold border border-border shrink-0 flex items-center gap-1">
+                <ShieldCheck className="size-3 text-emerald-500" />
+                E2EE Protected
+              </span>
+            </div>
+
+            <div className="flex items-start gap-3.5 bg-muted/20 p-3.5 rounded-2xl border border-border/40">
               {/* Profile Image / Fallback Avatar */}
               <div
                 onClick={() => senderProfile && setShowProfilePanel((p) => !p)}
                 className={cn(
-                  "size-9 rounded-full bg-muted border border-border flex items-center justify-center text-muted-foreground shrink-0 overflow-hidden relative",
+                  "size-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0 overflow-hidden relative shadow-xs",
                   senderProfile &&
-                    "cursor-pointer hover:border-muted-foreground transition-colors",
+                    "cursor-pointer hover:border-primary transition-colors",
                 )}
                 title={
                   senderProfile ? "Click to view contact profile" : undefined
@@ -445,13 +415,14 @@ export default function RrEmailReader({
                     src={senderProfile.avatarUrl}
                     alt="Sender Profile Image"
                     fill
-                    sizes="36px"
+                    sizes="40px"
                     className="object-cover"
                   />
                 ) : (
-                  <User className="size-4.5" />
+                  <User className="size-5" />
                 )}
               </div>
+
               <div className="min-w-0 flex-1 text-xs space-y-1">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
                   <span
@@ -459,42 +430,48 @@ export default function RrEmailReader({
                       senderProfile && setShowProfilePanel((p) => !p)
                     }
                     className={cn(
-                      "font-semibold text-foreground",
+                      "font-bold text-foreground text-sm",
                       senderProfile && "hover:underline cursor-pointer",
                     )}
-                    title={
-                      senderProfile
-                        ? "Click to view contact profile"
-                        : undefined
-                    }
                   >
                     {getSenderName(message.from)}
                   </span>
-                  <span className="text-muted-foreground font-light">
+                  <span className="text-muted-foreground text-[11px] font-medium flex items-center gap-1">
+                    <Calendar className="size-3" />
                     {new Date(message.date).toLocaleString()}
                   </span>
                 </div>
                 <div className="text-muted-foreground truncate">
                   {t("pegasus.attachments.from")}{" "}
-                  <span className="text-foreground">
+                  <span className="text-foreground font-semibold">
                     {getSenderEmail(message.from)}
                   </span>
                 </div>
                 <div className="text-muted-foreground truncate">
-                  {t("pegasus.compose.to")}: <span className="text-foreground">{message.to}</span>
+                  {t("pegasus.compose.to")}:{" "}
+                  <span className="text-foreground font-medium">
+                    {message.to}
+                  </span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Remote content warning */}
+          {/* DETECTED PACKAGE TRACKING BANNER */}
+          {detectedPackages.length > 0 && (
+            <RrPackageTrackerCard packages={detectedPackages} />
+          )}
+
+          {/* Remote Content Privacy Warning */}
           {hasRemoteContent && !loadRemoteContent && (
-            <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 text-amber-500 text-[11px] rounded-xl flex items-center justify-between gap-4">
-              <span>{t("pegasus.reader.blockedRemoteImages")}</span>
-              <div className="flex gap-2">
+            <div className="p-3.5 bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+              <span className="font-medium">
+                {t("pegasus.reader.blockedRemoteImages")}
+              </span>
+              <div className="flex gap-2 shrink-0">
                 <button
                   onClick={() => setLoadRemoteContent(true)}
-                  className="px-2 py-0.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-600 rounded-lg font-semibold cursor-pointer"
+                  className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-700 dark:text-amber-300 rounded-xl font-bold text-xs cursor-pointer transition-colors"
                 >
                   {t("pegasus.reader.showImages")}
                 </button>
@@ -502,20 +479,22 @@ export default function RrEmailReader({
                   onClick={() => {
                     if (senderEmail) {
                       const allowedSenders = JSON.parse(
-                        localStorage.getItem("pegasus_allowed_remote_content_senders") || "[]"
+                        localStorage.getItem(
+                          "pegasus_allowed_remote_content_senders",
+                        ) || "[]",
                       );
                       const lowerEmail = senderEmail.toLowerCase();
                       if (!allowedSenders.includes(lowerEmail)) {
                         allowedSenders.push(lowerEmail);
                         localStorage.setItem(
                           "pegasus_allowed_remote_content_senders",
-                          JSON.stringify(allowedSenders)
+                          JSON.stringify(allowedSenders),
                         );
                       }
                     }
                     setLoadRemoteContent(true);
                   }}
-                  className="px-2 py-0.5 bg-amber-500/30 hover:bg-amber-500/40 text-amber-600 rounded-lg font-semibold cursor-pointer"
+                  className="px-2.5 py-1 bg-amber-500/30 hover:bg-amber-500/40 text-amber-800 dark:text-amber-200 rounded-xl font-bold text-xs cursor-pointer transition-colors"
                 >
                   {t("pegasus.reader.alwaysShow")}
                 </button>
@@ -523,71 +502,37 @@ export default function RrEmailReader({
             </div>
           )}
 
-          {/* Scoped Native email viewer */}
-          <div className="overflow-hidden text-sm leading-relaxed wrap-break-word">
-            <style
-              dangerouslySetInnerHTML={{
-                __html: `
-              .rr-email-body {
-                background-color: #ffffff;
-                color: #1f2937;
-                border-radius: 0.75rem;
-                padding: 1.5rem;
-                transition: filter 0.2s ease;
-              }
-              .dark .rr-email-body {
-                filter: invert(0.92) hue-rotate(180deg) !important;
-                background-color: #ffffff !important;
-              }
-              .dark .rr-email-body img,
-              .dark .rr-email-body video {
-                filter: invert(1.08) hue-rotate(180deg) !important;
-              }
-              .rr-email-body a {
-                color: #2563eb !important;
-                text-decoration: underline !important;
-              }
-              .dark .rr-email-body a {
-                color: #3b82f6 !important;
-              }
-              /* Basic markup spacing inside content */
-              .rr-email-body h1 { font-size: 1.875rem; font-weight: 800; margin-top: 1.5rem; margin-bottom: 1rem; border-b: 1px solid #e5e7eb; padding-bottom: 0.5rem; }
-              .rr-email-body h2 { font-size: 1.5rem; font-weight: 700; margin-top: 1.5rem; margin-bottom: 1rem; border-b: 1px solid #e5e7eb; padding-bottom: 0.25rem; }
-              .rr-email-body p { margin-top: 0; margin-bottom: 1rem; }
-              .rr-email-body ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; }
-              .rr-email-body ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 1rem; }
-              .rr-email-body blockquote { border-left: 4px solid #e5e7eb; padding-left: 1rem; color: #4b5563; margin-bottom: 1rem; font-style: italic; }
-              .rr-email-body pre { background-color: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1rem; overflow-x: auto; font-family: ui-monospace, monospace; margin-bottom: 1rem; }
-              .rr-email-body code { background-color: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 0.25rem; padding: 0.125rem 0.25rem; font-family: ui-monospace, monospace; }
-              .rr-email-body pre code { background-color: transparent; border: 0; padding: 0; }
-              .rr-email-body table { border-collapse: collapse; margin-bottom: 1rem; }
-              .rr-email-body table:not([cellpadding]):not([cellspacing]) th,
-              .rr-email-body table:not([cellpadding]):not([cellspacing]) td { border: 1px solid #e5e7eb; padding: 0.5rem; text-align: left; }
-              .rr-email-body th { background-color: #f9fafb; }
-            `,
-              }}
+          {/* SANITIZED ISOLATED HTML EMAIL VIEWER */}
+          {message.bodyHtml ? (
+            <RrSanitizedEmailIframe
+              htmlContent={message.bodyHtml}
+              loadRemoteContent={loadRemoteContent}
             />
-            <div className="rr-email-body">
-              <div dangerouslySetInnerHTML={{ __html: parsedEmailContent }} />
+          ) : (
+            <div className="p-4 bg-muted/20 border border-border/60 rounded-2xl text-xs font-mono whitespace-pre-wrap break-all text-foreground leading-relaxed">
+              {message.bodyText}
             </div>
-          </div>
+          )}
 
-          {/* Attachments */}
+          {/* Attachments List */}
           {message.attachments && message.attachments.length > 0 && (
-            <div className="space-y-3 pt-4 border-t border-border">
-              <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+            <div className="space-y-3 pt-4 border-t border-border/60">
+              <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                <FileText className="size-3.5 text-primary" />
                 {t("pegasus.reader.attachments")} ({message.attachments.length})
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {message.attachments.map((file) => (
                   <div
                     key={file.id}
-                    className="flex items-center justify-between p-3 bg-muted/30 border border-border rounded-xl"
+                    className="flex items-center justify-between p-3 bg-muted/30 border border-border/60 hover:border-border rounded-2xl transition-all shadow-2xs"
                   >
-                    <div className="min-w-0 flex items-center gap-2">
-                      <FileText className="size-4 text-muted-foreground shrink-0" />
+                    <div className="min-w-0 flex items-center gap-2.5">
+                      <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                        <FileText className="size-4" />
+                      </div>
                       <span
-                        className="text-xs font-semibold text-foreground truncate max-w-[150px]"
+                        className="text-xs font-semibold text-foreground truncate max-w-37.5"
                         title={file.filename}
                       >
                         {file.filename}
@@ -597,9 +542,9 @@ export default function RrEmailReader({
                       onClick={() =>
                         onDownloadAttachment(file.id, file.filename)
                       }
-                      className="p-1 bg-card border border-border hover:border-muted-foreground text-muted-foreground rounded-lg cursor-pointer"
+                      className="p-1.5 bg-card border border-border hover:border-muted-foreground text-muted-foreground hover:text-foreground rounded-xl transition-colors cursor-pointer"
                     >
-                      <Download className="size-3.5" />
+                      <Download className="size-4" />
                     </button>
                   </div>
                 ))}
@@ -609,14 +554,14 @@ export default function RrEmailReader({
 
           {/* Inline Reply Editor Panel */}
           {replyMode && (
-            <div className="border border-border bg-card rounded-2xl p-4 space-y-4 animate-in slide-in-from-bottom-2 duration-200">
-              <div className="flex items-center justify-between border-b border-border pb-2 shrink-0">
+            <div className="border border-border/80 bg-card rounded-2xl p-4 space-y-4 shadow-md animate-in slide-in-from-bottom-2 duration-200">
+              <div className="flex items-center justify-between border-b border-border/60 pb-2.5 shrink-0">
                 <span className="text-xs font-bold text-foreground capitalize flex items-center gap-1.5">
-                  <Reply className="size-3.5" />
+                  <Reply className="size-4 text-primary" />
                   {t("pegasus.reader.inlineEditor", { mode: replyMode })}
                 </span>
                 <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1 border border-border rounded-lg px-2 py-0.5 bg-muted/40">
+                  <div className="flex items-center gap-1.5 border border-border/80 rounded-xl px-2.5 py-1 bg-muted/30">
                     <input
                       id="use-markdown-reply"
                       type="checkbox"
@@ -626,14 +571,14 @@ export default function RrEmailReader({
                     />
                     <label
                       htmlFor="use-markdown-reply"
-                      className="text-[9px] font-bold text-muted-foreground select-none cursor-pointer"
+                      className="text-[10px] font-bold text-muted-foreground select-none cursor-pointer"
                     >
                       {t("pegasus.reader.markdownMode")}
                     </label>
                   </div>
                   <button
                     onClick={() => setReplyMode(null)}
-                    className="text-muted-foreground hover:text-foreground cursor-pointer"
+                    className="p-1 text-muted-foreground hover:text-foreground rounded-lg transition-colors cursor-pointer"
                   >
                     <X className="size-4" />
                   </button>
@@ -642,8 +587,8 @@ export default function RrEmailReader({
 
               {/* CC inputs */}
               <div className="space-y-2 text-xs">
-                <div className="flex items-center gap-2 border-b border-border pb-1">
-                  <span className="text-muted-foreground w-12 font-semibold select-none">
+                <div className="flex items-center gap-2 border-b border-border/50 pb-1">
+                  <span className="text-muted-foreground w-14 font-semibold select-none">
                     {t("pegasus.compose.to")}:
                   </span>
                   <Input
@@ -654,15 +599,16 @@ export default function RrEmailReader({
                   {!showCcInput && (
                     <button
                       onClick={() => setShowCcInput(true)}
-                      className="text-[9px] font-bold text-muted-foreground hover:text-primary px-1"
+                      className="text-[10px] font-bold text-muted-foreground hover:text-primary px-1"
                     >
                       {t("pegasus.reader.addCc", "Add Cc")}
                     </button>
                   )}
                 </div>
+
                 {showCcInput && (
-                  <div className="flex items-center gap-2 border-b border-border pb-1">
-                    <span className="text-muted-foreground w-12 font-semibold select-none">
+                  <div className="flex items-center gap-2 border-b border-border/50 pb-1">
+                    <span className="text-muted-foreground w-14 font-semibold select-none">
                       {t("pegasus.compose.cc")}:
                     </span>
                     <Input
@@ -681,8 +627,9 @@ export default function RrEmailReader({
                     </button>
                   </div>
                 )}
-                <div className="flex items-center gap-2 border-b border-border pb-1">
-                  <span className="text-muted-foreground w-12 font-semibold select-none">
+
+                <div className="flex items-center gap-2 border-b border-border/50 pb-1">
+                  <span className="text-muted-foreground w-14 font-semibold select-none">
                     {t("pegasus.compose.subject")}:
                   </span>
                   <Input
@@ -694,18 +641,19 @@ export default function RrEmailReader({
               </div>
 
               {/* Text body */}
-              <div className="flex flex-col gap-2 min-h-[160px]">
+              <div className="flex flex-col gap-2 min-h-40">
                 {useMarkdown ? (
-                  <div className="flex gap-4 flex-1 min-h-[160px]">
+                  <div className="flex gap-4 flex-1 min-h-40">
                     <textarea
                       value={replyBody}
                       onChange={(e) => setReplyBody(e.target.value)}
                       placeholder={t("pegasus.reader.typeMarkdownResponse")}
-                      className="flex-1 min-h-[160px] p-3 text-xs bg-muted/20 border border-border rounded-xl resize-none outline-none focus:border-muted-foreground font-mono"
+                      className="flex-1 min-h-40 p-3 text-xs bg-muted/20 border border-border/80 rounded-xl resize-none outline-none focus:border-primary font-mono"
                     />
-                    <div className="flex-1 min-h-[160px] p-3 border border-border rounded-xl overflow-y-auto bg-muted/10 prose prose-invert max-w-none text-xs leading-relaxed text-muted-foreground">
+                    <div className="flex-1 min-h-40 p-3 border border-border/80 rounded-xl overflow-y-auto bg-muted/10 prose dark:prose-invert max-w-none text-xs leading-relaxed text-muted-foreground">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {replyBody || t("pegasus.reader.markdownPreviewPlaceholder")}
+                        {replyBody ||
+                          t("pegasus.reader.markdownPreviewPlaceholder")}
                       </ReactMarkdown>
                     </div>
                   </div>
@@ -714,7 +662,7 @@ export default function RrEmailReader({
                     value={replyBody}
                     onChange={(e) => setReplyBody(e.target.value)}
                     placeholder={t("pegasus.reader.typeEmailResponse")}
-                    className="w-full min-h-[160px] p-3 text-xs bg-muted/20 border border-border rounded-xl resize-none outline-none focus:border-muted-foreground font-sans"
+                    className="w-full min-h-40 p-3 text-xs bg-muted/20 border border-border/80 rounded-xl resize-none outline-none focus:border-primary font-sans"
                   />
                 )}
               </div>
@@ -734,7 +682,7 @@ export default function RrEmailReader({
                   size="sm"
                   onClick={handleSendReply}
                   disabled={sendingReply || !replyTo.trim()}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold cursor-pointer flex items-center gap-1.5"
+                  className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold cursor-pointer flex items-center gap-1.5 shadow-xs"
                 >
                   {sendingReply ? (
                     <Loader2 className="size-3.5 animate-spin" />
@@ -749,9 +697,9 @@ export default function RrEmailReader({
         </div>
       </div>
 
-      {/* Right collapsible user profile panel */}
+      {/* Right Collapsible User Profile Panel */}
       {showProfilePanel && (
-        <div className="w-[280px] border-l border-border h-full shrink-0 overflow-hidden bg-card">
+        <div className="w-70 border-l border-border/80 h-full shrink-0 overflow-hidden bg-card">
           <RrSenderProfileCard
             profile={senderProfile}
             loading={loadingProfile}

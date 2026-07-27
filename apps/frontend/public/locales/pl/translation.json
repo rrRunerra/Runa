@@ -2120,6 +2120,27 @@
       "typeSlashTemplate": "Wpisz / aby wstawić szablon",
       "editorPlaceholder": "Wpisz / aby wstawić szablon lub zacznij pisać...",
       "subjectPlaceholder": "Temat"
+    },
+    "packageTracker": {
+      "detectedTitle": "Wykryto numer śledzenia przesyłki",
+      "multiPackages": "{{count}} paczek",
+      "copyTracking": "Kopiuj numer śledzenia",
+      "copy": "Kopiuj",
+      "copied": "Skopiowano!",
+      "trackOnWeb": "Śledź paczkę",
+      "fetchingDetails": "Pobieranie statusu na żywo...",
+      "status_DELIVERED": "Doręczono",
+      "status_OUT_FOR_DELIVERY": "W doręczeniu",
+      "status_IN_TRANSIT": "W tranzycie",
+      "status_SHIPPED": "Wysłano",
+      "status_LABEL_CREATED": "Etykieta utworzona",
+      "stepPlaced": "Złożono",
+      "stepShipped": "Wysłano",
+      "stepInTransit": "W tranzycie",
+      "stepDelivered": "Doręczono",
+      "estDelivery": "Przewidywana dostawa",
+      "viewDetailedHistory": "Szczegółowa historia",
+      "failedLoadDetails": "Nie udało się załadować szczegółów śledzenia."
     }
   },
   "spotlight": {

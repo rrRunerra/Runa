@@ -2120,6 +2120,27 @@
       "typeSlashTemplate": "Type / to insert template",
       "editorPlaceholder": "Type / to insert a message template or start writing...",
       "subjectPlaceholder": "Subject Line"
+    },
+    "packageTracker": {
+      "detectedTitle": "Package Tracking Detected",
+      "multiPackages": "{{count}} packages",
+      "copyTracking": "Copy tracking number",
+      "copy": "Copy",
+      "copied": "Copied!",
+      "trackOnWeb": "Track Package",
+      "fetchingDetails": "Fetching live tracking status...",
+      "status_DELIVERED": "Delivered",
+      "status_OUT_FOR_DELIVERY": "Out for Delivery",
+      "status_IN_TRANSIT": "In Transit",
+      "status_SHIPPED": "Shipped",
+      "status_LABEL_CREATED": "Label Created",
+      "stepPlaced": "Placed",
+      "stepShipped": "Shipped",
+      "stepInTransit": "In Transit",
+      "stepDelivered": "Delivered",
+      "estDelivery": "Estimated Delivery",
+      "viewDetailedHistory": "Activity History",
+      "failedLoadDetails": "Unable to load package tracking details."
     }
   },
   "spotlight": {

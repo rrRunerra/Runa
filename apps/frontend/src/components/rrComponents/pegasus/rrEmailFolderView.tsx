@@ -107,7 +107,8 @@ export default function RrEmailFolderView({
   const [showShortcutsFooter, setShowShortcutsFooter] = useState<boolean>(true);
   const audioContextRef = useRef<AudioContext | null>(null);
 
-  const { getPrivateKey, unwrapKey, decrypt, isEncryptionUnlocked } = useRRCrypto();
+  const { getPrivateKey, unwrapKey, decrypt, isEncryptionUnlocked } =
+    useRRCrypto();
   const { t } = useTranslation();
   const [accounts, setAccounts] = useState<any[]>([]);
 
@@ -202,25 +203,18 @@ export default function RrEmailFolderView({
 
         let decryptedTo = msg.to;
         try {
-          decryptedTo = msg.to
-            ? await decrypt(msg.to, dataKey)
-            : msg.to;
+          decryptedTo = msg.to ? await decrypt(msg.to, dataKey) : msg.to;
         } catch {}
 
         let decryptedCc = msg.cc;
         try {
-          decryptedCc = msg.cc
-            ? await decrypt(msg.cc, dataKey)
-            : msg.cc;
+          decryptedCc = msg.cc ? await decrypt(msg.cc, dataKey) : msg.cc;
         } catch {}
 
         const decryptedAttachments = await Promise.all(
           (msg.attachments || []).map(async (att) => {
             try {
-              const decFilename = await decrypt(
-                att.filename,
-                dataKey,
-              );
+              const decFilename = await decrypt(att.filename, dataKey);
               return { ...att, filename: decFilename };
             } catch {
               return att;
@@ -266,34 +260,21 @@ export default function RrEmailFolderView({
 
         let decryptedTo = msg.to;
         try {
-          decryptedTo = msg.to
-            ? await decrypt(msg.to, dataKey)
-            : msg.to;
+          decryptedTo = msg.to ? await decrypt(msg.to, dataKey) : msg.to;
         } catch {}
 
         let decryptedCc = msg.cc;
         try {
-          decryptedCc = msg.cc
-            ? await decrypt(msg.cc, dataKey)
-            : msg.cc;
+          decryptedCc = msg.cc ? await decrypt(msg.cc, dataKey) : msg.cc;
         } catch {}
 
-        const decryptedBodyText = await decrypt(
-          msg.bodyText,
-          dataKey,
-        );
-        const decryptedBodyHtml = await decrypt(
-          msg.bodyHtml,
-          dataKey,
-        );
+        const decryptedBodyText = await decrypt(msg.bodyText, dataKey);
+        const decryptedBodyHtml = await decrypt(msg.bodyHtml, dataKey);
 
         const decryptedAttachments = await Promise.all(
           (msg.attachments || []).map(async (att) => {
             try {
-              const decFilename = await decrypt(
-                att.filename,
-                dataKey,
-              );
+              const decFilename = await decrypt(att.filename, dataKey);
               return { ...att, filename: decFilename };
             } catch {
               return att;
@@ -385,6 +366,15 @@ export default function RrEmailFolderView({
     [accountId, folder, page, session?.accessToken, decryptMessageObj],
   );
 
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
+
+  const hasUnlockedDecryptionRef = useRef(false);
+
+  useEffect(() => {
+    hasUnlockedDecryptionRef.current = false;
+  }, [accountId, folder]);
+
   // Fetch individual message details
   const fetchMessageDetail = useCallback(
     async (messageId: string): Promise<void> => {
@@ -395,7 +385,7 @@ export default function RrEmailFolderView({
 
       let itemAccountId = accountId;
       if (accountId === "unified") {
-        const found = messages.find((m) => m.id === messageId);
+        const found = messagesRef.current.find((m) => m.id === messageId);
         if (found && found.userEmailAccountId) {
           itemAccountId = found.userEmailAccountId;
         }
@@ -485,8 +475,42 @@ export default function RrEmailFolderView({
         setLoadingDetail(false);
       }
     },
-    [accountId, messages, session?.accessToken, decryptDetailedMessageObj],
+    [accountId, session?.accessToken, decryptDetailedMessageObj],
   );
+
+  // Re-decrypt messages ONCE when post-quantum crypto keys finish restoring on page refresh
+  useEffect(() => {
+    if (
+      isEncryptionUnlocked &&
+      !hasUnlockedDecryptionRef.current &&
+      messages.length > 0
+    ) {
+      hasUnlockedDecryptionRef.current = true;
+      let isMounted = true;
+
+      Promise.all(messages.map((msg) => decryptMessageObj(msg))).then(
+        (decrypted) => {
+          if (isMounted) {
+            setMessages(decrypted);
+          }
+        },
+      );
+
+      if (selectedMessageId) {
+        fetchMessageDetail(selectedMessageId);
+      }
+
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [
+    isEncryptionUnlocked,
+    messages,
+    decryptMessageObj,
+    selectedMessageId,
+    fetchMessageDetail,
+  ]);
 
   // Sync / Listeners
   useEffect(() => {
@@ -517,9 +541,16 @@ export default function RrEmailFolderView({
       if (data.folder.toLowerCase() === "inbox" && belongsToUs) {
         playNotificationSound();
         const decryptedMsg = await decryptMessageObj(data.message);
-        toast.info(t("pegasus.folderView.newMailSubject", { subject: decryptedMsg.subject || t("pegasus.folderView.noSubject") }), {
-          description: t("pegasus.folderView.fromSender", { sender: decryptedMsg.from }),
-        });
+        toast.info(
+          t("pegasus.folderView.newMailSubject", {
+            subject: decryptedMsg.subject || t("pegasus.folderView.noSubject"),
+          }),
+          {
+            description: t("pegasus.folderView.fromSender", {
+              sender: decryptedMsg.from,
+            }),
+          },
+        );
       }
     };
 
@@ -806,7 +837,11 @@ export default function RrEmailFolderView({
       toast.success(t("pegasus.attachments.downloadSuccess", { filename }));
     } catch (err: any) {
       console.error("Attachment download failed:", err);
-      toast.error(t("pegasus.attachments.downloadFailed", { message: err.message || String(err) }));
+      toast.error(
+        t("pegasus.attachments.downloadFailed", {
+          message: err.message || String(err),
+        }),
+      );
     }
   };
 
@@ -895,11 +930,7 @@ export default function RrEmailFolderView({
   const handleEmptyTrash = async () => {
     if (!session?.accessToken || accountId === "unified") return;
 
-    if (
-      !window.confirm(
-        t("pegasus.folderView.confirmEmptyTrash"),
-      )
-    ) {
+    if (!window.confirm(t("pegasus.folderView.confirmEmptyTrash"))) {
       return;
     }
 
@@ -985,7 +1016,7 @@ export default function RrEmailFolderView({
         <div
           className={`${
             showDetailOnMobile ? "hidden md:flex" : "flex"
-          } flex-col w-full md:w-[380px] lg:w-[420px] border border-border bg-card shrink-0 h-full overflow-hidden rounded-2xl`}
+          } flex-col w-full md:w-95 lg:w-105 border border-border bg-card shrink-0 h-full overflow-hidden rounded-2xl`}
         >
           <RrThreadList
             messages={messages}

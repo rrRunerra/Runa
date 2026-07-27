@@ -2120,6 +2120,27 @@
       "typeSlashTemplate": "輸入 / 以插入快速範本",
       "editorPlaceholder": "輸入 / 以插入快速範本或開始寫作...",
       "subjectPlaceholder": "主題"
+    },
+    "packageTracker": {
+      "detectedTitle": "偵測到包裹追蹤單號",
+      "multiPackages": "{{count}}個包裹",
+      "copyTracking": "複製運單號",
+      "copy": "複製",
+      "copied": "已複製!",
+      "trackOnWeb": "追蹤包裹",
+      "fetchingDetails": "正在取得即時物流狀態...",
+      "status_DELIVERED": "已送達",
+      "status_OUT_FOR_DELIVERY": "外送中",
+      "status_IN_TRANSIT": "運送中",
+      "status_SHIPPED": "已出貨",
+      "status_LABEL_CREATED": "託運單已建立",
+      "stepPlaced": "已下單",
+      "stepShipped": "已出貨",
+      "stepInTransit": "運送中",
+      "stepDelivered": "已送達",
+      "estDelivery": "預計送達",
+      "viewDetailedHistory": "詳細物流履歷",
+      "failedLoadDetails": "無法載入包裹追蹤詳情。"
     }
   },
   "spotlight": {

@@ -2120,6 +2120,27 @@ export default {
       "typeSlashTemplate": "Napište / pro vložení šablony",
       "editorPlaceholder": "Napište / pro vložení šablony nebo začněte psát...",
       "subjectPlaceholder": "Předmět"
+    },
+    "packageTracker": {
+      "detectedTitle": "Zjištěno sledovací číslo zásilky",
+      "multiPackages": "{{count}} balíky",
+      "copyTracking": "Kopírovat sledovací číslo",
+      "copy": "Kopírovat",
+      "copied": "Zkopírováno!",
+      "trackOnWeb": "Sledovat zásilku",
+      "fetchingDetails": "Načítání živého stavu zásilky...",
+      "status_DELIVERED": "Doručeno",
+      "status_OUT_FOR_DELIVERY": "Na cestě k doručení",
+      "status_IN_TRANSIT": "Na cestě",
+      "status_SHIPPED": "Odesláno",
+      "status_LABEL_CREATED": "Štítek vytvořen",
+      "stepPlaced": "Objednáno",
+      "stepShipped": "Odesláno",
+      "stepInTransit": "Na cestě",
+      "stepDelivered": "Doručeno",
+      "estDelivery": "Odhadované doručení",
+      "viewDetailedHistory": "Podrobná historie",
+      "failedLoadDetails": "Nelze načíst podrobnosti o sledování."
     }
   },
   "spotlight": {

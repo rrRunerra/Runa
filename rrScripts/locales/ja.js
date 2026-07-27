@@ -2120,6 +2120,27 @@ export default {
       "typeSlashTemplate": "/ を入力してテンプレートを挿入",
       "editorPlaceholder": "/ を入力してテンプレートを挿入するか、入力を開始...",
       "subjectPlaceholder": "件名を入力"
+    },
+    "packageTracker": {
+      "detectedTitle": "荷物追跡番号を検出しました",
+      "multiPackages": "{{count}}個の荷物",
+      "copyTracking": "追跡番号をコピー",
+      "copy": "コピー",
+      "copied": "コピー完了!",
+      "trackOnWeb": "配送状況を追跡",
+      "fetchingDetails": "最新の配送状況を取得中...",
+      "status_DELIVERED": "配達完了",
+      "status_OUT_FOR_DELIVERY": "配達中",
+      "status_IN_TRANSIT": "輸送中",
+      "status_SHIPPED": "発送済み",
+      "status_LABEL_CREATED": "伝票作成済み",
+      "stepPlaced": "注文完了",
+      "stepShipped": "発送",
+      "stepInTransit": "輸送中",
+      "stepDelivered": "配達完了",
+      "estDelivery": "お届け予定日",
+      "viewDetailedHistory": "詳細な配送履歴",
+      "failedLoadDetails": "追跡情報を取得できませんでした。"
     }
   },
   "spotlight": {

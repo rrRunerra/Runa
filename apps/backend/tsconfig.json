@@ -12,12 +12,9 @@
     "allowSyntheticDefaultImports": true,
     "target": "ES2023",
     "sourceMap": true,
-    "outDir": "./dist",
-    "rootDir": "src",
     "paths": {
       "src/*": ["./src/*"]
     },
-    "ignoreDeprecations": "6.0",
     "strictPropertyInitialization": false,
     "skipLibCheck": true,
     "strictNullChecks": true,

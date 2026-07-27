@@ -2120,6 +2120,27 @@
       "typeSlashTemplate": "Gõ / để chèn mẫu thư",
       "editorPlaceholder": "Gõ / để chèn mẫu thư hoặc bắt đầu viết...",
       "subjectPlaceholder": "Dòng chủ đề"
+    },
+    "packageTracker": {
+      "detectedTitle": "Phát hiện mã vận đơn bưu kiện",
+      "multiPackages": "{{count}} kiện hàng",
+      "copyTracking": "Sao chép mã vận đơn",
+      "copy": "Sao chép",
+      "copied": "Đã sao chép!",
+      "trackOnWeb": "Theo dõi đơn hàng",
+      "fetchingDetails": "Đang tải trạng thái vận chuyển...",
+      "status_DELIVERED": "Đã giao hàng",
+      "status_OUT_FOR_DELIVERY": "Đang giao hàng",
+      "status_IN_TRANSIT": "Đang vận chuyển",
+      "status_SHIPPED": "Đã xuất kho",
+      "status_LABEL_CREATED": "Đã tạo vận đơn",
+      "stepPlaced": "Đã đặt hàng",
+      "stepShipped": "Đã gửi",
+      "stepInTransit": "Đang vận chuyển",
+      "stepDelivered": "Đã giao",
+      "estDelivery": "Dự kiến giao hàng",
+      "viewDetailedHistory": "Lịch trình chi tiết",
+      "failedLoadDetails": "Không thể tải thông tin vận đơn."
     }
   },
   "spotlight": {

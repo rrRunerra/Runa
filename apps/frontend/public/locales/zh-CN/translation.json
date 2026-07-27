@@ -2120,6 +2120,27 @@
       "typeSlashTemplate": "输入 / 以插入快速模板",
       "editorPlaceholder": "输入 / 以插入快速模板或开始写作...",
       "subjectPlaceholder": "主题"
+    },
+    "packageTracker": {
+      "detectedTitle": "检测到包裹追踪单号",
+      "multiPackages": "{{count}}个包裹",
+      "copyTracking": "复制运单号",
+      "copy": "复制",
+      "copied": "已复制!",
+      "trackOnWeb": "追踪包裹",
+      "fetchingDetails": "正在获取实时物流状态...",
+      "status_DELIVERED": "已送达",
+      "status_OUT_FOR_DELIVERY": "派送中",
+      "status_IN_TRANSIT": "运输中",
+      "status_SHIPPED": "已发货",
+      "status_LABEL_CREATED": "电子单号已生成",
+      "stepPlaced": "已下单",
+      "stepShipped": "已发货",
+      "stepInTransit": "运输中",
+      "stepDelivered": "已送达",
+      "estDelivery": "预计送达",
+      "viewDetailedHistory": "详细物流轨迹",
+      "failedLoadDetails": "无法加载包裹追踪详情。"
     }
   },
   "spotlight": {

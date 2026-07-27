@@ -37,7 +37,8 @@ interface AttachmentItem {
 export default function RrAttachmentManager(): React.JSX.Element {
   const { data: session } = useSession();
   const router = useRouter();
-  const { getPrivateKey, unwrapKey, decrypt } = useRRCrypto();
+  const { getPrivateKey, unwrapKey, decrypt, isEncryptionUnlocked } =
+    useRRCrypto();
   const { t } = useTranslation();
 
   const [loading, setLoading] = useState<boolean>(true);
@@ -79,7 +80,8 @@ export default function RrAttachmentManager(): React.JSX.Element {
           headers: { Authorization: `Bearer ${session.accessToken}` },
         },
       );
-      if (!accountsRes.ok) throw new Error(t("pegasus.attachments.failedLoadAccounts"));
+      if (!accountsRes.ok)
+        throw new Error(t("pegasus.attachments.failedLoadAccounts"));
       const accountsList = await accountsRes.json();
       setAccounts(accountsList);
 
@@ -127,10 +129,7 @@ export default function RrAttachmentManager(): React.JSX.Element {
                 let filename = att.filename;
                 if (msg.encryptedKey && dataKey) {
                   try {
-                    filename = await decrypt(
-                      att.filename,
-                      dataKey,
-                    );
+                    filename = await decrypt(att.filename, dataKey);
                   } catch {}
                 }
 
@@ -168,12 +167,14 @@ export default function RrAttachmentManager(): React.JSX.Element {
 
   useEffect(() => {
     fetchAllAttachments();
-  }, [fetchAllAttachments]);
+  }, [fetchAllAttachments, isEncryptionUnlocked]);
 
   const handleDownloadAttachment = async (item: AttachmentItem) => {
     if (!session?.accessToken) return;
     try {
-      toast.info(t("pegasus.attachments.startingDownload", { filename: item.filename }));
+      toast.info(
+        t("pegasus.attachments.startingDownload", { filename: item.filename }),
+      );
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/emails/attachments/${item.id}`,
         {
@@ -205,10 +206,16 @@ export default function RrAttachmentManager(): React.JSX.Element {
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
-      toast.success(t("pegasus.attachments.downloadSuccess", { filename: item.filename }));
+      toast.success(
+        t("pegasus.attachments.downloadSuccess", { filename: item.filename }),
+      );
     } catch (err: any) {
       console.error(err);
-      toast.error(t("pegasus.attachments.downloadFailed", { message: err.message || String(err) }));
+      toast.error(
+        t("pegasus.attachments.downloadFailed", {
+          message: err.message || String(err),
+        }),
+      );
     }
   };
 
@@ -283,7 +290,11 @@ export default function RrAttachmentManager(): React.JSX.Element {
                   : "bg-zinc-900/60 border-zinc-800 hover:bg-zinc-800/60 text-zinc-400 hover:text-zinc-200"
               }`}
             >
-              {t("pegasus.attachments.type" + type.charAt(0).toUpperCase() + type.slice(1))}
+              {t(
+                "pegasus.attachments.type" +
+                  type.charAt(0).toUpperCase() +
+                  type.slice(1),
+              )}
             </button>
           ))}
         </div>
@@ -337,7 +348,7 @@ export default function RrAttachmentManager(): React.JSX.Element {
 
                 <div className="pt-2 border-t border-zinc-900/60 space-y-1.5">
                   <div className="flex items-center justify-between text-[11px] text-zinc-500">
-                    <span className="font-medium text-zinc-400 truncate max-w-[120px]">
+                    <span className="font-medium text-zinc-400 truncate max-w-30">
                       {t("pegasus.attachments.from")}{" "}
                       {item.messageFrom.replace(/<.*>/, "").replace(/"/g, "")}
                     </span>
@@ -348,7 +359,7 @@ export default function RrAttachmentManager(): React.JSX.Element {
                       })}
                     </span>
                   </div>
-                  <div className="text-[10px] text-zinc-600 truncate max-w-[280px]">
+                  <div className="text-[10px] text-zinc-600 truncate max-w-70">
                     {t("pegasus.attachments.subject")} {item.messageSubject}
                   </div>
                 </div>

@@ -2120,6 +2120,27 @@
       "typeSlashTemplate": "/를 입력하여 템플릿 삽입",
       "editorPlaceholder": "/를 입력하여 템플릿을 삽입하거나 입력 시작...",
       "subjectPlaceholder": "제목"
+    },
+    "packageTracker": {
+      "detectedTitle": "택배 운송장 번호 감지됨",
+      "multiPackages": "{{count}}개 소화물",
+      "copyTracking": "운송장 번호 복사",
+      "copy": "복사",
+      "copied": "복사됨!",
+      "trackOnWeb": "배송 추적",
+      "fetchingDetails": "실시간 배송 상태 조회 중...",
+      "status_DELIVERED": "배송 완료",
+      "status_OUT_FOR_DELIVERY": "배송 출발",
+      "status_IN_TRANSIT": "이동 중",
+      "status_SHIPPED": "발송 완료",
+      "status_LABEL_CREATED": "운송장 생성",
+      "stepPlaced": "주문 완료",
+      "stepShipped": "발송",
+      "stepInTransit": "이동 중",
+      "stepDelivered": "배송 완료",
+      "estDelivery": "예상 배송일",
+      "viewDetailedHistory": "상세 배송 이력",
+      "failedLoadDetails": "배송 추적 정보를 불러올 수 없습니다."
     }
   },
   "spotlight": {

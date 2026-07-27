@@ -2120,6 +2120,27 @@ export default {
       "typeSlashTemplate": "Şablon eklemek için / yazın",
       "editorPlaceholder": "Şablon eklemek için / yazın veya yazmaya başlayın...",
       "subjectPlaceholder": "Konu Satırı"
+    },
+    "packageTracker": {
+      "detectedTitle": "Kargo takip numarası tespit edildi",
+      "multiPackages": "{{count}} paket",
+      "copyTracking": "Takip numarasını kopyala",
+      "copy": "Kopyala",
+      "copied": "Kopyalandı!",
+      "trackOnWeb": "Kargoyu Takip Et",
+      "fetchingDetails": "Canlı takip durumu alınıyor...",
+      "status_DELIVERED": "Teslim Edildi",
+      "status_OUT_FOR_DELIVERY": "Dağıtımda",
+      "status_IN_TRANSIT": "Transfer Aşamasında",
+      "status_SHIPPED": "Kargoya Verildi",
+      "status_LABEL_CREATED": "Barkod Oluşturuldu",
+      "stepPlaced": "Sipariş Alındı",
+      "stepShipped": "Kargoda",
+      "stepInTransit": "Transferde",
+      "stepDelivered": "Teslim Edildi",
+      "estDelivery": "Tahmini Teslimat",
+      "viewDetailedHistory": "Detaylı Geçmiş",
+      "failedLoadDetails": "Kargo takip detayları yüklenemedi."
     }
   },
   "spotlight": {

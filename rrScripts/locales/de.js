@@ -2120,6 +2120,27 @@ export default {
       "typeSlashTemplate": "Tippen Sie / zum Einfügen einer Vorlage",
       "editorPlaceholder": "Tippen Sie / zum Einfügen einer Vorlage oder schreiben Sie...",
       "subjectPlaceholder": "Betreffzeile"
+    },
+    "packageTracker": {
+      "detectedTitle": "Paketverfolgungsnummer erkannt",
+      "multiPackages": "{{count}} Pakete",
+      "copyTracking": "Sendungsnummer kopieren",
+      "copy": "Kopieren",
+      "copied": "Kopiert!",
+      "trackOnWeb": "Paket verfolgen",
+      "fetchingDetails": "Live-Sendungsstatus wird abgerufen...",
+      "status_DELIVERED": "Zugestellt",
+      "status_OUT_FOR_DELIVERY": "In Zustellung",
+      "status_IN_TRANSIT": "Unterwegs",
+      "status_SHIPPED": "Versendet",
+      "status_LABEL_CREATED": "Sendeetikett erstellt",
+      "stepPlaced": "Bestellt",
+      "stepShipped": "Versendet",
+      "stepInTransit": "Unterwegs",
+      "stepDelivered": "Zugestellt",
+      "estDelivery": "Voraussichtliche Lieferung",
+      "viewDetailedHistory": "Detaillierter Verlauf",
+      "failedLoadDetails": "Paketverfolgungsdetails konnten nicht geladen werden."
     }
   },
   "spotlight": {

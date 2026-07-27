@@ -2120,6 +2120,27 @@ export default {
       "typeSlashTemplate": "Skriv / for å sette inn mal",
       "editorPlaceholder": "Skriv / for å sette inn mal eller begynn å skrive...",
       "subjectPlaceholder": "Emnelinje"
+    },
+    "packageTracker": {
+      "detectedTitle": "Pakkesporingsnummer oppdaget",
+      "multiPackages": "{{count}} pakker",
+      "copyTracking": "Kopier sporingsnummer",
+      "copy": "Kopier",
+      "copied": "Kopiert!",
+      "trackOnWeb": "Spor pakke",
+      "fetchingDetails": "Henter livestatus for sporing...",
+      "status_DELIVERED": "Levert",
+      "status_OUT_FOR_DELIVERY": "Ute til levering",
+      "status_IN_TRANSIT": "I transit",
+      "status_SHIPPED": "Sendt",
+      "status_LABEL_CREATED": "Etikett opprettet",
+      "stepPlaced": "Bestilt",
+      "stepShipped": "Sendt",
+      "stepInTransit": "I transit",
+      "stepDelivered": "Levert",
+      "estDelivery": "Beregnet levering",
+      "viewDetailedHistory": "Detaljert historikk",
+      "failedLoadDetails": "Kunne ikke laste sporingsdetaljer."
     }
   },
   "spotlight": {
