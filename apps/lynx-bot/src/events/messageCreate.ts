@@ -1,6 +1,8 @@
 import { Events, Message, TextChannel } from "discord.js";
 import { LynxClient } from "../client/client";
 import { Event } from "../structures/Event";
+import { rewindBuffer } from "../services/rewindBufferService";
+
 
 export default class MessageCreateEvent extends Event {
   constructor(client: LynxClient) {
@@ -16,6 +18,30 @@ Triggered when a message is created in a guild channel.`,
   }
 
   public async eventExecute(message: Message) {
+    if (message.author.bot) return;
+
+    if (message.guildId) {
+      const mentionsCount = message.mentions.users.size;
+      const attachmentsCount = message.attachments.size;
+      const mediaCount = message.attachments.filter((a) => a.contentType?.startsWith("image/") || a.contentType?.startsWith("video/")).size;
+
+      rewindBuffer.recordMessageSent({
+        guildId: message.guildId,
+        userId: message.author.id,
+        channelId: message.channelId,
+        content: message.content || "",
+        mentionsCount,
+        attachmentsCount,
+        mediaCount,
+      });
+
+      for (const [mentionedId] of message.mentions.users) {
+        if (mentionedId !== message.author.id) {
+          rewindBuffer.recordMentionReceived(message.guildId, mentionedId, 1);
+        }
+      }
+    }
+
     if (!(message.channel instanceof TextChannel)) return;
 
     // Emit a custom event on the client that the SSE API can listen to
@@ -46,3 +72,4 @@ Triggered when a message is created in a guild channel.`,
     });
   }
 }
+

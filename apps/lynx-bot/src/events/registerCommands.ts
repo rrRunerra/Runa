@@ -84,20 +84,37 @@ Synchronizes local command definitions with Discord.
     }
 
     if (devCommandList.size > 0) {
-      await rest
-        .put(
-          Routes.applicationGuildCommands(clientId, process.env.DEV_SERVER!),
-          {
+      const devServerId = process.env.LYNX_DEV_SERVER;
+      if (devServerId) {
+        await rest
+          .put(
+            Routes.applicationGuildCommands(clientId, devServerId),
+            {
+              body: this.GetJson(devCommandList),
+            },
+          )
+          .then((c: unknown) => {
+            this.logger.log(
+              `Succesfully loaded ${(c as { length: number }).length} dev (/) commands in dev server: ${devServerId}`,
+            );
+          });
+      } else {
+        this.logger.warn(
+          "DEV_SERVER environment variable is not defined; registering dev commands globally.",
+        );
+        await rest
+          .put(Routes.applicationCommands(clientId), {
             body: this.GetJson(devCommandList),
-          },
-        )
-        .then((c: unknown) => {
-          this.logger.log(
-            `Succesfully loaded ${(c as { length: number }).length} dev (/) commands`,
-          );
-        });
+          })
+          .then((c: unknown) => {
+            this.logger.log(
+              `Succesfully loaded ${(c as { length: number }).length} dev (/) commands globally`,
+            );
+          });
+      }
     }
   }
+
 
   private GetJson(commands: Collection<string, Command>): object[] {
     const data: object[] = [];

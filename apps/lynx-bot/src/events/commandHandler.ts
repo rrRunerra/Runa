@@ -11,6 +11,8 @@ import {
 import { Event } from "../structures/Event";
 import { LynxClient } from "../client/client";
 import { Command } from "../structures/Command";
+import { rewindBuffer } from "../services/rewindBufferService";
+
 
 export default class CommandHandlerEvent extends Event {
   constructor(client: LynxClient) {
@@ -197,6 +199,10 @@ Triggered by interaction creation.
 
         const subCommandExec = this.client.subCommands.get(subCommand);
 
+        if (interaction.guildId) {
+          rewindBuffer.recordCommandUsage(interaction.guildId, interaction.user.id, interaction.commandName);
+        }
+
         // Await subcommand if it exists
         if (subCommandExec) {
           subCommandExec.slashCommandExecute(interaction);
@@ -204,6 +210,7 @@ Triggered by interaction creation.
 
         // Await main command execution
         return command?.slashCommandExecute(interaction);
+
         //return command?.slashCommandExecute(interaction) || this.client.subCommands?.get(subCommand)?.slashCommandExecute(interaction)
       } catch (e) {
         this.logger.error(
