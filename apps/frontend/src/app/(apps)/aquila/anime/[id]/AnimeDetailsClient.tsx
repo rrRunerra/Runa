@@ -690,7 +690,13 @@ export default function AnimeDetailsPage(): React.JSX.Element {
         </motion.div>
 
         {/* Media Footer */}
-        <RrMediaFooter providers={providers} updatedAt={anime.updatedAt} />
+        <RrMediaFooter
+          providers={providers}
+          updatedAt={anime.updatedAt}
+          mediaType="anime"
+          mediaId={Number(id)}
+          mediaData={{ ...anime, relations, characters }}
+        />
       </div>
     </div>
   );

@@ -810,7 +810,6 @@ export default function TvDetailsPage(): React.JSX.Element {
 
             {/* Stats Dashboard (Score & Status distribution charts) */}
             <RrMediaStatsDashboard
-
               localAverageScore={tv.localAverageScore}
               localPopularity={tv.localPopularity}
               localFavoritesCount={tv.localFavoritesCount}
@@ -831,7 +830,13 @@ export default function TvDetailsPage(): React.JSX.Element {
         </motion.div>
 
         {/* Media Footer */}
-        <RrMediaFooter providers={providers} updatedAt={tv.updatedAt} />
+        <RrMediaFooter
+          providers={providers}
+          updatedAt={tv.updatedAt}
+          mediaType="tv"
+          mediaId={Number(id)}
+          mediaData={{ ...tv, relations: [], characters: tv.characters || [] }}
+        />
       </div>
     </div>
   );

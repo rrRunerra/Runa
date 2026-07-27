@@ -139,12 +139,20 @@ export default function BookDetailsPage(): React.JSX.Element {
     const items: any[] = [];
     if (book.authors) {
       book.authors.forEach((author: string, idx: number) => {
-        items.push({ id: `author-${idx}`, name: author, role: t("aquila.author") });
+        items.push({
+          id: `author-${idx}`,
+          name: author,
+          role: t("aquila.author"),
+        });
       });
     }
     if (book.artists) {
       book.artists.forEach((artist: string, idx: number) => {
-        items.push({ id: `artist-${idx}`, name: artist, role: t("aquila.artist") });
+        items.push({
+          id: `artist-${idx}`,
+          name: artist,
+          role: t("aquila.artist"),
+        });
       });
     }
     return items;
@@ -167,7 +175,9 @@ export default function BookDetailsPage(): React.JSX.Element {
           {t("aquila.bookNotFound")}
         </h2>
         <Button asChild variant="default" className="z-10 rounded-xl">
-          <Link href="/aquila/browse?type=books">{t("aquila.backToBrowse")}</Link>
+          <Link href="/aquila/browse?type=books">
+            {t("aquila.backToBrowse")}
+          </Link>
         </Button>
       </div>
     );
@@ -419,17 +429,45 @@ export default function BookDetailsPage(): React.JSX.Element {
                   {t("aquila.information")}
                 </h3>
                 <div className="space-y-3">
-                  <RrMediaInfoRow label={t("aquila.publisher")} value={book.publisher} />
-                  <RrMediaInfoRow label={t("aquila.publishedDate")} value={formattedPublishedDate} />
-                  <RrMediaInfoRow label={t("aquila.chapters")} value={book.chapters} />
+                  <RrMediaInfoRow
+                    label={t("aquila.publisher")}
+                    value={book.publisher}
+                  />
+                  <RrMediaInfoRow
+                    label={t("aquila.publishedDate")}
+                    value={formattedPublishedDate}
+                  />
+                  <RrMediaInfoRow
+                    label={t("aquila.chapters")}
+                    value={book.chapters}
+                  />
                   <RrMediaInfoRow
                     label={t("aquila.price")}
-                    value={book.retailPrice ? `${book.retailPrice} ${book.retailPriceCurrency || ""}` : null}
+                    value={
+                      book.retailPrice
+                        ? `${book.retailPrice} ${book.retailPriceCurrency || ""}`
+                        : null
+                    }
                   />
-                  <RrMediaInfoRow label="ISBN-10" value={book.isbn10} className="font-mono" />
-                  <RrMediaInfoRow label="ISBN-13" value={book.isbn13} className="font-mono" />
-                  <RrMediaInfoRow label={t("aquila.pages")} value={book.pages} />
-                  <RrMediaInfoRow label={t("aquila.language")} value={book.language} className="uppercase" />
+                  <RrMediaInfoRow
+                    label="ISBN-10"
+                    value={book.isbn10}
+                    className="font-mono"
+                  />
+                  <RrMediaInfoRow
+                    label="ISBN-13"
+                    value={book.isbn13}
+                    className="font-mono"
+                  />
+                  <RrMediaInfoRow
+                    label={t("aquila.pages")}
+                    value={book.pages}
+                  />
+                  <RrMediaInfoRow
+                    label={t("aquila.language")}
+                    value={book.language}
+                    className="uppercase"
+                  />
                 </div>
               </div>
             </div>
@@ -463,7 +501,9 @@ export default function BookDetailsPage(): React.JSX.Element {
             {/* Staff */}
             {staff && staff.length > 0 && (
               <motion.div variants={itemVariants} className="space-y-3">
-                <h3 className="text-base font-bold text-foreground">{t("aquila.staff")}</h3>
+                <h3 className="text-base font-bold text-foreground">
+                  {t("aquila.staff")}
+                </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {staff.map((person) => (
                     <div
@@ -487,7 +527,6 @@ export default function BookDetailsPage(): React.JSX.Element {
 
             {/* Stats Dashboard (Score & Status distribution charts) */}
             <RrMediaStatsDashboard
-
               localAverageScore={book.localAverageScore}
               localPopularity={book.localPopularity}
               localFavoritesCount={book.localFavoritesCount}
@@ -505,7 +544,13 @@ export default function BookDetailsPage(): React.JSX.Element {
         </motion.div>
 
         {/* Media Footer */}
-        <RrMediaFooter providers={providers} updatedAt={book.updatedAt} />
+        <RrMediaFooter
+          providers={providers}
+          updatedAt={book.updatedAt}
+          mediaType="book"
+          mediaId={Number(id)}
+          mediaData={{ ...book, relations: [], characters: [] }}
+        />
       </div>
     </div>
   );

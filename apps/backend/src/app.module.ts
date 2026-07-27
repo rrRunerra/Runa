@@ -27,6 +27,8 @@ import { ActorModule } from './modules/actor/actor.module';
 import { MediaUpdateModule } from './modules/media-update/media-update.module';
 import { FriendsModule } from './modules/friends/friends.module';
 
+import { SubmissionsModule } from './modules/submissions/submissions.module';
+
 @Module({
   providers: [
     {
@@ -63,6 +65,7 @@ import { FriendsModule } from './modules/friends/friends.module';
     ActorModule,
     MediaUpdateModule,
     FriendsModule,
+    SubmissionsModule,
     ThrottlerModule.forRoot({
       throttlers: [
         {

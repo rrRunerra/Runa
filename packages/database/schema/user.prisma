@@ -31,6 +31,8 @@ model User {
     notifications            Notification[]
     laceraFiles              LaceraFile[]
     laceraShares             LaceraShare[]
+    submittedMediaSubmissions AquilaMediaSubmission[] @relation("SubmittedMediaSubmissions")
+    reviewedMediaSubmissions  AquilaMediaSubmission[] @relation("ReviewedMediaSubmissions")
     vaultPinHash             String?
     lacertaMaxStorage        Float                  @default(104857600)
 

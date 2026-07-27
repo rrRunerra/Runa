@@ -101,3 +101,28 @@ enum FavoriteType {
     CHARACTER
     STAFF
 }
+
+model AquilaMediaSubmission {
+    id              String    @id @default(nanoid())
+    mediaType       String
+    actionType      String    // CREATE or EDIT
+    mediaId         Int?
+    data            Json      @db.Json
+    status          String    @default("PENDING") // PENDING, APPROVED, REJECTED
+    rejectionReason String?   @db.Text
+
+    submittedById   String
+    submittedBy     User      @relation("SubmittedMediaSubmissions", fields: [submittedById], references: [id], onDelete: Cascade)
+
+    reviewedById    String?
+    reviewedBy      User?     @relation("ReviewedMediaSubmissions", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+    createdAt       DateTime  @default(now())
+    updatedAt       DateTime  @updatedAt
+
+    @@index([submittedById])
+    @@index([reviewedById])
+    @@index([status])
+    @@index([mediaType])
+}
+

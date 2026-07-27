@@ -650,7 +650,13 @@ export default function MangaDetailsPage(): React.JSX.Element {
         </motion.div>
 
         {/* Media Footer */}
-        <RrMediaFooter providers={providers} updatedAt={manga.updatedAt} />
+        <RrMediaFooter
+          providers={providers}
+          updatedAt={manga.updatedAt}
+          mediaType="manga"
+          mediaId={Number(id)}
+          mediaData={{ ...manga, relations, characters }}
+        />
       </div>
     </div>
   );

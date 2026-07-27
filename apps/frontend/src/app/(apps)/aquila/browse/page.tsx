@@ -23,6 +23,9 @@ import { RrBrowseSearchForm } from "@/components/rrComponents/aquila/rrBrowseSea
 import { RrBrowseHistory } from "@/components/rrComponents/aquila/rrBrowseHistory";
 import RrLapplandBrowse from "@/components/rrComponents/rrImages/rrLapplandBrowse";
 import RrLapplandBrowseNotFound from "@/components/rrComponents/rrImages/rrLapplandBrowseNotFound";
+import { Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { RrMediaSubmissionModal } from "@/components/rrComponents/aquila/rrMediaSubmissionModal";
 import { useTranslation } from "react-i18next";
 
 export default function BrowsePage(): React.JSX.Element {
@@ -30,6 +33,7 @@ export default function BrowsePage(): React.JSX.Element {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [type, setType] = useState("anime");
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [history, setHistory] = useState<string[]>([]);
   const [openedItems, setOpenedItems] = useState<OpenedItemEntry[]>([]);
   const isLoadedRef = useRef(false);
@@ -371,28 +375,39 @@ export default function BrowsePage(): React.JSX.Element {
           </div>
         </motion.div>
 
-        {/* Animated Search Box */}
-        <RrBrowseSearchForm
-          query={query}
-          onChange={handleQueryChange}
-          onSubmit={handleSearchSubmit}
-          placeholder={
-            ["characters", "actors"].includes(type)
-              ? t(
-                  "aquila.searchNamesPlaceholder",
-                  "Search names... (try @anime, @manga to switch type)",
-                )
-              : t(
-                  "aquila.searchPlaceholder",
-                  "Search titles... (try @anime, @manga to switch type)",
-                )
-          }
-          shortPlaceholder={
-            ["characters", "actors"].includes(type)
-              ? t("aquila.shortSearchNamesPlaceholder", "Search names...")
-              : t("aquila.shortSearchPlaceholder", "Search titles...")
-          }
-        />
+        {/* Animated Search Box + Add Data Button */}
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full">
+          <div className="flex-1 w-full">
+            <RrBrowseSearchForm
+              query={query}
+              onChange={handleQueryChange}
+              onSubmit={handleSearchSubmit}
+              placeholder={
+                ["characters", "actors"].includes(type)
+                  ? t(
+                      "aquila.searchNamesPlaceholder",
+                      "Search names... (try @anime, @manga to switch type)",
+                    )
+                  : t(
+                      "aquila.searchPlaceholder",
+                      "Search titles... (try @anime, @manga to switch type)",
+                    )
+              }
+              shortPlaceholder={
+                ["characters", "actors"].includes(type)
+                  ? t("aquila.shortSearchNamesPlaceholder", "Search names...")
+                  : t("aquila.shortSearchPlaceholder", "Search titles...")
+              }
+            />
+          </div>
+          <Button
+            onClick={() => setIsAddModalOpen(true)}
+            className="h-12 px-5 gap-2 font-semibold text-xs rounded-2xl shrink-0 w-full sm:w-auto shadow-md"
+          >
+            <Plus className="size-4" />
+            Add Data
+          </Button>
+        </div>
 
         {/* Animated Search History badges */}
         <RrBrowseHistory
@@ -503,6 +518,24 @@ export default function BrowsePage(): React.JSX.Element {
           </motion.div>
         )}
       </div>
+
+      <RrMediaSubmissionModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        mediaType={
+          type === "movies"
+            ? "movie"
+            : type === "games"
+              ? "game"
+              : type === "books"
+                ? "book"
+                : (type as any)
+        }
+        actionType="CREATE"
+        onSuccess={() => {
+          // Re-trigger search or notify
+        }}
+      />
     </div>
   );
 }

@@ -576,7 +576,6 @@ export default function MovieDetailsPage(): React.JSX.Element {
 
             {/* Stats Dashboard (Score & Status distribution charts) */}
             <RrMediaStatsDashboard
-
               localAverageScore={movie.localAverageScore}
               localPopularity={movie.localPopularity}
               localFavoritesCount={movie.localFavoritesCount}
@@ -597,7 +596,17 @@ export default function MovieDetailsPage(): React.JSX.Element {
         </motion.div>
 
         {/* Media Footer */}
-        <RrMediaFooter providers={providers} updatedAt={movie.updatedAt} />
+        <RrMediaFooter
+          providers={providers}
+          updatedAt={movie.updatedAt}
+          mediaType="movie"
+          mediaId={Number(id)}
+          mediaData={{
+            ...movie,
+            relations: [],
+            characters: movie.characters || [],
+          }}
+        />
       </div>
     </div>
   );

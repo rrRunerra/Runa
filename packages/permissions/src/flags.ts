@@ -33,6 +33,12 @@ export const AquilaFlags = defineFlags(
   [
     "VIEW",
     "MANAGE",
+    "MANAGE_ANIME",
+    "MANAGE_MANGA",
+    "MANAGE_MOVIE",
+    "MANAGE_TV",
+    "MANAGE_GAME",
+    "MANAGE_BOOK",
     "EDIT_ANIME",
     "EDIT_MANGA",
     "EDIT_MOVIE",

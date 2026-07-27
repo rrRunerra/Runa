@@ -163,7 +163,9 @@ export default function GameDetailsPage(): React.JSX.Element {
           {t("aquila.gameNotFound")}
         </h2>
         <Button asChild variant="default" className="z-10 rounded-xl">
-          <Link href="/aquila/browse?type=games">{t("aquila.backToBrowse")}</Link>
+          <Link href="/aquila/browse?type=games">
+            {t("aquila.backToBrowse")}
+          </Link>
         </Button>
       </div>
     );
@@ -336,7 +338,9 @@ export default function GameDetailsPage(): React.JSX.Element {
                   </div>
                   <div className="flex flex-col min-w-0">
                     <span className="text-[10px] font-bold text-primary uppercase tracking-wider">
-                      {game.metacritic != null ? "Metacritic Score" : t("aquila.averageScore")}
+                      {game.metacritic != null
+                        ? "Metacritic Score"
+                        : t("aquila.averageScore")}
                     </span>
                     <div className="flex items-baseline gap-1 mt-0.5">
                       <span className="text-2xl font-black text-primary leading-none">
@@ -394,7 +398,9 @@ export default function GameDetailsPage(): React.JSX.Element {
                             : (game.popularity ?? 0).toLocaleString()
                         }
                       >
-                        {formatCompactNumber(game.localPopularity ?? game.popularity)}
+                        {formatCompactNumber(
+                          game.localPopularity ?? game.popularity,
+                        )}
                       </span>
                     </div>
                   </div>
@@ -463,7 +469,10 @@ export default function GameDetailsPage(): React.JSX.Element {
                     label={t("aquila.esrbRating")}
                     value={
                       game.esrbRating ? (
-                        <Badge variant="outline" className="text-[10px] px-2 py-0.5">
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] px-2 py-0.5"
+                        >
                           {game.esrbRating}
                         </Badge>
                       ) : null
@@ -521,7 +530,6 @@ export default function GameDetailsPage(): React.JSX.Element {
 
             {/* Stats Dashboard (Score & Status distribution charts) */}
             <RrMediaStatsDashboard
-
               localAverageScore={game.localAverageScore}
               localPopularity={game.localPopularity}
               localFavoritesCount={game.localFavoritesCount}
@@ -539,7 +547,13 @@ export default function GameDetailsPage(): React.JSX.Element {
         </motion.div>
 
         {/* Media Footer */}
-        <RrMediaFooter providers={providers} updatedAt={game.updatedAt} />
+        <RrMediaFooter
+          providers={providers}
+          updatedAt={game.updatedAt}
+          mediaType="game"
+          mediaId={Number(id)}
+          mediaData={{ ...game, relations: [], characters: [] }}
+        />
       </div>
     </div>
   );

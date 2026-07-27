@@ -1,6 +1,6 @@
 "use client";
 
-import { Home, Lock, Database, Zap } from "lucide-react";
+import { Home, Lock, Database, Zap, FileText } from "lucide-react";
 import { SidebarConfig } from "@/types/SidebarConfig";
 import { RunaFlags } from "@runa/permissions";
 
@@ -41,6 +41,14 @@ export const getMonocerosSidebarConfig = (
         icon: <Lock className="h-4 w-4" />,
         preventRedirect: false,
         subtitle: t("sidebarPermissions"),
+      },
+      {
+        dataKey: "Submissions",
+        label: t("sidebarSubmissions", "Submissions"),
+        href: "/monoceros/submissions",
+        icon: <FileText className="h-4 w-4" />,
+        preventRedirect: false,
+        subtitle: t("sidebarSubmissionsSubtitle", "Review Media Submissions"),
       },
       {
         dataKey: "Databases",
