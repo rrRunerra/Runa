@@ -28,6 +28,7 @@ import { MediaUpdateModule } from './modules/media-update/media-update.module';
 import { FriendsModule } from './modules/friends/friends.module';
 
 import { SubmissionsModule } from './modules/submissions/submissions.module';
+import { ReviewsModule } from './modules/reviews/reviews.module';
 
 @Module({
   providers: [
@@ -66,6 +67,7 @@ import { SubmissionsModule } from './modules/submissions/submissions.module';
     MediaUpdateModule,
     FriendsModule,
     SubmissionsModule,
+    ReviewsModule,
     ThrottlerModule.forRoot({
       throttlers: [
         {

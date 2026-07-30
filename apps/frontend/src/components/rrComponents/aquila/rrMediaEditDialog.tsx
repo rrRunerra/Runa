@@ -139,10 +139,35 @@ export function RrMediaEditDialog({
 
     const title =
       typeof raw.title === "object" && raw.title !== null
-        ? raw.title
+        ? {
+            english:
+              raw.title.english ||
+              raw.titlePrimary ||
+              raw.titleEnglish ||
+              raw.titleString ||
+              raw.title.romaji ||
+              "",
+            romaji:
+              raw.title.romaji ||
+              raw.titleSecondary ||
+              raw.titleRomaji ||
+              raw.titleString ||
+              "",
+            native: (raw.title as any).native || raw.titleNative || "",
+          }
         : {
-            english: raw.titleEnglish || raw.titleString || "",
-            romaji: raw.titleRomaji || raw.titleString || "",
+            english:
+              raw.titlePrimary ||
+              raw.titleEnglish ||
+              raw.titleSecondary ||
+              raw.titleString ||
+              "",
+            romaji:
+              raw.titleSecondary ||
+              raw.titleRomaji ||
+              raw.titlePrimary ||
+              raw.titleString ||
+              "",
             native: raw.titleNative || "",
           };
 
@@ -156,12 +181,42 @@ export function RrMediaEditDialog({
                 : raw.coverImageLarge || "",
           };
 
+    // Group flat episodes into their seasons so RrMediaEditTvEpisodes can render them.
+    // The parent may have already done this (initialMedia.seasons[].episodes populated),
+    // or we may need to do it ourselves from the raw API response.
+    let seasons = raw.seasons;
+    if (Array.isArray(initialMedia.seasons) && initialMedia.seasons.length > 0 && Array.isArray((initialMedia.seasons[0] as any)?.episodes)) {
+      // Parent already pre-processed seasons with nested episodes — use them.
+      seasons = initialMedia.seasons;
+    } else if (Array.isArray(raw.seasons) && Array.isArray(raw.episodes)) {
+      // Group the flat episodes into each season ourselves.
+      seasons = raw.seasons.map((s: any) => ({
+        ...s,
+        // normalise season number field — API uses seasonNumber, legacy used number
+        number: s.seasonNumber ?? s.number,
+        name: s.titlePrimary ?? s.name,
+        image: s.posterImage ?? s.image,
+        episodes: raw.episodes
+          .filter((ep: any) => ep.seasonNumber === (s.seasonNumber ?? s.number))
+          .map((ep: any) => ({
+            id: ep.id,
+            number: ep.episodeNumber ?? ep.number,
+            name: ep.titlePrimary ?? ep.name,
+            overview: ep.description ?? ep.overview,
+            image: ep.thumbnail ?? ep.image,
+            airDate: ep.airDate,
+          })),
+      }));
+    }
+
     return {
       ...raw,
       title,
       coverImage,
+      seasons,
     };
   }, [mediaDetails, initialMedia]);
+
 
   const mediaType = media.type;
   const scoreMax = mediaType === "game" ? 100 : 10;
@@ -238,37 +293,59 @@ export function RrMediaEditDialog({
     setScore(listEntryData.score ? listEntryData.score.toString() : "");
 
     if (mediaType === "manga" || mediaType === "book") {
+      const chapterVal =
+        listEntryData.chaptersProgress ??
+        listEntryData.progressChapters ??
+        listEntryData.chapters ??
+        listEntryData.progress;
+      const volumeVal =
+        listEntryData.volumesProgress ??
+        listEntryData.progressVolumes ??
+        listEntryData.volumes;
+
       setProgress(
-        listEntryData.chapters ? listEntryData.chapters.toString() : "",
+        chapterVal !== undefined && chapterVal !== null
+          ? chapterVal.toString()
+          : "",
       );
       setVolumes(
-        listEntryData.volumes ? listEntryData.volumes.toString() : "",
+        volumeVal !== undefined && volumeVal !== null
+          ? volumeVal.toString()
+          : "",
       );
       setRewatches(
-        listEntryData.reread ? listEntryData.reread.toString() : "0",
+        listEntryData.reread !== undefined && listEntryData.reread !== null
+          ? listEntryData.reread.toString()
+          : "0",
       );
     } else if (mediaType === "game") {
       setProgress(
-        listEntryData.progress ? listEntryData.progress.toString() : "",
+        listEntryData.progress !== undefined && listEntryData.progress !== null
+          ? listEntryData.progress.toString()
+          : "",
       );
     } else {
       setProgress(
-        listEntryData.progress ? listEntryData.progress.toString() : "",
+        listEntryData.progress !== undefined && listEntryData.progress !== null
+          ? listEntryData.progress.toString()
+          : "",
       );
       setRewatches(
-        listEntryData.rewatched ? listEntryData.rewatched.toString() : "0",
+        listEntryData.rewatched !== undefined && listEntryData.rewatched !== null
+          ? listEntryData.rewatched.toString()
+          : "0",
       );
     }
 
     setNotes(listEntryData.notes || "");
     setStartDate(
       listEntryData.startDate
-        ? new Date(listEntryData.startDate * 1000)
+        ? new Date(listEntryData.startDate)
         : undefined,
     );
     setFinishDate(
       listEntryData.endDate
-        ? new Date(listEntryData.endDate * 1000)
+        ? new Date(listEntryData.endDate)
         : undefined,
     );
 
@@ -287,7 +364,10 @@ export function RrMediaEditDialog({
         const currentProgressNum =
           Number(
             mediaType === "manga" || mediaType === "book"
-              ? listEntryData.chapters
+              ? (listEntryData.chaptersProgress ??
+                 listEntryData.progressChapters ??
+                 listEntryData.chapters ??
+                 listEntryData.progress)
               : listEntryData.progress,
           ) || 0;
 
@@ -306,9 +386,16 @@ export function RrMediaEditDialog({
         }
 
         let connVolumes: string | undefined = undefined;
+        const currentVolumesNum =
+          Number(
+            listEntryData.volumesProgress ??
+            listEntryData.progressVolumes ??
+            listEntryData.volumes,
+          ) || 0;
+
         if (conn.volumesOffset !== undefined) {
           connVolumes = (
-            Number(listEntryData.volumes || 0) + Number(conn.volumesOffset)
+            currentVolumesNum + Number(conn.volumesOffset)
           ).toString();
         } else if (conn.volumes !== undefined) {
           connVolumes = conn.volumes.toString();
@@ -770,7 +857,7 @@ export function RrMediaEditDialog({
       <RrMediaEditGeneralFields
         mediaType={mediaType}
         scoreMax={scoreMax}
-        episodes={media.episodes}
+        episodes={media.episodeCount}
         chapters={media.chapters}
         volumesMax={media.volumes}
         listStatus={listStatus}
@@ -789,8 +876,8 @@ export function RrMediaEditDialog({
           }
 
           if (val === "COMPLETED") {
-            if (mediaType === "anime" && media.episodes && !progress) {
-              setProgress(media.episodes.toString());
+            if (mediaType === "anime" && media.episodeCount && !progress) {
+              setProgress(media.episodeCount.toString());
             } else if (
               (mediaType === "manga" || mediaType === "book") &&
               media.chapters &&
@@ -906,7 +993,13 @@ export function RrMediaEditDialog({
       <RrMediaEditDialogHeader
         bannerImage={media.bannerImage}
         coverImageLarge={media.coverImage?.large ?? ""}
-        title={media.title?.english || media.title?.romaji || ""}
+        title={
+          media.title?.english ||
+          media.title?.romaji ||
+          media.titlePrimary ||
+          media.titleSecondary ||
+          ""
+        }
         mediaType={mediaType}
         isFavorited={isFavorited}
         isSubmittingFavorite={isSubmittingFavorite}
@@ -930,7 +1023,7 @@ export function RrMediaEditDialog({
             isOpen={isConnectionSearchOpen}
             onOpenChange={setIsConnectionSearchOpen}
             mediaType={mediaType}
-            mediaTitle={media.title.english || media.title.romaji}
+            mediaTitle={media.title.english || media.title.romaji || (media.title as any).native || ""}
             activeSearchProvider={activeSearchProvider}
             connectionProviders={filteredConnectionProviders}
             onSelectResult={handleSelectSearchResult}

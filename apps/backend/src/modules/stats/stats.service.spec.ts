@@ -14,12 +14,12 @@ describe('StatsService', () => {
       findUnique: jest.fn(),
       upsert: jest.fn(),
     },
-    aquilaAnimeUserList: { findMany: jest.fn() },
-    aquilaMangaUserList: { findMany: jest.fn() },
-    aquilaTvUserList: { findMany: jest.fn() },
-    aquilaMovieUserList: { findMany: jest.fn() },
-    aquilaGameUserList: { findMany: jest.fn() },
-    aquilaBookUserList: { findMany: jest.fn() },
+    aquilaAnimeUserListV2: { findMany: jest.fn() },
+    aquilaMangaUserListV2: { findMany: jest.fn() },
+    aquilaTvUserListV2: { findMany: jest.fn() },
+    aquilaMovieUserListV2: { findMany: jest.fn() },
+    aquilaGameUserListV2: { findMany: jest.fn() },
+    aquilaBookUserListV2: { findMany: jest.fn() },
   };
 
   const mockPrisma = { client: mockPrismaClient };
@@ -105,7 +105,7 @@ describe('StatsService', () => {
         id: 'user-1',
         username: 'testuser',
       });
-      mockPrismaClient.aquilaAnimeUserList.findMany.mockResolvedValue([
+      mockPrismaClient.aquilaAnimeUserListV2.findMany.mockResolvedValue([
         {
           progress: 5,
           score: 8,
@@ -159,7 +159,7 @@ describe('StatsService', () => {
         id: 'user-1',
         username: 'testuser',
       });
-      mockPrismaClient.aquilaMangaUserList.findMany.mockResolvedValue([
+      mockPrismaClient.aquilaMangaUserListV2.findMany.mockResolvedValue([
         {
           chapters: 15,
           volumes: 2,
@@ -202,7 +202,7 @@ describe('StatsService', () => {
         id: 'user-1',
         username: 'testuser',
       });
-      mockPrismaClient.aquilaTvUserList.findMany.mockResolvedValue([
+      mockPrismaClient.aquilaTvUserListV2.findMany.mockResolvedValue([
         {
           score: 8,
           status: 'WATCHING',
@@ -237,7 +237,7 @@ describe('StatsService', () => {
         id: 'user-1',
         username: 'testuser',
       });
-      mockPrismaClient.aquilaMovieUserList.findMany.mockResolvedValue([
+      mockPrismaClient.aquilaMovieUserListV2.findMany.mockResolvedValue([
         {
           score: 9,
           status: 'COMPLETED',
@@ -270,7 +270,7 @@ describe('StatsService', () => {
         id: 'user-1',
         username: 'testuser',
       });
-      mockPrismaClient.aquilaGameUserList.findMany.mockResolvedValue([
+      mockPrismaClient.aquilaGameUserListV2.findMany.mockResolvedValue([
         {
           progress: 45,
           score: 10,
@@ -304,7 +304,7 @@ describe('StatsService', () => {
         id: 'user-1',
         username: 'testuser',
       });
-      mockPrismaClient.aquilaBookUserList.findMany.mockResolvedValue([
+      mockPrismaClient.aquilaBookUserListV2.findMany.mockResolvedValue([
         {
           chapters: 10,
           volumes: 1,

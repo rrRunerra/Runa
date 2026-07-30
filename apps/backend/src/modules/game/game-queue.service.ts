@@ -1,68 +1,105 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { Subject, EMPTY } from 'rxjs';
 import { mergeMap, catchError } from 'rxjs/operators';
 import { GameExternal } from './game.external';
-import { CacheService } from 'src/providers/cache/cache.service';
+import { GameRepository } from './game.repository';
+import { AnimeQueueService } from '../anime/anime-queue.service';
+import { MangaQueueService } from '../manga/manga-queue.service';
+import { MovieQueueService } from '../movie/movie-queue.service';
+import { BookQueueService } from '../book/book-queue.service';
 
-interface SearchRefreshJob {
-  query: string;
-  cacheKey: string;
+interface ExternalUpsertJob {
+  rawgId: number;
+  depth?: number;
 }
 
 @Injectable()
 export class GameQueueService implements OnModuleInit {
   private readonly logger = new Logger(GameQueueService.name);
-  private readonly moduleCode = 'GeQeSve-';
-  private readonly jobQueue = new Subject<number>();
-  private readonly processing = new Set<number>();
-  private readonly searchQueue = new Subject<SearchRefreshJob>();
-  private readonly pendingSearches = new Set<string>();
+  private readonly upsertQueue = new Subject<ExternalUpsertJob>();
+  private readonly pendingRawgIds = new Set<number>();
 
   constructor(
     private readonly gameExternal: GameExternal,
-    private readonly cacheService: CacheService,
+    private readonly gameRepository: GameRepository,
+    @Inject(forwardRef(() => AnimeQueueService))
+    private readonly animeQueueService: AnimeQueueService,
+    @Inject(forwardRef(() => MangaQueueService))
+    private readonly mangaQueueService: MangaQueueService,
+    @Inject(forwardRef(() => MovieQueueService))
+    private readonly movieQueueService: MovieQueueService,
+    @Inject(forwardRef(() => BookQueueService))
+    private readonly bookQueueService: BookQueueService,
   ) {}
 
   onModuleInit(): void {
-    this.processSearchQueue();
+    this.processUpsertQueue();
   }
 
-  addJob(rawgId: number): void {
-    if (!this.processing.has(rawgId)) {
-      this.jobQueue.next(rawgId);
+  public async addUpsertJob(rawgId: number, depth = 0): Promise<void> {
+    if (!rawgId || depth > 5) return;
+    if (this.pendingRawgIds.has(rawgId)) return;
+
+    try {
+      const existing = await this.gameRepository.findByRawgId(rawgId);
+      if (existing && existing.rawgUpdatedAt) {
+        return;
+      }
+    } catch {
+      // Ignore check error
+    }
+
+    this.pendingRawgIds.add(rawgId);
+    this.upsertQueue.next({ rawgId, depth });
+  }
+
+  public addSearchUpserts(rawgIds: number[]): void {
+    for (const id of rawgIds) {
+      void this.addUpsertJob(id, 0);
     }
   }
 
-  addSearchRefresh(query: string, cacheKey: string): void {
-    if (!this.pendingSearches.has(query)) {
-      this.pendingSearches.add(query);
-      this.searchQueue.next({ query, cacheKey });
-    }
-  }
-
-  private processSearchQueue(): void {
-    this.searchQueue
+  private processUpsertQueue(): void {
+    this.upsertQueue
       .pipe(
         mergeMap(async (job) => {
           try {
-            this.logger.log(`Processing search refresh: "${job.query}"`);
-            const fresh = await this.gameExternal.search(job.query);
-            if (fresh.length > 0) {
-              await this.cacheService.set(job.cacheKey, fresh, 60 * 60);
+            this.logger.log(
+              `Processing background V2 game upsert for RAWG ID: ${job.rawgId} (depth ${job.depth || 0})`,
+            );
+            const fullRecord = await this.gameExternal.fetchFullV2Record(job.rawgId);
+            if (fullRecord) {
+              await this.gameRepository.upsertV2Record(fullRecord);
+              this.logger.log(
+                `Successfully completed background V2 game upsert for RAWG ID: ${job.rawgId}`,
+              );
+
+              if (fullRecord.relations && Array.isArray(fullRecord.relations)) {
+                for (const rel of fullRecord.relations) {
+                  if (rel.targetType === 'GAME' && rel.targetRawgId) {
+                    void this.addUpsertJob(rel.targetRawgId, (job.depth || 0) + 1);
+                  } else if (rel.targetType === 'ANIME' && rel.targetAnilistId) {
+                    void this.animeQueueService.addUpsertJob(rel.targetAnilistId, (job.depth || 0) + 1);
+                  } else if (rel.targetType === 'MANGA' && rel.targetAnilistId) {
+                    void this.mangaQueueService.addUpsertJob(rel.targetAnilistId, (job.depth || 0) + 1);
+                  } else if (rel.targetType === 'MOVIE' && rel.targetTvdbId) {
+                    void this.movieQueueService.addUpsertJob(rel.targetTvdbId, (job.depth || 0) + 1);
+                  } else if (rel.targetType === 'BOOK' && rel.targetGoogleBookId) {
+                    void this.bookQueueService.addUpsertJob(rel.targetGoogleBookId, (job.depth || 0) + 1);
+                  }
+                }
+              }
             }
-            this.logger.log(`Completed search refresh: "${job.query}"`);
-          } catch (error) {
-            const message =
-              error instanceof Error ? error.message : 'Unknown error';
+          } catch (error: any) {
             this.logger.error(
-              `Search refresh failed for "${job.query}": ${message}`,
+              `Background V2 game upsert failed for RAWG ID ${job.rawgId}: ${error?.message || error}`,
             );
           } finally {
-            this.pendingSearches.delete(job.query);
+            this.pendingRawgIds.delete(job.rawgId);
           }
-        }, 1),
+        }, 2),
         catchError((error) => {
-          this.logger.error(`Search queue error: ${error}`);
+          this.logger.error(`Game upsert queue unexpected error: ${error}`);
           return EMPTY;
         }),
       )

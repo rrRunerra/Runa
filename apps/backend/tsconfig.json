@@ -14,6 +14,7 @@
     "sourceMap": true,
     "outDir": "./dist",
     "rootDir": "./src",
+    "types": ["jest", "node"],
     "paths": {
       "src/*": ["./src/*"]
     },
@@ -26,7 +27,7 @@
     "noFallthroughCasesInSwitch": false
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "test", "**/*.spec.ts"],
+  "exclude": ["node_modules", "dist", "test"],
   "watchOptions": {
     "excludeDirectories": ["**/node_modules", "dist", "test"]
   }

@@ -24,6 +24,7 @@ export interface CharacterEntity {
   age?: string;
   bloodType?: string;
   dateOfBirth?: CharacterDOB | null;
+  characterId?: number;
   nameAlternative?: string[];
   nameAlternativeSpoiler?: string[];
   description?: string;
@@ -39,6 +40,9 @@ export interface CharacterEntity {
 interface RrMediaCharactersProps {
   characters?: CharacterEntity[] | null;
   showVoiceActors?: boolean;
+  showAllInitial?: boolean;
+  limitCount?: number;
+  hideToggleButton?: boolean;
 }
 
 const itemVariants = {
@@ -53,9 +57,13 @@ const itemVariants = {
 export function RrMediaCharacters({
   characters,
   showVoiceActors = true,
+  showAllInitial = false,
+  limitCount,
+  hideToggleButton = false,
 }: RrMediaCharactersProps): React.JSX.Element {
   const { t } = useTranslation();
-  const [showAllCharacters, setShowAllCharacters] = useState<boolean>(false);
+  const [showAllCharacters, setShowAllCharacters] =
+    useState<boolean>(showAllInitial);
 
   // Sort main characters first
   const sortedCharacters = useMemo(() => {
@@ -71,7 +79,13 @@ export function RrMediaCharacters({
     return <></>;
   }
 
-  const showButton = sortedCharacters.length > 5;
+  const effectiveCharacters =
+    limitCount && !showAllCharacters
+      ? sortedCharacters.slice(0, limitCount)
+      : sortedCharacters;
+
+  const showButton =
+    !hideToggleButton && !limitCount && sortedCharacters.length > 5;
   const buttonWrapperClass =
     sortedCharacters.length > 10
       ? "flex justify-center pt-2"
@@ -80,36 +94,39 @@ export function RrMediaCharacters({
   return (
     <motion.div variants={itemVariants} className="space-y-3">
       <h3 className="text-base font-bold text-foreground">
-        {showVoiceActors ? t("aquila.charactersAndActors") : t("aquila.characters")}
+        {showVoiceActors
+          ? t("aquila.charactersAndActors", "Characters & Voice Actors")
+          : t("aquila.characters", "Characters")}
       </h3>
       <div
         className={cn(
           "grid gap-3.5",
           showVoiceActors
             ? "grid-cols-1 lg:grid-cols-2"
-            : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"
+            : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5",
         )}
       >
-        {sortedCharacters.map((char, idx) => {
-          const itemVisibilityClass = showAllCharacters
-            ? "flex"
-            : idx < 5
-            ? "flex"
-            : idx < 10
-            ? "hidden md:flex"
-            : "hidden";
+        {effectiveCharacters.map((char, idx) => {
+          const itemVisibilityClass =
+            showAllCharacters || limitCount
+              ? "flex"
+              : idx < 5
+                ? "flex"
+                : idx < 10
+                  ? "hidden md:flex"
+                  : "hidden";
 
           return (
             <div
-              key={char.id || idx}
+              key={`${char.id}_${idx}`}
               className={cn(
                 "items-center justify-between bg-card/45 border border-border/30 backdrop-blur-md rounded-2xl overflow-hidden hover:border-border/50 hover:bg-accent/10 transition-all duration-300 shadow-xs",
-                itemVisibilityClass
+                itemVisibilityClass,
               )}
             >
               {/* Character Side (Left) */}
               <Link
-                href={`/aquila/characters/${char.id}`}
+                href={`/aquila/characters/${char.characterId}`}
                 className="flex items-center gap-3 p-3 sm:p-3.5 min-w-0 flex-1 hover:text-primary group/char cursor-pointer"
               >
                 <div className="relative size-11 sm:size-12 rounded-xl overflow-hidden shrink-0 bg-muted border border-border/20 shadow-xs">
@@ -188,25 +205,6 @@ export function RrMediaCharacters({
           );
         })}
       </div>
-      {showButton && (
-        <div className={buttonWrapperClass}>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowAllCharacters(!showAllCharacters)}
-            className="rounded-xl cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
-          >
-            <span>
-              {showAllCharacters ? t("aquila.showLess") : t("aquila.showMore")}
-            </span>
-            {showAllCharacters ? (
-              <ChevronUp className="size-3.5" />
-            ) : (
-              <ChevronDown className="size-3.5" />
-            )}
-          </Button>
-        </div>
-      )}
     </motion.div>
   );
 }

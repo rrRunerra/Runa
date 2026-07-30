@@ -13,6 +13,9 @@ export interface ExternalProvider {
 export interface RrMediaFooterProps {
   providers?: ExternalProvider[];
   updatedAt?: string | Date | number | null;
+  alUpdatedAt?: number | null;
+  malUpdatedAt?: number | null;
+  anidbUpdatedAt?: number | null;
   className?: string;
   mediaType?: "anime" | "manga" | "tv" | "movie" | "game" | "book";
   mediaId?: number;
@@ -22,6 +25,9 @@ export interface RrMediaFooterProps {
 export function RrMediaFooter({
   providers = [],
   updatedAt,
+  alUpdatedAt,
+  malUpdatedAt,
+  anidbUpdatedAt,
   mediaType = "anime",
   mediaId,
   mediaData,
@@ -30,9 +36,10 @@ export function RrMediaFooter({
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const formattedDate = React.useMemo(() => {
-    if (!updatedAt) return null;
+    const ts = updatedAt || alUpdatedAt || malUpdatedAt || anidbUpdatedAt;
+    if (!ts) return null;
     try {
-      const date = new Date(updatedAt);
+      const date = typeof ts === "number" && ts < 10000000000 ? new Date(ts * 1000) : new Date(ts);
       if (isNaN(date.getTime())) return null;
       return date.toLocaleDateString(undefined, {
         year: "numeric",
@@ -42,7 +49,7 @@ export function RrMediaFooter({
     } catch {
       return null;
     }
-  }, [updatedAt]);
+  }, [updatedAt, alUpdatedAt, malUpdatedAt, anidbUpdatedAt]);
 
   return (
     <>

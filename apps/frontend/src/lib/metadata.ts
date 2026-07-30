@@ -14,7 +14,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL
 /**
  * Strips HTML tags from a string and truncates it.
  */
-export function cleanDescription(html: string | undefined, maxLength = 160): string {
+export function cleanDescription(html: string | undefined | null, maxLength = 160): string {
   if (!html) return "";
 
   let result = "";

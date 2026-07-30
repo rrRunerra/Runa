@@ -8,10 +8,27 @@ import useSWR from "swr";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import Image from "next/image";
-import { Star, Heart, Users, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Star,
+  Heart,
+  Users,
+  ChevronDown,
+  ChevronUp,
+  ExternalLink as ExternalLinkIcon,
+  ShieldAlert,
+  LayoutGrid,
+  UserCheck,
+  Film,
+  Tv,
+  BarChart3,
+  ImageIcon,
+  MessageSquare,
+} from "lucide-react";
+import { MediaType } from "@/types/aquila";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 import { fetcher } from "@/lib/fetcher";
 import { AnimeEntity } from "@/types/anime.entities";
@@ -23,10 +40,15 @@ import { RrMediaRefreshButton } from "@/components/rrComponents/aquila/rrMediaRe
 import { RrMediaCountdownTimer } from "@/components/rrComponents/aquila/details/rrMediaCountdownTimer";
 import { RrMediaStatsDashboard } from "@/components/rrComponents/aquila/details/rrMediaStatsDashboard";
 import { RrMediaDescription } from "@/components/rrComponents/aquila/details/rrMediaDescription";
+import { RrMediaReviews } from "@/components/rrComponents/aquila/details/rrMediaReviews";
 import { RrMediaGenres } from "@/components/rrComponents/aquila/details/rrMediaGenres";
 import { RrMediaCharacters } from "@/components/rrComponents/aquila/details/rrMediaCharacters";
 import { RrMediaRelations } from "@/components/rrComponents/aquila/details/rrMediaRelations";
 import { RrMediaSimilar } from "@/components/rrComponents/aquila/details/rrMediaSimilar";
+import { RrMediaEpisodes } from "@/components/rrComponents/aquila/details/rrMediaEpisodes";
+import { RrMediaThemeSongs } from "@/components/rrComponents/aquila/details/rrMediaThemeSongs";
+import { RrMediaStaff } from "@/components/rrComponents/aquila/details/rrMediaStaff";
+import { RrMediaImages } from "@/components/rrComponents/aquila/details/rrMediaImages";
 
 import { RrMediaInfoRow } from "@/components/rrComponents/aquila/details/rrMediaInfoRow";
 import { RrMediaFriendsProgress } from "@/components/rrComponents/aquila/details/rrMediaFriendsProgress";
@@ -84,8 +106,11 @@ export default function AnimeDetailsPage(): React.JSX.Element {
 
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
   const [showMoreInfo, setShowMoreInfo] = useState<boolean>(false);
+  const [showAllSynonyms, setShowAllSynonyms] = useState<boolean>(false);
+  const [selectedVaLanguage, setSelectedVaLanguage] =
+    useState<string>("Japanese");
 
-  // SWR queries replacing sequential imperative fetching
+  // SWR query for V2 Anime
   const {
     data: anime,
     error: animeError,
@@ -108,30 +133,81 @@ export default function AnimeDetailsPage(): React.JSX.Element {
   );
 
   const hasListEntry = !!listEntry;
+  const isUserFavorite = !!(listEntry as any)?.isFavorite;
 
-  const titleEnglish = anime?.titleEnglish ?? "";
-  const titleRomaji = anime?.titleRomaji ?? "";
-  const titleNative = anime?.titleNative ?? "";
   const displayTitle =
-    titleEnglish || titleRomaji || t("aquila.animeDetails", "Anime Details");
-  const coverUrl = anime?.coverImageLarge ?? "";
-  const bannerUrl = anime?.bannerImage ?? "";
+    anime?.titlePrimary ||
+    anime?.titleSecondary ||
+    t("aquila.animeDetails", "Anime Details");
+  const coverUrl =
+    anime?.coverImage ||
+    anime?.images?.anilist?.cover?.extraLarge ||
+    anime?.images?.anilist?.cover?.large ||
+    "";
+  const bannerUrl = anime?.bannerImage || anime?.images?.anilist?.banner || "";
+
+  const displayFavorites = useMemo(() => {
+    if (!anime) return 0;
+    const base = Math.max(anime.favorites ?? 0, anime.localFavoritesCount ?? 0);
+    if (isUserFavorite && base === 0) return 1;
+    return base;
+  }, [anime, isUserFavorite]);
+
+  const displayPopularity = useMemo(() => {
+    if (!anime) return 0;
+    const base = Math.max(anime.popularity ?? 0, anime.localPopularity ?? 0);
+    if (hasListEntry && base === 0) return 1;
+    return base;
+  }, [anime, hasListEntry]);
+
+  // Local score only (strictly local averageScore)
+  const localScore = anime?.averageScore;
 
   const providers = useMemo(() => {
+    if (!anime) return [];
     const list: { name: string; url: string }[] = [];
-    if (anime?.anilistId) {
-      list.push({
-        name: "AniList",
-        url: `https://anilist.co/anime/${anime.anilistId}`,
-      });
-    }
+    const seenUrls = new Set<string>();
 
+    const addProvider = (name: string, url?: string | null) => {
+      if (!url || seenUrls.has(url)) return;
+      seenUrls.add(url);
+      list.push({ name, url });
+    };
+
+    if (anime.anilistId) {
+      addProvider("AniList", `https://anilist.co/anime/${anime.anilistId}`);
+    }
+    if (anime.malId) {
+      addProvider(
+        "MyAnimeList",
+        `https://myanimelist.net/anime/${anime.malId}`,
+      );
+    }
+    if (anime.aniDBId) {
+      addProvider("AniDB", `https://anidb.net/anime/${anime.aniDBId}`);
+    }
+    if (anime.tvDBId) {
+      addProvider(
+        "TheTVDB",
+        `https://thetvdb.com/dereferrer/series/${anime.tvDBId}`,
+      );
+    }
+    if (anime.bangumiId) {
+      addProvider("Bangumi", `https://bgm.tv/subject/${anime.bangumiId}`);
+    }
+    if (anime.sources) {
+      for (const src of anime.sources) {
+        if (src.url && src.provider) {
+          addProvider(src.provider, src.url);
+        }
+      }
+    }
     return list;
   }, [anime]);
 
   const studios = useMemo(() => {
-    if (!anime) return [];
-    return anime.animeStudios
+    if (!anime?.studios) return [];
+    return anime.studios
       .map((as) => as.studio?.name)
       .filter(Boolean) as string[];
   }, [anime]);
@@ -158,88 +234,132 @@ export default function AnimeDetailsPage(): React.JSX.Element {
     return parts.join("-");
   }, [anime]);
 
+  // Extract available voice actor languages
+  const vaLanguages = useMemo(() => {
+    if (!anime?.characters) return [];
+    const set = new Set<string>();
+    for (const ac of anime.characters) {
+      if (ac.actor?.language) {
+        set.add(ac.actor.language);
+      }
+    }
+    return Array.from(set).sort();
+  }, [anime]);
+
+  // Characters grouped with selected voice actor by language
   const characters = useMemo(() => {
-    if (!anime) return [];
-    return anime.animeCharacters
-      .filter((ac) => ac.character)
-      .map((ac) => {
-        const char = ac.character!;
-        const first = char.nameFirst ?? "";
-        const last = char.nameLast ?? "";
-        const name = [first, last].filter(Boolean).join(" ");
-        return {
-          id: char.id,
-          name:
-            name ||
-            char.nameNative ||
-            t("aquila.unknownCharacter", "Unknown Character"),
-          first,
-          last,
-          native: char.nameNative ?? "",
-          image: char.image ?? "",
-          role: ac.role ?? "",
-          description: char.description ?? "",
-          gender: char.gender ?? "",
-          age: char.age ?? "",
-          bloodType: char.bloodType ?? "",
-          dateOfBirth: {
-            year: char.dateOfBirthYear,
-            month: char.dateOfBirthMonth,
-            day: char.dateOfBirthDay,
-          },
-          nameAlternative: char.nameAlternative ?? [],
-          nameAlternativeSpoiler: char.nameAlternativeSpoiler ?? [],
-          voiceActor: ac.voiceActor
-            ? {
-                id: ac.voiceActor.id,
-                name:
-                  ac.voiceActor.name ||
-                  ac.voiceActor.personName ||
-                  t("aquila.unknownActor", "Unknown Actor"),
-                image: ac.voiceActor.image ?? "",
-                role: ac.voiceActor.peopleType ?? "Voice Actor",
-              }
-            : null,
-        };
+    if (!anime?.characters) return [];
+
+    const charMap = new Map<
+      number,
+      {
+        ac: (typeof anime.characters)[0];
+        actors: Array<{
+          actor: NonNullable<(typeof anime.characters)[0]["actor"]>;
+          role: string | null;
+        }>;
+      }
+    >();
+
+    for (const ac of anime.characters) {
+      if (!ac.character) continue;
+      const charId = ac.character.id;
+      if (!charMap.has(charId)) {
+        charMap.set(charId, { ac, actors: [] });
+      }
+      const entry = charMap.get(charId)!;
+      if (ac.actor) {
+        entry.actors.push({ actor: ac.actor, role: ac.role });
+      }
+    }
+
+    const list = [];
+    for (const { ac, actors } of charMap.values()) {
+      const char = ac.character;
+
+      let chosenActor = actors.find(
+        (a) =>
+          a.actor.language?.toLowerCase() === selectedVaLanguage.toLowerCase(),
+      )?.actor;
+      if (!chosenActor && selectedVaLanguage !== "Japanese") {
+        chosenActor = actors.find(
+          (a) => a.actor.language?.toLowerCase() === "japanese",
+        )?.actor;
+      }
+      if (!chosenActor && actors.length > 0) {
+        chosenActor = actors[0].actor;
+      }
+
+      list.push({
+        id: ac.id || `${char.id}_${chosenActor?.id || 0}`,
+        characterId: char.id,
+        name:
+          char.namePrimary ||
+          char.nameNative ||
+          t("aquila.unknownCharacter", "Unknown Character"),
+        native: char.nameNative ?? "",
+        image: char.image ?? "",
+        role: ac.role ?? "",
+        description: char.description ?? "",
+        gender: char.gender ?? "",
+        age: char.age ?? "",
+        bloodType: char.bloodType ?? "",
+        dateOfBirth: {
+          year: char.dateOfBirthYear,
+          month: char.dateOfBirthMonth,
+          day: char.dateOfBirthDay,
+        },
+        nameAlternative: char.nameAlternative ?? [],
+        nameAlternativeSpoiler: char.nameAlternativeSpoiler ?? [],
+        voiceActor: chosenActor
+          ? {
+              id: chosenActor.id,
+              name:
+                chosenActor.namePrimary ||
+                chosenActor.nameNative ||
+                t("aquila.unknownActor", "Unknown Actor"),
+              image: chosenActor.image ?? "",
+              role: chosenActor.language
+                ? `${chosenActor.language} Voice`
+                : "Voice Actor",
+            }
+          : null,
+        allActors: actors,
       });
-  }, [anime, t]);
+    }
+
+    return list.sort((a, b) => {
+      const aMain = a.role?.toUpperCase() === "MAIN" ? 1 : 0;
+      const bMain = b.role?.toUpperCase() === "MAIN" ? 1 : 0;
+      return bMain - aMain;
+    });
+  }, [anime, selectedVaLanguage, t]);
 
   const relations = useMemo(() => {
-    if (!anime) return [];
-    const combined: {
-      id: number;
-      relationType: string;
-      title: { english: string; romaji: string; native: string };
-      format: string;
-      type: string;
-      coverImage: string;
-    }[] = [];
-
-    anime.animeRelations.forEach((rel) => {
-      const related = rel.relatedAnime ?? rel.relatedManga;
-      if (related) {
-        combined.push({
-          id: related.id,
-          relationType: rel.relationType ?? "",
-          title: {
-            english: related.titleEnglish ?? "",
-            romaji: related.titleRomaji ?? "",
-            native: related.titleNative ?? "",
-          },
-          format: related.format ?? "",
-          type: rel.relatedAnime ? "ANIME" : "MANGA",
-          coverImage: related.coverImageLarge ?? "",
-        });
-      }
+    if (!anime?.relations) return [];
+    return anime.relations.map((rel) => {
+      const target = rel.targetMedia;
+      const relType = rel.relationType || rel.type || "";
+      const mediaType = rel.targetType || rel.sourceType || "ANIME";
+      return {
+        id: rel.targetId,
+        relationType: relType,
+        title: {
+          english: target?.titlePrimary ?? "",
+          romaji: target?.titleSecondary ?? "",
+          native: target?.titleNative ?? "",
+        },
+        format: target?.format ?? "",
+        type: mediaType,
+        coverImage: target?.coverImage ?? "",
+      };
     });
-
-    return combined;
   }, [anime]);
 
   useEffect((): void => {
     if (!anime) return;
-    document.title = `Aquila > Anime > ${titleEnglish || titleRomaji || ""}`;
-  }, [anime, titleEnglish, titleRomaji]);
+    document.title = `Aquila > Anime > ${displayTitle}`;
+  }, [anime, displayTitle]);
 
   if (animeLoading) {
     return <RrMediaDetailsSkeleton />;
@@ -300,7 +420,7 @@ export default function AnimeDetailsPage(): React.JSX.Element {
         {bannerUrl ? (
           <Image
             src={bannerUrl}
-            alt={titleRomaji || "Banner"}
+            alt={displayTitle}
             fill
             sizes="100vw"
             className="object-cover scale-105 filter blur-[1px] brightness-75"
@@ -329,7 +449,7 @@ export default function AnimeDetailsPage(): React.JSX.Element {
                 {coverUrl ? (
                   <Image
                     src={coverUrl}
-                    alt={titleRomaji || "Cover"}
+                    alt={displayTitle}
                     fill
                     sizes="(max-width: 640px) 112px, (max-width: 1024px) 144px, 260px"
                     className="object-cover"
@@ -377,9 +497,14 @@ export default function AnimeDetailsPage(): React.JSX.Element {
                       media={{
                         id: anime.id.toString(),
                         type: "anime",
-                        title: { english: titleEnglish, romaji: titleRomaji },
+                        title: {
+                          english: anime.titlePrimary,
+                          romaji: anime.titleSecondary ?? "",
+                        },
                         coverImage: { large: coverUrl },
-                        episodes: anime.episodes ?? undefined,
+                        episodes:
+                          anime.episodeCount ??
+                          (anime.episodes?.length || undefined),
                       }}
                       hasListEntry={hasListEntry}
                       open={isDialogOpen}
@@ -408,13 +533,10 @@ export default function AnimeDetailsPage(): React.JSX.Element {
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
                 {displayTitle}
               </h1>
-              {(titleRomaji && titleRomaji !== titleEnglish) || titleNative ? (
+              {anime.titleSecondary || anime.titleNative ? (
                 <p className="text-xs text-muted-foreground italic">
                   {t("aquila.alsoKnownAs", "Also known as:")}{" "}
-                  {[
-                    titleRomaji !== titleEnglish ? titleRomaji : null,
-                    titleNative,
-                  ]
+                  {[anime.titleSecondary, anime.titleNative]
                     .filter(Boolean)
                     .join(", ")}
                 </p>
@@ -425,20 +547,18 @@ export default function AnimeDetailsPage(): React.JSX.Element {
             <div className="bg-card/65 border border-border/40 backdrop-blur-xl rounded-2xl p-5 space-y-4">
               {/* Top Key Stats Block */}
               <div className="space-y-2.5">
-                {/* Average Score Card (Full Width) */}
+                {/* Average Score Card */}
                 <div className="flex items-center gap-3 p-3.5 rounded-xl bg-primary/10 border border-primary/20 transition-all shadow-xs">
                   <div className="p-2.5 rounded-xl bg-primary/20 text-primary shrink-0">
                     <Star className="size-5 fill-primary/40" />
                   </div>
                   <div className="flex flex-col min-w-0">
                     <span className="text-[10px] font-bold text-primary uppercase tracking-wider">
-                      {t("aquila.averageScore")}
+                      {t("aquila.averageScore", "Average Score")}
                     </span>
                     <div className="flex items-baseline gap-1 mt-0.5">
                       <span className="text-2xl font-black text-primary leading-none">
-                        {anime.localAverageScore
-                          ? anime.localAverageScore.toFixed(1)
-                          : "N/A"}
+                        {localScore != null ? localScore.toFixed(1) : "N/A"}
                       </span>
                       <span className="text-xs font-semibold text-muted-foreground">
                         / 10
@@ -447,48 +567,38 @@ export default function AnimeDetailsPage(): React.JSX.Element {
                   </div>
                 </div>
 
-                {/* Favorites & Popularity (2 Columns) */}
+                {/* Favorites & Popularity */}
                 <div className="grid grid-cols-2 gap-2.5">
-                  {/* Favorites */}
                   <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 transition-colors min-w-0">
                     <div className="p-2 rounded-lg bg-rose-500/20 text-rose-500 shrink-0">
                       <Heart className="size-4 fill-rose-500/40" />
                     </div>
                     <div className="flex flex-col min-w-0">
                       <span className="text-[10px] font-bold text-rose-500/90 uppercase tracking-wider truncate">
-                        {t("aquila.favorites")}
+                        {t("aquila.favorites", "Favorites")}
                       </span>
                       <span
                         className="text-base font-extrabold text-foreground tracking-tight leading-none mt-0.5"
-                        title={
-                          anime.localFavoritesCount != null
-                            ? anime.localFavoritesCount.toLocaleString()
-                            : "0"
-                        }
+                        title={displayFavorites.toLocaleString()}
                       >
-                        {formatCompactNumber(anime.localFavoritesCount)}
+                        {formatCompactNumber(displayFavorites)}
                       </span>
                     </div>
                   </div>
 
-                  {/* Popularity */}
                   <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 transition-colors min-w-0">
                     <div className="p-2 rounded-lg bg-blue-500/20 text-blue-500 shrink-0">
                       <Users className="size-4 fill-blue-500/40" />
                     </div>
                     <div className="flex flex-col min-w-0">
                       <span className="text-[10px] font-bold text-blue-500/90 uppercase tracking-wider truncate">
-                        {t("aquila.popularity")}
+                        {t("aquila.popularity", "Popularity")}
                       </span>
                       <span
                         className="text-base font-extrabold text-foreground tracking-tight leading-none mt-0.5"
-                        title={
-                          anime.localPopularity != null
-                            ? anime.localPopularity.toLocaleString()
-                            : "0"
-                        }
+                        title={displayPopularity.toLocaleString()}
                       >
-                        {formatCompactNumber(anime.localPopularity)}
+                        {formatCompactNumber(displayPopularity)}
                       </span>
                     </div>
                   </div>
@@ -503,7 +613,9 @@ export default function AnimeDetailsPage(): React.JSX.Element {
                 onClick={() => setShowMoreInfo(!showMoreInfo)}
               >
                 <span>
-                  {showMoreInfo ? t("aquila.showLess") : t("aquila.showMore")}
+                  {showMoreInfo
+                    ? t("aquila.showLess", "Show Less")
+                    : t("aquila.showMore", "Show More")}
                 </span>
                 {showMoreInfo ? (
                   <ChevronUp className="size-3.5" />
@@ -512,7 +624,7 @@ export default function AnimeDetailsPage(): React.JSX.Element {
                 )}
               </Button>
 
-              {/* Information Details (Collapsible on mobile, always shown on desktop) */}
+              {/* Information Details */}
               <div
                 className={cn(
                   "space-y-4 pt-2 border-t border-border/40",
@@ -520,7 +632,7 @@ export default function AnimeDetailsPage(): React.JSX.Element {
                 )}
               >
                 <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                  {t("aquila.information")}
+                  {t("aquila.information", "Information")}
                 </h3>
                 <div className="space-y-3">
                   <RrMediaInfoRow
@@ -529,15 +641,15 @@ export default function AnimeDetailsPage(): React.JSX.Element {
                   />
                   <RrMediaInfoRow
                     label={t("aquila.episodes", "Episodes")}
-                    value={anime.episodes || "?"}
+                    value={
+                      anime.episodeCount || (anime.episodes?.length ?? "?")
+                    }
                   />
                   <RrMediaInfoRow
                     label={t("aquila.duration", "Duration")}
                     value={
-                      anime.duration
-                        ? t("aquila.durationMinutes", "{{count}} mins", {
-                            count: anime.duration,
-                          })
+                      anime.episodeDuration
+                        ? `${anime.episodeDuration} mins`
                         : "?"
                     }
                   />
@@ -549,8 +661,8 @@ export default function AnimeDetailsPage(): React.JSX.Element {
                   <RrMediaInfoRow
                     label={t("aquila.season", "Season")}
                     value={
-                      anime.season
-                        ? `${anime.season.toLowerCase()} ${anime.seasonYear ?? ""}`
+                      anime.seasonSeason
+                        ? `${anime.seasonSeason.toLowerCase()} ${anime.seasonYear ?? ""}`
                         : null
                     }
                     className="capitalize"
@@ -575,6 +687,21 @@ export default function AnimeDetailsPage(): React.JSX.Element {
                       ) : null
                     }
                   />
+                  {anime.ageRating && (
+                    <RrMediaInfoRow
+                      label={t("aquila.ageRating", "Age Rating")}
+                      value={
+                        <span className="inline-flex items-center gap-1">
+                          <span>
+                            {anime.ageRating}{" "}
+                            {anime.ageRatingGuide
+                              ? `(${anime.ageRatingGuide})`
+                              : ""}
+                          </span>
+                        </span>
+                      }
+                    />
+                  )}
                   <RrMediaInfoRow
                     label={t("aquila.startDate", "Start Date")}
                     value={animeStartDate}
@@ -595,21 +722,35 @@ export default function AnimeDetailsPage(): React.JSX.Element {
                   />
                   {anime.synonyms && anime.synonyms.length > 0 && (
                     <div className="flex flex-col gap-1 text-sm">
-                      <span className="text-muted-foreground">
+                      <span className="text-muted-foreground text-xs">
                         {t("aquila.synonymsLabel", "Synonyms")}
                       </span>
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {anime.synonyms.slice(0, 4).map((syn, idx) => (
-                          <Badge
-                            key={idx}
-                            variant="outline"
-                            className="text-[10px] max-w-full truncate block"
-                            title={syn}
-                          >
-                            {syn}
-                          </Badge>
-                        ))}
+                        {anime.synonyms
+                          .slice(0, showAllSynonyms ? undefined : 4)
+                          .map((syn, idx) => (
+                            <Badge
+                              key={idx}
+                              variant="outline"
+                              className="text-[10px] max-w-full truncate block bg-muted/20"
+                              title={syn}
+                            >
+                              {syn}
+                            </Badge>
+                          ))}
                       </div>
+                      {anime.synonyms.length > 4 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowAllSynonyms(!showAllSynonyms)}
+                          className="h-6 text-[10px] p-0 text-muted-foreground hover:text-foreground cursor-pointer self-start mt-1 font-semibold"
+                        >
+                          {showAllSynonyms
+                            ? t("aquila.showLess", "Show Less")
+                            : `+${anime.synonyms.length - 4} ${t("aquila.more", "More")}`}
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -620,10 +761,12 @@ export default function AnimeDetailsPage(): React.JSX.Element {
           {/* Right Column - Info */}
           <div className="flex-1 space-y-6 lg:pt-8 min-w-0">
             {/* Countdown timer */}
-            {anime.status === "RELEASING" && anime.nextAiringEpisode && (
+            {anime.status === "RELEASING" && anime.nextAiringAt && (
               <RrMediaCountdownTimer
-                airingAt={anime.nextAiringEpisode.airingAt}
-                episode={anime.nextAiringEpisode.episode}
+                airingAt={Math.floor(
+                  new Date(anime.nextAiringAt).getTime() / 1000,
+                )}
+                episode={anime.nextAiringEpisodeNumber ?? 1}
               />
             )}
 
@@ -635,18 +778,48 @@ export default function AnimeDetailsPage(): React.JSX.Element {
               <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">
                 {displayTitle}
               </h1>
-              {(titleRomaji && titleRomaji !== titleEnglish) || titleNative ? (
+              {anime.titleSecondary || anime.titleNative ? (
                 <p className="text-xs text-muted-foreground italic">
                   {t("aquila.alsoKnownAs", "Also known as:")}{" "}
-                  {[
-                    titleRomaji !== titleEnglish ? titleRomaji : null,
-                    titleNative,
-                  ]
+                  {[anime.titleSecondary, anime.titleNative]
                     .filter(Boolean)
                     .join(", ")}
                 </p>
               ) : null}
             </motion.div>
+
+            {/* External Links / Streaming Badges */}
+            {anime.externalLinks && anime.externalLinks.length > 0 && (
+              <motion.div
+                variants={itemVariants}
+                className="flex items-center gap-2 flex-wrap"
+              >
+                {anime.externalLinks.map((link, idx) => (
+                  <Button
+                    key={idx}
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 text-xs rounded-xl bg-card/60 border-border/30 hover:bg-accent/20 cursor-pointer"
+                  >
+                    <Link href={link.url} target="_blank" rel="noreferrer">
+                      {link.icon ? (
+                        <Image
+                          src={link.icon}
+                          alt={link.site}
+                          width={14}
+                          height={14}
+                          className="rounded-xs"
+                        />
+                      ) : (
+                        <ExternalLinkIcon className="size-3.5 text-primary" />
+                      )}
+                      <span>{link.site}</span>
+                    </Link>
+                  </Button>
+                ))}
+              </motion.div>
+            )}
 
             {/* Description */}
             <RrMediaDescription description={anime.description} />
@@ -654,38 +827,210 @@ export default function AnimeDetailsPage(): React.JSX.Element {
             {/* Genres */}
             <RrMediaGenres genres={anime.genres} />
 
-            {/* Characters */}
-            {characters && characters.length > 0 && (
-              <RrMediaCharacters characters={characters} />
-            )}
+            {/* Tabs Navigation under Description */}
+            <Tabs defaultValue="overview" className="w-full space-y-6">
+              <TabsList className="bg-card/60 border border-border/30 backdrop-blur-xl p-1.5 rounded-2xl w-full flex overflow-x-auto justify-start sm:justify-center gap-1 scrollbar-none">
+                <TabsTrigger
+                  value="overview"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <LayoutGrid className="size-3.5 mr-1.5" />
+                  {t("aquila.overview", "Overview")}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="characters"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <Users className="size-3.5 mr-1.5" />
+                  {t("aquila.characters", "Characters")}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="staff"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <UserCheck className="size-3.5 mr-1.5" />
+                  {t("aquila.staff", "Staff")}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="episodes"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <Film className="size-3.5 mr-1.5" />
+                  {t("aquila.episodes", "Episodes")}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="images"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <ImageIcon className="size-3.5 mr-1.5" />
+                  {t("aquila.images", "Images")}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="trailers"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <Tv className="size-3.5 mr-1.5" />
+                  {t("aquila.trailers", "Trailers")}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="stats"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <BarChart3 className="size-3.5 mr-1.5" />
+                  {t("aquila.stats", "Stats")}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="reviews"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <MessageSquare className="size-3.5 mr-1.5" />
+                  {t("aquila.reviews")}
+                </TabsTrigger>
+              </TabsList>
 
-            {/* Relations */}
-            {relations && relations.length > 0 && (
-              <RrMediaRelations relations={relations} />
-            )}
+              {/* Overview Tab Content */}
+              <TabsContent value="overview" className="space-y-6 outline-none">
+                {/* Overview Characters (first 10, MAIN role prioritized) */}
+                {characters && characters.length > 0 && (
+                  <RrMediaCharacters
+                    characters={characters}
+                    limitCount={10}
+                    hideToggleButton={true}
+                  />
+                )}
 
-            {/* Similar Series Carousel */}
-            <RrMediaSimilar mediaType="anime" mediaId={id} />
+                {/* Theme Songs */}
+                <RrMediaThemeSongs themeSongs={anime.themeSongs} />
 
+                {/* Relations */}
+                {relations && relations.length > 0 && (
+                  <RrMediaRelations relations={relations} />
+                )}
 
-            {/* Stats Dashboard (Score & Status distribution charts) */}
-            <RrMediaStatsDashboard
-              localAverageScore={anime.localAverageScore}
-              localPopularity={anime.localPopularity}
-              localFavoritesCount={anime.localFavoritesCount}
-              localStatusDistribution={anime.localStatusDistribution}
-              localScoreDistribution={anime.localScoreDistribution}
-              showCounters={false}
-            />
+                {/* Similar Series Carousel */}
+                <RrMediaSimilar mediaType="anime" mediaId={id} />
 
-            {/* Trailer & Friend Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
-              <RrMediaTrailer trailer={anime.trailers} />
-              <RrMediaFriendsProgress
-                mediaId={anime.id.toString()}
-                mediaType="anime"
-              />
-            </div>
+                {/* Friend Progress */}
+                <RrMediaFriendsProgress
+                  mediaId={anime.id.toString()}
+                  mediaType="anime"
+                />
+              </TabsContent>
+
+              {/* Characters Tab Content */}
+              <TabsContent
+                value="characters"
+                className="space-y-6 outline-none"
+              >
+                {/* Voice Actor Language Filter */}
+                {vaLanguages.length > 1 && (
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none mb-4 bg-card/45 border border-border/30 p-2 rounded-2xl">
+                    <span className="text-xs font-semibold text-muted-foreground mr-1 shrink-0 pl-1">
+                      {t("aquila.voiceActorLanguage", "Voice Actor Language")}:
+                    </span>
+                    {vaLanguages.map((lang) => (
+                      <Button
+                        key={lang}
+                        variant={
+                          selectedVaLanguage === lang ? "default" : "outline"
+                        }
+                        size="sm"
+                        onClick={() => setSelectedVaLanguage(lang)}
+                        className="rounded-xl text-xs h-7 px-2.5 font-semibold cursor-pointer shrink-0"
+                      >
+                        {lang}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+                {characters && characters.length > 0 ? (
+                  <RrMediaCharacters
+                    characters={characters}
+                    showAllInitial={true}
+                  />
+                ) : (
+                  <div className="p-8 text-center text-muted-foreground bg-card/45 border border-border/30 rounded-2xl">
+                    {t(
+                      "aquila.noCharacters",
+                      "No character information available",
+                    )}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Staff Tab Content */}
+              <TabsContent value="staff" className="space-y-6 outline-none">
+                {anime.staff && anime.staff.length > 0 ? (
+                  <RrMediaStaff staff={anime.staff} showAllInitial={true} />
+                ) : (
+                  <div className="p-8 text-center text-muted-foreground bg-card/45 border border-border/30 rounded-2xl">
+                    {t("aquila.noStaff", "No staff information available")}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Episodes Tab Content */}
+              <TabsContent value="episodes" className="space-y-6 outline-none">
+                {(anime.episodes?.length > 0 || anime.airingSchedule?.length > 0) ? (
+                  <RrMediaEpisodes
+                    episodes={anime.episodes}
+                    airingSchedule={anime.airingSchedule}
+                    showAllInitial={true}
+                  />
+                ) : (
+                  <div className="p-8 text-center text-muted-foreground bg-card/45 border border-border/30 rounded-2xl">
+                    {t("aquila.noEpisodes", "No episode information available")}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Images Tab Content */}
+              <TabsContent value="images" className="space-y-6 outline-none">
+                <RrMediaImages anime={anime} />
+              </TabsContent>
+
+              {/* Trailers Tab Content */}
+              <TabsContent value="trailers" className="space-y-6 outline-none">
+                {anime.trailers && anime.trailers.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+                    {anime.trailers.map((tr, idx) => (
+                      <RrMediaTrailer key={tr.id || idx} trailer={tr} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-8 text-center text-muted-foreground bg-card/45 border border-border/30 rounded-2xl">
+                    {t("aquila.noTrailers", "No trailer available")}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Stats Tab Content */}
+              <TabsContent value="stats" className="space-y-6 outline-none">
+                <RrMediaStatsDashboard
+                  localAverageScore={localScore}
+                  localPopularity={displayPopularity}
+                  localFavoritesCount={displayFavorites}
+                  localStatusDistribution={
+                    anime.localStatusDistribution || anime.statusDistribution
+                  }
+                  localScoreDistribution={
+                    anime.localScoreDistribution || anime.scoreDistribution
+                  }
+                  alAverageScore={anime.alAverageScore}
+                  alFavorites={anime.alFavorites}
+                  alPopularity={anime.alPopularity}
+                  malAverageScore={anime.malAverageScore}
+                  malFavorites={anime.malFavorites}
+                  malPopularity={anime.malPopularity}
+                  showCounters={true}
+                />
+              </TabsContent>
+
+              {/* Reviews Tab Content */}
+              <TabsContent value="reviews" className="space-y-6 outline-none">
+                <RrMediaReviews mediaType={MediaType.ANIME} mediaId={Number(id)} />
+              </TabsContent>
+            </Tabs>
           </div>
         </motion.div>
 

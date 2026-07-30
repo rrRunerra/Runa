@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../../providers/database/prisma.service';
 import { CreateSubmissionDto } from './dto/submission.dto';
 import { BitField, AquilaFlags, RunaFlags } from '@runa/permissions';
+import { MediaType, CharacterRole, RelationType } from '@runa/database';
 
 const MANAGE_FLAG_MAP: Record<string, bigint> = {
   anime: AquilaFlags.MANAGE_ANIME,
@@ -10,6 +11,15 @@ const MANAGE_FLAG_MAP: Record<string, bigint> = {
   tv: AquilaFlags.MANAGE_TV,
   game: AquilaFlags.MANAGE_GAME,
   book: AquilaFlags.MANAGE_BOOK,
+};
+
+const MEDIA_TYPE_MAP: Record<string, MediaType> = {
+  anime: MediaType.ANIME,
+  manga: MediaType.MANGA,
+  movie: MediaType.MOVIE,
+  tv: MediaType.TV,
+  game: MediaType.GAME,
+  book: MediaType.BOOK,
 };
 
 @Injectable()
@@ -150,20 +160,20 @@ export class SubmissionsService {
 
     if (type === 'anime') {
       const payload: any = {
-        titleEnglish: data.titleEnglish || null,
-        titleRomaji: data.titleRomaji || null,
+        titlePrimary: data.titlePrimary || data.titleEnglish || 'Untitled',
+        titleSecondary: data.titleSecondary || data.titleRomaji || null,
         titleNative: data.titleNative || null,
         description: data.description || null,
-        coverImageLarge: data.coverImageLarge || data.coverImage || null,
+        coverImage: data.coverImageLarge || data.coverImage || null,
         bannerImage: data.bannerImage || null,
         format: data.format || 'UNKNOWN',
-        status: data.status || 'NOT_YET_RELEASED',
-        episodes: data.episodes ? Number(data.episodes) : null,
-        duration: data.duration ? Number(data.duration) : null,
-        source: data.source || null,
-        season: data.season || null,
-        seasonYear: data.seasonYear ? Number(data.seasonYear) : null,
-        startDateYear: data.startDateYear ? Number(data.startDateYear) : null,
+        status: data.status || 'UNKNOWN',
+        episodeCount: data.episodes ? Number(data.episodes) : data.episodeCount ? Number(data.episodeCount) : null,
+        episodeDuration: data.duration ? Number(data.duration) : data.episodeDuration ? Number(data.episodeDuration) : null,
+        source: data.source || 'UNKNOWN',
+        seasonSeason: data.seasonSeason || data.season || 'UNKNOWN',
+        seasonYear: data.seasonYear ? Number(data.seasonYear) : data.startDateYear ? Number(data.startDateYear) : 2000,
+        startDateYear: data.startDateYear ? Number(data.startDateYear) : 2000,
         startDateMonth: data.startDateMonth ? Number(data.startDateMonth) : null,
         startDateDay: data.startDateDay ? Number(data.startDateDay) : null,
         endDateYear: data.endDateYear ? Number(data.endDateYear) : null,
@@ -178,25 +188,25 @@ export class SubmissionsService {
       };
 
       if (actionType === 'EDIT' && mediaId) {
-        const updated = await this.prisma.client.aquilaAnime.update({ where: { id: mediaId }, data: payload });
+        const updated = await this.prisma.client.aquilaAnimeV2.update({ where: { id: mediaId }, data: payload });
         targetMediaId = updated.id;
       } else {
-        const created = await this.prisma.client.aquilaAnime.create({ data: payload });
+        const created = await this.prisma.client.aquilaAnimeV2.create({ data: payload });
         targetMediaId = created.id;
       }
     } else if (type === 'manga') {
       const payload: any = {
-        titleEnglish: data.titleEnglish || null,
-        titleRomaji: data.titleRomaji || null,
+        titlePrimary: data.titlePrimary || data.titleEnglish || 'Untitled',
+        titleSecondary: data.titleSecondary || data.titleRomaji || null,
         titleNative: data.titleNative || null,
         description: data.description || null,
-        coverImageLarge: data.coverImageLarge || data.coverImage || null,
+        coverImage: data.coverImageLarge || data.coverImage || null,
         bannerImage: data.bannerImage || null,
         format: data.format || 'UNKNOWN',
-        status: data.status || 'NOT_YET_RELEASED',
-        chapters: data.chapters ? Number(data.chapters) : null,
-        volumes: data.volumes ? Number(data.volumes) : null,
-        source: data.source || null,
+        status: data.status || 'UNKNOWN',
+        chapterCount: data.chapters ? Number(data.chapters) : data.chapterCount ? Number(data.chapterCount) : null,
+        volumeCount: data.volumes ? Number(data.volumes) : data.volumeCount ? Number(data.volumeCount) : null,
+        source: data.source || 'UNKNOWN',
         startDateYear: data.startDateYear ? Number(data.startDateYear) : null,
         startDateMonth: data.startDateMonth ? Number(data.startDateMonth) : null,
         startDateDay: data.startDateDay ? Number(data.startDateDay) : null,
@@ -212,78 +222,72 @@ export class SubmissionsService {
       };
 
       if (actionType === 'EDIT' && mediaId) {
-        const updated = await this.prisma.client.aquilaManga.update({ where: { id: mediaId }, data: payload });
+        const updated = await this.prisma.client.aquilaMangaV2.update({ where: { id: mediaId }, data: payload });
         targetMediaId = updated.id;
       } else {
-        const created = await this.prisma.client.aquilaManga.create({ data: payload });
+        const created = await this.prisma.client.aquilaMangaV2.create({ data: payload });
         targetMediaId = created.id;
       }
     } else if (type === 'tv') {
       const payload: any = {
-        titleEnglish: data.titleEnglish || null,
-        titleRomaji: data.titleRomaji || null,
+        titlePrimary: data.titlePrimary || data.titleEnglish || 'Untitled',
+        titleSecondary: data.titleSecondary || data.titleRomaji || null,
         titleNative: data.titleNative || null,
         description: data.description || null,
         coverImage: data.coverImage || null,
         bannerImage: data.bannerImage || null,
-        status: data.status || null,
+        status: data.status || 'UNKNOWN',
         averageRuntime: data.averageRuntime ? Number(data.averageRuntime) : null,
-        firstAired: data.firstAired || null,
-        originalCountry: data.originalCountry || null,
+        countryOfOrigin: data.countryOfOrigin || data.originalCountry || null,
         originalLanguage: data.originalLanguage || null,
-        contentRating: data.contentRating || null,
         genres: Array.isArray(data.genres) ? data.genres : [],
         studios: Array.isArray(data.studios) ? data.studios : [],
-        tvdbId: data.tvdbId ? Number(data.tvdbId) : Math.floor(Date.now() / 1000),
+        tvDBId: data.tvDBId || data.tvdbId ? Number(data.tvDBId || data.tvdbId) : Math.floor(Date.now() / 1000),
         locked: true,
       };
 
       if (actionType === 'EDIT' && mediaId) {
-        const updated = await this.prisma.client.aquilaTv.update({ where: { id: mediaId }, data: payload });
+        const updated = await this.prisma.client.aquilaTvV2.update({ where: { id: mediaId }, data: payload });
         targetMediaId = updated.id;
       } else {
-        const created = await this.prisma.client.aquilaTv.create({ data: payload });
+        const created = await this.prisma.client.aquilaTvV2.create({ data: payload });
         targetMediaId = created.id;
       }
     } else if (type === 'movie') {
       const payload: any = {
-        titleEnglish: data.titleEnglish || null,
-        titleRomaji: data.titleRomaji || null,
+        titlePrimary: data.titlePrimary || data.titleEnglish || 'Untitled',
+        titleSecondary: data.titleSecondary || data.titleRomaji || null,
         titleNative: data.titleNative || null,
         description: data.description || null,
         coverImage: data.coverImage || null,
         bannerImage: data.bannerImage || null,
-        status: data.status || null,
-        releaseDate: data.releaseDate || null,
+        status: data.status || 'RELEASED',
         runtime: data.runtime ? Number(data.runtime) : null,
-        budget: data.budget || null,
-        boxOffice: data.boxOffice || null,
-        originalCountry: data.originalCountry || null,
+        budget: data.budget ? BigInt(data.budget) : null,
+        revenue: data.boxOffice || data.revenue ? BigInt(data.boxOffice || data.revenue) : null,
+        countryOfOrigin: data.countryOfOrigin || data.originalCountry || null,
         originalLanguage: data.originalLanguage || null,
-        contentRating: data.contentRating || null,
         genres: Array.isArray(data.genres) ? data.genres : [],
         studios: Array.isArray(data.studios) ? data.studios : [],
-        tvdbId: data.tvdbId ? Number(data.tvdbId) : Math.floor(Date.now() / 1000),
+        tvDBId: data.tvDBId || data.tvdbId ? Number(data.tvDBId || data.tvdbId) : Math.floor(Date.now() / 1000),
         locked: true,
       };
 
       if (actionType === 'EDIT' && mediaId) {
-        const updated = await this.prisma.client.aquilaMovie.update({ where: { id: mediaId }, data: payload });
+        const updated = await this.prisma.client.aquilaMovieV2.update({ where: { id: mediaId }, data: payload });
         targetMediaId = updated.id;
       } else {
-        const created = await this.prisma.client.aquilaMovie.create({ data: payload });
+        const created = await this.prisma.client.aquilaMovieV2.create({ data: payload });
         targetMediaId = created.id;
       }
     } else if (type === 'game') {
       const payload: any = {
-        titleString: data.titleString || data.titleEnglish || null,
+        titlePrimary: data.titlePrimary || data.titleString || data.titleEnglish || 'Untitled',
         titleNative: data.titleNative || null,
         description: data.description || null,
         coverImage: data.coverImage || null,
         backgroundImage: data.backgroundImage || data.bannerImage || null,
-        released: data.released || null,
-        releasedYear: data.releasedYear ? Number(data.releasedYear) : null,
-        esrbRating: data.esrbRating || null,
+        releaseDateYear: data.releaseDateYear ? Number(data.releaseDateYear) : data.releasedYear ? Number(data.releasedYear) : null,
         genres: Array.isArray(data.genres) ? data.genres : [],
         platforms: Array.isArray(data.platforms) ? data.platforms : [],
         developers: Array.isArray(data.developers) ? data.developers : [],
@@ -293,38 +297,36 @@ export class SubmissionsService {
       };
 
       if (actionType === 'EDIT' && mediaId) {
-        const updated = await this.prisma.client.aquilaGame.update({ where: { id: mediaId }, data: payload });
+        const updated = await this.prisma.client.aquilaGameV2.update({ where: { id: mediaId }, data: payload });
         targetMediaId = updated.id;
       } else {
-        const created = await this.prisma.client.aquilaGame.create({ data: payload });
+        const created = await this.prisma.client.aquilaGameV2.create({ data: payload });
         targetMediaId = created.id;
       }
     } else if (type === 'book') {
       const payload: any = {
-        titleString: data.titleString || data.titleEnglish || null,
+        titlePrimary: data.titlePrimary || data.titleString || data.titleEnglish || 'Untitled',
         subtitle: data.subtitle || null,
         description: data.description || null,
         coverImage: data.coverImage || null,
-        publishedDate: data.publishedDate || null,
-        publishedYear: data.publishedYear ? Number(data.publishedYear) : null,
+        releaseDateYear: data.releaseDateYear ? Number(data.releaseDateYear) : data.publishedYear ? Number(data.publishedYear) : null,
         pageCount: data.pageCount ? Number(data.pageCount) : null,
-        chapters: data.chapters ? Number(data.chapters) : null,
-        language: data.language || null,
+        chapterCount: data.chapters ? Number(data.chapters) : data.chapterCount ? Number(data.chapterCount) : null,
+        originalLanguage: data.language || data.originalLanguage || null,
         isbn10: data.isbn10 || null,
         isbn13: data.isbn13 || null,
         subjects: Array.isArray(data.subjects) ? data.subjects : Array.isArray(data.genres) ? data.genres : [],
         authors: Array.isArray(data.authors) ? data.authors : [],
-        artists: Array.isArray(data.artists) ? data.artists : [],
         publishers: Array.isArray(data.publishers) ? data.publishers : [],
         googleBookId: data.googleBookId || `custom_${Date.now()}`,
         locked: true,
       };
 
       if (actionType === 'EDIT' && mediaId) {
-        const updated = await this.prisma.client.aquilaBook.update({ where: { id: mediaId }, data: payload });
+        const updated = await this.prisma.client.aquilaBookV2.update({ where: { id: mediaId }, data: payload });
         targetMediaId = updated.id;
       } else {
-        const created = await this.prisma.client.aquilaBook.create({ data: payload });
+        const created = await this.prisma.client.aquilaBookV2.create({ data: payload });
         targetMediaId = created.id;
       }
     } else {
@@ -342,20 +344,16 @@ export class SubmissionsService {
     const trimmed = (query || '').trim();
     if (!trimmed) return [];
 
-    return this.prisma.client.aquilaCharacter.findMany({
+    return this.prisma.client.aquilaCharacterV2.findMany({
       where: {
         OR: [
-          { nameFirst: { contains: trimmed, mode: 'insensitive' } },
-          { nameMiddle: { contains: trimmed, mode: 'insensitive' } },
-          { nameLast: { contains: trimmed, mode: 'insensitive' } },
+          { namePrimary: { contains: trimmed, mode: 'insensitive' } },
           { nameNative: { contains: trimmed, mode: 'insensitive' } },
         ],
       },
       select: {
         id: true,
-        nameFirst: true,
-        nameMiddle: true,
-        nameLast: true,
+        namePrimary: true,
         nameNative: true,
         image: true,
       },
@@ -367,12 +365,18 @@ export class SubmissionsService {
     const trimmed = (query || '').trim();
     if (!trimmed) return [];
 
-    return this.prisma.client.aquilaActor.findMany({
+    return this.prisma.client.aquilaActorV2.findMany({
       where: {
         OR: [
-          { name: { contains: trimmed, mode: 'insensitive' } },
-          { personName: { contains: trimmed, mode: 'insensitive' } },
+          { namePrimary: { contains: trimmed, mode: 'insensitive' } },
+          { nameNative: { contains: trimmed, mode: 'insensitive' } },
         ],
+      },
+      select: {
+        id: true,
+        namePrimary: true,
+        nameNative: true,
+        image: true,
       },
       take: 20,
     });
@@ -384,73 +388,73 @@ export class SubmissionsService {
     const type = (mediaType || 'anime').toLowerCase();
 
     if (type === 'anime') {
-      return this.prisma.client.aquilaAnime.findMany({
+      return this.prisma.client.aquilaAnimeV2.findMany({
         where: {
           OR: [
-            { titleEnglish: { contains: trimmed, mode: 'insensitive' } },
-            { titleRomaji: { contains: trimmed, mode: 'insensitive' } },
+            { titlePrimary: { contains: trimmed, mode: 'insensitive' } },
+            { titleSecondary: { contains: trimmed, mode: 'insensitive' } },
             { titleNative: { contains: trimmed, mode: 'insensitive' } },
           ],
         },
-        select: { id: true, titleEnglish: true, titleRomaji: true, coverImageLarge: true },
+        select: { id: true, titlePrimary: true, titleSecondary: true, coverImage: true },
         take: 20,
       });
     } else if (type === 'manga') {
-      return this.prisma.client.aquilaManga.findMany({
+      return this.prisma.client.aquilaMangaV2.findMany({
         where: {
           OR: [
-            { titleEnglish: { contains: trimmed, mode: 'insensitive' } },
-            { titleRomaji: { contains: trimmed, mode: 'insensitive' } },
+            { titlePrimary: { contains: trimmed, mode: 'insensitive' } },
+            { titleSecondary: { contains: trimmed, mode: 'insensitive' } },
             { titleNative: { contains: trimmed, mode: 'insensitive' } },
           ],
         },
-        select: { id: true, titleEnglish: true, titleRomaji: true, coverImageLarge: true },
+        select: { id: true, titlePrimary: true, titleSecondary: true, coverImage: true },
         take: 20,
       });
     } else if (type === 'tv') {
-      return this.prisma.client.aquilaTv.findMany({
+      return this.prisma.client.aquilaTvV2.findMany({
         where: {
           OR: [
-            { titleEnglish: { contains: trimmed, mode: 'insensitive' } },
-            { titleRomaji: { contains: trimmed, mode: 'insensitive' } },
+            { titlePrimary: { contains: trimmed, mode: 'insensitive' } },
+            { titleSecondary: { contains: trimmed, mode: 'insensitive' } },
             { titleNative: { contains: trimmed, mode: 'insensitive' } },
           ],
         },
-        select: { id: true, titleEnglish: true, titleRomaji: true, coverImage: true },
+        select: { id: true, titlePrimary: true, titleSecondary: true, coverImage: true },
         take: 20,
       });
     } else if (type === 'movie') {
-      return this.prisma.client.aquilaMovie.findMany({
+      return this.prisma.client.aquilaMovieV2.findMany({
         where: {
           OR: [
-            { titleEnglish: { contains: trimmed, mode: 'insensitive' } },
-            { titleRomaji: { contains: trimmed, mode: 'insensitive' } },
+            { titlePrimary: { contains: trimmed, mode: 'insensitive' } },
+            { titleSecondary: { contains: trimmed, mode: 'insensitive' } },
             { titleNative: { contains: trimmed, mode: 'insensitive' } },
           ],
         },
-        select: { id: true, titleEnglish: true, titleRomaji: true, coverImage: true },
+        select: { id: true, titlePrimary: true, titleSecondary: true, coverImage: true },
         take: 20,
       });
     } else if (type === 'game') {
-      return this.prisma.client.aquilaGame.findMany({
+      return this.prisma.client.aquilaGameV2.findMany({
         where: {
           OR: [
-            { titleString: { contains: trimmed, mode: 'insensitive' } },
+            { titlePrimary: { contains: trimmed, mode: 'insensitive' } },
             { titleNative: { contains: trimmed, mode: 'insensitive' } },
           ],
         },
-        select: { id: true, titleString: true, titleNative: true, coverImage: true },
+        select: { id: true, titlePrimary: true, titleNative: true, coverImage: true },
         take: 20,
       });
     } else if (type === 'book') {
-      return this.prisma.client.aquilaBook.findMany({
+      return this.prisma.client.aquilaBookV2.findMany({
         where: {
           OR: [
-            { titleString: { contains: trimmed, mode: 'insensitive' } },
+            { titlePrimary: { contains: trimmed, mode: 'insensitive' } },
             { subtitle: { contains: trimmed, mode: 'insensitive' } },
           ],
         },
-        select: { id: true, titleString: true, subtitle: true, coverImage: true },
+        select: { id: true, titlePrimary: true, subtitle: true, coverImage: true },
         take: 20,
       });
     }
@@ -460,58 +464,35 @@ export class SubmissionsService {
   private async saveCharacters(mediaType: string, mediaId: number, characters: any[]) {
     if (!Array.isArray(characters)) return;
     const type = mediaType.toLowerCase();
+    const mediaEnum = MEDIA_TYPE_MAP[type];
+    if (!mediaEnum) return;
 
-    if (type === 'anime') {
-      await this.prisma.client.aquilaAnimeCharacter.deleteMany({ where: { animeId: mediaId } }).catch(() => null);
-      for (const char of characters) {
-        if (!char.characterId) continue;
-        await this.prisma.client.aquilaAnimeCharacter.create({
-          data: {
-            animeId: mediaId,
-            characterId: Number(char.characterId),
-            voiceActorId: char.voiceActorId ? Number(char.voiceActorId) : null,
-            role: char.role || 'MAIN',
-          },
-        }).catch(() => null);
-      }
-    } else if (type === 'manga') {
-      await this.prisma.client.aquilaMangaCharacter.deleteMany({ where: { mangaId: mediaId } }).catch(() => null);
-      for (const char of characters) {
-        if (!char.characterId) continue;
-        await this.prisma.client.aquilaMangaCharacter.create({
-          data: {
-            mangaId: mediaId,
-            characterId: Number(char.characterId),
-            role: char.role || 'MAIN',
-          },
-        }).catch(() => null);
-      }
-    } else if (type === 'tv') {
-      await this.prisma.client.aquilaTvCharacter.deleteMany({ where: { tvId: mediaId } }).catch(() => null);
-      for (const char of characters) {
-        if (!char.characterId) continue;
-        await this.prisma.client.aquilaTvCharacter.create({
-          data: {
-            tvId: mediaId,
-            characterId: Number(char.characterId),
-            actorId: char.actorId ? Number(char.actorId) : null,
-            role: char.role || 'MAIN',
-          },
-        }).catch(() => null);
-      }
-    } else if (type === 'movie') {
-      await this.prisma.client.aquilaMovieCharacter.deleteMany({ where: { movieId: mediaId } }).catch(() => null);
-      for (const char of characters) {
-        if (!char.characterId) continue;
-        await this.prisma.client.aquilaMovieCharacter.create({
-          data: {
-            movieId: mediaId,
-            characterId: Number(char.characterId),
-            actorId: char.actorId ? Number(char.actorId) : null,
-            role: char.role || 'MAIN',
-          },
-        }).catch(() => null);
-      }
+    await this.prisma.client.aquilaMediaCharacterV2.deleteMany({
+      where: { mediaType: mediaEnum, mediaId },
+    }).catch(() => null);
+
+    for (const char of characters) {
+      if (!char.characterId) continue;
+      const charRoleStr = char.role ? String(char.role).toUpperCase() : '';
+      const charRole = ['MAIN', 'SUPPORTING', 'BACKGROUND'].includes(charRoleStr)
+        ? (charRoleStr as CharacterRole)
+        : CharacterRole.MAIN;
+
+      await this.prisma.client.aquilaMediaCharacterV2.create({
+        data: {
+          mediaType: mediaEnum,
+          mediaId,
+          animeId: mediaEnum === MediaType.ANIME ? mediaId : null,
+          mangaId: mediaEnum === MediaType.MANGA ? mediaId : null,
+          movieId: mediaEnum === MediaType.MOVIE ? mediaId : null,
+          tvId: mediaEnum === MediaType.TV ? mediaId : null,
+          gameId: mediaEnum === MediaType.GAME ? mediaId : null,
+          bookId: mediaEnum === MediaType.BOOK ? mediaId : null,
+          characterId: Number(char.characterId),
+          actorId: char.voiceActorId || char.actorId ? Number(char.voiceActorId || char.actorId) : null,
+          role: charRole,
+        },
+      }).catch(() => null);
     }
   }
 
@@ -539,67 +520,55 @@ export class SubmissionsService {
   private async saveRelations(mediaType: string, mediaId: number, relations: any[]) {
     if (!Array.isArray(relations)) return;
     const type = mediaType.toLowerCase();
+    const mediaEnum = MEDIA_TYPE_MAP[type];
+    if (!mediaEnum) return;
 
-    if (type === 'anime') {
-      await this.prisma.client.aquilaMediaRelation.deleteMany({ where: { animeId: mediaId } }).catch(() => null);
-      for (const rel of relations) {
-        if (!rel.relatedMediaId) continue;
-        const targetId = Number(rel.relatedMediaId);
-        const relType = rel.relationType || 'SEQUEL';
-        const reciprocalType = this.getReciprocalRelationType(relType);
+    await this.prisma.client.aquilaMediaRelationV2.deleteMany({
+      where: { sourceType: mediaEnum, sourceId: mediaId },
+    }).catch(() => null);
 
-        // 1. Forward relation: Current Anime -> Target Anime
-        await this.prisma.client.aquilaMediaRelation.create({
-          data: {
-            animeId: mediaId,
-            relatedAnimeId: targetId,
-            relationType: relType,
-          },
-        }).catch(() => null);
+    for (const rel of relations) {
+      if (!rel.relatedMediaId) continue;
+      const targetId = Number(rel.relatedMediaId);
+      const targetTypeStr = (rel.targetType || type).toLowerCase();
+      const targetEnum = MEDIA_TYPE_MAP[targetTypeStr] || mediaEnum;
 
-        // 2. Reciprocal relation: Target Anime -> Current Anime
-        await this.prisma.client.aquilaMediaRelation.deleteMany({
-          where: { animeId: targetId, relatedAnimeId: mediaId },
-        }).catch(() => null);
+      const relTypeStr = (rel.relationType || 'SEQUEL').toUpperCase();
+      const relType = relTypeStr in RelationType ? (relTypeStr as RelationType) : RelationType.OTHER;
 
-        await this.prisma.client.aquilaMediaRelation.create({
-          data: {
-            animeId: targetId,
-            relatedAnimeId: mediaId,
-            relationType: reciprocalType,
-          },
-        }).catch(() => null);
-      }
-    } else if (type === 'manga') {
-      await this.prisma.client.aquilaMediaRelation.deleteMany({ where: { mangaId: mediaId } }).catch(() => null);
-      for (const rel of relations) {
-        if (!rel.relatedMediaId) continue;
-        const targetId = Number(rel.relatedMediaId);
-        const relType = rel.relationType || 'SEQUEL';
-        const reciprocalType = this.getReciprocalRelationType(relType);
+      const reciprocalTypeStr = this.getReciprocalRelationType(relTypeStr);
+      const reciprocalType = reciprocalTypeStr in RelationType ? (reciprocalTypeStr as RelationType) : RelationType.OTHER;
 
-        // 1. Forward relation: Current Manga -> Target Manga
-        await this.prisma.client.aquilaMediaRelation.create({
-          data: {
-            mangaId: mediaId,
-            relatedMangaId: targetId,
-            relationType: relType,
-          },
-        }).catch(() => null);
+      // 1. Forward relation: Source Media -> Target Media
+      await this.prisma.client.aquilaMediaRelationV2.create({
+        data: {
+          sourceType: mediaEnum,
+          sourceId: mediaId,
+          targetType: targetEnum,
+          targetId: targetId,
+          type: relType,
+        },
+      }).catch(() => null);
 
-        // 2. Reciprocal relation: Target Manga -> Current Manga
-        await this.prisma.client.aquilaMediaRelation.deleteMany({
-          where: { mangaId: targetId, relatedMangaId: mediaId },
-        }).catch(() => null);
+      // 2. Reciprocal relation: Target Media -> Source Media
+      await this.prisma.client.aquilaMediaRelationV2.deleteMany({
+        where: {
+          sourceType: targetEnum,
+          sourceId: targetId,
+          targetType: mediaEnum,
+          targetId: mediaId,
+        },
+      }).catch(() => null);
 
-        await this.prisma.client.aquilaMediaRelation.create({
-          data: {
-            mangaId: targetId,
-            relatedMangaId: mediaId,
-            relationType: reciprocalType,
-          },
-        }).catch(() => null);
-      }
+      await this.prisma.client.aquilaMediaRelationV2.create({
+        data: {
+          sourceType: targetEnum,
+          sourceId: targetId,
+          targetType: mediaEnum,
+          targetId: mediaId,
+          type: reciprocalType,
+        },
+      }).catch(() => null);
     }
   }
 }

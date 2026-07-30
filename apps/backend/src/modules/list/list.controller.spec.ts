@@ -1,3 +1,55 @@
+jest.mock('@runa/database', () => ({
+  prisma: {
+    $extends: jest.fn(() => ({})),
+    $connect: jest.fn().mockResolvedValue(undefined),
+    $disconnect: jest.fn().mockResolvedValue(undefined),
+  },
+  $Enums: {
+    AnimeListStatus: {
+      WATCHING: 'WATCHING',
+      COMPLETED: 'COMPLETED',
+      ON_HOLD: 'ON_HOLD',
+      DROPPED: 'DROPPED',
+      PLANNING: 'PLANNING',
+    },
+    MangaListStatus: {
+      READING: 'READING',
+      COMPLETED: 'COMPLETED',
+      ON_HOLD: 'ON_HOLD',
+      DROPPED: 'DROPPED',
+      PLANNING: 'PLANNING',
+    },
+    MovieListStatus: {
+      PLANNING: 'PLANNING',
+      WATCHING: 'WATCHING',
+      COMPLETED: 'COMPLETED',
+      ON_HOLD: 'ON_HOLD',
+      DROPPED: 'DROPPED',
+    },
+    TvListStatus: {
+      PLANNING: 'PLANNING',
+      WATCHING: 'WATCHING',
+      COMPLETED: 'COMPLETED',
+      ON_HOLD: 'ON_HOLD',
+      DROPPED: 'DROPPED',
+    },
+    GameListStatus: {
+      PLANNING: 'PLANNING',
+      PLAYING: 'PLAYING',
+      COMPLETED: 'COMPLETED',
+      ON_HOLD: 'ON_HOLD',
+      DROPPED: 'DROPPED',
+    },
+    BookListStatus: {
+      PLANNING: 'PLANNING',
+      READING: 'READING',
+      COMPLETED: 'COMPLETED',
+      ON_HOLD: 'ON_HOLD',
+      DROPPED: 'DROPPED',
+    },
+  },
+}));
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { ListController } from './list.controller';
 import { ListService } from './list.service';
@@ -69,30 +121,28 @@ describe('ListController', () => {
   });
 
   describe('getAnimeList', () => {
-    it('should retrieve anime list by username', async () => {
+    it('should retrieve anime list by username with cursor query', async () => {
       const mockReq = { user: { username: 'viewer' } };
-      mockListService.getAnimeList.mockResolvedValue([]);
+      const expectedResponse = {
+        entries: [],
+        counts: { all: 0 },
+        pageInfo: { nextCursor: null, hasMore: false, count: 0 },
+      };
+      mockListService.getAnimeList.mockResolvedValue(expectedResponse);
 
-      const result = await controller.getAnimeList(
-        'testuser',
-        mockReq,
-        '10',
-        '0',
-        'WATCHING',
-        'search',
-        'TV',
-        'score',
-      );
-
-      expect(service.getAnimeList).toHaveBeenCalledWith('testuser', 'viewer', {
+      const query = {
         limit: 10,
-        offset: 0,
+        cursor: '5',
         status: 'WATCHING',
         search: 'search',
         format: 'TV',
         sort: 'score',
-      });
-      expect(result).toEqual([]);
+      };
+
+      const result = await controller.getAnimeList('testuser', mockReq, query);
+
+      expect(service.getAnimeList).toHaveBeenCalledWith('testuser', 'viewer', query);
+      expect(result).toEqual(expectedResponse);
     });
   });
 

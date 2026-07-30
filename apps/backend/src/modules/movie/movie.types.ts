@@ -39,6 +39,13 @@ export interface TvdbMovieExtended {
         peopleType?: string;
         peopleId?: number;
         sort?: number;
+        role?: string;
+        type?: number;
+        job?: string;
+        character?: string;
+        personId?: number;
+        personImgURL?: string;
+        department?: string;
       }[]
     | null;
   artworks?: {

@@ -13,8 +13,6 @@ import { AnimeDetailDto, SearchAnimeDto, AnimeRefreshDto } from './anime.dto';
 export class AnimeController {
   constructor(private readonly animeService: AnimeService) {}
 
-  private readonly moduleCode: string = 'AeCtr-';
-
   @Public()
   @Get('search/:name')
   async search(@Param() params: SearchAnimeDto): Promise<AnimeSearchEntity[]> {
@@ -32,23 +30,20 @@ export class AnimeController {
   @Get(':id')
   async animeDetail(
     @Param() params: AnimeDetailDto,
-  ): Promise<AnimeEntity | undefined> {
+  ): Promise<AnimeEntity> {
     return await this.animeService.getAnime(params.id);
   }
-
-
-
 
   @Post(':id/refresh')
   @Permissions([AquilaFlags.MEDIA_REFRESH])
   async refreshAnime(
     @Param() params: AnimeRefreshDto,
     @Query('force') forceQuery?: string,
-  ): Promise<AnimeEntity | undefined | null> {
+  ): Promise<AnimeEntity | null> {
     const force = forceQuery === 'true' || forceQuery === '1';
     return await this.animeService.refreshAnime(
       params.id,
-      ...(forceQuery !== undefined ? [force] : []),
+      force,
     );
   }
 }

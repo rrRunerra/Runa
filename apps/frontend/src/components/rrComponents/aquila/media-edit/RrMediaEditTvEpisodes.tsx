@@ -50,7 +50,7 @@ export function RrMediaEditTvEpisodes({
       <div className="max-h-86.25 overflow-y-auto pr-1 space-y-2 custom-scrollbar">
         {seasons && seasons.length > 0 ? (
           seasons.map((season) => {
-            const watchedInSeason = season.episodes.filter((ep: any) =>
+            const watchedInSeason = (season.episodes ?? []).filter((ep: any) =>
               watchedEpisodes.some(
                 (w) =>
                   w.seasonNum === season.number && w.episodeNum === ep.number,
@@ -124,7 +124,7 @@ export function RrMediaEditTvEpisodes({
                       className="overflow-hidden border-t border-border/40"
                     >
                       <div className="p-3 max-h-48 overflow-y-auto no-scrollbar grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                        {season.episodes.map((ep: any) => {
+                        {(season.episodes ?? []).map((ep: any) => {
                           const isEpWatched = watchedEpisodes.some(
                             (w) =>
                               w.seasonNum === season.number &&

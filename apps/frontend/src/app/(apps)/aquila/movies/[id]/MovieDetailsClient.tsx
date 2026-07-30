@@ -1,7 +1,17 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { Star, Heart, Users, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Star,
+  Heart,
+  Users,
+  ChevronDown,
+  ChevronUp,
+  LayoutGrid,
+  UserCheck,
+  BarChart3,
+  ImageIcon,
+} from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -12,6 +22,7 @@ import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 import { fetcher } from "@/lib/fetcher";
 import { RrMediaEditDialog } from "@/components/rrComponents/aquila/rrMediaEditDialog";
@@ -23,12 +34,18 @@ import { RrMediaFriendsProgress } from "@/components/rrComponents/aquila/details
 import { RrMediaDescription } from "@/components/rrComponents/aquila/details/rrMediaDescription";
 import { RrMediaGenres } from "@/components/rrComponents/aquila/details/rrMediaGenres";
 import { RrMediaCharacters } from "@/components/rrComponents/aquila/details/rrMediaCharacters";
+import { RrMediaStaff } from "@/components/rrComponents/aquila/details/rrMediaStaff";
+import { RrMediaRelations } from "@/components/rrComponents/aquila/details/rrMediaRelations";
 import { RrMediaStatsDashboard } from "@/components/rrComponents/aquila/details/rrMediaStatsDashboard";
 import { RrMediaSimilar } from "@/components/rrComponents/aquila/details/rrMediaSimilar";
+import { RrMediaImages } from "@/components/rrComponents/aquila/details/rrMediaImages";
 
 import { RrMediaTrailer } from "@/components/rrComponents/aquila/details/rrMediaTrailer";
 import { RrMediaFooter } from "@/components/rrComponents/aquila/details/rrMediaFooter";
 import { RrMediaDetailsSkeleton } from "@/components/rrComponents/aquila/details/rrMediaDetailsSkeleton";
+import { RrMediaReviews } from "@/components/rrComponents/aquila/details/rrMediaReviews";
+import { MessageSquare } from "lucide-react";
+import { MediaType } from "@/types/aquila";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
@@ -81,7 +98,6 @@ export default function MovieDetailsPage(): React.JSX.Element {
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
   const [showMoreInfo, setShowMoreInfo] = useState<boolean>(false);
 
-  // SWR queries replacing sequential imperative fetching
   const {
     data: movie,
     error: movieError,
@@ -105,73 +121,194 @@ export default function MovieDetailsPage(): React.JSX.Element {
 
   const hasListEntry = !!listEntry;
 
-  const titleEnglish = movie?.titleEnglish ?? "";
-  const titleRomaji = movie?.titleRomaji ?? "";
-  const titleNative = movie?.titleNative ?? "";
-  const displayTitle = titleEnglish || titleRomaji || t("aquila.movieDetails");
-  const coverUrl = movie?.coverImage ?? "";
-  const bannerUrl = movie?.bannerImage ?? "";
+  // ─── Derived display values ───────────────────────────────────────────────
+
+  const displayTitle =
+    movie?.titlePrimary || movie?.titleSecondary || t("aquila.movieDetails");
+
+  const coverUrl =
+    movie?.coverImage || movie?.images?.tvdb?.posters?.[0] || "";
+
+  const bannerUrl =
+    movie?.bannerImage || movie?.images?.tvdb?.backdrops?.[0] || "";
+
+  // ─── Providers from sources[] + known IDs ────────────────────────────────
 
   const providers = useMemo(() => {
+    if (!movie) return [];
     const list: { name: string; url: string }[] = [];
-    if (movie?.tvdbId) {
-      list.push({
-        name: "TheTVDB",
-        url: `https://thetvdb.com/dereferrer/movie/${movie.tvdbId}`,
-      });
+    const seenUrls = new Set<string>();
+
+    const addProvider = (name: string, url?: string | null): void => {
+      if (!url || seenUrls.has(url)) return;
+      seenUrls.add(url);
+      list.push({ name, url });
+    };
+
+    if (movie.tvDBId) {
+      addProvider(
+        "TheTVDB",
+        `https://thetvdb.com/dereferrer/movie/${movie.tvDBId}`,
+      );
+    }
+    if (movie.imdbId) {
+      addProvider("IMDb", `https://www.imdb.com/title/${movie.imdbId}`);
+    }
+    if (movie.sources) {
+      for (const src of movie.sources) {
+        if (src.url && src.provider) {
+          addProvider(src.provider, src.url);
+        }
+      }
     }
 
     return list;
   }, [movie]);
 
+  // ─── Trailers ────────────────────────────────────────────────────────────
+
   const trailerObj = useMemo(() => {
     if (!movie?.trailers || movie.trailers.length === 0) return null;
     const first = movie.trailers[0];
-    let youtubeId = first.id;
+    let youtubeId = String(first.id);
     if (first.url && first.url.includes("youtube.com/watch?v=")) {
-      youtubeId = first.url.split("watch?v=")[1]?.split("&")[0] || first.id;
+      youtubeId =
+        first.url.split("watch?v=")[1]?.split("&")[0] || String(first.id);
     } else if (first.url && first.url.includes("youtu.be/")) {
-      youtubeId = first.url.split("youtu.be/")[1]?.split("?")[0] || first.id;
+      youtubeId =
+        first.url.split("youtu.be/")[1]?.split("?")[0] || String(first.id);
     }
     return { id: youtubeId, site: "youtube" };
   }, [movie]);
 
+  // ─── Formatted release date ──────────────────────────────────────────────
+
   const formattedReleaseDate = useMemo((): string | null => {
-    if (!movie?.releaseDate) return null;
-    try {
-      return new Date(movie.releaseDate).toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      });
-    } catch {
-      return movie.releaseDate;
-    }
-  }, [movie?.releaseDate]);
+    if (!movie?.releaseDateYear) return null;
+    const parts = [
+      movie.releaseDateYear,
+      movie.releaseDateMonth
+        ? String(movie.releaseDateMonth).padStart(2, "0")
+        : null,
+      movie.releaseDateDay
+        ? String(movie.releaseDateDay).padStart(2, "0")
+        : null,
+    ].filter(Boolean);
+    return parts.join("-");
+  }, [movie]);
+
+  // ─── Characters (v2 shape) ───────────────────────────────────────────────
 
   const characters = useMemo(() => {
     if (!movie?.characters) return [];
-    return movie.characters.map((mc) => ({
-      id: mc.id,
-      name: mc.name || t("aquila.unknownCharacter"),
-      native: "",
-      role: mc.role || "Actor",
-      image: mc.image || "",
-      voiceActor: mc.actorId
-        ? {
-            id: mc.actorId,
-            name: mc.personName || t("aquila.unknownActor"),
-            image: mc.image || "",
-            role: "Actor",
-          }
-        : null,
-    }));
+    return movie.characters.map((mc: any) => {
+      const charName =
+        mc.namePrimary ||
+        mc.character?.namePrimary ||
+        mc.character?.nameNative ||
+        mc.name ||
+        t("aquila.unknownCharacter");
+
+      const charImage = mc.image || mc.character?.image || "";
+      const actorObj = mc.actor;
+
+      return {
+        id: mc.id,
+        characterId: mc.characterId || mc.id,
+        name: charName,
+        native: mc.nameNative || mc.character?.nameNative || "",
+        image: charImage,
+        role: mc.role || "MAIN",
+        voiceActor: actorObj
+          ? {
+              id: actorObj.id,
+              name:
+                actorObj.namePrimary ||
+                actorObj.nameNative ||
+                t("aquila.unknownActor"),
+              image: actorObj.image || "",
+              role: actorObj.role || "Actor",
+            }
+          : null,
+      };
+    });
   }, [movie, t]);
+
+  // ─── Staff (v2 shape) ───────────────────────────────────────────────────
+
+  const staff = useMemo(() => {
+    if (!movie?.staff) return [];
+    return movie.staff.map((st: any) => {
+      const person = st.actor || st.staff || st;
+      return {
+        id: st.id,
+        mediaType: "MOVIE",
+        mediaId: Number(id),
+        staffId: person.id || st.id,
+        role: st.customRole || st.role || "Staff",
+        staff: {
+          id: person.id || st.id,
+          namePrimary: person.namePrimary || person.name || "",
+          nameNative: person.nameNative ?? "",
+          image: person.image ?? "",
+        },
+      };
+    });
+  }, [movie, id]);
+
+  // ─── Relations (v2 shape) ────────────────────────────────────────────────
+
+  const relations = useMemo(() => {
+    if (!movie?.relations) return [];
+    return movie.relations.map((rel) => {
+      const target = rel.targetMedia;
+      const relType = rel.relationType ?? rel.type ?? "";
+      const mediaType = rel.targetType ?? "MOVIE";
+      return {
+        id: rel.targetId,
+        relationType: relType,
+        title: {
+          english: target?.titlePrimary ?? "",
+          romaji: target?.titleSecondary ?? "",
+          native: target?.titleNative ?? "",
+        },
+        format: target?.format ?? "",
+        type: mediaType,
+        coverImage: target?.coverImage ?? "",
+      };
+    });
+  }, [movie]);
+
+  // ─── Studios ─────────────────────────────────────────────────────────────
+
+  const studios = useMemo(() => {
+    if (!movie?.studios) return [];
+    return movie.studios
+      .map((s) => (typeof s === "string" ? s : s?.name))
+      .filter(Boolean);
+  }, [movie]);
+
+  // ─── Aggregate stats ───────────────────────────────────────────────────────
+
+  const displayAverageScore = useMemo(() => {
+    if (!movie) return null;
+    return movie.localAverageScore ?? movie.averageScore;
+  }, [movie]);
+
+  const displayFavorites = useMemo(() => {
+    if (!movie) return 0;
+    return Math.max(movie.localFavoritesCount ?? 0, movie.favorites ?? 0);
+  }, [movie]);
+
+  const displayPopularity = useMemo(() => {
+    if (!movie) return 0;
+    return Math.max(movie.localPopularity ?? 0, movie.popularity ?? 0);
+  }, [movie]);
 
   useEffect((): void => {
     if (!movie) return;
-    document.title = `Aquila > Movie > ${titleEnglish || titleRomaji || ""}`;
-  }, [movie, titleEnglish, titleRomaji]);
+    document.title = `Aquila > Movie > ${displayTitle}`;
+  }, [movie, displayTitle]);
 
   if (movieLoading) {
     return <RrMediaDetailsSkeleton />;
@@ -218,12 +355,6 @@ export default function MovieDetailsPage(): React.JSX.Element {
     }
   };
 
-  const studios = movie.studios
-    ? movie.studios
-        .map((s) => (typeof s === "string" ? s : (s as any)?.name))
-        .filter(Boolean)
-    : [];
-
   return (
     <div className="flex flex-col flex-1 min-h-screen bg-background text-foreground relative overflow-x-hidden">
       {/* Background Radial Glowing Auras */}
@@ -236,7 +367,7 @@ export default function MovieDetailsPage(): React.JSX.Element {
         {bannerUrl ? (
           <Image
             src={bannerUrl}
-            alt={titleRomaji || "Banner"}
+            alt={displayTitle}
             fill
             sizes="100vw"
             className="object-cover scale-105 filter blur-[1px] brightness-75"
@@ -265,7 +396,7 @@ export default function MovieDetailsPage(): React.JSX.Element {
                 {coverUrl ? (
                   <Image
                     src={coverUrl}
-                    alt={titleRomaji || "Cover"}
+                    alt={displayTitle}
                     fill
                     sizes="(max-width: 640px) 112px, (max-width: 1024px) 144px, 260px"
                     className="object-cover"
@@ -313,7 +444,10 @@ export default function MovieDetailsPage(): React.JSX.Element {
                       media={{
                         id: movie.id.toString(),
                         type: "movie",
-                        title: { english: titleEnglish, romaji: titleRomaji },
+                        title: {
+                          english: displayTitle,
+                          romaji: movie.titleSecondary ?? displayTitle,
+                        },
                         coverImage: { large: coverUrl },
                       }}
                       hasListEntry={hasListEntry}
@@ -343,19 +477,14 @@ export default function MovieDetailsPage(): React.JSX.Element {
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
                 {displayTitle}
               </h1>
-              {(titleEnglish && titleEnglish !== displayTitle) ||
-              (titleRomaji && titleRomaji !== displayTitle) ||
-              titleNative ? (
+              {movie.titleSecondary || movie.titleNative ? (
                 <p className="text-xs text-muted-foreground italic">
                   {t("aquila.alsoKnownAs")}{" "}
                   {[
-                    titleEnglish && titleEnglish !== displayTitle
-                      ? titleEnglish
+                    movie.titleSecondary !== movie.titlePrimary
+                      ? movie.titleSecondary
                       : null,
-                    titleRomaji && titleRomaji !== displayTitle
-                      ? titleRomaji
-                      : null,
-                    titleNative,
+                    movie.titleNative,
                   ]
                     .filter(Boolean)
                     .join(", ")}
@@ -378,8 +507,8 @@ export default function MovieDetailsPage(): React.JSX.Element {
                     </span>
                     <div className="flex items-baseline gap-1 mt-0.5">
                       <span className="text-2xl font-black text-primary leading-none">
-                        {movie.localAverageScore
-                          ? movie.localAverageScore.toFixed(1)
+                        {displayAverageScore != null
+                          ? displayAverageScore.toFixed(1)
                           : "N/A"}
                       </span>
                       <span className="text-xs font-semibold text-muted-foreground">
@@ -402,13 +531,9 @@ export default function MovieDetailsPage(): React.JSX.Element {
                       </span>
                       <span
                         className="text-base font-extrabold text-foreground tracking-tight leading-none mt-0.5"
-                        title={
-                          movie.localFavoritesCount != null
-                            ? movie.localFavoritesCount.toLocaleString()
-                            : "0"
-                        }
+                        title={displayFavorites.toLocaleString()}
                       >
-                        {formatCompactNumber(movie.localFavoritesCount)}
+                        {formatCompactNumber(displayFavorites)}
                       </span>
                     </div>
                   </div>
@@ -424,13 +549,9 @@ export default function MovieDetailsPage(): React.JSX.Element {
                       </span>
                       <span
                         className="text-base font-extrabold text-foreground tracking-tight leading-none mt-0.5"
-                        title={
-                          movie.localPopularity != null
-                            ? movie.localPopularity.toLocaleString()
-                            : "0"
-                        }
+                        title={displayPopularity.toLocaleString()}
                       >
-                        {formatCompactNumber(movie.localPopularity)}
+                        {formatCompactNumber(displayPopularity)}
                       </span>
                     </div>
                   </div>
@@ -482,36 +603,46 @@ export default function MovieDetailsPage(): React.JSX.Element {
                     label={t("aquila.releaseDate")}
                     value={formattedReleaseDate}
                   />
-                  <RrMediaInfoRow
-                    label={t("aquila.budget")}
-                    value={movie.budget}
-                  />
-                  <RrMediaInfoRow
-                    label={t("aquila.boxOffice")}
-                    value={movie.boxOffice}
-                  />
+                  {movie.budget && (
+                    <RrMediaInfoRow
+                      label={t("aquila.budget")}
+                      value={
+                        !isNaN(Number(movie.budget))
+                          ? `$${Number(movie.budget).toLocaleString()}`
+                          : movie.budget
+                      }
+                    />
+                  )}
+                  {movie.revenue && (
+                    <RrMediaInfoRow
+                      label={t("aquila.boxOffice")}
+                      value={
+                        !isNaN(Number(movie.revenue))
+                          ? `$${Number(movie.revenue).toLocaleString()}`
+                          : movie.revenue
+                      }
+                    />
+                  )}
                   <RrMediaInfoRow
                     label={t("aquila.country")}
-                    value={movie.originalCountry}
+                    value={movie.countryOfOrigin}
+                    className="uppercase"
                   />
                   <RrMediaInfoRow
                     label={t("aquila.language")}
                     value={movie.originalLanguage}
                     className="uppercase"
                   />
-                  <RrMediaInfoRow
-                    label={t("aquila.rating")}
-                    value={
-                      movie.contentRating ? (
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] px-2 py-0.5"
-                        >
-                          {movie.contentRating}
-                        </Badge>
-                      ) : null
-                    }
-                  />
+                  {movie.ageRating && (
+                    <RrMediaInfoRow
+                      label={t("aquila.rating")}
+                      value={
+                        movie.ageRatingGuide
+                          ? `${movie.ageRating} (${movie.ageRatingGuide})`
+                          : movie.ageRating
+                      }
+                    />
+                  )}
                   {studios.length > 0 && (
                     <RrMediaInfoRow
                       label={t("aquila.studiosLabel")}
@@ -530,7 +661,7 @@ export default function MovieDetailsPage(): React.JSX.Element {
             </div>
           </motion.div>
 
-          {/* Right Column - Info */}
+          {/* Right Column - Main Content & Tabs */}
           <div className="flex-1 space-y-6 lg:pt-8 min-w-0">
             {/* Header (Desktop) */}
             <motion.div
@@ -540,19 +671,14 @@ export default function MovieDetailsPage(): React.JSX.Element {
               <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">
                 {displayTitle}
               </h1>
-              {(titleEnglish && titleEnglish !== displayTitle) ||
-              (titleRomaji && titleRomaji !== displayTitle) ||
-              titleNative ? (
+              {movie.titleSecondary || movie.titleNative ? (
                 <p className="text-xs text-muted-foreground italic">
                   {t("aquila.alsoKnownAs")}{" "}
                   {[
-                    titleEnglish && titleEnglish !== displayTitle
-                      ? titleEnglish
+                    movie.titleSecondary !== movie.titlePrimary
+                      ? movie.titleSecondary
                       : null,
-                    titleRomaji && titleRomaji !== displayTitle
-                      ? titleRomaji
-                      : null,
-                    titleNative,
+                    movie.titleNative,
                   ]
                     .filter(Boolean)
                     .join(", ")}
@@ -566,32 +692,146 @@ export default function MovieDetailsPage(): React.JSX.Element {
             {/* Genres */}
             <RrMediaGenres genres={movie.genres} />
 
-            {/* Characters */}
-            {characters && characters.length > 0 && (
-              <RrMediaCharacters characters={characters} />
-            )}
+            {/* Tabs Navigation */}
+            <Tabs defaultValue="overview" className="w-full space-y-6">
+              <TabsList className="bg-card/60 border border-border/30 backdrop-blur-xl p-1.5 rounded-2xl w-full flex overflow-x-auto justify-start sm:justify-center gap-1 scrollbar-none">
+                <TabsTrigger
+                  value="overview"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <LayoutGrid className="size-3.5 mr-1.5" />
+                  {t("aquila.overview", "Overview")}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="characters"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <Users className="size-3.5 mr-1.5" />
+                  {t("aquila.characters", "Characters")}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="staff"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <UserCheck className="size-3.5 mr-1.5" />
+                  {t("aquila.staff", "Staff")}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="images"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <ImageIcon className="size-3.5 mr-1.5" />
+                  {t("aquila.images", "Images")}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="stats"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <BarChart3 className="size-3.5 mr-1.5" />
+                  {t("aquila.stats", "Stats")}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="reviews"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <MessageSquare className="size-3.5 mr-1.5" />
+                  {t("aquila.reviews")}
+                </TabsTrigger>
+              </TabsList>
 
-            {/* Similar Series Carousel */}
-            <RrMediaSimilar mediaType="movie" mediaId={id} />
+              {/* Overview Tab Content */}
+              <TabsContent value="overview" className="space-y-6 outline-none">
+                {/* Characters Preview (first 10) */}
+                {characters.length > 0 && (
+                  <RrMediaCharacters
+                    characters={characters}
+                    limitCount={10}
+                    hideToggleButton={true}
+                  />
+                )}
 
-            {/* Stats Dashboard (Score & Status distribution charts) */}
-            <RrMediaStatsDashboard
-              localAverageScore={movie.localAverageScore}
-              localPopularity={movie.localPopularity}
-              localFavoritesCount={movie.localFavoritesCount}
-              localStatusDistribution={movie.localStatusDistribution}
-              localScoreDistribution={movie.localScoreDistribution}
-              showCounters={false}
-            />
+                {/* Staff Preview (first 6) */}
+                {staff.length > 0 && (
+                  <RrMediaStaff staff={staff} limit={6} />
+                )}
 
-            {/* Trailer & Friends Progress */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
-              <RrMediaTrailer trailer={trailerObj} />
-              <RrMediaFriendsProgress
-                mediaId={movie.id.toString()}
-                mediaType="movie"
-              />
-            </div>
+                {/* Relations */}
+                {relations.length > 0 && (
+                  <RrMediaRelations relations={relations} />
+                )}
+
+                {/* Similar Series Carousel */}
+                <RrMediaSimilar mediaType="movie" mediaId={id} />
+
+                {/* Trailer & Friends Progress */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+                  <RrMediaTrailer trailer={trailerObj} />
+                  <RrMediaFriendsProgress
+                    mediaId={movie.id.toString()}
+                    mediaType="movie"
+                  />
+                </div>
+              </TabsContent>
+
+              {/* Characters Tab Content */}
+              <TabsContent
+                value="characters"
+                className="space-y-6 outline-none"
+              >
+                {characters.length > 0 ? (
+                  <RrMediaCharacters
+                    characters={characters}
+                    showAllInitial={true}
+                  />
+                ) : (
+                  <div className="p-8 text-center text-muted-foreground bg-card/45 border border-border/30 rounded-2xl">
+                    {t(
+                      "aquila.noCharacters",
+                      "No character information available",
+                    )}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Staff Tab Content */}
+              <TabsContent value="staff" className="space-y-6 outline-none">
+                {staff.length > 0 ? (
+                  <RrMediaStaff staff={staff} showAllInitial={true} />
+                ) : (
+                  <div className="p-8 text-center text-muted-foreground bg-card/45 border border-border/30 rounded-2xl">
+                    {t("aquila.noStaff", "No staff information available")}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Images Tab Content */}
+              <TabsContent value="images" className="space-y-6 outline-none">
+                <RrMediaImages anime={movie as any} />
+              </TabsContent>
+
+              {/* Stats Tab Content */}
+              <TabsContent value="stats" className="space-y-6 outline-none">
+                <RrMediaStatsDashboard
+                  localAverageScore={movie.localAverageScore ?? movie.averageScore}
+                  localPopularity={movie.localPopularity ?? movie.popularity}
+                  localFavoritesCount={
+                    movie.localFavoritesCount ?? movie.favorites
+                  }
+                  localStatusDistribution={
+                    movie.localStatusDistribution ?? movie.statusDistribution
+                  }
+                  localScoreDistribution={
+                    movie.localScoreDistribution ?? movie.scoreDistribution
+                  }
+                  showCounters={true}
+                />
+              </TabsContent>
+
+              {/* Reviews Tab Content */}
+              <TabsContent value="reviews" className="space-y-6 outline-none">
+                <RrMediaReviews mediaType={MediaType.MOVIE} mediaId={Number(id)} />
+              </TabsContent>
+            </Tabs>
           </div>
         </motion.div>
 
@@ -603,8 +843,8 @@ export default function MovieDetailsPage(): React.JSX.Element {
           mediaId={Number(id)}
           mediaData={{
             ...movie,
-            relations: [],
-            characters: movie.characters || [],
+            relations,
+            characters,
           }}
         />
       </div>

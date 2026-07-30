@@ -130,19 +130,23 @@ export default function UserMoviesPage({ initialData }: { initialData?: any }) {
 
   const getInitialPriorityState = () => {
     if (!initialData) {
-      return { index: 0, offset: 0, hasMore: true };
+      return { index: 0, cursor: undefined, hasMore: true };
     }
     const len = initialData.entries?.length || 0;
-    if (len < 30) {
-      return { index: 1, offset: 0, hasMore: true };
+    const pageInfo = initialData.pageInfo;
+    const initialHasMore = pageInfo?.hasMore ?? len >= 30;
+    const initialNextCursor = pageInfo?.nextCursor ?? null;
+
+    if (!initialHasMore) {
+      return { index: 1, cursor: undefined, hasMore: true };
     } else {
-      return { index: 0, offset: len, hasMore: true };
+      return { index: 0, cursor: initialNextCursor, hasMore: true };
     }
   };
 
   const initialPState = getInitialPriorityState();
-  const [offset, setOffset] = useState(
-    initialData ? initialData.entries?.length || 0 : 0,
+  const [nextCursor, setNextCursor] = useState<string | null | undefined>(
+    initialData?.pageInfo?.nextCursor,
   );
   const [hasMore, setHasMore] = useState(initialPState.hasMore);
   const [loading, setLoading] = useState(false);
@@ -150,7 +154,9 @@ export default function UserMoviesPage({ initialData }: { initialData?: any }) {
     initialData?.counts || {},
   );
   const [priorityIdx, setPriorityIdx] = useState(initialPState.index);
-  const [priorityOff, setPriorityOff] = useState(initialPState.offset);
+  const [priorityCursor, setPriorityCursor] = useState<
+    string | null | undefined
+  >(initialPState.cursor);
   const isFetchingRef = useRef(false);
   const isInitialMountRef = useRef(true);
 
@@ -162,7 +168,7 @@ export default function UserMoviesPage({ initialData }: { initialData?: any }) {
   }, [searchVal]);
 
   const fetchMoviesList = (
-    currentOffset = 0,
+    cursorToFetch?: string | null,
     isReset = false,
     statusOverride?: string,
     signal?: AbortSignal,
@@ -181,7 +187,6 @@ export default function UserMoviesPage({ initialData }: { initialData?: any }) {
 
     const queryParams = new URLSearchParams({
       limit: "30",
-      offset: currentOffset.toString(),
       status: effectiveStatus,
       search: debouncedSearch,
       format: filters.format || "",
@@ -190,6 +195,10 @@ export default function UserMoviesPage({ initialData }: { initialData?: any }) {
       mediaStatus: filters.mediaStatus || "",
       sort: sort,
     });
+
+    if (cursorToFetch) {
+      queryParams.set("cursor", cursorToFetch);
+    }
 
     fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/list/movie/user/${username}?${queryParams}`,
@@ -209,30 +218,36 @@ export default function UserMoviesPage({ initialData }: { initialData?: any }) {
         if (data && data.statusCode !== 404) {
           setIsPrivate(false);
           const newEntries = data.entries || [];
+          const pageInfo = data.pageInfo || {
+            nextCursor: null,
+            hasMore: newEntries.length === 30,
+          };
+
           setMoviesList((prev) => {
             if (isReset) return newEntries;
             const seen = new Set(prev.map((e) => e.id));
             return [...prev, ...newEntries.filter((e: any) => !seen.has(e.id))];
           });
           setCounts(data.counts || {});
+
           if (statusOverride !== undefined && activeList === "All") {
-            if (newEntries.length < 30) {
+            if (!pageInfo.hasMore) {
               const pIdx = MOVIES_PRIORITY_STATUSES.indexOf(statusOverride);
               const nextIdx = pIdx + 1;
               if (nextIdx < MOVIES_PRIORITY_STATUSES.length) {
                 setPriorityIdx(nextIdx);
-                setPriorityOff(0);
+                setPriorityCursor(undefined);
                 setHasMore(true);
               } else {
                 setHasMore(false);
               }
             } else {
-              setPriorityOff(currentOffset + newEntries.length);
+              setPriorityCursor(pageInfo.nextCursor);
               setHasMore(true);
             }
           } else {
-            setHasMore(newEntries.length === 30);
-            setOffset(currentOffset + newEntries.length);
+            setHasMore(pageInfo.hasMore);
+            setNextCursor(pageInfo.nextCursor);
           }
         }
       })
@@ -255,13 +270,18 @@ export default function UserMoviesPage({ initialData }: { initialData?: any }) {
     }
     const controller = new AbortController();
     setPriorityIdx(0);
-    setPriorityOff(0);
-    setOffset(0);
+    setPriorityCursor(undefined);
+    setNextCursor(undefined);
     setHasMore(true);
     if (activeList === "All") {
-      fetchMoviesList(0, true, MOVIES_PRIORITY_STATUSES[0], controller.signal);
+      fetchMoviesList(
+        undefined,
+        true,
+        MOVIES_PRIORITY_STATUSES[0],
+        controller.signal,
+      );
     } else {
-      fetchMoviesList(0, true, undefined, controller.signal);
+      fetchMoviesList(undefined, true, undefined, controller.signal);
     }
     return () => {
       controller.abort();
@@ -299,7 +319,11 @@ export default function UserMoviesPage({ initialData }: { initialData?: any }) {
         variants={itemVariants}
         className="flex-1 flex flex-col gap-6 w-full z-10"
       >
-        <RrUserListHeader userData={userData || null} listTitle="Movies List" entries={moviesList} />
+        <RrUserListHeader
+          userData={userData || null}
+          listTitle="Movies List"
+          entries={moviesList}
+        />
 
         {isPrivate ? (
           <div className="flex flex-col items-center justify-center py-20 bg-card/20 backdrop-blur-xl border border-border/40 rounded-2xl shadow-xl text-center p-6 mt-4">
@@ -347,9 +371,11 @@ export default function UserMoviesPage({ initialData }: { initialData?: any }) {
             ) : (
               <>
                 <header className="flex items-center justify-between mt-4">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/75" suppressHydrationWarning>
-                    {getListNameTranslation(activeList)}{" "}
-                    {t("aquila.movies")} (
+                  <h3
+                    className="text-sm font-bold uppercase tracking-wider text-muted-foreground/75"
+                    suppressHydrationWarning
+                  >
+                    {getListNameTranslation(activeList)} {t("aquila.movies")} (
                     {counts?.[activeList.toLowerCase().replace(/\s+/g, "_")] ??
                       moviesList.length}
                     )
@@ -363,14 +389,19 @@ export default function UserMoviesPage({ initialData }: { initialData?: any }) {
                     <div className="flex items-center gap-1.5 bg-muted/20 p-1 rounded-xl border border-border/30 shadow-inner">
                       {[
                         { type: "list", icon: <Lucide.List size={16} /> },
-                        { type: "compact", icon: <Lucide.LayoutList size={16} /> },
+                        {
+                          type: "compact",
+                          icon: <Lucide.LayoutList size={16} />,
+                        },
                         { type: "grid", icon: <Lucide.LayoutGrid size={16} /> },
                       ].map((view) => (
                         <motion.button
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
                           key={view.type}
-                          onClick={() => setDisplayType(view.type as DisplayType)}
+                          onClick={() =>
+                            setDisplayType(view.type as DisplayType)
+                          }
                           className={`flex items-center justify-center size-8 rounded-lg transition-all cursor-pointer ${displayType === view.type ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:bg-muted/30 hover:text-foreground"}`}
                         >
                           {view.icon}
@@ -392,12 +423,33 @@ export default function UserMoviesPage({ initialData }: { initialData?: any }) {
                   sort={sort}
                   baseUrl="/aquila/movies"
                   isOwner={isOwner}
-                  onRefresh={() => fetchMoviesList(0, true)}
+                  onRefresh={() => {
+                    if (activeList === "All") {
+                      setPriorityIdx(0);
+                      setPriorityCursor(undefined);
+                      fetchMoviesList(
+                        undefined,
+                        true,
+                        MOVIES_PRIORITY_STATUSES[0],
+                      );
+                    } else {
+                      setNextCursor(undefined);
+                      fetchMoviesList(undefined, true);
+                    }
+                  }}
                 />
 
                 <InfiniteScroll
                   onLoadMore={() => {
-                    fetchMoviesList(offset, false);
+                    if (activeList === "All") {
+                      fetchMoviesList(
+                        priorityCursor,
+                        false,
+                        MOVIES_PRIORITY_STATUSES[priorityIdx],
+                      );
+                    } else {
+                      fetchMoviesList(nextCursor, false);
+                    }
                   }}
                   hasMore={hasMore}
                   isLoading={loading}
@@ -410,4 +462,3 @@ export default function UserMoviesPage({ initialData }: { initialData?: any }) {
     </motion.div>
   );
 }
-

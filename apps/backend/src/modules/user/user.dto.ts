@@ -141,6 +141,14 @@ export class PrivacySettingsDto {
   @IsOptional()
   movieList?: boolean;
 
+  @IsBoolean({ message: 'PySgDto-GLMBAB001: Game list must be a boolean' })
+  @IsOptional()
+  gameList?: boolean;
+
+  @IsBoolean({ message: 'PySgDto-BLMBAB001: Book list must be a boolean' })
+  @IsOptional()
+  bookList?: boolean;
+
   @IsBoolean({ message: 'PySgDto-CMBAB001: Connections must be a boolean' })
   @IsOptional()
   connections?: boolean;

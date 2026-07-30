@@ -13,30 +13,44 @@ model User {
     avatarUrl                String?
     bannerUrl                String?
     sidebarCardBackgroundUrl String?
-    profileSettings          Json?                  @db.Json
+    profileSettings          Json?         @db.Json
     apiKeys                  ApiKey[]
     connections              Connections[]
-    animeList                AquilaAnimeUserList[]
-    mangaList                AquilaMangaUserList[]
-    aquilaMovieUserLists     AquilaMovieUserList[]
-    aquilaTvUserLists        AquilaTvUserList[]
-    favorites                Favorite[]
-    gameList                 AquilaGameUserList[]
-    bookList                 AquilaBookUserList[]
     userStats                UserStats[]
-    polarisBookmarks         PolarisUserBookMarks[]
-    emailAccounts            UserEmailAccount[]
-    cannedResponses          CannedResponse[]
-    devices                  Device[]
-    notifications            Notification[]
-    laceraFiles              LaceraFile[]
-    laceraShares             LaceraShare[]
+    favorites                Favorite[]
+
+    // MEDIA LISTS
+    animeList AquilaAnimeUserListV2[]
+    mangaList AquilaMangaUserListV2[]
+    movieList AquilaMovieUserListV2[]
+    tvList    AquilaTvUserListV2[]
+
+    gameList AquilaGameUserListV2[]
+    bookList AquilaBookUserListV2[]
+
+    // REVIEWS
+    aquilaAnimeReviews AquilaAnimeReview[]
+    aquilaMangaReviews AquilaMangaReview[]
+    aquilaMovieReviews AquilaMovieReview[]
+    aquilaTvReviews    AquilaTvReview[]
+    aquilaGameReviews  AquilaGameReview[]
+    aquilaBookReviews  AquilaBookReview[]
+
+    polarisBookmarks          PolarisUserBookMarks[]
+    emailAccounts             UserEmailAccount[]
+    cannedResponses           CannedResponse[]
+    devices                   Device[]
+    notifications             Notification[]
     submittedMediaSubmissions AquilaMediaSubmission[] @relation("SubmittedMediaSubmissions")
     reviewedMediaSubmissions  AquilaMediaSubmission[] @relation("ReviewedMediaSubmissions")
-    vaultPinHash             String?
-    lacertaMaxStorage        Float                  @default(104857600)
 
+    // LACERTA
+    vaultPinHash      String?
+    lacertaMaxStorage Float         @default(104857600)
+    laceraFiles       LaceraFile[]
+    laceraShares      LaceraShare[]
 
+    // FRIENDS STUFF
     friends          Friend[]        @relation("UserFriends")
     friendOf         Friend[]        @relation("FriendUsers")
     sentRequests     FriendRequest[] @relation("SentFriendRequests")

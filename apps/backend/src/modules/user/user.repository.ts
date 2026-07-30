@@ -106,7 +106,7 @@ export class UserRepository {
       }),
       ...(dto.animeList !== undefined
         ? [
-            this.prisma.client.aquilaAnimeUserList.updateMany({
+            this.prisma.client.aquilaAnimeUserListV2.updateMany({
               where: { username },
               data: { private: dto.animeList },
             }),
@@ -114,7 +114,7 @@ export class UserRepository {
         : []),
       ...(dto.mangaList !== undefined
         ? [
-            this.prisma.client.aquilaMangaUserList.updateMany({
+            this.prisma.client.aquilaMangaUserListV2.updateMany({
               where: { username },
               data: { private: dto.mangaList },
             }),
@@ -122,7 +122,7 @@ export class UserRepository {
         : []),
       ...(dto.tvList !== undefined
         ? [
-            this.prisma.client.aquilaTvUserList.updateMany({
+            this.prisma.client.aquilaTvUserListV2.updateMany({
               where: { username },
               data: { private: dto.tvList },
             }),
@@ -130,9 +130,25 @@ export class UserRepository {
         : []),
       ...(dto.movieList !== undefined
         ? [
-            this.prisma.client.aquilaMovieUserList.updateMany({
+            this.prisma.client.aquilaMovieUserListV2.updateMany({
               where: { username },
               data: { private: dto.movieList },
+            }),
+          ]
+        : []),
+      ...(dto.gameList !== undefined
+        ? [
+            this.prisma.client.aquilaGameUserListV2.updateMany({
+              where: { username },
+              data: { private: dto.gameList },
+            }),
+          ]
+        : []),
+      ...(dto.bookList !== undefined
+        ? [
+            this.prisma.client.aquilaBookUserListV2.updateMany({
+              where: { username },
+              data: { private: dto.bookList },
             }),
           ]
         : []),

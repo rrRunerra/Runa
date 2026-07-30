@@ -1,10 +1,11 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { Prisma } from '@runa/database';
 import {
-  rrError,
-  rrInternalServerErrorException,
-  rrNotFoundException,
-} from 'src/providers/error';
+  Injectable,
+  Logger,
+  BadRequestException,
+  NotFoundException,
+  InternalServerErrorException,
+} from '@nestjs/common';
+import { Prisma } from '@runa/database';
 import { CacheService } from '../../providers/cache/cache.service';
 import { parsePrivacy } from '../user/user.service';
 import { StatsRepository } from './stats.repository';
@@ -85,8 +86,10 @@ function computeScoreStats(scores: number[]): ScoreStatsEntity {
   }
 
   scores.forEach((s) => {
-    scoreDistribution[s.toString()] =
-      (scoreDistribution[s.toString()] || 0) + 1;
+    const key = Math.round(s).toString();
+    if (key in scoreDistribution) {
+      scoreDistribution[key] = (scoreDistribution[key] || 0) + 1;
+    }
   });
 
   let meanScore = 0;
@@ -156,7 +159,7 @@ export class StatsService {
   ) {}
 
   // -------------------------------------------------------------------------
-  // Public API —  getStats
+  // Public API — getStats
   // -------------------------------------------------------------------------
 
   public async getStats(
@@ -165,27 +168,23 @@ export class StatsService {
     req: ExtendedRequest,
   ): Promise<StatsEntity> {
     if (!VALID_MEDIA_TYPES.includes(mediaType as MediaType)) {
-      throw new rrError(`${this.moduleCode}UMT001`, {
-        message: `Stats for type "${mediaType}" do not exist.`,
-      });
+      throw new BadRequestException(
+        `Stats for type "${mediaType}" do not exist.`,
+      );
     }
 
     // --- Lookup & privacy check ---
     const owner = await this.statsRepository.findUserByUsername(username);
 
     if (!owner) {
-      throw new rrNotFoundException(`${this.moduleCode}UNF001`, {
-        message: `User "${username}" not found`,
-      });
+      throw new NotFoundException(`User "${username}" not found`);
     }
 
     const privacy = parsePrivacy(owner.privacy);
 
     // If the profile itself is private and viewer is not the owner, hide everything
     if (privacy.profile && !isOwner(req, owner.id)) {
-      throw new rrNotFoundException(`${this.moduleCode}UPROFPRIV001`, {
-        message: `User "${username}" not found`,
-      });
+      throw new NotFoundException(`User "${username}" not found`);
     }
 
     // Check the specific media type's privacy
@@ -193,9 +192,7 @@ export class StatsService {
     const isMediaPrivate = privacy[mediaPrivacyKey] === true;
 
     if (isMediaPrivate && !isOwner(req, owner.id)) {
-      throw new rrNotFoundException(`${this.moduleCode}UMEDPRIV001`, {
-        message: `User "${username}" not found`,
-      });
+      throw new NotFoundException(`User "${username}" not found`);
     }
 
     // --- Check cache ---
@@ -259,9 +256,7 @@ export class StatsService {
     const user = await this.statsRepository.findUserById(userId);
 
     if (!user) {
-      throw new rrNotFoundException(`${this.moduleCode}UWIDNF001`, {
-        message: `User with ID ${userId} not found`,
-      });
+      throw new NotFoundException(`User with ID ${userId} not found`);
     }
 
     const username = user.username.toLowerCase();
@@ -322,9 +317,9 @@ export class StatsService {
         );
         break;
       default:
-        throw new rrInternalServerErrorException(`${this.moduleCode}UMT002`, {
-          message: `Unsupported media type: ${mediaType}`,
-        });
+        throw new InternalServerErrorException(
+          `Unsupported media type: ${mediaType}`,
+        );
     }
 
     // Bust the cache so next getStats fetches fresh data
@@ -336,7 +331,7 @@ export class StatsService {
   }
 
   // -------------------------------------------------------------------------
-  // Calculation helpers —  Anime
+  // Calculation helpers — Anime
   // -------------------------------------------------------------------------
 
   private async calculateAnimeStats(
@@ -423,7 +418,7 @@ export class StatsService {
   }
 
   // -------------------------------------------------------------------------
-  // Calculation helpers —  Manga
+  // Calculation helpers — Manga
   // -------------------------------------------------------------------------
 
   private async calculateMangaStats(
@@ -491,7 +486,7 @@ export class StatsService {
   }
 
   // -------------------------------------------------------------------------
-  // Calculation helpers —  TV
+  // Calculation helpers — TV
   // -------------------------------------------------------------------------
 
   private async calculateTvStats(username: string): Promise<TvStatsEntity> {
@@ -528,7 +523,7 @@ export class StatsService {
   }
 
   // -------------------------------------------------------------------------
-  // Calculation helpers —  Movie
+  // Calculation helpers — Movie
   // -------------------------------------------------------------------------
 
   private async calculateMovieStats(
@@ -566,7 +561,7 @@ export class StatsService {
   }
 
   // -------------------------------------------------------------------------
-  // Calculation helpers —  Game
+  // Calculation helpers — Game
   // -------------------------------------------------------------------------
 
   private async calculateGameStats(username: string): Promise<GameStatsEntity> {
@@ -601,7 +596,7 @@ export class StatsService {
   }
 
   // -------------------------------------------------------------------------
-  // Calculation helpers —  Book
+  // Calculation helpers — Book
   // -------------------------------------------------------------------------
 
   private async calculateBookStats(username: string): Promise<BookStatsEntity> {

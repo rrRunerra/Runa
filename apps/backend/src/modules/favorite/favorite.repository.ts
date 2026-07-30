@@ -60,44 +60,44 @@ export class FavoriteRepository {
 
     switch (type) {
       case FavoriteType.ANIME:
-        return this.prisma.client.aquilaAnime.findUnique({
+        return this.prisma.client.aquilaAnimeV2.findUnique({
           where: { id: num },
           select: {
-            titleEnglish: true,
-            titleRomaji: true,
+            titlePrimary: true,
+            titleSecondary: true,
             titleNative: true,
-            coverImageLarge: true,
+            coverImage: true,
           },
         });
       case FavoriteType.MANGA:
-        return this.prisma.client.aquilaManga.findUnique({
+        return this.prisma.client.aquilaMangaV2.findUnique({
           where: { id: num },
           select: {
-            titleEnglish: true,
-            titleRomaji: true,
+            titlePrimary: true,
+            titleSecondary: true,
             titleNative: true,
-            coverImageLarge: true,
+            coverImage: true,
           },
         });
       case FavoriteType.TV:
-        return this.prisma.client.aquilaTv.findUnique({
+        return this.prisma.client.aquilaTvV2.findUnique({
           where: { id: num },
-          select: { titleEnglish: true, coverImage: true },
+          select: { titlePrimary: true, coverImage: true },
         });
       case FavoriteType.MOVIE:
-        return this.prisma.client.aquilaMovie.findUnique({
+        return this.prisma.client.aquilaMovieV2.findUnique({
           where: { id: num },
-          select: { titleEnglish: true, coverImage: true },
+          select: { titlePrimary: true, coverImage: true },
         });
       case FavoriteType.GAME:
-        return this.prisma.client.aquilaGame.findUnique({
+        return this.prisma.client.aquilaGameV2.findUnique({
           where: { id: num },
-          select: { titleString: true, coverImage: true },
+          select: { titlePrimary: true, coverImage: true },
         });
       case FavoriteType.BOOK:
-        return this.prisma.client.aquilaBook.findUnique({
+        return this.prisma.client.aquilaBookV2.findUnique({
           where: { id: num },
-          select: { titleString: true, coverImage: true },
+          select: { titlePrimary: true, coverImage: true },
         });
       case FavoriteType.USER:
         return this.prisma.client.user.findUnique({
@@ -105,22 +105,20 @@ export class FavoriteRepository {
           select: { username: true, displayName: true, avatarUrl: true },
         });
       case FavoriteType.CHARACTER:
-        return this.prisma.client.aquilaCharacter.findUnique({
+        return this.prisma.client.aquilaCharacterV2.findUnique({
           where: { id: num },
           select: {
-            nameFirst: true,
-            nameMiddle: true,
-            nameLast: true,
+            namePrimary: true,
             nameNative: true,
             image: true,
           },
         });
       case FavoriteType.STAFF:
-        return this.prisma.client.aquilaActor.findUnique({
+        return this.prisma.client.aquilaActorV2.findUnique({
           where: { id: num },
           select: {
-            name: true,
-            personName: true,
+            namePrimary: true,
+            nameNative: true,
             image: true,
           },
         });

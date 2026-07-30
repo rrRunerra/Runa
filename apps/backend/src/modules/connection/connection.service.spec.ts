@@ -223,8 +223,8 @@ describe('ConnectionService', () => {
       service['loader'].getConnection = jest
         .fn()
         .mockReturnValue(mockProviderInstance);
-      mockPrismaClient.aquilaAnimeUserList.findUnique.mockResolvedValue(null);
-      mockPrismaClient.aquilaAnimeUserList.create.mockResolvedValue({});
+      mockPrismaClient.aquilaAnimeUserListV2.findUnique.mockResolvedValue(null);
+      mockPrismaClient.aquilaAnimeUserListV2.create.mockResolvedValue({});
       mockPrismaClient.user.findFirst.mockResolvedValue({ id: 'user-id-123' });
 
       await service['runImportInBackground']('testuser', 'anilist');
@@ -235,7 +235,7 @@ describe('ConnectionService', () => {
         'Test Anime',
         'img',
       );
-      expect(mockPrismaClient.aquilaAnimeUserList.create).toHaveBeenCalled();
+      expect(mockPrismaClient.aquilaAnimeUserListV2.create).toHaveBeenCalled();
       expect(service.getImportStatus('testuser', 'anilist').status).toBe(
         'completed',
       );

@@ -46,7 +46,7 @@ async function bootstrap() {
     const fribbMap = await fetchFribbMappings();
 
     console.log('\nFetching anime user list entries from database...');
-    const animeEntries = await prisma.client.aquilaAnimeUserList.findMany({
+    const animeEntries = await prisma.client.aquilaAnimeUserListV2.findMany({
       select: {
         id: true,
         username: true,
@@ -56,8 +56,8 @@ async function bootstrap() {
           select: {
             id: true,
             anilistId: true,
-            titleEnglish: true,
-            titleRomaji: true,
+            titlePrimary: true,
+            titleSecondary: true,
           },
         },
       },
@@ -74,8 +74,8 @@ async function bootstrap() {
       const entry = animeEntries[i];
       const connectionsObj = (entry.connections as Record<string, unknown>) || {};
       const title =
-        entry.anime?.titleEnglish ||
-        entry.anime?.titleRomaji ||
+        entry.anime?.titlePrimary ||
+        entry.anime?.titleSecondary ||
         `Anime #${entry.animeId}`;
 
       let tvdbId: number | null = null;
@@ -103,7 +103,7 @@ async function bootstrap() {
         }
 
         if (!isDryRun) {
-          await prisma.client.aquilaAnimeUserList.update({
+          await prisma.client.aquilaAnimeUserListV2.update({
             where: { id: entry.id },
             data: {
               connections: {

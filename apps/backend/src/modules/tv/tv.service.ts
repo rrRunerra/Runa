@@ -1,29 +1,29 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  BadRequestException,
+  NotFoundException,
+  ConflictException,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { TvRepository } from './tv.repository';
 import { TvQueueService } from './tv-queue.service';
-import {
-  rrError,
-  rrNotFoundException,
-  rrTooManyRequestsException,
-  rrConflictException,
-} from 'src/providers/error';
 import { TvEntity, TvSearchEntity } from './tv.entities';
 import { CacheService } from 'src/providers/cache/cache.service';
 import { TvExternal } from './tv.external';
 
 interface DbTvResult {
   id: number;
-  tvdbId: number;
-  titleEnglish?: string | null;
-  titleRomaji?: string | null;
+  tvDBId: number | null;
+  titlePrimary?: string | null;
+  titleSecondary?: string | null;
   coverImage?: string | null;
 }
 
 @Injectable()
 export class TvService {
   private readonly logger = new Logger(TvService.name);
-  private readonly moduleCode = 'TvSve-';
-  private readonly useLocalMedia = process.env.USE_LOCAL_MEDIA_ONLY ?? false;
   private readonly cacheDuration = Number(
     process.env.TV_CACHE_DURATION ?? 60 * 60,
   );
@@ -37,27 +37,28 @@ export class TvService {
 
   public async search(name: string): Promise<TvSearchEntity[]> {
     const cleanName = decodeURIComponent(name).replace(/\+/g, ' ').trim();
+    if (!cleanName) return [];
+
     const cacheKey = CacheService.keys.tvSearch(cleanName);
 
     const rawCached = await this.cacheService.get<any>(cacheKey);
     const cached: TvSearchEntity[] | null =
       typeof rawCached === 'string' ? JSON.parse(rawCached) : rawCached;
 
-    if (cached && Array.isArray(cached)) {
+    if (cached && Array.isArray(cached) && cached.length > 0) {
       this.logger.debug(`TV search cache hit ${cached.length} entries`);
       return cached;
     }
 
-    let result: TvSearchEntity[] = [];
-    let usedExternal = false;
+    let result: TvSearchEntity[] = await this.tvRepository.search(cleanName);
 
-    if (this.useLocalMedia) {
-      result = await this.tvRepository.search(cleanName);
-    }
+    if (result.length === 0) {
+      this.logger.debug(`Local DB search empty, querying TVDB for: "${cleanName}"`);
+      const externalResults = await this.tvExternal.search(cleanName);
 
-    if (!this.useLocalMedia || result.length === 0) {
-      result = (await this.tvExternal.search(cleanName)) ?? [];
-      usedExternal = true;
+      if (externalResults.length > 0) {
+        result = externalResults;
+      }
     }
 
     this.logger.debug(`TV series found: ${result.length}`);
@@ -66,19 +67,12 @@ export class TvService {
       await this.cacheService.set(cacheKey, result, this.cacheDuration);
     }
 
-    if (this.useLocalMedia && !usedExternal && result.length > 0) {
-      this.logger.debug(`Queuing background refresh for TV series`);
-      this.tvQueueService.addSearchRefresh(cleanName, cacheKey);
-    }
-
     return result;
   }
 
   public async getTv(id: number): Promise<TvEntity | undefined> {
     if (isNaN(id)) {
-      throw new rrError(`${this.moduleCode}IMBAN001`, {
-        message: 'ID must be a number',
-      });
+      throw new BadRequestException('ID must be a number');
     }
 
     const cacheKey = `tv:${id}`;
@@ -93,9 +87,7 @@ export class TvService {
     const data = await this.tvRepository.find(id);
 
     if (!data) {
-      throw new rrNotFoundException(`${this.moduleCode}TNF001`, {
-        message: 'TV series not found',
-      });
+      throw new NotFoundException('TV series not found');
     }
 
     await this.cacheService.set(cacheKey, data, this.cacheDuration);
@@ -108,9 +100,7 @@ export class TvService {
     force = false,
   ): Promise<TvEntity | undefined | null> {
     if (isNaN(id)) {
-      throw new rrError(`${this.moduleCode}IMBAN002`, {
-        message: 'ID must be a number',
-      });
+      throw new BadRequestException('ID must be a number');
     }
 
     const cacheKey = `cooldown:refresh:tv:${id}`;
@@ -119,32 +109,24 @@ export class TvService {
       const onCooldown = await this.cacheService.get(cacheKey);
 
       if (onCooldown) {
-        throw new rrTooManyRequestsException(`${this.moduleCode}TMWRR001`, {
-          message: 'This media was refreshed recently.',
-        });
+        throw new HttpException('This media was refreshed recently.', HttpStatus.TOO_MANY_REQUESTS);
       }
     }
 
     const existing = await this.tvRepository.find(id);
     if (!existing) {
-      throw new rrNotFoundException(`${this.moduleCode}TNFID001`, {
-        message: 'TV series not found in database',
-      });
+      throw new NotFoundException('TV series not found in database');
     }
-    if (!existing.tvdbId) {
-      throw new rrError(`${this.moduleCode}THNTVDB001`, {
-        message: 'TV series has no TVDB ID, cannot refresh',
-      });
+    if (!existing.tvDBId) {
+      throw new BadRequestException('TV series has no TVDB ID, cannot refresh');
     }
 
     if (existing.locked && !force) {
-      throw new rrConflictException(`${this.moduleCode}LKD001`, {
-        message: 'TV series is locked, cannot refresh',
-      });
+      throw new ConflictException('TV series is locked, cannot refresh');
     }
 
     await this.tvExternal.fetchAndUpsertTv(
-      existing.tvdbId,
+      existing.tvDBId,
       ...(force ? [force] : []),
     );
 
@@ -171,9 +153,9 @@ export class TvService {
           tvdbId,
         )) as DbTvResult | null;
       } catch {
-        const upserted = await this.tvRepository.upsert(tvdbId, {
-          tvdbId,
-          titleRomaji: title || 'Unknown',
+        const upserted = await this.tvRepository.upsertV2Record({
+          tvDBId: tvdbId,
+          titlePrimary: title || 'Unknown',
           coverImage: coverImage || null,
         });
         tv = upserted as DbTvResult;
@@ -198,4 +180,3 @@ export class TvService {
     return result;
   }
 }
-

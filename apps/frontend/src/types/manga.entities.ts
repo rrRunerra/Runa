@@ -1,26 +1,64 @@
-// Copied from backend module for frontend type safety
-import { AnimeFormat, AnimeStatus } from '@runa/database';
-import type { RelationEntity, MediaTag, CharacterEntity, StudioEntity } from './anime.entities';
+// V2 Manga Schema Entity Definitions for Runa Frontend
+import type { AnimeFormat, AnimeStatus } from '@runa/database';
+import type {
+  CharacterV2Entity,
+  ExternalLink,
+  MediaSourceOrigin,
+  AnimeStaffV2Entity,
+} from './anime.entities';
 
-export interface MangaCharacterEntity {
-  mangaId: number;
+// ─── Relation ────────────────────────────────────────────────────────────────
+
+export interface MangaRelationV2Entity {
+  id: number;
+  sourceType: string;
+  sourceId: number;
+  targetType: string;
+  targetId: number;
+  relationType?: string;
+  type?: string;
+  targetMedia?: {
+    id: number;
+    anilistId?: number | null;
+    titlePrimary?: string;
+    titleSecondary?: string | null;
+    titleNative?: string | null;
+    coverImage?: string | null;
+    format?: AnimeFormat;
+    status?: AnimeStatus;
+    seasonYear?: number;
+  } | null;
+}
+
+// ─── Character join ───────────────────────────────────────────────────────────
+
+export interface MangaCharacterV2Entity {
+  id: number;
+  mediaType: string;
+  mediaId: number;
   characterId: number;
+  actorId: number | null;
   role: string | null;
   order: number | null;
-  character?: CharacterEntity;
+  animeId: number | null;
+  mangaId: number | null;
+  character: CharacterV2Entity;
+  actor: null; // manga characters have no voice actors
 }
 
-export interface MangaStudioEntity {
-  mangaId: number;
-  studioId: number;
-  isMain: boolean | null;
-  studio?: StudioEntity;
+// ─── Images ───────────────────────────────────────────────────────────────────
+
+export interface MangaImages {
+  mal?: { pictures?: string[] };
+  anilist?: { cover?: string | null; banner?: string | null };
 }
+
+// ─── Search result ────────────────────────────────────────────────────────────
 
 export interface MangaSearchEntity {
   id: number;
-  title: string;
-  secondaryTitle: string | null;
+  titlePrimary: string;
+  titleSecondary: string | null;
   coverImage: string | null;
   format: AnimeFormat;
   status: AnimeStatus;
@@ -28,46 +66,83 @@ export interface MangaSearchEntity {
   averageScore: number | null;
 }
 
+// ─── Full manga detail entity (v2) ────────────────────────────────────────────
+
 export interface MangaEntity {
   id: number;
   anilistId: number | null;
   malId: number | null;
-  titleEnglish: string | null;
-  titleRomaji: string | null;
+  mangaUpdatesId: number | null;
+
+  titlePrimary: string;
+  titleSecondary: string | null;
   titleNative: string | null;
-  coverImageLarge: string | null;
+
+  coverImage: string | null;
   bannerImage: string | null;
+  images: MangaImages | null;
+
   description: string | null;
+  hashtag: string | null;
+  countryOfOrigin: string | null;
+
+  volumeCount: number | null;
+  chapterCount: number | null;
+  serialization: string | null;
+  imprint: string | null;
+  publishers: string[];
+
+  demographics: string[];
+  readingDirection: string | null;
+
   startDateYear: number | null;
   startDateMonth: number | null;
   startDateDay: number | null;
+
   endDateYear: number | null;
   endDateMonth: number | null;
   endDateDay: number | null;
-  chapters: number | null;
-  volumes: number | null;
+
   genres: string[];
   source: string | null;
   format: AnimeFormat;
   status: AnimeStatus;
-  isAdult: boolean | null;
-  averageScore: number | null;
-  favourites: number | null;
-  synonyms: string[];
-  hashtag: string | null;
-  countryOfOrigin: string | null;
-  locked: boolean;
-  anilistUpdatedAt: number | null;
-  updatedAt: Date;
-  mangaCharacters: MangaCharacterEntity[];
-  mangaStudios: MangaStudioEntity[];
-  mangaMangaRelations: RelationEntity[];
 
-  localPopularity: number;
-  localFavoritesCount: number;
-  localAverageScore: number;
-  localStatusDistribution: Record<string, number>;
-  localScoreDistribution: Record<string, number>;
-  localTotalScoreSum: number;
-  localScoredCount: number;
+  averageScore: number | null;
+  favorites: number;
+  popularity: number;
+  totalScoreSum: number | null;
+  scoredCount: number | null;
+  statusDistribution: Record<string, number>;
+  scoreDistribution: Record<string, number>;
+
+  alAverageScore: number | null;
+  alFavorites: number | null;
+  alPopularity: number | null;
+
+  malAverageScore: number | null;
+  malFavorites: number | null;
+  malPopularity: number | null;
+
+  isAdult: boolean;
+  synonyms: string[];
+  locked: boolean;
+
+  siteUrl: string | null;
+  externalLinks: ExternalLink[] | null;
+  sources: MediaSourceOrigin[] | null;
+
+  ageRating: string | null;
+  ageRatingGuide: string | null;
+
+  alUpdatedAt: number | null;
+  malUpdatedAt: number | null;
+
+  createdAt: string | Date;
+  updatedAt: string | Date;
+
+  characters: MangaCharacterV2Entity[];
+  studios: never[];
+  staff: AnimeStaffV2Entity[];
+  relations: MangaRelationV2Entity[];
 }

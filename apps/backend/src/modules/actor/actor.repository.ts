@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../providers/database/prisma.service';
-import { ActorDetailEntity, ActorRoleAppearance } from './actor.entities';
+import { ActorDetailEntity, ActorRoleAppearanceV2 } from './actor.entities';
 import { rrError } from 'src/providers/error';
-import { Prisma } from '@runa/database';
+import { MediaType } from '@runa/database';
 
 @Injectable()
 export class ActorRepository {
@@ -14,124 +14,138 @@ export class ActorRepository {
   public async find(id: number): Promise<ActorDetailEntity | null> {
     this.logger.debug(`Fetching actor details for ID: ${id}`);
     try {
-      const actor = await this.prisma.client.aquilaActor.findUnique({
-        where: { id },
-        include: {
-          animeCharacters: {
-            include: {
-              anime: true,
-              character: true,
-            },
-          },
-          movieCharacters: {
-            include: {
-              movie: true,
-              character: true,
-            },
-          },
-          tvCharacters: {
-            include: {
-              tv: true,
-              character: true,
-            },
-          },
-        },
+      const numericId = typeof id === 'number' ? id : Number(id);
+      if (isNaN(numericId)) return null;
+
+      let actor = await this.prisma.client.aquilaActorV2.findUnique({
+        where: { id: numericId },
       });
+
+      if (!actor) {
+        actor = await this.prisma.client.aquilaActorV2.findUnique({
+          where: { anilistId: numericId },
+        });
+      }
 
       if (!actor) return null;
 
-      const animeRoles: ActorRoleAppearance[] = actor.animeCharacters.map((ac) => ({
-        id: ac.anime.id,
-        title: ac.anime.titleEnglish || ac.anime.titleRomaji || 'Unknown Anime',
-        coverImage: ac.anime.coverImageLarge,
-        format: ac.anime.format,
-        status: ac.anime.status,
-        role: ac.role,
-        character: {
-          id: ac.character.id,
-          anilistId: ac.character.anilistId,
-          nameFirst: ac.character.nameFirst,
-          nameMiddle: ac.character.nameMiddle,
-          nameLast: ac.character.nameLast,
-          nameNative: ac.character.nameNative,
-          nameAlternative: ac.character.nameAlternative,
-          nameAlternativeSpoiler: ac.character.nameAlternativeSpoiler,
-          image: ac.character.image,
-          description: ac.character.description,
-          gender: ac.character.gender,
-          age: ac.character.age,
-          bloodType: ac.character.bloodType,
-          dateOfBirthYear: ac.character.dateOfBirthYear,
-          dateOfBirthMonth: ac.character.dateOfBirthMonth,
-          dateOfBirthDay: ac.character.dateOfBirthDay,
-        },
-      }));
+      const [mediaChars, mediaStaff] = await Promise.all([
+        this.prisma.client.aquilaMediaCharacterV2.findMany({
+          where: { actorId: actor.id },
+          include: { character: true },
+        }),
+        this.prisma.client.aquilaMediaStaffV2.findMany({
+          where: { staffId: actor.id },
+        }),
+      ]);
 
-      const movieRoles: ActorRoleAppearance[] = actor.movieCharacters.map((mc) => ({
-        id: mc.movie.id,
-        title: mc.movie.titleEnglish || mc.movie.titleRomaji || 'Unknown Movie',
-        coverImage: mc.movie.coverImage,
-        format: 'MOVIE',
-        status: mc.movie.status || 'RELEASED',
-        role: mc.role,
-        character: {
-          id: mc.character.id,
-          anilistId: mc.character.anilistId,
-          nameFirst: mc.character.nameFirst,
-          nameMiddle: mc.character.nameMiddle,
-          nameLast: mc.character.nameLast,
-          nameNative: mc.character.nameNative,
-          nameAlternative: mc.character.nameAlternative,
-          nameAlternativeSpoiler: mc.character.nameAlternativeSpoiler,
-          image: mc.character.image,
-          description: mc.character.description,
-          gender: mc.character.gender,
-          age: mc.character.age,
-          bloodType: mc.character.bloodType,
-          dateOfBirthYear: mc.character.dateOfBirthYear,
-          dateOfBirthMonth: mc.character.dateOfBirthMonth,
-          dateOfBirthDay: mc.character.dateOfBirthDay,
-        },
-      }));
+      const roles: ActorRoleAppearanceV2[] = [];
 
-      const tvRoles: ActorRoleAppearance[] = actor.tvCharacters.map((tc) => ({
-        id: tc.tv.id,
-        title: tc.tv.titleEnglish || tc.tv.titleRomaji || 'Unknown TV Show',
-        coverImage: tc.tv.coverImage,
-        format: 'TV',
-        status: tc.tv.status || 'RELEASED',
-        role: tc.role,
-        character: {
-          id: tc.character.id,
-          anilistId: tc.character.anilistId,
-          nameFirst: tc.character.nameFirst,
-          nameMiddle: tc.character.nameMiddle,
-          nameLast: tc.character.nameLast,
-          nameNative: tc.character.nameNative,
-          nameAlternative: tc.character.nameAlternative,
-          nameAlternativeSpoiler: tc.character.nameAlternativeSpoiler,
-          image: tc.character.image,
-          description: tc.character.description,
-          gender: tc.character.gender,
-          age: tc.character.age,
-          bloodType: tc.character.bloodType,
-          dateOfBirthYear: tc.character.dateOfBirthYear,
-          dateOfBirthMonth: tc.character.dateOfBirthMonth,
-          dateOfBirthDay: tc.character.dateOfBirthDay,
-        },
-      }));
+      for (const mc of mediaChars) {
+        let mediaTitle = 'Unknown';
+        let coverImage: string | null = null;
+
+        if (mc.mediaType === MediaType.ANIME) {
+          const a = await this.prisma.client.aquilaAnimeV2.findUnique({
+            where: { id: mc.mediaId },
+            select: { titlePrimary: true, coverImage: true },
+          });
+          if (a) {
+            mediaTitle = a.titlePrimary;
+            coverImage = a.coverImage;
+          }
+        } else if (mc.mediaType === MediaType.MANGA) {
+          const m = await this.prisma.client.aquilaMangaV2.findUnique({
+            where: { id: mc.mediaId },
+            select: { titlePrimary: true, coverImage: true },
+          });
+          if (m) {
+            mediaTitle = m.titlePrimary;
+            coverImage = m.coverImage;
+          }
+        } else if (mc.mediaType === MediaType.MOVIE) {
+          const mv = await this.prisma.client.aquilaMovieV2.findUnique({
+            where: { id: mc.mediaId },
+            select: { titlePrimary: true, coverImage: true },
+          });
+          if (mv) {
+            mediaTitle = mv.titlePrimary;
+            coverImage = mv.coverImage;
+          }
+        }
+
+        roles.push({
+          id: mc.id,
+          mediaType: mc.mediaType as any,
+          mediaId: mc.mediaId,
+          titlePrimary: mediaTitle,
+          coverImage,
+          role: mc.role,
+          customRole: null,
+          characterName: mc.character.namePrimary,
+          characterImage: mc.character.image,
+        });
+      }
+
+      for (const ms of mediaStaff) {
+        let mediaTitle = 'Unknown';
+        let coverImage: string | null = null;
+
+        if (ms.mediaType === MediaType.ANIME) {
+          const a = await this.prisma.client.aquilaAnimeV2.findUnique({
+            where: { id: ms.mediaId },
+            select: { titlePrimary: true, coverImage: true },
+          });
+          if (a) {
+            mediaTitle = a.titlePrimary;
+            coverImage = a.coverImage;
+          }
+        } else if (ms.mediaType === MediaType.MANGA) {
+          const m = await this.prisma.client.aquilaMangaV2.findUnique({
+            where: { id: ms.mediaId },
+            select: { titlePrimary: true, coverImage: true },
+          });
+          if (m) {
+            mediaTitle = m.titlePrimary;
+            coverImage = m.coverImage;
+          }
+        } else if (ms.mediaType === MediaType.MOVIE) {
+          const mv = await this.prisma.client.aquilaMovieV2.findUnique({
+            where: { id: ms.mediaId },
+            select: { titlePrimary: true, coverImage: true },
+          });
+          if (mv) {
+            mediaTitle = mv.titlePrimary;
+            coverImage = mv.coverImage;
+          }
+        }
+
+        roles.push({
+          id: ms.id,
+          mediaType: ms.mediaType as any,
+          mediaId: ms.mediaId,
+          titlePrimary: mediaTitle,
+          coverImage,
+          role: ms.role,
+          customRole: ms.customRole,
+          characterName: null,
+          characterImage: null,
+        });
+      }
 
       return {
         id: actor.id,
-        peopleId: actor.peopleId,
-        anilistStaffId: actor.anilistStaffId,
-        name: actor.name,
-        personName: actor.personName,
+        anilistId: actor.anilistId,
+        malId: actor.malId,
+        tvDBId: actor.tvDBId,
+        namePrimary: actor.namePrimary,
+        nameNative: actor.nameNative,
+        nameAlternative: actor.nameAlternative,
         image: actor.image,
-        peopleType: actor.peopleType,
-        animeRoles,
-        movieRoles,
-        tvRoles,
+        images: actor.images,
+        description: actor.description,
+        language: actor.language,
+        roles,
       };
     } catch (err: any) {
       this.logger.error(`Failed to fetch actor ${id} from database: ${err.message}`);
@@ -147,35 +161,24 @@ export class ActorRepository {
       const trimmed = query.trim();
       if (!trimmed) return [];
 
-      const words = trimmed.split(/\s+/).filter(Boolean);
-
-      const whereConditions: Prisma.AquilaActorWhereInput[] = [
-        { name: { contains: trimmed, mode: 'insensitive' } },
-        { personName: { contains: trimmed, mode: 'insensitive' } },
-      ];
-
-      if (words.length > 1) {
-        whereConditions.push({
-          AND: words.map((word) => ({
-            OR: [
-              { name: { contains: word, mode: 'insensitive' } },
-              { personName: { contains: word, mode: 'insensitive' } },
-            ],
-          })),
-        });
-      }
-
-      const data = await this.prisma.client.aquilaActor.findMany({
+      const data = await this.prisma.client.aquilaActorV2.findMany({
         where: {
-          OR: whereConditions,
+          OR: [
+            { namePrimary: { contains: trimmed, mode: 'insensitive' } },
+            { nameNative: { contains: trimmed, mode: 'insensitive' } },
+            { nameAlternative: { has: trimmed } },
+          ],
         },
         take: 30,
       });
 
       return data.map((item) => ({
         id: item.id,
-        title: item.name || item.personName || 'Unknown Actor',
-        secondaryTitle: item.personName || null,
+        anilistId: item.anilistId,
+        malId: item.malId,
+        tvDBId: item.tvDBId,
+        title: item.namePrimary,
+        secondaryTitle: item.nameNative || null,
         coverImage: item.image || null,
       }));
     } catch (err: any) {

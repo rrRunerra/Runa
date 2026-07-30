@@ -12,6 +12,12 @@ interface RrMediaStatsDashboardProps {
   localStatusDistribution?: Record<string, number> | null;
   localScoreDistribution?: Record<string, number> | null;
   showCounters?: boolean;
+  alAverageScore?: number | null;
+  alFavorites?: number | null;
+  alPopularity?: number | null;
+  malAverageScore?: number | null;
+  malFavorites?: number | null;
+  malPopularity?: number | null;
 }
 
 const itemVariants = {
@@ -21,6 +27,20 @@ const itemVariants = {
     y: 0,
     transition: { type: "spring" as const, stiffness: 100, damping: 15 },
   },
+};
+
+const formatCompactNum = (num: number | null | undefined): string => {
+  if (num == null || isNaN(num)) return "0";
+  if (num >= 1_000_000_000) {
+    return (num / 1_000_000_000).toFixed(1).replace(/\.0$/, "") + "b";
+  }
+  if (num >= 1_000_000) {
+    return (num / 1_000_000).toFixed(1).replace(/\.0$/, "") + "m";
+  }
+  if (num >= 1_000) {
+    return (num / 1_000).toFixed(1).replace(/\.0$/, "") + "k";
+  }
+  return num.toString();
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -45,6 +65,12 @@ export function RrMediaStatsDashboard({
   localStatusDistribution = {},
   localScoreDistribution = {},
   showCounters = true,
+  alAverageScore,
+  alFavorites,
+  alPopularity,
+  malAverageScore,
+  malFavorites,
+  malPopularity,
 }: RrMediaStatsDashboardProps): React.JSX.Element {
   const { t } = useTranslation();
 
@@ -177,6 +203,89 @@ export function RrMediaStatsDashboard({
                 </span>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* External Platform Stats Card */}
+      {(alAverageScore != null ||
+        alFavorites != null ||
+        alPopularity != null ||
+        malAverageScore != null ||
+        malFavorites != null ||
+        malPopularity != null) && (
+        <div className="space-y-3">
+          <h3 className="text-sm font-bold text-foreground">
+            {t("aquila.externalStats", "External Platform Ratings & Stats")}
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* AniList Card */}
+            {(alAverageScore != null || alFavorites != null || alPopularity != null) && (
+              <div className="bg-card/45 border border-border/30 backdrop-blur-md p-4 rounded-2xl flex flex-col gap-3 shadow-xs">
+                <div className="flex items-center justify-between border-b border-border/20 pb-2">
+                  <span className="text-xs font-extrabold text-sky-400 tracking-wide uppercase">
+                    AniList
+                  </span>
+                  {alAverageScore != null && (
+                    <span className="text-xs font-bold text-sky-400 bg-sky-500/10 border border-sky-500/20 px-2 py-0.5 rounded-lg">
+                      {alAverageScore}% ({ (alAverageScore / 10).toFixed(1) } / 10)
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                      {t("aquila.favorites", "Favorites")}
+                    </span>
+                    <span className="text-sm font-extrabold text-foreground">
+                      {formatCompactNum(alFavorites)}
+                    </span>
+                  </div>
+                  <div className="flex flex-col border-l border-border/20 pl-3">
+                    <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                      {t("aquila.popularity", "Popularity")}
+                    </span>
+                    <span className="text-sm font-extrabold text-foreground">
+                      {formatCompactNum(alPopularity)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* MyAnimeList Card */}
+            {(malAverageScore != null || malFavorites != null || malPopularity != null) && (
+              <div className="bg-card/45 border border-border/30 backdrop-blur-md p-4 rounded-2xl flex flex-col gap-3 shadow-xs">
+                <div className="flex items-center justify-between border-b border-border/20 pb-2">
+                  <span className="text-xs font-extrabold text-blue-400 tracking-wide uppercase">
+                    MyAnimeList
+                  </span>
+                  {malAverageScore != null && (
+                    <span className="text-xs font-bold text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded-lg">
+                      {(malAverageScore / 100).toFixed(2)} / 10
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                      {t("aquila.favorites", "Favorites")}
+                    </span>
+                    <span className="text-sm font-extrabold text-foreground">
+                      {formatCompactNum(malFavorites)}
+                    </span>
+                  </div>
+                  <div className="flex flex-col border-l border-border/20 pl-3">
+                    <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                      {t("aquila.popularity", "Popularity")}
+                    </span>
+                    <span className="text-sm font-extrabold text-foreground">
+                      {formatCompactNum(malPopularity)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

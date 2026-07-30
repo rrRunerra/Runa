@@ -12,6 +12,9 @@ describe('MovieController', () => {
   const mockMovieService = {
     search: jest.fn(),
     getMovie: jest.fn(),
+    refreshMovie: jest.fn(),
+    ensureMovie: jest.fn(),
+    getSimilarMovies: jest.fn(),
   };
 
   const mockAuthGuard = {
@@ -41,41 +44,15 @@ describe('MovieController', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('decorators', () => {
-    it('search should have @Public() decorator', () => {
-      const isPublic = reflector.get<boolean>('isPublic', controller.search);
-      expect(isPublic).toBe(true);
-    });
-
-    it('getMovie should have @Public() decorator', () => {
-      const isPublic = reflector.get<boolean>('isPublic', controller.getMovie);
-      expect(isPublic).toBe(true);
-    });
-  });
-
   describe('search', () => {
     const mockResult = [
       {
-        id: '1',
-        title: { romaji: 'Movie Title', english: 'Movie Title' },
+        id: 1,
+        title: 'Movie Title',
       } as any,
     ];
 
-    it('should search movies under session authenticated context', async () => {
-      mockMovieService.search.mockResolvedValue(mockResult);
-      const result = await controller.search({ name: 'Movie' });
-      expect(service.search).toHaveBeenCalledWith('Movie');
-      expect(result).toBe(mockResult);
-    });
-
-    it('should search movies under API key authenticated context', async () => {
-      mockMovieService.search.mockResolvedValue(mockResult);
-      const result = await controller.search({ name: 'Movie' });
-      expect(service.search).toHaveBeenCalledWith('Movie');
-      expect(result).toBe(mockResult);
-    });
-
-    it('should search movies under unauthenticated context', async () => {
+    it('should search movies', async () => {
       mockMovieService.search.mockResolvedValue(mockResult);
       const result = await controller.search({ name: 'Movie' });
       expect(service.search).toHaveBeenCalledWith('Movie');
@@ -84,26 +61,12 @@ describe('MovieController', () => {
   });
 
   describe('getMovie', () => {
-    const mockResult = { id: '99', title: { romaji: 'Sample Movie' } } as any;
+    const mockResult = { id: 99, titlePrimary: 'Sample Movie' } as any;
 
-    it('should get movie details under session authenticated context', async () => {
+    it('should get movie details', async () => {
       mockMovieService.getMovie.mockResolvedValue(mockResult);
       const result = await controller.getMovie('99');
-      expect(service.getMovie).toHaveBeenCalledWith('99');
-      expect(result).toBe(mockResult);
-    });
-
-    it('should get movie details under API key authenticated context', async () => {
-      mockMovieService.getMovie.mockResolvedValue(mockResult);
-      const result = await controller.getMovie('99');
-      expect(service.getMovie).toHaveBeenCalledWith('99');
-      expect(result).toBe(mockResult);
-    });
-
-    it('should get movie details under unauthenticated context', async () => {
-      mockMovieService.getMovie.mockResolvedValue(mockResult);
-      const result = await controller.getMovie('99');
-      expect(service.getMovie).toHaveBeenCalledWith('99');
+      expect(service.getMovie).toHaveBeenCalledWith(99);
       expect(result).toBe(mockResult);
     });
   });

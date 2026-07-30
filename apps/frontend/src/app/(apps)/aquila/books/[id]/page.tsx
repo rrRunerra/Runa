@@ -19,13 +19,20 @@ export async function generateMetadata({
     };
   }
 
-  const title = book.titleString ?? "Book Details";
-  const description = cleanDescription(book.description, 160);
-  const image = typeof book.coverImage === "string" ? book.coverImage : "";
+  const title =
+    (book as any).titlePrimary ??
+    (book as any).titleSecondary ??
+    "Book Details";
+  const description = cleanDescription((book as any).description, 160);
+  const image = (book as any).coverImage ?? "";
+  const keywords: string[] = Array.isArray((book as any).genres)
+    ? (book as any).genres
+    : [];
 
   return {
     title: `Aquila > Book > ${title}`,
     description,
+    keywords,
     openGraph: {
       title,
       description,
@@ -42,6 +49,6 @@ export async function generateMetadata({
   };
 }
 
-export default async function Page({ params }: PageProps) {
+export default async function Page({ params: _ }: PageProps) {
   return <BookDetailsPage />;
 }

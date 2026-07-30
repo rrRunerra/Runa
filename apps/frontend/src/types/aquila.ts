@@ -1,3 +1,15 @@
+export enum MediaType {
+  ANIME = "ANIME",
+  MANGA = "MANGA",
+  MOVIE = "MOVIE",
+  TV = "TV",
+  GAME = "GAME",
+  BOOK = "BOOK",
+  MUSIC = "MUSIC",
+  OTHER = "OTHER",
+  UNKNOWN = "UNKNOWN",
+}
+
 export interface MediaItem {
   id: number | string;
   title: string;
@@ -101,17 +113,20 @@ export interface MediaExternalLink {
 
 export interface Media {
   id: string | number;
-  title: {
+  title?: {
     romaji: string;
     english?: string;
     native?: string;
   };
-  coverImage: {
+  titlePrimary?: string | null;
+  titleSecondary?: string | null;
+  coverImage?: string | {
     extraLarge?: string;
     large: string;
     color?: string;
-  };
+  } | null;
   bannerImage?: string;
+  images?: any;
   format: string;
   status: string;
   description: string;

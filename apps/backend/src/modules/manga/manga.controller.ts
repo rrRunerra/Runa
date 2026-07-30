@@ -1,4 +1,4 @@
-import { Controller, Get, Param, UseGuards, Post, Query } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards, Post, Query, Body } from '@nestjs/common';
 import { MangaService } from './manga.service';
 import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { Public } from 'src/common/decorators/public.decorator';
@@ -11,6 +11,13 @@ import { SearchMangaDto, MangaDetailDto, MangaRefreshDto } from './manga.dto';
 @UseGuards(AuthGuard)
 export class MangaController {
   constructor(private readonly mangaService: MangaService) {}
+
+  @Public()
+  @Get('search')
+  async searchByQuery(@Query('q') q?: string): Promise<MangaSearchEntity[]> {
+    if (!q) return [];
+    return this.mangaService.search(q);
+  }
 
   @Public()
   @Get('search/:name')
@@ -33,12 +40,9 @@ export class MangaController {
     return await this.mangaService.getManga(params.id);
   }
 
-
-
-
   @Post(':id/refresh')
   @Permissions([AquilaFlags.MEDIA_REFRESH])
-  async refreshAnime(
+  async refreshManga(
     @Param() params: MangaRefreshDto,
     @Query('force') forceQuery?: string,
   ): Promise<MangaEntity | undefined | null> {
@@ -46,6 +50,25 @@ export class MangaController {
     return await this.mangaService.refreshManga(
       params.id,
       ...(forceQuery !== undefined ? [force] : []),
+    );
+  }
+
+  @Post('ensure')
+  @Permissions([AquilaFlags.MEDIA_REFRESH])
+  async ensureManga(
+    @Body()
+    body: {
+      anilistId: number;
+      malId?: number | null;
+      title?: string;
+      coverImage?: string;
+    },
+  ): Promise<any> {
+    return await this.mangaService.ensureManga(
+      body.anilistId,
+      body.malId,
+      body.title,
+      body.coverImage,
     );
   }
 }

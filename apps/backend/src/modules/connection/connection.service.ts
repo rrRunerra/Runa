@@ -409,7 +409,7 @@ export class ConnectionService implements OnModuleInit {
 
             // 2. Conflict Resolution: Additive import
             const existing =
-              await this.prisma.client.aquilaAnimeUserList.findUnique({
+              await this.prisma.client.aquilaAnimeUserListV2.findUnique({
                 where: {
                   username_animeId: { username, animeId },
                 },
@@ -429,7 +429,7 @@ export class ConnectionService implements OnModuleInit {
                 providerId,
                 finalItemId,
               );
-              await this.prisma.client.aquilaAnimeUserList.update({
+              await this.prisma.client.aquilaAnimeUserListV2.update({
                 where: { id: existing.id },
                 data: {
                   connections,
@@ -442,7 +442,7 @@ export class ConnectionService implements OnModuleInit {
                 },
               });
             } else {
-              await this.prisma.client.aquilaAnimeUserList.create({
+              await this.prisma.client.aquilaAnimeUserListV2.create({
                 data: {
                   username,
                   animeId,
@@ -492,7 +492,7 @@ export class ConnectionService implements OnModuleInit {
 
             // 2. Conflict Resolution
             const existing =
-              await this.prisma.client.aquilaMangaUserList.findUnique({
+              await this.prisma.client.aquilaMangaUserListV2.findUnique({
                 where: {
                   username_mangaId: { username, mangaId },
                 },
@@ -511,7 +511,7 @@ export class ConnectionService implements OnModuleInit {
                 providerId,
                 finalItemId,
               );
-              await this.prisma.client.aquilaMangaUserList.update({
+              await this.prisma.client.aquilaMangaUserListV2.update({
                 where: { id: existing.id },
                 data: {
                   connections,
@@ -524,7 +524,7 @@ export class ConnectionService implements OnModuleInit {
                 },
               });
             } else {
-              await this.prisma.client.aquilaMangaUserList.create({
+              await this.prisma.client.aquilaMangaUserListV2.create({
                 data: {
                   username,
                   mangaId,
@@ -574,7 +574,7 @@ export class ConnectionService implements OnModuleInit {
 
             // 2. Conflict Resolution
             const existing =
-              await this.prisma.client.aquilaTvUserList.findUnique({
+              await this.prisma.client.aquilaTvUserListV2.findUnique({
                 where: { username_tvId: { username, tvId } },
               });
 
@@ -591,15 +591,19 @@ export class ConnectionService implements OnModuleInit {
                 providerId,
                 finalItemId,
               );
-              await this.prisma.client.aquilaTvUserList.update({
+              await this.prisma.client.aquilaTvUserListV2.update({
                 where: { id: existing.id },
                 data: {
                   connections,
                   ...(item.startDate !== undefined && {
-                    startDate: item.startDate || null,
+                    startDate: item.startDate
+                      ? new Date(item.startDate * 1000)
+                      : null,
                   }),
                   ...(item.endDate !== undefined && {
-                    endDate: item.endDate || null,
+                    endDate: item.endDate
+                      ? new Date(item.endDate * 1000)
+                      : null,
                   }),
                 },
               });
@@ -611,7 +615,7 @@ export class ConnectionService implements OnModuleInit {
               else if (item.status === 'DROPPED') tvStatus = 'DROPPED';
 
               const listEntry =
-                await this.prisma.client.aquilaTvUserList.create({
+                await this.prisma.client.aquilaTvUserListV2.create({
                   data: {
                     username,
                     tvId,
@@ -624,8 +628,12 @@ export class ConnectionService implements OnModuleInit {
                         sync: true,
                       },
                     },
-                    startDate: item.startDate || null,
-                    endDate: item.endDate || null,
+                    startDate: item.startDate
+                      ? new Date(item.startDate * 1000)
+                      : null,
+                    endDate: item.endDate
+                      ? new Date(item.endDate * 1000)
+                      : null,
                   },
                 });
               listEntryId = listEntry.id;
@@ -647,7 +655,7 @@ export class ConnectionService implements OnModuleInit {
                 skipDuplicates: true,
               });
             } else if (item.progress > 0) {
-              const dbTv = await this.prisma.client.aquilaTv.findUnique({
+              const dbTv = await this.prisma.client.aquilaTvV2.findUnique({
                 where: { tvdbId: item.tvdbId },
                 select: { seasons: true },
               });
@@ -752,7 +760,7 @@ export class ConnectionService implements OnModuleInit {
 
             // 2. Conflict Resolution
             const existing =
-              await this.prisma.client.aquilaMovieUserList.findUnique({
+              await this.prisma.client.aquilaMovieUserListV2.findUnique({
                 where: { username_movieId: { username, movieId } },
               });
 
@@ -767,7 +775,7 @@ export class ConnectionService implements OnModuleInit {
                 providerId,
                 finalItemId,
               );
-              await this.prisma.client.aquilaMovieUserList.update({
+              await this.prisma.client.aquilaMovieUserListV2.update({
                 where: { id: existing.id },
                 data: {
                   connections,
@@ -784,7 +792,7 @@ export class ConnectionService implements OnModuleInit {
               if (item.status === 'COMPLETED') movieStatus = 'COMPLETED';
               else if (item.status === 'DROPPED') movieStatus = 'DROPPED';
 
-              await this.prisma.client.aquilaMovieUserList.create({
+              await this.prisma.client.aquilaMovieUserListV2.create({
                 data: {
                   username,
                   movieId,

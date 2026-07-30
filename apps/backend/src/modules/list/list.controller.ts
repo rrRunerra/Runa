@@ -13,7 +13,21 @@ import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { Public } from 'src/common/decorators/public.decorator';
 import { ListService } from './list.service';
 import ListEntity from './list.entities';
-import { $Enums } from '@runa/database';
+import {
+  ListQueryDto,
+  SaveAnimeEntryDto,
+  SaveMangaEntryDto,
+  SaveMovieEntryDto,
+  SaveTvEntryDto,
+  SaveGameEntryDto,
+  SaveBookEntryDto,
+  IncrementProgressDto,
+  ToggleEpisodeDto,
+  ToggleSeasonDto,
+  MediaSequelsQueryDto,
+  ExportRrListQueryDto,
+  ExportMalQueryDto,
+} from './list.dto';
 
 @Controller('list')
 @UseGuards(AuthGuard)
@@ -27,27 +41,13 @@ export class ListController {
   public async getAnimeList(
     @Param('username') username: string,
     @Req() req: any,
-    @Query('limit') limit?: string,
-    @Query('offset') offset?: string,
-    @Query('status') status?: string,
-    @Query('search') search?: string,
-    @Query('format') format?: string,
-    @Query('sort') sort?: string,
-    @Query('genres') genres?: string,
-    @Query('year') year?: string,
-    @Query('mediaStatus') mediaStatus?: string,
-  ): Promise<any> {
-    return this.listService.getAnimeList(username, req.user?.username, {
-      limit: limit ? Number(limit) : undefined,
-      offset: offset ? Number(offset) : undefined,
-      status,
-      search,
-      format,
-      sort,
-      genres,
-      year,
-      mediaStatus,
-    });
+    @Query() query: ListQueryDto,
+  ): Promise<{
+    entries: ListEntity[];
+    counts: Record<string, number>;
+    pageInfo?: { nextCursor: string | null; hasMore: boolean; count: number };
+  }> {
+    return this.listService.getAnimeList(username, req.user?.username, query);
   }
 
   @Get('/anime/entry/:animeId')
@@ -64,22 +64,7 @@ export class ListController {
   @Post('/anime/entry/save')
   public async saveAnimeListEntry(
     @Req() req: any,
-    @Body()
-    body: {
-      animeId: number;
-      status?: $Enums.AnimeListStatus;
-      progress?: number;
-      score?: number;
-      startDate?: number;
-      endDate?: number;
-      notes?: string;
-      rewatched?: number;
-      updateConnection?: boolean;
-      connections?: {
-        anilist?: any;
-        mal?: any;
-      };
-    },
+    @Body() body: SaveAnimeEntryDto,
   ): Promise<{ success: boolean; message: string; error?: any }> {
     return this.listService.upsertAnimeList(req.user.username, body);
   }
@@ -99,27 +84,13 @@ export class ListController {
   public async getMangaList(
     @Param('username') username: string,
     @Req() req: any,
-    @Query('limit') limit?: string,
-    @Query('offset') offset?: string,
-    @Query('status') status?: string,
-    @Query('search') search?: string,
-    @Query('format') format?: string,
-    @Query('sort') sort?: string,
-    @Query('genres') genres?: string,
-    @Query('year') year?: string,
-    @Query('mediaStatus') mediaStatus?: string,
-  ): Promise<any> {
-    return this.listService.getMangaList(username, req.user?.username, {
-      limit: limit ? Number(limit) : undefined,
-      offset: offset ? Number(offset) : undefined,
-      status,
-      search,
-      format,
-      sort,
-      genres,
-      year,
-      mediaStatus,
-    });
+    @Query() query: ListQueryDto,
+  ): Promise<{
+    entries: ListEntity[];
+    counts: Record<string, number>;
+    pageInfo?: { nextCursor: string | null; hasMore: boolean; count: number };
+  }> {
+    return this.listService.getMangaList(username, req.user?.username, query);
   }
 
   @Get('/manga/entry/:mangaId')
@@ -136,23 +107,7 @@ export class ListController {
   @Post('/manga/entry/save')
   public async saveMangaListEntry(
     @Req() req: any,
-    @Body()
-    body: {
-      mangaId: number;
-      status?: $Enums.MangaListStatus;
-      chapters?: number;
-      volumes?: number;
-      score?: number;
-      startDate?: number;
-      endDate?: number;
-      notes?: string;
-      reread?: number;
-      updateConnection?: boolean;
-      connections?: {
-        anilist?: any;
-        mal?: any;
-      };
-    },
+    @Body() body: SaveMangaEntryDto,
   ): Promise<{ success: boolean; message: string; error?: any }> {
     return this.listService.upsertMangaList(req.user.username, body);
   }
@@ -172,27 +127,13 @@ export class ListController {
   public async getMovieList(
     @Param('username') username: string,
     @Req() req: any,
-    @Query('limit') limit?: string,
-    @Query('offset') offset?: string,
-    @Query('status') status?: string,
-    @Query('search') search?: string,
-    @Query('format') format?: string,
-    @Query('sort') sort?: string,
-    @Query('genres') genres?: string,
-    @Query('year') year?: string,
-    @Query('mediaStatus') mediaStatus?: string,
-  ): Promise<any> {
-    return this.listService.getMovieList(username, req.user?.username, {
-      limit: limit ? Number(limit) : undefined,
-      offset: offset ? Number(offset) : undefined,
-      status,
-      search,
-      format,
-      sort,
-      genres,
-      year,
-      mediaStatus,
-    });
+    @Query() query: ListQueryDto,
+  ): Promise<{
+    entries: ListEntity[];
+    counts: Record<string, number>;
+    pageInfo?: { nextCursor: string | null; hasMore: boolean; count: number };
+  }> {
+    return this.listService.getMovieList(username, req.user?.username, query);
   }
 
   @Get('/movie/entry/:movieId')
@@ -209,18 +150,7 @@ export class ListController {
   @Post('/movie/entry/save')
   public async saveMovieListEntry(
     @Req() req: any,
-    @Body()
-    body: {
-      movieId: number;
-      status?: $Enums.MovieListStatus;
-      score?: number;
-      startDate?: number;
-      endDate?: number;
-      notes?: string;
-      rewatched?: number;
-      updateConnection?: boolean;
-      connections?: any;
-    },
+    @Body() body: SaveMovieEntryDto,
   ): Promise<{ success: boolean; message: string; error?: any }> {
     return this.listService.upsertMovieList(req.user.username, body);
   }
@@ -240,27 +170,13 @@ export class ListController {
   public async getTvList(
     @Param('username') username: string,
     @Req() req: any,
-    @Query('limit') limit?: string,
-    @Query('offset') offset?: string,
-    @Query('status') status?: string,
-    @Query('search') search?: string,
-    @Query('format') format?: string,
-    @Query('sort') sort?: string,
-    @Query('genres') genres?: string,
-    @Query('year') year?: string,
-    @Query('mediaStatus') mediaStatus?: string,
-  ): Promise<any> {
-    return this.listService.getTvList(username, req.user?.username, {
-      limit: limit ? Number(limit) : undefined,
-      offset: offset ? Number(offset) : undefined,
-      status,
-      search,
-      format,
-      sort,
-      genres,
-      year,
-      mediaStatus,
-    });
+    @Query() query: ListQueryDto,
+  ): Promise<{
+    entries: ListEntity[];
+    counts: Record<string, number>;
+    pageInfo?: { nextCursor: string | null; hasMore: boolean; count: number };
+  }> {
+    return this.listService.getTvList(username, req.user?.username, query);
   }
 
   @Get('/tv/entry/:tvId')
@@ -274,19 +190,7 @@ export class ListController {
   @Post('/tv/entry/save')
   public async saveTvListEntry(
     @Req() req: any,
-    @Body()
-    body: {
-      tvId: number;
-      status?: $Enums.TvListStatus;
-      score?: number;
-      startDate?: number;
-      endDate?: number;
-      notes?: string;
-      rewatched?: number;
-      updateConnection?: boolean;
-      connections?: any;
-      episodes?: { seasonNum: number; episodeNum: number }[];
-    },
+    @Body() body: SaveTvEntryDto,
   ): Promise<{ success: boolean; message: string; error?: any }> {
     return this.listService.upsertTvList(req.user.username, body);
   }
@@ -306,27 +210,13 @@ export class ListController {
   public async getGameList(
     @Param('username') username: string,
     @Req() req: any,
-    @Query('limit') limit?: string,
-    @Query('offset') offset?: string,
-    @Query('status') status?: string,
-    @Query('search') search?: string,
-    @Query('format') format?: string,
-    @Query('sort') sort?: string,
-    @Query('genres') genres?: string,
-    @Query('year') year?: string,
-    @Query('mediaStatus') mediaStatus?: string,
-  ): Promise<any> {
-    return this.listService.getGameList(username, req.user?.username, {
-      limit: limit ? Number(limit) : undefined,
-      offset: offset ? Number(offset) : undefined,
-      status,
-      search,
-      format,
-      sort,
-      genres,
-      year,
-      mediaStatus,
-    });
+    @Query() query: ListQueryDto,
+  ): Promise<{
+    entries: ListEntity[];
+    counts: Record<string, number>;
+    pageInfo?: { nextCursor: string | null; hasMore: boolean; count: number };
+  }> {
+    return this.listService.getGameList(username, req.user?.username, query);
   }
 
   @Get('/game/entry/:gameId')
@@ -340,16 +230,7 @@ export class ListController {
   @Post('/game/entry/save')
   public async saveGameListEntry(
     @Req() req: any,
-    @Body()
-    body: {
-      gameId: number;
-      status?: $Enums.GameListStatus;
-      progress?: number;
-      score?: number;
-      startDate?: number;
-      endDate?: number;
-      notes?: string;
-    },
+    @Body() body: SaveGameEntryDto,
   ): Promise<{ success: boolean; message: string; error?: any }> {
     return this.listService.upsertGameList(req.user.username, body);
   }
@@ -369,27 +250,13 @@ export class ListController {
   public async getBookList(
     @Param('username') username: string,
     @Req() req: any,
-    @Query('limit') limit?: string,
-    @Query('offset') offset?: string,
-    @Query('status') status?: string,
-    @Query('search') search?: string,
-    @Query('format') format?: string,
-    @Query('sort') sort?: string,
-    @Query('genres') genres?: string,
-    @Query('year') year?: string,
-    @Query('mediaStatus') mediaStatus?: string,
-  ): Promise<any> {
-    return this.listService.getBookList(username, req.user?.username, {
-      limit: limit ? Number(limit) : undefined,
-      offset: offset ? Number(offset) : undefined,
-      status,
-      search,
-      format,
-      sort,
-      genres,
-      year,
-      mediaStatus,
-    });
+    @Query() query: ListQueryDto,
+  ): Promise<{
+    entries: ListEntity[];
+    counts: Record<string, number>;
+    pageInfo?: { nextCursor: string | null; hasMore: boolean; count: number };
+  }> {
+    return this.listService.getBookList(username, req.user?.username, query);
   }
 
   @Get('/book/entry/:bookId')
@@ -397,23 +264,13 @@ export class ListController {
     @Param('bookId') bookId: string,
     @Req() req: any,
   ): Promise<any> {
-    return this.listService.getBookListEntry(req.user.username, bookId);
+    return this.listService.getBookListEntry(req.user.username, Number(bookId));
   }
 
   @Post('/book/entry/save')
   public async saveBookListEntry(
     @Req() req: any,
-    @Body()
-    body: {
-      bookId: string;
-      status?: $Enums.BookListStatus;
-      chapters?: number;
-      volumes?: number;
-      score?: number;
-      startDate?: number;
-      endDate?: number;
-      notes?: string;
-    },
+    @Body() body: SaveBookEntryDto,
   ): Promise<{ success: boolean; message: string; error?: any }> {
     return this.listService.upsertBookList(req.user.username, body);
   }
@@ -423,23 +280,18 @@ export class ListController {
     @Param('bookId') bookId: string,
     @Req() req: any,
   ): Promise<{ success: boolean; message: string; error?: any }> {
-    return this.listService.deleteBookList(req.user.username, bookId);
+    return this.listService.deleteBookList(req.user.username, Number(bookId));
   }
 
   @Get('/watching')
-  public async getWatchingList(@Req() req: any): Promise<any> {
+  public async getWatchingList(@Req() req: any): Promise<ListEntity[]> {
     return this.listService.getWatchingList(req.user.username);
   }
 
   @Post('/increment')
   public async incrementProgress(
     @Req() req: any,
-    @Body()
-    body: {
-      mediaType: 'anime' | 'manga' | 'tv' | 'game' | 'book';
-      id: number | string;
-      count?: number;
-    },
+    @Body() body: IncrementProgressDto,
   ): Promise<any> {
     return this.listService.incrementProgress(
       req.user.username,
@@ -453,7 +305,7 @@ export class ListController {
   public async toggleEpisode(
     @Param('tvId') tvId: string,
     @Req() req: any,
-    @Body() body: { seasonNum: number; episodeNum: number },
+    @Body() body: ToggleEpisodeDto,
   ): Promise<any> {
     return this.listService.toggleEpisodeWatched(
       req.user.username,
@@ -467,7 +319,7 @@ export class ListController {
   public async toggleSeason(
     @Param('tvId') tvId: string,
     @Req() req: any,
-    @Body() body: { seasonNum: number; episodes: any[]; watched: boolean },
+    @Body() body: ToggleSeasonDto,
   ): Promise<any> {
     return this.listService.toggleSeasonWatched(
       req.user.username,
@@ -493,24 +345,22 @@ export class ListController {
     @Param('mediaType') mediaType: string,
     @Param('username') username: string,
     @Req() req: any,
-    @Query('relationType') relationType?: string,
-    @Query('releaseStatus') releaseStatus?: string,
-    @Query('includeInList') includeInList?: string,
-    @Query('search') search?: string,
-    @Query('limit') limit?: string,
-    @Query('offset') offset?: string,
+    @Query() query: MediaSequelsQueryDto,
   ): Promise<any> {
-    return this.listService.getMediaSequels(username, mediaType, req.user?.username, {
-      relationType,
-      releaseStatus,
-      includeInList: includeInList === 'true',
-      search,
-      limit: limit ? Number(limit) : 50,
-      offset: offset ? Number(offset) : 0,
-    });
+    return this.listService.getMediaSequels(
+      username,
+      mediaType,
+      req.user?.username,
+      {
+        relationType: query.relationType,
+        releaseStatus: query.releaseStatus,
+        includeInList: query.includeInList === 'true',
+        search: query.search,
+        limit: query.limit ?? 50,
+        cursor: query.cursor,
+      },
+    );
   }
-
-
 
   // ─────────────────────────── RADARR/SONARR ───────────────────────────
 
@@ -547,18 +397,18 @@ export class ListController {
   @Get('/export/rrlist')
   public async exportRrList(
     @Req() req: any,
-    @Query('types') types: string,
+    @Query() query: ExportRrListQueryDto,
   ): Promise<any> {
-    const listTypes = types ? types.split(',') : [];
+    const listTypes = query.types ? query.types.split(',') : [];
     return this.listService.exportRrList(req.user.username, listTypes);
   }
 
   @Get('/export/mal')
   public async exportMalXml(
     @Req() req: any,
-    @Query('type') type: 'anime' | 'manga',
+    @Query() query: ExportMalQueryDto,
   ): Promise<string> {
-    return this.listService.exportMalXml(req.user.username, type);
+    return this.listService.exportMalXml(req.user.username, query.type);
   }
 
   @Post('/import/rrlist')

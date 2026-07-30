@@ -47,6 +47,7 @@ export const AquilaFlags = defineFlags(
     "EDIT_BOOK",
     "IMPORT_LIST",
     "MEDIA_REFRESH",
+    "MANAGE_REVIEWS",
   ],
   200,
 );

@@ -8,10 +8,22 @@ import useSWR from "swr";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import Image from "next/image";
-import { Star, Heart, Users, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Star,
+  Heart,
+  Users,
+  ChevronDown,
+  ChevronUp,
+  LayoutGrid,
+  UserCheck,
+  BarChart3,
+  ImageIcon,
+  ExternalLink as ExternalLinkIcon,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 import { fetcher } from "@/lib/fetcher";
 import { RrMediaEditDialog } from "@/components/rrComponents/aquila/rrMediaEditDialog";
@@ -19,17 +31,21 @@ import RrLapplandImageNotFound from "@/components/rrComponents/rrImages/rrLappla
 import { RrMediaRefreshButton } from "@/components/rrComponents/aquila/rrMediaRefreshButton";
 import { MangaEntity } from "@/types/manga.entities";
 
-// Import reusable details components
+// Reusable detail components
 import { RrMediaStatsDashboard } from "@/components/rrComponents/aquila/details/rrMediaStatsDashboard";
 import { RrMediaDescription } from "@/components/rrComponents/aquila/details/rrMediaDescription";
 import { RrMediaGenres } from "@/components/rrComponents/aquila/details/rrMediaGenres";
 import { RrMediaCharacters } from "@/components/rrComponents/aquila/details/rrMediaCharacters";
 import { RrMediaRelations } from "@/components/rrComponents/aquila/details/rrMediaRelations";
 import { RrMediaSimilar } from "@/components/rrComponents/aquila/details/rrMediaSimilar";
-
+import { RrMediaStaff } from "@/components/rrComponents/aquila/details/rrMediaStaff";
+import { RrMediaImages } from "@/components/rrComponents/aquila/details/rrMediaImages";
 import { RrMediaInfoRow } from "@/components/rrComponents/aquila/details/rrMediaInfoRow";
 import { RrMediaFriendsProgress } from "@/components/rrComponents/aquila/details/rrMediaFriendsProgress";
 import { RrMediaFooter } from "@/components/rrComponents/aquila/details/rrMediaFooter";
+import { RrMediaReviews } from "@/components/rrComponents/aquila/details/rrMediaReviews";
+import { MessageSquare } from "lucide-react";
+import { MediaType } from "@/types/aquila";
 import { RrMediaDetailsSkeleton } from "@/components/rrComponents/aquila/details/rrMediaDetailsSkeleton";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
@@ -85,7 +101,6 @@ export default function MangaDetailsPage(): React.JSX.Element {
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
   const [showMoreInfo, setShowMoreInfo] = useState<boolean>(false);
 
-  // SWR queries replacing sequential imperative fetching
   const {
     data: manga,
     error: mangaError,
@@ -109,30 +124,49 @@ export default function MangaDetailsPage(): React.JSX.Element {
 
   const hasListEntry = !!listEntry;
 
-  const titleEnglish = manga?.titleEnglish ?? "";
-  const titleRomaji = manga?.titleRomaji ?? "";
-  const titleNative = manga?.titleNative ?? "";
-  const displayTitle = titleEnglish || titleRomaji || t("aquila.mangaDetails");
-  const coverUrl = manga?.coverImageLarge ?? "";
-  const bannerUrl = manga?.bannerImage ?? "";
+  // ─── Derived display values ───────────────────────────────────────────────
+
+  const displayTitle =
+    manga?.titlePrimary || manga?.titleSecondary || t("aquila.mangaDetails");
+
+  const coverUrl = manga?.coverImage || manga?.images?.anilist?.cover || "";
+
+  const bannerUrl = manga?.bannerImage || manga?.images?.anilist?.banner || "";
+
+  // ─── Providers from sources[] + known IDs ────────────────────────────────
 
   const providers = useMemo(() => {
+    if (!manga) return [];
     const list: { name: string; url: string }[] = [];
-    if (manga?.anilistId) {
-      list.push({
-        name: "AniList",
-        url: `https://anilist.co/manga/${manga.anilistId}`,
-      });
+    const seenUrls = new Set<string>();
+
+    const addProvider = (name: string, url?: string | null): void => {
+      if (!url || seenUrls.has(url)) return;
+      seenUrls.add(url);
+      list.push({ name, url });
+    };
+
+    if (manga.anilistId) {
+      addProvider("AniList", `https://anilist.co/manga/${manga.anilistId}`);
     }
+    if (manga.malId) {
+      addProvider(
+        "MyAnimeList",
+        `https://myanimelist.net/manga/${manga.malId}`,
+      );
+    }
+    if (manga.sources) {
+      for (const src of manga.sources) {
+        if (src.url && src.provider) {
+          addProvider(src.provider, src.url);
+        }
+      }
+    }
+
     return list;
   }, [manga]);
 
-  const publishers = useMemo(() => {
-    if (!manga) return [];
-    return manga.mangaStudios
-      .map((ms) => ms.studio?.name)
-      .filter(Boolean) as string[];
-  }, [manga]);
+  // ─── Start / end dates ───────────────────────────────────────────────────
 
   const mangaStartDate = useMemo(() => {
     if (!manga?.startDateYear) return null;
@@ -156,20 +190,19 @@ export default function MangaDetailsPage(): React.JSX.Element {
     return parts.join("-");
   }, [manga]);
 
+  // ─── Characters (v2 shape) ───────────────────────────────────────────────
+
   const characters = useMemo(() => {
-    if (!manga) return [];
-    return manga.mangaCharacters
+    if (!manga?.characters) return [];
+    return manga.characters
       .filter((mc) => mc.character)
       .map((mc) => {
-        const char = mc.character!;
-        const first = char.nameFirst ?? "";
-        const last = char.nameLast ?? "";
-        const name = [first, last].filter(Boolean).join(" ");
+        const char = mc.character;
         return {
-          id: char.id,
-          name: name || char.nameNative || t("aquila.unknownCharacter"),
-          first,
-          last,
+          id: mc.id || char.id,
+          characterId: char.id,
+          name:
+            char.namePrimary || char.nameNative || t("aquila.unknownCharacter"),
           native: char.nameNative ?? "",
           image: char.image ?? "",
           role: mc.role ?? "",
@@ -184,46 +217,52 @@ export default function MangaDetailsPage(): React.JSX.Element {
           },
           nameAlternative: char.nameAlternative ?? [],
           nameAlternativeSpoiler: char.nameAlternativeSpoiler ?? [],
+          voiceActor: null,
         };
       });
   }, [manga, t]);
 
+  // ─── Relations (v2 shape) ────────────────────────────────────────────────
+
   const relations = useMemo(() => {
-    if (!manga) return [];
-    const combined: {
-      id: number;
-      relationType: string;
-      title: { english: string; romaji: string; native: string };
-      format: string;
-      type: string;
-      coverImage: string;
-    }[] = [];
-
-    manga.mangaMangaRelations.forEach((rel) => {
-      const related = rel.relatedAnime ?? rel.relatedManga;
-      if (related) {
-        combined.push({
-          id: related.id,
-          relationType: rel.relationType ?? "",
-          title: {
-            english: related.titleEnglish ?? "",
-            romaji: related.titleRomaji ?? "",
-            native: related.titleNative ?? "",
-          },
-          format: related.format ?? "",
-          type: rel.relatedAnime ? "ANIME" : "MANGA",
-          coverImage: related.coverImageLarge ?? "",
-        });
-      }
+    if (!manga?.relations) return [];
+    return manga.relations.map((rel) => {
+      const target = rel.targetMedia;
+      const relType = rel.relationType ?? rel.type ?? "";
+      const mediaType = rel.targetType ?? "MANGA";
+      return {
+        id: rel.targetId,
+        relationType: relType,
+        title: {
+          english: target?.titlePrimary ?? "",
+          romaji: target?.titleSecondary ?? "",
+          native: target?.titleNative ?? "",
+        },
+        format: target?.format ?? "",
+        type: mediaType,
+        coverImage: target?.coverImage ?? "",
+      };
     });
+  }, [manga]);
 
-    return combined;
+  // ─── Aggregate stats ───────────────────────────────────────────────────────
+
+  const displayFavorites = useMemo(() => {
+    if (!manga) return 0;
+    return manga.favorites ?? manga.alFavorites ?? manga.malFavorites ?? 0;
+  }, [manga]);
+
+  const displayPopularity = useMemo(() => {
+    if (!manga) return 0;
+    return manga.popularity ?? manga.alPopularity ?? manga.malPopularity ?? 0;
   }, [manga]);
 
   useEffect((): void => {
     if (!manga) return;
-    document.title = `Aquila > Manga > ${titleEnglish || titleRomaji || ""}`;
-  }, [manga, titleEnglish, titleRomaji]);
+    document.title = `Aquila > Manga > ${displayTitle}`;
+  }, [manga, displayTitle]);
+
+  // ─── Render states ───────────────────────────────────────────────────────
 
   if (mangaLoading) {
     return <RrMediaDetailsSkeleton />;
@@ -282,7 +321,7 @@ export default function MangaDetailsPage(): React.JSX.Element {
         {bannerUrl ? (
           <Image
             src={bannerUrl}
-            alt={titleRomaji || "Banner"}
+            alt={manga.titleSecondary ?? manga.titlePrimary ?? "Banner"}
             fill
             sizes="100vw"
             className="object-cover scale-105 filter blur-[1px] brightness-75"
@@ -311,7 +350,7 @@ export default function MangaDetailsPage(): React.JSX.Element {
                 {coverUrl ? (
                   <Image
                     src={coverUrl}
-                    alt={titleRomaji || "Cover"}
+                    alt={manga.titleSecondary ?? manga.titlePrimary ?? "Cover"}
                     fill
                     sizes="(max-width: 640px) 112px, (max-width: 1024px) 144px, 260px"
                     className="object-cover"
@@ -359,10 +398,13 @@ export default function MangaDetailsPage(): React.JSX.Element {
                       media={{
                         id: manga.id.toString(),
                         type: "manga",
-                        title: { english: titleEnglish, romaji: titleRomaji },
+                        title: {
+                          english: displayTitle,
+                          romaji: manga.titleSecondary ?? displayTitle,
+                        },
                         coverImage: { large: coverUrl },
-                        chapters: manga.chapters ?? undefined,
-                        volumes: manga.volumes ?? undefined,
+                        chapters: manga.chapterCount ?? undefined,
+                        volumes: manga.volumeCount ?? undefined,
                       }}
                       hasListEntry={hasListEntry}
                       open={isDialogOpen}
@@ -391,12 +433,14 @@ export default function MangaDetailsPage(): React.JSX.Element {
               <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
                 {displayTitle}
               </h1>
-              {(titleRomaji && titleRomaji !== titleEnglish) || titleNative ? (
+              {manga.titleSecondary || manga.titleNative ? (
                 <p className="text-xs text-muted-foreground italic">
                   {t("aquila.alsoKnownAs")}{" "}
                   {[
-                    titleRomaji !== titleEnglish ? titleRomaji : null,
-                    titleNative,
+                    manga.titleSecondary !== manga.titlePrimary
+                      ? manga.titleSecondary
+                      : null,
+                    manga.titleNative,
                   ]
                     .filter(Boolean)
                     .join(", ")}
@@ -419,8 +463,8 @@ export default function MangaDetailsPage(): React.JSX.Element {
                     </span>
                     <div className="flex items-baseline gap-1 mt-0.5">
                       <span className="text-2xl font-black text-primary leading-none">
-                        {manga.localAverageScore
-                          ? manga.localAverageScore.toFixed(1)
+                        {manga.averageScore
+                          ? manga.averageScore.toFixed(1)
                           : "N/A"}
                       </span>
                       <span className="text-xs font-semibold text-muted-foreground">
@@ -443,13 +487,9 @@ export default function MangaDetailsPage(): React.JSX.Element {
                       </span>
                       <span
                         className="text-base font-extrabold text-foreground tracking-tight leading-none mt-0.5"
-                        title={
-                          manga.localFavoritesCount != null
-                            ? manga.localFavoritesCount.toLocaleString()
-                            : "0"
-                        }
+                        title={displayFavorites.toLocaleString()}
                       >
-                        {formatCompactNumber(manga.localFavoritesCount)}
+                        {formatCompactNumber(displayFavorites)}
                       </span>
                     </div>
                   </div>
@@ -465,13 +505,9 @@ export default function MangaDetailsPage(): React.JSX.Element {
                       </span>
                       <span
                         className="text-base font-extrabold text-foreground tracking-tight leading-none mt-0.5"
-                        title={
-                          manga.localPopularity != null
-                            ? manga.localPopularity.toLocaleString()
-                            : "0"
-                        }
+                        title={displayPopularity.toLocaleString()}
                       >
-                        {formatCompactNumber(manga.localPopularity)}
+                        {formatCompactNumber(displayPopularity)}
                       </span>
                     </div>
                   </div>
@@ -512,11 +548,11 @@ export default function MangaDetailsPage(): React.JSX.Element {
                   />
                   <RrMediaInfoRow
                     label={t("aquila.chapters")}
-                    value={manga.chapters || "?"}
+                    value={manga.chapterCount || "?"}
                   />
                   <RrMediaInfoRow
                     label={t("aquila.volumes")}
-                    value={manga.volumes || "?"}
+                    value={manga.volumeCount || "?"}
                   />
                   <RrMediaInfoRow
                     label={t("aquila.status")}
@@ -530,19 +566,47 @@ export default function MangaDetailsPage(): React.JSX.Element {
                     }
                     className="capitalize"
                   />
-                  <RrMediaInfoRow
-                    label={t("aquila.publishersLabel")}
-                    value={
-                      publishers && publishers.length > 0 ? (
+                  {manga.serialization && (
+                    <RrMediaInfoRow
+                      label={t("aquila.serialization")}
+                      value={manga.serialization}
+                    />
+                  )}
+                  {manga.imprint && (
+                    <RrMediaInfoRow
+                      label={t("aquila.imprint")}
+                      value={manga.imprint}
+                    />
+                  )}
+                  {manga.readingDirection && (
+                    <RrMediaInfoRow
+                      label={t("aquila.readingDirection")}
+                      value={manga.readingDirection
+                        .replace(/_/g, " ")
+                        .toLowerCase()}
+                      className="capitalize"
+                    />
+                  )}
+                  {manga.demographics && manga.demographics.length > 0 && (
+                    <RrMediaInfoRow
+                      label={t("aquila.demographics")}
+                      value={manga.demographics.join(", ")}
+                      className="capitalize"
+                    />
+                  )}
+                  {manga.publishers && manga.publishers.length > 0 && (
+                    <RrMediaInfoRow
+                      label={t("aquila.publishersLabel")}
+                      value={
                         <span
                           className="text-right text-xs max-w-37.5 truncate block"
-                          title={publishers.join(", ")}
+                          title={manga.publishers.join(", ")}
                         >
-                          {publishers.join(", ")}
+                          {manga.publishers.join(", ")}
                         </span>
-                      ) : null
-                    }
-                  />
+                      }
+                    />
+                  )}
                   <RrMediaInfoRow
                     label={t("aquila.startDate")}
                     value={mangaStartDate}
@@ -556,11 +620,23 @@ export default function MangaDetailsPage(): React.JSX.Element {
                     value={manga.countryOfOrigin}
                     className="capitalize"
                   />
-                  <RrMediaInfoRow
-                    label={t("aquila.hashtag")}
-                    value={manga.hashtag}
-                    className="text-primary"
-                  />
+                  {manga.ageRating && (
+                    <RrMediaInfoRow
+                      label={t("aquila.ageRating")}
+                      value={
+                        manga.ageRatingGuide
+                          ? `${manga.ageRating} (${manga.ageRatingGuide})`
+                          : manga.ageRating
+                      }
+                    />
+                  )}
+                  {manga.hashtag && (
+                    <RrMediaInfoRow
+                      label={t("aquila.hashtag")}
+                      value={manga.hashtag}
+                      className="text-primary"
+                    />
+                  )}
                   {manga.synonyms && manga.synonyms.length > 0 && (
                     <div className="flex flex-col gap-1 text-sm">
                       <span className="text-muted-foreground">
@@ -585,7 +661,7 @@ export default function MangaDetailsPage(): React.JSX.Element {
             </div>
           </motion.div>
 
-          {/* Right Column - Info */}
+          {/* Right Column - Main Content & Tabs */}
           <div className="flex-1 space-y-6 lg:pt-8 min-w-0">
             {/* Header (Desktop) */}
             <motion.div
@@ -595,12 +671,14 @@ export default function MangaDetailsPage(): React.JSX.Element {
               <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-foreground">
                 {displayTitle}
               </h1>
-              {(titleRomaji && titleRomaji !== titleEnglish) || titleNative ? (
+              {manga.titleSecondary || manga.titleNative ? (
                 <p className="text-xs text-muted-foreground italic">
                   {t("aquila.alsoKnownAs")}{" "}
                   {[
-                    titleRomaji !== titleEnglish ? titleRomaji : null,
-                    titleNative,
+                    manga.titleSecondary !== manga.titlePrimary
+                      ? manga.titleSecondary
+                      : null,
+                    manga.titleNative,
                   ]
                     .filter(Boolean)
                     .join(", ")}
@@ -608,44 +686,184 @@ export default function MangaDetailsPage(): React.JSX.Element {
               ) : null}
             </motion.div>
 
+            {/* External Links / Publisher Badges */}
+            {manga.externalLinks && manga.externalLinks.length > 0 && (
+              <motion.div
+                variants={itemVariants}
+                className="flex items-center gap-2 flex-wrap"
+              >
+                {manga.externalLinks.map((link, idx) => (
+                  <Button
+                    key={idx}
+                    asChild
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 text-xs rounded-xl bg-card/60 border-border/30 hover:bg-accent/20 cursor-pointer"
+                  >
+                    <Link href={link.url} target="_blank" rel="noreferrer">
+                      {link.icon ? (
+                        <Image
+                          src={link.icon}
+                          alt={link.site}
+                          width={14}
+                          height={14}
+                          className="rounded-xs"
+                        />
+                      ) : (
+                        <ExternalLinkIcon className="size-3.5 text-primary" />
+                      )}
+                      <span>{link.site}</span>
+                    </Link>
+                  </Button>
+                ))}
+              </motion.div>
+            )}
+
             {/* Description */}
             <RrMediaDescription description={manga.description} />
 
             {/* Genres */}
             <RrMediaGenres genres={manga.genres} />
 
-            {/* Characters */}
-            {characters && characters.length > 0 && (
-              <RrMediaCharacters
-                characters={characters}
-                showVoiceActors={false}
-              />
-            )}
+            {/* Tabs Navigation */}
+            <Tabs defaultValue="overview" className="w-full space-y-6">
+              <TabsList className="bg-card/60 border border-border/30 backdrop-blur-xl p-1.5 rounded-2xl w-full flex overflow-x-auto justify-start sm:justify-center gap-1 scrollbar-none">
+                <TabsTrigger
+                  value="overview"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <LayoutGrid className="size-3.5 mr-1.5" />
+                  {t("aquila.overview", "Overview")}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="characters"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <Users className="size-3.5 mr-1.5" />
+                  {t("aquila.characters", "Characters")}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="staff"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <UserCheck className="size-3.5 mr-1.5" />
+                  {t("aquila.staff", "Staff")}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="images"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <ImageIcon className="size-3.5 mr-1.5" />
+                  {t("aquila.images", "Images")}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="stats"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <BarChart3 className="size-3.5 mr-1.5" />
+                  {t("aquila.stats", "Stats")}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="reviews"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <MessageSquare className="size-3.5 mr-1.5" />
+                  {t("aquila.reviews")}
+                </TabsTrigger>
+              </TabsList>
 
-            {/* Relations */}
-            {relations && relations.length > 0 && (
-              <RrMediaRelations relations={relations} />
-            )}
+              {/* Overview Tab Content */}
+              <TabsContent value="overview" className="space-y-6 outline-none">
+                {/* Characters Preview (first 10) */}
+                {characters.length > 0 && (
+                  <RrMediaCharacters
+                    characters={characters}
+                    showVoiceActors={false}
+                    limitCount={10}
+                    hideToggleButton={true}
+                  />
+                )}
 
-            {/* Similar Series Carousel */}
-            <RrMediaSimilar mediaType="manga" mediaId={id} />
+                {/* Staff Preview (first 6) */}
+                {manga.staff && manga.staff.length > 0 && (
+                  <RrMediaStaff staff={manga.staff} limit={6} />
+                )}
 
+                {/* Relations */}
+                {relations.length > 0 && (
+                  <RrMediaRelations relations={relations} />
+                )}
 
-            {/* Stats Dashboard (Score & Status distribution charts) */}
-            <RrMediaStatsDashboard
-              localAverageScore={manga.localAverageScore}
-              localPopularity={manga.localPopularity}
-              localFavoritesCount={manga.localFavoritesCount}
-              localStatusDistribution={manga.localStatusDistribution}
-              localScoreDistribution={manga.localScoreDistribution}
-              showCounters={false}
-            />
+                {/* Similar Series Carousel */}
+                <RrMediaSimilar mediaType="manga" mediaId={id} />
 
-            {/* Friends Progress */}
-            <RrMediaFriendsProgress
-              mediaId={manga.id.toString()}
-              mediaType="manga"
-            />
+                {/* Friends Progress */}
+                <RrMediaFriendsProgress
+                  mediaId={manga.id.toString()}
+                  mediaType="manga"
+                />
+              </TabsContent>
+
+              {/* Characters Tab Content */}
+              <TabsContent
+                value="characters"
+                className="space-y-6 outline-none"
+              >
+                {characters.length > 0 ? (
+                  <RrMediaCharacters
+                    characters={characters}
+                    showVoiceActors={false}
+                    showAllInitial={true}
+                  />
+                ) : (
+                  <div className="p-8 text-center text-muted-foreground bg-card/45 border border-border/30 rounded-2xl">
+                    {t(
+                      "aquila.noCharacters",
+                      "No character information available",
+                    )}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Staff Tab Content */}
+              <TabsContent value="staff" className="space-y-6 outline-none">
+                {manga.staff && manga.staff.length > 0 ? (
+                  <RrMediaStaff staff={manga.staff} showAllInitial={true} />
+                ) : (
+                  <div className="p-8 text-center text-muted-foreground bg-card/45 border border-border/30 rounded-2xl">
+                    {t("aquila.noStaff", "No staff information available")}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Images Tab Content */}
+              <TabsContent value="images" className="space-y-6 outline-none">
+                <RrMediaImages anime={manga as any} />
+              </TabsContent>
+
+              {/* Stats Tab Content */}
+              <TabsContent value="stats" className="space-y-6 outline-none">
+                <RrMediaStatsDashboard
+                  localAverageScore={manga.averageScore}
+                  localPopularity={manga.popularity}
+                  localFavoritesCount={manga.favorites}
+                  localStatusDistribution={manga.statusDistribution}
+                  localScoreDistribution={manga.scoreDistribution}
+                  alAverageScore={manga.alAverageScore}
+                  alFavorites={manga.alFavorites}
+                  alPopularity={manga.alPopularity}
+                  malAverageScore={manga.malAverageScore}
+                  malFavorites={manga.malFavorites}
+                  malPopularity={manga.malPopularity}
+                  showCounters={true}
+                />
+              </TabsContent>
+
+              {/* Reviews Tab Content */}
+              <TabsContent value="reviews" className="space-y-6 outline-none">
+                <RrMediaReviews mediaType={MediaType.MANGA} mediaId={Number(id)} />
+              </TabsContent>
+            </Tabs>
           </div>
         </motion.div>
 
@@ -653,6 +871,8 @@ export default function MangaDetailsPage(): React.JSX.Element {
         <RrMediaFooter
           providers={providers}
           updatedAt={manga.updatedAt}
+          alUpdatedAt={manga.alUpdatedAt}
+          malUpdatedAt={manga.malUpdatedAt}
           mediaType="manga"
           mediaId={Number(id)}
           mediaData={{ ...manga, relations, characters }}

@@ -18,17 +18,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const title =
-    movie.titleEnglish ??
-    movie.titleRomaji ??
-    movie.title?.english ??
-    movie.title?.romaji ??
+    (movie as any).titlePrimary ??
+    (movie as any).titleSecondary ??
     "Movie Details";
-  const description = cleanDescription(movie.description, 160);
-  const image =
-    typeof movie.coverImage === "string"
-      ? movie.coverImage
-      : (movie.coverImage?.extraLarge ?? movie.coverImage?.large ?? "");
-  const keywords: string[] = Array.isArray(movie.genres) ? movie.genres : [];
+  const description = cleanDescription((movie as any).description, 160);
+  const image = (movie as any).coverImage ?? "";
+  const keywords: string[] = Array.isArray((movie as any).genres)
+    ? (movie as any).genres
+    : [];
 
   return {
     title: `Aquila > Movie > ${title}`,
@@ -50,6 +47,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export default async function Page({ params }: PageProps) {
+export default async function Page({ params: _ }: PageProps) {
   return <MovieDetailsPage />;
 }

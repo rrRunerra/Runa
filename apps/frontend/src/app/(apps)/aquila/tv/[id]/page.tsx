@@ -18,17 +18,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 
   const title =
-    tv.titleEnglish ??
-    tv.titleRomaji ??
-    tv.title?.english ??
-    tv.title?.romaji ??
+    (tv as any).titlePrimary ??
+    (tv as any).titleSecondary ??
     "TV Show Details";
-  const description = cleanDescription(tv.description, 160);
-  const image =
-    typeof tv.coverImage === "string"
-      ? tv.coverImage
-      : (tv.coverImage?.extraLarge ?? tv.coverImage?.large ?? "");
-  const keywords: string[] = Array.isArray(tv.genres) ? tv.genres : [];
+  const description = cleanDescription((tv as any).description, 160);
+  const image = (tv as any).coverImage ?? "";
+  const keywords: string[] = Array.isArray((tv as any).genres)
+    ? (tv as any).genres
+    : [];
 
   return {
     title: `Aquila > TV > ${title}`,
@@ -50,6 +47,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-export default async function Page({ params }: PageProps) {
+export default async function Page({ params: _ }: PageProps) {
   return <TvDetailsPage />;
 }

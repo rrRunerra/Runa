@@ -1,68 +1,91 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { Subject, EMPTY } from 'rxjs';
 import { mergeMap, catchError } from 'rxjs/operators';
 import { AnimeExternal } from './anime.external';
-import { CacheService } from 'src/providers/cache/cache.service';
+import { AnimeRepository } from './anime.repository';
+import { MangaQueueService } from '../manga/manga-queue.service';
 
-interface SearchRefreshJob {
-  query: string;
-  cacheKey: string;
+interface ExternalUpsertJob {
+  anilistId: number;
+  depth?: number;
 }
 
 @Injectable()
 export class AnimeQueueService implements OnModuleInit {
   private readonly logger = new Logger(AnimeQueueService.name);
-  private readonly moduleCode = 'AeQeSve-';
-  private readonly jobQueue = new Subject<number>();
-  private readonly processing = new Set<number>();
-  private readonly searchQueue = new Subject<SearchRefreshJob>();
-  private readonly pendingSearches = new Set<string>();
+  private readonly upsertQueue = new Subject<ExternalUpsertJob>();
+  private readonly pendingAnilistIds = new Set<number>();
 
   constructor(
     private readonly animeExternal: AnimeExternal,
-    private readonly cacheService: CacheService,
+    private readonly animeRepository: AnimeRepository,
+    @Inject(forwardRef(() => MangaQueueService))
+    private readonly mangaQueueService: MangaQueueService,
   ) {}
 
   onModuleInit(): void {
-    this.processSearchQueue();
+    this.processUpsertQueue();
   }
 
-  addJob(anilistId: number): void {
-    if (!this.processing.has(anilistId)) {
-      this.jobQueue.next(anilistId);
+  public async addUpsertJob(anilistId: number, depth = 0): Promise<void> {
+    if (!anilistId || depth > 5) return;
+    if (this.pendingAnilistIds.has(anilistId)) return;
+
+    try {
+      const existing = await this.animeRepository.findByAnilistId(anilistId);
+      if (existing && existing.alUpdatedAt) {
+        return;
+      }
+    } catch {
+      // Ignore lookup check error and proceed with queuing
+    }
+
+    this.pendingAnilistIds.add(anilistId);
+    this.upsertQueue.next({ anilistId, depth });
+  }
+
+  public addSearchUpserts(anilistIds: number[]): void {
+    for (const id of anilistIds) {
+      void this.addUpsertJob(id, 0);
     }
   }
 
-  addSearchRefresh(query: string, cacheKey: string): void {
-    if (!this.pendingSearches.has(query)) {
-      this.pendingSearches.add(query);
-      this.searchQueue.next({ query, cacheKey });
-    }
-  }
-
-  private processSearchQueue(): void {
-    this.searchQueue
+  private processUpsertQueue(): void {
+    this.upsertQueue
       .pipe(
         mergeMap(async (job) => {
           try {
-            this.logger.log(`Processing search refresh: "${job.query}"`);
-            const fresh = await this.animeExternal.search(job.query);
-            if (fresh.length > 0) {
-              await this.cacheService.set(job.cacheKey, fresh, 60 * 60);
+            this.logger.log(
+              `Processing background V2 anime upsert for AniList ID: ${job.anilistId} (depth ${job.depth || 0})`,
+            );
+            const fullRecord = await this.animeExternal.fetchFullV2Record(job.anilistId);
+            if (fullRecord) {
+              await this.animeRepository.upsertV2Record(fullRecord);
+              this.logger.log(
+                `Successfully completed background V2 anime upsert for AniList ID: ${job.anilistId}`,
+              );
+
+              // Recursively queue all related anime and manga for background metadata fetching
+              if (fullRecord.relations && Array.isArray(fullRecord.relations)) {
+                for (const rel of fullRecord.relations) {
+                  if (rel.targetType === 'ANIME' && rel.targetAnilistId) {
+                    void this.addUpsertJob(rel.targetAnilistId, (job.depth || 0) + 1);
+                  } else if (rel.targetType === 'MANGA' && rel.targetAnilistId) {
+                    void this.mangaQueueService.addUpsertJob(rel.targetAnilistId, (job.depth || 0) + 1);
+                  }
+                }
+              }
             }
-            this.logger.log(`Completed search refresh: "${job.query}"`);
-          } catch (error) {
-            const message =
-              error instanceof Error ? error.message : 'Unknown error';
+          } catch (error: any) {
             this.logger.error(
-              `Search refresh failed for "${job.query}": ${message}`,
+              `Background V2 anime upsert failed for AniList ID ${job.anilistId}: ${error?.message || error}`,
             );
           } finally {
-            this.pendingSearches.delete(job.query);
+            this.pendingAnilistIds.delete(job.anilistId);
           }
-        }, 1),
+        }, 2),
         catchError((error) => {
-          this.logger.error(`Search queue error: ${error}`);
+          this.logger.error(`Anime upsert queue unexpected error: ${error}`);
           return EMPTY;
         }),
       )

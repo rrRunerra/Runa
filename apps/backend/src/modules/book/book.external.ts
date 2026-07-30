@@ -1,7 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { rrError } from 'src/providers/error';
 import { BookSearchEntity } from './book.entities';
+import { BookRepository } from './book.repository';
 import type { GbooksVolume, GbooksSearchResponse } from './book.types';
 
 @Injectable()
@@ -10,7 +11,11 @@ export class BookExternal {
   private readonly moduleCode = 'BkExt-';
   private readonly baseUrl = 'https://www.googleapis.com/books/v1';
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(forwardRef(() => BookRepository))
+    private readonly bookRepository: BookRepository,
+  ) {}
 
   private gbooksFetch<T>(url: string): Promise<T> {
     const apiKey = process.env.GOOGLE_BOOKS_API_KEY ?? '';
@@ -106,20 +111,29 @@ export class BookExternal {
     publishedYear: number | null;
     publishedMonth: number | null;
     publishedDay: number | null;
+    releaseDate: Date | null;
   } {
     if (!publishedDate) {
-      return { publishedYear: null, publishedMonth: null, publishedDay: null };
+      return { publishedYear: null, publishedMonth: null, publishedDay: null, releaseDate: null };
     }
     const parts = publishedDate.split('-');
     const publishedYear = parts[0] ? parseInt(parts[0], 10) || null : null;
     const publishedMonth = parts[1] ? parseInt(parts[1], 10) || null : null;
     const publishedDay = parts[2] ? parseInt(parts[2], 10) || null : null;
-    return { publishedYear, publishedMonth, publishedDay };
+
+    let releaseDate: Date | null = null;
+    if (publishedYear) {
+      const m = publishedMonth ? publishedMonth - 1 : 0;
+      const d = publishedDay || 1;
+      releaseDate = new Date(Date.UTC(publishedYear, m, d));
+    }
+
+    return { publishedYear, publishedMonth, publishedDay, releaseDate };
   }
 
   public async search(query: string): Promise<BookSearchEntity[]> {
     try {
-      this.logger.debug('Searching for books in Google Books');
+      this.logger.debug(`Searching Google Books: "${query}"`);
       const data = await this.gbooksFetch<GbooksSearchResponse>(
         `${this.baseUrl}/volumes?q=${encodeURIComponent(query)}&maxResults=20`,
       );
@@ -128,72 +142,60 @@ export class BookExternal {
         return [];
       }
 
-      const results = await Promise.all(
-        data.items.map(async (item) => {
-          const googleBookId = item.id;
-          const info = item.volumeInfo || { title: '' };
+      const results: BookSearchEntity[] = [];
 
-          const coverImage = this.selectCoverImage(info.imageLinks);
-          const { publishedYear } = this.parsePublishedDate(info.publishedDate);
+      for (const item of data.items) {
+        const googleBookId = item.id;
+        const info = item.volumeInfo || { title: '' };
 
-          const existing = await this.prisma.client.aquilaBook.findUnique({
-            where: { googleBookId },
-            select: { id: true, titleString: true, coverImage: true, locked: true },
-          });
+        const titlePrimary = info.title || 'Untitled';
+        const titleSecondary = info.subtitle || null;
+        const coverImage = this.selectCoverImage(info.imageLinks);
+        const { publishedYear } = this.parsePublishedDate(info.publishedDate);
 
-          let book = existing;
-          if (!existing?.locked) {
-            book = await this.prisma.client.aquilaBook.upsert({
-              where: { googleBookId },
-              update: {
-                titleString: info.title || null,
-                subtitle: info.subtitle || null,
-                coverImage,
-                authors: info.authors || [],
-                publisher: info.publisher || null,
-                publishedDate: info.publishedDate || null,
-                publishedYear,
-              },
-              create: {
+        let dbRecord = await this.prisma.client.aquilaBookV2.findUnique({
+          where: { googleBookId },
+          select: { id: true, googleBookId: true },
+        });
+
+        if (!dbRecord) {
+          try {
+            dbRecord = await this.prisma.client.aquilaBookV2.create({
+              data: {
                 googleBookId,
-                titleString: info.title || null,
-                subtitle: info.subtitle || null,
+                titlePrimary,
+                titleSecondary,
                 coverImage,
-                authors: info.authors || [],
-                publisher: info.publisher || null,
-                publishedDate: info.publishedDate || null,
-                publishedYear,
+                releaseDateYear: publishedYear,
               },
-              select: {
-                id: true,
-                titleString: true,
-                coverImage: true,
-                locked: true,
-              },
+              select: { id: true, googleBookId: true },
             });
-
-            this.queueFetch(googleBookId);
+          } catch {
+            dbRecord = await this.prisma.client.aquilaBookV2.findUnique({
+              where: { googleBookId },
+              select: { id: true, googleBookId: true },
+            });
           }
+        }
 
-          if (!book) return null;
+        results.push({
+          id: dbRecord ? dbRecord.id : 0,
+          googleBookId,
+          title: titlePrimary,
+          secondaryTitle: titleSecondary,
+          coverImage,
+          format: 'BOOK',
+          status: 'PUBLISHED',
+          isAdult: info.maturityRating === 'MATURE',
+          averageScore:
+            info.averageRating != null
+              ? Math.round(info.averageRating * 20)
+              : null,
+          releaseDateYear: publishedYear,
+        });
+      }
 
-          return {
-            id: book.id,
-            title: book.titleString || info.title || '',
-            secondaryTitle: info.subtitle || null,
-            coverImage: book.coverImage || coverImage || null,
-            format: 'BOOK',
-            status: 'PUBLISHED',
-            isAdult: info.maturityRating === 'MATURE',
-            averageScore:
-              info.averageRating != null
-                ? Math.round(info.averageRating * 20)
-                : null,
-          } satisfies BookSearchEntity;
-        }),
-      );
-
-      return results.filter((r) => r !== null);
+      return results;
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`Failed to search books in Google Books: ${message}`);
@@ -203,140 +205,144 @@ export class BookExternal {
     }
   }
 
-  public async fetchAndUpsertBook(
-    googleBookId: string,
-    force = false,
-  ): Promise<void> {
+  public async fetchFullV2Record(googleBookId: string): Promise<any | null> {
     try {
+      this.logger.debug(`Fetching full V2 book record for Google Book ID: ${googleBookId}`);
       const data = await this.gbooksFetch<GbooksVolume>(
         `${this.baseUrl}/volumes/${googleBookId}`,
       );
 
       if (!data || !data.volumeInfo) {
-        throw new rrError(`${this.moduleCode}BNF001`, {
-          message: `Book with Google Book ID ${googleBookId} not found`,
+        return null;
+      }
+
+      const info = data.volumeInfo;
+      const saleInfo = data.saleInfo || {};
+
+      const coverImage = this.selectCoverImage(info.imageLinks);
+      const { authors, artists } = this.parseAuthorsAndArtists(info);
+      const { publishedYear, publishedMonth, publishedDay, releaseDate } =
+        this.parsePublishedDate(info.publishedDate);
+
+      const description = info.description
+        ? this.cleanDescription(info.description)
+        : null;
+
+      let isbn10: string | null = null;
+      let isbn13: string | null = null;
+      if (info.industryIdentifiers) {
+        for (const ident of info.industryIdentifiers) {
+          if (ident.type === 'ISBN_10') {
+            isbn10 = ident.identifier;
+          } else if (ident.type === 'ISBN_13') {
+            isbn13 = ident.identifier;
+          }
+        }
+      }
+
+      const staff: any[] = [];
+      for (const author of authors) {
+        staff.push({
+          namePrimary: author,
+          role: 'STORY',
+          customRole: 'Author',
+        });
+      }
+      for (const artist of artists) {
+        staff.push({
+          namePrimary: artist,
+          role: 'KEY_ANIMATION',
+          customRole: 'Illustrator / Artist',
         });
       }
 
-      await this.upsertBook(data, force);
+      const publishers = info.publisher ? [info.publisher] : [];
+
+      const averageScore = info.averageRating != null ? Math.round(info.averageRating * 20) : null;
+
+      const sources = [
+        {
+          provider: 'GOOGLE_BOOKS',
+          externalId: googleBookId,
+          url: info.infoLink || info.previewLink || `https://books.google.com/books?id=${googleBookId}`,
+          fieldsProvided: [
+            'id',
+            'googleBookId',
+            'titlePrimary',
+            'coverImage',
+            'authors',
+            'publishers',
+            'subjects',
+          ],
+          fetchedAt: new Date().toISOString(),
+        },
+      ];
+
+      return {
+        googleBookId,
+        isbn10,
+        isbn13,
+
+        titlePrimary: info.title || 'Untitled',
+        titleSecondary: info.subtitle || null,
+        subtitle: info.subtitle || null,
+
+        coverImage,
+        bannerImage: null,
+
+        description,
+        originalLanguage: info.language ? info.language.toUpperCase() : null,
+        countryOfOrigin: null,
+        format: 'BOOK',
+        website: info.infoLink || null,
+        siteUrl: info.infoLink || info.previewLink || `https://books.google.com/books?id=${googleBookId}`,
+        previewLink: info.previewLink || null,
+        infoLink: info.infoLink || null,
+        buyLink: saleInfo.buyLink || null,
+
+        releaseDateYear: publishedYear,
+        releaseDateMonth: publishedMonth,
+        releaseDateDay: publishedDay,
+        releaseDate,
+
+        pageCount: info.pageCount || null,
+
+        genres: info.categories || [],
+        subjects: info.categories || [],
+        tags: [],
+        publishers,
+        authors: info.authors || [],
+        status: 'PUBLISHED',
+        isAdult: info.maturityRating === 'MATURE',
+        synonyms: [],
+
+        averageScore,
+        googleBooksRating: info.averageRating || null,
+        googleBooksRatingsCount: info.ratingsCount || null,
+
+        sources,
+
+        retailPrice: saleInfo.retailPrice?.amount || null,
+        retailPriceCurrency: saleInfo.retailPrice?.currencyCode || null,
+        ageRating: info.maturityRating || null,
+
+        staff,
+        relations: [],
+      };
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(
-        `Failed to fetch book ${googleBookId} from Google Books: ${message}`,
-      );
-      throw new rrError(`${this.moduleCode}FTFFB001`, {
-        message: 'Failed to fetch book from Google Books',
-      });
+      this.logger.error(`Failed to fetch full V2 book record for ${googleBookId}: ${message}`);
+      return null;
     }
   }
 
-  private queueFetch(googleBookId: string): void {
-    this.fetchAndUpsertBook(googleBookId).catch((err: Error) =>
-      this.logger.warn(
-        `Background fetch failed for book ${googleBookId}: ${err.message}`,
-      ),
-    );
-  }
-
-  private async upsertBook(volume: GbooksVolume, force = false): Promise<void> {
-    const existing = await this.prisma.client.aquilaBook.findUnique({
-      where: { googleBookId: volume.id },
-      select: { locked: true },
-    });
-
-    if (existing?.locked && !force) {
-      this.logger.debug(
-        `Book with Google Book ID ${volume.id} is locked, skipping upsert`,
-      );
-      return;
+  public async fetchAndUpsertBook(
+    googleBookId: string,
+    force = false,
+  ): Promise<void> {
+    const fullRecord = await this.fetchFullV2Record(googleBookId);
+    if (fullRecord) {
+      await this.bookRepository.upsertV2Record(fullRecord);
     }
-
-    const info = volume.volumeInfo || { title: '' };
-    const saleInfo = volume.saleInfo || {};
-
-    const coverImage = this.selectCoverImage(info.imageLinks);
-    const { authors, artists } = this.parseAuthorsAndArtists(info);
-    const { publishedYear, publishedMonth, publishedDay } =
-      this.parsePublishedDate(info.publishedDate);
-
-    const description = info.description
-      ? this.cleanDescription(info.description)
-      : null;
-
-    let isbn10: string | null = null;
-    let isbn13: string | null = null;
-    if (info.industryIdentifiers) {
-      for (const ident of info.industryIdentifiers) {
-        if (ident.type === 'ISBN_10') {
-          isbn10 = ident.identifier;
-        } else if (ident.type === 'ISBN_13') {
-          isbn13 = ident.identifier;
-        }
-      }
-    }
-
-    await this.prisma.client.aquilaBook.upsert({
-      where: { googleBookId: volume.id },
-      update: {
-        titleString: info.title || null,
-        subtitle: info.subtitle || null,
-        coverImage,
-        description,
-        publishedYear,
-        publishedMonth,
-        publishedDay,
-        publishedDate: info.publishedDate || null,
-        subjects: info.categories || [],
-        authors,
-        artists,
-        publishers: info.publisher ? [info.publisher] : [],
-        pages: info.pageCount || null,
-        pageCount: info.pageCount || null,
-        chapters: null,
-        averageRating: info.averageRating || null,
-        ratingsCount: info.ratingsCount || null,
-        language: info.language || null,
-        isbn10,
-        isbn13,
-        previewLink: info.previewLink || null,
-        infoLink: info.infoLink || null,
-        buyLink: saleInfo.buyLink || null,
-        retailPrice: saleInfo.retailPrice?.amount || null,
-        retailPriceCurrency: saleInfo.retailPrice?.currencyCode || null,
-        maturityRating: info.maturityRating || null,
-        publisher: info.publisher || null,
-      },
-      create: {
-        googleBookId: volume.id,
-        titleString: info.title || null,
-        subtitle: info.subtitle || null,
-        coverImage,
-        description,
-        publishedYear,
-        publishedMonth,
-        publishedDay,
-        publishedDate: info.publishedDate || null,
-        subjects: info.categories || [],
-        authors,
-        artists,
-        publishers: info.publisher ? [info.publisher] : [],
-        pages: info.pageCount || null,
-        pageCount: info.pageCount || null,
-        chapters: null,
-        averageRating: info.averageRating || null,
-        ratingsCount: info.ratingsCount || null,
-        language: info.language || null,
-        isbn10,
-        isbn13,
-        previewLink: info.previewLink || null,
-        infoLink: info.infoLink || null,
-        buyLink: saleInfo.buyLink || null,
-        retailPrice: saleInfo.retailPrice?.amount || null,
-        retailPriceCurrency: saleInfo.retailPrice?.currencyCode || null,
-        maturityRating: info.maturityRating || null,
-        publisher: info.publisher || null,
-      },
-      select: { id: true },
-    });
   }
 }

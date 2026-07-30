@@ -34,6 +34,8 @@ export interface RawgGameDetail {
   platforms?: { platform: { name: string } }[];
   developers?: { name: string }[];
   publishers?: { name: string }[];
+  tags?: { name: string }[];
+  website?: string;
   esrb_rating?: { slug: string; name?: string };
   added?: number;
   playtime?: number;

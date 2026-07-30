@@ -7,43 +7,48 @@ import { useParams, useRouter } from "next/navigation";
 import useSWR from "swr";
 import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
-import { ArrowLeft, User, Film, Tv, Award, Heart } from "lucide-react";
+import { ArrowLeft, User, Film, Tv, Award, Heart, BookOpen, Gamepad2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { fetcher } from "@/lib/fetcher";
 import { RrMediaDetailsSkeleton } from "@/components/rrComponents/aquila/details/rrMediaDetailsSkeleton";
 import { useTranslation } from "react-i18next";
 
-interface RoleCharacter {
+interface ActorRoleV2 {
   id: number;
-  nameFirst: string | null;
-  nameLast: string | null;
-  image: string | null;
-}
-
-interface ActorRoleAppearance {
-  id: number; // media local DB id
-  title: string;
+  mediaType: string;
+  mediaId: number;
+  titlePrimary: string;
   coverImage: string | null;
-  format: string;
-  status: string;
   role: string | null;
-  character: RoleCharacter;
+  customRole: string | null;
+  characterName: string | null;
+  characterImage: string | null;
 }
 
-interface ActorDetail {
+interface ActorDetailV2 {
   id: number;
-  peopleId: number | null;
-  anilistStaffId: number | null;
-  name: string | null;
-  personName: string | null;
+  anilistId: number | null;
+  malId: number | null;
+  tvDBId: number | null;
+  namePrimary: string | null;
+  nameNative: string | null;
+  nameAlternative: string[];
   image: string | null;
-  peopleType: string | null;
-
-  animeRoles: ActorRoleAppearance[];
-  movieRoles: ActorRoleAppearance[];
-  tvRoles: ActorRoleAppearance[];
+  images: string[] | null;
+  description: string | null;
+  language: string | null;
+  roles: ActorRoleV2[];
 }
+
+const MEDIA_TYPE_ROUTE: Record<string, string> = {
+  ANIME: "/aquila/anime",
+  MOVIE: "/aquila/movies",
+  TV: "/aquila/tv",
+  MANGA: "/aquila/manga",
+  BOOK: "/aquila/books",
+  GAME: "/aquila/games",
+};
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -73,7 +78,7 @@ export default function ActorPage() {
     data: actor,
     error,
     isLoading,
-  } = useSWR<ActorDetail>(
+  } = useSWR<ActorDetailV2>(
     id ? `${process.env.NEXT_PUBLIC_API_URL}/actor/${id}` : null,
     fetcher,
   );
@@ -82,7 +87,7 @@ export default function ActorPage() {
     id && session?.accessToken
       ? [`${process.env.NEXT_PUBLIC_API_URL}/favorites/STAFF/${id}/status`, session.accessToken]
       : null,
-    fetcher
+    fetcher,
   );
 
   const toggleFavorite = async () => {
@@ -93,9 +98,7 @@ export default function ActorPage() {
       if (isFavorited) {
         await fetch(`${process.env.NEXT_PUBLIC_API_URL}/favorites/STAFF/${id}`, {
           method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${session.accessToken}`,
-          },
+          headers: { Authorization: `Bearer ${session.accessToken}` },
         });
       } else {
         await fetch(`${process.env.NEXT_PUBLIC_API_URL}/favorites`, {
@@ -104,10 +107,7 @@ export default function ActorPage() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${session.accessToken}`,
           },
-          body: JSON.stringify({
-            type: "STAFF",
-            targetId: id,
-          }),
+          body: JSON.stringify({ type: "STAFF", targetId: id }),
         });
       }
       mutateFav({ favorited: !isFavorited });
@@ -116,9 +116,19 @@ export default function ActorPage() {
     }
   };
 
+  const rolesByType = useMemo(() => {
+    if (!actor?.roles) return {} as Record<string, ActorRoleV2[]>;
+    return actor.roles.reduce<Record<string, ActorRoleV2[]>>((acc, role) => {
+      const key = role.mediaType.toUpperCase();
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(role);
+      return acc;
+    }, {});
+  }, [actor]);
+
   const displayName = useMemo(() => {
     if (!actor) return t("aquila.actorDetails", "Actor Details");
-    return actor.name || actor.personName || t("aquila.unknownActor", "Unknown Actor");
+    return actor.namePrimary || t("aquila.unknownActor", "Unknown Actor");
   }, [actor, t]);
 
   if (isLoading) {
@@ -141,6 +151,8 @@ export default function ActorPage() {
       </div>
     );
   }
+
+  const hasNoRoles = !actor.roles || actor.roles.length === 0;
 
   return (
     <div className="flex-1 min-h-screen bg-background pb-12 relative overflow-hidden">
@@ -174,47 +186,89 @@ export default function ActorPage() {
               <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground border-b border-border/20 pb-1.5">
                 {t("aquila.actorInfo", "Actor Info")}
               </h4>
-              {actor.personName && actor.personName !== actor.name && (
+
+              {actor.nameNative && (
                 <div>
                   <span className="text-[10px] font-semibold text-muted-foreground block">
-                    {t("aquila.fullName", "Full Name")}
+                    {t("aquila.nativeName", "Native Name")}
                   </span>
                   <span className="text-sm font-medium text-foreground">
-                    {actor.personName}
+                    {actor.nameNative}
                   </span>
                 </div>
               )}
-              {actor.peopleType && (
+
+              {actor.language && (
                 <div>
                   <span className="text-[10px] font-semibold text-muted-foreground block">
-                    {t("aquila.primaryRole", "Primary Role")}
+                    {t("aquila.language", "Language")}
                   </span>
                   <span className="text-sm font-medium text-foreground">
-                    {actor.peopleType}
+                    {actor.language}
                   </span>
                 </div>
               )}
-              {actor.anilistStaffId && (
+
+              {actor.nameAlternative && actor.nameAlternative.length > 0 && (
+                <div>
+                  <span className="text-[10px] font-semibold text-muted-foreground block mb-1">
+                    {t("aquila.alternativeNames", "Alternative Names")}
+                  </span>
+                  <div className="flex flex-wrap gap-1">
+                    {actor.nameAlternative.map((name, i) => (
+                      <Badge key={i} variant="secondary" className="text-[10px] px-1.5 py-0 rounded">
+                        {name}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {actor.anilistId && (
                 <div>
                   <span className="text-[10px] font-semibold text-muted-foreground block">
-                    {t("aquila.anilistStaffId", "AniList Staff ID")}
+                    {t("aquila.anilistId", "AniList ID")}
                   </span>
                   <span className="text-sm font-medium text-primary">
-                    #{actor.anilistStaffId}
+                    #{actor.anilistId}
                   </span>
                 </div>
               )}
-              {actor.peopleId && (
+
+              {actor.malId && (
                 <div>
                   <span className="text-[10px] font-semibold text-muted-foreground block">
-                    {t("aquila.tvdbPeopleId", "TVDB People ID")}
+                    {t("aquila.malId", "MAL ID")}
                   </span>
                   <span className="text-sm font-medium text-primary">
-                    #{actor.peopleId}
+                    #{actor.malId}
+                  </span>
+                </div>
+              )}
+
+              {actor.tvDBId && (
+                <div>
+                  <span className="text-[10px] font-semibold text-muted-foreground block">
+                    {t("aquila.tvdbId", "TVDB ID")}
+                  </span>
+                  <span className="text-sm font-medium text-primary">
+                    #{actor.tvDBId}
                   </span>
                 </div>
               )}
             </div>
+
+            {/* Description */}
+            {actor.description && (
+              <div className="bg-card/30 border border-border/20 backdrop-blur-sm p-4 rounded-2xl space-y-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground border-b border-border/20 pb-1.5">
+                  {t("aquila.biography", "Biography")}
+                </h4>
+                <p className="text-sm text-foreground/80 leading-relaxed line-clamp-6">
+                  {actor.description}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Right Column: Roles & Appearances */}
@@ -256,47 +310,24 @@ export default function ActorPage() {
                 animate="show"
                 className="space-y-6"
               >
-                {/* Anime Section */}
-                {actor.animeRoles && actor.animeRoles.length > 0 && (
-                  <RolesSection
-                    title={t("aquila.animeVoiced", "Anime Voiced")}
-                    icon={<Tv className="size-4 text-primary" />}
-                    roles={actor.animeRoles}
-                    routePrefix="/aquila/anime"
-                  />
+                {hasNoRoles ? (
+                  <div className="text-center py-12 bg-card/20 border border-border/10 rounded-2xl">
+                    <Award className="size-12 text-muted-foreground/60 mx-auto stroke-[1.2] mb-3" />
+                    <p className="text-muted-foreground text-sm">
+                      {t("aquila.noMappedRoles", "No mapped roles found for this actor.")}
+                    </p>
+                  </div>
+                ) : (
+                  Object.entries(rolesByType).map(([mediaType, roles]) => (
+                    <RolesSection
+                      key={mediaType}
+                      title={getSectionTitle(mediaType, t)}
+                      icon={getSectionIcon(mediaType)}
+                      roles={roles}
+                      routePrefix={MEDIA_TYPE_ROUTE[mediaType] ?? `/aquila/${mediaType.toLowerCase()}`}
+                    />
+                  ))
                 )}
-
-                {/* Movie Section */}
-                {actor.movieRoles && actor.movieRoles.length > 0 && (
-                  <RolesSection
-                    title={t("aquila.moviesPlayed", "Movies Played")}
-                    icon={<Film className="size-4 text-primary" />}
-                    roles={actor.movieRoles}
-                    routePrefix="/aquila/movies"
-                  />
-                )}
-
-                {/* TV Section */}
-                {actor.tvRoles && actor.tvRoles.length > 0 && (
-                  <RolesSection
-                    title={t("aquila.tvRoles", "TV Roles")}
-                    icon={<Tv className="size-4 text-primary" />}
-                    roles={actor.tvRoles}
-                    routePrefix="/aquila/tv"
-                  />
-                )}
-
-                {/* No Roles Found */}
-                {(!actor.animeRoles || actor.animeRoles.length === 0) &&
-                  (!actor.movieRoles || actor.movieRoles.length === 0) &&
-                  (!actor.tvRoles || actor.tvRoles.length === 0) && (
-                    <div className="text-center py-12 bg-card/20 border border-border/10 rounded-2xl">
-                      <Award className="size-12 text-muted-foreground/60 mx-auto stroke-[1.2] mb-3" />
-                      <p className="text-muted-foreground text-sm">
-                        {t("aquila.noMappedRoles", "No mapped roles found for this actor.")}
-                      </p>
-                    </div>
-                  )}
               </motion.div>
             </div>
           </div>
@@ -306,10 +337,40 @@ export default function ActorPage() {
   );
 }
 
+function getSectionTitle(mediaType: string, t: (key: string, fallback: string) => string): string {
+  const map: Record<string, string> = {
+    ANIME: t("aquila.animeVoiced", "Anime Voiced"),
+    MOVIE: t("aquila.moviesPlayed", "Movies Played"),
+    TV: t("aquila.tvRoles", "TV Roles"),
+    MANGA: t("aquila.mangaRoles", "Manga Roles"),
+    BOOK: t("aquila.bookRoles", "Book Roles"),
+    GAME: t("aquila.gameRoles", "Game Roles"),
+  };
+  return map[mediaType] ?? mediaType;
+}
+
+function getSectionIcon(mediaType: string): React.ReactNode {
+  const cls = "size-4 text-primary";
+  switch (mediaType) {
+    case "ANIME":
+    case "TV":
+      return <Tv className={cls} />;
+    case "MOVIE":
+      return <Film className={cls} />;
+    case "MANGA":
+    case "BOOK":
+      return <BookOpen className={cls} />;
+    case "GAME":
+      return <Gamepad2 className={cls} />;
+    default:
+      return <Award className={cls} />;
+  }
+}
+
 interface RolesSectionProps {
   title: string;
   icon: React.ReactNode;
-  roles: ActorRoleAppearance[];
+  roles: ActorRoleV2[];
   routePrefix: string;
 }
 
@@ -327,10 +388,8 @@ function RolesSection({ title, icon, roles, routePrefix }: RolesSectionProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {roles.map((role, idx) => {
-          const charName =
-            [role.character.nameFirst, role.character.nameLast]
-              .filter(Boolean)
-              .join(" ") || t("aquila.unknownCharacter", "Unknown Character");
+          const charName = role.characterName || t("aquila.unknownCharacter", "Unknown Character");
+          const displayRole = role.customRole || role.role?.toLowerCase() || "cast";
 
           return (
             <div
@@ -339,14 +398,14 @@ function RolesSection({ title, icon, roles, routePrefix }: RolesSectionProps) {
             >
               {/* Media Column (Left) */}
               <Link
-                href={`${routePrefix}/${role.id}`}
+                href={`${routePrefix}/${role.mediaId}`}
                 className="flex items-center gap-3 p-3 min-w-0 flex-1 hover:text-primary group/media"
               >
                 <div className="relative size-12 rounded-lg overflow-hidden shrink-0 bg-muted border border-border/20">
                   {role.coverImage ? (
                     <Image
                       src={role.coverImage}
-                      alt={role.title}
+                      alt={role.titlePrimary}
                       fill
                       sizes="48px"
                       className="object-cover"
@@ -359,39 +418,28 @@ function RolesSection({ title, icon, roles, routePrefix }: RolesSectionProps) {
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold truncate text-foreground group-hover/media:text-primary transition-colors duration-150">
-                    {role.title}
+                    {role.titlePrimary}
                   </p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <Badge
-                      variant="secondary"
-                      className="text-[9px] px-1 py-0 rounded"
-                    >
-                      {role.format}
-                    </Badge>
-                    <span className="text-[10px] text-muted-foreground truncate">
-                      {role.status?.toLowerCase()}
-                    </span>
-                  </div>
+                  <p className="text-[10px] text-muted-foreground capitalize mt-0.5">
+                    {t("aquila.role", "Role: {{role}}", { role: displayRole })}
+                  </p>
                 </div>
               </Link>
 
               {/* Character Column (Right) */}
-              <Link
-                href={`/aquila/characters/${role.character.id}`}
-                className="flex items-center gap-3 p-3 min-w-0 flex-1 justify-end hover:text-primary group/char border-l border-border/10 text-right hover:bg-accent/5 transition-all duration-150"
-              >
+              <div className="flex items-center gap-3 p-3 min-w-0 flex-1 justify-end border-l border-border/10 text-right">
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold truncate text-foreground group-hover/char:text-primary transition-colors">
+                  <p className="text-xs font-semibold truncate text-foreground">
                     {charName}
                   </p>
                   <p className="text-[9px] text-muted-foreground capitalize">
-                    {t("aquila.role", "Role: {{role}}", { role: role.role?.toLowerCase() || "cast" })}
+                    {role.role?.toLowerCase() || "cast"}
                   </p>
                 </div>
                 <div className="relative size-9 rounded-lg overflow-hidden shrink-0 bg-muted border border-border/20">
-                  {role.character.image ? (
+                  {role.characterImage ? (
                     <Image
-                      src={role.character.image}
+                      src={role.characterImage}
                       alt={charName}
                       fill
                       sizes="36px"
@@ -403,7 +451,7 @@ function RolesSection({ title, icon, roles, routePrefix }: RolesSectionProps) {
                     </div>
                   )}
                 </div>
-              </Link>
+              </div>
             </div>
           );
         })}

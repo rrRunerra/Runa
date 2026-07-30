@@ -160,7 +160,7 @@ export class FriendsRepository {
   ): Promise<any[]> {
     const typeLower = mediaType.toLowerCase();
     if (typeLower === 'anime') {
-      return this.prisma.client.aquilaAnimeUserList.findMany({
+      return this.prisma.client.aquilaAnimeUserListV2.findMany({
         where: { animeId: mediaId, username: { in: usernames }, private: false },
         skip: offset,
         take: limit,
@@ -168,7 +168,7 @@ export class FriendsRepository {
       });
     }
     if (typeLower === 'tv') {
-      return this.prisma.client.aquilaTvUserList.findMany({
+      return this.prisma.client.aquilaTvUserListV2.findMany({
         where: { tvId: mediaId, username: { in: usernames }, private: false },
         skip: offset,
         take: limit,
@@ -176,7 +176,7 @@ export class FriendsRepository {
       });
     }
     if (typeLower === 'manga') {
-      return this.prisma.client.aquilaMangaUserList.findMany({
+      return this.prisma.client.aquilaMangaUserListV2.findMany({
         where: { mangaId: mediaId, username: { in: usernames }, private: false },
         skip: offset,
         take: limit,
@@ -184,7 +184,7 @@ export class FriendsRepository {
       });
     }
     if (typeLower === 'movie') {
-      return this.prisma.client.aquilaMovieUserList.findMany({
+      return this.prisma.client.aquilaMovieUserListV2.findMany({
         where: { movieId: mediaId, username: { in: usernames }, private: false },
         skip: offset,
         take: limit,
@@ -192,7 +192,7 @@ export class FriendsRepository {
       });
     }
     if (typeLower === 'game') {
-      return this.prisma.client.aquilaGameUserList.findMany({
+      return this.prisma.client.aquilaGameUserListV2.findMany({
         where: { gameId: mediaId, username: { in: usernames }, private: false },
         skip: offset,
         take: limit,
@@ -200,7 +200,7 @@ export class FriendsRepository {
       });
     }
     if (typeLower === 'book') {
-      return this.prisma.client.aquilaBookUserList.findMany({
+      return this.prisma.client.aquilaBookUserListV2.findMany({
         where: { bookId: mediaId, username: { in: usernames }, private: false },
         skip: offset,
         take: limit,

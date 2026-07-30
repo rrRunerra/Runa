@@ -1,7 +1,19 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { Star, Heart, Users, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Star,
+  Heart,
+  Users,
+  ChevronDown,
+  ChevronUp,
+  LayoutGrid,
+  UserCheck,
+  BarChart3,
+  ImageIcon,
+  Gamepad2,
+  Clock,
+} from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -12,6 +24,7 @@ import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 import { fetcher } from "@/lib/fetcher";
 import { RrMediaEditDialog } from "@/components/rrComponents/aquila/rrMediaEditDialog";
@@ -20,12 +33,19 @@ import { RrMediaRefreshButton } from "@/components/rrComponents/aquila/rrMediaRe
 import { GameEntity } from "@/types/game.entities";
 import { RrMediaStatsDashboard } from "@/components/rrComponents/aquila/details/rrMediaStatsDashboard";
 import { RrMediaSimilar } from "@/components/rrComponents/aquila/details/rrMediaSimilar";
-
 import { RrMediaDescription } from "@/components/rrComponents/aquila/details/rrMediaDescription";
 import { RrMediaGenres } from "@/components/rrComponents/aquila/details/rrMediaGenres";
 import { RrMediaInfoRow } from "@/components/rrComponents/aquila/details/rrMediaInfoRow";
 import { RrMediaFriendsProgress } from "@/components/rrComponents/aquila/details/rrMediaFriendsProgress";
+import { RrMediaCharacters } from "@/components/rrComponents/aquila/details/rrMediaCharacters";
+import { RrMediaStaff } from "@/components/rrComponents/aquila/details/rrMediaStaff";
+import { RrMediaRelations } from "@/components/rrComponents/aquila/details/rrMediaRelations";
+import { RrMediaImages } from "@/components/rrComponents/aquila/details/rrMediaImages";
+import { RrMediaTrailer } from "@/components/rrComponents/aquila/details/rrMediaTrailer";
 import { RrMediaFooter } from "@/components/rrComponents/aquila/details/rrMediaFooter";
+import { RrMediaReviews } from "@/components/rrComponents/aquila/details/rrMediaReviews";
+import { MessageSquare } from "lucide-react";
+import { MediaType } from "@/types/aquila";
 import { RrMediaDetailsSkeleton } from "@/components/rrComponents/aquila/details/rrMediaDetailsSkeleton";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
@@ -79,7 +99,6 @@ export default function GameDetailsPage(): React.JSX.Element {
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
   const [showMoreInfo, setShowMoreInfo] = useState<boolean>(false);
 
-  // SWR queries replacing sequential imperative fetching
   const {
     data: game,
     error: gameError,
@@ -108,28 +127,82 @@ export default function GameDetailsPage(): React.JSX.Element {
     return url.replace(/\/media\/crop\/\d+\/\d+\//, "/media/");
   };
 
-  const displayTitle = game?.titleString ?? t("aquila.gameDetails");
-  const coverUrl = getHighResRawgUrl(game?.coverImage ?? "");
-  const bannerUrl = getHighResRawgUrl(game?.backgroundImage ?? "");
+  // ─── Display Titles & Images ─────────────────────────────────────────────
+
+  const displayTitle =
+    game?.titlePrimary || game?.titleSecondary || t("aquila.gameDetails");
+
+  const coverUrl = getHighResRawgUrl(
+    game?.coverImage || game?.images?.cover || "",
+  );
+
+  const bannerUrl = getHighResRawgUrl(
+    game?.bannerImage ||
+      game?.backgroundImage ||
+      game?.images?.banner ||
+      game?.images?.screenshots?.[0] ||
+      "",
+  );
+
+  // ─── External Sources & Providers ───────────────────────────────────────
 
   const providers = useMemo(() => {
+    if (!game) return [];
     const list: { name: string; url: string }[] = [];
-    if (game?.slug) {
-      list.push({
-        name: "RAWG.io",
-        url: `https://rawg.io/games/${game.slug}`,
-      });
+    const seenUrls = new Set<string>();
+
+    const addProvider = (name: string, url?: string | null): void => {
+      if (!url || seenUrls.has(url)) return;
+      seenUrls.add(url);
+      list.push({ name, url });
+    };
+
+    if (game.slug) {
+      addProvider("RAWG.io", `https://rawg.io/games/${game.slug}`);
     }
+    if (game.steamAppId) {
+      addProvider(
+        "Steam",
+        `https://store.steampowered.com/app/${game.steamAppId}`,
+      );
+    }
+    if (game.website) {
+      addProvider("Official Site", game.website);
+    }
+
+    if (game.sources) {
+      for (const src of game.sources) {
+        if (src.url && src.provider) {
+          addProvider(src.provider, src.url);
+        }
+      }
+    }
+
     return list;
   }, [game]);
 
+  // ─── Trailers ────────────────────────────────────────────────────────────
+
+  const trailerObj = useMemo(() => {
+    if (!game?.trailers || game.trailers.length === 0) return null;
+    const first = game.trailers[0];
+    if (first.video) {
+      return { id: first.video, site: "video", url: first.video };
+    }
+    if (first.url && first.url.includes("youtube.com/watch?v=")) {
+      const youtubeId = first.url.split("watch?v=")[1]?.split("&")[0];
+      return { id: youtubeId, site: "youtube" };
+    }
+    return null;
+  }, [game]);
+
+  // ─── Formatted Release Date ──────────────────────────────────────────────
+
   const formattedReleaseDate = useMemo((): string | null => {
+    if (!game?.releaseDateYear && !game?.releaseDate) return null;
     const dateStr =
-      game?.released ||
-      (game?.releasedYear
-        ? `${game?.releasedYear}-${String(game?.releasedMonth || 1).padStart(2, "0")}-${String(game?.releasedDay || 1).padStart(2, "0")}`
-        : null);
-    if (!dateStr) return null;
+      game.releaseDate ||
+      `${game.releaseDateYear}-${String(game.releaseDateMonth || 1).padStart(2, "0")}-${String(game.releaseDateDay || 1).padStart(2, "0")}`;
     try {
       return new Date(dateStr).toLocaleDateString("en-US", {
         year: "numeric",
@@ -137,14 +210,105 @@ export default function GameDetailsPage(): React.JSX.Element {
         day: "numeric",
       });
     } catch {
-      return dateStr;
+      return String(dateStr);
     }
-  }, [
-    game?.released,
-    game?.releasedYear,
-    game?.releasedMonth,
-    game?.releasedDay,
-  ]);
+  }, [game]);
+
+  // ─── Characters ─────────────────────────────────────────────────────────
+
+  const characters = useMemo(() => {
+    if (!game?.characters) return [];
+    return game.characters.map((gc: any) => {
+      const charName =
+        gc.namePrimary ||
+        gc.character?.namePrimary ||
+        gc.character?.nameNative ||
+        t("aquila.unknownCharacter");
+
+      const charImage = gc.image || gc.character?.image || "";
+      const actorObj = gc.actor;
+
+      return {
+        id: gc.id,
+        characterId: gc.characterId || gc.id,
+        name: charName,
+        native: gc.nameNative || gc.character?.nameNative || "",
+        image: charImage,
+        role: gc.role || "MAIN",
+        voiceActor: actorObj
+          ? {
+              id: actorObj.id,
+              name:
+                actorObj.namePrimary ||
+                actorObj.nameNative ||
+                t("aquila.unknownActor"),
+              image: actorObj.image || "",
+              role: actorObj.role || "Actor",
+            }
+          : null,
+      };
+    });
+  }, [game, t]);
+
+  // ─── Staff ─────────────────────────────────────────────────────────────
+
+  const staff = useMemo(() => {
+    if (!game?.staff) return [];
+    return game.staff.map((st: any) => {
+      const person = st.actor || st.staff || st;
+      return {
+        id: st.id,
+        mediaType: "GAME",
+        mediaId: Number(id),
+        staffId: person.id || st.id,
+        role: st.customRole || st.role || "Staff",
+        staff: {
+          id: person.id || st.id,
+          namePrimary: person.namePrimary || person.name || "",
+          nameNative: person.nameNative ?? "",
+          image: person.image ?? "",
+        },
+      };
+    });
+  }, [game, id]);
+
+  // ─── Relations ──────────────────────────────────────────────────────────
+
+  const relations = useMemo(() => {
+    if (!game?.relations) return [];
+    return game.relations.map((rel: any) => {
+      const relType = rel.type ?? rel.relationType ?? "";
+      const mediaType = rel.targetType ?? "GAME";
+      return {
+        id: rel.targetId || rel.id,
+        relationType: relType,
+        title: {
+          english: rel.titlePrimary ?? "",
+          romaji: rel.titleSecondary ?? "",
+          native: "",
+        },
+        format: rel.format ?? "GAME",
+        type: mediaType,
+        coverImage: rel.coverImage ?? "",
+      };
+    });
+  }, [game]);
+
+  // ─── Developers & Publishers ─────────────────────────────────────────────
+
+  const developersAndPublishers = useMemo(() => {
+    if (!game) return [];
+    const list: string[] = [];
+    if (game.developers) list.push(...game.developers);
+    if (game.publishers) list.push(...game.publishers);
+    if (game.studios) {
+      for (const st of game.studios) {
+        if (typeof st === "string") list.push(st);
+        else if (st?.name) list.push(st.name);
+      }
+    }
+    return Array.from(new Set(list));
+  }, [game]);
 
   useEffect((): void => {
     if (!game) return;
@@ -170,9 +334,6 @@ export default function GameDetailsPage(): React.JSX.Element {
       </div>
     );
   }
-
-  const platforms = game.platforms ?? [];
-  const cleanGenres = game.genres ?? [];
 
   const handleQuickAdd = async (): Promise<void> => {
     try {
@@ -331,27 +492,23 @@ export default function GameDetailsPage(): React.JSX.Element {
             <div className="bg-card/65 border border-border/40 backdrop-blur-xl rounded-2xl p-5 space-y-4">
               {/* Top Key Stats Block */}
               <div className="space-y-2.5">
-                {/* Metacritic / Score Card (Full Width) */}
+                {/* Average Score Card (Full Width) */}
                 <div className="flex items-center gap-3 p-3.5 rounded-xl bg-primary/10 border border-primary/20 transition-all shadow-xs">
                   <div className="p-2.5 rounded-xl bg-primary/20 text-primary shrink-0">
                     <Star className="size-5 fill-primary/40" />
                   </div>
                   <div className="flex flex-col min-w-0">
                     <span className="text-[10px] font-bold text-primary uppercase tracking-wider">
-                      {game.metacritic != null
-                        ? "Metacritic Score"
-                        : t("aquila.averageScore")}
+                      {t("aquila.averageScore")}
                     </span>
                     <div className="flex items-baseline gap-1 mt-0.5">
                       <span className="text-2xl font-black text-primary leading-none">
-                        {game.metacritic != null
-                          ? game.metacritic
-                          : game.localAverageScore
-                            ? game.localAverageScore.toFixed(1)
-                            : "N/A"}
+                        {game.averageScore
+                          ? game.averageScore.toFixed(1)
+                          : "N/A"}
                       </span>
                       <span className="text-xs font-semibold text-muted-foreground">
-                        {game.metacritic != null ? "/ 100" : "/ 10"}
+                        / 10
                       </span>
                     </div>
                   </div>
@@ -370,13 +527,15 @@ export default function GameDetailsPage(): React.JSX.Element {
                       </span>
                       <span
                         className="text-base font-extrabold text-foreground tracking-tight leading-none mt-0.5"
-                        title={
-                          game.localFavoritesCount != null
-                            ? game.localFavoritesCount.toLocaleString()
-                            : "0"
-                        }
+                        title={(
+                          game.localFavoritesCount ??
+                          game.favorites ??
+                          0
+                        ).toLocaleString()}
                       >
-                        {formatCompactNumber(game.localFavoritesCount)}
+                        {formatCompactNumber(
+                          game.localFavoritesCount ?? game.favorites,
+                        )}
                       </span>
                     </div>
                   </div>
@@ -392,11 +551,11 @@ export default function GameDetailsPage(): React.JSX.Element {
                       </span>
                       <span
                         className="text-base font-extrabold text-foreground tracking-tight leading-none mt-0.5"
-                        title={
-                          game.localPopularity != null
-                            ? game.localPopularity.toLocaleString()
-                            : (game.popularity ?? 0).toLocaleString()
-                        }
+                        title={(
+                          game.localPopularity ??
+                          game.popularity ??
+                          0
+                        ).toLocaleString()}
                       >
                         {formatCompactNumber(
                           game.localPopularity ?? game.popularity,
@@ -439,52 +598,45 @@ export default function GameDetailsPage(): React.JSX.Element {
                     label={t("aquila.releaseDate")}
                     value={formattedReleaseDate}
                   />
-                  <RrMediaInfoRow
-                    label={t("aquila.developer")}
-                    value={
-                      game.developers && game.developers.length > 0 ? (
+                  {game.metacriticScore != null && (
+                    <RrMediaInfoRow
+                      label="Metacritic"
+                      value={`${game.metacriticScore} / 100`}
+                    />
+                  )}
+                  {developersAndPublishers.length > 0 && (
+                    <RrMediaInfoRow
+                      label={t("aquila.studiosLabel")}
+                      value={
                         <span
                           className="text-right text-xs max-w-37.5 truncate block"
-                          title={game.developers.join(", ")}
+                          title={developersAndPublishers.join(", ")}
                         >
-                          {game.developers.join(", ")}
+                          {developersAndPublishers.join(", ")}
                         </span>
-                      ) : null
-                    }
-                  />
-                  <RrMediaInfoRow
-                    label={t("aquila.publisher")}
-                    value={
-                      game.publishers && game.publishers.length > 0 ? (
-                        <span
-                          className="text-right text-xs max-w-37.5 truncate block"
-                          title={game.publishers.join(", ")}
-                        >
-                          {game.publishers.join(", ")}
-                        </span>
-                      ) : null
-                    }
-                  />
-                  <RrMediaInfoRow
-                    label={t("aquila.esrbRating")}
-                    value={
-                      game.esrbRating ? (
+                      }
+                    />
+                  )}
+                  {game.esrbRating && (
+                    <RrMediaInfoRow
+                      label={t("aquila.esrbRating")}
+                      value={
                         <Badge
                           variant="outline"
                           className="text-[10px] px-2 py-0.5"
                         >
                           {game.esrbRating}
                         </Badge>
-                      ) : null
-                    }
-                  />
-                  {platforms.length > 0 && (
+                      }
+                    />
+                  )}
+                  {game.platforms && game.platforms.length > 0 && (
                     <div className="flex flex-col gap-1 text-sm">
-                      <span className="text-muted-foreground">
+                      <span className="text-muted-foreground text-xs font-medium">
                         {t("aquila.platforms")}
                       </span>
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {platforms.map((p, idx) => (
+                        {game.platforms.map((p, idx) => (
                           <Badge
                             key={idx}
                             variant="outline"
@@ -497,12 +649,56 @@ export default function GameDetailsPage(): React.JSX.Element {
                       </div>
                     </div>
                   )}
+
+                  {/* HowLongToBeat Stats Card */}
+                  {(game.hltbMainStory ||
+                    game.hltbExtraStory ||
+                    game.hltbCompletionist) && (
+                    <div className="pt-2 border-t border-border/30 flex flex-col gap-2">
+                      <div className="flex items-center gap-1.5 text-xs font-bold text-foreground">
+                        <Clock className="size-3.5 text-primary" />
+                        <span>HowLongToBeat</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-1.5 text-center">
+                        {game.hltbMainStory && (
+                          <div className="p-1.5 rounded-lg bg-card/60 border border-border/30">
+                            <span className="text-[9px] text-muted-foreground block truncate">
+                              Main
+                            </span>
+                            <span className="text-xs font-extrabold text-foreground">
+                              {game.hltbMainStory}h
+                            </span>
+                          </div>
+                        )}
+                        {game.hltbExtraStory && (
+                          <div className="p-1.5 rounded-lg bg-card/60 border border-border/30">
+                            <span className="text-[9px] text-muted-foreground block truncate">
+                              Main+Extra
+                            </span>
+                            <span className="text-xs font-extrabold text-foreground">
+                              {game.hltbExtraStory}h
+                            </span>
+                          </div>
+                        )}
+                        {game.hltbCompletionist && (
+                          <div className="p-1.5 rounded-lg bg-card/60 border border-border/30">
+                            <span className="text-[9px] text-muted-foreground block truncate">
+                              Completionist
+                            </span>
+                            <span className="text-xs font-extrabold text-foreground">
+                              {game.hltbCompletionist}h
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </motion.div>
 
-          {/* Right Column - Info */}
+          {/* Right Column - Main Content & Tabs */}
           <div className="flex-1 space-y-6 lg:pt-8 min-w-0">
             {/* Header (Desktop) */}
             <motion.div
@@ -523,26 +719,148 @@ export default function GameDetailsPage(): React.JSX.Element {
             <RrMediaDescription description={game.description} />
 
             {/* Genres */}
-            <RrMediaGenres genres={cleanGenres} />
+            <RrMediaGenres genres={game.genres} />
 
-            {/* Similar Series Carousel */}
-            <RrMediaSimilar mediaType="game" mediaId={id} />
+            {/* Tabs Navigation */}
+            <Tabs defaultValue="overview" className="w-full space-y-6">
+              <TabsList className="bg-card/60 border border-border/30 backdrop-blur-xl p-1.5 rounded-2xl w-full flex overflow-x-auto justify-start sm:justify-center gap-1 scrollbar-none">
+                <TabsTrigger
+                  value="overview"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <LayoutGrid className="size-3.5 mr-1.5" />
+                  {t("aquila.overview", "Overview")}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="characters"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <Users className="size-3.5 mr-1.5" />
+                  {t("aquila.characters", "Characters")}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="staff"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <UserCheck className="size-3.5 mr-1.5" />
+                  {t("aquila.staff", "Staff")}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="images"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <ImageIcon className="size-3.5 mr-1.5" />
+                  {t("aquila.images", "Images")}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="stats"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <BarChart3 className="size-3.5 mr-1.5" />
+                  {t("aquila.stats", "Stats")}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="reviews"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <MessageSquare className="size-3.5 mr-1.5" />
+                  {t("aquila.reviews")}
+                </TabsTrigger>
+              </TabsList>
 
-            {/* Stats Dashboard (Score & Status distribution charts) */}
-            <RrMediaStatsDashboard
-              localAverageScore={game.localAverageScore}
-              localPopularity={game.localPopularity}
-              localFavoritesCount={game.localFavoritesCount}
-              localStatusDistribution={game.localStatusDistribution}
-              localScoreDistribution={game.localScoreDistribution}
-              showCounters={false}
-            />
+              {/* Overview Tab Content */}
+              <TabsContent value="overview" className="space-y-6 outline-none">
+                {/* Characters Preview (first 10) */}
+                {characters.length > 0 && (
+                  <RrMediaCharacters
+                    characters={characters}
+                    limitCount={10}
+                    hideToggleButton={true}
+                  />
+                )}
 
-            {/* Friends Progress */}
-            <RrMediaFriendsProgress
-              mediaId={game.id.toString()}
-              mediaType="game"
-            />
+                {/* Staff Preview (first 6) */}
+                {staff.length > 0 && <RrMediaStaff staff={staff} limit={6} />}
+
+                {/* Relations */}
+                {relations.length > 0 && (
+                  <RrMediaRelations relations={relations} />
+                )}
+
+                {/* Similar Series Carousel */}
+                <RrMediaSimilar mediaType="game" mediaId={id} />
+
+                {/* Trailer & Friends Progress */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+                  <RrMediaTrailer trailer={trailerObj} />
+                  <RrMediaFriendsProgress
+                    mediaId={game.id.toString()}
+                    mediaType="game"
+                  />
+                </div>
+              </TabsContent>
+
+              {/* Characters Tab Content */}
+              <TabsContent
+                value="characters"
+                className="space-y-6 outline-none"
+              >
+                {characters.length > 0 ? (
+                  <RrMediaCharacters
+                    characters={characters}
+                    showAllInitial={true}
+                  />
+                ) : (
+                  <div className="p-8 text-center text-muted-foreground bg-card/45 border border-border/30 rounded-2xl">
+                    {t(
+                      "aquila.noCharacters",
+                      "No character information available",
+                    )}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Staff Tab Content */}
+              <TabsContent value="staff" className="space-y-6 outline-none">
+                {staff.length > 0 ? (
+                  <RrMediaStaff staff={staff} showAllInitial={true} />
+                ) : (
+                  <div className="p-8 text-center text-muted-foreground bg-card/45 border border-border/30 rounded-2xl">
+                    {t("aquila.noStaff", "No staff information available")}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Images Tab Content */}
+              <TabsContent value="images" className="space-y-6 outline-none">
+                <RrMediaImages anime={game as any} />
+              </TabsContent>
+
+              {/* Stats Tab Content */}
+              <TabsContent value="stats" className="space-y-6 outline-none">
+                <RrMediaStatsDashboard
+                  localAverageScore={
+                    game.localAverageScore ?? game.averageScore
+                  }
+                  localPopularity={game.localPopularity ?? game.popularity}
+                  localFavoritesCount={
+                    game.localFavoritesCount ?? game.favorites
+                  }
+                  localStatusDistribution={
+                    game.localStatusDistribution ?? game.statusDistribution
+                  }
+                  localScoreDistribution={
+                    game.localScoreDistribution ?? game.scoreDistribution
+                  }
+                  showCounters={true}
+                />
+              </TabsContent>
+
+              {/* Reviews Tab Content */}
+              <TabsContent value="reviews" className="space-y-6 outline-none">
+                <RrMediaReviews mediaType={MediaType.GAME} mediaId={Number(id)} />
+              </TabsContent>
+            </Tabs>
           </div>
         </motion.div>
 
@@ -552,7 +870,11 @@ export default function GameDetailsPage(): React.JSX.Element {
           updatedAt={game.updatedAt}
           mediaType="game"
           mediaId={Number(id)}
-          mediaData={{ ...game, relations: [], characters: [] }}
+          mediaData={{
+            ...game,
+            relations,
+            characters,
+          }}
         />
       </div>
     </div>

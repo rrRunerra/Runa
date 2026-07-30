@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { MangaRepository } from './manga.repository';
 import { MangaExternal } from './manga.external';
 import { MangaQueueService } from './manga-queue.service';
@@ -10,12 +10,12 @@ import {
   rrNotFoundException,
   rrTooManyRequestsException,
 } from 'src/providers/error';
+import { AnimeQueueService } from '../anime/anime-queue.service';
 
 @Injectable()
 export class MangaService {
   private readonly logger = new Logger(MangaService.name);
   private readonly moduleCode = 'MaSve-';
-  private readonly useLocalMedia = process.env.USE_LOCAL_MEDIA_ONLY ?? false;
   private readonly cacheDuration = Number(
     process.env.MANGA_CACHE_DURATION ?? 60 * 60,
   );
@@ -25,43 +25,69 @@ export class MangaService {
     private readonly mangaQueueService: MangaQueueService,
     private readonly cacheService: CacheService,
     private readonly mangaExternal: MangaExternal,
+    @Inject(forwardRef(() => AnimeQueueService))
+    private readonly animeQueueService: AnimeQueueService,
   ) {}
+
+  private readonly cacheKeys = {
+    mangaDetail: (id: number) => `manga:v2:${id}`,
+    mangaSearch: (query: string) => `manga:v2:search:${query}`,
+    mangaSimilar: (id: number) => `manga:v2:similar:${id}`,
+  };
 
   public async search(name: string): Promise<MangaSearchEntity[]> {
     const cleanName = decodeURIComponent(name).replace(/\+/g, ' ').trim();
-    const cacheKey = CacheService.keys.mangaSearch(cleanName);
+    const cacheKey = this.cacheKeys.mangaSearch(cleanName);
 
     const rawCached = await this.cacheService.get<any>(cacheKey);
     const cached: MangaSearchEntity[] | null =
       typeof rawCached === 'string' ? JSON.parse(rawCached) : rawCached;
 
-    if (cached && Array.isArray(cached)) {
+    if (cached && Array.isArray(cached) && cached.length > 0) {
       this.logger.debug(`Manga search cache hit ${cached.length} entries`);
       return cached;
     }
 
-    let result: MangaSearchEntity[] = [];
-    let externalUsed = false;
+    let result: MangaSearchEntity[] = await this.mangaRepository.search(cleanName);
 
-    if (this.useLocalMedia) {
-      result = await this.mangaRepository.search(cleanName);
-    }
+    if (result.length === 0) {
+      this.logger.debug(`Local DB search empty, querying AniList for manga: "${cleanName}"`);
+      const externalResults = await this.mangaExternal.search(cleanName);
 
-    if (!this.useLocalMedia || result.length === 0) {
-      result = await this.mangaExternal.search(cleanName);
-      externalUsed = true;
+      if (externalResults.length > 0) {
+        result = await Promise.all(
+          externalResults.map(async (item) => {
+            const dbRecord = await this.mangaRepository.upsertV2Record({
+              anilistId: item.anilistId,
+              titlePrimary: item.title,
+              titleSecondary: item.secondaryTitle,
+              coverImage: item.coverImage,
+              format: item.format,
+              status: item.status,
+              startDateYear: 1970,
+            });
+            void this.mangaQueueService.addUpsertJob(item.anilistId, 0);
+
+            return {
+              id: dbRecord.id,
+              anilistId: item.anilistId,
+              title: item.title,
+              secondaryTitle: item.secondaryTitle,
+              coverImage: item.coverImage,
+              averageScore: item.averageScore,
+              isAdult: item.isAdult,
+              format: item.format,
+              status: item.status,
+            };
+          }),
+        );
+      }
     }
 
     this.logger.debug(`Manga found: ${result.length}`);
 
     if (result.length > 0) {
       await this.cacheService.set(cacheKey, result, this.cacheDuration);
-    }
-
-    // Queue a background refresh only when local results were returned
-    if (this.useLocalMedia && !externalUsed && result.length > 0) {
-      this.logger.debug(`Queuing background refresh for manga`);
-      this.mangaQueueService.addSearchRefresh(cleanName, cacheKey);
     }
 
     return result;
@@ -74,7 +100,7 @@ export class MangaService {
       });
     }
 
-    const cacheKey = `manga:${id}`;
+    const cacheKey = this.cacheKeys.mangaDetail(id);
     const cached = await this.cacheService.get<MangaEntity>(cacheKey);
 
     if (cached) {
@@ -82,7 +108,7 @@ export class MangaService {
       return cached;
     }
 
-    this.logger.debug(`getManga fetching from db`);
+    this.logger.debug(`getManga fetching from db for ID ${id}`);
     const data = await this.mangaRepository.find(id);
 
     if (!data) {
@@ -106,10 +132,10 @@ export class MangaService {
       });
     }
 
-    const cacheKey = `cooldown:refresh:manga:${id}`;
+    const cooldownKey = `cooldown:refresh:manga:v2:${id}`;
 
     if (!force) {
-      const onCooldown = await this.cacheService.get(cacheKey);
+      const onCooldown = await this.cacheService.get(cooldownKey);
 
       if (onCooldown) {
         throw new rrTooManyRequestsException(`${this.moduleCode}TMWRR001`, {
@@ -118,7 +144,6 @@ export class MangaService {
       }
     }
 
-    // Look up the existing entry to get the AniList ID
     const existing = await this.mangaRepository.find(id);
     if (!existing) {
       throw new rrNotFoundException(`${this.moduleCode}MNFID001`, {
@@ -137,17 +162,24 @@ export class MangaService {
       });
     }
 
-    // Fetch fresh data from AniList
-    await this.mangaExternal.fetchAndUpsertManga(
-      existing.anilistId,
-      ...(force ? [force] : []),
-    );
+    const fullRecord = await this.mangaExternal.fetchFullV2Record(existing.anilistId);
+    if (fullRecord) {
+      await this.mangaRepository.upsertV2Record(fullRecord);
+      if (fullRecord.relations && Array.isArray(fullRecord.relations)) {
+        for (const rel of fullRecord.relations) {
+          if (rel.targetType === 'MANGA' && rel.targetAnilistId) {
+            void this.mangaQueueService.addUpsertJob(rel.targetAnilistId, 1);
+          } else if (rel.targetType === 'ANIME' && rel.targetAnilistId) {
+            void this.animeQueueService.addUpsertJob(rel.targetAnilistId, 1);
+          }
+        }
+      }
+    }
 
-    // Bust the cache so next getManga fetches fresh data
-    await this.cacheService.del(`manga:${id}`);
+    await this.cacheService.del(this.cacheKeys.mangaDetail(id));
 
     const cooldownSeconds = 5 * 60;
-    await this.cacheService.set(cacheKey, true, cooldownSeconds);
+    await this.cacheService.set(cooldownKey, true, cooldownSeconds);
 
     return await this.mangaRepository.find(id);
   }
@@ -158,21 +190,32 @@ export class MangaService {
     title?: string,
     coverImage?: string,
   ): Promise<any> {
-    // Check if already in DB by anilistId
     let manga = await this.mangaRepository.findByAnilistId(anilistId);
     if (!manga) {
       try {
-        await this.mangaExternal.fetchAndUpsertManga(anilistId);
-        manga = await this.mangaRepository.findByAnilistId(anilistId);
+        const fullRecord = await this.mangaExternal.fetchFullV2Record(anilistId);
+        if (fullRecord) {
+          manga = await this.mangaRepository.upsertV2Record(fullRecord);
+          if (fullRecord.relations && Array.isArray(fullRecord.relations)) {
+            for (const rel of fullRecord.relations) {
+              if (rel.targetType === 'MANGA' && rel.targetAnilistId) {
+                void this.mangaQueueService.addUpsertJob(rel.targetAnilistId, 1);
+              } else if (rel.targetType === 'ANIME' && rel.targetAnilistId) {
+                void this.animeQueueService.addUpsertJob(rel.targetAnilistId, 1);
+              }
+            }
+          }
+        }
       } catch {
-        // AniList fetch failed — write minimal stub so the list entry can be created
         this.logger.warn(
-          `ensureManga: AniList fetch failed for ${anilistId}, writing stub`,
+          `ensureManga V2: External fetch failed for ${anilistId}, writing minimal stub`,
         );
-        manga = await this.mangaRepository.upsert(anilistId, {
+        manga = await this.mangaRepository.upsertV2Record({
+          anilistId,
           malId: malId ?? null,
-          titleRomaji: title || 'Unknown',
-          coverImageLarge: coverImage ?? null,
+          titlePrimary: title || 'Unknown',
+          coverImage: coverImage ?? null,
+          startDateYear: 1970,
         });
       }
     }
@@ -183,7 +226,7 @@ export class MangaService {
     if (isNaN(id)) {
       return [];
     }
-    const cacheKey = `manga:similar:${id}`;
+    const cacheKey = this.cacheKeys.mangaSimilar(id);
     const cached = await this.cacheService.get<any[]>(cacheKey);
     if (cached && Array.isArray(cached)) {
       return cached;
@@ -195,4 +238,3 @@ export class MangaService {
     return result;
   }
 }
-

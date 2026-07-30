@@ -1,25 +1,40 @@
-import { CharacterEntity } from '../anime/anime.entities';
+export interface ActorEntity {
+  id: number;
+  peopleId?: number | null;
+  anilistId?: number | null;
+  malId?: number | null;
+  tvDBId?: number | null;
+  namePrimary: string;
+  nameNative?: string | null;
+  nameAlternative?: string[];
+  image: string | null;
+  role?: string | null;
+}
 
-export interface ActorRoleAppearance {
-  id: number; // media local DB id
-  title: string; // media title
-  coverImage: string | null; // media cover image
-  format: string; // media format (e.g. MOVIE, TV, etc.)
-  status: string; // media release status
-  role: string | null; // character role description/name
-  character: CharacterEntity; // character details
+export interface ActorRoleAppearanceV2 {
+  id: number;
+  mediaType: 'ANIME' | 'MANGA' | 'MOVIE' | 'TV' | 'BOOK' | 'GAME';
+  mediaId: number;
+  titlePrimary: string;
+  coverImage: string | null;
+  role: string | null;
+  customRole: string | null;
+  characterName: string | null;
+  characterImage: string | null;
 }
 
 export interface ActorDetailEntity {
   id: number;
-  peopleId: number | null;
-  anilistStaffId: number | null;
-  name: string | null;
-  personName: string | null;
+  anilistId: number | null;
+  malId: number | null;
+  tvDBId: number | null;
+  namePrimary: string;
+  nameNative: string | null;
+  nameAlternative: string[];
   image: string | null;
-  peopleType: string | null;
+  images: any | null;
+  description: string | null;
+  language: string | null;
 
-  animeRoles: ActorRoleAppearance[];
-  movieRoles: ActorRoleAppearance[];
-  tvRoles: ActorRoleAppearance[];
+  roles: ActorRoleAppearanceV2[];
 }

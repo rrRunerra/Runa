@@ -38,7 +38,7 @@ export interface TvListEntry {
     averageRuntime: number | null;
     originalCountry: string | null;
   } | null;
-  watchedEpisodes: { id: string }[];
+  watchedEpisodes: { id: number }[];
 }
 
 export interface MovieListEntry {
@@ -135,10 +135,10 @@ export class StatsRepository {
     });
   }
 
-  // --- List queries for each media type ---
+  // --- List queries for each V2 media type ---
 
   public async findAnimeList(username: string): Promise<AnimeListEntry[]> {
-    return this.prisma.client.aquilaAnimeUserList.findMany({
+    const list = await this.prisma.client.aquilaAnimeUserListV2.findMany({
       where: { username },
       select: {
         progress: true,
@@ -146,38 +146,67 @@ export class StatsRepository {
         status: true,
         anime: {
           select: {
-            episodes: true,
-            duration: true,
+            episodeCount: true,
+            episodeDuration: true,
             format: true,
             countryOfOrigin: true,
           },
         },
       },
     });
+
+    return list.map((item) => ({
+      progress: item.progress,
+      score: item.score,
+      status: item.status,
+      anime: item.anime
+        ? {
+            episodes: item.anime.episodeCount,
+            duration: item.anime.episodeDuration,
+            format: item.anime.format,
+            countryOfOrigin: item.anime.countryOfOrigin,
+          }
+        : null,
+    }));
   }
 
   public async findMangaList(username: string): Promise<MangaListEntry[]> {
-    return this.prisma.client.aquilaMangaUserList.findMany({
+    const list = await this.prisma.client.aquilaMangaUserListV2.findMany({
       where: { username },
       select: {
-        chapters: true,
-        volumes: true,
+        chaptersProgress: true,
+        volumesProgress: true,
         score: true,
         status: true,
         manga: {
           select: {
-            chapters: true,
-            volumes: true,
+            chapterCount: true,
+            volumeCount: true,
             format: true,
             countryOfOrigin: true,
           },
         },
       },
     });
+
+    return list.map((item) => ({
+      chapters: item.chaptersProgress,
+      volumes: item.volumesProgress,
+      score: item.score,
+      status: item.status,
+      manga: item.manga
+        ? {
+            chapters: item.manga.chapterCount,
+            volumes: item.manga.volumeCount,
+            format: item.manga.format,
+            countryOfOrigin: item.manga.countryOfOrigin,
+          }
+        : null,
+    }));
   }
 
   public async findTvList(username: string): Promise<TvListEntry[]> {
-    return this.prisma.client.aquilaTvUserList.findMany({
+    const list = await this.prisma.client.aquilaTvUserListV2.findMany({
       where: { username },
       select: {
         score: true,
@@ -185,18 +214,30 @@ export class StatsRepository {
         tv: {
           select: {
             averageRuntime: true,
-            originalCountry: true,
+            countryOfOrigin: true,
           },
         },
         watchedEpisodes: {
           select: { id: true },
         },
       },
-    }) as unknown as TvListEntry[];
+    });
+
+    return list.map((item) => ({
+      score: item.score,
+      status: item.status,
+      tv: item.tv
+        ? {
+            averageRuntime: item.tv.averageRuntime,
+            originalCountry: item.tv.countryOfOrigin,
+          }
+        : null,
+      watchedEpisodes: item.watchedEpisodes,
+    }));
   }
 
   public async findMovieList(username: string): Promise<MovieListEntry[]> {
-    return this.prisma.client.aquilaMovieUserList.findMany({
+    const list = await this.prisma.client.aquilaMovieUserListV2.findMany({
       where: { username },
       select: {
         score: true,
@@ -204,15 +245,26 @@ export class StatsRepository {
         movie: {
           select: {
             runtime: true,
-            originalCountry: true,
+            countryOfOrigin: true,
           },
         },
       },
     });
+
+    return list.map((item) => ({
+      score: item.score,
+      status: item.status,
+      movie: item.movie
+        ? {
+            runtime: item.movie.runtime,
+            originalCountry: item.movie.countryOfOrigin,
+          }
+        : null,
+    }));
   }
 
   public async findGameList(username: string): Promise<GameListEntry[]> {
-    return this.prisma.client.aquilaGameUserList.findMany({
+    const list = await this.prisma.client.aquilaGameUserListV2.findMany({
       where: { username },
       select: {
         progress: true,
@@ -226,22 +278,46 @@ export class StatsRepository {
         },
       },
     });
+
+    return list.map((item) => ({
+      progress: item.progress,
+      score: item.score,
+      status: item.status,
+      game: item.game
+        ? {
+            platforms: item.game.platforms,
+            genres: item.game.genres,
+          }
+        : null,
+    }));
   }
 
   public async findBookList(username: string): Promise<BookListEntry[]> {
-    return this.prisma.client.aquilaBookUserList.findMany({
+    const list = await this.prisma.client.aquilaBookUserListV2.findMany({
       where: { username },
       select: {
-        chapters: true,
-        volumes: true,
+        progressChapters: true,
+        progressVolumes: true,
         score: true,
         status: true,
         book: {
           select: {
-            pages: true,
+            pageCount: true,
           },
         },
       },
     });
+
+    return list.map((item) => ({
+      chapters: item.progressChapters,
+      volumes: item.progressVolumes,
+      score: item.score,
+      status: item.status,
+      book: item.book
+        ? {
+            pages: item.book.pageCount,
+          }
+        : null,
+    }));
   }
 }

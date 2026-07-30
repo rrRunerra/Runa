@@ -24,8 +24,8 @@ export class GameController {
   @Public()
   @Get(':id/similar')
   async getSimilar(@Param() params: GameDetailDto | any): Promise<any[]> {
-    const id = typeof params === 'object' && params !== null && 'id' in params ? Number(params.id) : Number(params);
-    return await this.gameService.getSimilarGame(id);
+    const id = typeof params === 'object' && params !== null && 'id' in params ? params.id : params;
+    return await this.gameService.getSimilarGame(Number(id));
   }
 
   @Public()
@@ -33,7 +33,7 @@ export class GameController {
   async getGame(
     @Param() params: GameDetailDto | any,
   ): Promise<GameEntity | undefined> {
-    const id = typeof params === 'object' && params !== null && 'id' in params ? Number(params.id) : Number(params);
+    const id = typeof params === 'object' && params !== null && 'id' in params ? params.id : params;
     return await this.gameService.getGame(id);
   }
 

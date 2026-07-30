@@ -1,4 +1,4 @@
-import { Controller, Param, UseGuards, Get, Post, Query } from '@nestjs/common';
+import { Controller, Param, UseGuards, Get, Post, Query, Body } from '@nestjs/common';
 import { MovieService } from './movie.service';
 import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { Public } from 'src/common/decorators/public.decorator';
@@ -11,9 +11,13 @@ import type { MovieSearchEntity, MovieEntity } from './movie.entities';
 @Controller('movie')
 @UseGuards(AuthGuard, PermissionsGuard)
 export class MovieController {
-  private readonly moduleCode: string = 'MoCtr-';
-
   constructor(private readonly movieService: MovieService) {}
+
+  @Public()
+  @Get('search')
+  async searchMovieQuery(@Query('q') query: string): Promise<MovieSearchEntity[]> {
+    return this.movieService.search(query || '');
+  }
 
   @Public()
   @Get('search/:name')
@@ -23,9 +27,8 @@ export class MovieController {
 
   @Public()
   @Get(':id/similar')
-  async getSimilar(@Param() params: MovieDetailDto | any): Promise<any[]> {
-    const id = typeof params === 'object' && params !== null && 'id' in params ? params.id : params;
-    return await this.movieService.getSimilarMovie(Number(id));
+  async getSimilar(@Param('id') id: string): Promise<MovieSearchEntity[]> {
+    return await this.movieService.getSimilarMovies(Number(id));
   }
 
   @Public()
@@ -34,10 +37,8 @@ export class MovieController {
     @Param() params: MovieDetailDto | any,
   ): Promise<MovieEntity | undefined> {
     const id = typeof params === 'object' && params !== null && 'id' in params ? params.id : params;
-    return await this.movieService.getMovie(id);
+    return await this.movieService.getMovie(Number(id));
   }
-
-
 
   @Post(':id/refresh')
   @Permissions([AquilaFlags.MEDIA_REFRESH])
@@ -47,8 +48,20 @@ export class MovieController {
   ): Promise<MovieEntity | undefined | null> {
     const force = forceQuery === 'true' || forceQuery === '1';
     return await this.movieService.refreshMovie(
-      params.id,
+      Number(params.id),
       ...(forceQuery !== undefined ? [force] : []),
+    );
+  }
+
+  @Post('ensure')
+  @Permissions([AquilaFlags.MEDIA_REFRESH])
+  async ensureMovie(
+    @Body() body: { tvdbId: number; title?: string; coverImage?: string },
+  ): Promise<any> {
+    return this.movieService.ensureMovie(
+      body.tvdbId,
+      body.title,
+      body.coverImage,
     );
   }
 }

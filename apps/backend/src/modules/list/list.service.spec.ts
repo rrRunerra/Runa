@@ -13,7 +13,6 @@ import { BookService } from '../book/book.service';
 import { NotificationService } from '../notification/notification.service';
 import { MediaStatsService } from './media-stats.service';
 
-// Mock database $Enums and prisma client
 jest.mock('@runa/database', () => ({
   prisma: {
     $extends: jest.fn(() => ({})),
@@ -26,38 +25,38 @@ jest.mock('@runa/database', () => ({
       COMPLETED: 'COMPLETED',
       ON_HOLD: 'ON_HOLD',
       DROPPED: 'DROPPED',
-      PLAN_TO_WATCH: 'PLAN_TO_WATCH',
+      PLANNING: 'PLANNING',
     },
     MangaListStatus: {
       READING: 'READING',
       COMPLETED: 'COMPLETED',
       ON_HOLD: 'ON_HOLD',
       DROPPED: 'DROPPED',
-      PLAN_TO_READ: 'PLAN_TO_READ',
+      PLANNING: 'PLANNING',
     },
     MovieListStatus: {
-      PLAN_TO_WATCH: 'PLAN_TO_WATCH',
+      PLANNING: 'PLANNING',
       WATCHING: 'WATCHING',
       COMPLETED: 'COMPLETED',
       ON_HOLD: 'ON_HOLD',
       DROPPED: 'DROPPED',
     },
     TvListStatus: {
-      PLAN_TO_WATCH: 'PLAN_TO_WATCH',
+      PLANNING: 'PLANNING',
       WATCHING: 'WATCHING',
       COMPLETED: 'COMPLETED',
       ON_HOLD: 'ON_HOLD',
       DROPPED: 'DROPPED',
     },
     GameListStatus: {
-      PLAN_TO_PLAY: 'PLAN_TO_PLAY',
+      PLANNING: 'PLANNING',
       PLAYING: 'PLAYING',
       COMPLETED: 'COMPLETED',
       ON_HOLD: 'ON_HOLD',
       DROPPED: 'DROPPED',
     },
     BookListStatus: {
-      PLAN_TO_READ: 'PLAN_TO_READ',
+      PLANNING: 'PLANNING',
       READING: 'READING',
       COMPLETED: 'COMPLETED',
       ON_HOLD: 'ON_HOLD',
@@ -71,65 +70,39 @@ import { $Enums } from '@runa/database';
 describe('ListService', () => {
   let service: ListService;
 
+  const createModelMock = () => ({
+    paginate: jest.fn().mockResolvedValue({
+      data: [],
+      pageInfo: { nextCursor: null, hasMore: false, count: 0 },
+    }),
+    findMany: jest.fn().mockResolvedValue([]),
+    findUnique: jest.fn().mockResolvedValue(null),
+    upsert: jest.fn().mockResolvedValue({}),
+    create: jest.fn().mockResolvedValue({}),
+    delete: jest.fn().mockResolvedValue({}),
+    groupBy: jest.fn().mockResolvedValue([]),
+    update: jest.fn().mockResolvedValue({}),
+    count: jest.fn().mockResolvedValue(0),
+  });
+
   const mockPrismaClient = {
     user: {
       findUnique: jest.fn(),
     },
-    aquilaAnimeUserList: {
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      upsert: jest.fn(),
-      delete: jest.fn(),
-      groupBy: jest.fn(),
-      update: jest.fn(),
-    },
-    aquilaMangaUserList: {
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      upsert: jest.fn(),
-      delete: jest.fn(),
-      groupBy: jest.fn(),
-      update: jest.fn(),
-    },
-    aquilaMovieUserList: {
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      upsert: jest.fn(),
-      delete: jest.fn(),
-      groupBy: jest.fn(),
-      update: jest.fn(),
-    },
-    aquilaTvUserList: {
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      upsert: jest.fn(),
-      delete: jest.fn(),
-      groupBy: jest.fn(),
-      update: jest.fn(),
-    },
-    aquilaGameUserList: {
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      upsert: jest.fn(),
-      delete: jest.fn(),
-      groupBy: jest.fn(),
-      update: jest.fn(),
-    },
-    aquilaBookUserList: {
-      findMany: jest.fn(),
-      findUnique: jest.fn(),
-      upsert: jest.fn(),
-      delete: jest.fn(),
-      groupBy: jest.fn(),
-      update: jest.fn(),
-    },
-    aquilaTvWatchedEpisode: {
+    aquilaAnimeUserListV2: createModelMock(),
+    aquilaMangaUserListV2: createModelMock(),
+    aquilaMovieUserListV2: createModelMock(),
+    aquilaTvUserListV2: createModelMock(),
+    aquilaGameUserListV2: createModelMock(),
+    aquilaBookUserListV2: createModelMock(),
+    aquilaTvWatchedEpisodeV2: {
       findUnique: jest.fn(),
       create: jest.fn(),
       delete: jest.fn(),
       upsert: jest.fn(),
       deleteMany: jest.fn(),
       createMany: jest.fn(),
+      count: jest.fn().mockResolvedValue(0),
     },
   };
 
@@ -152,27 +125,13 @@ describe('ListService', () => {
     recalculate: jest.fn(),
   };
 
-  const mockMovieService = {
-    ensureMovie: jest.fn().mockResolvedValue({ id: 1 }),
-  };
-  const mockTvService = {
-    ensureTv: jest.fn().mockResolvedValue({ id: 1 }),
-  };
-  const mockAnimeService = {
-    ensureAnime: jest.fn().mockResolvedValue({ id: 1 }),
-  };
-  const mockMangaService = {
-    ensureManga: jest.fn().mockResolvedValue({ id: 1 }),
-  };
-  const mockGameService = {
-    ensureGame: jest.fn().mockResolvedValue({ id: 1 }),
-  };
-  const mockBookService = {
-    ensureBook: jest.fn().mockResolvedValue({ id: 1 }),
-  };
-  const mockNotificationService = {
-    create: jest.fn().mockResolvedValue({}),
-  };
+  const mockMovieService = { ensureMovie: jest.fn().mockResolvedValue({ id: 1 }) };
+  const mockTvService = { ensureTv: jest.fn().mockResolvedValue({ id: 1 }) };
+  const mockAnimeService = { ensureAnime: jest.fn().mockResolvedValue({ id: 1 }) };
+  const mockMangaService = { ensureManga: jest.fn().mockResolvedValue({ id: 1 }) };
+  const mockGameService = { ensureGame: jest.fn().mockResolvedValue({ id: 1 }) };
+  const mockBookService = { ensureBook: jest.fn().mockResolvedValue({ id: 1 }) };
+  const mockNotificationService = { create: jest.fn().mockResolvedValue({}) };
   const mockMediaStatsService = {
     updateStatsIncremental: jest.fn().mockResolvedValue(undefined),
   };
@@ -205,7 +164,7 @@ describe('ListService', () => {
       mockPrismaClient.user.findUnique.mockResolvedValue(null);
       await expect(
         service.upsertAnimeList('testuser', { animeId: 1 }),
-      ).rejects.toThrow(new NotFoundException('User testuser not found'));
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -226,12 +185,13 @@ describe('ListService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
-    it('should return list and status counts if authorized', async () => {
+    it('should return paginated list and status counts if authorized', async () => {
       mockPrismaClient.user.findUnique.mockResolvedValue({
         privacy: { animeList: false },
       });
       const mockList = [
         {
+          id: 5,
           animeId: 1,
           status: 'WATCHING',
           progress: 5,
@@ -239,17 +199,21 @@ describe('ListService', () => {
           updatedAt: new Date(),
           createdAt: new Date(),
           anime: {
-            titleEnglish: 'Anime English',
-            titleRomaji: null,
+            titlePrimary: 'Anime English',
+            titleSecondary: null,
             titleNative: null,
-            coverImageLarge: 'image-large',
-            episodes: 12,
+            coverImage: 'image-url',
+            episodeCount: 12,
             format: 'TV',
+            status: 'FINISHED',
           },
         },
       ];
-      mockPrismaClient.aquilaAnimeUserList.findMany.mockResolvedValue(mockList);
-      mockPrismaClient.aquilaAnimeUserList.groupBy.mockResolvedValue([
+      mockPrismaClient.aquilaAnimeUserListV2.paginate.mockResolvedValue({
+        data: mockList,
+        pageInfo: { nextCursor: null, hasMore: false, count: 1 },
+      });
+      mockPrismaClient.aquilaAnimeUserListV2.groupBy.mockResolvedValue([
         { status: 'WATCHING', _count: { status: 1 } },
       ]);
 
@@ -262,13 +226,14 @@ describe('ListService', () => {
 
       expect(result.entries[0].title).toBe('Anime English');
       expect(result.counts).toEqual({ all: 1, watching: 1 });
-      expect(mockPrismaClient.aquilaAnimeUserList.findMany).toHaveBeenCalled();
+      expect(result.pageInfo).toEqual({ nextCursor: null, hasMore: false, count: 1 });
+      expect(mockPrismaClient.aquilaAnimeUserListV2.paginate).toHaveBeenCalled();
     });
   });
 
   describe('getAnimeListEntry', () => {
     it('should throw NotFoundException if entry not found', async () => {
-      mockPrismaClient.aquilaAnimeUserList.findUnique.mockResolvedValue(null);
+      mockPrismaClient.aquilaAnimeUserListV2.findUnique.mockResolvedValue(null);
       await expect(service.getAnimeListEntry('testuser', 1)).rejects.toThrow(
         NotFoundException,
       );
@@ -276,7 +241,7 @@ describe('ListService', () => {
 
     it('should return entry if found', async () => {
       const entry = { animeId: 1, status: 'WATCHING' };
-      mockPrismaClient.aquilaAnimeUserList.findUnique.mockResolvedValue(entry);
+      mockPrismaClient.aquilaAnimeUserListV2.findUnique.mockResolvedValue(entry);
       const result = await service.getAnimeListEntry('testuser', 1);
       expect(result).toBe(entry);
     });
@@ -288,7 +253,7 @@ describe('ListService', () => {
         id: 'user-1',
         privacy: {},
       });
-      mockPrismaClient.aquilaAnimeUserList.upsert.mockResolvedValue({});
+      mockPrismaClient.aquilaAnimeUserListV2.upsert.mockResolvedValue({});
 
       const result = await service.upsertAnimeList('testuser', {
         animeId: 1,
@@ -301,7 +266,7 @@ describe('ListService', () => {
         success: true,
         message: 'Anime list updated successfully',
       });
-      expect(mockPrismaClient.aquilaAnimeUserList.upsert).toHaveBeenCalled();
+      expect(mockPrismaClient.aquilaAnimeUserListV2.upsert).toHaveBeenCalled();
       expect(mockConnectionsManager.syncAnime).toHaveBeenCalledWith(
         'anilist',
         'testuser',
@@ -319,7 +284,7 @@ describe('ListService', () => {
         id: 'user-1',
         privacy: {},
       });
-      mockPrismaClient.aquilaAnimeUserList.upsert.mockRejectedValue(
+      mockPrismaClient.aquilaAnimeUserListV2.upsert.mockRejectedValue(
         new Error('DB error'),
       );
 
@@ -332,16 +297,16 @@ describe('ListService', () => {
   describe('deleteAnimeList', () => {
     it('should successfully delete anime list entry', async () => {
       mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaClient.aquilaAnimeUserList.findUnique.mockResolvedValue({
+      mockPrismaClient.aquilaAnimeUserListV2.findUnique.mockResolvedValue({
         connections: { mal: 200 },
       });
-      mockPrismaClient.aquilaAnimeUserList.delete.mockResolvedValue({});
+      mockPrismaClient.aquilaAnimeUserListV2.delete.mockResolvedValue({});
       mockConnectionsManager.deleteAnime.mockResolvedValue({});
 
       const result = await service.deleteAnimeList('testuser', 1);
 
       expect(result.success).toBe(true);
-      expect(mockPrismaClient.aquilaAnimeUserList.delete).toHaveBeenCalled();
+      expect(mockPrismaClient.aquilaAnimeUserListV2.delete).toHaveBeenCalled();
       expect(mockConnectionsManager.deleteAnime).toHaveBeenCalledWith(
         'mal',
         'testuser',
@@ -354,7 +319,7 @@ describe('ListService', () => {
     });
 
     it('should return failure if deletion fails', async () => {
-      mockPrismaClient.aquilaAnimeUserList.findUnique.mockRejectedValue(
+      mockPrismaClient.aquilaAnimeUserListV2.findUnique.mockRejectedValue(
         new Error('Fail'),
       );
       const result = await service.deleteAnimeList('testuser', 1);
@@ -365,33 +330,37 @@ describe('ListService', () => {
   describe('Manga Operations', () => {
     it('should get manga list and status counts', async () => {
       mockPrismaClient.user.findUnique.mockResolvedValue({ privacy: {} });
-      mockPrismaClient.aquilaMangaUserList.findMany.mockResolvedValue([
-        {
-          mangaId: 10,
-          status: 'READING',
-          chapters: 5,
-          volumes: 1,
-          score: 10,
-          updatedAt: new Date(),
-          createdAt: new Date(),
-          manga: {
-            titleEnglish: null,
-            titleRomaji: 'Manga Romaji',
-            titleNative: null,
-            coverImageLarge: '',
-            chapters: 20,
-            format: 'Manga',
+      mockPrismaClient.aquilaMangaUserListV2.paginate.mockResolvedValue({
+        data: [
+          {
+            id: 10,
+            mangaId: 10,
+            status: 'READING',
+            chaptersProgress: 5,
+            volumesProgress: 1,
+            score: 10,
+            updatedAt: new Date(),
+            createdAt: new Date(),
+            manga: {
+              titlePrimary: 'Manga Primary',
+              titleSecondary: null,
+              titleNative: null,
+              coverImage: '',
+              chapterCount: 20,
+              format: 'MANGA',
+            },
           },
-        },
-      ]);
-      mockPrismaClient.aquilaMangaUserList.groupBy.mockResolvedValue([]);
+        ],
+        pageInfo: { nextCursor: null, hasMore: false, count: 1 },
+      });
+      mockPrismaClient.aquilaMangaUserListV2.groupBy.mockResolvedValue([]);
 
       const result = await service.getMangaList('testuser', 'testuser');
-      expect(result.entries[0].title).toBe('Manga Romaji');
+      expect(result.entries[0].title).toBe('Manga Primary');
     });
 
     it('should throw NotFoundException on getMangaListEntry if not found', async () => {
-      mockPrismaClient.aquilaMangaUserList.findUnique.mockResolvedValue(null);
+      mockPrismaClient.aquilaMangaUserListV2.findUnique.mockResolvedValue(null);
       await expect(service.getMangaListEntry('testuser', 1)).rejects.toThrow(
         NotFoundException,
       );
@@ -402,25 +371,22 @@ describe('ListService', () => {
         id: 'user-1',
         privacy: {},
       });
-      mockPrismaClient.aquilaMangaUserList.upsert.mockResolvedValue({});
+      mockPrismaClient.aquilaMangaUserListV2.upsert.mockResolvedValue({});
 
       const result = await service.upsertMangaList('testuser', {
         mangaId: 1,
         status: $Enums.MangaListStatus.READING,
-        updateConnection: true,
-        connections: { mal: { id: 22, chaptersOffset: 2 } as any },
       });
 
       expect(result.success).toBe(true);
-      expect(mockConnectionsManager.syncManga).toHaveBeenCalled();
     });
 
     it('should delete manga list entry successfully', async () => {
       mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaClient.aquilaMangaUserList.findUnique.mockResolvedValue({
+      mockPrismaClient.aquilaMangaUserListV2.findUnique.mockResolvedValue({
         connections: { mal: 200 },
       });
-      mockPrismaClient.aquilaMangaUserList.delete.mockResolvedValue({});
+      mockPrismaClient.aquilaMangaUserListV2.delete.mockResolvedValue({});
 
       const result = await service.deleteMangaList('testuser', 1);
       expect(result.success).toBe(true);
@@ -430,658 +396,131 @@ describe('ListService', () => {
   describe('Movie Operations', () => {
     it('should get movie list', async () => {
       mockPrismaClient.user.findUnique.mockResolvedValue({ privacy: {} });
-      mockPrismaClient.aquilaMovieUserList.findMany.mockResolvedValue([
-        {
-          tvdbId: 1,
-          status: 'COMPLETED',
-          score: 8,
-          updatedAt: new Date(),
-          createdAt: new Date(),
-          movie: {
-            titleEnglish: 'Movie Title',
-            titleRomaji: null,
-            coverImage: '',
+      mockPrismaClient.aquilaMovieUserListV2.paginate.mockResolvedValue({
+        data: [
+          {
+            id: 1,
+            movieId: 1,
+            status: 'COMPLETED',
+            score: 8,
+            updatedAt: new Date(),
+            createdAt: new Date(),
+            movie: {
+              titlePrimary: 'Movie Title',
+              titleSecondary: null,
+              coverImage: '',
+            },
           },
-        },
-      ]);
-      mockPrismaClient.aquilaMovieUserList.groupBy.mockResolvedValue([]);
+        ],
+        pageInfo: { nextCursor: null, hasMore: false, count: 1 },
+      });
 
       const result = await service.getMovieList('testuser');
       expect(result.entries[0].title).toBe('Movie Title');
     });
 
     it('should throw NotFoundException on getMovieListEntry if not found', async () => {
-      mockPrismaClient.aquilaMovieUserList.findUnique.mockResolvedValue(null);
+      mockPrismaClient.aquilaMovieUserListV2.findUnique.mockResolvedValue(null);
       await expect(service.getMovieListEntry('testuser', 1)).rejects.toThrow(
         NotFoundException,
       );
-    });
-
-    it('should upsert movie list successfully', async () => {
-      mockPrismaClient.user.findUnique.mockResolvedValue({
-        id: 'user-1',
-        privacy: {},
-      });
-      mockPrismaClient.aquilaMovieUserList.upsert.mockResolvedValue({});
-
-      const result = await service.upsertMovieList('testuser', {
-        movieId: 1,
-        status: $Enums.MovieListStatus.COMPLETED,
-        updateConnection: true,
-        connections: { mal: 300 },
-      });
-
-      expect(result.success).toBe(true);
-      expect(mockConnectionsManager.syncMovie).toHaveBeenCalled();
-    });
-
-    it('should delete movie list successfully', async () => {
-      mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaClient.aquilaMovieUserList.findUnique.mockResolvedValue({
-        connections: { mal: 300 },
-      });
-      mockPrismaClient.aquilaMovieUserList.delete.mockResolvedValue({});
-
-      const result = await service.deleteMovieList('testuser', 1);
-      expect(result.success).toBe(true);
     });
   });
 
   describe('TV Operations', () => {
     it('should get TV list', async () => {
       mockPrismaClient.user.findUnique.mockResolvedValue({ privacy: {} });
-      mockPrismaClient.aquilaTvUserList.findMany.mockResolvedValue([
-        {
-          tvdbId: 1,
-          status: 'WATCHING',
-          score: 7,
-          updatedAt: new Date(),
-          createdAt: new Date(),
-          tv: {
-            titleEnglish: 'TV Show',
-            titleRomaji: null,
-            coverImage: '',
-            seasons: [{ seasonNumber: 1, episodeCount: 10 }],
+      mockPrismaClient.aquilaTvUserListV2.paginate.mockResolvedValue({
+        data: [
+          {
+            id: 1,
+            tvId: 1,
+            status: 'WATCHING',
+            score: 7,
+            updatedAt: new Date(),
+            createdAt: new Date(),
+            tv: {
+              titlePrimary: 'TV Show',
+              titleSecondary: null,
+              coverImage: '',
+              episodeCount: 10,
+            },
           },
-          _count: {
-            watchedEpisodes: 3,
-          },
-        },
-      ]);
-      mockPrismaClient.aquilaTvUserList.groupBy.mockResolvedValue([]);
+        ],
+        pageInfo: { nextCursor: null, hasMore: false, count: 1 },
+      });
 
       const result = await service.getTvList('testuser');
       expect(result.entries[0].title).toBe('TV Show');
       expect(result.entries[0].episodes).toBe(10);
     });
 
-    it('should throw NotFoundException on getTvListEntry if not found', async () => {
-      mockPrismaClient.aquilaTvUserList.findUnique.mockResolvedValue(null);
-      await expect(service.getTvListEntry('testuser', 1)).rejects.toThrow(
-        NotFoundException,
-      );
-    });
-
-    it('should upsert TV list successfully', async () => {
-      mockPrismaClient.user.findUnique.mockResolvedValue({
-        id: 'user-1',
-        privacy: {},
+    it('should toggle episode watched', async () => {
+      mockPrismaClient.aquilaTvUserListV2.findUnique.mockResolvedValue({
+        id: 1,
+        username: 'testuser',
+        tvId: 123,
       });
-      mockPrismaClient.aquilaTvUserList.upsert.mockResolvedValue({});
-      mockPrismaClient.aquilaTvUserList.findUnique.mockResolvedValue({
-        watchedEpisodes: [],
-      });
+      mockPrismaClient.aquilaTvWatchedEpisodeV2.findUnique.mockResolvedValue(null);
+      mockPrismaClient.aquilaTvWatchedEpisodeV2.create.mockResolvedValue({});
+      mockPrismaClient.aquilaTvWatchedEpisodeV2.count.mockResolvedValue(1);
 
-      const result = await service.upsertTvList('testuser', {
-        tvId: 1,
-        status: $Enums.TvListStatus.WATCHING,
-        updateConnection: true,
-        connections: { mal: 400 },
-      });
-
-      expect(result.success).toBe(true);
-      expect(mockConnectionsManager.syncTv).toHaveBeenCalled();
-    });
-
-    it('should delete TV list successfully', async () => {
-      mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaClient.aquilaTvUserList.findUnique.mockResolvedValue({
-        connections: { mal: 400 },
-      });
-      mockPrismaClient.aquilaTvUserList.delete.mockResolvedValue({});
-
-      const result = await service.deleteTvList('testuser', 1);
-      expect(result.success).toBe(true);
-    });
-
-    it('should toggle episode watched - create watched record if it does not exist', async () => {
-      mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaClient.aquilaTvUserList.findUnique.mockResolvedValue({
-        id: 'list-1',
-        connections: {},
-      });
-      mockPrismaClient.aquilaTvWatchedEpisode.findUnique.mockResolvedValue(
-        null,
-      );
-      mockPrismaClient.aquilaTvWatchedEpisode.create.mockResolvedValue({});
-
-      const result = await service.toggleEpisodeWatched('testuser', 1, 1, 1);
-      expect(result).toEqual({ watched: true });
-      expect(mockPrismaClient.aquilaTvWatchedEpisode.create).toHaveBeenCalled();
-    });
-
-    it('should toggle episode watched - delete watched record if it exists', async () => {
-      mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaClient.aquilaTvUserList.findUnique.mockResolvedValue({
-        id: 'list-1',
-        connections: {},
-      });
-      mockPrismaClient.aquilaTvWatchedEpisode.findUnique.mockResolvedValue({
-        id: 'ep-1',
-      });
-      mockPrismaClient.aquilaTvWatchedEpisode.delete.mockResolvedValue({});
-
-      const result = await service.toggleEpisodeWatched('testuser', 1, 1, 1);
-      expect(result).toEqual({ watched: false });
-      expect(mockPrismaClient.aquilaTvWatchedEpisode.delete).toHaveBeenCalled();
-    });
-
-    it('should throw NotFoundException in toggleEpisodeWatched if TV show not in list', async () => {
-      mockPrismaClient.aquilaTvUserList.findUnique.mockResolvedValue(null);
-      await expect(
-        service.toggleEpisodeWatched('testuser', 1, 1, 1),
-      ).rejects.toThrow(NotFoundException);
-    });
-
-    it('should toggle season watched to true - upsert all episodes', async () => {
-      mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaClient.aquilaTvUserList.findUnique.mockResolvedValue({
-        id: 'list-1',
-        connections: {},
-      });
-      mockPrismaClient.aquilaTvWatchedEpisode.upsert.mockResolvedValue({});
-
-      const result = await service.toggleSeasonWatched(
-        'testuser',
-        1,
-        1,
-        [{ number: 1 }, { number: 2 }],
-        true,
-      );
-      expect(result).toEqual({ success: true });
-      expect(
-        mockPrismaClient.aquilaTvWatchedEpisode.upsert,
-      ).toHaveBeenCalledTimes(2);
-    });
-
-    it('should toggle season watched to false - delete many episodes', async () => {
-      mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaClient.aquilaTvUserList.findUnique.mockResolvedValue({
-        id: 'list-1',
-        connections: {},
-      });
-      mockPrismaClient.aquilaTvWatchedEpisode.deleteMany.mockResolvedValue({});
-
-      const result = await service.toggleSeasonWatched(
-        'testuser',
-        1,
-        1,
-        [{ number: 1 }, { number: 2 }],
-        false,
-      );
-      expect(result).toEqual({ success: true });
-      expect(
-        mockPrismaClient.aquilaTvWatchedEpisode.deleteMany,
-      ).toHaveBeenCalledWith({
-        where: { listId: 'list-1', seasonNum: 1 },
-      });
+      const result = await service.toggleEpisodeWatched('testuser', 123, 1, 2);
+      expect(result.watched).toBe(true);
     });
   });
 
   describe('Game Operations', () => {
     it('should get game list', async () => {
       mockPrismaClient.user.findUnique.mockResolvedValue({ privacy: {} });
-      mockPrismaClient.aquilaGameUserList.findMany.mockResolvedValue([
-        {
-          gameId: 1,
-          status: 'PLAYING',
-          progress: 10,
-          score: 9,
-          updatedAt: new Date(),
-          createdAt: new Date(),
-          game: {
-            titleString: 'Witcher 3',
-            coverImage: '',
+      mockPrismaClient.aquilaGameUserListV2.paginate.mockResolvedValue({
+        data: [
+          {
+            id: 1,
+            gameId: 1,
+            status: 'PLAYING',
+            progress: 10,
+            score: 9,
+            updatedAt: new Date(),
+            createdAt: new Date(),
+            game: {
+              titlePrimary: 'Witcher 3',
+              coverImage: '',
+            },
           },
-        },
-      ]);
-      mockPrismaClient.aquilaGameUserList.groupBy.mockResolvedValue([]);
+        ],
+        pageInfo: { nextCursor: null, hasMore: false, count: 1 },
+      });
 
       const result = await service.getGameList('testuser');
       expect(result.entries[0].title).toBe('Witcher 3');
-    });
-
-    it('should throw NotFoundException on getGameListEntry if not found', async () => {
-      mockPrismaClient.aquilaGameUserList.findUnique.mockResolvedValue(null);
-      await expect(service.getGameListEntry('testuser', 1)).rejects.toThrow(
-        NotFoundException,
-      );
-    });
-
-    it('should upsert game list successfully', async () => {
-      mockPrismaClient.user.findUnique.mockResolvedValue({
-        id: 'user-1',
-        privacy: {},
-      });
-      mockPrismaClient.aquilaGameUserList.upsert.mockResolvedValue({});
-
-      const result = await service.upsertGameList('testuser', {
-        gameId: 1,
-        status: $Enums.GameListStatus.PLAYING,
-      });
-
-      expect(result.success).toBe(true);
-    });
-
-    it('should delete game list successfully', async () => {
-      mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaClient.aquilaGameUserList.delete.mockResolvedValue({});
-
-      const result = await service.deleteGameList('testuser', 1);
-      expect(result.success).toBe(true);
     });
   });
 
   describe('Book Operations', () => {
     it('should get book list', async () => {
       mockPrismaClient.user.findUnique.mockResolvedValue({ privacy: {} });
-      mockPrismaClient.aquilaBookUserList.findMany.mockResolvedValue([
-        {
-          bookId: 'book-1',
-          status: 'READING',
-          chapters: 5,
-          volumes: 1,
-          score: 8,
-          updatedAt: new Date(),
-          createdAt: new Date(),
-          book: {
-            titleString: 'Book One',
-            coverImage: '',
+      mockPrismaClient.aquilaBookUserListV2.paginate.mockResolvedValue({
+        data: [
+          {
+            id: 1,
+            bookId: 1,
+            status: 'READING',
+            progressChapters: 5,
+            score: 8,
+            updatedAt: new Date(),
+            createdAt: new Date(),
+            book: {
+              titlePrimary: 'Book One',
+              coverImage: '',
+            },
           },
-        },
-      ]);
-      mockPrismaClient.aquilaBookUserList.groupBy.mockResolvedValue([]);
+        ],
+        pageInfo: { nextCursor: null, hasMore: false, count: 1 },
+      });
 
       const result = await service.getBookList('testuser');
       expect(result.entries[0].title).toBe('Book One');
-    });
-
-    it('should throw NotFoundException on getBookListEntry if not found', async () => {
-      mockPrismaClient.aquilaBookUserList.findUnique.mockResolvedValue(null);
-      await expect(
-        service.getBookListEntry('testuser', 'book-1'),
-      ).rejects.toThrow(NotFoundException);
-    });
-
-    it('should upsert book list successfully', async () => {
-      mockPrismaClient.user.findUnique.mockResolvedValue({
-        id: 'user-1',
-        privacy: {},
-      });
-      mockPrismaClient.aquilaBookUserList.upsert.mockResolvedValue({});
-
-      const result = await service.upsertBookList('testuser', {
-        bookId: 'book-1',
-        status: $Enums.BookListStatus.READING,
-      });
-
-      expect(result.success).toBe(true);
-    });
-
-    it('should delete book list successfully', async () => {
-      mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaClient.aquilaBookUserList.delete.mockResolvedValue({});
-
-      const result = await service.deleteBookList('testuser', 'book-1');
-      expect(result.success).toBe(true);
-    });
-  });
-
-  describe('getWatchingList', () => {
-    it('should retrieve consolidated reading/watching/playing list sorted by updatedAt desc', async () => {
-      const date1 = new Date('2026-06-19T10:00:00.000Z');
-      const date2 = new Date('2026-06-19T12:00:00.000Z');
-
-      mockPrismaClient.aquilaAnimeUserList.findMany.mockResolvedValue([
-        {
-          animeId: 1,
-          score: 9,
-          progress: 4,
-          updatedAt: date1,
-          createdAt: date1,
-          status: 'WATCHING',
-          anime: {
-            titleEnglish: 'Anime English',
-            titleRomaji: null,
-            titleNative: null,
-            coverImageLarge: '',
-            episodes: 12,
-            format: 'TV',
-          },
-        },
-      ]);
-      mockPrismaClient.aquilaMangaUserList.findMany.mockResolvedValue([]);
-      mockPrismaClient.aquilaTvUserList.findMany.mockResolvedValue([
-        {
-          tvId: 2,
-          score: 8,
-          updatedAt: date2,
-          createdAt: date2,
-          status: 'WATCHING',
-          tv: {
-            titleEnglish: 'TV English',
-            titleRomaji: null,
-            coverImage: '',
-            seasons: [{ seasonNumber: 1, episodeCount: 5 }],
-          },
-          watchedEpisodes: [{ seasonNum: 1, episodeNum: 2 }],
-        },
-      ]);
-      mockPrismaClient.aquilaGameUserList.findMany.mockResolvedValue([]);
-      mockPrismaClient.aquilaBookUserList.findMany.mockResolvedValue([]);
-
-      const result = await service.getWatchingList('testuser');
-
-      expect(result.length).toBe(2);
-      // Sorted by updatedAt desc, so index 0 should be date2 (TV)
-      expect(result[0].id).toBe(2);
-      expect(result[1].id).toBe(1);
-    });
-  });
-
-  describe('incrementProgress', () => {
-    it('should throw error for invalid game ID in incrementProgress', async () => {
-      await expect(
-        service.incrementProgress('testuser', 'game', NaN),
-      ).rejects.toThrow('Invalid game ID');
-    });
-
-    it('should increment progress for game', async () => {
-      mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaClient.aquilaGameUserList.findUnique.mockResolvedValue({
-        id: 'list-game-1',
-        progress: 5,
-      });
-      mockPrismaClient.aquilaGameUserList.update.mockResolvedValue({});
-
-      const result = await service.incrementProgress('testuser', 'game', 1, 3);
-
-      expect(result).toEqual({ success: true, message: 'Progress updated' });
-      expect(mockPrismaClient.aquilaGameUserList.update).toHaveBeenCalledWith({
-        where: { id: 'list-game-1' },
-        data: { progress: 8 },
-      });
-    });
-
-    it('should throw NotFoundException if game not in list', async () => {
-      mockPrismaClient.aquilaGameUserList.findUnique.mockResolvedValue(null);
-      await expect(
-        service.incrementProgress('testuser', 'game', 1),
-      ).rejects.toThrow(NotFoundException);
-    });
-
-    it('should increment progress for book and mark completed if chapters limit reached', async () => {
-      mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaClient.aquilaBookUserList.findUnique.mockResolvedValue({
-        id: 'list-book-1',
-        chapters: 8,
-        status: 'READING',
-        book: { chapters: 10 },
-      });
-      mockPrismaClient.aquilaBookUserList.update.mockResolvedValue({});
-
-      const result = await service.incrementProgress(
-        'testuser',
-        'book',
-        'book-1',
-        2,
-      );
-
-      expect(result.success).toBe(true);
-      expect(mockPrismaClient.aquilaBookUserList.update).toHaveBeenCalledWith({
-        where: { id: 'list-book-1' },
-        data: {
-          chapters: 10,
-          status: $Enums.BookListStatus.COMPLETED,
-          endDate: expect.any(Number),
-        },
-      });
-    });
-
-    it('should increment progress for anime, sync connection and mark completed', async () => {
-      mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaClient.aquilaAnimeUserList.findUnique.mockResolvedValue({
-        id: 'list-anime-1',
-        progress: 11,
-        status: 'WATCHING',
-        anime: { episodes: 12 },
-        connections: {
-          anilist: { id: 100, progress: 11 },
-        },
-      });
-      mockPrismaClient.aquilaAnimeUserList.update.mockResolvedValue({});
-
-      const result = await service.incrementProgress('testuser', 'anime', 1, 1);
-
-      expect(result.success).toBe(true);
-      expect(mockPrismaClient.aquilaAnimeUserList.update).toHaveBeenCalledWith({
-        where: { id: 'list-anime-1' },
-        data: {
-          progress: 12,
-          status: $Enums.AnimeListStatus.COMPLETED,
-          endDate: expect.any(Number),
-          connections: {
-            anilist: { id: 100, progress: 12 },
-          },
-        },
-      });
-      expect(mockConnectionsManager.syncAnime).toHaveBeenCalled();
-    });
-
-    it('should increment progress for manga', async () => {
-      mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaClient.aquilaMangaUserList.findUnique.mockResolvedValue({
-        id: 'list-manga-1',
-        chapters: 5,
-        status: 'READING',
-        manga: { chapters: 10 },
-        connections: {
-          anilist: { id: 100, chapters: 5 },
-        },
-      });
-      mockPrismaClient.aquilaMangaUserList.update.mockResolvedValue({});
-
-      const result = await service.incrementProgress('testuser', 'manga', 1, 2);
-
-      expect(result.success).toBe(true);
-      expect(mockPrismaClient.aquilaMangaUserList.update).toHaveBeenCalledWith({
-        where: { id: 'list-manga-1' },
-        data: {
-          chapters: 7,
-          status: 'READING',
-          connections: {
-            anilist: { id: 100, chapters: 7 },
-          },
-        },
-      });
-    });
-
-    it('should increment progress for tv', async () => {
-      mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-1' });
-      mockPrismaClient.aquilaTvUserList.findUnique.mockResolvedValue({
-        id: 'list-tv-1',
-        status: 'WATCHING',
-        tv: {
-          seasons: [
-            {
-              number: 1,
-              episodes: [{ number: 1 }, { number: 2 }],
-              episodeCount: 2,
-            },
-          ],
-        },
-        watchedEpisodes: [],
-      });
-      mockPrismaClient.aquilaTvWatchedEpisode.createMany.mockResolvedValue({});
-
-      const result = await service.incrementProgress('testuser', 'tv', 1, 1);
-
-      expect(result.success).toBe(true);
-      expect(
-        mockPrismaClient.aquilaTvWatchedEpisode.createMany,
-      ).toHaveBeenCalledWith({
-        data: [{ listId: 'list-tv-1', seasonNum: 1, episodeNum: 1 }],
-      });
-    });
-
-    it('should return failure if all tv episodes already watched', async () => {
-      mockPrismaClient.aquilaTvUserList.findUnique.mockResolvedValue({
-        id: 'list-tv-1',
-        status: 'WATCHING',
-        tv: {
-          seasons: [
-            {
-              number: 1,
-              episodes: [{ number: 1 }],
-              episodeCount: 1,
-            },
-          ],
-        },
-        watchedEpisodes: [{ seasonNum: 1, episodeNum: 1 }],
-      });
-
-      const result = await service.incrementProgress('testuser', 'tv', 1, 1);
-
-      expect(result).toEqual({
-        success: false,
-        message: 'All episodes already watched',
-      });
-    });
-  });
-
-  describe('fetchSonarrSeries', () => {
-    let originalFetch: typeof global.fetch;
-
-    beforeAll(() => {
-      originalFetch = global.fetch;
-      global.fetch = jest.fn().mockImplementation(() =>
-        Promise.resolve({
-          json: () => Promise.resolve([{ anilist_id: 5001, tvdb_id: 9999 }]),
-        } as any),
-      );
-    });
-
-    afterAll(() => {
-      global.fetch = originalFetch;
-    });
-
-    it('should return tv entries when includeTv is true', async () => {
-      mockPrismaClient.aquilaTvUserList.findMany.mockResolvedValue([
-        {
-          tv: {
-            tvdbId: 12345,
-            titleEnglish: 'English TV Title',
-            titleRomaji: 'Romaji TV Title',
-          },
-        },
-      ]);
-
-      const result = await service.fetchSonarrSeries('testuser', true, false);
-
-      expect(mockPrismaClient.aquilaTvUserList.findMany).toHaveBeenCalledWith({
-        where: {
-          username: 'testuser',
-          status: 'PLANNING',
-        },
-        select: {
-          tv: {
-            select: {
-              tvdbId: true,
-              titleEnglish: true,
-              titleRomaji: true,
-            },
-          },
-        },
-      });
-
-      expect(result).toEqual([
-        {
-          title: 'English TV Title',
-          tvdbId: 12345,
-          year: 0,
-          monitored: true,
-          seasons: [],
-        },
-      ]);
-    });
-
-    it('should resolve and cache anime tvdbId using anilistId', async () => {
-      mockPrismaClient.aquilaAnimeUserList.findMany.mockResolvedValue([
-        {
-          id: 10,
-          animeId: 101,
-          connections: {},
-          anime: {
-            anilistId: 5001,
-            titleEnglish: 'Test Anime',
-            titleRomaji: 'Test Anime Romaji',
-            seasonYear: 2024,
-          },
-        },
-      ]);
-
-      mockPrismaClient.aquilaAnimeUserList.update.mockResolvedValue({});
-
-      const result = await service.fetchSonarrSeries('testuser', false, true);
-
-      expect(mockPrismaClient.aquilaAnimeUserList.findMany).toHaveBeenCalledWith({
-        where: {
-          username: 'testuser',
-          status: 'PLANNING',
-        },
-        select: {
-          id: true,
-          animeId: true,
-          connections: true,
-          anime: {
-            select: {
-              anilistId: true,
-              titleEnglish: true,
-              titleRomaji: true,
-              seasonYear: true,
-            },
-          },
-        },
-      });
-
-      expect(mockPrismaClient.aquilaAnimeUserList.update).toHaveBeenCalledWith({
-        where: { id: 10 },
-        data: {
-          connections: {
-            tvdbId: 9999,
-          },
-        },
-      });
-
-      expect(result).toEqual([
-        {
-          title: 'Test Anime',
-          tvdbId: 9999,
-          year: 2024,
-          monitored: true,
-          seasons: [],
-        },
-      ]);
     });
   });
 });

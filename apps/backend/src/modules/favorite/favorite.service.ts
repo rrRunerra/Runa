@@ -185,22 +185,27 @@ export class FavoriteService {
       case FavoriteType.MANGA:
         return {
           title:
+            (details.titlePrimary as string | null) ??
+            (details.titleSecondary as string | null) ??
+            (details.titleNative as string | null) ??
             (details.titleEnglish as string | null) ??
             (details.titleRomaji as string | null) ??
-            (details.titleNative as string | null) ??
             '',
-          image: (details.coverImageLarge as string | null) ?? '',
+          image:
+            (details.coverImage as string | null) ??
+            (details.coverImageLarge as string | null) ??
+            '',
         };
       case FavoriteType.TV:
       case FavoriteType.MOVIE:
-        return {
-          title: (details.titleEnglish as string | null) ?? '',
-          image: (details.coverImage as string | null) ?? '',
-        };
       case FavoriteType.GAME:
       case FavoriteType.BOOK:
         return {
-          title: (details.titleString as string | null) ?? '',
+          title:
+            (details.titlePrimary as string | null) ??
+            (details.titleEnglish as string | null) ??
+            (details.titleString as string | null) ??
+            '',
           image: (details.coverImage as string | null) ?? '',
         };
       case FavoriteType.USER:
@@ -211,19 +216,14 @@ export class FavoriteService {
             '',
           image: (details.avatarUrl as string | null) ?? '',
         };
-      case FavoriteType.CHARACTER: {
-        const first = (details.nameFirst as string | null) ?? '';
-        const middle = (details.nameMiddle as string | null) ?? '';
-        const last = (details.nameLast as string | null) ?? '';
-        const name = [first, middle, last].filter(Boolean).join(' ') || (details.nameNative as string | null) || '';
-        return {
-          title: name,
-          image: (details.image as string | null) ?? '',
-        };
-      }
+      case FavoriteType.CHARACTER:
       case FavoriteType.STAFF:
         return {
-          title: (details.name as string | null) ?? (details.personName as string | null) ?? '',
+          title:
+            (details.namePrimary as string | null) ??
+            (details.nameNative as string | null) ??
+            (details.name as string | null) ??
+            '',
           image: (details.image as string | null) ?? '',
         };
       default:

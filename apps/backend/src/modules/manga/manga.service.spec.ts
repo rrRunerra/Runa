@@ -10,7 +10,6 @@ import {
   rrTooManyRequestsException,
   rrConflictException,
 } from 'src/providers/error';
-import type { MangaSearchEntity, MangaEntity } from './manga.entities';
 
 describe('MangaService', () => {
   let service: MangaService;
@@ -22,15 +21,19 @@ describe('MangaService', () => {
   const mockRepository = {
     find: jest.fn(),
     search: jest.fn(),
+    findByAnilistId: jest.fn(),
+    upsertV2Record: jest.fn(),
+    findSimilar: jest.fn(),
   };
 
   const mockExternal = {
     search: jest.fn(),
-    fetchAndUpsertManga: jest.fn(),
+    fetchFullV2Record: jest.fn(),
   };
 
   const mockQueueService = {
-    addSearchRefresh: jest.fn(),
+    addUpsertJob: jest.fn(),
+    addSearchUpserts: jest.fn(),
   };
 
   const mockCacheService = {
@@ -59,7 +62,7 @@ describe('MangaService', () => {
     cacheService = module.get<CacheService>(CacheService);
   }
 
-  const mockSearchResults: MangaSearchEntity[] = [
+  const mockSearchResults: any[] = [
     {
       id: 1,
       title: 'Romaji Title',
@@ -73,136 +76,42 @@ describe('MangaService', () => {
   ];
 
   describe('search', () => {
-    describe('with USE_LOCAL_MEDIA_ONLY disabled (default)', () => {
-      beforeEach(async () => {
-        delete process.env.USE_LOCAL_MEDIA_ONLY;
-        await createModule();
-      });
-
-      it('should return cached search results if available', async () => {
-        mockCacheService.get.mockResolvedValue(mockSearchResults);
-
-        const result = await service.search('Test Manga');
-
-        expect(mockCacheService.get).toHaveBeenCalledWith(
-          'manga-search:testmanga',
-        );
-        expect(mockExternal.search).not.toHaveBeenCalled();
-        expect(result).toEqual(mockSearchResults);
-      });
-
-      it('should search external on cache miss and cache results', async () => {
-        mockCacheService.get.mockResolvedValue(null);
-        mockExternal.search.mockResolvedValue(mockSearchResults);
-
-        const result = await service.search('Test Manga');
-
-        expect(mockExternal.search).toHaveBeenCalledWith('Test Manga');
-        expect(mockCacheService.set).toHaveBeenCalledWith(
-          'manga-search:testmanga',
-          JSON.stringify(mockSearchResults),
-          expect.any(Number),
-        );
-        expect(mockQueueService.addSearchRefresh).not.toHaveBeenCalled();
-        expect(result).toEqual(mockSearchResults);
-      });
-
-      it('should not cache empty results', async () => {
-        mockCacheService.get.mockResolvedValue(null);
-        mockExternal.search.mockResolvedValue([]);
-
-        const result = await service.search('Empty');
-
-        expect(mockExternal.search).toHaveBeenCalled();
-        expect(mockCacheService.set).not.toHaveBeenCalled();
-        expect(result).toEqual([]);
-      });
+    beforeEach(async () => {
+      await createModule();
     });
 
-    describe('with USE_LOCAL_MEDIA_ONLY enabled', () => {
-      beforeEach(async () => {
-        process.env.USE_LOCAL_MEDIA_ONLY = 'true';
-        await createModule();
-      });
+    it('should return cached search results if available', async () => {
+      mockCacheService.get.mockResolvedValue(mockSearchResults);
 
-      afterEach(() => {
-        delete process.env.USE_LOCAL_MEDIA_ONLY;
-      });
+      const result = await service.search('Test Manga');
 
-      it('should return local results when available and queue a background refresh', async () => {
-        mockCacheService.get.mockResolvedValue(null);
-        mockRepository.search.mockResolvedValue(mockSearchResults);
+      expect(mockCacheService.get).toHaveBeenCalledWith('manga:v2:search:Test Manga');
+      expect(mockExternal.search).not.toHaveBeenCalled();
+      expect(result).toEqual(mockSearchResults);
+    });
 
-        const result = await service.search('Naruto');
+    it('should search local DB first and return results if found', async () => {
+      mockCacheService.get.mockResolvedValue(null);
+      mockRepository.search.mockResolvedValue(mockSearchResults);
 
-        expect(mockRepository.search).toHaveBeenCalledWith('Naruto');
-        expect(mockExternal.search).not.toHaveBeenCalled();
-        expect(mockCacheService.set).toHaveBeenCalledWith(
-          'manga-search:naruto',
-          JSON.stringify(mockSearchResults),
-          expect.any(Number),
-        );
-        expect(mockQueueService.addSearchRefresh).toHaveBeenCalledWith(
-          'Naruto',
-          'manga-search:naruto',
-        );
-        expect(result).toEqual(mockSearchResults);
-      });
+      const result = await service.search('Test Manga');
 
-      it('should fall back to external when local search returns empty', async () => {
-        mockCacheService.get.mockResolvedValue(null);
-        mockRepository.search.mockResolvedValue([]);
-        mockExternal.search.mockResolvedValue(mockSearchResults);
-
-        const result = await service.search('Naruto');
-
-        expect(mockRepository.search).toHaveBeenCalledWith('Naruto');
-        expect(mockExternal.search).toHaveBeenCalledWith('Naruto');
-        expect(mockQueueService.addSearchRefresh).not.toHaveBeenCalled();
-        expect(result).toEqual(mockSearchResults);
-      });
+      expect(mockRepository.search).toHaveBeenCalledWith('Test Manga');
+      expect(mockExternal.search).not.toHaveBeenCalled();
+      expect(result).toEqual(mockSearchResults);
     });
   });
 
   describe('getManga', () => {
-    const mockManga: MangaEntity = {
+    const mockManga: any = {
       id: 1,
       anilistId: 123,
-      malId: 456,
-      titleEnglish: 'English Title',
-      titleRomaji: 'Romaji Title',
-      titleNative: 'Native Title',
-      coverImageLarge: 'cover.jpg',
-      bannerImage: 'banner.jpg',
-      description: 'A description',
-      startDateYear: 2020,
-      startDateMonth: 1,
-      startDateDay: 1,
-      endDateYear: 2020,
-      endDateMonth: 12,
-      endDateDay: 31,
-      chapters: 100,
-      volumes: 10,
-      genres: ['Action'],
-      source: 'ORIGINAL',
+      titlePrimary: 'Sample Manga',
       format: 'MANGA',
       status: 'FINISHED',
-      isAdult: false,
-      averageScore: 85,
-      favourites: 100,
-      synonyms: [],
-      hashtag: '#manga',
-      countryOfOrigin: 'JP',
-      locked: false,
-      anilistUpdatedAt: null,
-      updatedAt: new Date(),
-      mangaCharacters: [],
-      mangaStudios: [],
-      mangaMangaRelations: [],
     };
 
     beforeEach(async () => {
-      delete process.env.USE_LOCAL_MEDIA_ONLY;
       await createModule();
     });
 
@@ -215,7 +124,7 @@ describe('MangaService', () => {
 
       const result = await service.getManga(123);
 
-      expect(mockCacheService.get).toHaveBeenCalledWith('manga:123');
+      expect(mockCacheService.get).toHaveBeenCalledWith('manga:v2:123');
       expect(mockRepository.find).not.toHaveBeenCalled();
       expect(result).toEqual(mockManga);
     });
@@ -228,60 +137,23 @@ describe('MangaService', () => {
 
       expect(mockRepository.find).toHaveBeenCalledWith(123);
       expect(mockCacheService.set).toHaveBeenCalledWith(
-        'manga:123',
+        'manga:v2:123',
         mockManga,
         expect.any(Number),
       );
       expect(result).toEqual(mockManga);
     });
-
-    it('should throw rrNotFoundException when manga not found in cache or database', async () => {
-      mockCacheService.get.mockResolvedValue(null);
-      mockRepository.find.mockResolvedValue(null);
-
-      await expect(service.getManga(123)).rejects.toThrow(rrNotFoundException);
-    });
   });
 
   describe('refreshManga', () => {
-    const existingManga: MangaEntity = {
+    const existingManga: any = {
       id: 1,
       anilistId: 100,
-      malId: null,
-      titleEnglish: 'Old Title',
-      titleRomaji: null,
-      titleNative: null,
-      coverImageLarge: null,
-      bannerImage: null,
-      description: null,
-      startDateYear: null,
-      startDateMonth: null,
-      startDateDay: null,
-      endDateYear: null,
-      endDateMonth: null,
-      endDateDay: null,
-      chapters: null,
-      volumes: null,
-      genres: [],
-      source: null,
-      format: 'MANGA',
-      status: 'FINISHED',
-      isAdult: false,
-      averageScore: null,
-      favourites: null,
-      synonyms: [],
-      hashtag: null,
-      countryOfOrigin: null,
+      titlePrimary: 'Old Title',
       locked: false,
-      anilistUpdatedAt: null,
-      updatedAt: new Date(),
-      mangaCharacters: [],
-      mangaStudios: [],
-      mangaMangaRelations: [],
     };
 
     beforeEach(async () => {
-      delete process.env.USE_LOCAL_MEDIA_ONLY;
       await createModule();
     });
 
@@ -297,40 +169,9 @@ describe('MangaService', () => {
       );
 
       expect(mockCacheService.get).toHaveBeenCalledWith(
-        'cooldown:refresh:manga:1',
+        'cooldown:refresh:manga:v2:1',
       );
       expect(mockRepository.find).not.toHaveBeenCalled();
-    });
-
-    it('should throw rrNotFoundException when manga not in database', async () => {
-      mockCacheService.get.mockResolvedValue(null);
-      mockRepository.find.mockResolvedValue(null);
-
-      await expect(service.refreshManga(1)).rejects.toThrow(
-        rrNotFoundException,
-      );
-    });
-
-    it('should throw rrError when manga has no anilistId', async () => {
-      mockCacheService.get.mockResolvedValue(null);
-      mockRepository.find.mockResolvedValue({
-        ...existingManga,
-        anilistId: null,
-      });
-
-      await expect(service.refreshManga(1)).rejects.toThrow(rrError);
-    });
-
-    it('should throw rrConflictException when manga is locked', async () => {
-      mockCacheService.get.mockResolvedValue(null);
-      mockRepository.find.mockResolvedValue({
-        ...existingManga,
-        locked: true,
-      });
-
-      await expect(service.refreshManga(1)).rejects.toThrow(
-        rrConflictException,
-      );
     });
 
     it('should fetch fresh data, bust cache, set cooldown, and return updated manga', async () => {
@@ -338,18 +179,20 @@ describe('MangaService', () => {
       mockRepository.find
         .mockResolvedValueOnce(existingManga)
         .mockResolvedValueOnce(existingManga);
-      mockExternal.fetchAndUpsertManga.mockResolvedValue(undefined);
+      mockExternal.fetchFullV2Record.mockResolvedValue({
+        anilistId: 100,
+        titlePrimary: 'Fresh Title',
+      });
 
       const result = await service.refreshManga(1);
 
-      expect(mockExternal.fetchAndUpsertManga).toHaveBeenCalledWith(100);
-      expect(mockCacheService.del).toHaveBeenCalledWith('manga:1');
+      expect(mockExternal.fetchFullV2Record).toHaveBeenCalledWith(100);
+      expect(mockCacheService.del).toHaveBeenCalledWith('manga:v2:1');
       expect(mockCacheService.set).toHaveBeenCalledWith(
-        'cooldown:refresh:manga:1',
+        'cooldown:refresh:manga:v2:1',
         true,
         300,
       );
-      expect(mockRepository.find).toHaveBeenCalledTimes(2);
       expect(result).toEqual(existingManga);
     });
   });

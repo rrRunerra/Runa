@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../providers/database/prisma.service';
-import { AnimeFormat, AnimeStatus, MangaFormat, MangaStatus, Prisma } from '@runa/database';
+import { AnimeFormat, AnimeStatus, MangaFormat, MangaStatus, MovieStatus, TvStatus, Prisma } from '@runa/database';
 import { rrError } from 'src/providers/error';
 import { DiscoverItemEntity, CalendarItemEntity } from './discover.entity';
 import { DiscoverQueryDto } from './discover.dto';
@@ -17,60 +17,59 @@ export class DiscoverRepository {
       let years: (number | null)[] = [];
 
       if (type === 'anime') {
-        const data = await this.prisma.client.aquilaAnime.findMany({
-          where: { startDateYear: { not: null } },
+        const data = await this.prisma.client.aquilaAnimeV2.findMany({
           select: { startDateYear: true },
           distinct: ['startDateYear'],
           orderBy: { startDateYear: 'desc' },
         });
         years = data.map((d) => d.startDateYear);
       } else if (type === 'manga') {
-        const data = await this.prisma.client.aquilaManga.findMany({
-          where: { startDateYear: { not: null } },
+        const data = await this.prisma.client.aquilaMangaV2.findMany({
+          where: { NOT: { startDateYear: null } },
           select: { startDateYear: true },
           distinct: ['startDateYear'],
           orderBy: { startDateYear: 'desc' },
         });
         years = data.map((d) => d.startDateYear);
       } else if (type === 'movie') {
-        const data = await this.prisma.client.aquilaMovie.findMany({
-          where: { startDateYear: { not: null } },
-          select: { startDateYear: true },
-          distinct: ['startDateYear'],
-          orderBy: { startDateYear: 'desc' },
+        const data = await this.prisma.client.aquilaMovieV2.findMany({
+          where: { NOT: { releaseDateYear: null } },
+          select: { releaseDateYear: true },
+          distinct: ['releaseDateYear'],
+          orderBy: { releaseDateYear: 'desc' },
         });
-        years = data.map((d) => d.startDateYear);
+        years = data.map((d) => d.releaseDateYear);
       } else if (type === 'tv') {
-        const data = await this.prisma.client.aquilaTv.findMany({
-          where: { startDateYear: { not: null } },
-          select: { startDateYear: true },
-          distinct: ['startDateYear'],
-          orderBy: { startDateYear: 'desc' },
+        const data = await this.prisma.client.aquilaTvV2.findMany({
+          where: { NOT: { firstAiredYear: null } },
+          select: { firstAiredYear: true },
+          distinct: ['firstAiredYear'],
+          orderBy: { firstAiredYear: 'desc' },
         });
-        years = data.map((d) => d.startDateYear);
+        years = data.map((d) => d.firstAiredYear);
       } else if (type === 'game') {
-        const data = await this.prisma.client.aquilaGame.findMany({
-          where: { releasedYear: { not: null } },
-          select: { releasedYear: true },
-          distinct: ['releasedYear'],
-          orderBy: { releasedYear: 'desc' },
+        const data = await this.prisma.client.aquilaGameV2.findMany({
+          where: { NOT: { releaseDateYear: null } },
+          select: { releaseDateYear: true },
+          distinct: ['releaseDateYear'],
+          orderBy: { releaseDateYear: 'desc' },
         });
-        years = data.map((d) => d.releasedYear);
+        years = data.map((d) => d.releaseDateYear);
       } else if (type === 'book') {
-        const data = await this.prisma.client.aquilaBook.findMany({
-          where: { publishedYear: { not: null } },
-          select: { publishedYear: true },
-          distinct: ['publishedYear'],
-          orderBy: { publishedYear: 'desc' },
+        const data = await this.prisma.client.aquilaBookV2.findMany({
+          where: { NOT: { releaseDateYear: null } },
+          select: { releaseDateYear: true },
+          distinct: ['releaseDateYear'],
+          orderBy: { releaseDateYear: 'desc' },
         });
-        years = data.map((d) => d.publishedYear);
+        years = data.map((d) => d.releaseDateYear);
       }
 
       return years.filter((y): y is number => y !== null);
     } catch (err: any) {
-      this.logger.error(`Failed to get distinct years: ${err.message}`);
+      this.logger.error(`Failed to get years for ${type}: ${err.message}`);
       throw new rrError(`${this.moduleCode}FTGDY001`, {
-        message: 'Failed to get distinct years from database',
+        message: `Failed to fetch discover years for ${type}`,
       });
     }
   }
@@ -82,16 +81,14 @@ export class DiscoverRepository {
       } else if (type === 'manga') {
         return Object.values(MangaStatus);
       } else if (type === 'movie') {
-        const data = await this.prisma.client.aquilaMovie.findMany({
-          where: { status: { not: null } },
+        const data = await this.prisma.client.aquilaMovieV2.findMany({
           select: { status: true },
           distinct: ['status'],
           orderBy: { status: 'asc' },
         });
         return data.map((d) => d.status as string).filter(Boolean);
       } else if (type === 'tv') {
-        const data = await this.prisma.client.aquilaTv.findMany({
-          where: { status: { not: null } },
+        const data = await this.prisma.client.aquilaTvV2.findMany({
           select: { status: true },
           distinct: ['status'],
           orderBy: { status: 'asc' },
@@ -151,7 +148,7 @@ export class DiscoverRepository {
     limit: number,
   ): Promise<{ items: DiscoverItemEntity[]; totalCount: number }> {
     const { year, format, status, search, sort, addedWithin } = query;
-    const where: Prisma.AquilaAnimeWhereInput = {};
+    const where: Prisma.AquilaAnimeV2WhereInput = {};
 
     if (addedWithin) {
       const days = Number(addedWithin);
@@ -166,14 +163,14 @@ export class DiscoverRepository {
     if (format) where.format = format as AnimeFormat;
     if (status) where.status = status as AnimeStatus;
     if (search) {
-      const searchStr = search.trim().split(/\s+/).join(' & ');
+      const searchStr = search.trim();
       where.OR = [
-        { titleEnglish: { search: searchStr } },
-        { titleRomaji: { search: searchStr } },
+        { titlePrimary: { contains: searchStr, mode: 'insensitive' } },
+        { titleSecondary: { contains: searchStr, mode: 'insensitive' } },
       ];
     }
 
-    let orderBy: Prisma.AquilaAnimeOrderByWithRelationInput[] = [];
+    let orderBy: Prisma.AquilaAnimeV2OrderByWithRelationInput[] = [];
     if (sort === 'latest') {
       orderBy = [{ startDateYear: 'desc' }, { startDateMonth: 'desc' }, { startDateDay: 'desc' }];
     } else if (sort === 'oldest') {
@@ -181,26 +178,26 @@ export class DiscoverRepository {
     } else if (sort === 'score') {
       orderBy = [{ averageScore: 'desc' }, { id: 'desc' }];
     } else if (sort === 'alphabetical') {
-      orderBy = [{ titleEnglish: 'asc' }, { titleRomaji: 'asc' }];
+      orderBy = [{ titlePrimary: 'asc' }, { titleSecondary: 'asc' }];
     } else {
       orderBy = [{ id: 'desc' }];
     }
 
     const [data, totalCount] = await Promise.all([
-      this.prisma.client.aquilaAnime.findMany({
+      this.prisma.client.aquilaAnimeV2.findMany({
         where,
         skip,
         take: limit,
         orderBy,
       }),
-      this.prisma.client.aquilaAnime.count({ where }),
+      this.prisma.client.aquilaAnimeV2.count({ where }),
     ]);
 
     const items = data.map((item) => ({
       id: item.id,
-      title: item.titleEnglish || item.titleRomaji || '',
-      secondaryTitle: item.titleRomaji || null,
-      coverImage: item.coverImageLarge || null,
+      title: item.titlePrimary || item.titleSecondary || '',
+      secondaryTitle: item.titleSecondary || null,
+      coverImage: item.coverImage || null,
       format: item.format,
       status: item.status,
       isAdult: item.isAdult ?? false,
@@ -217,7 +214,7 @@ export class DiscoverRepository {
     limit: number,
   ): Promise<{ items: DiscoverItemEntity[]; totalCount: number }> {
     const { year, format, status, search, sort, addedWithin } = query;
-    const where: Prisma.AquilaMangaWhereInput = {};
+    const where: Prisma.AquilaMangaV2WhereInput = {};
 
     if (addedWithin) {
       const days = Number(addedWithin);
@@ -232,14 +229,14 @@ export class DiscoverRepository {
     if (format) where.format = format as MangaFormat;
     if (status) where.status = status as MangaStatus;
     if (search) {
-      const searchStr = search.trim().split(/\s+/).join(' & ');
+      const searchStr = search.trim();
       where.OR = [
-        { titleEnglish: { search: searchStr } },
-        { titleRomaji: { search: searchStr } },
+        { titlePrimary: { contains: searchStr, mode: 'insensitive' } },
+        { titleSecondary: { contains: searchStr, mode: 'insensitive' } },
       ];
     }
 
-    let orderBy: Prisma.AquilaMangaOrderByWithRelationInput[] = [];
+    let orderBy: Prisma.AquilaMangaV2OrderByWithRelationInput[] = [];
     if (sort === 'latest') {
       orderBy = [{ startDateYear: 'desc' }, { startDateMonth: 'desc' }, { startDateDay: 'desc' }];
     } else if (sort === 'oldest') {
@@ -247,26 +244,26 @@ export class DiscoverRepository {
     } else if (sort === 'score') {
       orderBy = [{ averageScore: 'desc' }, { id: 'desc' }];
     } else if (sort === 'alphabetical') {
-      orderBy = [{ titleEnglish: 'asc' }, { titleRomaji: 'asc' }];
+      orderBy = [{ titlePrimary: 'asc' }, { titleSecondary: 'asc' }];
     } else {
       orderBy = [{ id: 'desc' }];
     }
 
     const [data, totalCount] = await Promise.all([
-      this.prisma.client.aquilaManga.findMany({
+      this.prisma.client.aquilaMangaV2.findMany({
         where,
         skip,
         take: limit,
         orderBy,
       }),
-      this.prisma.client.aquilaManga.count({ where }),
+      this.prisma.client.aquilaMangaV2.count({ where }),
     ]);
 
     const items = data.map((item) => ({
       id: item.id,
-      title: item.titleEnglish || item.titleRomaji || '',
-      secondaryTitle: item.titleRomaji || null,
-      coverImage: item.coverImageLarge || null,
+      title: item.titlePrimary || item.titleSecondary || '',
+      secondaryTitle: item.titleSecondary || null,
+      coverImage: item.coverImage || null,
       format: item.format,
       status: item.status,
       isAdult: item.isAdult ?? false,
@@ -283,7 +280,7 @@ export class DiscoverRepository {
     limit: number,
   ): Promise<{ items: DiscoverItemEntity[]; totalCount: number }> {
     const { year, status, search, sort, addedWithin } = query;
-    const where: Prisma.AquilaMovieWhereInput = {};
+    const where: Prisma.AquilaMovieV2WhereInput = {};
 
     if (addedWithin) {
       const days = Number(addedWithin);
@@ -294,47 +291,47 @@ export class DiscoverRepository {
       }
     }
 
-    if (year) where.startDateYear = Number(year);
-    if (status) where.status = status;
+    if (year) where.releaseDateYear = Number(year);
+    if (status) where.status = status as MovieStatus;
     if (search) {
-      const searchStr = search.trim().split(/\s+/).join(' & ');
+      const searchStr = search.trim();
       where.OR = [
-        { titleEnglish: { search: searchStr } },
-        { titleRomaji: { search: searchStr } },
+        { titlePrimary: { contains: searchStr, mode: 'insensitive' } },
+        { titleSecondary: { contains: searchStr, mode: 'insensitive' } },
       ];
     }
 
-    let orderBy: Prisma.AquilaMovieOrderByWithRelationInput[] = [];
+    let orderBy: Prisma.AquilaMovieV2OrderByWithRelationInput[] = [];
     if (sort === 'latest') {
-      orderBy = [{ startDateYear: 'desc' }, { startDateMonth: 'desc' }, { startDateDay: 'desc' }];
+      orderBy = [{ releaseDateYear: 'desc' }, { releaseDateMonth: 'desc' }, { releaseDateDay: 'desc' }];
     } else if (sort === 'oldest') {
-      orderBy = [{ startDateYear: 'asc' }, { startDateMonth: 'asc' }, { startDateDay: 'asc' }];
+      orderBy = [{ releaseDateYear: 'asc' }, { releaseDateMonth: 'asc' }, { releaseDateDay: 'asc' }];
     } else if (sort === 'alphabetical') {
-      orderBy = [{ titleEnglish: 'asc' }, { titleRomaji: 'asc' }];
+      orderBy = [{ titlePrimary: 'asc' }, { titleSecondary: 'asc' }];
     } else {
       orderBy = [{ id: 'desc' }];
     }
 
     const [data, totalCount] = await Promise.all([
-      this.prisma.client.aquilaMovie.findMany({
+      this.prisma.client.aquilaMovieV2.findMany({
         where,
         skip,
         take: limit,
         orderBy,
       }),
-      this.prisma.client.aquilaMovie.count({ where }),
+      this.prisma.client.aquilaMovieV2.count({ where }),
     ]);
 
     const items = data.map((item) => ({
       id: item.id,
-      title: item.titleEnglish || item.titleRomaji || '',
-      secondaryTitle: item.titleRomaji || null,
+      title: item.titlePrimary || item.titleSecondary || '',
+      secondaryTitle: item.titleSecondary || null,
       coverImage: item.coverImage || null,
       format: 'MOVIE',
       status: item.status,
       isAdult: false,
-      year: item.startDateYear,
-      averageScore: null,
+      year: item.releaseDateYear,
+      averageScore: item.averageScore || null,
     }));
 
     return { items, totalCount };
@@ -346,7 +343,7 @@ export class DiscoverRepository {
     limit: number,
   ): Promise<{ items: DiscoverItemEntity[]; totalCount: number }> {
     const { year, status, search, sort, addedWithin } = query;
-    const where: Prisma.AquilaTvWhereInput = {};
+    const where: Prisma.AquilaTvV2WhereInput = {};
 
     if (addedWithin) {
       const days = Number(addedWithin);
@@ -357,47 +354,47 @@ export class DiscoverRepository {
       }
     }
 
-    if (year) where.startDateYear = Number(year);
-    if (status) where.status = status;
+    if (year) where.firstAiredYear = Number(year);
+    if (status) where.status = status as TvStatus;
     if (search) {
-      const searchStr = search.trim().split(/\s+/).join(' & ');
+      const searchStr = search.trim();
       where.OR = [
-        { titleEnglish: { search: searchStr } },
-        { titleRomaji: { search: searchStr } },
+        { titlePrimary: { contains: searchStr, mode: 'insensitive' } },
+        { titleSecondary: { contains: searchStr, mode: 'insensitive' } },
       ];
     }
 
-    let orderBy: Prisma.AquilaTvOrderByWithRelationInput[] = [];
+    let orderBy: Prisma.AquilaTvV2OrderByWithRelationInput[] = [];
     if (sort === 'latest') {
-      orderBy = [{ startDateYear: 'desc' }, { startDateMonth: 'desc' }, { startDateDay: 'desc' }];
+      orderBy = [{ firstAiredYear: 'desc' }, { firstAiredMonth: 'desc' }, { firstAiredDay: 'desc' }];
     } else if (sort === 'oldest') {
-      orderBy = [{ startDateYear: 'asc' }, { startDateMonth: 'asc' }, { startDateDay: 'asc' }];
+      orderBy = [{ firstAiredYear: 'asc' }, { firstAiredMonth: 'asc' }, { firstAiredDay: 'asc' }];
     } else if (sort === 'alphabetical') {
-      orderBy = [{ titleEnglish: 'asc' }, { titleRomaji: 'asc' }];
+      orderBy = [{ titlePrimary: 'asc' }, { titleSecondary: 'asc' }];
     } else {
       orderBy = [{ id: 'desc' }];
     }
 
     const [data, totalCount] = await Promise.all([
-      this.prisma.client.aquilaTv.findMany({
+      this.prisma.client.aquilaTvV2.findMany({
         where,
         skip,
         take: limit,
         orderBy,
       }),
-      this.prisma.client.aquilaTv.count({ where }),
+      this.prisma.client.aquilaTvV2.count({ where }),
     ]);
 
     const items = data.map((item) => ({
       id: item.id,
-      title: item.titleEnglish || item.titleRomaji || '',
-      secondaryTitle: item.titleRomaji || null,
+      title: item.titlePrimary || item.titleSecondary || '',
+      secondaryTitle: item.titleSecondary || null,
       coverImage: item.coverImage || null,
       format: 'TV',
       status: item.status,
       isAdult: false,
-      year: item.startDateYear,
-      averageScore: null,
+      year: item.firstAiredYear,
+      averageScore: item.averageScore || null,
     }));
 
     return { items, totalCount };
@@ -409,7 +406,7 @@ export class DiscoverRepository {
     limit: number,
   ): Promise<{ items: DiscoverItemEntity[]; totalCount: number }> {
     const { year, search, sort, addedWithin } = query;
-    const where: Prisma.AquilaGameWhereInput = {};
+    const where: Prisma.AquilaGameV2WhereInput = {};
 
     if (addedWithin) {
       const days = Number(addedWithin);
@@ -420,46 +417,46 @@ export class DiscoverRepository {
       }
     }
 
-    if (year) where.releasedYear = Number(year);
+    if (year) where.releaseDateYear = Number(year);
     if (search) {
-      const searchStr = search.trim().split(/\s+/).join(' & ');
+      const searchStr = search.trim();
       where.OR = [
-        { titleString: { search: searchStr } },
+        { titlePrimary: { contains: searchStr, mode: 'insensitive' } },
       ];
     }
 
-    let orderBy: Prisma.AquilaGameOrderByWithRelationInput[] = [];
+    let orderBy: Prisma.AquilaGameV2OrderByWithRelationInput[] = [];
     if (sort === 'latest') {
-      orderBy = [{ releasedYear: 'desc' }, { releasedMonth: 'desc' }, { releasedDay: 'desc' }];
+      orderBy = [{ releaseDateYear: 'desc' }, { releaseDateMonth: 'desc' }, { releaseDateDay: 'desc' }];
     } else if (sort === 'oldest') {
-      orderBy = [{ releasedYear: 'asc' }, { releasedMonth: 'asc' }, { releasedDay: 'asc' }];
+      orderBy = [{ releaseDateYear: 'asc' }, { releaseDateMonth: 'asc' }, { releaseDateDay: 'asc' }];
     } else if (sort === 'score') {
       orderBy = [{ averageScore: 'desc' }, { id: 'desc' }];
     } else if (sort === 'alphabetical') {
-      orderBy = [{ titleString: 'asc' }];
+      orderBy = [{ titlePrimary: 'asc' }];
     } else {
       orderBy = [{ id: 'desc' }];
     }
 
     const [data, totalCount] = await Promise.all([
-      this.prisma.client.aquilaGame.findMany({
+      this.prisma.client.aquilaGameV2.findMany({
         where,
         skip,
         take: limit,
         orderBy,
       }),
-      this.prisma.client.aquilaGame.count({ where }),
+      this.prisma.client.aquilaGameV2.count({ where }),
     ]);
 
     const items = data.map((item) => ({
       id: item.id,
-      title: item.titleString || item.titleNative || '',
+      title: item.titlePrimary || item.titleNative || '',
       secondaryTitle: item.titleNative || null,
       coverImage: item.coverImage || item.backgroundImage || null,
       format: 'GAME',
       status: null,
       isAdult: false,
-      year: item.releasedYear,
+      year: item.releaseDateYear,
       averageScore: item.averageScore || null,
     }));
 
@@ -472,7 +469,7 @@ export class DiscoverRepository {
     limit: number,
   ): Promise<{ items: DiscoverItemEntity[]; totalCount: number }> {
     const { year, search, sort, addedWithin } = query;
-    const where: Prisma.AquilaBookWhereInput = {};
+    const where: Prisma.AquilaBookV2WhereInput = {};
 
     if (addedWithin) {
       const days = Number(addedWithin);
@@ -483,47 +480,47 @@ export class DiscoverRepository {
       }
     }
 
-    if (year) where.publishedYear = Number(year);
+    if (year) where.releaseDateYear = Number(year);
     if (search) {
-      const searchStr = search.trim().split(/\s+/).join(' & ');
+      const searchStr = search.trim();
       where.OR = [
-        { titleString: { search: searchStr } },
+        { titlePrimary: { contains: searchStr, mode: 'insensitive' } },
       ];
     }
 
-    let orderBy: Prisma.AquilaBookOrderByWithRelationInput[] = [];
+    let orderBy: Prisma.AquilaBookV2OrderByWithRelationInput[] = [];
     if (sort === 'latest') {
-      orderBy = [{ publishedYear: 'desc' }, { publishedMonth: 'desc' }, { publishedDay: 'desc' }];
+      orderBy = [{ releaseDateYear: 'desc' }, { releaseDateMonth: 'desc' }, { releaseDateDay: 'desc' }];
     } else if (sort === 'oldest') {
-      orderBy = [{ publishedYear: 'asc' }, { publishedMonth: 'asc' }, { publishedDay: 'asc' }];
+      orderBy = [{ releaseDateYear: 'asc' }, { releaseDateMonth: 'asc' }, { releaseDateDay: 'asc' }];
     } else if (sort === 'score') {
-      orderBy = [{ averageRating: 'desc' }, { id: 'desc' }];
+      orderBy = [{ averageScore: 'desc' }, { id: 'desc' }];
     } else if (sort === 'alphabetical') {
-      orderBy = [{ titleString: 'asc' }];
+      orderBy = [{ titlePrimary: 'asc' }];
     } else {
       orderBy = [{ id: 'desc' }];
     }
 
     const [data, totalCount] = await Promise.all([
-      this.prisma.client.aquilaBook.findMany({
+      this.prisma.client.aquilaBookV2.findMany({
         where,
         skip,
         take: limit,
         orderBy,
       }),
-      this.prisma.client.aquilaBook.count({ where }),
+      this.prisma.client.aquilaBookV2.count({ where }),
     ]);
 
     const items = data.map((item) => ({
       id: item.id,
-      title: item.titleString || '',
+      title: item.titlePrimary || '',
       secondaryTitle: item.subtitle || null,
       coverImage: item.coverImage || null,
       format: 'BOOK',
       status: null,
       isAdult: false,
-      year: item.publishedYear,
-      averageScore: item.averageRating || null,
+      year: item.releaseDateYear,
+      averageScore: item.averageScore || null,
     }));
 
     return { items, totalCount };
@@ -547,27 +544,27 @@ export class DiscoverRepository {
 
       if (username) {
         const [animeUserLists, mangaUserLists, tvUserLists, gameUserLists, bookUserLists, movieUserLists] = await Promise.all([
-          this.prisma.client.aquilaAnimeUserList.findMany({
+          this.prisma.client.aquilaAnimeUserListV2.findMany({
             where: { username: username.toLowerCase(), status: { in: ['WATCHING', 'PLANNING'] } },
             include: { anime: true },
           }),
-          this.prisma.client.aquilaMangaUserList.findMany({
+          this.prisma.client.aquilaMangaUserListV2.findMany({
             where: { username: username.toLowerCase(), status: { in: ['READING', 'PLANNING'] } },
             include: { manga: true },
           }),
-          this.prisma.client.aquilaTvUserList.findMany({
+          this.prisma.client.aquilaTvUserListV2.findMany({
             where: { username: username.toLowerCase(), status: { in: ['WATCHING', 'PLANNING'] } },
             include: { tv: true },
           }),
-          this.prisma.client.aquilaGameUserList.findMany({
+          this.prisma.client.aquilaGameUserListV2.findMany({
             where: { username: username.toLowerCase(), status: { in: ['PLAYING', 'PLANNING'] } },
             include: { game: true },
           }),
-          this.prisma.client.aquilaBookUserList.findMany({
+          this.prisma.client.aquilaBookUserListV2.findMany({
             where: { username: username.toLowerCase(), status: { in: ['READING', 'PLANNING'] } },
-            include: { book: true },
+            // include: { book: true },
           }),
-          this.prisma.client.aquilaMovieUserList.findMany({
+          this.prisma.client.aquilaMovieUserListV2.findMany({
             where: { username: username.toLowerCase(), status: { in: ['PLANNING'] } },
             include: { movie: true },
           }),
@@ -577,11 +574,11 @@ export class DiscoverRepository {
         mangaList = mangaUserLists.map((l) => l.manga);
         tvList = tvUserLists.map((l) => l.tv);
         gameList = gameUserLists.map((l) => l.game);
-        bookList = bookUserLists.map((l) => l.book);
+        // bookList = bookUserLists.map((l) => l.book);
         movieList = movieUserLists.map((l) => l.movie);
       } else {
         const [animes, mangas, tvs, movies, games, books] = await Promise.all([
-          this.prisma.client.aquilaAnime.findMany({
+          this.prisma.client.aquilaAnimeV2.findMany({
             where: {
               OR: [
                 { startDateYear: { gte: startYear, lte: endYear } },
@@ -589,18 +586,18 @@ export class DiscoverRepository {
               ],
             },
           }),
-          this.prisma.client.aquilaManga.findMany({
+          this.prisma.client.aquilaMangaV2.findMany({
             where: { startDateYear: { gte: startYear, lte: endYear } },
           }),
-          this.prisma.client.aquilaTv.findMany(),
-          this.prisma.client.aquilaMovie.findMany({
-            where: { startDateYear: { gte: startYear, lte: endYear } },
+          this.prisma.client.aquilaTvV2.findMany(),
+          this.prisma.client.aquilaMovieV2.findMany({
+            where: { releaseDateYear: { gte: startYear, lte: endYear } },
           }),
-          this.prisma.client.aquilaGame.findMany({
-            where: { releasedYear: { gte: startYear, lte: endYear } },
+          this.prisma.client.aquilaGameV2.findMany({
+            where: { releaseDateYear: { gte: startYear, lte: endYear } },
           }),
-          this.prisma.client.aquilaBook.findMany({
-            where: { publishedYear: { gte: startYear, lte: endYear } },
+          this.prisma.client.aquilaBookV2.findMany({
+            where: { releaseDateYear: { gte: startYear, lte: endYear } },
           }),
         ]);
 
@@ -833,16 +830,14 @@ export class DiscoverRepository {
     limit: number,
   ): Promise<{ items: DiscoverItemEntity[]; totalCount: number }> {
     const { search } = query;
-    const where: Prisma.AquilaCharacterWhereInput = {};
+    const where: Prisma.AquilaCharacterV2WhereInput = {};
 
     if (search) {
       const searchStr = search.trim();
       const words = searchStr.split(/\s+/).filter(Boolean);
 
-      const searchConditions: Prisma.AquilaCharacterWhereInput[] = [
-        { nameFirst: { contains: searchStr, mode: 'insensitive' } },
-        { nameMiddle: { contains: searchStr, mode: 'insensitive' } },
-        { nameLast: { contains: searchStr, mode: 'insensitive' } },
+      const searchConditions: Prisma.AquilaCharacterV2WhereInput[] = [
+        { namePrimary: { contains: searchStr, mode: 'insensitive' } },
         { nameNative: { contains: searchStr, mode: 'insensitive' } },
         { nameAlternative: { hasSome: [searchStr] } },
       ];
@@ -851,9 +846,7 @@ export class DiscoverRepository {
         searchConditions.push({
           AND: words.map((word) => ({
             OR: [
-              { nameFirst: { contains: word, mode: 'insensitive' } },
-              { nameMiddle: { contains: word, mode: 'insensitive' } },
-              { nameLast: { contains: word, mode: 'insensitive' } },
+              { namePrimary: { contains: word, mode: 'insensitive' } },
               { nameNative: { contains: word, mode: 'insensitive' } },
               { nameAlternative: { hasSome: [word] } },
             ],
@@ -865,18 +858,18 @@ export class DiscoverRepository {
     }
 
     const [data, totalCount] = await Promise.all([
-      this.prisma.client.aquilaCharacter.findMany({
+      this.prisma.client.aquilaCharacterV2.findMany({
         where,
         skip,
         take: limit,
-        orderBy: { nameFirst: 'asc' },
+        orderBy: { namePrimary: 'asc' },
       }),
-      this.prisma.client.aquilaCharacter.count({ where }),
+      this.prisma.client.aquilaCharacterV2.count({ where }),
     ]);
 
     const items = data.map((item) => ({
       id: item.id,
-      title: [item.nameFirst, item.nameMiddle, item.nameLast].filter(Boolean).join(' ') || item.nameNative || 'Unknown Character',
+      title: item.namePrimary || item.nameNative || 'Unknown Character',
       secondaryTitle: item.nameNative || null,
       coverImage: item.image || null,
       format: item.gender || 'Character',
@@ -893,23 +886,25 @@ export class DiscoverRepository {
     limit: number,
   ): Promise<{ items: DiscoverItemEntity[]; totalCount: number }> {
     const { search } = query;
-    const where: Prisma.AquilaActorWhereInput = {};
+    const where: Prisma.AquilaActorV2WhereInput = {};
 
     if (search) {
       const searchStr = search.trim();
       const words = searchStr.split(/\s+/).filter(Boolean);
 
-      const searchConditions: Prisma.AquilaActorWhereInput[] = [
-        { name: { contains: searchStr, mode: 'insensitive' } },
-        { personName: { contains: searchStr, mode: 'insensitive' } },
+      const searchConditions: Prisma.AquilaActorV2WhereInput[] = [
+        { namePrimary: { contains: searchStr, mode: 'insensitive' } },
+        { nameNative: { contains: searchStr, mode: 'insensitive' } },
+        { nameAlternative: { hasSome: [searchStr] } },
       ];
 
       if (words.length > 1) {
         searchConditions.push({
           AND: words.map((word) => ({
             OR: [
-              { name: { contains: word, mode: 'insensitive' } },
-              { personName: { contains: word, mode: 'insensitive' } },
+              { namePrimary: { contains: word, mode: 'insensitive' } },
+              { nameNative: { contains: word, mode: 'insensitive' } },
+              { nameAlternative: { hasSome: [word] } },
             ],
           })),
         });
@@ -919,21 +914,21 @@ export class DiscoverRepository {
     }
 
     const [data, totalCount] = await Promise.all([
-      this.prisma.client.aquilaActor.findMany({
+      this.prisma.client.aquilaActorV2.findMany({
         where,
         skip,
         take: limit,
-        orderBy: { name: 'asc' },
+        orderBy: { namePrimary: 'asc' },
       }),
-      this.prisma.client.aquilaActor.count({ where }),
+      this.prisma.client.aquilaActorV2.count({ where }),
     ]);
 
     const items = data.map((item) => ({
       id: item.id,
-      title: item.name || item.personName || 'Unknown Actor',
-      secondaryTitle: item.personName || null,
+      title: item.namePrimary || item.nameNative || 'Unknown Actor',
+      secondaryTitle: item.nameNative || null,
       coverImage: item.image || null,
-      format: item.peopleType || 'Actor',
+      format: 'Actor',
       status: null,
       isAdult: false,
     }));

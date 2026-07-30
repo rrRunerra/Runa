@@ -1,7 +1,17 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { Star, Heart, Users, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Star,
+  Heart,
+  Users,
+  ChevronDown,
+  ChevronUp,
+  LayoutGrid,
+  UserCheck,
+  BarChart3,
+  ImageIcon,
+} from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -12,6 +22,7 @@ import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 import { fetcher } from "@/lib/fetcher";
 import { RrMediaEditDialog } from "@/components/rrComponents/aquila/rrMediaEditDialog";
@@ -22,11 +33,17 @@ import { RrMediaInfoRow } from "@/components/rrComponents/aquila/details/rrMedia
 import { RrMediaFriendsProgress } from "@/components/rrComponents/aquila/details/rrMediaFriendsProgress";
 import { RrMediaDescription } from "@/components/rrComponents/aquila/details/rrMediaDescription";
 import { RrMediaGenres } from "@/components/rrComponents/aquila/details/rrMediaGenres";
+import { RrMediaCharacters } from "@/components/rrComponents/aquila/details/rrMediaCharacters";
+import { RrMediaStaff } from "@/components/rrComponents/aquila/details/rrMediaStaff";
+import { RrMediaRelations } from "@/components/rrComponents/aquila/details/rrMediaRelations";
 import { RrMediaStatsDashboard } from "@/components/rrComponents/aquila/details/rrMediaStatsDashboard";
 import { RrMediaSimilar } from "@/components/rrComponents/aquila/details/rrMediaSimilar";
-
+import { RrMediaImages } from "@/components/rrComponents/aquila/details/rrMediaImages";
 import { RrMediaFooter } from "@/components/rrComponents/aquila/details/rrMediaFooter";
 import { RrMediaDetailsSkeleton } from "@/components/rrComponents/aquila/details/rrMediaDetailsSkeleton";
+import { RrMediaReviews } from "@/components/rrComponents/aquila/details/rrMediaReviews";
+import { MessageSquare } from "lucide-react";
+import { MediaType } from "@/types/aquila";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
@@ -79,7 +96,6 @@ export default function BookDetailsPage(): React.JSX.Element {
   const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
   const [showMoreInfo, setShowMoreInfo] = useState<boolean>(false);
 
-  // SWR queries replacing sequential imperative fetching
   const {
     data: book,
     error: bookError,
@@ -103,60 +119,179 @@ export default function BookDetailsPage(): React.JSX.Element {
 
   const hasListEntry = !!listEntry;
 
-  const displayTitle = book?.titleString ?? t("aquila.bookDetails");
+  // ─── Display Titles & Images ─────────────────────────────────────────────
+
+  const displayTitle =
+    book?.titlePrimary || book?.titleSecondary || t("aquila.bookDetails");
+
   const displaySubtitle = book?.subtitle ?? null;
   const coverUrl = book?.coverImage ?? "";
+  const bannerUrl = book?.bannerImage ?? "";
+
+  // ─── External Sources & Providers ───────────────────────────────────────
 
   const providers = useMemo(() => {
+    if (!book) return [];
     const list: { name: string; url: string }[] = [];
-    if (book?.infoLink) {
-      list.push({
-        name: "Google Books",
-        url: book.infoLink,
-      });
+    const seenUrls = new Set<string>();
+
+    const addProvider = (name: string, url?: string | null): void => {
+      if (!url || seenUrls.has(url)) return;
+      seenUrls.add(url);
+      list.push({ name, url });
+    };
+
+    if (book.infoLink) addProvider("Google Books", book.infoLink);
+    if (book.previewLink) addProvider("Preview", book.previewLink);
+    if (book.website) addProvider("Official Site", book.website);
+
+    if (book.sources) {
+      for (const src of book.sources) {
+        if (src.url && src.provider) {
+          addProvider(src.provider, src.url);
+        }
+      }
     }
+
     return list;
   }, [book]);
 
-  const formattedPublishedDate = useMemo((): string | null => {
-    if (!book?.publishedDate) return null;
+  // ─── Formatted Release Date ──────────────────────────────────────────────
+
+  const formattedReleaseDate = useMemo((): string | null => {
+    if (!book?.releaseDateYear && !book?.releaseDate) return null;
+    const dateStr =
+      book.releaseDate ||
+      `${book.releaseDateYear}-${String(book.releaseDateMonth || 1).padStart(2, "0")}-${String(book.releaseDateDay || 1).padStart(2, "0")}`;
     try {
-      const date = new Date(book.publishedDate);
-      if (isNaN(date.getTime())) return book.publishedDate;
-      return date.toLocaleDateString("en-US", {
+      return new Date(dateStr).toLocaleDateString("en-US", {
         year: "numeric",
         month: "long",
         day: "numeric",
-        timeZone: "UTC",
       });
     } catch {
-      return book.publishedDate;
+      return String(dateStr);
     }
-  }, [book?.publishedDate]);
+  }, [book]);
+
+  // ─── Characters (V2 shape) ───────────────────────────────────────────────
+
+  const characters = useMemo(() => {
+    if (!book?.characters) return [];
+    return book.characters.map((bc: any) => {
+      const charName =
+        bc.namePrimary ||
+        bc.character?.namePrimary ||
+        bc.character?.nameNative ||
+        t("aquila.unknownCharacter");
+
+      const charImage = bc.image || bc.character?.image || "";
+      const actorObj = bc.actor;
+
+      return {
+        id: bc.id,
+        characterId: bc.characterId || bc.id,
+        name: charName,
+        native: bc.nameNative || bc.character?.nameNative || "",
+        image: charImage,
+        role: bc.role || "MAIN",
+        voiceActor: actorObj
+          ? {
+              id: actorObj.id,
+              name:
+                actorObj.namePrimary ||
+                actorObj.nameNative ||
+                t("aquila.unknownActor"),
+              image: actorObj.image || "",
+              role: actorObj.role || "Actor",
+            }
+          : null,
+      };
+    });
+  }, [book, t]);
+
+  // ─── Staff (V2 shape) ───────────────────────────────────────────────────
 
   const staff = useMemo(() => {
     if (!book) return [];
     const items: any[] = [];
-    if (book.authors) {
-      book.authors.forEach((author: string, idx: number) => {
+
+    if (book.staff && book.staff.length > 0) {
+      book.staff.forEach((st: any) => {
+        const person = st.actor || st.staff || st;
         items.push({
-          id: `author-${idx}`,
-          name: author,
-          role: t("aquila.author"),
+          id: st.id,
+          mediaType: "BOOK",
+          mediaId: Number(id),
+          staffId: person.id || st.id,
+          role: st.customRole || st.role || "Staff",
+          staff: {
+            id: person.id || st.id,
+            namePrimary: person.namePrimary || person.name || "",
+            nameNative: person.nameNative ?? "",
+            image: person.image ?? "",
+          },
         });
       });
-    }
-    if (book.artists) {
-      book.artists.forEach((artist: string, idx: number) => {
-        items.push({
-          id: `artist-${idx}`,
-          name: artist,
-          role: t("aquila.artist"),
+    } else {
+      if (book.authors) {
+        book.authors.forEach((author: string, idx: number) => {
+          items.push({
+            id: `author-${idx}`,
+            mediaType: "BOOK",
+            mediaId: Number(id),
+            staffId: idx,
+            role: t("aquila.author", "Author"),
+            staff: {
+              id: idx,
+              namePrimary: author,
+              nameNative: "",
+              image: "",
+            },
+          });
         });
-      });
+      }
     }
+
     return items;
-  }, [book, t]);
+  }, [book, id, t]);
+
+  // ─── Relations (V2 shape) ────────────────────────────────────────────────
+
+  const relations = useMemo(() => {
+    if (!book?.relations) return [];
+    return book.relations.map((rel: any) => {
+      const relType = rel.type ?? rel.relationType ?? "";
+      const mediaType = rel.targetType ?? "BOOK";
+      return {
+        id: rel.targetId || rel.id,
+        relationType: relType,
+        title: {
+          english: rel.titlePrimary ?? "",
+          romaji: rel.titleSecondary ?? "",
+          native: "",
+        },
+        format: rel.format ?? "BOOK",
+        type: mediaType,
+        coverImage: rel.coverImage ?? "",
+      };
+    });
+  }, [book]);
+
+  // ─── Publishers & Studios ────────────────────────────────────────────────
+
+  const publishers = useMemo(() => {
+    if (!book) return [];
+    const list: string[] = [];
+    if (book.publishers) list.push(...book.publishers);
+    if (book.studios) {
+      for (const st of book.studios) {
+        if (typeof st === "string") list.push(st);
+        else if (st?.name) list.push(st.name);
+      }
+    }
+    return Array.from(new Set(list));
+  }, [book]);
 
   useEffect((): void => {
     if (!book) return;
@@ -219,7 +354,18 @@ export default function BookDetailsPage(): React.JSX.Element {
       {/* Banner Section */}
       <div className="relative h-60 md:h-90 w-full overflow-hidden shrink-0 z-10">
         <div className="absolute inset-x-0 bottom-0 h-48 bg-linear-to-t from-background to-transparent z-10" />
-        <div className="w-full h-full bg-muted/10" />
+        {bannerUrl ? (
+          <Image
+            src={bannerUrl}
+            alt={displayTitle}
+            fill
+            sizes="100vw"
+            className="object-cover scale-105 filter blur-[1px] brightness-75"
+            priority
+          />
+        ) : (
+          <div className="w-full h-full bg-muted/10" />
+        )}
       </div>
 
       {/* Details layout container */}
@@ -340,11 +486,9 @@ export default function BookDetailsPage(): React.JSX.Element {
                     </span>
                     <div className="flex items-baseline gap-1 mt-0.5">
                       <span className="text-2xl font-black text-primary leading-none">
-                        {book.localAverageScore
-                          ? book.localAverageScore.toFixed(1)
-                          : book.averageRating
-                            ? book.averageRating.toFixed(1)
-                            : "N/A"}
+                        {book.localAverageScore ?? book.averageScore
+                          ? (book.localAverageScore ?? book.averageScore)?.toFixed(1)
+                          : "N/A"}
                       </span>
                       <span className="text-xs font-semibold text-muted-foreground">
                         / 10
@@ -367,12 +511,10 @@ export default function BookDetailsPage(): React.JSX.Element {
                       <span
                         className="text-base font-extrabold text-foreground tracking-tight leading-none mt-0.5"
                         title={
-                          book.localFavoritesCount != null
-                            ? book.localFavoritesCount.toLocaleString()
-                            : "0"
+                          (book.localFavoritesCount ?? book.favorites ?? 0).toLocaleString()
                         }
                       >
-                        {formatCompactNumber(book.localFavoritesCount)}
+                        {formatCompactNumber(book.localFavoritesCount ?? book.favorites)}
                       </span>
                     </div>
                   </div>
@@ -389,12 +531,10 @@ export default function BookDetailsPage(): React.JSX.Element {
                       <span
                         className="text-base font-extrabold text-foreground tracking-tight leading-none mt-0.5"
                         title={
-                          book.localPopularity != null
-                            ? book.localPopularity.toLocaleString()
-                            : "0"
+                          (book.localPopularity ?? book.popularity ?? 0).toLocaleString()
                         }
                       >
-                        {formatCompactNumber(book.localPopularity)}
+                        {formatCompactNumber(book.localPopularity ?? book.popularity)}
                       </span>
                     </div>
                   </div>
@@ -429,26 +569,41 @@ export default function BookDetailsPage(): React.JSX.Element {
                   {t("aquila.information")}
                 </h3>
                 <div className="space-y-3">
-                  <RrMediaInfoRow
-                    label={t("aquila.publisher")}
-                    value={book.publisher}
-                  />
+                  {publishers.length > 0 && (
+                    <RrMediaInfoRow
+                      label={t("aquila.publisher")}
+                      value={
+                        <span
+                          className="text-right text-xs max-w-37.5 truncate block"
+                          title={publishers.join(", ")}
+                        >
+                          {publishers.join(", ")}
+                        </span>
+                      }
+                    />
+                  )}
                   <RrMediaInfoRow
                     label={t("aquila.publishedDate")}
-                    value={formattedPublishedDate}
+                    value={formattedReleaseDate}
+                  />
+                  <RrMediaInfoRow
+                    label={t("aquila.pages")}
+                    value={book.pageCount}
                   />
                   <RrMediaInfoRow
                     label={t("aquila.chapters")}
-                    value={book.chapters}
+                    value={book.chapterCount}
                   />
                   <RrMediaInfoRow
-                    label={t("aquila.price")}
-                    value={
-                      book.retailPrice
-                        ? `${book.retailPrice} ${book.retailPriceCurrency || ""}`
-                        : null
-                    }
+                    label={t("aquila.volumes")}
+                    value={book.volumeCount}
                   />
+                  {book.retailPrice != null && (
+                    <RrMediaInfoRow
+                      label={t("aquila.price")}
+                      value={`${book.retailPrice} ${book.retailPriceCurrency || ""}`}
+                    />
+                  )}
                   <RrMediaInfoRow
                     label="ISBN-10"
                     value={book.isbn10}
@@ -460,12 +615,8 @@ export default function BookDetailsPage(): React.JSX.Element {
                     className="font-mono"
                   />
                   <RrMediaInfoRow
-                    label={t("aquila.pages")}
-                    value={book.pages}
-                  />
-                  <RrMediaInfoRow
                     label={t("aquila.language")}
-                    value={book.language}
+                    value={book.originalLanguage}
                     className="uppercase"
                   />
                 </div>
@@ -473,7 +624,7 @@ export default function BookDetailsPage(): React.JSX.Element {
             </div>
           </motion.div>
 
-          {/* Right Column - Info */}
+          {/* Right Column - Main Content & Tabs */}
           <div className="flex-1 space-y-6 lg:pt-8 min-w-0">
             {/* Header (Desktop) */}
             <motion.div
@@ -494,52 +645,153 @@ export default function BookDetailsPage(): React.JSX.Element {
             <RrMediaDescription description={book.description} />
 
             {/* Genres / Subjects */}
-            {book.subjects && book.subjects.length > 0 && (
-              <RrMediaGenres genres={book.subjects} />
+            {(book.genres?.length > 0 || book.subjects?.length > 0) && (
+              <RrMediaGenres
+                genres={
+                  book.genres?.length > 0
+                    ? book.genres
+                    : book.subjects ?? []
+                }
+              />
             )}
 
-            {/* Staff */}
-            {staff && staff.length > 0 && (
-              <motion.div variants={itemVariants} className="space-y-3">
-                <h3 className="text-base font-bold text-foreground">
-                  {t("aquila.staff")}
-                </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {staff.map((person) => (
-                    <div
-                      key={person.id}
-                      className="flex items-center justify-between bg-card/45 border border-border/30 backdrop-blur-md p-3.5 rounded-xl hover:border-border/50 transition-all"
-                    >
-                      <p className="text-sm font-semibold text-foreground">
-                        {person.name}
-                      </p>
-                      <Badge variant="outline" className="text-[10px]">
-                        {person.role}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
+            {/* Tabs Navigation */}
+            <Tabs defaultValue="overview" className="w-full space-y-6">
+              <TabsList className="bg-card/60 border border-border/30 backdrop-blur-xl p-1.5 rounded-2xl w-full flex overflow-x-auto justify-start sm:justify-center gap-1 scrollbar-none">
+                <TabsTrigger
+                  value="overview"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <LayoutGrid className="size-3.5 mr-1.5" />
+                  {t("aquila.overview", "Overview")}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="characters"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <Users className="size-3.5 mr-1.5" />
+                  {t("aquila.characters", "Characters")}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="staff"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <UserCheck className="size-3.5 mr-1.5" />
+                  {t("aquila.staff", "Staff")}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="images"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <ImageIcon className="size-3.5 mr-1.5" />
+                  {t("aquila.images", "Images")}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="stats"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <BarChart3 className="size-3.5 mr-1.5" />
+                  {t("aquila.stats", "Stats")}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="reviews"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <MessageSquare className="size-3.5 mr-1.5" />
+                  {t("aquila.reviews")}
+                </TabsTrigger>
+              </TabsList>
 
-            {/* Similar Series Carousel */}
-            <RrMediaSimilar mediaType="book" mediaId={id} />
+              {/* Overview Tab Content */}
+              <TabsContent value="overview" className="space-y-6 outline-none">
+                {/* Characters Preview (first 10) */}
+                {characters.length > 0 && (
+                  <RrMediaCharacters
+                    characters={characters}
+                    limitCount={10}
+                    hideToggleButton={true}
+                  />
+                )}
 
-            {/* Stats Dashboard (Score & Status distribution charts) */}
-            <RrMediaStatsDashboard
-              localAverageScore={book.localAverageScore}
-              localPopularity={book.localPopularity}
-              localFavoritesCount={book.localFavoritesCount}
-              localStatusDistribution={book.localStatusDistribution}
-              localScoreDistribution={book.localScoreDistribution}
-              showCounters={false}
-            />
+                {/* Staff Preview (first 6) */}
+                {staff.length > 0 && (
+                  <RrMediaStaff staff={staff} limit={6} />
+                )}
 
-            {/* Friends Progress */}
-            <RrMediaFriendsProgress
-              mediaId={book.id.toString()}
-              mediaType="book"
-            />
+                {/* Relations */}
+                {relations.length > 0 && (
+                  <RrMediaRelations relations={relations} />
+                )}
+
+                {/* Similar Series Carousel */}
+                <RrMediaSimilar mediaType="book" mediaId={id} />
+
+                {/* Friends Progress */}
+                <RrMediaFriendsProgress
+                  mediaId={book.id.toString()}
+                  mediaType="book"
+                />
+              </TabsContent>
+
+              {/* Characters Tab Content */}
+              <TabsContent
+                value="characters"
+                className="space-y-6 outline-none"
+              >
+                {characters.length > 0 ? (
+                  <RrMediaCharacters
+                    characters={characters}
+                    showAllInitial={true}
+                  />
+                ) : (
+                  <div className="p-8 text-center text-muted-foreground bg-card/45 border border-border/30 rounded-2xl">
+                    {t(
+                      "aquila.noCharacters",
+                      "No character information available",
+                    )}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Staff Tab Content */}
+              <TabsContent value="staff" className="space-y-6 outline-none">
+                {staff.length > 0 ? (
+                  <RrMediaStaff staff={staff} showAllInitial={true} />
+                ) : (
+                  <div className="p-8 text-center text-muted-foreground bg-card/45 border border-border/30 rounded-2xl">
+                    {t("aquila.noStaff", "No staff information available")}
+                  </div>
+                )}
+              </TabsContent>
+
+              {/* Images Tab Content */}
+              <TabsContent value="images" className="space-y-6 outline-none">
+                <RrMediaImages anime={book as any} />
+              </TabsContent>
+
+              {/* Stats Tab Content */}
+              <TabsContent value="stats" className="space-y-6 outline-none">
+                <RrMediaStatsDashboard
+                  localAverageScore={book.localAverageScore ?? book.averageScore}
+                  localPopularity={book.localPopularity ?? book.popularity}
+                  localFavoritesCount={
+                    book.localFavoritesCount ?? book.favorites
+                  }
+                  localStatusDistribution={
+                    book.localStatusDistribution ?? book.statusDistribution
+                  }
+                  localScoreDistribution={
+                    book.localScoreDistribution ?? book.scoreDistribution
+                  }
+                  showCounters={true}
+                />
+              </TabsContent>
+
+              {/* Reviews Tab Content */}
+              <TabsContent value="reviews" className="space-y-6 outline-none">
+                <RrMediaReviews mediaType={MediaType.BOOK} mediaId={Number(id)} />
+              </TabsContent>
+            </Tabs>
           </div>
         </motion.div>
 
@@ -549,7 +801,11 @@ export default function BookDetailsPage(): React.JSX.Element {
           updatedAt={book.updatedAt}
           mediaType="book"
           mediaId={Number(id)}
-          mediaData={{ ...book, relations: [], characters: [] }}
+          mediaData={{
+            ...book,
+            relations,
+            characters,
+          }}
         />
       </div>
     </div>

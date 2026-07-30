@@ -1,68 +1,96 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { Subject, EMPTY } from 'rxjs';
 import { mergeMap, catchError } from 'rxjs/operators';
 import { MovieExternal } from './movie.external';
-import { CacheService } from 'src/providers/cache/cache.service';
+import { MovieRepository } from './movie.repository';
+import { AnimeQueueService } from '../anime/anime-queue.service';
+import { MangaQueueService } from '../manga/manga-queue.service';
 
-interface SearchRefreshJob {
-  query: string;
-  cacheKey: string;
+interface ExternalUpsertJob {
+  tvdbId: number;
+  depth?: number;
 }
 
 @Injectable()
 export class MovieQueueService implements OnModuleInit {
   private readonly logger = new Logger(MovieQueueService.name);
-  private readonly moduleCode = 'MoQeSve-';
-  private readonly jobQueue = new Subject<number>();
-  private readonly processing = new Set<number>();
-  private readonly searchQueue = new Subject<SearchRefreshJob>();
-  private readonly pendingSearches = new Set<string>();
+  private readonly upsertQueue = new Subject<ExternalUpsertJob>();
+  private readonly pendingTvdbIds = new Set<number>();
 
   constructor(
     private readonly movieExternal: MovieExternal,
-    private readonly cacheService: CacheService,
+    private readonly movieRepository: MovieRepository,
+    @Inject(forwardRef(() => AnimeQueueService))
+    private readonly animeQueueService: AnimeQueueService,
+    @Inject(forwardRef(() => MangaQueueService))
+    private readonly mangaQueueService: MangaQueueService,
   ) {}
 
   onModuleInit(): void {
-    this.processSearchQueue();
+    this.processUpsertQueue();
   }
 
-  addJob(tvdbId: number): void {
-    if (!this.processing.has(tvdbId)) {
-      this.jobQueue.next(tvdbId);
+  public async addUpsertJob(tvdbId: number, depth = 0): Promise<void> {
+    if (!tvdbId || depth > 5) return;
+    if (this.pendingTvdbIds.has(tvdbId)) return;
+
+    try {
+      const existing = await this.movieRepository.findByTvdbId(tvdbId);
+      if (existing && existing.tvdbUpdatedAt) {
+        return;
+      }
+    } catch {
+      // Ignore lookup check error and proceed with queuing
+    }
+
+    this.pendingTvdbIds.add(tvdbId);
+    this.upsertQueue.next({ tvdbId, depth });
+  }
+
+  public addSearchUpserts(tvdbIds: number[]): void {
+    for (const id of tvdbIds) {
+      void this.addUpsertJob(id, 0);
     }
   }
 
-  addSearchRefresh(query: string, cacheKey: string): void {
-    if (!this.pendingSearches.has(query)) {
-      this.pendingSearches.add(query);
-      this.searchQueue.next({ query, cacheKey });
-    }
-  }
-
-  private processSearchQueue(): void {
-    this.searchQueue
+  private processUpsertQueue(): void {
+    this.upsertQueue
       .pipe(
         mergeMap(async (job) => {
           try {
-            this.logger.log(`Processing search refresh: "${job.query}"`);
-            const fresh = await this.movieExternal.search(job.query);
-            if (fresh.length > 0) {
-              await this.cacheService.set(job.cacheKey, fresh, 60 * 60);
+            this.logger.log(
+              `Processing background V2 movie upsert for TVDB ID: ${job.tvdbId} (depth ${job.depth || 0})`,
+            );
+            const fullRecord = await this.movieExternal.fetchFullV2Record(job.tvdbId);
+            if (fullRecord) {
+              await this.movieRepository.upsertV2Record(fullRecord);
+              this.logger.log(
+                `Successfully completed background V2 movie upsert for TVDB ID: ${job.tvdbId}`,
+              );
+
+              // Recursively queue all related media for background fetching
+              if (fullRecord.relations && Array.isArray(fullRecord.relations)) {
+                for (const rel of fullRecord.relations) {
+                  if (rel.targetType === 'MOVIE' && rel.targetTvdbId) {
+                    void this.addUpsertJob(rel.targetTvdbId, (job.depth || 0) + 1);
+                  } else if (rel.targetType === 'ANIME' && rel.targetAnilistId) {
+                    void this.animeQueueService.addUpsertJob(rel.targetAnilistId, (job.depth || 0) + 1);
+                  } else if (rel.targetType === 'MANGA' && rel.targetAnilistId) {
+                    void this.mangaQueueService.addUpsertJob(rel.targetAnilistId, (job.depth || 0) + 1);
+                  }
+                }
+              }
             }
-            this.logger.log(`Completed search refresh: "${job.query}"`);
-          } catch (error) {
-            const message =
-              error instanceof Error ? error.message : 'Unknown error';
+          } catch (error: any) {
             this.logger.error(
-              `Search refresh failed for "${job.query}": ${message}`,
+              `Background V2 movie upsert failed for TVDB ID ${job.tvdbId}: ${error?.message || error}`,
             );
           } finally {
-            this.pendingSearches.delete(job.query);
+            this.pendingTvdbIds.delete(job.tvdbId);
           }
-        }, 1),
+        }, 2),
         catchError((error) => {
-          this.logger.error(`Search queue error: ${error}`);
+          this.logger.error(`Movie upsert queue unexpected error: ${error}`);
           return EMPTY;
         }),
       )

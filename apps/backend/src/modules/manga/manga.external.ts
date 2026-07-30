@@ -1,816 +1,375 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { MangaSearchEntity } from './manga.entities';
-import {
-  AniListMangaMedia,
-  AniListCharacterNode,
-  AniListStudioNode,
-  AniListRelationNode,
-} from './manga.types';
-import {
-  AnimeFormat,
-  AnimeStatus,
-  MangaFormat,
-  MangaStatus,
-  Prisma,
-} from '@runa/database';
-import { rrError } from 'src/providers/error';
-import { PrismaService } from 'src/providers/database/prisma.service';
+import { StaffRole } from '@runa/database';
+import { AnilistService } from 'src/providers/Anilist/anilist.service';
+import { AnizipService } from 'src/providers/Anizip/anizip.service';
+import { MalService } from 'src/providers/Mal/mal.service';
+import { BangumiService } from 'src/providers/Bangumi/bangumi.service';
+
+function mapRelationType(relTypeStr?: string): string {
+  if (!relTypeStr) return 'OTHER';
+  const upper = relTypeStr.toUpperCase();
+  const valid = [
+    'PREQUEL',
+    'SEQUEL',
+    'ADAPTATION',
+    'SIDE_STORY',
+    'SPIN_OFF',
+    'SUMMARY',
+    'ALTERNATIVE',
+    'CHARACTER',
+    'OTHER',
+  ];
+  if (valid.includes(upper)) {
+    return upper;
+  }
+  if (upper === 'PARENT') return 'PREQUEL';
+  if (upper === 'CHILD') return 'SEQUEL';
+  if (upper === 'SOURCE') return 'ADAPTATION';
+  return 'OTHER';
+}
+
+function mapStaffRole(roleStr?: string): StaffRole {
+  if (!roleStr) return StaffRole.OTHER;
+  const upper = roleStr.toUpperCase();
+  if (upper.includes('STORY') || upper.includes('AUTHOR') || upper.includes('WRITER'))
+    return StaffRole.ORIGINAL_CREATOR;
+  if (upper.includes('ART') || upper.includes('ILLUSTRATION') || upper.includes('DRAWING'))
+    return StaffRole.CHARACTER_DESIGN;
+  return StaffRole.OTHER;
+}
+
+function parseAgeRating(
+  ratingStr?: string | null,
+  isAdult?: boolean,
+): { ageRating: string | null; ageRatingGuide: string | null } {
+  if (isAdult) {
+    return { ageRating: 'Rx', ageRatingGuide: 'Adult / Hentai (18+)' };
+  }
+  if (!ratingStr) {
+    return { ageRating: null, ageRatingGuide: null };
+  }
+
+  const r = ratingStr.toUpperCase();
+  if (r.includes('G') || r.includes('ALL AGES')) {
+    return { ageRating: 'G', ageRatingGuide: 'All Ages' };
+  }
+  if (r.includes('PG-13') || r.includes('TEENS')) {
+    return { ageRating: 'PG-13', ageRatingGuide: 'Teens 13 or older' };
+  }
+  if (r.includes('R-17') || r.includes('17+')) {
+    return { ageRating: 'R-17+', ageRatingGuide: 'Violence & Profanity' };
+  }
+  if (r.includes('R+') || r.includes('MILD NUDITY')) {
+    return { ageRating: 'R+', ageRatingGuide: 'Mild Nudity & Violence' };
+  }
+  if (r.includes('RX') || r.includes('HENTAI')) {
+    return { ageRating: 'Rx', ageRatingGuide: 'Explicit Adult Content' };
+  }
+
+  return { ageRating: ratingStr, ageRatingGuide: null };
+}
 
 @Injectable()
 export class MangaExternal {
   private readonly logger = new Logger(MangaExternal.name);
-  private readonly moduleCode: string = 'MaExt-';
-  constructor(private readonly prisma: PrismaService) {}
 
-  private readonly getQuery = `
-    query ($id: Int) {
-      Media(id: $id, type: MANGA) {
-        id
-        idMal
-        title {
-          romaji
-          english
-          native
-        }
-        format
-        status
-        description
-        startDate { year month day }
-        endDate { year month day }
-        chapters
-        volumes
-        countryOfOrigin
-        source
-        hashtag
-        coverImage { large }
-        bannerImage
-        genres
-        synonyms
-        averageScore
-        trailer { id site thumbnail }
-        relations {
-          edges {
-            id
-            relationType
-            node {
-              id
-              idMal
-              title { romaji english native }
-              format
-              type
-              status
-              description
-              coverImage { large }
-              bannerImage
-              startDate { year month day }
-              endDate { year month day }
-              episodes
-              chapters
-              volumes
-              duration
-              countryOfOrigin
-              source
-              averageScore
-              favourites
-              genres
-              synonyms
-              hashtag
-              isAdult
-              siteUrl
-              updatedAt
-            }
-          }
-        }
-        characters(page: 1, perPage: 25, sort: [ROLE, RELEVANCE, ID]) {
-          pageInfo {
-            hasNextPage
-          }
-          edges {
-            role
-            node {
-              id
-              name {
-                first
-                middle
-                last
-                full
-                native
-                alternative
-                alternativeSpoiler
-              }
-              image { large }
-              description
-              gender
-              age
-              bloodType
-              dateOfBirth { year month day }
-            }
-            voiceActors(language: JAPANESE) {
-              id
-              name { full }
-              image { large }
-            }
-          }
-        }
-        studios {
-          edges {
-            isMain
-            node {
-              id
-              name
-              isAnimationStudio
-              siteUrl
-            }
-          }
-        }
-        isAdult
-        siteUrl
-        updatedAt
-      }
-    }
-  `;
+  constructor(
+    private readonly anilistService: AnilistService,
+    private readonly anizipService: AnizipService,
+    private readonly malService: MalService,
+    private readonly bangumiService: BangumiService,
+  ) {}
 
-  private readonly getCharactersQuery = `
-    query ($id: Int, $page: Int) {
-      Media(id: $id) {
-        characters(page: $page, perPage: 25, sort: [ROLE, RELEVANCE, ID]) {
-          pageInfo {
-            hasNextPage
-          }
-          edges {
-            role
-            node {
-              id
-              name {
-                first
-                middle
-                last
-                full
-                native
-                alternative
-                alternativeSpoiler
-              }
-              image { large }
-              description
-              gender
-              age
-              bloodType
-              dateOfBirth { year month day }
-            }
-            voiceActors(language: JAPANESE) {
-              id
-              name { full }
-              image { large }
-            }
-          }
-        }
-      }
-    }
-  `;
-
-  private readonly searchQuery = `
-    query ($search: String, $page: Int, $perPage: Int) {
-      Page(page: $page, perPage: $perPage) {
-        pageInfo {
-          total
-          currentPage
-          lastPage
-          hasNextPage
-          perPage
-        }
-        media(search: $search, type: MANGA) {
-          id
-          idMal
-          title {
-            romaji
-            english
-            native
-          }
-          format
-          status
-          description
-          startDate { year month day }
-          endDate { year month day }
-          chapters
-          volumes
-          countryOfOrigin
-          source
-          hashtag
-          coverImage { large }
-          bannerImage
-          genres
-          synonyms
-          averageScore
-          trailer { id site thumbnail }
-          relations {
-            edges {
-              id
-              relationType
-              node {
-                id
-                idMal
-                title { romaji english native }
-                format
-                type
-                status
-                description
-                coverImage { large }
-                bannerImage
-                startDate { year month day }
-                endDate { year month day }
-                episodes
-                chapters
-                volumes
-                duration
-                countryOfOrigin
-                source
-                averageScore
-                favourites
-                genres
-                synonyms
-                hashtag
-                isAdult
-                siteUrl
-                updatedAt
-              }
-            }
-          }
-          characters(perPage: 25, sort: [ROLE, RELEVANCE, ID]) {
-            edges {
-              role
-              node {
-                id
-                name {
-                  first
-                  middle
-                  last
-                  full
-                  native
-                  alternative
-                  alternativeSpoiler
-                }
-                image { large }
-                description
-                gender
-                age
-                bloodType
-                dateOfBirth { year month day }
-              }
-              voiceActors(language: JAPANESE) {
-                id
-                name { full }
-                image { large }
-              }
-            }
-          }
-          studios {
-            edges {
-              isMain
-              node {
-                id
-                name
-                isAnimationStudio
-                siteUrl
-              }
-            }
-          }
-          isAdult
-          siteUrl
-          updatedAt
-        }
-      }
-    }
-  `;
-
-  public async fetchAndUpsertManga(
-    anilistId: number,
-    force = false,
-  ): Promise<void> {
+  public async fetchFullV2Record(inputParam: string | number): Promise<any | null> {
     try {
-      const data = (await this.fetchWithRateLimit(this.getQuery, {
-        id: anilistId,
-      })) as { data: { Media: AniListMangaMedia } };
+      this.logger.log(`Fetching complete V2 manga record for: "${inputParam}"`);
 
-      if (!data.data?.Media) {
-        throw new rrError(`${this.moduleCode}MWAINF002`, {
-          message: `Manga with AniList ID ${anilistId} not found`,
-        });
+      // 1. Fetch Paginated AniList Data
+      const alData = await this.anilistService.fetchFullManga(inputParam);
+      if (!alData) {
+        this.logger.warn(`Manga not found on AniList for: "${inputParam}"`);
+        return null;
       }
 
-      const media = data.data.Media;
+      const anilistId = alData.id;
 
-      // Fetch all pages of characters
-      if (media.characters?.pageInfo?.hasNextPage) {
-        let currentPage = 2;
-        let hasNextPage = true;
+      // 2. Fetch Cross-Reference Mappings (AniZip)
+      const aniZip = await this.anizipService.fetchMappings(anilistId);
+      const malId = alData.idMal || aniZip?.malId || null;
+      const mangaUpdatesId = aniZip?.mangaUpdatesId ? String(aniZip.mangaUpdatesId) : null;
 
-        while (hasNextPage) {
-          const charData = (await this.fetchWithRateLimit(
-            this.getCharactersQuery,
-            {
-              id: anilistId,
-              page: currentPage,
-            },
-          )) as {
-            data: {
-              Media: {
-                characters: {
-                  pageInfo: { hasNextPage: boolean };
-                  edges: any[];
-                };
-              };
-            };
-          };
+      // 3. Fetch MAL Data
+      const malData = malId ? await this.malService.fetchMalMangaData(malId) : null;
 
-          const newEdges = charData?.data?.Media?.characters?.edges || [];
-          if (media.characters.edges) {
-            media.characters.edges.push(...newEdges);
-          } else {
-            media.characters.edges = newEdges;
-          }
+      // 4. Construct Primary & Secondary Titles
+      const titlePrimary =
+        alData.title?.english ||
+        alData.title?.romaji ||
+        alData.title?.native ||
+        'Untitled';
+      const titleSecondary = alData.title?.english
+        ? alData.title?.romaji !== alData.title?.english
+          ? alData.title?.romaji
+          : null
+        : null;
+      const titleNative = alData.title?.native || null;
 
-          hasNextPage =
-            charData?.data?.Media?.characters?.pageInfo?.hasNextPage ?? false;
-          currentPage++;
-        }
-      }
+      // 5. Build Image Galleries
+      const images: any = {
+        anilist: {
+          cover:
+            alData.coverImage?.extraLarge ||
+            alData.coverImage?.large ||
+            alData.coverImage?.medium ||
+            null,
+          banner: alData.bannerImage || null,
+        },
+        mal: {
+          pictures: malData?.pictures || [],
+        },
+      };
 
-      await this.upsertManga(media, force);
-    } catch (error) {
-      this.logger.error(
-        `Failed to fetch manga ${anilistId} from AniList: ${error}`,
-      );
-      throw new rrError(`${this.moduleCode}FTFMFA003`, {
-        message: 'Failed to fetch manga from AniList',
-      });
-    }
-  }
+      const coverImage =
+        alData.coverImage?.extraLarge ||
+        alData.coverImage?.large ||
+        alData.coverImage?.medium ||
+        null;
+      const bannerImage = alData.bannerImage || null;
 
-  public async search(title: string): Promise<MangaSearchEntity[]> {
-    try {
-      this.logger.debug('Searching for manga in AniList');
-
-      const data = (await this.fetchWithRateLimit(this.searchQuery, {
-        search: title,
-        perPage: 30,
-      })) as { data: { Page: { media: AniListMangaMedia[] } } };
-
-      const localData = await Promise.all(
-        data.data.Page.media.map(async (item) => {
-          const manga = await this.upsertManga(item);
-
-          return {
-            id: manga.id,
-            title: manga.titleEnglish ?? 'rrUnknown',
-            secondaryTitle: manga.titleRomaji ?? null,
-            coverImage: manga.coverImageLarge ?? null,
-            averageScore: manga.averageScore ?? null,
-            isAdult: manga.isAdult ?? false,
-            format: manga.format,
-            status: manga.status,
-          };
-        }),
+      // 6. Age Rating & Guide
+      const { ageRating, ageRatingGuide } = parseAgeRating(
+        malData?.rating,
+        alData.isAdult,
       );
 
-      return localData;
-    } catch (error) {
-      this.logger.error(`Failed to fetch manga from AniList: ${error}`);
-      throw new rrError(`${this.moduleCode}FTFAFA001`, {
-        message: 'Failed to fetch manga from AniList',
-      });
-    }
-  }
+      // 7. Characters Mapping
+      const characters: any[] = [];
+      if (alData.allCharacters && Array.isArray(alData.allCharacters)) {
+        for (const edge of alData.allCharacters) {
+          const charNode = edge.node;
+          if (!charNode || !charNode.name) continue;
 
-  /**
-   * Fires a GraphQL request to AniList and retries on 429 (rate limited)
-   * using the Retry-After header or exponential back-off.
-   */
-  private async fetchWithRateLimit(
-    query: string,
-    variables: Record<string, any>,
-    maxRetries = 5,
-    baseDelay = 1000,
-  ): Promise<unknown> {
-    let res: Response | null = null;
+          const namePrimary =
+            charNode.name.full ||
+            charNode.name.native ||
+            charNode.name.alternative?.[0] ||
+            'Unknown Character';
 
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-      try {
-        res = await fetch('https://graphql.anilist.co', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-          },
-          body: JSON.stringify({ query, variables }),
-        });
+          characters.push({
+            anilistId: charNode.id,
+            namePrimary,
+            nameNative: charNode.name.native || null,
+            nameAlternative: charNode.name.alternative || [],
+            nameAlternativeSpoiler: charNode.nameAlternativeSpoiler || [],
+            image: charNode.image?.large || charNode.image?.medium || null,
+            description: charNode.description || null,
+            gender: charNode.gender || null,
+            age: charNode.age || null,
+            bloodType: charNode.bloodType || null,
+            dateOfBirthYear: charNode.dateOfBirth?.year || null,
+            dateOfBirthMonth: charNode.dateOfBirth?.month || null,
+            dateOfBirthDay: charNode.dateOfBirth?.day || null,
+            alFavorites: charNode.favourites || null,
+            role: edge.role || 'MAIN',
+          });
+        }
+      }
 
-        if (res.status === 429) {
-          const retryAfter = res.headers.get('retry-after');
-          const waitMs = retryAfter
-            ? parseInt(retryAfter, 10) * 1000 + 500
-            : baseDelay * Math.pow(2, attempt);
-          this.logger.warn(
-            `AniList rate limit hit (429). Waiting ${waitMs}ms before retry ${attempt + 1}/${maxRetries}...`,
+      // 8. Staff Mapping (Authors / Illustrators)
+      const staff: any[] = [];
+      if (alData.allStaff && Array.isArray(alData.allStaff)) {
+        for (const edge of alData.allStaff) {
+          const staffNode = edge.node;
+          if (!staffNode || !staffNode.name) continue;
+
+          const namePrimary =
+            staffNode.name.full ||
+            staffNode.name.native ||
+            staffNode.name.alternative?.[0] ||
+            'Unknown Staff';
+
+          staff.push({
+            anilistId: staffNode.id,
+            namePrimary,
+            nameNative: staffNode.name.native || null,
+            nameAlternative: staffNode.name.alternative || [],
+            image: staffNode.image?.large || staffNode.image?.medium || null,
+            role: mapStaffRole(edge.role),
+            customRole: edge.role || null,
+          });
+        }
+      }
+
+      // Add MAL authors to staff if not present
+      if (malData?.authors && Array.isArray(malData.authors)) {
+        for (const author of malData.authors) {
+          if (!author.name) continue;
+          const exists = staff.some(
+            (s) => s.namePrimary.toLowerCase() === author.name.toLowerCase(),
           );
-          await new Promise((resolve) => setTimeout(resolve, waitMs));
-          continue;
+          if (!exists) {
+            staff.push({
+              anilistId: null,
+              malId: author.malId || null,
+              namePrimary: author.name,
+              role: mapStaffRole(author.role),
+              customRole: author.role || 'Author',
+            });
+          }
         }
+      }
 
-        if (!res.ok) {
-          throw new rrError(`${this.moduleCode}AAE001`, {
-            message: `AniList API error: ${res.status}`,
+      // 9. Studios / Publishers Mapping
+      const studios: any[] = [];
+      if (alData.studios?.edges && Array.isArray(alData.studios.edges)) {
+        for (const edge of alData.studios.edges) {
+          const studioNode = edge.node;
+          if (!studioNode || !studioNode.name) continue;
+          studios.push({
+            anilistId: studioNode.id,
+            name: studioNode.name,
+            isAnimationStudio: studioNode.isAnimationStudio || false,
+            siteUrl: studioNode.siteUrl || null,
+            alFavorites: studioNode.favourites || null,
+            isMain: edge.isMain || false,
           });
         }
-
-        return res.json();
-      } catch (err: any) {
-        if (attempt === maxRetries - 1) throw err;
-        const waitMs = baseDelay * Math.pow(2, attempt);
-        this.logger.warn(
-          `AniList request failed (attempt ${attempt + 1}/${maxRetries}), retrying in ${waitMs}ms: ${err.message}`,
-        );
-        await new Promise((resolve) => setTimeout(resolve, waitMs));
       }
-    }
 
-    throw new rrError(`${this.moduleCode}FTFMFA002`, {
-      message: 'AniList request failed after maximum retries',
-    });
-  }
-
-  private async upsertManga(item: AniListMangaMedia, force = false) {
-    const existing = await this.prisma.client.aquilaManga.findUnique({
-      where: { anilistId: item.id },
-    });
-
-    if (existing?.locked && !force) {
-      this.logger.debug(
-        `Manga with AniList ID ${item.id} is locked, skipping upsert`,
-      );
-      return existing;
-    }
-
-    const manga = await this.prisma.client.aquilaManga.upsert({
-      where: { anilistId: item.id },
-      update: {
-        anilistId: item.id,
-        malId: item.idMal,
-        titleEnglish: item.title.english,
-        titleRomaji: item.title.romaji,
-        titleNative: item.title.native,
-        coverImageLarge: item.coverImage?.large,
-        bannerImage: item.bannerImage,
-        description: item.description,
-        startDateYear: item.startDate?.year,
-        startDateMonth: item.startDate?.month,
-        startDateDay: item.startDate?.day,
-        endDateYear: item.endDate?.year,
-        endDateMonth: item.endDate?.month,
-        endDateDay: item.endDate?.day,
-        chapters: item.chapters,
-        volumes: item.volumes,
-        countryOfOrigin: item.countryOfOrigin,
-        source: item.source,
-        hashtag: item.hashtag,
-        genres: item.genres ?? [],
-        synonyms: item.synonyms ?? [],
-        averageScore: item.averageScore,
-        format: (item.format ?? 'UNKNOWN') as MangaFormat,
-        status: (item.status ?? 'NOT_YET_RELEASED') as MangaStatus,
-        isAdult: item.isAdult ?? false,
-        anilistUpdatedAt: item.updatedAt,
-      },
-      create: {
-        anilistId: item.id,
-        malId: item.idMal,
-        titleEnglish: item.title.english,
-        titleRomaji: item.title.romaji,
-        titleNative: item.title.native,
-        coverImageLarge: item.coverImage?.large,
-        bannerImage: item.bannerImage,
-        description: item.description,
-        startDateYear: item.startDate?.year,
-        startDateMonth: item.startDate?.month,
-        startDateDay: item.startDate?.day,
-        endDateYear: item.endDate?.year,
-        endDateMonth: item.endDate?.month,
-        endDateDay: item.endDate?.day,
-        chapters: item.chapters,
-        volumes: item.volumes,
-        countryOfOrigin: item.countryOfOrigin,
-        source: item.source,
-        hashtag: item.hashtag,
-        genres: item.genres ?? [],
-        synonyms: item.synonyms ?? [],
-        averageScore: item.averageScore,
-        format: (item.format ?? 'UNKNOWN') as MangaFormat,
-        status: (item.status ?? 'NOT_YET_RELEASED') as MangaStatus,
-        isAdult: item.isAdult ?? false,
-        anilistUpdatedAt: item.updatedAt,
-      },
-      select: {
-        id: true,
-        titleEnglish: true,
-        titleRomaji: true,
-        coverImageLarge: true,
-        averageScore: true,
-        format: true,
-        status: true,
-        isAdult: true,
-      },
-    });
-
-    // Process characters
-    if (item.characters?.edges) {
-      for (const edge of item.characters.edges) {
-        const character = await this.upsertCharacter(edge.node);
-
-        await this.prisma.client.aquilaMangaCharacter.upsert({
-          where: {
-            mangaId_characterId: {
-              mangaId: manga.id,
-              characterId: character.id,
-            },
-          },
-          update: { role: edge.role, order: 0 },
-          create: {
-            mangaId: manga.id,
-            characterId: character.id,
-            role: edge.role,
-            order: 0,
-          },
-        });
-      }
-    }
-
-    // Process studios
-    if (item.studios?.edges) {
-      for (const edge of item.studios.edges) {
-        const studio = await this.upsertStudio(edge.node);
-
-        await this.prisma.client.aquilaMangaStudio.upsert({
-          where: {
-            mangaId_studioId: {
-              mangaId: manga.id,
-              studioId: studio.id,
-            },
-          },
-          update: { isMain: edge.isMain },
-          create: {
-            mangaId: manga.id,
-            studioId: studio.id,
-            isMain: edge.isMain,
-          },
-        });
-      }
-    }
-
-    // Process relations
-    if (item.relations?.edges) {
-      for (const edge of item.relations.edges) {
-        const relationNode = edge.node;
-
-        if (relationNode.type === 'ANIME') {
-          await this.upsertRelatedAnime(relationNode);
-        } else {
-          await this.upsertRelatedManga(relationNode);
+      // 10. Relations Mapping
+      const relations: any[] = [];
+      if (alData.relations?.edges && Array.isArray(alData.relations.edges)) {
+        for (const edge of alData.relations.edges) {
+          const relNode = edge.node;
+          if (!relNode) continue;
+          const targetType = (relNode.type || 'MANGA').toUpperCase();
+          relations.push({
+            targetAnilistId: relNode.id,
+            targetType,
+            type: mapRelationType(edge.relationType),
+            titlePrimary:
+              relNode.title?.english ||
+              relNode.title?.romaji ||
+              relNode.title?.native ||
+              'Unknown',
+            format: relNode.format || 'UNKNOWN',
+          });
         }
+      }
 
-        const relatedAnime =
-          relationNode.type === 'ANIME'
-            ? await this.prisma.client.aquilaAnime.findFirst({
-                where: { anilistId: relationNode.id },
-              })
-            : null;
+      return {
+        anilistId,
+        malId,
+        mangaUpdatesId,
 
-        const relatedManga =
-          relationNode.type === 'MANGA'
-            ? await this.prisma.client.aquilaManga.findFirst({
-                where: { anilistId: relationNode.id },
-              })
-            : null;
+        titlePrimary,
+        titleSecondary,
+        titleNative,
 
-        const existing = await this.prisma.client.aquilaMediaRelation.findFirst(
+        coverImage,
+        bannerImage,
+        images,
+
+        description: alData.description || null,
+        hashtag: alData.hashtag || null,
+        countryOfOrigin: alData.countryOfOrigin || null,
+
+        volumeCount: alData.volumes || null,
+        chapterCount: alData.chapters || null,
+
+        serialization: malData?.serialization || null,
+        imprint: null,
+        publishers: studios.map((s) => s.name),
+        demographics: [],
+        readingDirection: 'RIGHT_TO_LEFT',
+
+        startDateYear: alData.startDate?.year || null,
+        startDateMonth: alData.startDate?.month || null,
+        startDateDay: alData.startDate?.day || null,
+
+        endDateYear: alData.endDate?.year || null,
+        endDateMonth: alData.endDate?.month || null,
+        endDateDay: alData.endDate?.day || null,
+
+        genres: alData.genres || [],
+        source: alData.source || 'UNKNOWN',
+        format: alData.format || 'UNKNOWN',
+        status: alData.status || 'UNKNOWN',
+
+        averageScore: null,
+        favorites: 0,
+        popularity: 0,
+        totalScoreSum: null,
+        scoredCount: null,
+
+        alAverageScore: alData.averageScore || alData.meanScore || null,
+        alFavorites: alData.favourites || null,
+        alPopularity: alData.popularity || null,
+
+        malAverageScore: malData?.mean ? Math.round(malData.mean * 10) : null,
+        malFavorites: malData?.favorites || null,
+        malPopularity: malData?.popularity || null,
+
+        isAdult: alData.isAdult || false,
+        synonyms: alData.synonyms || [],
+
+        siteUrl: alData.siteUrl || null,
+        externalLinks: alData.externalLinks || [],
+        sources: [
           {
-            where: {
-              mangaId: manga.id,
-              relatedAnimeId: relatedAnime?.id ?? null,
-              relatedMangaId: relatedManga?.id ?? null,
-            },
+            provider: 'ANILIST',
+            url: alData.siteUrl || `https://anilist.co/manga/${anilistId}`,
+            externalId: String(anilistId),
           },
-        );
+          ...(malId
+            ? [
+                {
+                  provider: 'MYANIMELIST',
+                  url: `https://myanimelist.net/manga/${malId}`,
+                  externalId: String(malId),
+                },
+              ]
+            : []),
+        ],
 
-        if (!existing) {
-          await this.prisma.client.aquilaMediaRelation.create({
-            data: {
-              mangaId: manga.id,
-              relatedAnimeId: relatedAnime?.id ?? null,
-              relatedMangaId: relatedManga?.id ?? null,
-              relationType: edge.relationType,
-            },
-          });
-        }
-      }
+        ageRating,
+        ageRatingGuide,
+
+        alUpdatedAt: alData.updatedAt || Math.floor(Date.now() / 1000),
+        malUpdatedAt: malData ? Math.floor(Date.now() / 1000) : null,
+
+        characters,
+        staff,
+        studios,
+        relations,
+      };
+    } catch (error: any) {
+      this.logger.error(
+        `Failed to fetch full V2 manga record for "${inputParam}": ${error?.message || error}`,
+      );
+      return null;
     }
-
-    return manga;
   }
 
-  private async upsertCharacter(node: AniListCharacterNode) {
-    const character = await this.prisma.client.aquilaCharacter.upsert({
-      where: { anilistId: node.id },
-      update: {
-        nameFirst: node.name.first,
-        nameMiddle: node.name.middle,
-        nameLast: node.name.last,
-        nameNative: node.name.native,
-        nameAlternative: node.name.alternative ?? [],
-        nameAlternativeSpoiler: node.name.alternativeSpoiler ?? [],
-        image: node.image?.large,
-        description: node.description,
-        gender: node.gender,
-        age: node.age,
-        bloodType: node.bloodType,
-        dateOfBirthYear: node.dateOfBirth?.year,
-        dateOfBirthMonth: node.dateOfBirth?.month,
-        dateOfBirthDay: node.dateOfBirth?.day,
-      },
-      create: {
-        anilistId: node.id,
-        nameFirst: node.name.first,
-        nameMiddle: node.name.middle,
-        nameLast: node.name.last,
-        nameNative: node.name.native,
-        nameAlternative: node.name.alternative ?? [],
-        nameAlternativeSpoiler: node.name.alternativeSpoiler ?? [],
-        image: node.image?.large,
-        description: node.description,
-        gender: node.gender,
-        age: node.age,
-        bloodType: node.bloodType,
-        dateOfBirthYear: node.dateOfBirth?.year,
-        dateOfBirthMonth: node.dateOfBirth?.month,
-        dateOfBirthDay: node.dateOfBirth?.day,
-      },
-    });
-    return character;
-  }
+  public async search(title: string): Promise<any[]> {
+    try {
+      this.logger.debug(`Searching for manga on AniList: "${title}"`);
+      const results = await this.anilistService.searchManga(title, 30);
 
-  private async upsertStudio(node: AniListStudioNode) {
-    const studio = await this.prisma.client.aquilaStudio.upsert({
-      where: { anilistId: node.id },
-      update: {
-        name: node.name,
-        isAnimationStudio: node.isAnimationStudio,
-        siteUrl: node.siteUrl,
-      },
-      create: {
-        anilistId: node.id,
-        name: node.name,
-        isAnimationStudio: node.isAnimationStudio,
-        siteUrl: node.siteUrl,
-      },
-    });
-    return studio;
-  }
-
-  private async upsertRelatedAnime(node: AniListRelationNode) {
-    const existing = await this.prisma.client.aquilaAnime.findUnique({
-      where: { anilistId: node.id },
-      select: { locked: true },
-    });
-    if (existing?.locked) {
-      return;
+      return results.map((item) => ({
+        anilistId: item.id,
+        malId: item.idMal || null,
+        title: item.title?.english || item.title?.romaji || item.title?.native || 'Untitled',
+        secondaryTitle: item.title?.english ? item.title?.romaji : null,
+        coverImage: item.coverImage?.extraLarge || item.coverImage?.large || item.coverImage?.medium || null,
+        averageScore: item.averageScore || null,
+        isAdult: item.isAdult || false,
+        format: item.format || 'UNKNOWN',
+        status: item.status || 'UNKNOWN',
+      }));
+    } catch (error: any) {
+      this.logger.error(`Failed to search manga on AniList: ${error?.message || error}`);
+      return [];
     }
-
-    await this.prisma.client.aquilaAnime.upsert({
-      where: { anilistId: node.id },
-      update: {
-        anilistId: node.id,
-        malId: node.idMal,
-        titleEnglish: node.title?.english,
-        titleRomaji: node.title?.romaji,
-        titleNative: node.title?.native,
-        coverImageLarge: node.coverImage?.large,
-        bannerImage: node.bannerImage,
-        description: node.description,
-        startDateYear: node.startDate?.year,
-        startDateMonth: node.startDate?.month,
-        startDateDay: node.startDate?.day,
-        endDateYear: node.endDate?.year,
-        endDateMonth: node.endDate?.month,
-        endDateDay: node.endDate?.day,
-        episodes: node.episodes,
-        duration: node.duration,
-        countryOfOrigin: node.countryOfOrigin,
-        source: node.source,
-        genres: node.genres ?? [],
-        synonyms: node.synonyms ?? [],
-        averageScore: node.averageScore,
-        format: (node.format ?? 'UNKNOWN') as AnimeFormat,
-        status: (node.status ?? 'NOT_YET_RELEASED') as AnimeStatus,
-        isAdult: node.isAdult ?? false,
-        hashtag: node.hashtag,
-        anilistUpdatedAt: node.updatedAt,
-      },
-      create: {
-        anilistId: node.id,
-        malId: node.idMal,
-        titleEnglish: node.title?.english,
-        titleRomaji: node.title?.romaji,
-        titleNative: node.title?.native,
-        coverImageLarge: node.coverImage?.large,
-        bannerImage: node.bannerImage,
-        description: node.description,
-        startDateYear: node.startDate?.year,
-        startDateMonth: node.startDate?.month,
-        startDateDay: node.startDate?.day,
-        endDateYear: node.endDate?.year,
-        endDateMonth: node.endDate?.month,
-        endDateDay: node.endDate?.day,
-        episodes: node.episodes,
-        duration: node.duration,
-        countryOfOrigin: node.countryOfOrigin,
-        source: node.source,
-        genres: node.genres ?? [],
-        synonyms: node.synonyms ?? [],
-        averageScore: node.averageScore,
-        format: (node.format ?? 'UNKNOWN') as AnimeFormat,
-        status: (node.status ?? 'NOT_YET_RELEASED') as AnimeStatus,
-        isAdult: node.isAdult ?? false,
-        hashtag: node.hashtag,
-        anilistUpdatedAt: node.updatedAt,
-      },
-    });
-  }
-
-  private async upsertRelatedManga(node: AniListRelationNode) {
-    const existing = await this.prisma.client.aquilaManga.findUnique({
-      where: { anilistId: node.id },
-      select: { locked: true },
-    });
-    if (existing?.locked) {
-      return;
-    }
-
-    await this.prisma.client.aquilaManga.upsert({
-      where: { anilistId: node.id },
-      update: {
-        anilistId: node.id,
-        malId: node.idMal,
-        titleEnglish: node.title?.english,
-        titleRomaji: node.title?.romaji,
-        titleNative: node.title?.native,
-        coverImageLarge: node.coverImage?.large,
-        bannerImage: node.bannerImage,
-        description: node.description,
-        startDateYear: node.startDate?.year,
-        startDateMonth: node.startDate?.month,
-        startDateDay: node.startDate?.day,
-        endDateYear: node.endDate?.year,
-        endDateMonth: node.endDate?.month,
-        endDateDay: node.endDate?.day,
-        chapters: node.chapters,
-        volumes: node.volumes,
-        countryOfOrigin: node.countryOfOrigin,
-        source: node.source,
-        genres: node.genres ?? [],
-        synonyms: node.synonyms ?? [],
-        averageScore: node.averageScore,
-        format: (node.format ?? 'UNKNOWN') as MangaFormat,
-        status: (node.status ?? 'NOT_YET_RELEASED') as MangaStatus,
-        isAdult: node.isAdult ?? false,
-        hashtag: node.hashtag,
-        anilistUpdatedAt: node.updatedAt,
-      },
-      create: {
-        anilistId: node.id,
-        malId: node.idMal,
-        titleEnglish: node.title?.english,
-        titleRomaji: node.title?.romaji,
-        titleNative: node.title?.native,
-        coverImageLarge: node.coverImage?.large,
-        bannerImage: node.bannerImage,
-        description: node.description,
-        startDateYear: node.startDate?.year,
-        startDateMonth: node.startDate?.month,
-        startDateDay: node.startDate?.day,
-        endDateYear: node.endDate?.year,
-        endDateMonth: node.endDate?.month,
-        endDateDay: node.endDate?.day,
-        chapters: node.chapters,
-        volumes: node.volumes,
-        countryOfOrigin: node.countryOfOrigin,
-        source: node.source,
-        genres: node.genres ?? [],
-        synonyms: node.synonyms ?? [],
-        averageScore: node.averageScore,
-        format: (node.format ?? 'UNKNOWN') as MangaFormat,
-        status: (node.status ?? 'NOT_YET_RELEASED') as MangaStatus,
-        isAdult: node.isAdult ?? false,
-        hashtag: node.hashtag,
-        anilistUpdatedAt: node.updatedAt,
-      },
-    });
   }
 }

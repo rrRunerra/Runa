@@ -78,15 +78,19 @@ function RelationItem({ relation }: { relation: RelationEntity }): React.JSX.Ele
           {relation.title.english || relation.title.romaji}
         </p>
         <p className="text-xs text-muted-foreground mt-0.5">
-          {relation.format} • {relation.type}
+          {relation.format && relation.type && relation.format !== relation.type
+            ? `${relation.format} • ${relation.type}`
+            : relation.format || relation.type}
         </p>
       </div>
-      <Badge
-        variant="outline"
-        className="text-[10px] capitalize shrink-0 ml-auto"
-      >
-        {relation.relationType.replace(/_/g, " ").toLowerCase()}
-      </Badge>
+      {relation.relationType ? (
+        <Badge
+          variant="outline"
+          className="text-[10px] capitalize shrink-0 ml-auto"
+        >
+          {relation.relationType.replace(/_/g, " ").toLowerCase()}
+        </Badge>
+      ) : null}
     </Link>
   );
 }
@@ -124,7 +128,7 @@ export function RrMediaRelations({
           <h3 className="text-base font-bold text-foreground">
             {t("aquila.relatedAnime")}
           </h3>
-          <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1.5 pt-0.5 snap-x snap-mandatory sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:pb-0">
+          <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1.5 pt-0.5 snap-x snap-mandatory sm:grid sm:grid-cols-2 sm:gap-3.5 sm:max-h-[340px] sm:overflow-y-auto sm:pr-1.5 sm:pb-0">
             {animeRelations.map((relation, qid) => (
               <RelationItem key={`anime-${relation.id}-${qid}`} relation={relation} />
             ))}
@@ -137,7 +141,7 @@ export function RrMediaRelations({
           <h3 className="text-base font-bold text-foreground">
             {t("aquila.relatedManga")}
           </h3>
-          <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1.5 pt-0.5 snap-x snap-mandatory sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:pb-0">
+          <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1.5 pt-0.5 snap-x snap-mandatory sm:grid sm:grid-cols-2 sm:gap-3.5 sm:max-h-[340px] sm:overflow-y-auto sm:pr-1.5 sm:pb-0">
             {mangaRelations.map((relation, qid) => (
               <RelationItem key={`manga-${relation.id}-${qid}`} relation={relation} />
             ))}
@@ -150,7 +154,7 @@ export function RrMediaRelations({
           <h3 className="text-base font-bold text-foreground">
             {t("aquila.otherRelations")}
           </h3>
-          <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1.5 pt-0.5 snap-x snap-mandatory sm:grid sm:grid-cols-2 sm:gap-4 sm:overflow-visible sm:pb-0">
+          <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1.5 pt-0.5 snap-x snap-mandatory sm:grid sm:grid-cols-2 sm:gap-3.5 sm:max-h-[340px] sm:overflow-y-auto sm:pr-1.5 sm:pb-0">
             {otherRelations.map((relation, qid) => (
               <RelationItem key={`other-${relation.id}-${qid}`} relation={relation} />
             ))}

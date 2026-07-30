@@ -1,29 +1,22 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { MovieRepository } from './movie.repository';
+import { MovieExternal } from './movie.external';
 import { MovieQueueService } from './movie-queue.service';
+import { CacheService } from 'src/providers/cache/cache.service';
+import { MovieEntity, MovieSearchEntity } from './movie.entities';
 import {
+  rrConflictException,
   rrError,
   rrNotFoundException,
   rrTooManyRequestsException,
-  rrConflictException,
 } from 'src/providers/error';
-import { MovieEntity, MovieSearchEntity } from './movie.entities';
-import { CacheService } from 'src/providers/cache/cache.service';
-import { MovieExternal } from './movie.external';
-
-interface DbMovieResult {
-  id: number;
-  tvdbId: number;
-  titleEnglish?: string | null;
-  titleRomaji?: string | null;
-  coverImage?: string | null;
-}
+import { AnimeQueueService } from '../anime/anime-queue.service';
+import { MangaQueueService } from '../manga/manga-queue.service';
 
 @Injectable()
 export class MovieService {
   private readonly logger = new Logger(MovieService.name);
   private readonly moduleCode = 'MoSve-';
-  private readonly useLocalMedia = process.env.USE_LOCAL_MEDIA_ONLY ?? false;
   private readonly cacheDuration = Number(
     process.env.MOVIE_CACHE_DURATION ?? 60 * 60,
   );
@@ -33,43 +26,52 @@ export class MovieService {
     private readonly movieQueueService: MovieQueueService,
     private readonly cacheService: CacheService,
     private readonly movieExternal: MovieExternal,
+    @Inject(forwardRef(() => AnimeQueueService))
+    private readonly animeQueueService: AnimeQueueService,
+    @Inject(forwardRef(() => MangaQueueService))
+    private readonly mangaQueueService: MangaQueueService,
   ) {}
+
+  private readonly cacheKeys = {
+    movieDetail: (id: number) => `movie:v2:${id}`,
+    movieSearch: (query: string) => `movie:v2:search:${query.toLowerCase().trim()}`,
+    movieSimilar: (id: number) => `movie:v2:similar:${id}`,
+  };
 
   public async search(name: string): Promise<MovieSearchEntity[]> {
     const cleanName = decodeURIComponent(name).replace(/\+/g, ' ').trim();
-    const cacheKey = CacheService.keys.movieSearch(cleanName);
+    if (!cleanName) return [];
 
+    const cacheKey = this.cacheKeys.movieSearch(cleanName);
     const rawCached = await this.cacheService.get<any>(cacheKey);
     const cached: MovieSearchEntity[] | null =
       typeof rawCached === 'string' ? JSON.parse(rawCached) : rawCached;
 
-    if (cached && Array.isArray(cached)) {
+    if (cached && Array.isArray(cached) && cached.length > 0) {
       this.logger.debug(`Movie search cache hit ${cached.length} entries`);
       return cached;
     }
 
-    let result: MovieSearchEntity[] = [];
-    let usedExternal = false;
+    let result: MovieSearchEntity[] = await this.movieRepository.search(cleanName);
 
-    if (this.useLocalMedia) {
-      result = await this.movieRepository.search(cleanName);
-    }
+    if (result.length === 0) {
+      this.logger.debug(`Local DB search empty, querying TVDB for movie: "${cleanName}"`);
+      const externalResults = await this.movieExternal.search(cleanName);
 
-    if (!this.useLocalMedia || result.length === 0) {
-      result = await this.movieExternal.search(cleanName);
-      usedExternal = true;
+      if (externalResults.length > 0) {
+        const tvdbIds = externalResults
+          .map((r) => r.tvdbId)
+          .filter((id): id is number => Boolean(id));
+        this.movieQueueService.addSearchUpserts(tvdbIds);
+
+        result = externalResults;
+      }
     }
 
     this.logger.debug(`Movies found: ${result.length}`);
 
     if (result.length > 0) {
       await this.cacheService.set(cacheKey, result, this.cacheDuration);
-    }
-
-    // Queue a background refresh only when local results were returned
-    if (this.useLocalMedia && !usedExternal && result.length > 0) {
-      this.logger.debug('Queuing background refresh for movies');
-      this.movieQueueService.addSearchRefresh(cleanName, cacheKey);
     }
 
     return result;
@@ -82,7 +84,7 @@ export class MovieService {
       });
     }
 
-    const cacheKey = `movie:${id}`;
+    const cacheKey = this.cacheKeys.movieDetail(id);
     const cached = await this.cacheService.get<MovieEntity>(cacheKey);
 
     if (cached) {
@@ -90,12 +92,12 @@ export class MovieService {
       return cached;
     }
 
-    this.logger.debug('getMovie fetching from db');
+    this.logger.debug(`getMovie fetching from db for ID ${id}`);
     const data = await this.movieRepository.find(id);
 
     if (!data) {
       throw new rrNotFoundException(`${this.moduleCode}MNF001`, {
-        message: 'Movie not found',
+        message: `Movie not found`,
       });
     }
 
@@ -114,10 +116,10 @@ export class MovieService {
       });
     }
 
-    const cacheKey = `cooldown:refresh:movie:${id}`;
+    const cooldownKey = `cooldown:refresh:movie:v2:${id}`;
 
     if (!force) {
-      const onCooldown = await this.cacheService.get(cacheKey);
+      const onCooldown = await this.cacheService.get(cooldownKey);
 
       if (onCooldown) {
         throw new rrTooManyRequestsException(`${this.moduleCode}TMWRR001`, {
@@ -126,11 +128,17 @@ export class MovieService {
       }
     }
 
-    // Look up the existing entry to get the TVDB ID
     const existing = await this.movieRepository.find(id);
     if (!existing) {
       throw new rrNotFoundException(`${this.moduleCode}MNFID001`, {
         message: 'Movie not found in database',
+      });
+    }
+
+    const tvdbId = existing.tvDBId;
+    if (!tvdbId) {
+      throw new rrError(`${this.moduleCode}MHNTICR001`, {
+        message: 'Movie has no TVDB ID, cannot refresh',
       });
     }
 
@@ -140,17 +148,26 @@ export class MovieService {
       });
     }
 
-    // Fetch fresh data from TVDB
-    await this.movieExternal.fetchAndUpsertMovie(
-      existing.tvdbId,
-      ...(force ? [force] : []),
-    );
+    const fullRecord = await this.movieExternal.fetchFullV2Record(tvdbId);
+    if (fullRecord) {
+      await this.movieRepository.upsertV2Record(fullRecord);
+      if (fullRecord.relations && Array.isArray(fullRecord.relations)) {
+        for (const rel of fullRecord.relations) {
+          if (rel.targetType === 'MOVIE' && rel.targetTvdbId) {
+            void this.movieQueueService.addUpsertJob(rel.targetTvdbId, 1);
+          } else if (rel.targetType === 'ANIME' && rel.targetAnilistId) {
+            void this.animeQueueService.addUpsertJob(rel.targetAnilistId, 1);
+          } else if (rel.targetType === 'MANGA' && rel.targetAnilistId) {
+            void this.mangaQueueService.addUpsertJob(rel.targetAnilistId, 1);
+          }
+        }
+      }
+    }
 
-    // Bust the cache so next getMovie fetches fresh data
-    await this.cacheService.del(`movie:${id}`);
+    await this.cacheService.del(this.cacheKeys.movieDetail(id));
 
     const cooldownSeconds = 5 * 60;
-    await this.cacheService.set(cacheKey, true, cooldownSeconds);
+    await this.cacheService.set(cooldownKey, true, cooldownSeconds);
 
     return await this.movieRepository.find(id);
   }
@@ -159,46 +176,50 @@ export class MovieService {
     tvdbId: number,
     title?: string,
     coverImage?: string,
-  ): Promise<DbMovieResult | null> {
-    let movie = (await this.movieRepository.findByTvdbId(
-      tvdbId,
-    )) as DbMovieResult | null;
+  ): Promise<any> {
+    let movie = await this.movieRepository.findByTvdbId(tvdbId);
     if (!movie) {
       try {
-        await this.movieExternal.fetchAndUpsertMovie(tvdbId);
-        movie = (await this.movieRepository.findByTvdbId(
-          tvdbId,
-        )) as DbMovieResult | null;
+        const fullRecord = await this.movieExternal.fetchFullV2Record(tvdbId);
+        if (fullRecord) {
+          movie = await this.movieRepository.upsertV2Record(fullRecord);
+          if (fullRecord.relations && Array.isArray(fullRecord.relations)) {
+            for (const rel of fullRecord.relations) {
+              if (rel.targetType === 'MOVIE' && rel.targetTvdbId) {
+                void this.movieQueueService.addUpsertJob(rel.targetTvdbId, 1);
+              } else if (rel.targetType === 'ANIME' && rel.targetAnilistId) {
+                void this.animeQueueService.addUpsertJob(rel.targetAnilistId, 1);
+              } else if (rel.targetType === 'MANGA' && rel.targetAnilistId) {
+                void this.mangaQueueService.addUpsertJob(rel.targetAnilistId, 1);
+              }
+            }
+          }
+        }
       } catch {
-        movie = (await this.movieRepository.upsert(tvdbId, {
-          tvdbId,
-          titleRomaji: title || 'Unknown',
-          coverImage: coverImage || null,
-        })) as DbMovieResult;
+        this.logger.warn(
+          `ensureMovie V2: External fetch failed for ${tvdbId}, writing minimal stub`,
+        );
+        movie = await this.movieRepository.upsertV2Record({
+          tvDBId: tvdbId,
+          titlePrimary: title || 'Unknown',
+          coverImage: coverImage ?? null,
+          releaseDateYear: 1970,
+        });
       }
     }
     return movie;
   }
 
-  public async getSimilarMovie(id: number): Promise<any[]> {
-    if (isNaN(id)) {
-      return [];
-    }
-    const cacheKey = `movie:similar:${id}`;
-    const cached = await this.cacheService.get<any[]>(cacheKey);
-    if (cached && Array.isArray(cached)) {
-      return cached;
-    }
-    const result = await this.movieRepository.findSimilar(id);
-    if (result && result.length > 0) {
-      await this.cacheService.set(cacheKey, result, this.cacheDuration);
-    }
-    return result;
-  }
+  public async getSimilarMovies(id: number): Promise<MovieSearchEntity[]> {
+    if (isNaN(id)) return [];
+    const cacheKey = this.cacheKeys.movieSimilar(id);
+    const cached = await this.cacheService.get<MovieSearchEntity[]>(cacheKey);
+    if (cached) return cached;
 
-  public async getRemoteIds(
-    tvdbId: number,
-  ): Promise<{ tmdbId?: number; imdbId?: string } | null> {
-    return this.movieExternal.getRemoteIds(tvdbId);
+    const similar = await this.movieRepository.findSimilar(id);
+    if (similar && similar.length > 0) {
+      await this.cacheService.set(cacheKey, similar, this.cacheDuration);
+    }
+    return similar;
   }
 }

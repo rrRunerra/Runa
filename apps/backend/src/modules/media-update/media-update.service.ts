@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { AnimeService } from '../anime/anime.service';
 import { MangaService } from '../manga/manga.service';
@@ -24,11 +24,11 @@ export class MediaUpdateService {
 
   /**
    * Runs weekly on Sunday at midnight.
-   * Updates all media released in the past 3 months by triggering their refresh methods.
+   * Updates all V2 media released in the past 3 months by triggering their refresh methods.
    */
   @Cron('0 0 * * 0')
   public async updateRecentMedia(): Promise<void> {
-    this.logger.log('Starting weekly background media update job...');
+    this.logger.log('Starting weekly background V2 media update job...');
 
     const now = new Date();
     const threeMonthsAgo = new Date();
@@ -38,7 +38,6 @@ export class MediaUpdateService {
     const startMonthIndex = threeMonthsAgo.getFullYear() * 12 + threeMonthsAgo.getMonth();
     const currentMonthIndex = now.getFullYear() * 12 + now.getMonth();
 
-    // Helper to check if a release date is in the past 3 months (month-level accuracy)
     const isWithinPastThreeMonths = (
       year: number | null | undefined,
       month: number | null | undefined,
@@ -49,9 +48,9 @@ export class MediaUpdateService {
       return itemMonthIndex >= startMonthIndex && itemMonthIndex <= currentMonthIndex;
     };
 
-    // 1. Anime
+    // 1. Anime V2
     try {
-      const animes = await this.prisma.client.aquilaAnime.findMany({
+      const animes = await this.prisma.client.aquilaAnimeV2.findMany({
         where: {
           locked: false,
           startDateYear: { gte: targetYear - 1 },
@@ -67,22 +66,22 @@ export class MediaUpdateService {
         isWithinPastThreeMonths(a.startDateYear, a.startDateMonth),
       );
 
-      this.logger.log(`Found ${toUpdateAnime.length} Anime records to update.`);
+      this.logger.log(`Found ${toUpdateAnime.length} V2 Anime records to update.`);
       for (const item of toUpdateAnime) {
         try {
           await this.animeService.refreshAnime(item.id);
         } catch (err: unknown) {
           const errMsg = err instanceof Error ? err.message : String(err);
-          this.logger.warn(`Failed to refresh Anime ID ${item.id}: ${errMsg}`);
+          this.logger.warn(`Failed to refresh V2 Anime ID ${item.id}: ${errMsg}`);
         }
       }
     } catch (err: unknown) {
-      this.logger.error('Error occurred during Anime update sub-job:', err);
+      this.logger.error('Error occurred during V2 Anime update sub-job:', err);
     }
 
-    // 2. Manga
+    // 2. Manga V2
     try {
-      const mangas = await this.prisma.client.aquilaManga.findMany({
+      const mangas = await this.prisma.client.aquilaMangaV2.findMany({
         where: {
           locked: false,
           startDateYear: { gte: targetYear - 1 },
@@ -98,143 +97,143 @@ export class MediaUpdateService {
         isWithinPastThreeMonths(m.startDateYear, m.startDateMonth),
       );
 
-      this.logger.log(`Found ${toUpdateManga.length} Manga records to update.`);
+      this.logger.log(`Found ${toUpdateManga.length} V2 Manga records to update.`);
       for (const item of toUpdateManga) {
         try {
           await this.mangaService.refreshManga(item.id);
         } catch (err: unknown) {
           const errMsg = err instanceof Error ? err.message : String(err);
-          this.logger.warn(`Failed to refresh Manga ID ${item.id}: ${errMsg}`);
+          this.logger.warn(`Failed to refresh V2 Manga ID ${item.id}: ${errMsg}`);
         }
       }
     } catch (err: unknown) {
-      this.logger.error('Error occurred during Manga update sub-job:', err);
+      this.logger.error('Error occurred during V2 Manga update sub-job:', err);
     }
 
-    // 3. Book
+    // 3. Book V2
     try {
-      const books = await this.prisma.client.aquilaBook.findMany({
+      const books = await this.prisma.client.aquilaBookV2.findMany({
         where: {
           locked: false,
-          publishedYear: { gte: targetYear - 1 },
+          releaseDateYear: { gte: targetYear - 1 },
         },
         select: {
           id: true,
-          publishedYear: true,
-          publishedMonth: true,
+          releaseDateYear: true,
+          releaseDateMonth: true,
         },
       });
 
       const toUpdateBook = books.filter((b) =>
-        isWithinPastThreeMonths(b.publishedYear, b.publishedMonth),
+        isWithinPastThreeMonths(b.releaseDateYear, b.releaseDateMonth),
       );
 
-      this.logger.log(`Found ${toUpdateBook.length} Book records to update.`);
+      this.logger.log(`Found ${toUpdateBook.length} V2 Book records to update.`);
       for (const item of toUpdateBook) {
         try {
           await this.bookService.refreshBook(item.id);
         } catch (err: unknown) {
           const errMsg = err instanceof Error ? err.message : String(err);
-          this.logger.warn(`Failed to refresh Book ID ${item.id}: ${errMsg}`);
+          this.logger.warn(`Failed to refresh V2 Book ID ${item.id}: ${errMsg}`);
         }
       }
     } catch (err: unknown) {
-      this.logger.error('Error occurred during Book update sub-job:', err);
+      this.logger.error('Error occurred during V2 Book update sub-job:', err);
     }
 
-    // 4. Game
+    // 4. Game V2
     try {
-      const games = await this.prisma.client.aquilaGame.findMany({
+      const games = await this.prisma.client.aquilaGameV2.findMany({
         where: {
           locked: false,
-          releasedYear: { gte: targetYear - 1 },
+          releaseDateYear: { gte: targetYear - 1 },
         },
         select: {
           id: true,
-          releasedYear: true,
-          releasedMonth: true,
+          releaseDateYear: true,
+          releaseDateMonth: true,
         },
       });
 
       const toUpdateGame = games.filter((g) =>
-        isWithinPastThreeMonths(g.releasedYear, g.releasedMonth),
+        isWithinPastThreeMonths(g.releaseDateYear, g.releaseDateMonth),
       );
 
-      this.logger.log(`Found ${toUpdateGame.length} Game records to update.`);
+      this.logger.log(`Found ${toUpdateGame.length} V2 Game records to update.`);
       for (const item of toUpdateGame) {
         try {
           await this.gameService.refreshGame(item.id);
         } catch (err: unknown) {
           const errMsg = err instanceof Error ? err.message : String(err);
-          this.logger.warn(`Failed to refresh Game ID ${item.id}: ${errMsg}`);
+          this.logger.warn(`Failed to refresh V2 Game ID ${item.id}: ${errMsg}`);
         }
       }
     } catch (err: unknown) {
-      this.logger.error('Error occurred during Game update sub-job:', err);
+      this.logger.error('Error occurred during V2 Game update sub-job:', err);
     }
 
-    // 5. Movie
+    // 5. Movie V2
     try {
-      const movies = await this.prisma.client.aquilaMovie.findMany({
+      const movies = await this.prisma.client.aquilaMovieV2.findMany({
         where: {
           locked: false,
-          startDateYear: { gte: targetYear - 1 },
+          releaseDateYear: { gte: targetYear - 1 },
         },
         select: {
           id: true,
-          startDateYear: true,
-          startDateMonth: true,
+          releaseDateYear: true,
+          releaseDateMonth: true,
         },
       });
 
       const toUpdateMovie = movies.filter((m) =>
-        isWithinPastThreeMonths(m.startDateYear, m.startDateMonth),
+        isWithinPastThreeMonths(m.releaseDateYear, m.releaseDateMonth),
       );
 
-      this.logger.log(`Found ${toUpdateMovie.length} Movie records to update.`);
+      this.logger.log(`Found ${toUpdateMovie.length} V2 Movie records to update.`);
       for (const item of toUpdateMovie) {
         try {
           await this.movieService.refreshMovie(item.id);
         } catch (err: unknown) {
           const errMsg = err instanceof Error ? err.message : String(err);
-          this.logger.warn(`Failed to refresh Movie ID ${item.id}: ${errMsg}`);
+          this.logger.warn(`Failed to refresh V2 Movie ID ${item.id}: ${errMsg}`);
         }
       }
     } catch (err: unknown) {
-      this.logger.error('Error occurred during Movie update sub-job:', err);
+      this.logger.error('Error occurred during V2 Movie update sub-job:', err);
     }
 
-    // 6. TV
+    // 6. TV V2
     try {
-      const tvs = await this.prisma.client.aquilaTv.findMany({
+      const tvs = await this.prisma.client.aquilaTvV2.findMany({
         where: {
           locked: false,
-          startDateYear: { gte: targetYear - 1 },
+          firstAiredYear: { gte: targetYear - 1 },
         },
         select: {
           id: true,
-          startDateYear: true,
-          startDateMonth: true,
+          firstAiredYear: true,
+          firstAiredMonth: true,
         },
       });
 
       const toUpdateTv = tvs.filter((t) =>
-        isWithinPastThreeMonths(t.startDateYear, t.startDateMonth),
+        isWithinPastThreeMonths(t.firstAiredYear, t.firstAiredMonth),
       );
 
-      this.logger.log(`Found ${toUpdateTv.length} TV records to update.`);
+      this.logger.log(`Found ${toUpdateTv.length} V2 TV records to update.`);
       for (const item of toUpdateTv) {
         try {
           await this.tvService.refreshTv(item.id);
         } catch (err: unknown) {
           const errMsg = err instanceof Error ? err.message : String(err);
-          this.logger.warn(`Failed to refresh TV ID ${item.id}: ${errMsg}`);
+          this.logger.warn(`Failed to refresh V2 TV ID ${item.id}: ${errMsg}`);
         }
       }
     } catch (err: unknown) {
-      this.logger.error('Error occurred during TV update sub-job:', err);
+      this.logger.error('Error occurred during V2 TV update sub-job:', err);
     }
 
-    this.logger.log('Weekly background media update job completed.');
+    this.logger.log('Weekly background V2 media update job completed.');
   }
 }

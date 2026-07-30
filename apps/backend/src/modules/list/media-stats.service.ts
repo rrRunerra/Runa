@@ -12,43 +12,43 @@ interface MediaConfigEntry {
 
 const mediaConfig: Record<string, MediaConfigEntry> = {
   anime: {
-    model: 'aquilaAnime',
-    listModel: 'aquilaAnimeUserList',
+    model: 'aquilaAnimeV2',
+    listModel: 'aquilaAnimeUserListV2',
     favType: 'ANIME',
     idField: 'animeId',
     extIdField: 'anilistId',
   },
   manga: {
-    model: 'aquilaManga',
-    listModel: 'aquilaMangaUserList',
+    model: 'aquilaMangaV2',
+    listModel: 'aquilaMangaUserListV2',
     favType: 'MANGA',
     idField: 'mangaId',
     extIdField: 'anilistId',
   },
   movie: {
-    model: 'aquilaMovie',
-    listModel: 'aquilaMovieUserList',
+    model: 'aquilaMovieV2',
+    listModel: 'aquilaMovieUserListV2',
     favType: 'MOVIE',
     idField: 'movieId',
-    extIdField: 'tvdbId',
+    extIdField: 'tvDBId',
   },
   tv: {
-    model: 'aquilaTv',
-    listModel: 'aquilaTvUserList',
+    model: 'aquilaTvV2',
+    listModel: 'aquilaTvUserListV2',
     favType: 'TV',
     idField: 'tvId',
-    extIdField: 'tvdbId',
+    extIdField: 'tvDBId',
   },
   game: {
-    model: 'aquilaGame',
-    listModel: 'aquilaGameUserList',
+    model: 'aquilaGameV2',
+    listModel: 'aquilaGameUserListV2',
     favType: 'GAME',
     idField: 'gameId',
     extIdField: 'rawgId',
   },
   book: {
-    model: 'aquilaBook',
-    listModel: 'aquilaBookUserList',
+    model: 'aquilaBookV2',
+    listModel: 'aquilaBookUserListV2',
     favType: 'BOOK',
     idField: 'bookId',
     extIdField: 'googleBookId',
@@ -128,13 +128,13 @@ export class MediaStatsService {
       const updatedMedia = await this.prisma.client[config.model].update({
         where: { id: mediaId },
         data: {
-          localPopularity: popularity,
-          localFavoritesCount: favoritesCount,
-          localAverageScore: avgScore,
-          localStatusDistribution: statusDist,
-          localScoreDistribution: scoreDist,
-          localTotalScoreSum: totalScoreSum,
-          localScoredCount: scoredCount,
+          popularity,
+          favorites: favoritesCount,
+          averageScore: avgScore,
+          statusDistribution: statusDist,
+          scoreDistribution: scoreDist,
+          totalScoreSum,
+          scoredCount,
         },
       });
 
@@ -168,18 +168,18 @@ export class MediaStatsService {
       });
       if (!media) return;
 
-      let popularity = media.localPopularity ?? 0;
-      let totalScoreSum = media.localTotalScoreSum ?? 0;
-      let scoredCount = media.localScoredCount ?? 0;
+      let popularity = media.popularity ?? 0;
+      let totalScoreSum = media.totalScoreSum ?? 0;
+      let scoredCount = media.scoredCount ?? 0;
 
       let statusDist: Record<string, number> = {};
-      if (media.localStatusDistribution && typeof media.localStatusDistribution === 'object') {
-        statusDist = { ...(media.localStatusDistribution as Record<string, number>) };
+      if (media.statusDistribution && typeof media.statusDistribution === 'object') {
+        statusDist = { ...(media.statusDistribution as Record<string, number>) };
       }
 
       let scoreDist: Record<string, number> = {};
-      if (media.localScoreDistribution && typeof media.localScoreDistribution === 'object') {
-        scoreDist = { ...(media.localScoreDistribution as Record<string, number>) };
+      if (media.scoreDistribution && typeof media.scoreDistribution === 'object') {
+        scoreDist = { ...(media.scoreDistribution as Record<string, number>) };
       }
 
       // Process deletion of old stats values
@@ -217,12 +217,12 @@ export class MediaStatsService {
       const updatedMedia = await this.prisma.client[config.model].update({
         where: { id: mediaId },
         data: {
-          localPopularity: popularity,
-          localAverageScore: avgScore,
-          localStatusDistribution: statusDist,
-          localScoreDistribution: scoreDist,
-          localTotalScoreSum: totalScoreSum,
-          localScoredCount: scoredCount,
+          popularity,
+          averageScore: avgScore,
+          statusDistribution: statusDist,
+          scoreDistribution: scoreDist,
+          totalScoreSum,
+          scoredCount,
         },
       });
 
@@ -262,7 +262,7 @@ export class MediaStatsService {
       const updatedMedia = await this.prisma.client[config.model].update({
         where: { id: mediaId },
         data: {
-          localFavoritesCount: favoritesCount,
+          favorites: favoritesCount,
         },
       });
 
@@ -284,13 +284,13 @@ export class MediaStatsService {
       if (cached) {
         const updated = {
           ...cached,
-          localPopularity: newMedia.localPopularity,
-          localFavoritesCount: newMedia.localFavoritesCount,
-          localAverageScore: newMedia.localAverageScore,
-          localStatusDistribution: newMedia.localStatusDistribution,
-          localScoreDistribution: newMedia.localScoreDistribution,
-          localTotalScoreSum: newMedia.localTotalScoreSum,
-          localScoredCount: newMedia.localScoredCount,
+          popularity: newMedia.popularity,
+          favorites: newMedia.favorites,
+          averageScore: newMedia.averageScore,
+          statusDistribution: newMedia.statusDistribution,
+          scoreDistribution: newMedia.scoreDistribution,
+          totalScoreSum: newMedia.totalScoreSum,
+          scoredCount: newMedia.scoredCount,
         };
         await this.cacheService.set(cacheKey, updated, 60 * 60);
         this.logger.debug(`Cache hot-updated for key: ${cacheKey}`);

@@ -62,7 +62,7 @@ export default async function Page({ params }: PageProps) {
   let initialData = null;
   try {
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/list/game/user/${name}?limit=30&offset=0&status=Playing&sort=last_updated`,
+      `${process.env.NEXT_PUBLIC_API_URL}/list/game/user/${name}?limit=30&status=Playing&sort=last_updated`,
       { headers, next: { revalidate: 0 } }
     );
     if (res.ok) {

@@ -136,19 +136,23 @@ export default function UserTvPage({ initialData }: { initialData?: any }) {
 
   const getInitialPriorityState = () => {
     if (!initialData) {
-      return { index: 0, offset: 0, hasMore: true };
+      return { index: 0, cursor: undefined, hasMore: true };
     }
     const len = initialData.entries?.length || 0;
-    if (len < 30) {
-      return { index: 1, offset: 0, hasMore: true };
+    const pageInfo = initialData.pageInfo;
+    const initialHasMore = pageInfo?.hasMore ?? (len >= 30);
+    const initialNextCursor = pageInfo?.nextCursor ?? null;
+
+    if (!initialHasMore) {
+      return { index: 1, cursor: undefined, hasMore: true };
     } else {
-      return { index: 0, offset: len, hasMore: true };
+      return { index: 0, cursor: initialNextCursor, hasMore: true };
     }
   };
 
   const initialPState = getInitialPriorityState();
-  const [offset, setOffset] = useState(
-    initialData ? initialData.entries?.length || 0 : 0,
+  const [nextCursor, setNextCursor] = useState<string | null | undefined>(
+    initialData?.pageInfo?.nextCursor
   );
   const [hasMore, setHasMore] = useState(initialPState.hasMore);
   const [loading, setLoading] = useState(false);
@@ -156,7 +160,9 @@ export default function UserTvPage({ initialData }: { initialData?: any }) {
     initialData?.counts || {},
   );
   const [priorityIdx, setPriorityIdx] = useState(initialPState.index);
-  const [priorityOff, setPriorityOff] = useState(initialPState.offset);
+  const [priorityCursor, setPriorityCursor] = useState<string | null | undefined>(
+    initialPState.cursor
+  );
   const isFetchingRef = useRef(false);
   const isInitialMountRef = useRef(true);
 
@@ -168,7 +174,7 @@ export default function UserTvPage({ initialData }: { initialData?: any }) {
   }, [searchVal]);
 
   const fetchTvList = (
-    currentOffset = 0,
+    cursorToFetch?: string | null,
     isReset = false,
     statusOverride?: string,
     signal?: AbortSignal,
@@ -187,7 +193,6 @@ export default function UserTvPage({ initialData }: { initialData?: any }) {
 
     const queryParams = new URLSearchParams({
       limit: "30",
-      offset: currentOffset.toString(),
       status: effectiveStatus,
       search: debouncedSearch,
       format: filters.format || "",
@@ -196,6 +201,10 @@ export default function UserTvPage({ initialData }: { initialData?: any }) {
       mediaStatus: filters.mediaStatus || "",
       sort: sort,
     });
+
+    if (cursorToFetch) {
+      queryParams.set("cursor", cursorToFetch);
+    }
 
     fetch(
       `${process.env.NEXT_PUBLIC_API_URL}/list/tv/user/${username}?${queryParams}`,
@@ -215,30 +224,36 @@ export default function UserTvPage({ initialData }: { initialData?: any }) {
         if (data && data.statusCode !== 404) {
           setIsPrivate(false);
           const newEntries = data.entries || [];
+          const pageInfo = data.pageInfo || {
+            nextCursor: null,
+            hasMore: newEntries.length === 30,
+          };
+
           setTvList((prev) => {
             if (isReset) return newEntries;
             const seen = new Set(prev.map((e) => e.id));
             return [...prev, ...newEntries.filter((e: any) => !seen.has(e.id))];
           });
           setCounts(data.counts || {});
+
           if (statusOverride !== undefined && activeList === "All") {
-            if (newEntries.length < 30) {
+            if (!pageInfo.hasMore) {
               const pIdx = TV_PRIORITY_STATUSES.indexOf(statusOverride);
               const nextIdx = pIdx + 1;
               if (nextIdx < TV_PRIORITY_STATUSES.length) {
                 setPriorityIdx(nextIdx);
-                setPriorityOff(0);
+                setPriorityCursor(undefined);
                 setHasMore(true);
               } else {
                 setHasMore(false);
               }
             } else {
-              setPriorityOff(currentOffset + newEntries.length);
+              setPriorityCursor(pageInfo.nextCursor);
               setHasMore(true);
             }
           } else {
-            setHasMore(newEntries.length === 30);
-            setOffset(currentOffset + newEntries.length);
+            setHasMore(pageInfo.hasMore);
+            setNextCursor(pageInfo.nextCursor);
           }
         }
       })
@@ -261,13 +276,13 @@ export default function UserTvPage({ initialData }: { initialData?: any }) {
     }
     const controller = new AbortController();
     setPriorityIdx(0);
-    setPriorityOff(0);
-    setOffset(0);
+    setPriorityCursor(undefined);
+    setNextCursor(undefined);
     setHasMore(true);
     if (activeList === "All") {
-      fetchTvList(0, true, TV_PRIORITY_STATUSES[0], controller.signal);
+      fetchTvList(undefined, true, TV_PRIORITY_STATUSES[0], controller.signal);
     } else {
-      fetchTvList(0, true, undefined, controller.signal);
+      fetchTvList(undefined, true, undefined, controller.signal);
     }
     return () => {
       controller.abort();
@@ -406,19 +421,28 @@ export default function UserTvPage({ initialData }: { initialData?: any }) {
                   sort={sort}
                   baseUrl="/aquila/tv"
                   isOwner={isOwner}
-                  onRefresh={() => fetchTvList(0, true)}
+                  onRefresh={() => {
+                    if (activeList === "All") {
+                      setPriorityIdx(0);
+                      setPriorityCursor(undefined);
+                      fetchTvList(undefined, true, TV_PRIORITY_STATUSES[0]);
+                    } else {
+                      setNextCursor(undefined);
+                      fetchTvList(undefined, true);
+                    }
+                  }}
                 />
 
                 <InfiniteScroll
                   onLoadMore={() => {
                     if (activeList === "All") {
                       fetchTvList(
-                        priorityOff,
+                        priorityCursor,
                         false,
                         TV_PRIORITY_STATUSES[priorityIdx],
                       );
                     } else {
-                      fetchTvList(offset, false);
+                      fetchTvList(nextCursor, false);
                     }
                   }}
                   hasMore={hasMore}

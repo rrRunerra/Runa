@@ -1,60 +1,95 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Inject, forwardRef } from '@nestjs/common';
 import { Subject, EMPTY } from 'rxjs';
 import { mergeMap, catchError } from 'rxjs/operators';
 import { BookExternal } from './book.external';
-import { CacheService } from 'src/providers/cache/cache.service';
+import { BookRepository } from './book.repository';
+import { AnimeQueueService } from '../anime/anime-queue.service';
+import { MangaQueueService } from '../manga/manga-queue.service';
 
-interface SearchRefreshJob {
-  query: string;
-  cacheKey: string;
+interface ExternalUpsertJob {
+  googleBookId: string;
+  depth?: number;
 }
 
 @Injectable()
 export class BookQueueService implements OnModuleInit {
   private readonly logger = new Logger(BookQueueService.name);
-  private readonly moduleCode = 'BkQeSve-';
-  private readonly searchQueue = new Subject<SearchRefreshJob>();
-  private readonly pendingSearches = new Set<string>();
+  private readonly upsertQueue = new Subject<ExternalUpsertJob>();
+  private readonly pendingBookIds = new Set<string>();
 
   constructor(
     private readonly bookExternal: BookExternal,
-    private readonly cacheService: CacheService,
+    private readonly bookRepository: BookRepository,
+    @Inject(forwardRef(() => AnimeQueueService))
+    private readonly animeQueueService: AnimeQueueService,
+    @Inject(forwardRef(() => MangaQueueService))
+    private readonly mangaQueueService: MangaQueueService,
   ) {}
 
   onModuleInit(): void {
-    this.processSearchQueue();
+    this.processUpsertQueue();
   }
 
-  addSearchRefresh(query: string, cacheKey: string): void {
-    if (!this.pendingSearches.has(query)) {
-      this.pendingSearches.add(query);
-      this.searchQueue.next({ query, cacheKey });
+  public async addUpsertJob(googleBookId: string, depth = 0): Promise<void> {
+    if (!googleBookId || depth > 5) return;
+    if (this.pendingBookIds.has(googleBookId)) return;
+
+    try {
+      const existing = await this.bookRepository.findByGoogleBookId(googleBookId);
+      if (existing && existing.googleBooksUpdatedAt) {
+        return;
+      }
+    } catch {
+      // Ignore check errors
+    }
+
+    this.pendingBookIds.add(googleBookId);
+    this.upsertQueue.next({ googleBookId, depth });
+  }
+
+  public addSearchUpserts(googleBookIds: string[]): void {
+    for (const id of googleBookIds) {
+      void this.addUpsertJob(id, 0);
     }
   }
 
-  private processSearchQueue(): void {
-    this.searchQueue
+  private processUpsertQueue(): void {
+    this.upsertQueue
       .pipe(
         mergeMap(async (job) => {
           try {
-            this.logger.log(`Processing search refresh: "${job.query}"`);
-            const fresh = await this.bookExternal.search(job.query);
-            if (fresh.length > 0) {
-              await this.cacheService.set(job.cacheKey, fresh, 60 * 60);
+            this.logger.log(
+              `Processing background V2 book upsert for Google Book ID: ${job.googleBookId} (depth ${job.depth || 0})`,
+            );
+            const fullRecord = await this.bookExternal.fetchFullV2Record(job.googleBookId);
+            if (fullRecord) {
+              await this.bookRepository.upsertV2Record(fullRecord);
+              this.logger.log(
+                `Successfully completed background V2 book upsert for Google Book ID: ${job.googleBookId}`,
+              );
+
+              if (fullRecord.relations && Array.isArray(fullRecord.relations)) {
+                for (const rel of fullRecord.relations) {
+                  if (rel.targetType === 'BOOK' && rel.targetGoogleBookId) {
+                    void this.addUpsertJob(rel.targetGoogleBookId, (job.depth || 0) + 1);
+                  } else if (rel.targetType === 'ANIME' && rel.targetAnilistId) {
+                    void this.animeQueueService.addUpsertJob(rel.targetAnilistId, (job.depth || 0) + 1);
+                  } else if (rel.targetType === 'MANGA' && rel.targetAnilistId) {
+                    void this.mangaQueueService.addUpsertJob(rel.targetAnilistId, (job.depth || 0) + 1);
+                  }
+                }
+              }
             }
-            this.logger.log(`Completed search refresh: "${job.query}"`);
-          } catch (error) {
-            const message =
-              error instanceof Error ? error.message : 'Unknown error';
+          } catch (error: any) {
             this.logger.error(
-              `Search refresh failed for "${job.query}": ${message}`,
+              `Background V2 book upsert failed for Google Book ID ${job.googleBookId}: ${error?.message || error}`,
             );
           } finally {
-            this.pendingSearches.delete(job.query);
+            this.pendingBookIds.delete(job.googleBookId);
           }
-        }, 1),
+        }, 2),
         catchError((error) => {
-          this.logger.error(`Search queue error: ${error}`);
+          this.logger.error(`Book upsert queue unexpected error: ${error}`);
           return EMPTY;
         }),
       )

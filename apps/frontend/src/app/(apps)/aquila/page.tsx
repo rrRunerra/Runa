@@ -102,7 +102,7 @@ export default function AquilaHome(): React.JSX.Element {
   >({});
   const inFlightKeysRef = useRef<Set<string>>(new Set());
 
-  // Fetch watching list using standard SWR hook
+  // Fetch V2 watching list using standard SWR hook
   const {
     data: rawWatching = [],
     isLoading: isSWRClassLoading,

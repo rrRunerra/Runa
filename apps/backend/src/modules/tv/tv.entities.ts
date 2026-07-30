@@ -1,5 +1,11 @@
+import { TvStatus } from '@runa/database';
+
 export interface TvSearchEntity {
   id: number;
+  tvDBId?: number | null;
+  tmdbId?: number | null;
+  imdbId?: string | null;
+  tvmazeId?: number | null;
   title: string;
   secondaryTitle: string | null;
   coverImage: string | null;
@@ -7,72 +13,90 @@ export interface TvSearchEntity {
   status: string;
   isAdult: boolean;
   averageScore: number | null;
-}
-
-export interface TvCharacterEntity {
-  id: number;
-  name: string;
-  personName: string;
-  image: string | null;
-  role: string | null;
-  actorId: number | null;
-}
-
-export interface TvTrailerEntity {
-  id: string;
-  name: string;
-  url: string;
-  language: string;
-}
-
-export interface TvEpisodeEntity {
-  id: number;
-  number: number;
-  name: string;
-  overview: string | null;
-  image: string | null;
-  airDate: string | null;
-}
-
-export interface TvSeasonEntity {
-  id: number;
-  number: number;
-  name: string | null;
-  image: string | null;
-  episodeCount: number;
-  episodes: TvEpisodeEntity[];
+  firstAiredYear?: number | null;
 }
 
 export interface TvEntity {
   id: number;
-  tvdbId: number;
-  tmdbId: number | null;
-  imdbId: string | null;
-  titleEnglish: string | null;
-  titleRomaji: string | null;
-  titleNative: string | null;
-  coverImage: string | null;
-  bannerImage: string | null;
-  description: string | null;
-  slug: string | null;
-  status: string | null;
-  averageRuntime: number | null;
-  firstAired: string | null;
-  genres: string[];
-  studios: string[];
-  characters: TvCharacterEntity[] | null;
-  seasons: TvSeasonEntity[] | null;
-  trailers: TvTrailerEntity[] | null;
-  originalCountry: string | null;
-  originalLanguage: string | null;
-  contentRating: string | null;
-  locked: boolean;
-  updatedAt: Date;
-  episodeCount?: number | null;
+  tvDBId?: number | null;
+  imdbId?: string | null;
+  tmdbId?: number | null;
+  traktId?: number | null;
+  tvmazeId?: number | null;
+  tvrageId?: number | null;
 
-  localPopularity: number;
-  localFavoritesCount: number;
-  localAverageScore: number;
-  localStatusDistribution: Record<string, number>;
-  localScoreDistribution: Record<string, number>;
+  titlePrimary: string;
+  titleSecondary?: string | null;
+  titleNative?: string | null;
+  tagline?: string | null;
+
+  coverImage?: string | null;
+  bannerImage?: string | null;
+  images?: any;
+
+  description?: string | null;
+  originalLanguage?: string | null;
+  countryOfOrigin?: string | null;
+  episodeCount?: number | null;
+  seasonCount?: number | null;
+  averageRuntime?: number | null;
+  homepage?: string | null;
+  siteUrl?: string | null;
+  showType?: string | null;
+
+  broadcastTime?: string | null;
+  broadcastDays: string[];
+
+  firstAiredYear?: number | null;
+  firstAiredMonth?: number | null;
+  firstAiredDay?: number | null;
+
+  lastAiredYear?: number | null;
+  lastAiredMonth?: number | null;
+  lastAiredDay?: number | null;
+
+  genres: string[];
+  tags: string[];
+  networks: string[];
+  studios: string[];
+
+  status: TvStatus;
+  isAdult: boolean;
+  synonyms: string[];
+  trailers?: any;
+  locked: boolean;
+
+  averageScore?: number | null;
+  imdbRating?: number | null;
+  imdbVotes?: number | null;
+  tvmazeRating?: number | null;
+  rottenTomatoesScore?: number | null;
+  awards?: string | null;
+
+  favorites: number;
+  popularity: number;
+  totalScoreSum?: number | null;
+  scoredCount?: number | null;
+  statusDistribution?: any;
+  scoreDistribution?: any;
+
+  sources?: any;
+
+  ageRating?: string | null;
+  ageRatingGuide?: string | null;
+  contentRatings?: any;
+
+  imdbUpdatedAt?: number | null;
+  tvdbUpdatedAt?: number | null;
+  tvmazeUpdatedAt?: number | null;
+
+  createdAt: Date;
+  updatedAt: Date;
+
+  seasons?: any[];
+  episodes?: any[];
+  characters?: any[];
+  studiosList?: any[];
+  staff?: any[];
+  relations?: any[];
 }

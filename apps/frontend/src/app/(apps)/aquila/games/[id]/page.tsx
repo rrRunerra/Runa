@@ -19,13 +19,17 @@ export async function generateMetadata({
     };
   }
 
-  const title = game.titleString ?? "Game Details";
-  const description = cleanDescription(game.description, 160);
-  const image =
-    typeof game.coverImage === "string" ? game.coverImage : "";
+  const title =
+    (game as any).titlePrimary ??
+    (game as any).titleSecondary ??
+    "Game Details";
+  const description = cleanDescription((game as any).description, 160);
+  const image = (game as any).coverImage ?? "";
   const bannerImage =
-    typeof game.backgroundImage === "string" ? game.backgroundImage : image;
-  const keywords: string[] = Array.isArray(game.genres) ? game.genres : [];
+    (game as any).bannerImage ?? (game as any).backgroundImage ?? image;
+  const keywords: string[] = Array.isArray((game as any).genres)
+    ? (game as any).genres
+    : [];
 
   return {
     title: `Aquila > Game > ${title}`,
@@ -51,6 +55,6 @@ export async function generateMetadata({
   };
 }
 
-export default async function Page({ params }: PageProps) {
+export default async function Page({ params: _ }: PageProps) {
   return <GameDetailsPage />;
 }
