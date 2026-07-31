@@ -115,6 +115,14 @@ steps:
         from_secret: NEXT_PUBLIC_ONLYOFFICE_API_URL
       NEXT_PUBLIC_KLIPY_API_KEY:
         from_secret: NEXT_PUBLIC_KLIPY_API_KEY
+      ANIDB_CLIENT:
+        from_secret: ANIDB_CLIENT
+      ANIDB_CLIENT_VER:
+        from_secret: ANIDB_CLIENT_VER
+      TMDB_API_KEY:
+        from_secret: TMDB_API_KEY
+      LYNX_DISABLE_TRACKING:
+        from_secret: LYNX_DISABLE_TRACKING
     commands:
       - rm -f .env
       - printf "INTERNAL_API_KEY=%s\n" "$INTERNAL_API_KEY" >> .env
@@ -170,6 +178,10 @@ steps:
       - printf "NEXT_PUBLIC_ONLYOFFICE_URL=%s\n" "$NEXT_PUBLIC_ONLYOFFICE_URL" >> .env
       - printf "NEXT_PUBLIC_ONLYOFFICE_API_URL=%s\n" "$NEXT_PUBLIC_ONLYOFFICE_API_URL" >> .env
       - printf "NEXT_PUBLIC_KLIPY_API_KEY=%s\n" "$NEXT_PUBLIC_KLIPY_API_KEY" >> .env
+      - printf "ANIDB_CLIENT=%s\n" "$ANIDB_CLIENT" >> .env
+      - printf "ANIDB_CLIENT_VER=%s\n" "$ANIDB_CLIENT_VER" >> .env
+      - printf "TMDB_API_KEY=%s\n" "$TMDB_API_KEY" >> .env
+      - printf "LYNX_DISABLE_TRACKING=%s\n" "$LYNX_DISABLE_TRACKING" >> .env
       - docker compose build
       - docker compose build
       - docker compose up -d

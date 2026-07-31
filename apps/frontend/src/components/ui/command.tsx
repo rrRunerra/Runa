@@ -33,21 +33,28 @@ function Command({
   )
 }
 
+type CommandDialogProps = React.ComponentProps<typeof Dialog> &
+  React.ComponentProps<typeof Command> & {
+    title?: string
+    description?: string
+    className?: string
+    showCloseButton?: boolean
+  }
+
 function CommandDialog({
   title = "Command Palette",
   description = "Search for a command to run...",
   children,
   className,
   showCloseButton = false,
-  ...props
-}: React.ComponentProps<typeof Dialog> & {
-  title?: string
-  description?: string
-  className?: string
-  showCloseButton?: boolean
-}) {
+  open,
+  onOpenChange,
+  defaultOpen,
+  modal,
+  ...commandProps
+}: CommandDialogProps) {
   return (
-    <Dialog {...props}>
+    <Dialog open={open} onOpenChange={onOpenChange} defaultOpen={defaultOpen} modal={modal}>
       <DialogHeader className="sr-only">
         <DialogTitle>{title}</DialogTitle>
         <DialogDescription>{description}</DialogDescription>
@@ -59,7 +66,7 @@ function CommandDialog({
         )}
         showCloseButton={showCloseButton}
       >
-        {children}
+        <Command {...commandProps}>{children}</Command>
       </DialogContent>
     </Dialog>
   )

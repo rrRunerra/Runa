@@ -303,7 +303,9 @@ export function RrMediaReviews({
         <div className="space-y-4">
           {filteredList.map((review) => {
             const isOwner =
-              session?.user?.name?.toLowerCase() ===
+              session?.user?.username?.toLowerCase() ===
+                review.username.toLowerCase() ||
+              session?.user?.displayName?.toLowerCase() ===
                 review.username.toLowerCase() ||
               session?.user?.email?.split("@")[0].toLowerCase() ===
                 review.username.toLowerCase();
