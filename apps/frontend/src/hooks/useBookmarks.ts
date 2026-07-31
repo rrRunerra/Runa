@@ -10,11 +10,13 @@ export interface UseBookmarksOptions {
 }
 
 export function useBookmarks(options: UseBookmarksOptions = {}) {
-  const { bookmarks, loadingBookmarks, refetchBookmarks } = useNotificationAndBookmarks();
+  const { bookmarks, loadingBookmarks, refetchBookmarks, deleteBookmark } =
+    useNotificationAndBookmarks();
 
   return {
     bookmarks,
     loading: loadingBookmarks,
     mutate: refetchBookmarks,
+    deleteBookmark,
   };
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
@@ -89,6 +89,17 @@ export function RrConnectionsTab({
     items: any[];
   } | null>(null);
 
+  const pollingTimersRef = useRef<Record<string, NodeJS.Timeout>>({});
+  const initialCheckedRef = useRef<Record<string, boolean>>({});
+
+  const clearPollTimer = useCallback((providerId: string) => {
+    const key = providerId.toLowerCase();
+    if (pollingTimersRef.current[key]) {
+      clearTimeout(pollingTimersRef.current[key]);
+      delete pollingTimersRef.current[key];
+    }
+  }, []);
+
   const {
     data: connectionsData,
     isLoading: connectionsLoading,
@@ -103,14 +114,17 @@ export function RrConnectionsTab({
   const pollImportStatus = useCallback(
     async (providerId: string): Promise<void> => {
       if (!session?.accessToken) return;
+      const key = providerId.toLowerCase();
+      clearPollTimer(key);
+
       try {
         const data = (await fetcher([
-          `${process.env.NEXT_PUBLIC_API_URL}/connections/${providerId.toLowerCase()}/import/status`,
+          `${process.env.NEXT_PUBLIC_API_URL}/connections/${key}/import/status`,
           session.accessToken,
         ])) as ImportStatus;
 
         setImportStatus((prev) => {
-          const old = prev[providerId.toLowerCase()];
+          const old = prev[key];
           if (old?.status === "processing") {
             if (data.status === "completed") {
               if (data.failedItems && data.failedItems.length > 0) {
@@ -131,18 +145,21 @@ export function RrConnectionsTab({
           }
           return {
             ...prev,
-            [providerId.toLowerCase()]: data,
+            [key]: data,
           };
         });
 
         if (data.status === "processing") {
-          setTimeout(() => pollImportStatus(providerId), 5000);
+          pollingTimersRef.current[key] = setTimeout(
+            () => pollImportStatus(providerId),
+            10000,
+          );
         }
       } catch (err) {
         console.error(err);
       }
     },
-    [session, setFailedImports, t],
+    [session, clearPollTimer, setFailedImports, t],
   );
 
   const handleImport = async (
@@ -214,11 +231,24 @@ export function RrConnectionsTab({
     const importableProviders = ["anilist", "mal", "simkl", "trakt"];
     for (const conn of connections) {
       const providerId = conn.provider.toLowerCase();
-      if (importableProviders.includes(providerId)) {
+      if (
+        importableProviders.includes(providerId) &&
+        !initialCheckedRef.current[providerId]
+      ) {
+        initialCheckedRef.current[providerId] = true;
         pollImportStatus(providerId);
       }
     }
   }, [session, connections, connectionsLoading, pollImportStatus]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(pollingTimersRef.current).forEach((timer) =>
+        clearTimeout(timer),
+      );
+      pollingTimersRef.current = {};
+    };
+  }, []);
 
   const fetchConnections = useCallback((): void => {
     refetchConnections();

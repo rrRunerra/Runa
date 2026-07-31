@@ -32,6 +32,7 @@ interface NotificationAndBookmarksContextType {
   bookmarks: Bookmark[];
   loadingBookmarks: boolean;
   refetchBookmarks: () => Promise<void>;
+  deleteBookmark: (id: string) => Promise<boolean>;
 }
 
 const RrNotificationAndBookmarksContext = createContext<
@@ -221,6 +222,31 @@ export function RrNotificationAndBookmarksProvider({
     }).length;
   }, [notifications]);
 
+  const deleteBookmark = useCallback(
+    async (id: string): Promise<boolean> => {
+      if (!token) return false;
+      try {
+        const url = `${process.env.NEXT_PUBLIC_API_URL}/bookmarks/${id}`;
+        const res = await fetch(url, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (res.ok) {
+          setBookmarks((prev) => prev.filter((b) => b.id !== id));
+          window.dispatchEvent(new Event("runa-bookmarks-changed"));
+          return true;
+        }
+        return false;
+      } catch (err) {
+        console.error("Error deleting bookmark:", err);
+        return false;
+      }
+    },
+    [token]
+  );
+
   return (
     <RrNotificationAndBookmarksContext.Provider
       value={{
@@ -231,6 +257,7 @@ export function RrNotificationAndBookmarksProvider({
         bookmarks,
         loadingBookmarks,
         refetchBookmarks,
+        deleteBookmark,
       }}
     >
       {children}

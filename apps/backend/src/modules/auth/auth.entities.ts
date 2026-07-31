@@ -6,6 +6,7 @@ export interface AuthResponseEntity {
     permissions: number[];
     avatarUrl: string | null;
     displayName: string | null;
+    sidebarCardBackgroundUrl: string | null;
     passwordChangedAt: Date | null;
   };
   token: string;
