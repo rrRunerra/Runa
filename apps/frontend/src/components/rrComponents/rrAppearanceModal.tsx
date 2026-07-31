@@ -292,15 +292,33 @@ function ThemeButton({
           <div className="flex flex-col gap-1">
             <div
               className="h-1 w-full rounded-xs"
-              style={{ backgroundColor: colors.primary, opacity: 0.8 }}
+              style={{
+                background:
+                  themeConfig.id === "runa"
+                    ? "linear-gradient(90deg, #c9a3ff, #00fff3, #a9f100, #ff8a00)"
+                    : colors.primary,
+                opacity: 0.9,
+              }}
             />
             <div
               className="h-1 w-4/5 rounded-xs"
-              style={{ backgroundColor: colors.accent, opacity: 0.5 }}
+              style={{
+                background:
+                  themeConfig.id === "runa"
+                    ? "linear-gradient(90deg, #ffb49a, #ffa5c0)"
+                    : colors.accent,
+                opacity: 0.6,
+              }}
             />
             <div
               className="h-1 w-2/3 rounded-xs"
-              style={{ backgroundColor: colors.accent, opacity: 0.5 }}
+              style={{
+                background:
+                  themeConfig.id === "runa"
+                    ? "linear-gradient(90deg, #00ff00, #aeb1ff)"
+                    : colors.accent,
+                opacity: 0.6,
+              }}
             />
           </div>
         </div>
@@ -311,11 +329,19 @@ function ThemeButton({
           <div className="flex justify-between items-center pb-0.5 border-b shrink-0">
             <div
               className="h-1.5 w-12 rounded-sm"
-              style={{ backgroundColor: colors.primary }}
+              style={{
+                background:
+                  themeConfig.id === "runa"
+                    ? "linear-gradient(90deg, #c9a3ff, #ffb49a, #00fff3, #00ff00, #a9f100, #aeb1ff, #ffa5c0, #ead600, #ff8a00)"
+                    : colors.primary,
+              }}
             />
             <div
               className="size-1.5 rounded-full"
-              style={{ backgroundColor: colors.accent }}
+              style={{
+                background:
+                  themeConfig.id === "runa" ? "#00fff3" : colors.accent,
+              }}
             />
           </div>
           {/* Mockup Grid cards */}
@@ -324,15 +350,36 @@ function ThemeButton({
               <div
                 key={i}
                 className="rounded-xs border p-1 flex flex-col gap-0.5 justify-center"
-                style={{ backgroundColor: colors.accent, opacity: 0.08 }}
+                style={{
+                  backgroundColor:
+                    themeConfig.id === "runa"
+                      ? "rgba(201, 163, 255, 0.08)"
+                      : colors.accent,
+                  opacity: themeConfig.id === "runa" ? 1 : 0.08,
+                }}
               >
                 <div
                   className="h-0.5 w-2/3 rounded-xxs"
-                  style={{ backgroundColor: colors.primary }}
+                  style={{
+                    background:
+                      themeConfig.id === "runa"
+                        ? i === 0
+                          ? "#c9a3ff"
+                          : "#00fff3"
+                        : colors.primary,
+                  }}
                 />
                 <div
                   className="h-0.5 w-full rounded-xxs"
-                  style={{ backgroundColor: colors.primary, opacity: 0.4 }}
+                  style={{
+                    background:
+                      themeConfig.id === "runa"
+                        ? i === 0
+                          ? "#ffb49a"
+                          : "#ff8a00"
+                        : colors.primary,
+                    opacity: 0.6,
+                  }}
                 />
               </div>
             ))}

@@ -542,11 +542,11 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
         label: app.name,
         category: "Applications",
         icon: (
-          <div className="flex size-6 items-center justify-center rounded-md border border-border/55 bg-background text-foreground shadow-xs group-data-selected/command-item:border-primary/40 group-data-selected/command-item:scale-105 transition-all">
-            {typeof app.icon === "string" ? (
-              <Image src={app.icon} alt={app.name} width={20} height={20} />
+          <div className="flex size-6 items-center justify-center rounded-md border border-border/55 bg-background text-foreground shadow-xs group-data-selected/command-item:border-primary/40 group-data-selected/command-item:scale-105 transition-all overflow-hidden">
+            {app.iconLeftRing ? (
+              <Image src={app.iconLeftRing} alt={app.name} width={20} height={20} className="size-full object-contain" />
             ) : (
-              app.icon
+              <span className="text-[10px] font-bold">{app.name[0]}</span>
             )}
           </div>
         ),

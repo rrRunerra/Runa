@@ -1,14 +1,3 @@
-import React from "react";
-import {
-  Folder,
-  Bot,
-  List,
-  Mail,
-  Music2,
-  Star,
-  Archive,
-  GlassWater,
-} from "lucide-react";
 import {
   AndromedaFlags,
   PolarisFlags,
@@ -27,14 +16,22 @@ export const rrApps: rrApp[] = [
   {
     name: "Polaris",
     href: "/polaris",
-    icon: <Star className="size-4" />,
+    color: "#c9a3ff",
+    iconLeftRing: "/polaris/polaris-512-left-ring.png",
+    iconLeftNoRing: "/polaris/polaris-512-left-noring.png",
+    iconRightRing: "/polaris/polaris-512-right-ring.png",
+    iconRightNoRing: "/polaris/polaris-512-right-noring.png",
     description: "Landing page",
     descriptionShort: "Account",
   },
   {
     name: "Andromeda",
     href: "/andromeda",
-    icon: <Folder className="size-4" />,
+    color: "#ffb49a",
+    iconLeftRing: "/andromeda/andromeda-512-left-ring.png",
+    iconLeftNoRing: "/andromeda/andromeda-512-left-noring.png",
+    iconRightRing: "/andromeda/andromeda-512-right-ring.png",
+    iconRightNoRing: "/andromeda/andromeda-512-right-noring.png",
     description: "Docs/Knowledge base",
     descriptionShort: "Knowledge hub",
     permissions: [AndromedaFlags.VIEW],
@@ -42,7 +39,11 @@ export const rrApps: rrApp[] = [
   {
     name: "Aquarius",
     href: "/aquarius",
-    icon: <GlassWater className="size-4" />,
+    color: "#00fff3",
+    iconLeftRing: "/aquarius/aquarius-512-left-ring.png",
+    iconLeftNoRing: "/aquarius/aquarius-512-left-noring.png",
+    iconRightRing: "/aquarius/aquarius-512-right-ring.png",
+    iconRightNoRing: "/aquarius/aquarius-512-right-noring.png",
     description: "Social features",
     descriptionShort: "Social",
     permissions: [AquariusFlags.VIEW],
@@ -50,14 +51,22 @@ export const rrApps: rrApp[] = [
   {
     name: "Pegasus",
     href: "/pegasus",
-    icon: <Mail className="size-4" />,
+    color: "#00ff00",
+    iconLeftRing: "/pegasus/pegasus-512-left-ring.png",
+    iconLeftNoRing: "/pegasus/pegasus-512-left-noring.png",
+    iconRightRing: "/pegasus/pegasus-512-right-ring.png",
+    iconRightNoRing: "/pegasus/pegasus-512-right-noring.png",
     description: "Email client.",
     descriptionShort: "Email",
   },
   {
     name: "Lacerta",
     href: "/lacerta",
-    icon: <Archive className="size-4" />,
+    color: "#a9f100",
+    iconLeftRing: "/lacerta/lacerta-512-left-ring.png",
+    iconLeftNoRing: "/lacerta/lacerta-512-left-noring.png",
+    iconRightRing: "/lacerta/lacerta-512-right-ring.png",
+    iconRightNoRing: "/lacerta/lacerta-512-right-noring.png",
     description: "Cloud storage",
     descriptionShort: "Storage",
   },
@@ -65,14 +74,22 @@ export const rrApps: rrApp[] = [
   {
     name: "Aquila",
     href: "/aquila",
-    icon: <List className="size-4" />,
+    color: "#aeb1ff",
+    iconLeftRing: "/aquila/aquila-512-left-ring.png",
+    iconLeftNoRing: "/aquila/aquila-512-left-noring.png",
+    iconRightRing: "/aquila/aquila-512-right-ring.png",
+    iconRightNoRing: "/aquila/aquila-512-right-noring.png",
     description: "Media tracker",
     descriptionShort: "Media",
   },
   {
     name: "Lyra",
     href: "/lyra",
-    icon: <Music2 className="size-4" />,
+    color: "#ffa5c0",
+    iconLeftRing: "/lyra/lyra-512-left-ring.png",
+    iconLeftNoRing: "/lyra/lyra-512-left-noring.png",
+    iconRightRing: "/lyra/lyra-512-right-ring.png",
+    iconRightNoRing: "/lyra/lyra-512-right-noring.png",
     description: "Music player",
     descriptionShort: "Music",
     permissions: [LyraFlags.VIEW],
@@ -80,7 +97,11 @@ export const rrApps: rrApp[] = [
   {
     name: "Monoceros",
     href: "/monoceros",
-    icon: <Archive className="size-4" />,
+    color: "#ead600",
+    iconLeftRing: "/monoceros/monoceros-512-left-ring.png",
+    iconLeftNoRing: "/monoceros/monoceros-512-left-noring.png",
+    iconRightRing: "/monoceros/monoceros-512-right-ring.png",
+    iconRightNoRing: "/monoceros/monoceros-512-right-noring.png",
     description: "Admin panel for Runa",
     descriptionShort: "Admin",
     permissions: [MonocerosFlags.VIEW],
@@ -89,7 +110,11 @@ export const rrApps: rrApp[] = [
   {
     name: "Lynx",
     href: "/lynx",
-    icon: <Bot className="size-4" />,
+    color: "#ff8a00",
+    iconLeftRing: "/lynx/lynx-512-left-ring.png",
+    iconLeftNoRing: "/lynx/lynx-512-left-noring.png",
+    iconRightRing: "/lynx/lynx-512-right-ring.png",
+    iconRightNoRing: "/lynx/lynx-512-right-noring.png",
     description: "Discord bot management",
     descriptionShort: "Discord bot",
   },
@@ -98,7 +123,11 @@ export const rrApps: rrApp[] = [
 export interface rrApp {
   name: string;
   href: string;
-  icon: React.ReactNode | string;
+  color: string;
+  iconLeftRing: string;
+  iconLeftNoRing: string;
+  iconRightRing: string;
+  iconRightNoRing: string;
   description: string;
   descriptionShort: string;
   permissions?: bigint[];
