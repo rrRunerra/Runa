@@ -44,7 +44,7 @@ export function RrMediaThemeSongs({
     <motion.div variants={itemVariants} className="space-y-4">
       <h3 className="text-base font-bold text-foreground flex items-center gap-2">
         <Music className="size-4 text-primary" />
-        <span>{t("aquila.themeSongs", "Theme Songs")}</span>
+        <span>{t("aquila.themeSongs")}</span>
       </h3>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -54,7 +54,7 @@ export function RrMediaThemeSongs({
             <div className="flex items-center justify-between border-b border-border/20 pb-2">
               <span className="text-xs font-bold uppercase tracking-wider text-primary flex items-center gap-1.5">
                 <Disc3 className="size-3.5 text-primary animate-spin-slow" />
-                {t("aquila.openings", "Openings")}
+                {t("aquila.openings")}
               </span>
             </div>
 
@@ -79,7 +79,7 @@ export function RrMediaThemeSongs({
                 className="w-full h-7 text-[11px] text-muted-foreground hover:text-foreground cursor-pointer flex items-center justify-center gap-1"
                 onClick={() => setShowAllOpenings(!showAllOpenings)}
               >
-                <span>{showAllOpenings ? t("aquila.showLess", "Show Less") : t("aquila.showMore", "Show More")}</span>
+                <span>{showAllOpenings ? t("aquila.showLess") : t("aquila.showMore")}</span>
                 {showAllOpenings ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
               </Button>
             )}
@@ -92,7 +92,7 @@ export function RrMediaThemeSongs({
             <div className="flex items-center justify-between border-b border-border/20 pb-2">
               <span className="text-xs font-bold uppercase tracking-wider text-rose-400 flex items-center gap-1.5">
                 <Disc3 className="size-3.5 text-rose-400" />
-                {t("aquila.endings", "Endings")}
+                {t("aquila.endings")}
               </span>
             </div>
 
@@ -117,7 +117,7 @@ export function RrMediaThemeSongs({
                 className="w-full h-7 text-[11px] text-muted-foreground hover:text-foreground cursor-pointer flex items-center justify-center gap-1"
                 onClick={() => setShowAllEndings(!showAllEndings)}
               >
-                <span>{showAllEndings ? t("aquila.showLess", "Show Less") : t("aquila.showMore", "Show More")}</span>
+                <span>{showAllEndings ? t("aquila.showLess") : t("aquila.showMore")}</span>
                 {showAllEndings ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
               </Button>
             )}

@@ -674,17 +674,18 @@ export default class SimklConnection extends BaseConnection {
               let tvdbId = ids.tvdb ? Number(ids.tvdb) : undefined;
               const simklId = ids.simkl ? Number(ids.simkl) : undefined;
               if (!tvdbId && title) {
-                const existing = await this.deps.prisma.client.tv.findFirst({
+                const existing = await this.deps.prisma.client.aquilaTvV2.findFirst({
                   where: {
                     OR: [
-                      { titleRomaji: { equals: title, mode: "insensitive" } },
-                      { titleEnglish: { equals: title, mode: "insensitive" } },
+                      { titlePrimary: { equals: title, mode: "insensitive" } },
+                      { titleSecondary: { equals: title, mode: "insensitive" } },
+                      { titleNative: { equals: title, mode: "insensitive" } },
                     ],
                   },
-                  select: { tvdbId: true },
+                  select: { tvDBId: true },
                 });
                 if (existing) {
-                  tvdbId = existing.tvdbId;
+                  tvdbId = existing.tvDBId ?? undefined;
                 }
               }
 
@@ -723,17 +724,18 @@ export default class SimklConnection extends BaseConnection {
               let tvdbId = ids.tvdb ? Number(ids.tvdb) : undefined;
               const simklId = ids.simkl ? Number(ids.simkl) : undefined;
               if (!tvdbId && title) {
-                const existing = await this.deps.prisma.client.movie.findFirst({
+                const existing = await this.deps.prisma.client.aquilaMovieV2.findFirst({
                   where: {
                     OR: [
-                      { titleRomaji: { equals: title, mode: "insensitive" } },
-                      { titleEnglish: { equals: title, mode: "insensitive" } },
+                      { titlePrimary: { equals: title, mode: "insensitive" } },
+                      { titleSecondary: { equals: title, mode: "insensitive" } },
+                      { titleNative: { equals: title, mode: "insensitive" } },
                     ],
                   },
-                  select: { tvdbId: true },
+                  select: { tvDBId: true },
                 });
                 if (existing) {
-                  tvdbId = existing.tvdbId;
+                  tvdbId = existing.tvDBId ?? undefined;
                 }
               }
 

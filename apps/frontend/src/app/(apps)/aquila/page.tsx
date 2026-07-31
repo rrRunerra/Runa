@@ -246,12 +246,19 @@ export default function AquilaHome(): React.JSX.Element {
   };
 
   const sections = useMemo<Record<CategoryType, MediaItem[]>>(() => {
-    const anime = watching.filter((i) => i.type === "anime");
-    const manga = watching.filter((i) => i.type === "manga");
-    const tv = watching.filter((i) => i.type === "tv");
-    const movie = watching.filter((i) => i.type === "movie");
-    const game = watching.filter((i) => i.type === "game");
-    const book = watching.filter((i) => i.type === "book");
+    const sortByLastUpdated = (items: MediaItem[]) =>
+      [...items].sort((a, b) => {
+        const timeA = a.last_updated ? new Date(a.last_updated).getTime() : 0;
+        const timeB = b.last_updated ? new Date(b.last_updated).getTime() : 0;
+        return timeB - timeA;
+      });
+
+    const anime = sortByLastUpdated(watching.filter((i) => i.type === "anime"));
+    const manga = sortByLastUpdated(watching.filter((i) => i.type === "manga"));
+    const tv = sortByLastUpdated(watching.filter((i) => i.type === "tv"));
+    const movie = sortByLastUpdated(watching.filter((i) => i.type === "movie"));
+    const game = sortByLastUpdated(watching.filter((i) => i.type === "game"));
+    const book = sortByLastUpdated(watching.filter((i) => i.type === "book"));
     return { anime, manga, tv, movie, game, book };
   }, [watching]);
 

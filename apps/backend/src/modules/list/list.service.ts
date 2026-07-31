@@ -1155,29 +1155,53 @@ export class ListService {
               status: true,
             },
           },
+          watchedEpisodes: {
+            select: {
+              seasonNum: true,
+              episodeNum: true,
+            },
+          },
         },
       }),
       this.getStatusCounts(this.prisma.client.aquilaTvUserListV2, username),
     ]);
 
-    const mappedList: ListEntity[] = paginated.data.map((item: any) => ({
-      id: item.tvId,
-      title:
-        item.tv.titlePrimary ??
-        item.tv.titleSecondary ??
-        item.tv.titleNative ??
-        '',
-      score: item.score,
-      progress: item.progress,
-      episodes: item.tv.episodeCount,
-      image: item.tv.coverImage ?? '',
-      format: 'TV',
-      status: item.status,
-      last_updated: item.updatedAt,
-      last_added: item.createdAt,
-      type: 'tv',
-      mediaStatus: item.tv.status,
-    }));
+    const mappedList: ListEntity[] = paginated.data.map((item: any) => {
+      const watched = Array.isArray(item.watchedEpisodes) ? item.watchedEpisodes : [];
+      const watchedCount = watched.length;
+      const progress = (item.progress && item.progress > 0) ? item.progress : watchedCount;
+
+      let meta: { season: number; episode: number } | undefined = undefined;
+      if (watched.length > 0) {
+        const regular = watched.filter((w: any) => w.seasonNum > 0);
+        const candidates = regular.length > 0 ? regular : watched;
+        const sorted = [...candidates].sort((a, b) => {
+          if (b.seasonNum !== a.seasonNum) return b.seasonNum - a.seasonNum;
+          return b.episodeNum - a.episodeNum;
+        });
+        meta = { season: sorted[0].seasonNum, episode: sorted[0].episodeNum };
+      }
+
+      return {
+        id: item.tvId,
+        title:
+          item.tv.titlePrimary ??
+          item.tv.titleSecondary ??
+          item.tv.titleNative ??
+          '',
+        score: item.score,
+        progress,
+        episodes: item.tv.episodeCount,
+        image: item.tv.coverImage ?? '',
+        format: 'TV',
+        status: item.status,
+        last_updated: item.updatedAt,
+        last_added: item.createdAt,
+        type: 'tv',
+        mediaStatus: item.tv.status,
+        ...(meta && { meta }),
+      };
+    });
 
     return {
       entries: mappedList,
@@ -1861,6 +1885,7 @@ export class ListService {
         status: $Enums.AnimeListStatus.WATCHING,
       },
       include: { anime: true },
+      orderBy: { updatedAt: 'desc' },
     });
 
     const mangaReading = await this.prisma.client.aquilaMangaUserListV2.findMany({
@@ -1869,6 +1894,7 @@ export class ListService {
         status: $Enums.MangaListStatus.READING,
       },
       include: { manga: true },
+      orderBy: { updatedAt: 'desc' },
     });
 
     const tvWatching = await this.prisma.client.aquilaTvUserListV2.findMany({
@@ -1877,6 +1903,7 @@ export class ListService {
         status: $Enums.TvListStatus.WATCHING,
       },
       include: { tv: true, watchedEpisodes: true },
+      orderBy: { updatedAt: 'desc' },
     });
 
     const moviesWatching = await this.prisma.client.aquilaMovieUserListV2.findMany({
@@ -1885,6 +1912,7 @@ export class ListService {
         status: $Enums.MovieListStatus.WATCHING,
       },
       include: { movie: true },
+      orderBy: { updatedAt: 'desc' },
     });
 
     const gamesPlaying = await this.prisma.client.aquilaGameUserListV2.findMany({
@@ -1893,6 +1921,7 @@ export class ListService {
         status: $Enums.GameListStatus.PLAYING,
       },
       include: { game: true },
+      orderBy: { updatedAt: 'desc' },
     });
 
     const booksReading = await this.prisma.client.aquilaBookUserListV2.findMany({
@@ -1901,6 +1930,7 @@ export class ListService {
         status: $Enums.BookListStatus.READING,
       },
       include: { book: true },
+      orderBy: { updatedAt: 'desc' },
     });
 
     const watchingList: ListEntity[] = [];
@@ -1938,11 +1968,26 @@ export class ListService {
     });
 
     tvWatching.forEach((item: any) => {
+      const watched = Array.isArray(item.watchedEpisodes) ? item.watchedEpisodes : [];
+      const watchedCount = watched.length;
+      const progress = (item.progress && item.progress > 0) ? item.progress : watchedCount;
+
+      let meta: { season: number; episode: number } | undefined = undefined;
+      if (watched.length > 0) {
+        const regular = watched.filter((w: any) => w.seasonNum > 0);
+        const candidates = regular.length > 0 ? regular : watched;
+        const sorted = [...candidates].sort((a, b) => {
+          if (b.seasonNum !== a.seasonNum) return b.seasonNum - a.seasonNum;
+          return b.episodeNum - a.episodeNum;
+        });
+        meta = { season: sorted[0].seasonNum, episode: sorted[0].episodeNum };
+      }
+
       watchingList.push({
         id: item.tvId,
         title: item.tv?.titlePrimary ?? item.tv?.titleSecondary ?? item.tv?.titleNative ?? '',
         score: item.score,
-        progress: item.progress ?? 0,
+        progress,
         episodes: item.tv?.episodeCount ?? null,
         image: item.tv?.coverImage ?? '',
         format: 'TV',
@@ -1950,6 +1995,7 @@ export class ListService {
         last_updated: item.updatedAt,
         last_added: item.createdAt,
         type: 'tv',
+        ...(meta && { meta }),
       });
     });
 
@@ -2001,6 +2047,12 @@ export class ListService {
       });
     });
 
+    watchingList.sort((a, b) => {
+      const dateA = a.last_updated ? new Date(a.last_updated).getTime() : 0;
+      const dateB = b.last_updated ? new Date(b.last_updated).getTime() : 0;
+      return dateB - dateA;
+    });
+
     return watchingList;
   }
 
@@ -2041,12 +2093,24 @@ export class ListService {
         });
         if (!entry) throw new NotFoundException('Entry not found');
 
-        // Fetch all episodes ordered by season then episode number
-        const allEpisodes = await this.prisma.client.aquilaTvEpisodeV2.findMany({
-          where: { tvId: mediaId },
+        // Fetch all non-special episodes (seasonNumber > 0) ordered by season then episode number
+        let allEpisodes = await this.prisma.client.aquilaTvEpisodeV2.findMany({
+          where: {
+            tvId: mediaId,
+            seasonNumber: { gt: 0 },
+          },
           orderBy: [{ seasonNumber: 'asc' }, { episodeNumber: 'asc' }],
           select: { seasonNumber: true, episodeNumber: true },
         });
+
+        // Fallback if no regular season episodes are found
+        if (allEpisodes.length === 0) {
+          allEpisodes = await this.prisma.client.aquilaTvEpisodeV2.findMany({
+            where: { tvId: mediaId },
+            orderBy: [{ seasonNumber: 'asc' }, { episodeNumber: 'asc' }],
+            select: { seasonNumber: true, episodeNumber: true },
+          });
+        }
 
         if (allEpisodes.length === 0) {
           return { success: false, message: 'No episodes found for this show' };

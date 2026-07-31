@@ -110,7 +110,7 @@ export function RrMediaImages({ anime }: RrMediaImagesProps): React.JSX.Element 
   if (imagesList.length === 0) {
     return (
       <div className="p-8 text-center text-muted-foreground bg-card/45 border border-border/30 rounded-2xl">
-        {t("aquila.noImages", "No gallery images available")}
+        {t("aquila.noImages")}
       </div>
     );
   }
@@ -138,7 +138,7 @@ export function RrMediaImages({ anime }: RrMediaImagesProps): React.JSX.Element 
           className="rounded-xl text-xs font-semibold shrink-0 cursor-pointer"
         >
           <Layers className="size-3.5 mr-1" />
-          {t("aquila.allImages", "All Images")} ({imagesList.length})
+          {t("aquila.allImages")} ({imagesList.length})
         </Button>
         <Button
           variant={selectedCategory === "poster" ? "default" : "outline"}
@@ -146,7 +146,7 @@ export function RrMediaImages({ anime }: RrMediaImagesProps): React.JSX.Element 
           onClick={() => setSelectedCategory("poster")}
           className="rounded-xl text-xs font-semibold shrink-0 cursor-pointer"
         >
-          {t("aquila.posters", "Posters & Covers")} (
+          {t("aquila.posters")} (
           {imagesList.filter((i) => i.category === "poster").length})
         </Button>
         <Button
@@ -155,7 +155,7 @@ export function RrMediaImages({ anime }: RrMediaImagesProps): React.JSX.Element 
           onClick={() => setSelectedCategory("background")}
           className="rounded-xl text-xs font-semibold shrink-0 cursor-pointer"
         >
-          {t("aquila.backgrounds", "Backgrounds")} (
+          {t("aquila.backgrounds")} (
           {imagesList.filter((i) => i.category === "background").length})
         </Button>
         <Button
@@ -164,7 +164,7 @@ export function RrMediaImages({ anime }: RrMediaImagesProps): React.JSX.Element 
           onClick={() => setSelectedCategory("banner")}
           className="rounded-xl text-xs font-semibold shrink-0 cursor-pointer"
         >
-          {t("aquila.banners", "Banners")} (
+          {t("aquila.banners")} (
           {imagesList.filter((i) => i.category === "banner").length})
         </Button>
         <Button
@@ -173,7 +173,7 @@ export function RrMediaImages({ anime }: RrMediaImagesProps): React.JSX.Element 
           onClick={() => setSelectedCategory("screencap")}
           className="rounded-xl text-xs font-semibold shrink-0 cursor-pointer"
         >
-          {t("aquila.screencaps", "Screencaps")} (
+          {t("aquila.screencaps")} (
           {imagesList.filter((i) => i.category === "screencap").length})
         </Button>
       </div>

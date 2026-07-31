@@ -764,42 +764,42 @@ export default function TvDetailsPage(): React.JSX.Element {
                   className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
                 >
                   <LayoutGrid className="size-3.5 mr-1.5" />
-                  {t("aquila.overview", "Overview")}
+                  {t("aquila.overview")}
                 </TabsTrigger>
                 <TabsTrigger
                   value="characters"
                   className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
                 >
                   <Users className="size-3.5 mr-1.5" />
-                  {t("aquila.characters", "Characters")}
+                  {t("aquila.characters")}
                 </TabsTrigger>
                 <TabsTrigger
                   value="staff"
                   className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
                 >
                   <UserCheck className="size-3.5 mr-1.5" />
-                  {t("aquila.staff", "Staff")}
+                  {t("aquila.staff")}
                 </TabsTrigger>
                 <TabsTrigger
                   value="episodes"
                   className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
                 >
                   <Film className="size-3.5 mr-1.5" />
-                  {t("aquila.episodes", "Episodes")}
+                  {t("aquila.episodes")}
                 </TabsTrigger>
                 <TabsTrigger
                   value="images"
                   className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
                 >
                   <ImageIcon className="size-3.5 mr-1.5" />
-                  {t("aquila.images", "Images")}
+                  {t("aquila.images")}
                 </TabsTrigger>
                 <TabsTrigger
                   value="stats"
                   className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
                 >
                   <BarChart3 className="size-3.5 mr-1.5" />
-                  {t("aquila.stats", "Stats")}
+                  {t("aquila.stats")}
                 </TabsTrigger>
                 <TabsTrigger
                   value="reviews"

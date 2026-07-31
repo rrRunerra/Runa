@@ -640,13 +640,13 @@ export default function AnimeDetailsPage(): React.JSX.Element {
                     value={anime.format}
                   />
                   <RrMediaInfoRow
-                    label={t("aquila.episodes", "Episodes")}
+                    label={t("aquila.episodes")}
                     value={
                       anime.episodeCount || (anime.episodes?.length ?? "?")
                     }
                   />
                   <RrMediaInfoRow
-                    label={t("aquila.duration", "Duration")}
+                    label={t("aquila.duration")}
                     value={
                       anime.episodeDuration
                         ? `${anime.episodeDuration} mins`
@@ -654,12 +654,16 @@ export default function AnimeDetailsPage(): React.JSX.Element {
                     }
                   />
                   <RrMediaInfoRow
-                    label={t("aquila.status", "Status")}
-                    value={anime.status?.replace(/_/g, " ").toLowerCase()}
+                    label={t("aquila.status")}
+                    value={
+                      anime.status
+                        ? t(`aquila.statuses.${anime.status.toUpperCase()}`)
+                        : "?"
+                    }
                     className="capitalize"
                   />
                   <RrMediaInfoRow
-                    label={t("aquila.season", "Season")}
+                    label={t("aquila.season")}
                     value={
                       anime.seasonSeason
                         ? `${anime.seasonSeason.toLowerCase()} ${anime.seasonYear ?? ""}`
@@ -668,14 +672,14 @@ export default function AnimeDetailsPage(): React.JSX.Element {
                     className="capitalize"
                   />
                   <RrMediaInfoRow
-                    label={t("aquila.source", "Source")}
+                    label={t("aquila.source")}
                     value={
                       anime.source?.replace(/_/g, " ").toLowerCase() || "?"
                     }
                     className="capitalize"
                   />
                   <RrMediaInfoRow
-                    label={t("aquila.studiosLabel", "Studios")}
+                    label={t("aquila.studiosLabel")}
                     value={
                       studios && studios.length > 0 ? (
                         <span
@@ -689,7 +693,7 @@ export default function AnimeDetailsPage(): React.JSX.Element {
                   />
                   {anime.ageRating && (
                     <RrMediaInfoRow
-                      label={t("aquila.ageRating", "Age Rating")}
+                      label={t("aquila.ageRating")}
                       value={
                         <span className="inline-flex items-center gap-1">
                           <span>
@@ -703,27 +707,27 @@ export default function AnimeDetailsPage(): React.JSX.Element {
                     />
                   )}
                   <RrMediaInfoRow
-                    label={t("aquila.startDate", "Start Date")}
+                    label={t("aquila.startDate")}
                     value={animeStartDate}
                   />
                   <RrMediaInfoRow
-                    label={t("aquila.endDate", "End Date")}
+                    label={t("aquila.endDate")}
                     value={animeEndDate}
                   />
                   <RrMediaInfoRow
-                    label={t("aquila.country", "Country")}
+                    label={t("aquila.country")}
                     value={anime.countryOfOrigin}
                     className="capitalize"
                   />
                   <RrMediaInfoRow
-                    label={t("aquila.hashtag", "Hashtag")}
+                    label={t("aquila.hashtag")}
                     value={anime.hashtag}
                     className="text-primary"
                   />
                   {anime.synonyms && anime.synonyms.length > 0 && (
                     <div className="flex flex-col gap-1 text-sm">
                       <span className="text-muted-foreground text-xs">
-                        {t("aquila.synonymsLabel", "Synonyms")}
+                        {t("aquila.synonymsLabel")}
                       </span>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {anime.synonyms
@@ -835,49 +839,49 @@ export default function AnimeDetailsPage(): React.JSX.Element {
                   className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
                 >
                   <LayoutGrid className="size-3.5 mr-1.5" />
-                  {t("aquila.overview", "Overview")}
+                  {t("aquila.overview")}
                 </TabsTrigger>
                 <TabsTrigger
                   value="characters"
                   className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
                 >
                   <Users className="size-3.5 mr-1.5" />
-                  {t("aquila.characters", "Characters")}
+                  {t("aquila.characters")}
                 </TabsTrigger>
                 <TabsTrigger
                   value="staff"
                   className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
                 >
                   <UserCheck className="size-3.5 mr-1.5" />
-                  {t("aquila.staff", "Staff")}
+                  {t("aquila.staff")}
                 </TabsTrigger>
                 <TabsTrigger
                   value="episodes"
                   className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
                 >
                   <Film className="size-3.5 mr-1.5" />
-                  {t("aquila.episodes", "Episodes")}
+                  {t("aquila.episodes")}
                 </TabsTrigger>
                 <TabsTrigger
                   value="images"
                   className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
                 >
                   <ImageIcon className="size-3.5 mr-1.5" />
-                  {t("aquila.images", "Images")}
+                  {t("aquila.images")}
                 </TabsTrigger>
                 <TabsTrigger
                   value="trailers"
                   className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
                 >
                   <Tv className="size-3.5 mr-1.5" />
-                  {t("aquila.trailers", "Trailers")}
+                  {t("aquila.trailers")}
                 </TabsTrigger>
                 <TabsTrigger
                   value="stats"
                   className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
                 >
                   <BarChart3 className="size-3.5 mr-1.5" />
-                  {t("aquila.stats", "Stats")}
+                  {t("aquila.stats")}
                 </TabsTrigger>
                 <TabsTrigger
                   value="reviews"
@@ -926,7 +930,7 @@ export default function AnimeDetailsPage(): React.JSX.Element {
                 {vaLanguages.length > 1 && (
                   <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none mb-4 bg-card/45 border border-border/30 p-2 rounded-2xl">
                     <span className="text-xs font-semibold text-muted-foreground mr-1 shrink-0 pl-1">
-                      {t("aquila.voiceActorLanguage", "Voice Actor Language")}:
+                      {t("aquila.voiceActorLanguage")}:
                     </span>
                     {vaLanguages.map((lang) => (
                       <Button
@@ -938,7 +942,7 @@ export default function AnimeDetailsPage(): React.JSX.Element {
                         onClick={() => setSelectedVaLanguage(lang)}
                         className="rounded-xl text-xs h-7 px-2.5 font-semibold cursor-pointer shrink-0"
                       >
-                        {lang}
+                        {t(`aquila.languages.${lang.toUpperCase()}`)}
                       </Button>
                     ))}
                   </div>

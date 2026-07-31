@@ -61,7 +61,7 @@ export class ConnectionService implements OnModuleInit {
     );
     console.log(
       '[ConnectionLoader Debug] Loaded connections:',
-      Array.from(this.loader.getConnections().keys()),
+      this.loader.getConnections ? Array.from(this.loader.getConnections().keys()) : [],
     );
   }
 
@@ -434,10 +434,10 @@ export class ConnectionService implements OnModuleInit {
                 data: {
                   connections,
                   ...(item.startDate !== undefined && {
-                    startDate: item.startDate || null,
+                    startDate: this.parseDate(item.startDate),
                   }),
                   ...(item.endDate !== undefined && {
-                    endDate: item.endDate || null,
+                    endDate: this.parseDate(item.endDate),
                   }),
                 },
               });
@@ -453,8 +453,8 @@ export class ConnectionService implements OnModuleInit {
                   connections: {
                     [providerId.toLowerCase()]: { id: finalItemId, sync: true },
                   },
-                  startDate: item.startDate || null,
-                  endDate: item.endDate || null,
+                  startDate: this.parseDate(item.startDate),
+                  endDate: this.parseDate(item.endDate),
                 },
               });
             }
@@ -516,10 +516,10 @@ export class ConnectionService implements OnModuleInit {
                 data: {
                   connections,
                   ...(item.startDate !== undefined && {
-                    startDate: item.startDate || null,
+                    startDate: this.parseDate(item.startDate),
                   }),
                   ...(item.endDate !== undefined && {
-                    endDate: item.endDate || null,
+                    endDate: this.parseDate(item.endDate),
                   }),
                 },
               });
@@ -529,15 +529,15 @@ export class ConnectionService implements OnModuleInit {
                   username,
                   mangaId,
                   status: item.status,
-                  chapters: item.progress || 0,
-                  volumes: item.volumesProgress || 0,
+                  chaptersProgress: item.progress || 0,
+                  volumesProgress: item.volumesProgress || 0,
                   score: item.score || 0,
                   notes: item.notes || '',
                   connections: {
                     [providerId.toLowerCase()]: { id: finalItemId, sync: true },
                   },
-                  startDate: item.startDate || null,
-                  endDate: item.endDate || null,
+                  startDate: this.parseDate(item.startDate),
+                  endDate: this.parseDate(item.endDate),
                 },
               });
             }
@@ -595,15 +595,12 @@ export class ConnectionService implements OnModuleInit {
                 where: { id: existing.id },
                 data: {
                   connections,
+                  ...(item.progress !== undefined && { progress: item.progress }),
                   ...(item.startDate !== undefined && {
-                    startDate: item.startDate
-                      ? new Date(item.startDate * 1000)
-                      : null,
+                    startDate: this.parseDate(item.startDate),
                   }),
                   ...(item.endDate !== undefined && {
-                    endDate: item.endDate
-                      ? new Date(item.endDate * 1000)
-                      : null,
+                    endDate: this.parseDate(item.endDate),
                   }),
                 },
               });
@@ -622,18 +619,15 @@ export class ConnectionService implements OnModuleInit {
                     status: tvStatus as any,
                     score: item.score || 0,
                     notes: item.notes || '',
+                    progress: item.progress || (item.watchedEpisodes?.length ?? 0),
                     connections: {
                       [providerId.toLowerCase()]: {
                         id: finalItemId,
                         sync: true,
                       },
                     },
-                    startDate: item.startDate
-                      ? new Date(item.startDate * 1000)
-                      : null,
-                    endDate: item.endDate
-                      ? new Date(item.endDate * 1000)
-                      : null,
+                    startDate: this.parseDate(item.startDate),
+                    endDate: this.parseDate(item.endDate),
                   },
                 });
               listEntryId = listEntry.id;
@@ -650,13 +644,13 @@ export class ConnectionService implements OnModuleInit {
                 seasonNum: ep.seasonNum,
                 episodeNum: ep.episodeNum,
               }));
-              await this.prisma.client.aquilaTvWatchedEpisode.createMany({
+              await this.prisma.client.aquilaTvWatchedEpisodeV2.createMany({
                 data: episodesData,
                 skipDuplicates: true,
               });
             } else if (item.progress > 0) {
               const dbTv = await this.prisma.client.aquilaTvV2.findUnique({
-                where: { tvdbId: item.tvdbId },
+                where: { tvDBId: item.tvdbId },
                 select: { seasons: true },
               });
 
@@ -706,7 +700,7 @@ export class ConnectionService implements OnModuleInit {
                 }
 
                 if (episodesData.length > 0) {
-                  await this.prisma.client.aquilaTvWatchedEpisode.createMany({
+                  await this.prisma.client.aquilaTvWatchedEpisodeV2.createMany({
                     data: episodesData,
                     skipDuplicates: true,
                   });
@@ -721,12 +715,21 @@ export class ConnectionService implements OnModuleInit {
                     episodeNum: i + 1,
                   }),
                 );
-                await this.prisma.client.aquilaTvWatchedEpisode.createMany({
+                await this.prisma.client.aquilaTvWatchedEpisodeV2.createMany({
                   data: episodesData,
                   skipDuplicates: true,
                 });
               }
             }
+
+            // Sync total watched count back to progress column in AquilaTvUserListV2
+            const watchedCount = await this.prisma.client.aquilaTvWatchedEpisodeV2.count({
+              where: { listId: listEntryId },
+            });
+            await this.prisma.client.aquilaTvUserListV2.update({
+              where: { id: listEntryId },
+              data: { progress: watchedCount > 0 ? watchedCount : (item.progress ?? 0) },
+            });
           } else if (item.mediaType === 'movie') {
             if (!item.tvdbId) {
               const errMsg = `Skipping movie "${item.title}" as it lacks TVDB ID`;
@@ -780,10 +783,10 @@ export class ConnectionService implements OnModuleInit {
                 data: {
                   connections,
                   ...(item.startDate !== undefined && {
-                    startDate: item.startDate || null,
+                    startDate: this.parseDate(item.startDate),
                   }),
                   ...(item.endDate !== undefined && {
-                    endDate: item.endDate || null,
+                    endDate: this.parseDate(item.endDate),
                   }),
                 },
               });
@@ -802,8 +805,8 @@ export class ConnectionService implements OnModuleInit {
                   connections: {
                     [providerId.toLowerCase()]: { id: finalItemId, sync: true },
                   },
-                  startDate: item.startDate || null,
-                  endDate: item.endDate || null,
+                  startDate: this.parseDate(item.startDate),
+                  endDate: this.parseDate(item.endDate),
                 },
               });
             }
@@ -1005,5 +1008,20 @@ export class ConnectionService implements OnModuleInit {
       }
     }
     return malToAnilistMap;
+  }
+
+  private parseDate(val: any): Date | null {
+    if (val === null || val === undefined || val === '') return null;
+    if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
+    if (typeof val === 'number') {
+      const ms = val < 1e11 ? val * 1000 : val;
+      const date = new Date(ms);
+      return isNaN(date.getTime()) ? null : date;
+    }
+    if (typeof val === 'string') {
+      const date = new Date(val);
+      return isNaN(date.getTime()) ? null : date;
+    }
+    return null;
   }
 }

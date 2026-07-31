@@ -241,7 +241,7 @@ export default function DiscoverClientPage({
             <div className="flex items-center gap-2">
               <Compass className="size-6 text-primary" />
               <h1 className="text-3xl font-bold tracking-tight bg-linear-to-r from-foreground to-foreground/75 bg-clip-text text-transparent">
-                {t("aquila.discover", "Discover")}
+                {t("aquila.discover")}
               </h1>
             </div>
           </div>
@@ -258,7 +258,7 @@ export default function DiscoverClientPage({
           <RrLapplandLayingLeft className="absolute right-0 bottom-0 w-[200px] md:w-[280px] h-auto text-foreground opacity-[0.15] dark:opacity-[0.08] pointer-events-none select-none z-0" />
           <div className="flex items-center gap-2 text-sm font-semibold text-foreground/95 mb-1">
             <SlidersHorizontal className="size-4 text-primary" />
-            <span>{t("aquila.searchFilters", "Search Filters")}</span>
+            <span>{t("aquila.searchFilters")}</span>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
@@ -268,11 +268,8 @@ export default function DiscoverClientPage({
               <Input
                 placeholder={
                   ["characters", "actors"].includes(type)
-                    ? t("aquila.searchNamesPlaceholderShort", "Search names...")
-                    : t(
-                        "aquila.searchTitlesPlaceholderShort",
-                        "Search titles...",
-                      )
+                    ? t("aquila.searchNamesPlaceholderShort")
+                    : t("aquila.searchTitlesPlaceholderShort")
                 }
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -296,12 +293,12 @@ export default function DiscoverClientPage({
                 <Select value={year} onValueChange={handleYearChange}>
                   <SelectTrigger className="h-10 bg-background/50 border-border/60 rounded-xl w-full sm:w-[130px]">
                     <SelectValue
-                      placeholder={t("aquila.yearAll", "Year (All)")}
+                      placeholder={t("aquila.yearAll")}
                     />
                   </SelectTrigger>
                   <SelectContent className="max-h-60" position="popper">
                     <SelectItem value="all">
-                      {t("aquila.yearAll", "Year (All)")}
+                      {t("aquila.yearAll")}
                     </SelectItem>
                     {meta.years.map((y: number) => (
                       <SelectItem key={y} value={y.toString()}>
@@ -319,16 +316,16 @@ export default function DiscoverClientPage({
                 <Select value={format} onValueChange={handleFormatChange}>
                   <SelectTrigger className="h-10 bg-background/50 border-border/60 rounded-xl w-full sm:w-[140px]">
                     <SelectValue
-                      placeholder={t("aquila.formatAll", "Format (All)")}
+                      placeholder={t("aquila.formatAll")}
                     />
                   </SelectTrigger>
                   <SelectContent className="max-h-60" position="popper">
                     <SelectItem value="all">
-                      {t("aquila.formatAll", "Format (All)")}
+                      {t("aquila.formatAll")}
                     </SelectItem>
                     {meta.formats.map((f: string) => (
                       <SelectItem key={f} value={f}>
-                        {f.replace("_", " ")}
+                        {t(`aquila.formats.${f.toUpperCase()}`)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -342,19 +339,16 @@ export default function DiscoverClientPage({
                 <Select value={status} onValueChange={handleStatusChange}>
                   <SelectTrigger className="h-10 bg-background/50 border-border/60 rounded-xl w-full sm:w-[140px]">
                     <SelectValue
-                      placeholder={t("aquila.statusAll", "Status (All)")}
+                      placeholder={t("aquila.statusAll")}
                     />
                   </SelectTrigger>
                   <SelectContent className="max-h-60" position="popper">
                     <SelectItem value="all">
-                      {t("aquila.statusAll", "Status (All)")}
+                      {t("aquila.statusAll")}
                     </SelectItem>
                     {meta.statuses.map((s: string) => (
                       <SelectItem key={s} value={s}>
-                        {s
-                          .toLowerCase()
-                          .replace("_", " ")
-                          .replace(/\b\w/g, (c) => c.toUpperCase())}
+                        {t(`aquila.statuses.${s.toUpperCase()}`)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -369,21 +363,21 @@ export default function DiscoverClientPage({
               >
                 <SelectTrigger className="h-10 bg-background/50 border-border/60 rounded-xl w-full sm:w-[160px]">
                   <SelectValue
-                    placeholder={t("aquila.addedTime", "Added Time")}
+                    placeholder={t("aquila.addedTime")}
                   />
                 </SelectTrigger>
                 <SelectContent className="max-h-60" position="popper">
                   <SelectItem value="all">
-                    {t("aquila.addedAnytime", "Added (Anytime)")}
+                    {t("aquila.addedAnytime")}
                   </SelectItem>
                   <SelectItem value="1">
-                    {t("aquila.added1DayAgo", "Added 1 day ago")}
+                    {t("aquila.added1DayAgo")}
                   </SelectItem>
                   <SelectItem value="7">
-                    {t("aquila.added7DaysAgo", "Added 7 days ago")}
+                    {t("aquila.added7DaysAgo")}
                   </SelectItem>
                   <SelectItem value="30">
-                    {t("aquila.added30DaysAgo", "Added 30 days ago")}
+                    {t("aquila.added30DaysAgo")}
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -393,22 +387,22 @@ export default function DiscoverClientPage({
             {!["characters", "actors"].includes(type) && (
               <Select value={sort} onValueChange={handleSortChange}>
                 <SelectTrigger className="h-10 bg-background/50 border-border/60 rounded-xl w-full sm:w-[160px]">
-                  <SelectValue placeholder={t("aquila.sortBy", "Sort By")} />
+                  <SelectValue placeholder={t("aquila.sortBy")} />
                 </SelectTrigger>
                 <SelectContent className="max-h-60" position="popper">
                   <SelectItem value="latest">
-                    {t("aquila.latestRelease", "Latest Release")}
+                    {t("aquila.latestRelease")}
                   </SelectItem>
                   <SelectItem value="oldest">
-                    {t("aquila.oldestRelease", "Oldest Release")}
+                    {t("aquila.oldestRelease")}
                   </SelectItem>
                   {type !== "movies" && type !== "tv" && (
                     <SelectItem value="score">
-                      {t("aquila.highestScore", "Highest Score")}
+                      {t("aquila.highestScore")}
                     </SelectItem>
                   )}
                   <SelectItem value="alphabetical">
-                    {t("aquila.alphabetical", "Alphabetical (A-Z)")}
+                    {t("aquila.alphabetical")}
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -421,7 +415,7 @@ export default function DiscoverClientPage({
                 onClick={clearFilters}
                 className="text-xs text-muted-foreground hover:text-foreground h-10 cursor-pointer rounded-lg px-3"
               >
-                {t("aquila.clearFilters", "Clear Filters")}
+                {t("aquila.clearFilters")}
               </Button>
             )}
           </div>

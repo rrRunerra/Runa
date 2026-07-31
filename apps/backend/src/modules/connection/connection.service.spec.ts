@@ -51,7 +51,28 @@ describe('ConnectionService', () => {
       upsert: jest.fn(),
       delete: jest.fn(),
     },
-    aquilaAnimeUserList: {
+    aquilaAnimeUserListV2: {
+      findUnique: jest.fn(),
+      update: jest.fn(),
+      create: jest.fn(),
+    },
+    aquilaMangaUserListV2: {
+      findUnique: jest.fn(),
+      update: jest.fn(),
+      create: jest.fn(),
+    },
+    aquilaTvUserListV2: {
+      findUnique: jest.fn(),
+      update: jest.fn(),
+      create: jest.fn(),
+    },
+    aquilaTvWatchedEpisodeV2: {
+      createMany: jest.fn(),
+    },
+    aquilaTvV2: {
+      findUnique: jest.fn(),
+    },
+    aquilaMovieUserListV2: {
       findUnique: jest.fn(),
       update: jest.fn(),
       create: jest.fn(),
@@ -236,6 +257,53 @@ describe('ConnectionService', () => {
         'img',
       );
       expect(mockPrismaClient.aquilaAnimeUserListV2.create).toHaveBeenCalled();
+      expect(service.getImportStatus('testuser', 'anilist').status).toBe(
+        'completed',
+      );
+    });
+
+    it('should run background import for manga and save items to aquilaMangaUserListV2 with chaptersProgress', async () => {
+      const mangaProviderInstance = {
+        ...mockProviderInstance,
+        fetchUserList: jest.fn().mockResolvedValue([
+          {
+            mediaType: 'manga',
+            anilistId: 64,
+            malId: 100,
+            title: 'Test Manga',
+            status: 'READING',
+            progress: 311,
+            volumesProgress: 0,
+            score: 10,
+            coverImage: 'img',
+          },
+        ]),
+      };
+      service['loader'].getConnection = jest
+        .fn()
+        .mockReturnValue(mangaProviderInstance);
+      mockPrismaClient.aquilaMangaUserListV2.findUnique.mockResolvedValue(null);
+      mockPrismaClient.aquilaMangaUserListV2.create.mockResolvedValue({});
+      mockPrismaClient.user.findFirst.mockResolvedValue({ id: 'user-id-123' });
+
+      await service['runImportInBackground']('testuser', 'anilist');
+
+      expect(mockMangaService.ensureManga).toHaveBeenCalledWith(
+        64,
+        100,
+        'Test Manga',
+        'img',
+      );
+      expect(mockPrismaClient.aquilaMangaUserListV2.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          username: 'testuser',
+          mangaId: 1,
+          status: 'READING',
+          chaptersProgress: 311,
+          volumesProgress: 0,
+          score: 10,
+        }),
+      });
       expect(service.getImportStatus('testuser', 'anilist').status).toBe(
         'completed',
       );

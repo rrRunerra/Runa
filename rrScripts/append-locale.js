@@ -2,7 +2,6 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { execSync } from 'child_process';
-import prompts from 'prompts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -70,6 +69,47 @@ async function run() {
   }
 
   const otherLangs = Object.keys(allLocales).filter(lang => lang !== 'en');
+
+  // Check for --batch argument or automatically apply pending keys if any
+  // format
+    //   "aquila.noCharacters": {
+    //   "cs": "Žádné informace o postavách", "de": "Keine Charakterinformationen verfügbar", "en": "No character information available", "es": "No hay información de personajes disponible", "fi": "Ei hahmo-tietoja saatavilla", "ja": "キャラクター情報はありません", "ko": "캐릭터 정보가 없습니다", "ms": "Tiada maklumat watak tersedia", "no": "Ingen karakterinformasjon tilgjengelig", "pl": "Brak dostępnych informacji o postaciach", "ru": "Информация о персонажах отсутствует", "th": "ไม่มีข้อมูลตัวละคร", "tr": "Karakter bilgisi bulunmuyor", "vi": "Không có thông tin nhân vật", "zh-CN": "暂无角色信息", "zh-TW": "暫無角色資訊"
+    // }
+  const batchData = {
+
+  };
+
+  const isBatchRun = process.argv.includes('--batch');
+  if (isBatchRun) {
+    console.log('Running batch translation update for pending keys...');
+    for (const [keyPath, langValues] of Object.entries(batchData)) {
+      for (const [lang, val] of Object.entries(langValues)) {
+        if (allLocales[lang]) {
+          setNestedProperty(allLocales[lang], keyPath, val);
+        }
+      }
+    }
+
+    console.log('\nWriting changes to locale files (.js in rrScripts/locales)...');
+    for (const lang of Object.keys(allLocales)) {
+      const filePath = path.join(localesDir, `${lang}.js`);
+      const fileContent = `export default ${JSON.stringify(allLocales[lang], null, 2)};\n`;
+      fs.writeFileSync(filePath, fileContent, 'utf8');
+    }
+    console.log('All JS locale files updated successfully.');
+
+    console.log('\nRunning locale generation and validation...');
+    try {
+      execSync('node generate-locales.js', { stdio: 'inherit', cwd: __dirname });
+      execSync('node check-locales.js', { stdio: 'inherit', cwd: __dirname });
+      console.log('\n🎉 Batch append completed successfully.');
+    } catch (error) {
+      console.error('\n❌ Locale validation or generation failed.');
+      process.exit(1);
+    }
+    return;
+  }
+
   let addMore = true;
 
   // 2. Prompt loop

@@ -86,14 +86,14 @@ export function RrMediaFooter({
               className="h-8 gap-1.5 text-xs font-semibold rounded-xl bg-background/50 hover:bg-muted"
             >
               <Edit3 className="size-3.5 text-primary" />
-              Edit Data
+              {t("aquila.editData")}
             </Button>
 
             {formattedDate && (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground/80">
                 <RefreshCw className="size-3 shrink-0" />
                 <span>
-                  {t("aquila.lastUpdated", "Last updated")}: {formattedDate}
+                  {t("aquila.lastUpdated")}: {formattedDate}
                 </span>
               </div>
             )}

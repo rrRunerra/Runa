@@ -153,7 +153,7 @@ export function RrMediaCharacters({
                   </p>
                   {char.role && (
                     <p className="text-[10px] text-muted-foreground capitalize font-medium mt-0.5">
-                      {char.role.toLowerCase()}
+                      {t(`aquila.roles.${char.role.toUpperCase().replace(/\s+/g, "_")}`)}
                     </p>
                   )}
                 </div>
@@ -174,8 +174,9 @@ export function RrMediaCharacters({
                         {char.voiceActor.name}
                       </p>
                       <p className="text-[10px] text-muted-foreground capitalize font-medium mt-0.5">
-                        {char.voiceActor.role?.toLowerCase() ||
-                          t("aquila.actor")}
+                        {char.voiceActor.role
+                          ? t(`aquila.roles.${char.voiceActor.role.toUpperCase().replace(/\s+/g, "_")}`)
+                          : t("aquila.actor")}
                       </p>
                     </div>
                     <div className="relative size-11 sm:size-12 rounded-xl overflow-hidden shrink-0 bg-muted border border-border/20 shadow-xs">

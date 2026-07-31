@@ -102,7 +102,7 @@ export function RrMediaCharacterDialog({
                     variant="secondary"
                     className="capitalize text-[10px] rounded-lg"
                   >
-                    {character.role.toLowerCase()}
+                    {t(`aquila.roles.${character.role.toUpperCase()}`)}
                   </Badge>
                 )}
                 {character.gender && (
