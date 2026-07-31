@@ -1,5 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, Inter } from "next/font/google";
+import {
+  Geist,
+  Geist_Mono,
+  Inter,
+  Roboto,
+  JetBrains_Mono,
+} from "next/font/google";
 import "./globals.css";
 import "katex/dist/katex.min.css";
 import { cn } from "@/lib/utils";
@@ -7,17 +13,12 @@ import Providers from "./providers";
 import { Toaster } from "@/components/ui/sonner";
 import { RrI18nServerProvider } from "@/components/Providers/rrI18nServerProvider";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const jetbrainsMonoHeading = JetBrains_Mono({
   subsets: ["latin"],
+  variable: "--font-heading",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const roboto = Roboto({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
   title: "Runa",
@@ -44,10 +45,9 @@ export default function RootLayout({
       className={cn(
         "h-full",
         "antialiased",
-        geistSans.variable,
-        geistMono.variable,
         "font-sans",
-        inter.variable,
+        roboto.variable,
+        jetbrainsMonoHeading.variable,
       )}
     >
       <body className="h-screen flex flex-col">
