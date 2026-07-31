@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 
 import { ListService } from './list.service';
 import { ListController } from './list.controller';
@@ -18,7 +18,7 @@ import { MediaStatsService } from './media-stats.service';
 @Module({
   imports: [
     PrismaModule,
-    ConnectionModule,
+    forwardRef(() => ConnectionModule),
     StatsModule,
     MovieModule,
     TvModule,

@@ -147,21 +147,30 @@ export class GameService {
     coverImage?: string,
   ): Promise<GameEntity | null> {
     let game = await this.gameRepository.find(rawgId);
-    if (!game) {
+    const threeMonthsMs = 90 * 24 * 60 * 60 * 1000;
+    const rawgUpdatedAt = (game as any)?.rawgUpdatedAt;
+    const isStale =
+      !game ||
+      !rawgUpdatedAt ||
+      Date.now() - new Date(rawgUpdatedAt).getTime() >= threeMonthsMs;
+
+    if (isStale) {
       try {
         await this.gameExternal.fetchAndUpsertGame(rawgId);
         game = await this.gameRepository.find(rawgId);
       } catch {
-        this.logger.warn(
-          `ensureGame V2: External fetch failed for ${rawgId}, writing minimal stub`,
-        );
-        await this.gameRepository.upsertV2Record({
-          rawgId,
-          titlePrimary: title || 'Unknown',
-          coverImage: coverImage ?? null,
-          releaseDateYear: 1970,
-        });
-        game = await this.gameRepository.find(rawgId);
+        if (!game) {
+          this.logger.warn(
+            `ensureGame V2: External fetch failed for ${rawgId}, writing minimal stub`,
+          );
+          await this.gameRepository.upsertV2Record({
+            rawgId,
+            titlePrimary: title || 'Unknown',
+            coverImage: coverImage ?? null,
+            releaseDateYear: 1970,
+          });
+          game = await this.gameRepository.find(rawgId);
+        }
       }
     }
     return game;

@@ -37,7 +37,10 @@ export class MovieQueueService implements OnModuleInit {
     try {
       const existing = await this.movieRepository.findByTvdbId(tvdbId);
       if (existing && existing.tvdbUpdatedAt) {
-        return;
+        const threeMonthsMs = 90 * 24 * 60 * 60 * 1000;
+        if (Date.now() - new Date(existing.tvdbUpdatedAt).getTime() < threeMonthsMs) {
+          return;
+        }
       }
     } catch {
       // Ignore lookup check error and proceed with queuing
@@ -88,7 +91,7 @@ export class MovieQueueService implements OnModuleInit {
           } finally {
             this.pendingTvdbIds.delete(job.tvdbId);
           }
-        }, 2),
+        }, 1),
         catchError((error) => {
           this.logger.error(`Movie upsert queue unexpected error: ${error}`);
           return EMPTY;

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ConnectionService } from './connection.service';
 import { ConnectionController } from './connection.controller';
 import { PrismaModule } from '../../providers/database/prisma.module';
@@ -8,6 +8,7 @@ import { MovieModule } from '../movie/movie.module';
 import { TvModule } from '../tv/tv.module';
 import { StatsModule } from '../stats/stats.module';
 import { NotificationModule } from '../notification/notification.module';
+import { ListModule } from '../list/list.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { NotificationModule } from '../notification/notification.module';
     TvModule,
     StatsModule,
     NotificationModule,
+    forwardRef(() => ListModule),
   ],
   controllers: [ConnectionController],
   providers: [ConnectionService],

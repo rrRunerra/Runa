@@ -191,7 +191,13 @@ export class MangaService {
     coverImage?: string,
   ): Promise<any> {
     let manga = await this.mangaRepository.findByAnilistId(anilistId);
-    if (!manga) {
+    const threeMonthsMs = 90 * 24 * 60 * 60 * 1000;
+    const isStale =
+      !manga ||
+      !manga.alUpdatedAt ||
+      Date.now() - new Date(manga.alUpdatedAt).getTime() >= threeMonthsMs;
+
+    if (isStale) {
       try {
         const fullRecord = await this.mangaExternal.fetchFullV2Record(anilistId);
         if (fullRecord) {
@@ -207,16 +213,18 @@ export class MangaService {
           }
         }
       } catch {
-        this.logger.warn(
-          `ensureManga V2: External fetch failed for ${anilistId}, writing minimal stub`,
-        );
-        manga = await this.mangaRepository.upsertV2Record({
-          anilistId,
-          malId: malId ?? null,
-          titlePrimary: title || 'Unknown',
-          coverImage: coverImage ?? null,
-          startDateYear: 1970,
-        });
+        if (!manga) {
+          this.logger.warn(
+            `ensureManga V2: External fetch failed for ${anilistId}, writing minimal stub`,
+          );
+          manga = await this.mangaRepository.upsertV2Record({
+            anilistId,
+            malId: malId ?? null,
+            titlePrimary: title || 'Unknown',
+            coverImage: coverImage ?? null,
+            startDateYear: 1970,
+          });
+        }
       }
     }
     return manga;

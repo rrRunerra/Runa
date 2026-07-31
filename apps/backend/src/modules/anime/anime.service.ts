@@ -193,7 +193,13 @@ export class AnimeService {
     coverImage?: string,
   ): Promise<any> {
     let anime = await this.animeRepository.findByAnilistId(anilistId);
-    if (!anime) {
+    const threeMonthsMs = 90 * 24 * 60 * 60 * 1000;
+    const isStale =
+      !anime ||
+      !anime.alUpdatedAt ||
+      Date.now() - new Date(anime.alUpdatedAt).getTime() >= threeMonthsMs;
+
+    if (isStale) {
       try {
         const fullRecord = await this.animeExternal.fetchFullV2Record(anilistId);
         if (fullRecord) {
@@ -209,17 +215,19 @@ export class AnimeService {
           }
         }
       } catch {
-        this.logger.warn(
-          `ensureAnime V2: External fetch failed for ${anilistId}, writing minimal stub`,
-        );
-        anime = await this.animeRepository.upsertV2Record({
-          anilistId,
-          malId: malId ?? null,
-          titlePrimary: title || 'Unknown',
-          coverImage: coverImage ?? null,
-          startDateYear: 1970,
-          seasonYear: 1970,
-        });
+        if (!anime) {
+          this.logger.warn(
+            `ensureAnime V2: External fetch failed for ${anilistId}, writing minimal stub`,
+          );
+          anime = await this.animeRepository.upsertV2Record({
+            anilistId,
+            malId: malId ?? null,
+            titlePrimary: title || 'Unknown',
+            coverImage: coverImage ?? null,
+            startDateYear: 1970,
+            seasonYear: 1970,
+          });
+        }
       }
     }
     return anime;

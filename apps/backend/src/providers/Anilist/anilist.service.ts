@@ -8,11 +8,52 @@ export interface AniListResponse<T = any> {
 @Injectable()
 export class AnilistService {
   private readonly logger = new Logger(AnilistService.name);
+  private queue: Promise<void> = Promise.resolve();
+
+  private getRequestDelayMs(): number {
+    const envVal = process.env.ANILIST_REQUEST_DELAY_MS;
+    if (envVal) {
+      const parsed = parseInt(envVal, 10);
+      if (!isNaN(parsed) && parsed >= 0) {
+        return parsed;
+      }
+    }
+    return 2000; // Default 2000ms (2s) spacing between AniList requests
+  }
+
+  private async execSerialized<T>(fn: () => Promise<T>): Promise<T> {
+    let release: () => void;
+    const next = new Promise<void>((res) => (release = res));
+    const prev = this.queue;
+    this.queue = next;
+    await prev;
+    try {
+      const result = await fn();
+      const delayMs = this.getRequestDelayMs();
+      if (delayMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+      return result;
+    } finally {
+      release!();
+    }
+  }
 
   /**
    * Primary GraphQL fetch method with retry and rate-limiting support.
    */
   public async fetchGraphQL<T = any>(
+    query: string,
+    variables: Record<string, any>,
+    maxRetries = 5,
+    baseDelay = 1000,
+  ): Promise<T | null> {
+    return this.execSerialized(() =>
+      this.doFetchGraphQL<T>(query, variables, maxRetries, baseDelay),
+    );
+  }
+
+  private async doFetchGraphQL<T = any>(
     query: string,
     variables: Record<string, any>,
     maxRetries = 5,
@@ -31,11 +72,24 @@ export class AnilistService {
 
         if (res.status === 429) {
           const retryAfter = res.headers.get('retry-after');
-          const waitMs = retryAfter
-            ? parseInt(retryAfter, 10) * 1000 + 500
-            : baseDelay * Math.pow(2, attempt);
+          const resetHeader = res.headers.get('x-ratelimit-reset');
+          let waitMs = baseDelay * Math.pow(2, attempt);
+
+          if (retryAfter) {
+            const retrySec = parseInt(retryAfter, 10);
+            if (!isNaN(retrySec)) {
+              waitMs = retrySec * 1000 + 1500;
+            }
+          } else if (resetHeader) {
+            const resetSec = parseInt(resetHeader, 10);
+            if (!isNaN(resetSec)) {
+              const nowSec = Math.floor(Date.now() / 1000);
+              waitMs = Math.max((resetSec - nowSec + 2) * 1000, 2000);
+            }
+          }
+
           this.logger.warn(
-            `AniList rate limit hit (429). Retrying in ${waitMs}ms (attempt ${attempt + 1}/${maxRetries})...`,
+            `[AniList] Rate limit / burst limit hit (429). Retrying in ${waitMs}ms (attempt ${attempt + 1}/${maxRetries})...`,
           );
           await new Promise((resolve) => setTimeout(resolve, waitMs));
           continue;
@@ -46,8 +100,39 @@ export class AnilistService {
           return null;
         }
 
+        // Proactive check of remaining requests to prevent hitting 429
+        const remainingHeader = res.headers.get('x-ratelimit-remaining');
+        const resetHeader = res.headers.get('x-ratelimit-reset');
+        if (remainingHeader !== null) {
+          const remaining = parseInt(remainingHeader, 10);
+          if (!isNaN(remaining) && remaining <= 2) {
+            let waitMs = 60000;
+            if (resetHeader) {
+              const resetSec = parseInt(resetHeader, 10);
+              if (!isNaN(resetSec)) {
+                const nowSec = Math.floor(Date.now() / 1000);
+                waitMs = Math.max((resetSec - nowSec + 2) * 1000, 2000);
+              }
+            }
+            this.logger.warn(
+              `[AniList] Proactive rate limit pause: remaining requests = ${remaining}. Pausing ${waitMs}ms until reset...`,
+            );
+            await new Promise((resolve) => setTimeout(resolve, waitMs));
+          }
+        }
+
         const json = (await res.json()) as AniListResponse<T>;
         if (json.errors && json.errors.length > 0) {
+          const is429Error = json.errors.some(
+            (e) => e.status === 429 || e.message?.includes('Too Many Requests'),
+          );
+          if (is429Error) {
+            this.logger.warn(
+              `[AniList] GraphQL 429 error returned in body. Pausing for 60s (attempt ${attempt + 1}/${maxRetries})...`,
+            );
+            await new Promise((resolve) => setTimeout(resolve, 60000));
+            continue;
+          }
           this.logger.warn(
             `AniList GraphQL return errors: ${JSON.stringify(json.errors)}`,
           );

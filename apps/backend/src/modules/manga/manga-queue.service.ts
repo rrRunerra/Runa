@@ -34,7 +34,10 @@ export class MangaQueueService implements OnModuleInit {
     try {
       const existing = await this.mangaRepository.findByAnilistId(anilistId);
       if (existing && existing.alUpdatedAt) {
-        return;
+        const threeMonthsMs = 90 * 24 * 60 * 60 * 1000;
+        if (Date.now() - new Date(existing.alUpdatedAt).getTime() < threeMonthsMs) {
+          return;
+        }
       }
     } catch {
       // Ignore lookup check error and proceed with queuing
@@ -83,7 +86,7 @@ export class MangaQueueService implements OnModuleInit {
           } finally {
             this.pendingAnilistIds.delete(job.anilistId);
           }
-        }, 2),
+        }, 1),
         catchError((error) => {
           this.logger.error(`Manga upsert queue unexpected error: ${error}`);
           return EMPTY;

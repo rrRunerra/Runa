@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit, Inject, forwardRef, Logger } from '@nestjs/common';
 import {
   rrBadRequestException,
   rrNotFoundException,
@@ -14,9 +14,31 @@ import { MovieService } from '../movie/movie.service';
 import { TvService } from '../tv/tv.service';
 import { StatsService } from '../stats/stats.service';
 import { NotificationService } from '../notification/notification.service';
+import { MediaStatsService } from '../list/media-stats.service';
+import { ConnectionEntity } from './connection.entities';
+
+class ImportMutex {
+  private queue: Promise<void> = Promise.resolve();
+
+  async runExclusive<T>(fn: () => Promise<T>): Promise<T> {
+    let release: () => void;
+    const next = new Promise<void>((res) => (release = res));
+    const prev = this.queue;
+    this.queue = next;
+    await prev;
+    try {
+      return await fn();
+    } finally {
+      release!();
+    }
+  }
+}
+
+const globalImportMutex = new ImportMutex();
 
 @Injectable()
 export class ConnectionService implements OnModuleInit {
+  private readonly logger = new Logger(ConnectionService.name);
   private loader: ConnectionLoader;
   private activeImports = new Map<
     string,
@@ -42,6 +64,8 @@ export class ConnectionService implements OnModuleInit {
     private readonly tvService: TvService,
     private readonly statsService: StatsService,
     private readonly notificationService: NotificationService,
+    @Inject(forwardRef(() => MediaStatsService))
+    private readonly mediaStatsService: MediaStatsService,
   ) {}
 
   // Module code identifier
@@ -340,6 +364,10 @@ export class ConnectionService implements OnModuleInit {
           ? items.filter((item) => mediaTypes.includes(item.mediaType))
           : items;
 
+      this.logger.debug(
+        `[Import] Starting background list import for user "${username}" via ${providerId}. Found ${items.length} total items (${filteredItems.length} filtered).`,
+      );
+
       this.activeImports.set(key, {
         total: filteredItems.length,
         processed: 0,
@@ -353,6 +381,9 @@ export class ConnectionService implements OnModuleInit {
         (item) => item.mediaType === 'anime' && !item.anilistId && item.malId,
       );
       if (missingAnilistAnime.length > 0) {
+        this.logger.debug(
+          `[Import] Resolving AniList IDs for ${missingAnilistAnime.length} MAL anime items...`,
+        );
         const malIds = missingAnilistAnime.map((item) => item.malId);
         const resolvedMap = await this.resolveMalToAnilistIds(malIds);
         for (const item of missingAnilistAnime) {
@@ -362,17 +393,28 @@ export class ConnectionService implements OnModuleInit {
         }
       }
 
+      const affectedMedia = new Map<string, Set<number>>();
+      const addAffected = (type: string, id: number) => {
+        if (!affectedMedia.has(type)) affectedMedia.set(type, new Set());
+        affectedMedia.get(type)!.add(id);
+      };
+
       let processed = 0;
       for (const item of filteredItems) {
-        const itemTitle =
-          typeof item.title === 'object'
-            ? item.title.romaji ||
-              item.title.english ||
-              item.title.native ||
-              'Unknown'
-            : item.title || 'Unknown';
-        const providerItemId =
-          item.anilistId || item.malId || item.tvdbId || item.simklId || 0;
+        await globalImportMutex.runExclusive(async () => {
+          const itemTitle =
+            typeof item.title === 'object'
+              ? item.title.romaji ||
+                item.title.english ||
+                item.title.native ||
+                'Unknown'
+              : item.title || 'Unknown';
+          const providerItemId =
+            item.anilistId || item.malId || item.tvdbId || item.simklId || 0;
+
+          this.logger.debug(
+            `[Import] [${processed + 1}/${filteredItems.length}] Processing ${item.mediaType}: "${itemTitle}" (Provider ID: ${providerItemId}, status: ${item.status})`,
+          );
 
         try {
           if (item.mediaType === 'anime') {
@@ -385,8 +427,9 @@ export class ConnectionService implements OnModuleInit {
                 reason: 'Could not resolve AniList ID',
                 mediaType: 'anime',
               });
-              continue;
+              return;
             }
+            
             // 1. Ensure Anime exists in db
             const dbAnime = await this.animeService.ensureAnime(
               item.anilistId,
@@ -404,8 +447,9 @@ export class ConnectionService implements OnModuleInit {
                 reason: 'Failed to create Anime record in DB',
                 mediaType: 'anime',
               });
-              continue;
+              return;
             }
+            addAffected('anime', animeId);
 
             // 2. Conflict Resolution: Additive import
             const existing =
@@ -468,7 +512,7 @@ export class ConnectionService implements OnModuleInit {
                 reason: 'Could not resolve AniList ID',
                 mediaType: 'manga',
               });
-              continue;
+              return;
             }
             // 1. Ensure Manga exists in db
             const dbManga = await this.mangaService.ensureManga(
@@ -487,8 +531,9 @@ export class ConnectionService implements OnModuleInit {
                 reason: 'Failed to create Manga record in DB',
                 mediaType: 'manga',
               });
-              continue;
+              return;
             }
+            addAffected('manga', mangaId);
 
             // 2. Conflict Resolution
             const existing =
@@ -551,7 +596,7 @@ export class ConnectionService implements OnModuleInit {
                 reason: 'Lacks TVDB ID',
                 mediaType: 'tv',
               });
-              continue;
+              return;
             }
             // 1. Ensure TV exists in db
             const dbTv = await this.tvService.ensureTv(
@@ -569,8 +614,9 @@ export class ConnectionService implements OnModuleInit {
                 reason: 'Failed to create TV record in DB',
                 mediaType: 'tv',
               });
-              continue;
+              return;
             }
+            addAffected('tv', tvId);
 
             // 2. Conflict Resolution
             const existing =
@@ -740,7 +786,7 @@ export class ConnectionService implements OnModuleInit {
                 reason: 'Lacks TVDB ID',
                 mediaType: 'movie',
               });
-              continue;
+              return;
             }
             // 1. Ensure Movie exists in db
             const dbMovie = await this.movieService.ensureMovie(
@@ -758,8 +804,9 @@ export class ConnectionService implements OnModuleInit {
                 reason: 'Failed to create movie record in DB',
                 mediaType: 'movie',
               });
-              continue;
+              return;
             }
+            addAffected('movie', movieId);
 
             // 2. Conflict Resolution
             const existing =
@@ -812,9 +859,8 @@ export class ConnectionService implements OnModuleInit {
             }
           }
         } catch (err: any) {
-          console.error(
-            `Failed to import media item "${itemTitle}" in background:`,
-            err.message,
+          this.logger.error(
+            `[Import] Failed to import ${item.mediaType} item "${itemTitle}" (Provider ID: ${providerItemId}): ${err?.message || err}`,
           );
           failedItems.push({
             title: itemTitle,
@@ -830,7 +876,15 @@ export class ConnectionService implements OnModuleInit {
           status: 'processing',
           failedItems,
         });
+
+        // Throttle 300ms between series imports to stay well clear of API rate limits
+        await new Promise((res) => setTimeout(res, 300));
+      });
       }
+
+      this.logger.debug(
+        `[Import] Completed list import for "${username}" via ${providerId}. Processed: ${processed}/${filteredItems.length}, Failed: ${failedItems.length}`,
+      );
 
       this.activeImports.set(key, {
         total: filteredItems.length,
@@ -838,6 +892,25 @@ export class ConnectionService implements OnModuleInit {
         status: 'completed',
         failedItems,
       });
+
+      // Recalculate media stats (popularity, averageScore, statusDistribution, etc.) for all affected media
+      this.logger.debug(
+        `[Import] Recalculating platform stats for ${affectedMedia.size} media types...`,
+      );
+      for (const [mediaType, mediaIds] of affectedMedia.entries()) {
+        for (const mediaId of mediaIds) {
+          try {
+            await this.mediaStatsService.recalculateStatsFull(mediaType, mediaId);
+            this.logger.debug(
+              `[Import] Recalculated stats for ${mediaType} ID ${mediaId}`,
+            );
+          } catch (err: any) {
+            this.logger.error(
+              `[Import] Failed to recalculate media stats for ${mediaType} ID ${mediaId}: ${err?.message || err}`,
+            );
+          }
+        }
+      }
 
       try {
         const user = await this.prisma.client.user.findFirst({

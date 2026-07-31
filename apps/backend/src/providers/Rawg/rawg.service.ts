@@ -4,12 +4,53 @@ import { Injectable, Logger } from '@nestjs/common';
 export class RawgService {
   private readonly logger = new Logger(RawgService.name);
   private readonly baseUrl = 'https://api.rawg.io/api';
+  private queue: Promise<void> = Promise.resolve();
+
+  private getRequestDelayMs(): number {
+    const envVal = process.env.RAWG_REQUEST_DELAY_MS;
+    if (envVal) {
+      const parsed = parseInt(envVal, 10);
+      if (!isNaN(parsed) && parsed >= 0) {
+        return parsed;
+      }
+    }
+    return 500; // Default 500ms spacing between RAWG requests
+  }
+
+  private async execSerialized<T>(fn: () => Promise<T>): Promise<T> {
+    let release: () => void;
+    const next = new Promise<void>((res) => (release = res));
+    const prev = this.queue;
+    this.queue = next;
+    await prev;
+    try {
+      const result = await fn();
+      const delayMs = this.getRequestDelayMs();
+      if (delayMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+      return result;
+    } finally {
+      release!();
+    }
+  }
 
   private getApiKey(): string | null {
     return process.env.RAWG_API_KEY || null;
   }
 
   private async fetchWithRateLimit(
+    url: string,
+    options?: RequestInit,
+    maxRetries = 3,
+    baseDelay = 1000,
+  ): Promise<Response | null> {
+    return this.execSerialized(() =>
+      this.doFetchWithRateLimit(url, options, maxRetries, baseDelay),
+    );
+  }
+
+  private async doFetchWithRateLimit(
     url: string,
     options?: RequestInit,
     maxRetries = 3,

@@ -147,21 +147,30 @@ export class BookService {
     coverImage?: string,
   ): Promise<BookEntity | null> {
     let book = await this.bookRepository.find(googleBookId);
-    if (!book) {
+    const threeMonthsMs = 90 * 24 * 60 * 60 * 1000;
+    const googleBookUpdatedAt = (book as any)?.googleBookUpdatedAt;
+    const isStale =
+      !book ||
+      !googleBookUpdatedAt ||
+      Date.now() - new Date(googleBookUpdatedAt).getTime() >= threeMonthsMs;
+
+    if (isStale) {
       try {
         await this.bookExternal.fetchAndUpsertBook(googleBookId);
         book = await this.bookRepository.find(googleBookId);
       } catch {
-        this.logger.warn(
-          `ensureBook V2: External fetch failed for ${googleBookId}, writing minimal stub`,
-        );
-        await this.bookRepository.upsertV2Record({
-          googleBookId,
-          titlePrimary: title || 'Unknown',
-          coverImage: coverImage ?? null,
-          releaseDateYear: 1970,
-        });
-        book = await this.bookRepository.find(googleBookId);
+        if (!book) {
+          this.logger.warn(
+            `ensureBook V2: External fetch failed for ${googleBookId}, writing minimal stub`,
+          );
+          await this.bookRepository.upsertV2Record({
+            googleBookId,
+            titlePrimary: title || 'Unknown',
+            coverImage: coverImage ?? null,
+            releaseDateYear: 1970,
+          });
+          book = await this.bookRepository.find(googleBookId);
+        }
       }
     }
     return book;

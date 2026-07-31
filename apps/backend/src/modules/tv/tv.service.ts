@@ -146,19 +146,28 @@ export class TvService {
     let tv = (await this.tvRepository.findByTvdbId(
       tvdbId,
     )) as DbTvResult | null;
-    if (!tv) {
+    const threeMonthsMs = 90 * 24 * 60 * 60 * 1000;
+    const tvUpdatedAt = (tv as any)?.tvdbUpdatedAt;
+    const isStale =
+      !tv ||
+      !tvUpdatedAt ||
+      Date.now() - new Date(tvUpdatedAt).getTime() >= threeMonthsMs;
+
+    if (isStale) {
       try {
         await this.tvExternal.fetchAndUpsertTv(tvdbId);
         tv = (await this.tvRepository.findByTvdbId(
           tvdbId,
         )) as DbTvResult | null;
       } catch {
-        const upserted = await this.tvRepository.upsertV2Record({
-          tvDBId: tvdbId,
-          titlePrimary: title || 'Unknown',
-          coverImage: coverImage || null,
-        });
-        tv = upserted as DbTvResult;
+        if (!tv) {
+          const upserted = await this.tvRepository.upsertV2Record({
+            tvDBId: tvdbId,
+            titlePrimary: title || 'Unknown',
+            coverImage: coverImage || null,
+          });
+          tv = upserted as DbTvResult;
+        }
       }
     }
     return tv;

@@ -178,7 +178,13 @@ export class MovieService {
     coverImage?: string,
   ): Promise<any> {
     let movie = await this.movieRepository.findByTvdbId(tvdbId);
-    if (!movie) {
+    const threeMonthsMs = 90 * 24 * 60 * 60 * 1000;
+    const isStale =
+      !movie ||
+      !movie.tvdbUpdatedAt ||
+      Date.now() - new Date(movie.tvdbUpdatedAt).getTime() >= threeMonthsMs;
+
+    if (isStale) {
       try {
         const fullRecord = await this.movieExternal.fetchFullV2Record(tvdbId);
         if (fullRecord) {
@@ -196,15 +202,17 @@ export class MovieService {
           }
         }
       } catch {
-        this.logger.warn(
-          `ensureMovie V2: External fetch failed for ${tvdbId}, writing minimal stub`,
-        );
-        movie = await this.movieRepository.upsertV2Record({
-          tvDBId: tvdbId,
-          titlePrimary: title || 'Unknown',
-          coverImage: coverImage ?? null,
-          releaseDateYear: 1970,
-        });
+        if (!movie) {
+          this.logger.warn(
+            `ensureMovie V2: External fetch failed for ${tvdbId}, writing minimal stub`,
+          );
+          movie = await this.movieRepository.upsertV2Record({
+            tvDBId: tvdbId,
+            titlePrimary: title || 'Unknown',
+            coverImage: coverImage ?? null,
+            releaseDateYear: 1970,
+          });
+        }
       }
     }
     return movie;

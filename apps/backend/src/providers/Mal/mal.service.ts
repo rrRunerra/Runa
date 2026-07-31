@@ -33,8 +33,49 @@ function normalizeNameKey(name: string): string {
 @Injectable()
 export class MalService {
   private readonly logger = new Logger(MalService.name);
+  private queue: Promise<void> = Promise.resolve();
+
+  private getRequestDelayMs(): number {
+    const envVal = process.env.MAL_REQUEST_DELAY_MS;
+    if (envVal) {
+      const parsed = parseInt(envVal, 10);
+      if (!isNaN(parsed) && parsed >= 0) {
+        return parsed;
+      }
+    }
+    return 500; // Default 500ms spacing between MAL requests
+  }
+
+  private async execSerialized<T>(fn: () => Promise<T>): Promise<T> {
+    let release: () => void;
+    const next = new Promise<void>((res) => (release = res));
+    const prev = this.queue;
+    this.queue = next;
+    await prev;
+    try {
+      const result = await fn();
+      const delayMs = this.getRequestDelayMs();
+      if (delayMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+      return result;
+    } finally {
+      release!();
+    }
+  }
 
   private async fetchWithRateLimit(
+    url: string,
+    options?: RequestInit,
+    maxRetries = 3,
+    baseDelay = 1000,
+  ): Promise<Response | null> {
+    return this.execSerialized(() =>
+      this.doFetchWithRateLimit(url, options, maxRetries, baseDelay),
+    );
+  }
+
+  private async doFetchWithRateLimit(
     url: string,
     options?: RequestInit,
     maxRetries = 3,
