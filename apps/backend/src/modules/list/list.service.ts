@@ -2541,6 +2541,296 @@ export class ListService {
     }
   }
 
+  private async resolveAnimeId(item: any): Promise<number | null> {
+    const rawLocal = item.animeId ?? item.media?.animeId;
+    const localId = rawLocal != null ? Number(rawLocal) : NaN;
+    if (!isNaN(localId) && localId > 0) {
+      const existing = await this.prisma.client.aquilaAnimeV2.findUnique({
+        where: { id: localId },
+        select: { id: true },
+      });
+      if (existing) return existing.id;
+    }
+
+    const rawAnilist = item.anilistId ?? item.media?.anilistId ?? item.media?.id;
+    const anilistId = rawAnilist != null ? Number(rawAnilist) : NaN;
+    if (!isNaN(anilistId) && anilistId > 0) {
+      const title =
+        item.media?.titleString ||
+        item.media?.titlePrimary ||
+        (typeof item.media?.title === 'string'
+          ? item.media.title
+          : item.media?.title?.english || item.media?.title?.userPreferred) ||
+        item.title ||
+        undefined;
+      const rawCover = item.media?.coverImage || item.coverImage;
+      const coverImage =
+        typeof rawCover === 'string'
+          ? rawCover
+          : rawCover?.large || rawCover?.medium || undefined;
+      try {
+        const anime = await this.animeService.ensureAnime(
+          anilistId,
+          title,
+          coverImage,
+        );
+        if (anime?.id) return anime.id;
+      } catch (err) {
+        this.logger.warn(`Failed to ensure anime ${anilistId}: ${err}`);
+      }
+    }
+
+    const rawMal = item.malId ?? item.media?.malId;
+    const malId = rawMal != null ? Number(rawMal) : NaN;
+    if (!isNaN(malId) && malId > 0) {
+      const existing = await this.prisma.client.aquilaAnimeV2.findUnique({
+        where: { malId },
+        select: { id: true },
+      });
+      if (existing) return existing.id;
+    }
+
+    return null;
+  }
+
+  private async resolveMangaId(item: any): Promise<number | null> {
+    const rawLocal = item.mangaId ?? item.media?.mangaId;
+    const localId = rawLocal != null ? Number(rawLocal) : NaN;
+    if (!isNaN(localId) && localId > 0) {
+      const existing = await this.prisma.client.aquilaMangaV2.findUnique({
+        where: { id: localId },
+        select: { id: true },
+      });
+      if (existing) return existing.id;
+    }
+
+    const rawAnilist = item.anilistId ?? item.media?.anilistId ?? item.media?.id;
+    const anilistId = rawAnilist != null ? Number(rawAnilist) : NaN;
+    if (!isNaN(anilistId) && anilistId > 0) {
+      const title =
+        item.media?.titleString ||
+        item.media?.titlePrimary ||
+        (typeof item.media?.title === 'string'
+          ? item.media.title
+          : item.media?.title?.english || item.media?.title?.userPreferred) ||
+        item.title ||
+        undefined;
+      const rawCover = item.media?.coverImage || item.coverImage;
+      const coverImage =
+        typeof rawCover === 'string'
+          ? rawCover
+          : rawCover?.large || rawCover?.medium || undefined;
+      try {
+        const manga = await this.mangaService.ensureManga(
+          anilistId,
+          title,
+          coverImage,
+        );
+        if (manga?.id) return manga.id;
+      } catch (err) {
+        this.logger.warn(`Failed to ensure manga ${anilistId}: ${err}`);
+      }
+    }
+
+    const rawMal = item.malId ?? item.media?.malId;
+    const malId = rawMal != null ? Number(rawMal) : NaN;
+    if (!isNaN(malId) && malId > 0) {
+      const existing = await this.prisma.client.aquilaMangaV2.findUnique({
+        where: { malId },
+        select: { id: true },
+      });
+      if (existing) return existing.id;
+    }
+
+    return null;
+  }
+
+  private async resolveMovieId(item: any): Promise<number | null> {
+    const rawLocal = item.movieId ?? item.media?.movieId;
+    const localId = rawLocal != null ? Number(rawLocal) : NaN;
+    if (!isNaN(localId) && localId > 0) {
+      const existing = await this.prisma.client.aquilaMovieV2.findUnique({
+        where: { id: localId },
+        select: { id: true },
+      });
+      if (existing) return existing.id;
+    }
+
+    const rawTvdb =
+      item.tvDBId ??
+      item.media?.tvDBId ??
+      item.tmdbId ??
+      item.media?.tmdbId ??
+      item.media?.id;
+    const tvDBId = rawTvdb != null ? Number(rawTvdb) : NaN;
+    if (!isNaN(tvDBId) && tvDBId > 0) {
+      const title =
+        item.media?.titleString ||
+        item.media?.titlePrimary ||
+        item.title ||
+        undefined;
+      const rawCover = item.media?.coverImage || item.coverImage;
+      const coverImage =
+        typeof rawCover === 'string'
+          ? rawCover
+          : rawCover?.large || rawCover?.medium || undefined;
+      try {
+        const movie = await this.movieService.ensureMovie(
+          tvDBId,
+          title,
+          coverImage,
+        );
+        if (movie?.id) return movie.id;
+      } catch (err) {
+        this.logger.warn(`Failed to ensure movie ${tvDBId}: ${err}`);
+      }
+    }
+
+    return null;
+  }
+
+  private async resolveTvId(item: any): Promise<number | null> {
+    const rawLocal = item.tvId ?? item.media?.tvId;
+    const localId = rawLocal != null ? Number(rawLocal) : NaN;
+    if (!isNaN(localId) && localId > 0) {
+      const existing = await this.prisma.client.aquilaTvV2.findUnique({
+        where: { id: localId },
+        select: { id: true },
+      });
+      if (existing) return existing.id;
+    }
+
+    const rawTvdb = item.tvDBId ?? item.media?.tvDBId;
+    const tvDBId = rawTvdb != null ? Number(rawTvdb) : NaN;
+    if (!isNaN(tvDBId) && tvDBId > 0) {
+      const title =
+        item.media?.titleString ||
+        item.media?.titlePrimary ||
+        item.title ||
+        undefined;
+      const rawCover = item.media?.coverImage || item.coverImage;
+      const coverImage =
+        typeof rawCover === 'string'
+          ? rawCover
+          : rawCover?.large || rawCover?.medium || undefined;
+      try {
+        const tv = await this.tvService.ensureTv(
+          tvDBId,
+          title,
+          coverImage,
+        );
+        if (tv?.id) return tv.id;
+      } catch (err) {
+        this.logger.warn(`Failed to ensure TV ${tvDBId}: ${err}`);
+      }
+    }
+
+    const rawTmdb = item.tmdbId ?? item.media?.tmdbId ?? item.media?.id;
+    const tmdbId = rawTmdb != null ? Number(rawTmdb) : NaN;
+    if (!isNaN(tmdbId) && tmdbId > 0) {
+      const existing = await this.prisma.client.aquilaTvV2.findUnique({
+        where: { tmdbId },
+        select: { id: true },
+      });
+      if (existing) return existing.id;
+    }
+
+    return null;
+  }
+
+  private async resolveGameId(item: any): Promise<number | null> {
+    const rawLocal = item.gameId ?? item.media?.gameId;
+    const localId = rawLocal != null ? Number(rawLocal) : NaN;
+    if (!isNaN(localId) && localId > 0) {
+      const existing = await this.prisma.client.aquilaGameV2.findUnique({
+        where: { id: localId },
+        select: { id: true },
+      });
+      if (existing) return existing.id;
+    }
+
+    const rawRawg = item.rawgId ?? item.media?.rawgId ?? item.media?.id;
+    const rawgId = rawRawg != null ? Number(rawRawg) : NaN;
+    if (!isNaN(rawgId) && rawgId > 0) {
+      const title =
+        item.media?.titleString ||
+        item.media?.titlePrimary ||
+        item.title ||
+        undefined;
+      const rawCover = item.media?.coverImage || item.coverImage;
+      const coverImage =
+        typeof rawCover === 'string'
+          ? rawCover
+          : rawCover?.large || rawCover?.medium || undefined;
+      try {
+        const game = await this.gameService.ensureGame(
+          rawgId,
+          title,
+          coverImage,
+        );
+        if (game?.id) return game.id;
+      } catch (err) {
+        this.logger.warn(`Failed to ensure game ${rawgId}: ${err}`);
+      }
+    }
+
+    const rawIgdb = item.igdbId ?? item.media?.igdbId;
+    const igdbId = rawIgdb != null ? Number(rawIgdb) : NaN;
+    if (!isNaN(igdbId) && igdbId > 0) {
+      const existing = await this.prisma.client.aquilaGameV2.findUnique({
+        where: { igdbId },
+        select: { id: true },
+      });
+      if (existing) return existing.id;
+    }
+
+    return null;
+  }
+
+  private async resolveBookId(item: any): Promise<number | null> {
+    const rawLocal = item.bookId ?? item.media?.bookId;
+    const localId = rawLocal != null ? Number(rawLocal) : NaN;
+    if (!isNaN(localId) && localId > 0) {
+      const existing = await this.prisma.client.aquilaBookV2.findUnique({
+        where: { id: localId },
+        select: { id: true },
+      });
+      if (existing) return existing.id;
+    }
+
+    const rawGbook =
+      item.googleBookId ??
+      item.googleBooksId ??
+      item.media?.googleBookId ??
+      item.media?.googleBooksId ??
+      item.media?.id;
+    const gBookId = rawGbook != null ? String(rawGbook).trim() : '';
+    if (gBookId) {
+      const title =
+        item.media?.titleString ||
+        item.media?.titlePrimary ||
+        item.title ||
+        undefined;
+      const rawCover = item.media?.coverImage || item.coverImage;
+      const coverImage =
+        typeof rawCover === 'string'
+          ? rawCover
+          : rawCover?.large || rawCover?.medium || undefined;
+      try {
+        const book = await this.bookService.ensureBook(
+          gBookId,
+          title,
+          coverImage,
+        );
+        if (book?.id) return book.id;
+      } catch (err) {
+        this.logger.warn(`Failed to ensure book ${gBookId}: ${err}`);
+      }
+    }
+
+    return null;
+  }
+
   public async startImport(
     username: string,
     body: any,
@@ -2554,10 +2844,11 @@ export class ListService {
 
     if (Array.isArray(body.anime)) {
       for (const item of body.anime) {
-        if (!item.animeId) continue;
+        const animeId = await this.resolveAnimeId(item);
+        if (!animeId) continue;
         await this.prisma.client.aquilaAnimeUserListV2.upsert({
           where: {
-            username_animeId: { username: username.toLowerCase(), animeId: Number(item.animeId) },
+            username_animeId: { username: username.toLowerCase(), animeId },
           },
           update: {
             status: toPrismaStatus(item.status),
@@ -2571,7 +2862,7 @@ export class ListService {
           },
           create: {
             username: username.toLowerCase(),
-            animeId: Number(item.animeId),
+            animeId,
             status: toPrismaStatus(item.status),
             progress: Number(item.progress || 0),
             score: item.score != null ? Number(item.score) : null,
@@ -2589,10 +2880,11 @@ export class ListService {
 
     if (Array.isArray(body.manga)) {
       for (const item of body.manga) {
-        if (!item.mangaId) continue;
+        const mangaId = await this.resolveMangaId(item);
+        if (!mangaId) continue;
         await this.prisma.client.aquilaMangaUserListV2.upsert({
           where: {
-            username_mangaId: { username: username.toLowerCase(), mangaId: Number(item.mangaId) },
+            username_mangaId: { username: username.toLowerCase(), mangaId },
           },
           update: {
             status: toPrismaStatus(item.status),
@@ -2607,7 +2899,7 @@ export class ListService {
           },
           create: {
             username: username.toLowerCase(),
-            mangaId: Number(item.mangaId),
+            mangaId,
             status: toPrismaStatus(item.status),
             chaptersProgress: Number(item.chaptersProgress ?? item.chapters ?? 0),
             volumesProgress: Number(item.volumesProgress ?? item.volumes ?? 0),
@@ -2626,10 +2918,11 @@ export class ListService {
 
     if (Array.isArray(body.movie)) {
       for (const item of body.movie) {
-        if (!item.movieId) continue;
+        const movieId = await this.resolveMovieId(item);
+        if (!movieId) continue;
         await this.prisma.client.aquilaMovieUserListV2.upsert({
           where: {
-            username_movieId: { username: username.toLowerCase(), movieId: Number(item.movieId) },
+            username_movieId: { username: username.toLowerCase(), movieId },
           },
           update: {
             status: toPrismaStatus(item.status),
@@ -2642,7 +2935,7 @@ export class ListService {
           },
           create: {
             username: username.toLowerCase(),
-            movieId: Number(item.movieId),
+            movieId,
             status: toPrismaStatus(item.status),
             score: item.score != null ? Number(item.score) : null,
             startDate: toDate(item.startDate),
@@ -2659,10 +2952,11 @@ export class ListService {
 
     if (Array.isArray(body.tv)) {
       for (const item of body.tv) {
-        if (!item.tvId) continue;
+        const tvId = await this.resolveTvId(item);
+        if (!tvId) continue;
         const tvEntry = await this.prisma.client.aquilaTvUserListV2.upsert({
           where: {
-            username_tvId: { username: username.toLowerCase(), tvId: Number(item.tvId) },
+            username_tvId: { username: username.toLowerCase(), tvId },
           },
           update: {
             status: toPrismaStatus(item.status),
@@ -2676,7 +2970,7 @@ export class ListService {
           },
           create: {
             username: username.toLowerCase(),
-            tvId: Number(item.tvId),
+            tvId,
             status: toPrismaStatus(item.status),
             progress: Number(item.progress || 0),
             score: item.score != null ? Number(item.score) : null,
@@ -2707,10 +3001,11 @@ export class ListService {
 
     if (Array.isArray(body.game)) {
       for (const item of body.game) {
-        if (!item.gameId) continue;
+        const gameId = await this.resolveGameId(item);
+        if (!gameId) continue;
         await this.prisma.client.aquilaGameUserListV2.upsert({
           where: {
-            username_gameId: { username: username.toLowerCase(), gameId: Number(item.gameId) },
+            username_gameId: { username: username.toLowerCase(), gameId },
           },
           update: {
             status: toPrismaStatus(item.status),
@@ -2722,7 +3017,7 @@ export class ListService {
           },
           create: {
             username: username.toLowerCase(),
-            gameId: Number(item.gameId),
+            gameId,
             status: toPrismaStatus(item.status),
             progress: Number(item.progress || 0),
             score: item.score != null ? Number(item.score) : null,
@@ -2738,10 +3033,11 @@ export class ListService {
 
     if (Array.isArray(body.book)) {
       for (const item of body.book) {
-        if (!item.bookId) continue;
+        const bookId = await this.resolveBookId(item);
+        if (!bookId) continue;
         await this.prisma.client.aquilaBookUserListV2.upsert({
           where: {
-            username_bookId: { username: username.toLowerCase(), bookId: Number(item.bookId) },
+            username_bookId: { username: username.toLowerCase(), bookId },
           },
           update: {
             status: toPrismaStatus(item.status),
@@ -2754,7 +3050,7 @@ export class ListService {
           },
           create: {
             username: username.toLowerCase(),
-            bookId: Number(item.bookId),
+            bookId,
             status: toPrismaStatus(item.status),
             progressChapters: Number(item.progressChapters ?? item.chapters ?? 0),
             progressVolumes: Number(item.progressVolumes ?? item.volumes ?? 0),
