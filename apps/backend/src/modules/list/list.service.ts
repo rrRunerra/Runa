@@ -1318,6 +1318,23 @@ export class ListService {
         },
       });
       void this.mediaStatsService.updateStatsIncremental('tv', tvId, oldEntry, newEntry);
+
+      const watchedEps = await this.prisma.client.aquilaTvWatchedEpisodeV2.findMany({
+        where: { listId: listEntry.id },
+        select: { seasonNum: true, episodeNum: true },
+      });
+      void this.updateTvConnections(
+        username.toLowerCase(),
+        tvId,
+        newEntry?.connections || body.connections,
+        body.status,
+        body.score,
+        watchedEps,
+        body.startDate,
+        body.endDate,
+        body.notes,
+        body.rewatched,
+      );
     } catch (error) {
       this.logger.error(error);
       return {
@@ -2254,6 +2271,19 @@ export class ListService {
       data: { progress: count },
     });
 
+    const watchedEps = await this.prisma.client.aquilaTvWatchedEpisodeV2.findMany({
+      where: { listId: listEntry.id },
+      select: { seasonNum: true, episodeNum: true },
+    });
+    void this.updateTvConnections(
+      username.toLowerCase(),
+      tvId,
+      listEntry.connections,
+      listEntry.status,
+      listEntry.score ?? undefined,
+      watchedEps,
+    );
+
     return { success: true, watched: !existing, count };
   }
 
@@ -2279,22 +2309,29 @@ export class ListService {
     }
 
     if (watched) {
-      for (const ep of episodes) {
-        await this.prisma.client.aquilaTvWatchedEpisodeV2.upsert({
-          where: {
-            listId_seasonNum_episodeNum: {
+      if (Array.isArray(episodes)) {
+        const episodeNums = episodes
+          .map((ep) => {
+            const epNum =
+              typeof ep === 'number'
+                ? ep
+                : typeof ep === 'object' && ep !== null
+                  ? (ep.episodeNum ?? ep.number ?? ep.episode_number)
+                  : undefined;
+            return typeof epNum === 'number' && !isNaN(epNum) ? epNum : undefined;
+          })
+          .filter((epNum): epNum is number => epNum !== undefined);
+
+        if (episodeNums.length > 0) {
+          await this.prisma.client.aquilaTvWatchedEpisodeV2.createMany({
+            data: episodeNums.map((episodeNum) => ({
               listId: listEntry.id,
               seasonNum,
-              episodeNum: ep.episodeNum,
-            },
-          },
-          update: {},
-          create: {
-            listId: listEntry.id,
-            seasonNum,
-            episodeNum: ep.episodeNum,
-          },
-        });
+              episodeNum,
+            })),
+            skipDuplicates: true,
+          });
+        }
       }
     } else {
       await this.prisma.client.aquilaTvWatchedEpisodeV2.deleteMany({
@@ -2313,6 +2350,19 @@ export class ListService {
       where: { id: listEntry.id },
       data: { progress: count },
     });
+
+    const watchedEps = await this.prisma.client.aquilaTvWatchedEpisodeV2.findMany({
+      where: { listId: listEntry.id },
+      select: { seasonNum: true, episodeNum: true },
+    });
+    void this.updateTvConnections(
+      username.toLowerCase(),
+      tvId,
+      listEntry.connections,
+      listEntry.status,
+      listEntry.score ?? undefined,
+      watchedEps,
+    );
 
     return { success: true, count };
   }
@@ -3209,6 +3259,95 @@ export class ListService {
             err,
           ),
         );
+    }
+  }
+
+  private async updateTvConnections(
+    username: string,
+    tvId: number,
+    connections: any,
+    status?: string,
+    score?: number,
+    watchedEpisodes?: { seasonNum: number; episodeNum: number }[],
+    startDate?: number,
+    endDate?: number,
+    notes?: string,
+    rewatched?: number,
+  ) {
+    try {
+      const userConns = await this.prisma.client.connections.findMany({
+        where: { username: username.toLowerCase() },
+        select: { provider: true },
+      });
+
+      if (!userConns || userConns.length === 0) return;
+
+      const tvShow = await this.prisma.client.aquilaTvV2.findUnique({
+        where: { id: tvId },
+        select: { tmdbId: true, tvDBId: true, traktId: true },
+      });
+
+      const mergedConnMap: Record<string, any> = {
+        ...(typeof connections === 'object' && connections !== null ? connections : {}),
+      };
+
+      for (const uConn of userConns) {
+        const pKey = uConn.provider.toLowerCase();
+        if (!mergedConnMap[pKey] && !mergedConnMap[uConn.provider]) {
+          const fallbackId = tvShow?.tmdbId || tvShow?.tvDBId || tvShow?.traktId || tvId;
+          if (fallbackId) {
+            mergedConnMap[pKey] = fallbackId;
+          }
+        }
+      }
+
+      for (const providerKey of Object.keys(mergedConnMap)) {
+        const conn = mergedConnMap[providerKey];
+        if (!conn) continue;
+
+        let providerId: number;
+        let connStatus = status;
+        let connScore = score;
+        let connStartDate = startDate;
+        let connEndDate = endDate;
+        let connNotes = notes;
+        let connRewatched = rewatched;
+
+        if (typeof conn === 'object' && conn !== null) {
+          providerId = Number(conn.id ?? conn.simklId ?? conn.providerId);
+          if (conn.status !== undefined) connStatus = conn.status;
+          if (conn.score !== undefined) connScore = Number(conn.score);
+          if (conn.startDate !== undefined) connStartDate = conn.startDate;
+          if (conn.endDate !== undefined) connEndDate = conn.endDate;
+          if (conn.notes !== undefined) connNotes = conn.notes;
+          if (conn.rewatched !== undefined) connRewatched = Number(conn.rewatched);
+        } else {
+          providerId = Number(conn);
+        }
+
+        if (Number.isNaN(providerId) || providerId <= 0) continue;
+
+        const updateData: TvUpdateData = {
+          status: connStatus,
+          score: connScore,
+          watchedEpisodes,
+          startDate: connStartDate,
+          endDate: connEndDate,
+          notes: connNotes,
+          rewatched: connRewatched,
+        };
+
+        await this.connectionsManager
+          .syncTv(providerKey.toLowerCase(), username.toLowerCase(), providerId, updateData)
+          .catch((err) =>
+            this.logger.error(
+              `Failed to update TV connection for provider ${providerKey}`,
+              err,
+            ),
+          );
+      }
+    } catch (err: any) {
+      this.logger.error(`Error updating TV connections for ${username}:`, err);
     }
   }
 }

@@ -470,6 +470,50 @@ describe('ListService', () => {
       const result = await service.toggleEpisodeWatched('testuser', 123, 1, 2);
       expect(result.watched).toBe(true);
     });
+
+    it('should toggle season watched with objects or numbers', async () => {
+      mockPrismaClient.aquilaTvUserListV2.findUnique.mockResolvedValue({
+        id: 1,
+        username: 'testuser',
+        tvId: 123,
+      });
+      mockPrismaClient.aquilaTvWatchedEpisodeV2.createMany.mockResolvedValue({ count: 2 });
+      mockPrismaClient.aquilaTvWatchedEpisodeV2.count.mockResolvedValue(2);
+
+      const result = await service.toggleSeasonWatched(
+        'testuser',
+        123,
+        1,
+        [{ number: 1 }, { episodeNum: 2 }, 3],
+        true,
+      );
+
+      expect(mockPrismaClient.aquilaTvWatchedEpisodeV2.createMany).toHaveBeenCalledWith({
+        data: [
+          { listId: 1, seasonNum: 1, episodeNum: 1 },
+          { listId: 1, seasonNum: 1, episodeNum: 2 },
+          { listId: 1, seasonNum: 1, episodeNum: 3 },
+        ],
+        skipDuplicates: true,
+      });
+      expect(result.count).toBe(2);
+    });
+
+    it('should delete season watched when watched is false', async () => {
+      mockPrismaClient.aquilaTvUserListV2.findUnique.mockResolvedValue({
+        id: 1,
+        username: 'testuser',
+        tvId: 123,
+      });
+      mockPrismaClient.aquilaTvWatchedEpisodeV2.deleteMany.mockResolvedValue({ count: 2 });
+      mockPrismaClient.aquilaTvWatchedEpisodeV2.count.mockResolvedValue(0);
+
+      const result = await service.toggleSeasonWatched('testuser', 123, 1, [], false);
+      expect(mockPrismaClient.aquilaTvWatchedEpisodeV2.deleteMany).toHaveBeenCalledWith({
+        where: { listId: 1, seasonNum: 1 },
+      });
+      expect(result.count).toBe(0);
+    });
   });
 
   describe('Game Operations', () => {

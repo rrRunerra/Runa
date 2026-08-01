@@ -423,6 +423,12 @@ export default class SimklConnection extends BaseConnection {
         break;
     }
 
+    const ids = {
+      simkl: providerId,
+      tmdb: providerId,
+      tvdb: providerId,
+    };
+
     if (simklStatus) {
       try {
         const res = await fetch("https://api.simkl.com/sync/add-to-list", {
@@ -431,9 +437,7 @@ export default class SimklConnection extends BaseConnection {
           body: JSON.stringify({
             shows: [
               {
-                ids: {
-                  simkl: providerId,
-                },
+                ids,
                 to: simklStatus,
               },
             ],
@@ -456,9 +460,7 @@ export default class SimklConnection extends BaseConnection {
           body: JSON.stringify({
             shows: [
               {
-                ids: {
-                  simkl: providerId,
-                },
+                ids,
                 rating: data.score,
               },
             ],
@@ -494,9 +496,7 @@ export default class SimklConnection extends BaseConnection {
           body: JSON.stringify({
             shows: [
               {
-                ids: {
-                  simkl: providerId,
-                },
+                ids,
                 seasons,
               },
             ],

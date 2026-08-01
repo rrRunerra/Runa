@@ -552,7 +552,10 @@ export function RrMediaEditDialog({
             ...watchedEpisodes.filter((ep) => ep.seasonNum !== seasonNum),
             ...season.episodes.map((ep: any) => ({
               seasonNum,
-              episodeNum: ep.number,
+              episodeNum:
+                typeof ep === "number"
+                  ? ep
+                  : (ep.number ?? ep.episodeNum ?? ep.episode_number),
             })),
           ];
           setWatchedEpisodes(next);
