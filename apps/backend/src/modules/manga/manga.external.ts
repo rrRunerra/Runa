@@ -82,7 +82,7 @@ export class MangaExternal {
 
   public async fetchFullV2Record(inputParam: string | number): Promise<any | null> {
     try {
-      this.logger.log(`Fetching complete V2 manga record for: "${inputParam}"`);
+      this.logger.debug(`Fetching complete V2 manga record for: "${inputParam}"`);
 
       // 1. Fetch Paginated AniList Data
       const alData = await this.anilistService.fetchFullManga(inputParam);

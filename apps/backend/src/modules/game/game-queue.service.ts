@@ -10,7 +10,8 @@ import { BookQueueService } from '../book/book-queue.service';
 
 interface ExternalUpsertJob {
   rawgId: number;
-  depth?: number;
+  skipRelations?: boolean;
+  force?: boolean;
 }
 
 @Injectable()
@@ -36,26 +37,47 @@ export class GameQueueService implements OnModuleInit {
     this.processUpsertQueue();
   }
 
-  public async addUpsertJob(rawgId: number, depth = 0): Promise<void> {
-    if (!rawgId || depth > 5) return;
-    if (this.pendingRawgIds.has(rawgId)) return;
-
-    try {
-      const existing = await this.gameRepository.findByRawgId(rawgId);
-      if (existing && existing.rawgUpdatedAt) {
-        return;
-      }
-    } catch {
-      // Ignore check error
+  public async addUpsertJob(
+    rawgId: number,
+    options?: { skipRelations?: boolean; force?: boolean },
+  ): Promise<void> {
+    if (!rawgId) return;
+    if (this.pendingRawgIds.has(rawgId)) {
+      this.logger.debug(
+        `[GameQueue] Skipping RAWG ID ${rawgId}: job already pending in queue`,
+      );
+      return;
     }
 
+    if (!options?.force) {
+      try {
+        const existing = await this.gameRepository.findByRawgId(rawgId);
+        if (existing && existing.rawgUpdatedAt) {
+          this.logger.debug(
+            `[GameQueue] Skipping RAWG ID ${rawgId}: record updated at ${existing.rawgUpdatedAt}`,
+          );
+          return;
+        }
+      } catch {
+        // Ignore check error
+      }
+    }
+
+    this.logger.debug(
+      `[GameQueue] Queuing upsert job for RAWG ID ${rawgId} (force: ${!!options?.force}, skipRelations: ${!!options?.skipRelations})`,
+    );
+
     this.pendingRawgIds.add(rawgId);
-    this.upsertQueue.next({ rawgId, depth });
+    this.upsertQueue.next({
+      rawgId,
+      skipRelations: options?.skipRelations,
+      force: options?.force,
+    });
   }
 
   public addSearchUpserts(rawgIds: number[]): void {
     for (const id of rawgIds) {
-      void this.addUpsertJob(id, 0);
+      void this.addUpsertJob(id);
     }
   }
 
@@ -64,28 +86,54 @@ export class GameQueueService implements OnModuleInit {
       .pipe(
         mergeMap(async (job) => {
           try {
-            this.logger.log(
-              `Processing background V2 game upsert for RAWG ID: ${job.rawgId} (depth ${job.depth || 0})`,
+            this.logger.debug(
+              `Processing background V2 game upsert for RAWG ID: ${job.rawgId} (force: ${!!job.force}, skipRelations: ${!!job.skipRelations})`,
             );
             const fullRecord = await this.gameExternal.fetchFullV2Record(job.rawgId);
             if (fullRecord) {
               await this.gameRepository.upsertV2Record(fullRecord);
-              this.logger.log(
+              this.logger.debug(
                 `Successfully completed background V2 game upsert for RAWG ID: ${job.rawgId}`,
               );
 
-              if (fullRecord.relations && Array.isArray(fullRecord.relations)) {
+              if (job.skipRelations) {
+                this.logger.debug(
+                  `[GameQueue] Skipping relations processing for RAWG ID ${job.rawgId} (skipRelations flag set)`,
+                );
+              } else if (
+                fullRecord.relations &&
+                Array.isArray(fullRecord.relations)
+              ) {
+                this.logger.debug(
+                  `[GameQueue] Processing ${fullRecord.relations.length} relations for RAWG ID ${job.rawgId}`,
+                );
                 for (const rel of fullRecord.relations) {
+                  const info = `"${rel.titlePrimary || 'Unknown'}" (relation: ${rel.type || 'UNKNOWN'})`;
                   if (rel.targetType === 'GAME' && rel.targetRawgId) {
-                    void this.addUpsertJob(rel.targetRawgId, (job.depth || 0) + 1);
+                    this.logger.debug(
+                      `[GameQueue] Queuing related GAME RAWG ID ${rel.targetRawgId} ${info}`,
+                    );
+                    void this.addUpsertJob(rel.targetRawgId);
                   } else if (rel.targetType === 'ANIME' && rel.targetAnilistId) {
-                    void this.animeQueueService.addUpsertJob(rel.targetAnilistId, (job.depth || 0) + 1);
+                    this.logger.debug(
+                      `[GameQueue] Queuing related ANIME AniList ID ${rel.targetAnilistId} ${info}`,
+                    );
+                    void this.animeQueueService.addUpsertJob(rel.targetAnilistId);
                   } else if (rel.targetType === 'MANGA' && rel.targetAnilistId) {
-                    void this.mangaQueueService.addUpsertJob(rel.targetAnilistId, (job.depth || 0) + 1);
+                    this.logger.debug(
+                      `[GameQueue] Queuing related MANGA AniList ID ${rel.targetAnilistId} ${info}`,
+                    );
+                    void this.mangaQueueService.addUpsertJob(rel.targetAnilistId);
                   } else if (rel.targetType === 'MOVIE' && rel.targetTvdbId) {
-                    void this.movieQueueService.addUpsertJob(rel.targetTvdbId, (job.depth || 0) + 1);
+                    this.logger.debug(
+                      `[GameQueue] Queuing related MOVIE TVDB ID ${rel.targetTvdbId} ${info}`,
+                    );
+                    void this.movieQueueService.addUpsertJob(rel.targetTvdbId);
                   } else if (rel.targetType === 'BOOK' && rel.targetGoogleBookId) {
-                    void this.bookQueueService.addUpsertJob(rel.targetGoogleBookId, (job.depth || 0) + 1);
+                    this.logger.debug(
+                      `[GameQueue] Queuing related BOOK Google Book ID ${rel.targetGoogleBookId} ${info}`,
+                    );
+                    void this.bookQueueService.addUpsertJob(rel.targetGoogleBookId);
                   }
                 }
               }

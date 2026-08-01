@@ -164,7 +164,7 @@ export class MovieExternal {
     if (isNaN(tvdbId)) return null;
 
     try {
-      this.logger.log(`Fetching complete V2 movie record for TVDB ID: ${tvdbId}`);
+      this.logger.debug(`Fetching complete V2 movie record for TVDB ID: ${tvdbId}`);
 
       const [movieData, transData] = await Promise.all([
         this.tvdbFetch<TvdbMovieResponse>(`${this.baseUrl}/movies/${tvdbId}/extended`),

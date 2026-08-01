@@ -154,11 +154,20 @@ export class MovieService {
       if (fullRecord.relations && Array.isArray(fullRecord.relations)) {
         for (const rel of fullRecord.relations) {
           if (rel.targetType === 'MOVIE' && rel.targetTvdbId) {
-            void this.movieQueueService.addUpsertJob(rel.targetTvdbId, 1);
+            void this.movieQueueService.addUpsertJob(
+              rel.targetTvdbId,
+              { skipRelations: true, ...(force ? { force: true } : {}) },
+            );
           } else if (rel.targetType === 'ANIME' && rel.targetAnilistId) {
-            void this.animeQueueService.addUpsertJob(rel.targetAnilistId, 1);
+            void this.animeQueueService.addUpsertJob(
+              rel.targetAnilistId,
+              { skipRelations: true, ...(force ? { force: true } : {}) },
+            );
           } else if (rel.targetType === 'MANGA' && rel.targetAnilistId) {
-            void this.mangaQueueService.addUpsertJob(rel.targetAnilistId, 1);
+            void this.mangaQueueService.addUpsertJob(
+              rel.targetAnilistId,
+              { skipRelations: true, ...(force ? { force: true } : {}) },
+            );
           }
         }
       }
@@ -192,11 +201,11 @@ export class MovieService {
           if (fullRecord.relations && Array.isArray(fullRecord.relations)) {
             for (const rel of fullRecord.relations) {
               if (rel.targetType === 'MOVIE' && rel.targetTvdbId) {
-                void this.movieQueueService.addUpsertJob(rel.targetTvdbId, 1);
+                void this.movieQueueService.addUpsertJob(rel.targetTvdbId);
               } else if (rel.targetType === 'ANIME' && rel.targetAnilistId) {
-                void this.animeQueueService.addUpsertJob(rel.targetAnilistId, 1);
+                void this.animeQueueService.addUpsertJob(rel.targetAnilistId);
               } else if (rel.targetType === 'MANGA' && rel.targetAnilistId) {
-                void this.mangaQueueService.addUpsertJob(rel.targetAnilistId, 1);
+                void this.mangaQueueService.addUpsertJob(rel.targetAnilistId);
               }
             }
           }

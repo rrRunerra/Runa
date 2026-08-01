@@ -647,7 +647,7 @@ export class TvExternal {
 
       await this.tvRepository.upsertV2Record(payload);
 
-      this.logger.log(
+      this.logger.debug(
         `TV V2 upsert complete: "${payload.titlePrimary}" (TVDB: ${tvdbId}) | ${seasonsArray.length} seasons, ${episodesList.length} episodes, ${castPayload.length} cast, ${crewPayload.length} crew`,
       );
     } catch (error: unknown) {

@@ -37,12 +37,12 @@ export class TvQueueService implements OnModuleInit {
       .pipe(
         mergeMap(async (job) => {
           try {
-            this.logger.log(`Processing search refresh: "${job.query}"`);
+            this.logger.debug(`Processing search refresh: "${job.query}"`);
             const fresh = (await this.tvExternal.search(job.query)) ?? [];
             if (fresh.length > 0) {
               await this.cacheService.set(job.cacheKey, fresh, 60 * 60);
             }
-            this.logger.log(`Completed search refresh: "${job.query}"`);
+            this.logger.debug(`Completed search refresh: "${job.query}"`);
           } catch (error) {
             const message =
               error instanceof Error ? error.message : 'Unknown error';

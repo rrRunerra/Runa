@@ -66,7 +66,7 @@ export class MangaService {
               status: item.status,
               startDateYear: 1970,
             });
-            void this.mangaQueueService.addUpsertJob(item.anilistId, 0);
+            void this.mangaQueueService.addUpsertJob(item.anilistId);
 
             return {
               id: dbRecord.id,
@@ -168,9 +168,15 @@ export class MangaService {
       if (fullRecord.relations && Array.isArray(fullRecord.relations)) {
         for (const rel of fullRecord.relations) {
           if (rel.targetType === 'MANGA' && rel.targetAnilistId) {
-            void this.mangaQueueService.addUpsertJob(rel.targetAnilistId, 1);
+            void this.mangaQueueService.addUpsertJob(
+              rel.targetAnilistId,
+              { skipRelations: true, ...(force ? { force: true } : {}) },
+            );
           } else if (rel.targetType === 'ANIME' && rel.targetAnilistId) {
-            void this.animeQueueService.addUpsertJob(rel.targetAnilistId, 1);
+            void this.animeQueueService.addUpsertJob(
+              rel.targetAnilistId,
+              { skipRelations: true, ...(force ? { force: true } : {}) },
+            );
           }
         }
       }
@@ -205,9 +211,9 @@ export class MangaService {
           if (fullRecord.relations && Array.isArray(fullRecord.relations)) {
             for (const rel of fullRecord.relations) {
               if (rel.targetType === 'MANGA' && rel.targetAnilistId) {
-                void this.mangaQueueService.addUpsertJob(rel.targetAnilistId, 1);
+                void this.mangaQueueService.addUpsertJob(rel.targetAnilistId);
               } else if (rel.targetType === 'ANIME' && rel.targetAnilistId) {
-                void this.animeQueueService.addUpsertJob(rel.targetAnilistId, 1);
+                void this.animeQueueService.addUpsertJob(rel.targetAnilistId);
               }
             }
           }

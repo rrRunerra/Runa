@@ -284,5 +284,30 @@ describe('AnimeService', () => {
       expect(mockRepository.find).toHaveBeenCalledTimes(2);
       expect(result).toEqual(existingAnime);
     });
+
+    it('should pass force and skipRelations options to relation jobs on force refresh', async () => {
+      mockRepository.find
+        .mockResolvedValueOnce(existingAnime)
+        .mockResolvedValueOnce(existingAnime);
+      mockExternal.fetchFullV2Record.mockResolvedValue({
+        titlePrimary: 'New Title',
+        relations: [
+          { targetType: 'ANIME', targetAnilistId: 200 },
+          { targetType: 'MANGA', targetAnilistId: 300 },
+        ],
+      });
+      mockRepository.upsertV2Record.mockResolvedValue(existingAnime);
+
+      await service.refreshAnime(1, true);
+
+      expect(mockQueueService.addUpsertJob).toHaveBeenCalledWith(200, {
+        force: true,
+        skipRelations: true,
+      });
+      expect(mockMangaQueueService.addUpsertJob).toHaveBeenCalledWith(300, {
+        force: true,
+        skipRelations: true,
+      });
+    });
   });
 });

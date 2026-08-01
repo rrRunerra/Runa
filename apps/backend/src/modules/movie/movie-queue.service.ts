@@ -8,7 +8,8 @@ import { MangaQueueService } from '../manga/manga-queue.service';
 
 interface ExternalUpsertJob {
   tvdbId: number;
-  depth?: number;
+  skipRelations?: boolean;
+  force?: boolean;
 }
 
 @Injectable()
@@ -30,29 +31,50 @@ export class MovieQueueService implements OnModuleInit {
     this.processUpsertQueue();
   }
 
-  public async addUpsertJob(tvdbId: number, depth = 0): Promise<void> {
-    if (!tvdbId || depth > 5) return;
-    if (this.pendingTvdbIds.has(tvdbId)) return;
-
-    try {
-      const existing = await this.movieRepository.findByTvdbId(tvdbId);
-      if (existing && existing.tvdbUpdatedAt) {
-        const threeMonthsMs = 90 * 24 * 60 * 60 * 1000;
-        if (Date.now() - new Date(existing.tvdbUpdatedAt).getTime() < threeMonthsMs) {
-          return;
-        }
-      }
-    } catch {
-      // Ignore lookup check error and proceed with queuing
+  public async addUpsertJob(
+    tvdbId: number,
+    options?: { skipRelations?: boolean; force?: boolean },
+  ): Promise<void> {
+    if (!tvdbId) return;
+    if (this.pendingTvdbIds.has(tvdbId)) {
+      this.logger.debug(
+        `[MovieQueue] Skipping TVDB ID ${tvdbId}: job already pending in queue`,
+      );
+      return;
     }
 
+    if (!options?.force) {
+      try {
+        const existing = await this.movieRepository.findByTvdbId(tvdbId);
+        if (existing && existing.tvdbUpdatedAt) {
+          const threeMonthsMs = 90 * 24 * 60 * 60 * 1000;
+          if (Date.now() - new Date(existing.tvdbUpdatedAt).getTime() < threeMonthsMs) {
+            this.logger.debug(
+              `[MovieQueue] Skipping TVDB ID ${tvdbId}: updated < 3 months ago (${existing.tvdbUpdatedAt})`,
+            );
+            return;
+          }
+        }
+      } catch {
+        // Ignore lookup check error and proceed with queuing
+      }
+    }
+
+    this.logger.debug(
+      `[MovieQueue] Queuing upsert job for TVDB ID ${tvdbId} (force: ${!!options?.force}, skipRelations: ${!!options?.skipRelations})`,
+    );
+
     this.pendingTvdbIds.add(tvdbId);
-    this.upsertQueue.next({ tvdbId, depth });
+    this.upsertQueue.next({
+      tvdbId,
+      skipRelations: options?.skipRelations,
+      force: options?.force,
+    });
   }
 
   public addSearchUpserts(tvdbIds: number[]): void {
     for (const id of tvdbIds) {
-      void this.addUpsertJob(id, 0);
+      void this.addUpsertJob(id);
     }
   }
 
@@ -61,25 +83,44 @@ export class MovieQueueService implements OnModuleInit {
       .pipe(
         mergeMap(async (job) => {
           try {
-            this.logger.log(
-              `Processing background V2 movie upsert for TVDB ID: ${job.tvdbId} (depth ${job.depth || 0})`,
+            this.logger.debug(
+              `Processing background V2 movie upsert for TVDB ID: ${job.tvdbId} (force: ${!!job.force}, skipRelations: ${!!job.skipRelations})`,
             );
             const fullRecord = await this.movieExternal.fetchFullV2Record(job.tvdbId);
             if (fullRecord) {
               await this.movieRepository.upsertV2Record(fullRecord);
-              this.logger.log(
+              this.logger.debug(
                 `Successfully completed background V2 movie upsert for TVDB ID: ${job.tvdbId}`,
               );
 
-              // Recursively queue all related media for background fetching
-              if (fullRecord.relations && Array.isArray(fullRecord.relations)) {
+              if (job.skipRelations) {
+                this.logger.debug(
+                  `[MovieQueue] Skipping relations processing for TVDB ID ${job.tvdbId} (skipRelations flag set)`,
+                );
+              } else if (
+                fullRecord.relations &&
+                Array.isArray(fullRecord.relations)
+              ) {
+                this.logger.debug(
+                  `[MovieQueue] Processing ${fullRecord.relations.length} relations for TVDB ID ${job.tvdbId}`,
+                );
                 for (const rel of fullRecord.relations) {
+                  const info = `"${rel.titlePrimary || 'Unknown'}" (relation: ${rel.type || 'UNKNOWN'})`;
                   if (rel.targetType === 'MOVIE' && rel.targetTvdbId) {
-                    void this.addUpsertJob(rel.targetTvdbId, (job.depth || 0) + 1);
+                    this.logger.debug(
+                      `[MovieQueue] Queuing related MOVIE TVDB ID ${rel.targetTvdbId} ${info}`,
+                    );
+                    void this.addUpsertJob(rel.targetTvdbId);
                   } else if (rel.targetType === 'ANIME' && rel.targetAnilistId) {
-                    void this.animeQueueService.addUpsertJob(rel.targetAnilistId, (job.depth || 0) + 1);
+                    this.logger.debug(
+                      `[MovieQueue] Queuing related ANIME AniList ID ${rel.targetAnilistId} ${info}`,
+                    );
+                    void this.animeQueueService.addUpsertJob(rel.targetAnilistId);
                   } else if (rel.targetType === 'MANGA' && rel.targetAnilistId) {
-                    void this.mangaQueueService.addUpsertJob(rel.targetAnilistId, (job.depth || 0) + 1);
+                    this.logger.debug(
+                      `[MovieQueue] Queuing related MANGA AniList ID ${rel.targetAnilistId} ${info}`,
+                    );
+                    void this.mangaQueueService.addUpsertJob(rel.targetAnilistId);
                   }
                 }
               }

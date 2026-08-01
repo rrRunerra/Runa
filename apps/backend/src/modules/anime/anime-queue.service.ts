@@ -7,7 +7,8 @@ import { MangaQueueService } from '../manga/manga-queue.service';
 
 interface ExternalUpsertJob {
   anilistId: number;
-  depth?: number;
+  skipRelations?: boolean;
+  force?: boolean;
 }
 
 @Injectable()
@@ -27,29 +28,50 @@ export class AnimeQueueService implements OnModuleInit {
     this.processUpsertQueue();
   }
 
-  public async addUpsertJob(anilistId: number, depth = 0): Promise<void> {
-    if (!anilistId || depth > 5) return;
-    if (this.pendingAnilistIds.has(anilistId)) return;
-
-    try {
-      const existing = await this.animeRepository.findByAnilistId(anilistId);
-      if (existing && existing.alUpdatedAt) {
-        const threeMonthsMs = 90 * 24 * 60 * 60 * 1000;
-        if (Date.now() - new Date(existing.alUpdatedAt).getTime() < threeMonthsMs) {
-          return;
-        }
-      }
-    } catch {
-      // Ignore lookup check error and proceed with queuing
+  public async addUpsertJob(
+    anilistId: number,
+    options?: { skipRelations?: boolean; force?: boolean },
+  ): Promise<void> {
+    if (!anilistId) return;
+    if (this.pendingAnilistIds.has(anilistId)) {
+      this.logger.debug(
+        `[AnimeQueue] Skipping AniList ID ${anilistId}: job already pending in queue`,
+      );
+      return;
     }
 
+    if (!options?.force) {
+      try {
+        const existing = await this.animeRepository.findByAnilistId(anilistId);
+        if (existing && existing.alUpdatedAt) {
+          const threeMonthsMs = 90 * 24 * 60 * 60 * 1000;
+          if (Date.now() - new Date(existing.alUpdatedAt).getTime() < threeMonthsMs) {
+            this.logger.debug(
+              `[AnimeQueue] Skipping AniList ID ${anilistId}: updated < 3 months ago (${existing.alUpdatedAt})`,
+            );
+            return;
+          }
+        }
+      } catch {
+        // Ignore lookup check error and proceed with queuing
+      }
+    }
+
+    this.logger.debug(
+      `[AnimeQueue] Queuing upsert job for AniList ID ${anilistId} (force: ${!!options?.force}, skipRelations: ${!!options?.skipRelations})`,
+    );
+
     this.pendingAnilistIds.add(anilistId);
-    this.upsertQueue.next({ anilistId, depth });
+    this.upsertQueue.next({
+      anilistId,
+      skipRelations: options?.skipRelations,
+      force: options?.force,
+    });
   }
 
   public addSearchUpserts(anilistIds: number[]): void {
     for (const id of anilistIds) {
-      void this.addUpsertJob(id, 0);
+      void this.addUpsertJob(id);
     }
   }
 
@@ -58,23 +80,39 @@ export class AnimeQueueService implements OnModuleInit {
       .pipe(
         mergeMap(async (job) => {
           try {
-            this.logger.log(
-              `Processing background V2 anime upsert for AniList ID: ${job.anilistId} (depth ${job.depth || 0})`,
+            this.logger.debug(
+              `Processing background V2 anime upsert for AniList ID: ${job.anilistId} (force: ${!!job.force}, skipRelations: ${!!job.skipRelations})`,
             );
             const fullRecord = await this.animeExternal.fetchFullV2Record(job.anilistId);
             if (fullRecord) {
               await this.animeRepository.upsertV2Record(fullRecord);
-              this.logger.log(
+              this.logger.debug(
                 `Successfully completed background V2 anime upsert for AniList ID: ${job.anilistId}`,
               );
 
-              // Recursively queue all related anime and manga for background metadata fetching
-              if (fullRecord.relations && Array.isArray(fullRecord.relations)) {
+              if (job.skipRelations) {
+                this.logger.debug(
+                  `[AnimeQueue] Skipping relations processing for AniList ID ${job.anilistId} (skipRelations flag set)`,
+                );
+              } else if (
+                fullRecord.relations &&
+                Array.isArray(fullRecord.relations)
+              ) {
+                this.logger.debug(
+                  `[AnimeQueue] Processing ${fullRecord.relations.length} relations for AniList ID ${job.anilistId}`,
+                );
                 for (const rel of fullRecord.relations) {
+                  const info = `"${rel.titlePrimary || 'Unknown'}" (format: ${rel.format || 'UNKNOWN'}, relation: ${rel.type || 'UNKNOWN'})`;
                   if (rel.targetType === 'ANIME' && rel.targetAnilistId) {
-                    void this.addUpsertJob(rel.targetAnilistId, (job.depth || 0) + 1);
+                    this.logger.debug(
+                      `[AnimeQueue] Queuing related ANIME AniList ID ${rel.targetAnilistId} ${info}`,
+                    );
+                    void this.addUpsertJob(rel.targetAnilistId);
                   } else if (rel.targetType === 'MANGA' && rel.targetAnilistId) {
-                    void this.mangaQueueService.addUpsertJob(rel.targetAnilistId, (job.depth || 0) + 1);
+                    this.logger.debug(
+                      `[AnimeQueue] Queuing related MANGA AniList ID ${rel.targetAnilistId} ${info}`,
+                    );
+                    void this.mangaQueueService.addUpsertJob(rel.targetAnilistId);
                   }
                 }
               }

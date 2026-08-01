@@ -61,11 +61,11 @@ describe('AnimeQueueService', () => {
       expect(mockAnimeRepository.upsertV2Record).toHaveBeenCalled();
     });
 
-    it('should skip job if anime already has alUpdatedAt', async () => {
+    it('should skip job if anime already has alUpdatedAt unless force option is set', async () => {
       mockAnimeRepository.findByAnilistId.mockResolvedValue({
         id: 1,
         anilistId: 100,
-        alUpdatedAt: 1600000000,
+        alUpdatedAt: new Date().toISOString(),
       });
 
       service.onModuleInit();
@@ -74,6 +74,45 @@ describe('AnimeQueueService', () => {
       await new Promise((resolve) => process.nextTick(resolve));
 
       expect(mockAnimeExternal.fetchFullV2Record).not.toHaveBeenCalled();
+    });
+
+    it('should process job even with fresh alUpdatedAt if force is true', async () => {
+      mockAnimeRepository.findByAnilistId.mockResolvedValue({
+        id: 1,
+        anilistId: 100,
+        alUpdatedAt: new Date().toISOString(),
+      });
+      mockAnimeExternal.fetchFullV2Record.mockResolvedValue({
+        anilistId: 100,
+        titlePrimary: 'Forced Anime',
+      });
+      mockAnimeRepository.upsertV2Record.mockResolvedValue({ id: 1 });
+
+      service.onModuleInit();
+      await service.addUpsertJob(100, { force: true });
+
+      await new Promise((resolve) => process.nextTick(resolve));
+
+      expect(mockAnimeExternal.fetchFullV2Record).toHaveBeenCalledWith(100);
+    });
+
+    it('should not queue child relations when skipRelations option is true', async () => {
+      mockAnimeRepository.findByAnilistId.mockResolvedValue(null);
+      mockAnimeExternal.fetchFullV2Record.mockResolvedValue({
+        anilistId: 100,
+        titlePrimary: 'Sample Anime',
+        relations: [{ targetType: 'ANIME', targetAnilistId: 200 }],
+      });
+      mockAnimeRepository.upsertV2Record.mockResolvedValue({ id: 1 });
+
+      service.onModuleInit();
+      await service.addUpsertJob(100, { skipRelations: true });
+
+      await new Promise((resolve) => process.nextTick(resolve));
+
+      expect(mockAnimeExternal.fetchFullV2Record).toHaveBeenCalledWith(100);
+      // Relations shouldn't be queued recursively
+      expect(mockAnimeExternal.fetchFullV2Record).not.toHaveBeenCalledWith(200);
     });
   });
 });

@@ -8,7 +8,8 @@ import { MangaQueueService } from '../manga/manga-queue.service';
 
 interface ExternalUpsertJob {
   googleBookId: string;
-  depth?: number;
+  skipRelations?: boolean;
+  force?: boolean;
 }
 
 @Injectable()
@@ -30,26 +31,47 @@ export class BookQueueService implements OnModuleInit {
     this.processUpsertQueue();
   }
 
-  public async addUpsertJob(googleBookId: string, depth = 0): Promise<void> {
-    if (!googleBookId || depth > 5) return;
-    if (this.pendingBookIds.has(googleBookId)) return;
-
-    try {
-      const existing = await this.bookRepository.findByGoogleBookId(googleBookId);
-      if (existing && existing.googleBooksUpdatedAt) {
-        return;
-      }
-    } catch {
-      // Ignore check errors
+  public async addUpsertJob(
+    googleBookId: string,
+    options?: { skipRelations?: boolean; force?: boolean },
+  ): Promise<void> {
+    if (!googleBookId) return;
+    if (this.pendingBookIds.has(googleBookId)) {
+      this.logger.debug(
+        `[BookQueue] Skipping Google Book ID ${googleBookId}: job already pending in queue`,
+      );
+      return;
     }
 
+    if (!options?.force) {
+      try {
+        const existing = await this.bookRepository.findByGoogleBookId(googleBookId);
+        if (existing && existing.googleBooksUpdatedAt) {
+          this.logger.debug(
+            `[BookQueue] Skipping Google Book ID ${googleBookId}: record updated at ${existing.googleBooksUpdatedAt}`,
+          );
+          return;
+        }
+      } catch {
+        // Ignore check errors
+      }
+    }
+
+    this.logger.debug(
+      `[BookQueue] Queuing upsert job for Google Book ID ${googleBookId} (force: ${!!options?.force}, skipRelations: ${!!options?.skipRelations})`,
+    );
+
     this.pendingBookIds.add(googleBookId);
-    this.upsertQueue.next({ googleBookId, depth });
+    this.upsertQueue.next({
+      googleBookId,
+      skipRelations: options?.skipRelations,
+      force: options?.force,
+    });
   }
 
   public addSearchUpserts(googleBookIds: string[]): void {
     for (const id of googleBookIds) {
-      void this.addUpsertJob(id, 0);
+      void this.addUpsertJob(id);
     }
   }
 
@@ -58,24 +80,44 @@ export class BookQueueService implements OnModuleInit {
       .pipe(
         mergeMap(async (job) => {
           try {
-            this.logger.log(
-              `Processing background V2 book upsert for Google Book ID: ${job.googleBookId} (depth ${job.depth || 0})`,
+            this.logger.debug(
+              `Processing background V2 book upsert for Google Book ID: ${job.googleBookId} (force: ${!!job.force}, skipRelations: ${!!job.skipRelations})`,
             );
             const fullRecord = await this.bookExternal.fetchFullV2Record(job.googleBookId);
             if (fullRecord) {
               await this.bookRepository.upsertV2Record(fullRecord);
-              this.logger.log(
+              this.logger.debug(
                 `Successfully completed background V2 book upsert for Google Book ID: ${job.googleBookId}`,
               );
 
-              if (fullRecord.relations && Array.isArray(fullRecord.relations)) {
+              if (job.skipRelations) {
+                this.logger.debug(
+                  `[BookQueue] Skipping relations processing for Google Book ID ${job.googleBookId} (skipRelations flag set)`,
+                );
+              } else if (
+                fullRecord.relations &&
+                Array.isArray(fullRecord.relations)
+              ) {
+                this.logger.debug(
+                  `[BookQueue] Processing ${fullRecord.relations.length} relations for Google Book ID ${job.googleBookId}`,
+                );
                 for (const rel of fullRecord.relations) {
+                  const info = `"${rel.titlePrimary || 'Unknown'}" (relation: ${rel.type || 'UNKNOWN'})`;
                   if (rel.targetType === 'BOOK' && rel.targetGoogleBookId) {
-                    void this.addUpsertJob(rel.targetGoogleBookId, (job.depth || 0) + 1);
+                    this.logger.debug(
+                      `[BookQueue] Queuing related BOOK Google Book ID ${rel.targetGoogleBookId} ${info}`,
+                    );
+                    void this.addUpsertJob(rel.targetGoogleBookId);
                   } else if (rel.targetType === 'ANIME' && rel.targetAnilistId) {
-                    void this.animeQueueService.addUpsertJob(rel.targetAnilistId, (job.depth || 0) + 1);
+                    this.logger.debug(
+                      `[BookQueue] Queuing related ANIME AniList ID ${rel.targetAnilistId} ${info}`,
+                    );
+                    void this.animeQueueService.addUpsertJob(rel.targetAnilistId);
                   } else if (rel.targetType === 'MANGA' && rel.targetAnilistId) {
-                    void this.mangaQueueService.addUpsertJob(rel.targetAnilistId, (job.depth || 0) + 1);
+                    this.logger.debug(
+                      `[BookQueue] Queuing related MANGA AniList ID ${rel.targetAnilistId} ${info}`,
+                    );
+                    void this.mangaQueueService.addUpsertJob(rel.targetAnilistId);
                   }
                 }
               }
