@@ -1346,7 +1346,11 @@
     "voiceActors": "Diễn viên lồng tiếng",
     "ageRating": "Xếp hạng độ tuổi",
     "noCharacters": "Không có thông tin nhân vật",
-    "addData": "Thêm dữ liệu"
+    "addData": "Thêm dữ liệu",
+    "connect": "Kết nối",
+    "connected": "Đã kết nối",
+    "disconnect": "Ngắt kết nối",
+    "toggleFavorite": "Chuyển đổi yêu thích"
   },
   "lynx": {
     "returnToSafety": "Quay lại an toàn",

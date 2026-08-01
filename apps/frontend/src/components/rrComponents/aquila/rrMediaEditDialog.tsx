@@ -185,7 +185,11 @@ export function RrMediaEditDialog({
     // The parent may have already done this (initialMedia.seasons[].episodes populated),
     // or we may need to do it ourselves from the raw API response.
     let seasons = raw.seasons;
-    if (Array.isArray(initialMedia.seasons) && initialMedia.seasons.length > 0 && Array.isArray((initialMedia.seasons[0] as any)?.episodes)) {
+    if (
+      Array.isArray(initialMedia.seasons) &&
+      initialMedia.seasons.length > 0 &&
+      Array.isArray((initialMedia.seasons[0] as any)?.episodes)
+    ) {
       // Parent already pre-processed seasons with nested episodes — use them.
       seasons = initialMedia.seasons;
     } else if (Array.isArray(raw.seasons) && Array.isArray(raw.episodes)) {
@@ -216,7 +220,6 @@ export function RrMediaEditDialog({
       seasons,
     };
   }, [mediaDetails, initialMedia]);
-
 
   const mediaType = media.type;
   const scoreMax = mediaType === "game" ? 100 : 10;
@@ -331,7 +334,8 @@ export function RrMediaEditDialog({
           : "",
       );
       setRewatches(
-        listEntryData.rewatched !== undefined && listEntryData.rewatched !== null
+        listEntryData.rewatched !== undefined &&
+          listEntryData.rewatched !== null
           ? listEntryData.rewatched.toString()
           : "0",
       );
@@ -339,14 +343,10 @@ export function RrMediaEditDialog({
 
     setNotes(listEntryData.notes || "");
     setStartDate(
-      listEntryData.startDate
-        ? new Date(listEntryData.startDate)
-        : undefined,
+      listEntryData.startDate ? new Date(listEntryData.startDate) : undefined,
     );
     setFinishDate(
-      listEntryData.endDate
-        ? new Date(listEntryData.endDate)
-        : undefined,
+      listEntryData.endDate ? new Date(listEntryData.endDate) : undefined,
     );
 
     if (mediaType === "tv") {
@@ -365,9 +365,9 @@ export function RrMediaEditDialog({
           Number(
             mediaType === "manga" || mediaType === "book"
               ? (listEntryData.chaptersProgress ??
-                 listEntryData.progressChapters ??
-                 listEntryData.chapters ??
-                 listEntryData.progress)
+                  listEntryData.progressChapters ??
+                  listEntryData.chapters ??
+                  listEntryData.progress)
               : listEntryData.progress,
           ) || 0;
 
@@ -389,8 +389,8 @@ export function RrMediaEditDialog({
         const currentVolumesNum =
           Number(
             listEntryData.volumesProgress ??
-            listEntryData.progressVolumes ??
-            listEntryData.volumes,
+              listEntryData.progressVolumes ??
+              listEntryData.volumes,
           ) || 0;
 
         if (conn.volumesOffset !== undefined) {
@@ -566,7 +566,9 @@ export function RrMediaEditDialog({
           );
         }
         toast.success(
-          checked ? t("aquila.seasonMarkedWatched") : t("aquila.seasonMarkedUnwatched"),
+          checked
+            ? t("aquila.seasonMarkedWatched")
+            : t("aquila.seasonMarkedUnwatched"),
         );
         mutateListEntry();
       }
@@ -808,9 +810,7 @@ export function RrMediaEditDialog({
       }
     } catch (err: any) {
       console.error(err);
-      setSaveError(
-        err.message || t("aquila.unexpectedRemoveError"),
-      );
+      setSaveError(err.message || t("aquila.unexpectedRemoveError"));
       toast.error(t("aquila.failedToRemove"));
     } finally {
       setIsSubmitting(false);
@@ -929,17 +929,25 @@ export function RrMediaEditDialog({
           onValueChange={setActiveTab}
           className="w-full flex flex-col gap-4"
         >
-          <TabsList className="bg-muted p-[3px] rounded-lg w-full sm:w-fit grid grid-cols-2">
-            <TabsTrigger value="general" className="rounded-md">
+          <TabsList className="bg-muted/60 backdrop-blur-xs p-1 rounded-xl w-full sm:w-fit grid grid-cols-2 border border-border/60 shadow-2xs">
+            <TabsTrigger
+              value="general"
+              className="rounded-lg text-xs font-bold transition-all data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-2xs"
+            >
               {t("aquila.generalTab")}
             </TabsTrigger>
-            <TabsTrigger value="episodes" className="rounded-md">
+            <TabsTrigger
+              value="episodes"
+              className="rounded-lg text-xs font-bold transition-all data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-2xs"
+            >
               {t("aquila.episodesTab", {
                 watched: watchedEpisodes.length,
-                total: media.seasons?.reduce(
-                  (acc: any, s: { episodeCount: any }) => acc + s.episodeCount,
-                  0,
-                ) || 0
+                total:
+                  media.seasons?.reduce(
+                    (acc: any, s: { episodeCount: any }) =>
+                      acc + s.episodeCount,
+                    0,
+                  ) || 0,
               })}
             </TabsTrigger>
           </TabsList>
@@ -982,9 +990,11 @@ export function RrMediaEditDialog({
   };
 
   const dialogContent = (
-    <DialogContent className="flex flex-col gap-0 max-h-[95dvh] sm:max-h-[90dvh] sm:max-w-[700px] p-0 overflow-hidden bg-background/90 backdrop-blur-xl border border-border/60 text-foreground [&>button]:text-foreground [&>button]:z-60 [&>button]:hover:text-muted-foreground shadow-2xl rounded-2xl">
+    <DialogContent className="flex flex-col gap-0 max-h-[95dvh] sm:max-h-[90dvh] sm:max-w-180 p-0 overflow-hidden bg-background/90 backdrop-blur-2xl border border-border/60 text-foreground [&>button]:text-foreground [&>button]:z-60 [&>button]:hover:text-muted-foreground shadow-2xl rounded-3xl">
       <DialogTitle className="sr-only">
-        {hasListEntry ? t("aquila.editEntry", { type: mediaType }) : t("aquila.addToList", { type: mediaType })}
+        {hasListEntry
+          ? t("aquila.editEntry", { type: mediaType })
+          : t("aquila.addToList", { type: mediaType })}
       </DialogTitle>
       <DialogDescription className="sr-only">
         {t("aquila.editDialogDescription")}
@@ -1008,7 +1018,7 @@ export function RrMediaEditDialog({
         onSave={handleSave}
       />
 
-      <div className="p-6 pt-4 bg-transparent flex-1 flex flex-col gap-4 overflow-y-auto no-scrollbar">
+      <div className="p-5 sm:p-6 pt-4 bg-transparent flex-1 flex flex-col gap-4 overflow-y-auto no-scrollbar">
         {saveError && (
           <div className="p-3 text-xs bg-destructive/10 border border-destructive/20 text-destructive rounded-xl flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
             <AlertCircle className="size-4 shrink-0" />
@@ -1023,7 +1033,12 @@ export function RrMediaEditDialog({
             isOpen={isConnectionSearchOpen}
             onOpenChange={setIsConnectionSearchOpen}
             mediaType={mediaType}
-            mediaTitle={media.title.english || media.title.romaji || (media.title as any).native || ""}
+            mediaTitle={
+              media.title.english ||
+              media.title.romaji ||
+              (media.title as any).native ||
+              ""
+            }
             activeSearchProvider={activeSearchProvider}
             connectionProviders={filteredConnectionProviders}
             onSelectResult={handleSelectSearchResult}
@@ -1031,7 +1046,7 @@ export function RrMediaEditDialog({
         )}
 
         {hasListEntry && (
-          <div className="mt-4 flex justify-end">
+          <div className="mt-2 flex justify-end">
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <motion.div
@@ -1041,23 +1056,25 @@ export function RrMediaEditDialog({
                   <Button
                     variant="outline"
                     disabled={isSubmitting}
-                    className="bg-transparent hover:bg-destructive hover:text-destructive-foreground border-border hover:border-destructive/50 text-muted-foreground text-xs font-semibold rounded-xl cursor-pointer px-4 h-9 transition-colors"
+                    className="bg-transparent hover:bg-destructive hover:text-destructive-foreground border-border/60 hover:border-destructive/50 text-muted-foreground text-xs font-semibold rounded-xl cursor-pointer px-4 h-9 transition-colors shadow-2xs"
                   >
                     {t("aquila.delete")}
                   </Button>
                 </motion.div>
               </AlertDialogTrigger>
-              <AlertDialogContent className="bg-background/95 backdrop-blur-xl border border-border/60 rounded-2xl shadow-2xl text-foreground">
+              <AlertDialogContent className="bg-background/95 backdrop-blur-2xl border border-border/60 rounded-2xl shadow-2xl text-foreground">
                 <AlertDialogHeader>
                   <AlertDialogTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
                     {t("aquila.confirmDeletion")}
                   </AlertDialogTitle>
                   <AlertDialogDescription className="text-xs text-muted-foreground/80">
-                    {t("aquila.confirmDeletionDescription", { type: mediaType })}
+                    {t("aquila.confirmDeletionDescription", {
+                      type: mediaType,
+                    })}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter className="mt-4 gap-2">
-                  <AlertDialogCancel className="bg-transparent hover:bg-muted border-border text-foreground text-xs font-bold rounded-xl cursor-pointer h-9 px-4">
+                  <AlertDialogCancel className="bg-transparent hover:bg-muted border-border/60 text-foreground text-xs font-bold rounded-xl cursor-pointer h-9 px-4">
                     {t("aquila.cancel")}
                   </AlertDialogCancel>
                   <AlertDialogAction

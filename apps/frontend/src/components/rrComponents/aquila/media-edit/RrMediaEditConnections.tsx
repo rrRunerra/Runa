@@ -21,6 +21,9 @@ import {
   ChevronDown,
   ChevronUp,
   CalendarIcon,
+  Link2,
+  Search,
+  ExternalLink,
 } from "lucide-react";
 import { format } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
@@ -250,7 +253,10 @@ export function RrMediaEditConnections({
     });
   };
 
-  const handleVolumesOverrideChange = (provider: string, val: string): void => {
+  const handleVolumesOverrideChange = (
+    provider: string,
+    val: string,
+  ): void => {
     onConnectionsChange((prev) => {
       const current = prev[provider];
       const id = typeof current === "object" ? current.id : current;
@@ -278,25 +284,28 @@ export function RrMediaEditConnections({
     });
   };
 
-  const renderConnectionCard = (
-    provider: string,
-    label: string,
-  ): React.JSX.Element => {
+  const renderConnectionCard = (provider: string, label: string) => {
     const conn = connections[provider];
-    const isLinked = !!conn;
-    const linkedId = conn ? (typeof conn === "object" ? conn.id : conn) : "";
-    const isExpanded = !!expandedConnections[provider];
+    const linkedId = typeof conn === "object" ? conn?.id : conn;
+    const isLinked = !!linkedId;
+    const isExpanded = expandedConnections[provider];
 
     if (!isLinked) {
       return (
         <Button
           type="button"
           variant="outline"
-          className="w-full h-12 border-dashed border-border hover:border-primary/50 hover:bg-primary/5 hover:text-primary transition-all duration-300 flex items-center justify-center gap-2 rounded-xl bg-muted/10 text-muted-foreground text-xs font-semibold cursor-pointer"
           onClick={() => onOpenSearchModal(provider)}
+          className="w-full justify-between bg-background/70 border border-dashed border-border/70 hover:border-primary/50 text-foreground h-11 px-3.5 rounded-xl transition-all hover:bg-primary/5 text-xs font-semibold group cursor-pointer shadow-2xs"
         >
-          <Plus className="size-4" />
-          {t("aquila.linkConnection", { provider: label })}
+          <div className="flex items-center gap-2">
+            <Search className="size-3.5 text-primary/70 group-hover:scale-110 transition-transform" />
+            <span className="uppercase text-[11px] font-bold tracking-wider">{label}</span>
+          </div>
+          <span className="flex items-center gap-1 text-[11px] font-medium text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-lg group-hover:bg-primary/20 transition-colors">
+            <Plus className="size-3" />
+            {t("aquila.connect")}
+          </span>
         </Button>
       );
     }
@@ -315,22 +324,22 @@ export function RrMediaEditConnections({
       connDetails.startDate !== undefined || connDetails.endDate !== undefined;
 
     return (
-      <div className="flex flex-col border border-border/40 rounded-xl overflow-hidden bg-muted/20 w-full transition-all duration-200 text-foreground">
+      <div className="flex flex-col border border-border/60 rounded-xl overflow-hidden bg-background/80 w-full transition-all duration-200 text-foreground shadow-2xs">
         <div
           className="flex items-center justify-between p-3 hover:bg-muted/40 cursor-pointer select-none transition-colors"
           onClick={() => toggleConnectionExpand(provider)}
         >
-          <div className="flex items-center gap-3">
-            <span className="font-semibold text-[10px] tracking-wide uppercase text-muted-foreground">
+          <div className="flex items-center gap-2.5">
+            <span className="font-extrabold text-[10px] tracking-wider uppercase text-foreground">
               {label}
             </span>
-            <span className="text-[10px] font-mono text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-lg">
-              {linkedId}
+            <span className="text-[10px] font-mono font-bold text-primary bg-primary/10 border border-primary/25 px-2 py-0.5 rounded-md">
+              #{linkedId}
             </span>
             {isExpanded ? (
-              <ChevronUp className="size-3.5 text-muted-foreground/60" />
+              <ChevronUp className="size-3.5 text-muted-foreground" />
             ) : (
-              <ChevronDown className="size-3.5 text-muted-foreground/60" />
+              <ChevronDown className="size-3.5 text-muted-foreground" />
             )}
           </div>
           <Button
@@ -347,7 +356,7 @@ export function RrMediaEditConnections({
               });
             }}
           >
-            <X className="size-4" />
+            <X className="size-3.5" />
           </Button>
         </div>
 
@@ -358,11 +367,11 @@ export function RrMediaEditConnections({
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="border-t border-border/40 bg-muted/10 overflow-hidden"
+              className="border-t border-border/50 bg-muted/15 overflow-hidden"
             >
-              <div className="p-4 flex flex-col gap-4">
+              <div className="p-3.5 flex flex-col gap-3">
                 {/* Status Override */}
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-1.5">
                   <div className="flex items-center gap-2">
                     <Checkbox
                       id={`${provider}-override-status`}
@@ -372,7 +381,7 @@ export function RrMediaEditConnections({
                     />
                     <Label
                       htmlFor={`${provider}-override-status`}
-                      className="text-xs font-semibold text-muted-foreground cursor-pointer select-none"
+                      className="text-xs font-semibold text-foreground cursor-pointer select-none"
                     >
                       {t("aquila.overrideStatus")}
                     </Label>
@@ -384,10 +393,10 @@ export function RrMediaEditConnections({
                         handleStatusOverrideChange(provider, val)
                       }
                     >
-                      <SelectTrigger className="w-full bg-background border border-border text-foreground h-9 mt-1 px-3 text-xs font-normal hover:bg-muted/50 focus:ring-1 focus:ring-primary/30 rounded-xl transition-all">
+                      <SelectTrigger className="w-full bg-background border border-border/70 text-foreground h-9 mt-0.5 px-3 text-xs font-normal hover:bg-muted/50 focus:ring-1 focus:ring-primary/30 rounded-xl transition-all">
                         <SelectValue placeholder={t("aquila.selectStatus")} />
                       </SelectTrigger>
-                      <SelectContent className="bg-popover border border-border rounded-xl text-foreground">
+                      <SelectContent className="bg-popover border border-border/70 rounded-xl text-foreground">
                         {getStatusOptions().map((opt) => (
                           <SelectItem key={opt.value} value={opt.value}>
                             {opt.label}
@@ -396,7 +405,7 @@ export function RrMediaEditConnections({
                       </SelectContent>
                     </Select>
                   ) : (
-                    <span className="text-[10px] text-muted-foreground/60 pl-6 italic">
+                    <span className="text-[10px] text-muted-foreground/70 pl-6 italic">
                       {t("aquila.inheritedStatus", { status: getListNameTranslation(listStatus) })}
                     </span>
                   )}
@@ -404,7 +413,7 @@ export function RrMediaEditConnections({
 
                 {/* Progress Override (For Anime/Manga) */}
                 {(mediaType === "anime" || mediaType === "manga") && (
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-1.5">
                     <div className="flex items-center gap-2">
                       <Checkbox
                         id={`${provider}-override-progress`}
@@ -414,13 +423,13 @@ export function RrMediaEditConnections({
                       />
                       <Label
                         htmlFor={`${provider}-override-progress`}
-                        className="text-xs font-semibold text-muted-foreground cursor-pointer select-none"
+                        className="text-xs font-semibold text-foreground cursor-pointer select-none"
                       >
                         {t("aquila.overrideProgress", { type: mediaType === "anime" ? t("aquila.episodeShort") : t("aquila.chapterShort") })}
                       </Label>
                     </div>
                     {hasProgressOverride ? (
-                      <div className="flex bg-background border border-border rounded-xl overflow-hidden focus-within:border-primary/50 transition-all h-9 mt-1">
+                      <div className="flex bg-background border border-border/70 rounded-xl overflow-hidden focus-within:border-primary/50 transition-all h-9 mt-0.5">
                         <Input
                           type="number"
                           min="0"
@@ -431,11 +440,11 @@ export function RrMediaEditConnections({
                               e.target.value,
                             )
                           }
-                          className="border-0 bg-transparent text-foreground focus-visible:ring-0 h-full w-full px-3 text-xs"
+                          className="border-0 bg-transparent text-foreground focus-visible:ring-0 h-full w-full px-3 text-xs font-medium"
                         />
                       </div>
                     ) : (
-                      <span className="text-[10px] text-muted-foreground/60 pl-6 italic">
+                      <span className="text-[10px] text-muted-foreground/70 pl-6 italic">
                         {t("aquila.inheritedProgress", { progress: progress || "0" })}
                       </span>
                     )}
@@ -444,7 +453,7 @@ export function RrMediaEditConnections({
 
                 {/* Volumes Override (For Manga) */}
                 {mediaType === "manga" && (
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-1.5">
                     <div className="flex items-center gap-2">
                       <Checkbox
                         id={`${provider}-override-volumes`}
@@ -454,13 +463,13 @@ export function RrMediaEditConnections({
                       />
                       <Label
                         htmlFor={`${provider}-override-volumes`}
-                        className="text-xs font-semibold text-muted-foreground cursor-pointer select-none"
+                        className="text-xs font-semibold text-foreground cursor-pointer select-none"
                       >
                         {t("aquila.overrideVolume")}
                       </Label>
                     </div>
                     {hasVolumesOverride ? (
-                      <div className="flex bg-background border border-border rounded-xl overflow-hidden focus-within:border-primary/50 transition-all h-9 mt-1">
+                      <div className="flex bg-background border border-border/70 rounded-xl overflow-hidden focus-within:border-primary/50 transition-all h-9 mt-0.5">
                         <Input
                           type="number"
                           min="0"
@@ -471,11 +480,11 @@ export function RrMediaEditConnections({
                               e.target.value,
                             )
                           }
-                          className="border-0 bg-transparent text-foreground focus-visible:ring-0 h-full w-full px-3 text-xs"
+                          className="border-0 bg-transparent text-foreground focus-visible:ring-0 h-full w-full px-3 text-xs font-medium"
                         />
                       </div>
                     ) : (
-                      <span className="text-[10px] text-muted-foreground/60 pl-6 italic">
+                      <span className="text-[10px] text-muted-foreground/70 pl-6 italic">
                         {t("aquila.inheritedVolume", { volume: volumes || "0" })}
                       </span>
                     )}
@@ -483,7 +492,7 @@ export function RrMediaEditConnections({
                 )}
 
                 {/* Dates Override */}
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-1.5">
                   <div className="flex items-center gap-2">
                     <Checkbox
                       id={`${provider}-override-dates`}
@@ -493,15 +502,15 @@ export function RrMediaEditConnections({
                     />
                     <Label
                       htmlFor={`${provider}-override-dates`}
-                      className="text-xs font-semibold text-muted-foreground cursor-pointer select-none"
+                      className="text-xs font-semibold text-foreground cursor-pointer select-none"
                     >
                       {t("aquila.overrideDates")}
                     </Label>
                   </div>
                   {hasDatesOverride ? (
-                    <div className="grid grid-cols-2 gap-3 mt-1">
+                    <div className="grid grid-cols-2 gap-2 mt-0.5">
                       <div className="flex flex-col gap-1">
-                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                           {t("aquila.startDate")}
                         </span>
                         <Popover>
@@ -509,11 +518,11 @@ export function RrMediaEditConnections({
                             <Button
                               variant="outline"
                               className={cn(
-                                "w-full justify-start text-left font-normal bg-background border border-border text-foreground h-9 hover:bg-muted/50 text-xs rounded-xl transition-all",
+                                "w-full justify-start text-left font-normal bg-background border border-border/70 text-foreground h-9 hover:bg-muted/50 text-xs rounded-xl transition-all",
                                 !connStartDate && "text-muted-foreground",
                               )}
                             >
-                              <CalendarIcon className="mr-1 size-3.5 text-muted-foreground/60" />
+                              <CalendarIcon className="mr-1 size-3 text-muted-foreground" />
                               {connStartDate ? (
                                 format(connStartDate, "yyyy-MM-dd")
                               ) : (
@@ -523,7 +532,7 @@ export function RrMediaEditConnections({
                           </PopoverTrigger>
                           <PopoverContent
                             align="start"
-                            className="w-auto p-0 bg-popover border border-border rounded-xl z-60"
+                            className="w-auto p-0 bg-popover border border-border/70 rounded-xl z-60 shadow-xl"
                           >
                             <Calendar
                               mode="single"
@@ -541,7 +550,7 @@ export function RrMediaEditConnections({
                         </Popover>
                       </div>
                       <div className="flex flex-col gap-1">
-                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                           {t("aquila.finishDate")}
                         </span>
                         <Popover>
@@ -549,11 +558,11 @@ export function RrMediaEditConnections({
                             <Button
                               variant="outline"
                               className={cn(
-                                "w-full justify-start text-left font-normal bg-background border border-border text-foreground h-9 hover:bg-muted/50 text-xs rounded-xl transition-all",
+                                "w-full justify-start text-left font-normal bg-background border border-border/70 text-foreground h-9 hover:bg-muted/50 text-xs rounded-xl transition-all",
                                 !connEndDate && "text-muted-foreground",
                               )}
                             >
-                              <CalendarIcon className="mr-1 size-3.5 text-muted-foreground/60" />
+                              <CalendarIcon className="mr-1 size-3 text-muted-foreground" />
                               {connEndDate ? (
                                 format(connEndDate, "yyyy-MM-dd")
                               ) : (
@@ -563,7 +572,7 @@ export function RrMediaEditConnections({
                           </PopoverTrigger>
                           <PopoverContent
                             align="start"
-                            className="w-auto p-0 bg-popover border border-border rounded-xl z-60"
+                            className="w-auto p-0 bg-popover border border-border/70 rounded-xl z-60 shadow-xl"
                           >
                             <Calendar
                               mode="single"
@@ -582,7 +591,7 @@ export function RrMediaEditConnections({
                       </div>
                     </div>
                   ) : (
-                    <span className="text-[10px] text-muted-foreground/60 pl-6 italic">
+                    <span className="text-[10px] text-muted-foreground/70 pl-6 italic">
                       {t("aquila.inheritedDates", {
                         start: startDate ? format(startDate, "yyyy-MM-dd") : t("aquila.noStartDate"),
                         finish: finishDate ? format(finishDate, "yyyy-MM-dd") : t("aquila.noFinishDate")
@@ -603,7 +612,7 @@ export function RrMediaEditConnections({
   );
 
   return (
-    <div className="col-span-6 flex flex-col gap-2 mt-2">
+    <div className="bg-card/40 border border-border/60 backdrop-blur-xs rounded-2xl p-4 sm:p-5 flex flex-col gap-3 shadow-xs">
       <div className="flex items-center gap-2">
         <Checkbox
           id="media-update-connection"
@@ -615,14 +624,15 @@ export function RrMediaEditConnections({
         />
         <Label
           htmlFor="media-update-connection"
-          className="text-xs font-bold uppercase tracking-wider text-muted-foreground cursor-pointer select-none"
+          className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 cursor-pointer select-none"
         >
+          <Link2 className="size-3.5 text-primary" />
           {t("aquila.updateListFromConnection")}
         </Label>
       </div>
 
       {updateConnection && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-1 w-full">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1 w-full">
           {CONNECTION_PROVIDERS.length > 0 ? (
             CONNECTION_PROVIDERS.map((prov) => (
               <div key={prov.key} className="w-full">
@@ -630,7 +640,8 @@ export function RrMediaEditConnections({
               </div>
             ))
           ) : (
-            <div className="col-span-2 text-center py-4 text-xs text-muted-foreground bg-muted/10 border border-dashed border-border rounded-xl">
+            <div className="col-span-2 text-center py-5 text-xs text-muted-foreground bg-background/50 border border-dashed border-border/70 rounded-xl flex items-center justify-center gap-2 font-medium">
+              <ExternalLink className="size-3.5 text-muted-foreground/70" />
               {t("aquila.noActiveConnections")}
             </div>
           )}

@@ -1346,7 +1346,11 @@
     "voiceActors": "声优/配音员",
     "ageRating": "分级",
     "noCharacters": "暂无角色信息",
-    "addData": "添加数据"
+    "addData": "添加数据",
+    "connect": "连接",
+    "connected": "已连接",
+    "disconnect": "断开",
+    "toggleFavorite": "切换收藏"
   },
   "lynx": {
     "returnToSafety": "返回安全区域",

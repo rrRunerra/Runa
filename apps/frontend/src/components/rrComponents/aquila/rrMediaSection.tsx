@@ -69,7 +69,7 @@ export function RrMediaSection({
         <div
           {...(dragHandleProps || {})}
           className={cn(
-            "p-2 bg-primary/10 rounded-lg text-primary select-none flex items-center gap-1",
+            "p-2.5 bg-primary/10 text-primary border border-primary/20 rounded-xl select-none flex items-center gap-1.5 shadow-xs",
             dragHandleProps &&
               "cursor-grab active:cursor-grabbing hover:bg-primary/20 active:bg-primary/30 transition-all duration-200 pointer-events-auto",
           )}
@@ -89,13 +89,13 @@ export function RrMediaSection({
             className={cn(
               "ml-2 transition-all duration-300 flex items-center gap-1.5 text-[10px] sm:text-xs font-semibold py-0.5 px-2.5 rounded-full select-none cursor-pointer border",
               isCollapsed
-                ? "bg-destructive/10 hover:bg-destructive/25 text-destructive border-destructive/20 shadow-xs"
-                : "bg-primary/5 hover:bg-primary/15 text-primary border-primary/10 shadow-inner",
+                ? "bg-destructive/10 hover:bg-destructive/20 text-destructive border-destructive/20 shadow-xs"
+                : "bg-primary/10 hover:bg-primary/20 text-primary border-primary/20 shadow-xs",
             )}
           >
             {isCollapsed ? (
               <>
-                <EyeOff className="size-3.5 animate-pulse" />
+                <EyeOff className="size-3.5" />
                 <span>{t("aquila.hiddenCount", { count: items.length })}</span>
               </>
             ) : (

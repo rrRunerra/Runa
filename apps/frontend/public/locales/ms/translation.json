@@ -1346,7 +1346,11 @@
     "voiceActors": "Pelakon Suara",
     "ageRating": "Penarafan Umur",
     "noCharacters": "Tiada maklumat watak tersedia",
-    "addData": "Tambah Data"
+    "addData": "Tambah Data",
+    "connect": "Sambung",
+    "connected": "Disambungkan",
+    "disconnect": "Putuskan",
+    "toggleFavorite": "Tukar Kegemaran"
   },
   "lynx": {
     "returnToSafety": "Kembali ke keselamatan",

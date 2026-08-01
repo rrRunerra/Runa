@@ -310,18 +310,26 @@ export default function AquilaHome(): React.JSX.Element {
         <RrLapplandBook className="fixed right-0 top-0 h-screen w-auto opacity-[0.06] text-foreground pointer-events-none select-none z-0 object-contain -scale-x-100 transition-opacity duration-300 " />
 
         <div className="relative z-10 flex-1 flex flex-col items-center justify-center min-h-[60vh] gap-6 text-center max-w-xl mx-auto">
-          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-foreground bg-clip-text bg-linear-to-r from-foreground via-foreground/95 to-primary">
+          <span className="px-3 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary border border-primary/20 shadow-xs">
+            Aquila Realm
+          </span>
+          <h1 className="text-4xl sm:text-5xl font-black tracking-tight text-foreground">
             {t("aquila.welcomeToAquila", "Welcome to Aquila")}
           </h1>
-          <p className="text-muted-foreground text-sm sm:text-base leading-relaxed">
-            {t("aquila.welcomeDesc", "Keep track of your active anime, manga series, movies, games, and reading books in one highly responsive, centralized, and customized dashboard.")}
+          <p className="text-muted-foreground text-sm sm:text-base leading-relaxed font-medium">
+            {t(
+              "aquila.welcomeDesc",
+              "Keep track of your active anime, manga series, movies, games, and reading books in one highly responsive, centralized, and customized dashboard.",
+            )}
           </p>
           <Button
             size="lg"
-            className="rounded-xl px-8 font-semibold tracking-wide cursor-pointer"
+            className="rounded-2xl px-8 font-semibold tracking-wide cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 shadow-md border border-primary-foreground/10"
             asChild
           >
-            <Link href="/auth/login">{t("aquila.getStarted", "Get Started")}</Link>
+            <Link href="/auth/login">
+              {t("aquila.getStarted", "Get Started")}
+            </Link>
           </Button>
         </div>
       </div>
@@ -344,27 +352,34 @@ export default function AquilaHome(): React.JSX.Element {
       {/* Main Content Pane */}
       <div className="relative z-10 flex-1 flex flex-col gap-8">
         {watching.length === 0 ? (
-          <div className="flex-1 flex flex-col justify-center items-center text-center py-16 px-4 select-none relative z-10">
+          <div className="flex-1 flex flex-col justify-center items-center text-center py-16 px-6 select-none relative z-10 bg-card/60 backdrop-blur-md border border-border/40 rounded-3xl max-w-lg mx-auto shadow-sm my-auto">
             <div className="space-y-4 max-w-sm">
-              <h2 className="text-4xl font-black tracking-wider text-muted-foreground/20 uppercase leading-none">
+              <span className="px-3 py-1 text-xs font-semibold rounded-full bg-primary/10 text-primary border border-primary/20 shadow-xs inline-block">
+                {t("aquila.nothingHere", "Nothing Here")}
+              </span>
+              <h2 className="text-3xl font-black tracking-tight text-foreground">
                 {t("aquila.nothingHere", "Nothing Here")}
               </h2>
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                {t("aquila.emptyListDesc", "It looks like your watch list is empty. Start browsing to find and track your favorite media.")}
+              <p className="text-muted-foreground text-sm leading-relaxed font-medium">
+                {t(
+                  "aquila.emptyListDesc",
+                  "It looks like your watch list is empty. Start browsing to find and track your favorite media.",
+                )}
               </p>
               <div className="pt-2">
                 <Button
-                  variant="outline"
-                  className="px-6 rounded-xl border border-border/80 bg-background/50 hover:bg-accent transition-all text-xs tracking-wider uppercase font-bold cursor-pointer"
+                  className="px-6 h-11 rounded-2xl border border-primary-foreground/10 bg-primary text-primary-foreground hover:bg-primary/90 shadow-md font-semibold text-xs tracking-wider uppercase cursor-pointer"
                   asChild
                 >
-                  <Link href="/aquila/browse">{t("aquila.browseMedia", "Browse Media")}</Link>
+                  <Link href="/aquila/browse">
+                    {t("aquila.browseMedia", "Browse Media")}
+                  </Link>
                 </Button>
               </div>
             </div>
           </div>
         ) : (
-          <div className="flex flex-col gap-10 pb-16">
+          <div className="flex flex-col gap-8 pb-16">
             {categoryOrder.map((category) => {
               const items = sections[category];
               if (!items || items.length === 0) return null;
@@ -380,9 +395,9 @@ export default function AquilaHome(): React.JSX.Element {
                   onDragOver={handleDragOver}
                   onDragEnd={handleDragEnd}
                   className={cn(
-                    "transition-all duration-300 rounded-3xl p-4 border border-transparent",
+                    "transition-all duration-300 rounded-3xl p-5 bg-card/40 backdrop-blur-xs border border-border/30 shadow-xs hover:border-border/50",
                     draggedCategory === category &&
-                      "opacity-30 border-2 border-dashed border-primary/45 bg-primary/5 scale-[0.99] shadow-lg",
+                      "opacity-30 border-2 border-dashed border-primary/45 bg-primary/10 scale-[0.99] shadow-lg",
                   )}
                 >
                   <RrMediaSection

@@ -1346,7 +1346,11 @@
     "voiceActors": "นักพากย์",
     "ageRating": "เรตติ้งอายุ",
     "noCharacters": "ไม่มีข้อมูลตัวละคร",
-    "addData": "เพิ่มข้อมูล"
+    "addData": "เพิ่มข้อมูล",
+    "connect": "เชื่อมต่อ",
+    "connected": "เชื่อมต่อแล้ว",
+    "disconnect": "ยกเลิกการเชื่อมต่อ",
+    "toggleFavorite": "สลับรายการโปรด"
   },
   "lynx": {
     "returnToSafety": "กลับสู่ความปลอดภัย",

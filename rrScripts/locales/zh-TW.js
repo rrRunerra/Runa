@@ -1346,7 +1346,11 @@ export default {
     "voiceActors": "聲優/配音員",
     "ageRating": "分級",
     "noCharacters": "暫無角色資訊",
-    "addData": "新增資料"
+    "addData": "新增資料",
+    "connect": "連結",
+    "connected": "已連結",
+    "disconnect": "中斷連結",
+    "toggleFavorite": "切換收藏"
   },
   "lynx": {
     "returnToSafety": "返回安全區域",

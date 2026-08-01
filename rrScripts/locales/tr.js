@@ -1346,7 +1346,11 @@ export default {
     "voiceActors": "Seslendirmenler",
     "ageRating": "Yaş Sınırı",
     "noCharacters": "Karakter bilgisi bulunmuyor",
-    "addData": "Veri Ekle"
+    "addData": "Veri Ekle",
+    "connect": "Bağlan",
+    "connected": "Bağlandı",
+    "disconnect": "Bağlantıyı Kes",
+    "toggleFavorite": "Favori Değiştir"
   },
   "lynx": {
     "returnToSafety": "Güvenli bölgeye dön",

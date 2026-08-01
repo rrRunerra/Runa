@@ -1346,7 +1346,11 @@
     "voiceActors": "Stemmeskuespillere",
     "ageRating": "Aldersgrense",
     "noCharacters": "Ingen karakterinformasjon tilgjengelig",
-    "addData": "Legg til data"
+    "addData": "Legg til data",
+    "connect": "Koble til",
+    "connected": "Tilkoblet",
+    "disconnect": "Koble fra",
+    "toggleFavorite": "Veksle favoritt"
   },
   "lynx": {
     "returnToSafety": "Gå tilbake til sikkerhet",

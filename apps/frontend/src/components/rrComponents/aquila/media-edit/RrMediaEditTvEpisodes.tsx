@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { useTranslation } from "react-i18next";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronDown, ChevronUp, Check, Info } from "lucide-react";
+import { ChevronDown, ChevronUp, Check, Info, Tv } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -36,10 +36,10 @@ export function RrMediaEditTvEpisodes({
   const canToggle =
     hasListEntry === true && ALLOWED_STATUSES.includes(listStatus ?? "");
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
       {!canToggle && (
-        <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-muted/30 border border-border/40 text-xs text-muted-foreground">
-          <Info className="size-3.5 shrink-0" />
+        <div className="flex items-center gap-2.5 p-3 rounded-xl bg-muted border border-border text-xs font-medium text-muted-foreground shadow-2xs">
+          <Info className="size-4 shrink-0 text-muted-foreground" />
           <span>
             {!hasListEntry
               ? t("aquila.saveThisShowToTrack")
@@ -47,7 +47,7 @@ export function RrMediaEditTvEpisodes({
           </span>
         </div>
       )}
-      <div className="max-h-86.25 overflow-y-auto pr-1 space-y-2 custom-scrollbar">
+      <div className="max-h-[415px] overflow-y-auto pr-1 flex flex-col gap-2.5 w-full custom-scrollbar">
         {seasons && seasons.length > 0 ? (
           seasons.map((season) => {
             const watchedInSeason = (season.episodes ?? []).filter((ep: any) =>
@@ -58,22 +58,26 @@ export function RrMediaEditTvEpisodes({
             ).length;
             const isSeasonCompleted = watchedInSeason === season.episodeCount;
             const isSeasonExpanded = expandedSeasonNum === season.number;
+            const seasonPercent =
+              season.episodeCount > 0
+                ? Math.round((watchedInSeason / season.episodeCount) * 100)
+                : 0;
 
             return (
               <div
                 key={`season-${season.number}`}
-                className="border border-border/40 rounded-xl bg-muted/10 overflow-hidden"
+                className="border border-border/60 rounded-2xl bg-card/40 backdrop-blur-xs overflow-hidden shadow-2xs transition-all hover:border-border shrink-0"
               >
                 {/* Season Header */}
                 <div
-                  className="flex items-center justify-between p-3 bg-muted/20 cursor-pointer select-none hover:bg-muted/30 transition-colors"
+                  className="flex items-center justify-between p-3.5 bg-background/50 cursor-pointer select-none hover:bg-muted/40 transition-colors"
                   onClick={() =>
                     onExpandedSeasonNumChange(
                       isSeasonExpanded ? null : season.number,
                     )
                   }
                 >
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-3">
                     <div onClick={(e) => e.stopPropagation()}>
                       <Checkbox
                         id={`season-${season.number}-completed`}
@@ -85,26 +89,34 @@ export function RrMediaEditTvEpisodes({
                         className="border-border data-[state=checked]:bg-primary data-[state=checked]:border-primary disabled:opacity-40 disabled:cursor-not-allowed"
                       />
                     </div>
-                    <Label
-                      htmlFor={`season-${season.number}-completed`}
-                      className="font-bold text-xs sm:text-sm text-foreground cursor-pointer select-none"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {season.name ||
-                        t("aquila.seasonName", { number: season.number })}
-                    </Label>
+                    <div className="flex flex-col">
+                      <Label
+                        htmlFor={`season-${season.number}-completed`}
+                        className="font-bold text-xs sm:text-sm text-foreground cursor-pointer select-none"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {season.name ||
+                          t("aquila.seasonName", { number: season.number })}
+                      </Label>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2.5">
                     <Badge
                       variant={isSeasonCompleted ? "default" : "outline"}
-                      className="text-[10px]"
+                      className={cn(
+                        "text-[10px] font-bold px-2.5 py-0.5 rounded-full",
+                        isSeasonCompleted
+                          ? "bg-primary/10 text-primary border-primary/25"
+                          : "bg-muted/60 text-muted-foreground border-border/60",
+                      )}
                     >
                       {watchedInSeason} / {season.episodeCount} Ep
+                      {seasonPercent > 0 && ` (${seasonPercent}%)`}
                     </Badge>
                     {isSeasonExpanded ? (
-                      <ChevronUp className="size-3.5 text-muted-foreground/60 shrink-0" />
+                      <ChevronUp className="size-4 text-muted-foreground shrink-0" />
                     ) : (
-                      <ChevronDown className="size-3.5 text-muted-foreground/60 shrink-0" />
+                      <ChevronDown className="size-4 text-muted-foreground shrink-0" />
                     )}
                   </div>
                 </div>
@@ -121,9 +133,9 @@ export function RrMediaEditTvEpisodes({
                         stiffness: 300,
                         damping: 30,
                       }}
-                      className="overflow-hidden border-t border-border/40"
+                      className="overflow-hidden border-t border-border/50 bg-muted/10"
                     >
-                      <div className="p-3 max-h-48 overflow-y-auto no-scrollbar grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                      <div className="p-3 max-h-52 overflow-y-auto no-scrollbar grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {(season.episodes ?? []).map((ep: any) => {
                           const isEpWatched = watchedEpisodes.some(
                             (w) =>
@@ -139,13 +151,13 @@ export function RrMediaEditTvEpisodes({
                                 onToggleEpisode(season.number, ep.number)
                               }
                               className={cn(
-                                "flex items-center justify-between p-2 rounded-lg border text-left transition-all duration-200 text-xs font-semibold",
+                                "flex items-center justify-between p-2.5 rounded-xl border text-left transition-all duration-200 text-xs font-semibold",
                                 canToggle
                                   ? "cursor-pointer"
                                   : "cursor-not-allowed opacity-50",
                                 isEpWatched
-                                  ? "bg-primary/5 border-primary/20 text-primary hover:bg-primary/10"
-                                  : "bg-background border-border hover:bg-muted/50 text-foreground",
+                                  ? "bg-primary/10 border-primary/30 text-primary shadow-2xs"
+                                  : "bg-background/80 border-border/60 hover:bg-muted/60 text-foreground",
                               )}
                             >
                               <span className="truncate pr-1">
@@ -156,7 +168,7 @@ export function RrMediaEditTvEpisodes({
                                   })}
                               </span>
                               {isEpWatched && (
-                                <Check className="size-3.5 shrink-0" />
+                                <Check className="size-3.5 shrink-0 text-primary" />
                               )}
                             </button>
                           );
@@ -169,8 +181,9 @@ export function RrMediaEditTvEpisodes({
             );
           })
         ) : (
-          <div className="text-center py-8 text-xs text-muted-foreground bg-muted/10 border border-dashed border-border rounded-xl">
-            {t("aquila.noSeasonsAvailable")}
+          <div className="text-center py-10 text-xs text-muted-foreground bg-card/40 border border-dashed border-border/60 rounded-2xl flex flex-col items-center justify-center gap-2">
+            <Tv className="size-6 text-muted-foreground/50" />
+            <span>{t("aquila.noSeasonsAvailable")}</span>
           </div>
         )}
       </div>

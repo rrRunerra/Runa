@@ -1347,7 +1347,11 @@ export default {
     "voiceActorLanguage": "Voice Actor Language",
     "voiceActors": "Voice Actors",
     "ageRating": "Age Rating",
-    "noCharacters": "No character information available"
+    "noCharacters": "No character information available",
+    "connect": "Connect",
+    "connected": "Connected",
+    "disconnect": "Disconnect",
+    "toggleFavorite": "Toggle Favorite"
   },
   "lynx": {
     "returnToSafety": "Návrat do bezpečí",

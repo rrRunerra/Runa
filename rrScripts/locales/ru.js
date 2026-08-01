@@ -1346,7 +1346,11 @@ export default {
     "voiceActors": "Актеры озвучки",
     "ageRating": "Возрастной рейтинг",
     "noCharacters": "Информация о персонажах отсутствует",
-    "addData": "Добавить данные"
+    "addData": "Добавить данные",
+    "connect": "Подключить",
+    "connected": "Подключено",
+    "disconnect": "Отключить",
+    "toggleFavorite": "Переключить избранное"
   },
   "lynx": {
     "returnToSafety": "Вернуться в безопасность",

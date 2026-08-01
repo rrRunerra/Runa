@@ -1346,7 +1346,11 @@ export default {
     "voiceActors": "Actores de voz",
     "ageRating": "Clasificación por edad",
     "noCharacters": "No hay información de personajes disponible",
-    "addData": "Agregar datos"
+    "addData": "Agregar datos",
+    "connect": "Conectar",
+    "connected": "Conectado",
+    "disconnect": "Desconectar",
+    "toggleFavorite": "Alternar favorito"
   },
   "lynx": {
     "returnToSafety": "Volver a la seguridad",

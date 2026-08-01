@@ -1346,7 +1346,11 @@ export default {
     "voiceActors": "Dabéři",
     "ageRating": "Věkové omezení",
     "noCharacters": "Žádné informace o postavách",
-    "addData": "Přidat data"
+    "addData": "Přidat data",
+    "connect": "Připojit",
+    "connected": "Připojeno",
+    "disconnect": "Odpojit",
+    "toggleFavorite": "Přepnout oblíbené"
   },
   "lynx": {
     "returnToSafety": "Návrat do bezpečí",

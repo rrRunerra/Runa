@@ -1346,7 +1346,11 @@
     "voiceActors": "Ääninäyttelijät",
     "ageRating": "Ikäraja",
     "noCharacters": "Ei hahmo-tietoja saatavilla",
-    "addData": "Lisää tietoja"
+    "addData": "Lisää tietoja",
+    "connect": "Yhdistä",
+    "connected": "Yhdistetty",
+    "disconnect": "Katkaise yhteys",
+    "toggleFavorite": "Vaihda suosikki"
   },
   "lynx": {
     "returnToSafety": "Palaa turvallisuuteen",
