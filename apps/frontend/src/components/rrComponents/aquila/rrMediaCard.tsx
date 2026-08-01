@@ -68,7 +68,9 @@ const RrMediaCardComponent = ({
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isLongPressActiveRef = useRef<boolean>(false);
 
-  const startLongPress = (e: React.TouchEvent | React.MouseEvent | React.KeyboardEvent) => {
+  const startLongPress = (
+    e: React.TouchEvent | React.MouseEvent | React.KeyboardEvent,
+  ) => {
     isLongPressActiveRef.current = false;
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
@@ -76,7 +78,11 @@ const RrMediaCardComponent = ({
     longPressTimerRef.current = setTimeout(() => {
       isLongPressActiveRef.current = true;
       setIsEditDialogOpen(true);
-      if (typeof window !== "undefined" && window.navigator && window.navigator.vibrate) {
+      if (
+        typeof window !== "undefined" &&
+        window.navigator &&
+        window.navigator.vibrate
+      ) {
         window.navigator.vibrate(50);
       }
     }, 250);
@@ -257,7 +263,9 @@ const RrMediaCardComponent = ({
                         : `${t("aquila.episodeShort")} ${item.progress}${item.episodes ? `/${item.episodes}` : ""}`
                       : `${
                           mediaType === "game"
-                            ? t("aquila.hoursPlayedShort", { hours: item.progress })
+                            ? t("aquila.hoursPlayedShort", {
+                                hours: item.progress,
+                              })
                             : mediaType === "book"
                               ? `${t("aquila.chapterShort")} ${item.progress}`
                               : `${mediaType === "manga" ? t("aquila.chapterShort") : t("aquila.episodeShort")} ${item.progress}`

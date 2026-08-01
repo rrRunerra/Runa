@@ -1350,7 +1350,20 @@ export default {
     "connect": "Conectar",
     "connected": "Conectado",
     "disconnect": "Desconectar",
-    "toggleFavorite": "Alternar favorito"
+    "toggleFavorite": "Alternar favorito",
+    "submission": {
+      "modalTitleEdit": "Editar metadatos del medio (V2)",
+      "modalTitleCreate": "Añadir nueva entrada de medio (V2)",
+      "tabBasic": "Información básica",
+      "tabRelease": "Lanzamiento y especificaciones",
+      "tabAssets": "Recursos multimedia",
+      "tabTaxonomy": "Taxonomía y clasificaciones",
+      "tabExternal": "IDs externos",
+      "tabPeople": "Personas y producción",
+      "createNewCharacter": "Crear nuevo personaje",
+      "createNewStaff": "Crear nuevo miembro del equipo",
+      "createNewStudio": "Crear nuevo estudio"
+    }
   },
   "lynx": {
     "returnToSafety": "Volver a la seguridad",

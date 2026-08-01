@@ -111,7 +111,9 @@ export function RrUserListFilters({
     });
   };
 
-  const activeGenre = Array.isArray(filters.genres) ? filters.genres[0] || "" : "";
+  const activeGenre = Array.isArray(filters.genres)
+    ? filters.genres[0] || ""
+    : "";
   const resolvedSearchPlaceholder =
     searchPlaceholder ?? t("aquila.searchPlaceholder");
 

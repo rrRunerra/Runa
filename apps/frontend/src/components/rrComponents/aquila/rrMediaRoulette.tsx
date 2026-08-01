@@ -35,7 +35,7 @@ interface RrMediaEntry {
 
 interface RrMediaRouletteProps {
   username: string;
-  mediaType: "anime" | "manga" | "tv" | "movie" | "game" | "book";
+  mediaType: "anime" | "manga" | "tv" | "movie" | "game" | "book" | "music";
   baseUrl: string;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;

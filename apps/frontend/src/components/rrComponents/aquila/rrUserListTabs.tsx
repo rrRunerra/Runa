@@ -84,8 +84,12 @@ export function RrUserListTabs({
                   }}
                 />
               )}
-              <span className="relative z-10 flex items-center gap-1.5" suppressHydrationWarning>
-                {(list.toUpperCase() === "SIMILAR" || list.toUpperCase() === "SEQUELS") && (
+              <span
+                className="relative z-10 flex items-center gap-1.5"
+                suppressHydrationWarning
+              >
+                {(list.toUpperCase() === "SIMILAR" ||
+                  list.toUpperCase() === "SEQUELS") && (
                   <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
                 )}
                 {getListNameTranslation(list)}

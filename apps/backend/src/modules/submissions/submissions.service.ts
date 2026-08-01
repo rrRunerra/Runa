@@ -184,6 +184,16 @@ export class SubmissionsService {
         genres: Array.isArray(data.genres) ? data.genres : [],
         synonyms: Array.isArray(data.synonyms) ? data.synonyms : [],
         countryOfOrigin: data.countryOfOrigin || null,
+        siteUrl: data.siteUrl || null,
+        externalLinks: Array.isArray(data.externalLinks) ? data.externalLinks : null,
+        trailers: Array.isArray(data.trailers) ? data.trailers : null,
+        ageRating: data.ageRating || null,
+        ageRatingGuide: data.ageRatingGuide || null,
+        anilistId: data.anilistId ? Number(data.anilistId) : null,
+        malId: data.malId ? Number(data.malId) : null,
+        aniDBId: data.aniDBId ? Number(data.aniDBId) : null,
+        tvDBId: data.tvDBId ? Number(data.tvDBId) : null,
+        bangumiId: data.bangumiId ? Number(data.bangumiId) : null,
         locked: true,
       };
 
@@ -207,6 +217,11 @@ export class SubmissionsService {
         chapterCount: data.chapters ? Number(data.chapters) : data.chapterCount ? Number(data.chapterCount) : null,
         volumeCount: data.volumes ? Number(data.volumes) : data.volumeCount ? Number(data.volumeCount) : null,
         source: data.source || 'UNKNOWN',
+        serialization: data.serialization || null,
+        imprint: data.imprint || null,
+        publishers: Array.isArray(data.publishers) ? data.publishers : [],
+        demographics: Array.isArray(data.demographics) ? data.demographics : [],
+        readingDirection: data.readingDirection || null,
         startDateYear: data.startDateYear ? Number(data.startDateYear) : null,
         startDateMonth: data.startDateMonth ? Number(data.startDateMonth) : null,
         startDateDay: data.startDateDay ? Number(data.startDateDay) : null,
@@ -218,6 +233,13 @@ export class SubmissionsService {
         genres: Array.isArray(data.genres) ? data.genres : [],
         synonyms: Array.isArray(data.synonyms) ? data.synonyms : [],
         countryOfOrigin: data.countryOfOrigin || null,
+        siteUrl: data.siteUrl || null,
+        externalLinks: Array.isArray(data.externalLinks) ? data.externalLinks : null,
+        ageRating: data.ageRating || null,
+        ageRatingGuide: data.ageRatingGuide || null,
+        anilistId: data.anilistId ? Number(data.anilistId) : null,
+        malId: data.malId ? Number(data.malId) : null,
+        mangaUpdatesId: data.mangaUpdatesId ? String(data.mangaUpdatesId) : null,
         locked: true,
       };
 
@@ -233,16 +255,41 @@ export class SubmissionsService {
         titlePrimary: data.titlePrimary || data.titleEnglish || 'Untitled',
         titleSecondary: data.titleSecondary || data.titleRomaji || null,
         titleNative: data.titleNative || null,
+        tagline: data.tagline || null,
         description: data.description || null,
         coverImage: data.coverImage || null,
         bannerImage: data.bannerImage || null,
         status: data.status || 'UNKNOWN',
-        averageRuntime: data.averageRuntime ? Number(data.averageRuntime) : null,
+        showType: data.showType || null,
+        seasonCount: data.seasonCount ? Number(data.seasonCount) : null,
+        episodeCount: data.episodeCount ? Number(data.episodeCount) : null,
+        averageRuntime: data.averageRuntime || data.duration ? Number(data.averageRuntime || data.duration) : null,
+        broadcastTime: data.broadcastTime || null,
+        broadcastDays: Array.isArray(data.broadcastDays) ? data.broadcastDays : [],
+        networks: Array.isArray(data.networks) ? data.networks : [],
+        studios: Array.isArray(data.studios) ? data.studios : [],
         countryOfOrigin: data.countryOfOrigin || data.originalCountry || null,
         originalLanguage: data.originalLanguage || null,
+        homepage: data.homepage || data.siteUrl || null,
+        siteUrl: data.siteUrl || data.homepage || null,
+        firstAiredYear: data.firstAiredYear || data.startDateYear ? Number(data.firstAiredYear || data.startDateYear) : null,
+        firstAiredMonth: data.firstAiredMonth || data.startDateMonth ? Number(data.firstAiredMonth || data.startDateMonth) : null,
+        firstAiredDay: data.firstAiredDay || data.startDateDay ? Number(data.firstAiredDay || data.startDateDay) : null,
+        lastAiredYear: data.lastAiredYear || data.endDateYear ? Number(data.lastAiredYear || data.endDateYear) : null,
+        lastAiredMonth: data.lastAiredMonth || data.endDateMonth ? Number(data.lastAiredMonth || data.endDateMonth) : null,
+        lastAiredDay: data.lastAiredDay || data.endDateDay ? Number(data.lastAiredDay || data.endDateDay) : null,
         genres: Array.isArray(data.genres) ? data.genres : [],
-        studios: Array.isArray(data.studios) ? data.studios : [],
+        tags: Array.isArray(data.tags) ? data.tags : [],
+        synonyms: Array.isArray(data.synonyms) ? data.synonyms : [],
+        isAdult: typeof data.isAdult === 'boolean' ? data.isAdult : false,
+        trailers: Array.isArray(data.trailers) ? data.trailers : null,
+        ageRating: data.ageRating || null,
+        ageRatingGuide: data.ageRatingGuide || null,
         tvDBId: data.tvDBId || data.tvdbId ? Number(data.tvDBId || data.tvdbId) : Math.floor(Date.now() / 1000),
+        imdbId: data.imdbId || null,
+        tmdbId: data.tmdbId ? Number(data.tmdbId) : null,
+        traktId: data.traktId ? Number(data.traktId) : null,
+        tvmazeId: data.tvmazeId ? Number(data.tvmazeId) : null,
         locked: true,
       };
 
@@ -258,18 +305,32 @@ export class SubmissionsService {
         titlePrimary: data.titlePrimary || data.titleEnglish || 'Untitled',
         titleSecondary: data.titleSecondary || data.titleRomaji || null,
         titleNative: data.titleNative || null,
+        tagline: data.tagline || null,
         description: data.description || null,
         coverImage: data.coverImage || null,
         bannerImage: data.bannerImage || null,
         status: data.status || 'RELEASED',
-        runtime: data.runtime ? Number(data.runtime) : null,
+        runtime: data.runtime || data.duration ? Number(data.runtime || data.duration) : null,
         budget: data.budget ? BigInt(data.budget) : null,
         revenue: data.boxOffice || data.revenue ? BigInt(data.boxOffice || data.revenue) : null,
         countryOfOrigin: data.countryOfOrigin || data.originalCountry || null,
         originalLanguage: data.originalLanguage || null,
+        homepage: data.homepage || data.siteUrl || null,
+        siteUrl: data.siteUrl || data.homepage || null,
+        releaseDateYear: data.releaseDateYear || data.startDateYear ? Number(data.releaseDateYear || data.startDateYear) : null,
+        releaseDateMonth: data.releaseDateMonth || data.startDateMonth ? Number(data.releaseDateMonth || data.startDateMonth) : null,
+        releaseDateDay: data.releaseDateDay || data.startDateDay ? Number(data.releaseDateDay || data.startDateDay) : null,
         genres: Array.isArray(data.genres) ? data.genres : [],
         studios: Array.isArray(data.studios) ? data.studios : [],
+        synonyms: Array.isArray(data.synonyms) ? data.synonyms : [],
+        isAdult: typeof data.isAdult === 'boolean' ? data.isAdult : false,
+        trailers: Array.isArray(data.trailers) ? data.trailers : null,
+        ageRating: data.ageRating || null,
+        ageRatingGuide: data.ageRatingGuide || null,
         tvDBId: data.tvDBId || data.tvdbId ? Number(data.tvDBId || data.tvdbId) : Math.floor(Date.now() / 1000),
+        imdbId: data.imdbId || null,
+        tmdbId: data.tmdbId ? Number(data.tmdbId) : null,
+        traktId: data.traktId ? Number(data.traktId) : null,
         locked: true,
       };
 
@@ -283,16 +344,44 @@ export class SubmissionsService {
     } else if (type === 'game') {
       const payload: any = {
         titlePrimary: data.titlePrimary || data.titleString || data.titleEnglish || 'Untitled',
+        titleSecondary: data.titleSecondary || null,
         titleNative: data.titleNative || null,
+        slug: data.slug || null,
+        tagline: data.tagline || null,
         description: data.description || null,
         coverImage: data.coverImage || null,
         backgroundImage: data.backgroundImage || data.bannerImage || null,
+        bannerImage: data.bannerImage || data.backgroundImage || null,
+        originalLanguage: data.originalLanguage || null,
+        countryOfOrigin: data.countryOfOrigin || null,
+        website: data.website || data.siteUrl || null,
+        siteUrl: data.siteUrl || data.website || null,
+        franchise: data.franchise || null,
+        gameModes: Array.isArray(data.gameModes) ? data.gameModes : [],
+        playerPerspectives: Array.isArray(data.playerPerspectives) ? data.playerPerspectives : [],
         releaseDateYear: data.releaseDateYear ? Number(data.releaseDateYear) : data.releasedYear ? Number(data.releasedYear) : null,
+        releaseDateMonth: data.releaseDateMonth ? Number(data.releaseDateMonth) : null,
+        releaseDateDay: data.releaseDateDay ? Number(data.releaseDateDay) : null,
         genres: Array.isArray(data.genres) ? data.genres : [],
+        tags: Array.isArray(data.tags) ? data.tags : [],
         platforms: Array.isArray(data.platforms) ? data.platforms : [],
         developers: Array.isArray(data.developers) ? data.developers : [],
         publishers: Array.isArray(data.publishers) ? data.publishers : [],
+        status: data.status || 'UNKNOWN',
+        isAdult: typeof data.isAdult === 'boolean' ? data.isAdult : false,
+        synonyms: Array.isArray(data.synonyms) ? data.synonyms : [],
+        esrbRating: data.esrbRating || null,
+        pegiRating: data.pegiRating || null,
+        ageRating: data.ageRating || null,
+        ageRatingGuide: data.ageRatingGuide || null,
+        hltbMainStory: data.hltbMainStory ? Number(data.hltbMainStory) : null,
+        hltbExtraStory: data.hltbExtraStory ? Number(data.hltbExtraStory) : null,
+        hltbCompletionist: data.hltbCompletionist ? Number(data.hltbCompletionist) : null,
         rawgId: data.rawgId ? Number(data.rawgId) : Math.floor(Date.now() / 1000),
+        igdbId: data.igdbId ? Number(data.igdbId) : null,
+        steamAppId: data.steamAppId ? Number(data.steamAppId) : null,
+        giantbombId: data.giantbombId || null,
+        vndbId: data.vndbId || null,
         locked: true,
       };
 
@@ -306,18 +395,43 @@ export class SubmissionsService {
     } else if (type === 'book') {
       const payload: any = {
         titlePrimary: data.titlePrimary || data.titleString || data.titleEnglish || 'Untitled',
+        titleSecondary: data.titleSecondary || null,
         subtitle: data.subtitle || null,
+        slug: data.slug || null,
+        tagline: data.tagline || null,
         description: data.description || null,
         coverImage: data.coverImage || null,
+        bannerImage: data.bannerImage || null,
+        series: data.series || null,
+        seriesPosition: data.seriesPosition ? Number(data.seriesPosition) : null,
+        format: data.format || null,
+        status: data.status || 'UNKNOWN',
         releaseDateYear: data.releaseDateYear ? Number(data.releaseDateYear) : data.publishedYear ? Number(data.publishedYear) : null,
+        releaseDateMonth: data.releaseDateMonth ? Number(data.releaseDateMonth) : null,
+        releaseDateDay: data.releaseDateDay ? Number(data.releaseDateDay) : null,
         pageCount: data.pageCount ? Number(data.pageCount) : null,
         chapterCount: data.chapters ? Number(data.chapters) : data.chapterCount ? Number(data.chapterCount) : null,
+        volumeCount: data.volumes ? Number(data.volumes) : data.volumeCount ? Number(data.volumeCount) : null,
         originalLanguage: data.language || data.originalLanguage || null,
+        countryOfOrigin: data.countryOfOrigin || null,
         isbn10: data.isbn10 || null,
         isbn13: data.isbn13 || null,
+        website: data.website || data.siteUrl || null,
+        siteUrl: data.siteUrl || data.website || null,
+        previewLink: data.previewLink || null,
+        infoLink: data.infoLink || null,
+        buyLink: data.buyLink || null,
+        retailPrice: data.retailPrice ? Number(data.retailPrice) : null,
+        retailPriceCurrency: data.retailPriceCurrency || null,
+        ageRating: data.ageRating || null,
+        ageRatingGuide: data.ageRatingGuide || null,
         subjects: Array.isArray(data.subjects) ? data.subjects : Array.isArray(data.genres) ? data.genres : [],
+        genres: Array.isArray(data.genres) ? data.genres : Array.isArray(data.subjects) ? data.subjects : [],
+        tags: Array.isArray(data.tags) ? data.tags : [],
         authors: Array.isArray(data.authors) ? data.authors : [],
         publishers: Array.isArray(data.publishers) ? data.publishers : [],
+        synonyms: Array.isArray(data.synonyms) ? data.synonyms : [],
+        isAdult: typeof data.isAdult === 'boolean' ? data.isAdult : false,
         googleBookId: data.googleBookId || `custom_${Date.now()}`,
         locked: true,
       };
@@ -334,6 +448,8 @@ export class SubmissionsService {
     }
 
     await this.saveCharacters(type, targetMediaId, data.characters);
+    await this.saveStaff(type, targetMediaId, data.staff);
+    await this.saveStudios(type, targetMediaId, data.studiosList || data.studiosData);
     await this.saveRelations(type, targetMediaId, data.relations);
 
     return targetMediaId;
@@ -377,6 +493,24 @@ export class SubmissionsService {
         namePrimary: true,
         nameNative: true,
         image: true,
+      },
+      take: 20,
+    });
+  }
+
+  async searchStudios(query: string) {
+    const trimmed = (query || '').trim();
+    if (!trimmed) return [];
+
+    return this.prisma.client.aquilaStudioV2.findMany({
+      where: {
+        name: { contains: trimmed, mode: 'insensitive' },
+      },
+      select: {
+        id: true,
+        name: true,
+        isAnimationStudio: true,
+        siteUrl: true,
       },
       take: 20,
     });
@@ -472,7 +606,25 @@ export class SubmissionsService {
     }).catch(() => null);
 
     for (const char of characters) {
-      if (!char.characterId) continue;
+      let charId = char.characterId ? Number(char.characterId) : null;
+
+      // Handle inline created NEW Character
+      if (!charId && (char.isNew || char.namePrimary || char.name)) {
+        const namePrimary = char.namePrimary || char.name || 'Unknown Character';
+        const createdChar = await this.prisma.client.aquilaCharacterV2.create({
+          data: {
+            namePrimary,
+            nameNative: char.nameNative || null,
+            image: char.image || null,
+            description: char.description || null,
+            gender: char.gender || null,
+          },
+        }).catch(() => null);
+        if (createdChar) charId = createdChar.id;
+      }
+
+      if (!charId) continue;
+
       const charRoleStr = char.role ? String(char.role).toUpperCase() : '';
       const charRole = ['MAIN', 'SUPPORTING', 'BACKGROUND'].includes(charRoleStr)
         ? (charRoleStr as CharacterRole)
@@ -488,9 +640,104 @@ export class SubmissionsService {
           tvId: mediaEnum === MediaType.TV ? mediaId : null,
           gameId: mediaEnum === MediaType.GAME ? mediaId : null,
           bookId: mediaEnum === MediaType.BOOK ? mediaId : null,
-          characterId: Number(char.characterId),
+          characterId: charId,
           actorId: char.voiceActorId || char.actorId ? Number(char.voiceActorId || char.actorId) : null,
           role: charRole,
+        },
+      }).catch(() => null);
+    }
+  }
+
+  private async saveStaff(mediaType: string, mediaId: number, staffList: any[]) {
+    if (!Array.isArray(staffList)) return;
+    const type = mediaType.toLowerCase();
+    const mediaEnum = MEDIA_TYPE_MAP[type];
+    if (!mediaEnum) return;
+
+    await this.prisma.client.aquilaMediaStaffV2.deleteMany({
+      where: { mediaType: mediaEnum, mediaId },
+    }).catch(() => null);
+
+    for (const item of staffList) {
+      let staffId = item.staffId || item.actorId ? Number(item.staffId || item.actorId) : null;
+
+      // Handle inline created NEW Staff/Actor
+      if (!staffId && (item.isNew || item.namePrimary || item.name)) {
+        const namePrimary = item.namePrimary || item.name || 'Unknown Staff';
+        const createdStaff = await this.prisma.client.aquilaActorV2.create({
+          data: {
+            namePrimary,
+            nameNative: item.nameNative || null,
+            image: item.image || null,
+            description: item.description || null,
+            language: item.language || null,
+          },
+        }).catch(() => null);
+        if (createdStaff) staffId = createdStaff.id;
+      }
+
+      if (!staffId) continue;
+
+      const roleStr = item.role ? String(item.role).toUpperCase() : 'OTHER';
+
+      await this.prisma.client.aquilaMediaStaffV2.create({
+        data: {
+          mediaType: mediaEnum,
+          mediaId,
+          animeId: mediaEnum === MediaType.ANIME ? mediaId : null,
+          mangaId: mediaEnum === MediaType.MANGA ? mediaId : null,
+          movieId: mediaEnum === MediaType.MOVIE ? mediaId : null,
+          tvId: mediaEnum === MediaType.TV ? mediaId : null,
+          gameId: mediaEnum === MediaType.GAME ? mediaId : null,
+          bookId: mediaEnum === MediaType.BOOK ? mediaId : null,
+          staffId,
+          role: roleStr as any,
+          customRole: item.customRole || null,
+        },
+      }).catch(() => null);
+    }
+  }
+
+  private async saveStudios(mediaType: string, mediaId: number, studiosList: any[]) {
+    if (!Array.isArray(studiosList)) return;
+    const type = mediaType.toLowerCase();
+    const mediaEnum = MEDIA_TYPE_MAP[type];
+    if (!mediaEnum) return;
+
+    await this.prisma.client.aquilaMediaStudioV2.deleteMany({
+      where: { mediaType: mediaEnum, mediaId },
+    }).catch(() => null);
+
+    for (const item of studiosList) {
+      let studioId = item.studioId || item.id ? Number(item.studioId || item.id) : null;
+
+      // Handle inline created NEW Studio
+      if (!studioId && (item.isNew || item.name)) {
+        const name = item.name || 'Unknown Studio';
+        const createdStudio = await this.prisma.client.aquilaStudioV2.create({
+          data: {
+            name,
+            isAnimationStudio: typeof item.isAnimationStudio === 'boolean' ? item.isAnimationStudio : true,
+            siteUrl: item.siteUrl || null,
+          },
+        }).catch(() => null);
+        if (createdStudio) studioId = createdStudio.id;
+      }
+
+      if (!studioId) continue;
+
+      await this.prisma.client.aquilaMediaStudioV2.create({
+        data: {
+          mediaType: mediaEnum,
+          mediaId,
+          animeId: mediaEnum === MediaType.ANIME ? mediaId : null,
+          mangaId: mediaEnum === MediaType.MANGA ? mediaId : null,
+          movieId: mediaEnum === MediaType.MOVIE ? mediaId : null,
+          tvId: mediaEnum === MediaType.TV ? mediaId : null,
+          gameId: mediaEnum === MediaType.GAME ? mediaId : null,
+          bookId: mediaEnum === MediaType.BOOK ? mediaId : null,
+          studioId,
+          isMain: typeof item.isMain === 'boolean' ? item.isMain : false,
         },
       }).catch(() => null);
     }

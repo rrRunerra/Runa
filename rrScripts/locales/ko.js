@@ -1350,7 +1350,20 @@ export default {
     "connect": "연결",
     "connected": "연결됨",
     "disconnect": "연결 해제",
-    "toggleFavorite": "즐겨찾기 전환"
+    "toggleFavorite": "즐겨찾기 전환",
+    "submission": {
+      "modalTitleEdit": "미디어 메타데이터 편집 (V2)",
+      "modalTitleCreate": "새 미디어 항목 추가 (V2)",
+      "tabBasic": "기본 정보",
+      "tabRelease": "출시 및 사양",
+      "tabAssets": "미디어 자산",
+      "tabTaxonomy": "분류 및 등급",
+      "tabExternal": "외부 ID",
+      "tabPeople": "인물 및 제작",
+      "createNewCharacter": "새 캐릭터 만들기",
+      "createNewStaff": "새 스태프 추가",
+      "createNewStudio": "새 스튜디오 만들기"
+    }
   },
   "lynx": {
     "returnToSafety": "안전한 곳으로 돌아가기",

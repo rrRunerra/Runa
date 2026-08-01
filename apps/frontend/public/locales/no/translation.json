@@ -1350,7 +1350,20 @@
     "connect": "Koble til",
     "connected": "Tilkoblet",
     "disconnect": "Koble fra",
-    "toggleFavorite": "Veksle favoritt"
+    "toggleFavorite": "Veksle favoritt",
+    "submission": {
+      "modalTitleEdit": "Rediger mediametadata (V2)",
+      "modalTitleCreate": "Legg til ny medieoppføring (V2)",
+      "tabBasic": "Grunnleggende info",
+      "tabRelease": "Utgivelse og spesifikasjoner",
+      "tabAssets": "Medieaktiva",
+      "tabTaxonomy": "Taksonomi og rangeringer",
+      "tabExternal": "Eksterne ID-er",
+      "tabPeople": "Personer og produksjon",
+      "createNewCharacter": "Opprett ny karakter",
+      "createNewStaff": "Opprett nytt stabsmedlem",
+      "createNewStudio": "Opprett nytt studio"
+    }
   },
   "lynx": {
     "returnToSafety": "Gå tilbake til sikkerhet",

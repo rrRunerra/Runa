@@ -140,7 +140,7 @@ export default function UserMangaPage({ initialData }: { initialData?: any }) {
     }
     const len = initialData.entries?.length || 0;
     const pageInfo = initialData.pageInfo;
-    const initialHasMore = pageInfo?.hasMore ?? (len >= 30);
+    const initialHasMore = pageInfo?.hasMore ?? len >= 30;
     const initialNextCursor = pageInfo?.nextCursor ?? null;
 
     if (!initialHasMore) {
@@ -152,7 +152,7 @@ export default function UserMangaPage({ initialData }: { initialData?: any }) {
 
   const initialPState = getInitialPriorityState();
   const [nextCursor, setNextCursor] = useState<string | null | undefined>(
-    initialData?.pageInfo?.nextCursor
+    initialData?.pageInfo?.nextCursor,
   );
   const [hasMore, setHasMore] = useState(initialPState.hasMore);
   const [loading, setLoading] = useState(false);
@@ -160,9 +160,9 @@ export default function UserMangaPage({ initialData }: { initialData?: any }) {
     initialData?.counts || {},
   );
   const [priorityIdx, setPriorityIdx] = useState(initialPState.index);
-  const [priorityCursor, setPriorityCursor] = useState<string | null | undefined>(
-    initialPState.cursor
-  );
+  const [priorityCursor, setPriorityCursor] = useState<
+    string | null | undefined
+  >(initialPState.cursor);
   const isFetchingRef = useRef(false);
   const isInitialMountRef = useRef(true);
 
@@ -280,7 +280,12 @@ export default function UserMangaPage({ initialData }: { initialData?: any }) {
     setNextCursor(undefined);
     setHasMore(true);
     if (activeList === "All") {
-      fetchMangaList(undefined, true, MANGA_PRIORITY_STATUSES[0], controller.signal);
+      fetchMangaList(
+        undefined,
+        true,
+        MANGA_PRIORITY_STATUSES[0],
+        controller.signal,
+      );
     } else {
       fetchMangaList(undefined, true, undefined, controller.signal);
     }
@@ -328,7 +333,11 @@ export default function UserMangaPage({ initialData }: { initialData?: any }) {
         variants={itemVariants}
         className="flex-1 flex flex-col gap-6 w-full z-10"
       >
-        <RrUserListHeader userData={userData || null} listTitle="Manga List" entries={mangaList} />
+        <RrUserListHeader
+          userData={userData || null}
+          listTitle="Manga List"
+          entries={mangaList}
+        />
 
         {isPrivate ? (
           <div className="flex flex-col items-center justify-center py-20 bg-card/20 backdrop-blur-xl border border-border/40 rounded-2xl shadow-xl text-center p-6 mt-4">
@@ -376,9 +385,11 @@ export default function UserMangaPage({ initialData }: { initialData?: any }) {
             ) : (
               <>
                 <header className="flex items-center justify-between mt-4">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground/75" suppressHydrationWarning>
-                    {getListNameTranslation(activeList)}{" "}
-                    {t("aquila.manga")} (
+                  <h3
+                    className="text-sm font-bold uppercase tracking-wider text-muted-foreground/75"
+                    suppressHydrationWarning
+                  >
+                    {getListNameTranslation(activeList)} {t("aquila.manga")} (
                     {counts?.[activeList.toLowerCase().replace(/\s+/g, "_")] ??
                       mangaList.length}
                     )
@@ -392,14 +403,19 @@ export default function UserMangaPage({ initialData }: { initialData?: any }) {
                     <div className="flex items-center gap-1.5 bg-muted/20 p-1 rounded-xl border border-border/30 shadow-inner">
                       {[
                         { type: "list", icon: <Lucide.List size={16} /> },
-                        { type: "compact", icon: <Lucide.LayoutList size={16} /> },
+                        {
+                          type: "compact",
+                          icon: <Lucide.LayoutList size={16} />,
+                        },
                         { type: "grid", icon: <Lucide.LayoutGrid size={16} /> },
                       ].map((view) => (
                         <motion.button
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
                           key={view.type}
-                          onClick={() => setDisplayType(view.type as DisplayType)}
+                          onClick={() =>
+                            setDisplayType(view.type as DisplayType)
+                          }
                           className={`flex items-center justify-center size-8 rounded-lg transition-all cursor-pointer ${displayType === view.type ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground hover:bg-muted/30 hover:text-foreground"}`}
                         >
                           {view.icon}
@@ -412,7 +428,13 @@ export default function UserMangaPage({ initialData }: { initialData?: any }) {
                 <RrMediaListDisplay
                   lists={
                     activeList === "All"
-                      ? ["Reading", "On Hold", "Completed", "Dropped", "Planning"]
+                      ? [
+                          "Reading",
+                          "On Hold",
+                          "Completed",
+                          "Dropped",
+                          "Planning",
+                        ]
                       : [activeList]
                   }
                   data={mangaList}
@@ -425,7 +447,11 @@ export default function UserMangaPage({ initialData }: { initialData?: any }) {
                     if (activeList === "All") {
                       setPriorityIdx(0);
                       setPriorityCursor(undefined);
-                      fetchMangaList(undefined, true, MANGA_PRIORITY_STATUSES[0]);
+                      fetchMangaList(
+                        undefined,
+                        true,
+                        MANGA_PRIORITY_STATUSES[0],
+                      );
                     } else {
                       setNextCursor(undefined);
                       fetchMangaList(undefined, true);

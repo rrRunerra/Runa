@@ -1350,7 +1350,20 @@
     "connect": "Подключить",
     "connected": "Подключено",
     "disconnect": "Отключить",
-    "toggleFavorite": "Переключить избранное"
+    "toggleFavorite": "Переключить избранное",
+    "submission": {
+      "modalTitleEdit": "Редактировать метаданные медиа (V2)",
+      "modalTitleCreate": "Добавить новую запись медиа (V2)",
+      "tabBasic": "Основная информация",
+      "tabRelease": "Релиз и характеристики",
+      "tabAssets": "Медиаресурсы",
+      "tabTaxonomy": "Таксономия и рейтинги",
+      "tabExternal": "Внешние ID",
+      "tabPeople": "Люди и производство",
+      "createNewCharacter": "Создать нового персонажа",
+      "createNewStaff": "Создать нового участника команды",
+      "createNewStudio": "Создать новую студию"
+    }
   },
   "lynx": {
     "returnToSafety": "Вернуться в безопасность",

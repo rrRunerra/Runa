@@ -17,7 +17,7 @@ import { RrMediaEditDialog } from "./rrMediaEditDialog";
 
 export interface RrUserListSequelsTabProps {
   username: string;
-  mediaType: "anime" | "manga" | "tv" | "movie" | "game" | "book";
+  mediaType: "anime" | "manga" | "tv" | "movie" | "game" | "book" | "music";
 }
 
 interface SimilarItem {

@@ -1351,7 +1351,20 @@
     "connect": "Connect",
     "connected": "Connected",
     "disconnect": "Disconnect",
-    "toggleFavorite": "Toggle Favorite"
+    "toggleFavorite": "Toggle Favorite",
+    "submission": {
+      "modalTitleEdit": "Edit Media Metadata (V2)",
+      "modalTitleCreate": "Add New Media Entry (V2)",
+      "tabBasic": "Basic Info",
+      "tabRelease": "Release & Specs",
+      "tabAssets": "Media Assets",
+      "tabTaxonomy": "Taxonomy & Ratings",
+      "tabExternal": "External IDs",
+      "tabPeople": "People & Production",
+      "createNewCharacter": "Create New Character",
+      "createNewStaff": "Create New Staff Member",
+      "createNewStudio": "Create New Studio"
+    }
   },
   "lynx": {
     "returnToSafety": "Návrat do bezpečí",

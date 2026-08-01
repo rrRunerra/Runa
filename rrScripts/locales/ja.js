@@ -1350,7 +1350,20 @@ export default {
     "connect": "連携",
     "connected": "連携済み",
     "disconnect": "連携解除",
-    "toggleFavorite": "お気に入り切替"
+    "toggleFavorite": "お気に入り切替",
+    "submission": {
+      "modalTitleEdit": "メディアメタデータの編集 (V2)",
+      "modalTitleCreate": "新しいメディアエントリの追加 (V2)",
+      "tabBasic": "基本情報",
+      "tabRelease": "リリースと仕様",
+      "tabAssets": "メディアアセット",
+      "tabTaxonomy": "分類とレーティング",
+      "tabExternal": "外部ID",
+      "tabPeople": "人物と制作",
+      "createNewCharacter": "新しいキャラクターを作成",
+      "createNewStaff": "新しいスタッフを作成",
+      "createNewStudio": "新しいスタジオを作成"
+    }
   },
   "lynx": {
     "returnToSafety": "安全な場所に戻る",

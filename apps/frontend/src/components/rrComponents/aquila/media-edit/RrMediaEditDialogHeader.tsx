@@ -49,7 +49,7 @@ export function RrMediaEditDialogHeader({
       )}
 
       {/* Smooth gradient shadow overlay from bottom to top for title contrast */}
-      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+      <div className="absolute inset-0 bg-linear-to-t from-background via-background/60 to-transparent" />
 
       {/* Header content container */}
       <div className="absolute bottom-4 left-4 right-4 sm:left-6 sm:right-6 flex items-end gap-3 sm:gap-5 z-10">

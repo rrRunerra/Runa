@@ -105,4 +105,10 @@ export class SubmissionsController {
   ) {
     return this.submissionsService.searchRelations(mediaType || 'anime', query || '');
   }
+
+  @Public()
+  @Get('search/studios')
+  async searchStudios(@Query('q') query: string) {
+    return this.submissionsService.searchStudios(query || '');
+  }
 }

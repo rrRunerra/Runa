@@ -122,5 +122,5 @@ export const RrMediaCompactRow = memo(
       prevProps.entry.last_updated === nextProps.entry.last_updated &&
       prevProps.entry.last_added === nextProps.entry.last_added
     );
-  }
+  },
 );

@@ -1350,7 +1350,20 @@ export default {
     "connect": "Yhdistä",
     "connected": "Yhdistetty",
     "disconnect": "Katkaise yhteys",
-    "toggleFavorite": "Vaihda suosikki"
+    "toggleFavorite": "Vaihda suosikki",
+    "submission": {
+      "modalTitleEdit": "Muokkaa median metatietoja (V2)",
+      "modalTitleCreate": "Lisää uusi mediatieto (V2)",
+      "tabBasic": "Perustiedot",
+      "tabRelease": "Julkaisu & Tekniset tiedot",
+      "tabAssets": "Mediatiedostot",
+      "tabTaxonomy": "Taksonomia & Luokitukset",
+      "tabExternal": "Ukoiset tunnisteet",
+      "tabPeople": "Henkilöt & Tuotanto",
+      "createNewCharacter": "Luo uusi hahmo",
+      "createNewStaff": "Luo uusi henkilökunnan jäsen",
+      "createNewStudio": "Luo uusi studio"
+    }
   },
   "lynx": {
     "returnToSafety": "Palaa turvallisuuteen",

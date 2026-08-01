@@ -1350,7 +1350,20 @@
     "connect": "Bağlan",
     "connected": "Bağlandı",
     "disconnect": "Bağlantıyı Kes",
-    "toggleFavorite": "Favori Değiştir"
+    "toggleFavorite": "Favori Değiştir",
+    "submission": {
+      "modalTitleEdit": "Medya Meta Verilerini Düzenle (V2)",
+      "modalTitleCreate": "Yeni Medya Girişi Ekle (V2)",
+      "tabBasic": "Temel Bilgi",
+      "tabRelease": "Yayın & Özellikler",
+      "tabAssets": "Medya Varlıkları",
+      "tabTaxonomy": "Taksonomi ve Derecelendirmeler",
+      "tabExternal": "Harici Kimlikler",
+      "tabPeople": "Kişiler ve Üretim",
+      "createNewCharacter": "Yeni Karakter Oluştur",
+      "createNewStaff": "Yeni Personel Oluştur",
+      "createNewStudio": "Yeni Stüdyo Oluştur"
+    }
   },
   "lynx": {
     "returnToSafety": "Güvenli bölgeye dön",

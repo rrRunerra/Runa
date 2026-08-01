@@ -11,22 +11,18 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { Upload, Plus, Trash2, Search, Sparkles } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Sparkles, Info, Calendar, ImageIcon, Tag, Database, Users } from "lucide-react";
+
+import { RrSubmissionBasicTab } from "./submission/rrSubmissionBasicTab";
+import { RrSubmissionReleaseTab } from "./submission/rrSubmissionReleaseTab";
+import { RrSubmissionAssetsTab } from "./submission/rrSubmissionAssetsTab";
+import { RrSubmissionTaxonomyTab } from "./submission/rrSubmissionTaxonomyTab";
+import { RrSubmissionExternalIdsTab } from "./submission/rrSubmissionExternalIdsTab";
+import { RrSubmissionPeopleTab } from "./submission/rrSubmissionPeopleTab";
 
 export interface RrMediaSubmissionModalProps {
   isOpen: boolean;
@@ -168,32 +164,57 @@ const GENRE_OPTIONS: Record<string, string[]> = {
 };
 
 const FORMAT_OPTIONS: Record<string, string[]> = {
-  anime: [
-    "TV",
-    "TV_SHORT",
-    "MOVIE",
-    "SPECIAL",
-    "OVA",
-    "ONA",
-    "MUSIC",
-    "UNKNOWN",
-  ],
-  manga: ["MANGA", "NOVEL", "ONE_SHOT", "UNKNOWN"],
+  anime: ["TV", "TV_SHORT", "MOVIE", "SPECIAL", "OVA", "ONA", "MUSIC", "UNKNOWN"],
+  manga: ["MANGA", "NOVEL", "LIGHT_NOVEL", "ONE_SHOT", "MANHWA", "MANHUA", "UNKNOWN"],
+  tv: ["Scripted", "Animation", "Reality", "Documentary", "Talk Show", "News"],
+  movie: ["Theatrical", "Direct to Video", "TV Movie", "Short"],
+  game: ["Full Game", "DLC", "Expansion", "Mod"],
+  book: ["Hardcover", "Paperback", "eBook", "Audiobook"],
 };
 
 const STATUS_OPTIONS: Record<string, string[]> = {
-  anime: ["FINISHED", "RELEASING", "NOT_YET_RELEASED", "CANCELLED"],
-  manga: ["FINISHED", "RELEASING", "NOT_YET_RELEASED", "CANCELLED"],
-  tv: ["Continuing", "Ended", "Upcoming", "Canceled"],
-  movie: [
-    "Released",
-    "In Production",
-    "Post Production",
-    "Planned",
-    "Canceled",
+  anime: ["FINISHED", "RELEASING", "NOT_YET_RELEASED", "CANCELLED", "HIATUS", "UNKNOWN"],
+  manga: ["FINISHED", "RELEASING", "NOT_YET_RELEASED", "CANCELLED", "HIATUS", "UNKNOWN"],
+  tv: ["RETURNING_SERIES", "ENDED", "CANCELED", "IN_PRODUCTION", "UPCOMING", "UNKNOWN"],
+  movie: ["RELEASED", "IN_PRODUCTION", "POST_PRODUCTION", "RUMORED", "CANCELLED", "UNKNOWN"],
+  game: ["RELEASED", "EARLY_ACCESS", "ANNOUNCED", "IN_DEVELOPMENT", "DELAYED", "CANCELLED", "UNKNOWN"],
+  book: ["PUBLISHED", "RELEASING", "CANCELLED", "ON_HIATUS", "UNKNOWN"],
+};
+
+const SOURCE_OPTIONS: Record<string, string[]> = {
+  anime: [
+    "ORIGINAL",
+    "MANGA",
+    "LIGHT_NOVEL",
+    "VISUAL_NOVEL",
+    "VIDEO_GAME",
+    "OTHER",
+    "NOVEL",
+    "DOUJINSHI",
+    "ANIME",
+    "WEB_NOVEL",
+    "LIVE_ACTION",
+    "GAME",
+    "COMIC",
+    "MULTIMEDIA_PROJECT",
+    "PICTURE_BOOK",
+    "UNKNOWN",
   ],
-  game: ["Released", "Early Access", "In Development", "Cancelled"],
-  book: ["Published", "Upcoming"],
+  manga: [
+    "ORIGINAL",
+    "MANGA",
+    "LIGHT_NOVEL",
+    "VISUAL_NOVEL",
+    "VIDEO_GAME",
+    "OTHER",
+    "NOVEL",
+    "WEB_NOVEL",
+    "UNKNOWN",
+  ],
+  tv: ["Original", "Novel", "Book", "Comic", "Game", "True Story"],
+  movie: ["Original", "Book", "Comic", "Play", "Game", "Real Life"],
+  game: ["Original", "Book", "Anime", "Movie", "Manga"],
+  book: ["Original", "Folklore", "Historical Events"],
 };
 
 export function RrMediaSubmissionModal({
@@ -206,81 +227,102 @@ export function RrMediaSubmissionModal({
   onSuccess,
 }: RrMediaSubmissionModalProps): React.JSX.Element {
   const { data: session } = useSession();
-  const [selectedMediaType, setSelectedMediaType] =
-    useState<string>(initialMediaType);
-  const [activeTab, setActiveTab] = useState("general");
+  const [selectedMediaType, setSelectedMediaType] = useState<string>(initialMediaType);
+  const [activeTab, setActiveTab] = useState("basic");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
+  const [isUploadingBackground, setIsUploadingBackground] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [synonymsList, setSynonymsList] = useState<string[]>([]);
-  const [newSynonym, setNewSynonym] = useState("");
 
-  // Characters & Staff state
-  const [characterSearch, setCharacterSearch] = useState("");
-  const [characterResults, setCharacterResults] = useState<any[]>([]);
+  // Attached Entities
   const [selectedCharacters, setSelectedCharacters] = useState<any[]>([]);
-
-  // Relations state
-  const [relationSearch, setRelationSearch] = useState("");
-  const [relationResults, setRelationResults] = useState<any[]>([]);
+  const [selectedStaff, setSelectedStaff] = useState<any[]>([]);
+  const [selectedStudios, setSelectedStudios] = useState<any[]>([]);
   const [selectedRelations, setSelectedRelations] = useState<any[]>([]);
 
   useEffect(() => {
     if (isOpen) {
       const activeType = initialMediaType || "anime";
       setSelectedMediaType(activeType);
-      // Prefill initial data if editing or provided
+
+      // Prefill initial data
       setFormData({
-        titleEnglish:
+        titlePrimary:
+          initialData?.titlePrimary ||
           initialData?.titleEnglish ||
           initialData?.titleString ||
           initialData?.title?.english ||
           "",
+        titleEnglish:
+          initialData?.titleEnglish ||
+          initialData?.titlePrimary ||
+          initialData?.titleString ||
+          initialData?.title?.english ||
+          "",
+        titleSecondary:
+          initialData?.titleSecondary ||
+          initialData?.titleRomaji ||
+          initialData?.title?.romaji ||
+          "",
         titleRomaji:
-          initialData?.titleRomaji || initialData?.title?.romaji || "",
+          initialData?.titleRomaji ||
+          initialData?.titleSecondary ||
+          initialData?.title?.romaji ||
+          "",
         titleNative:
           initialData?.titleNative || initialData?.title?.native || "",
+        tagline: initialData?.tagline || "",
         subtitle: initialData?.subtitle || "",
         description: initialData?.description || "",
         coverImage:
           initialData?.coverImageLarge || initialData?.coverImage || "",
         bannerImage:
           initialData?.bannerImage || initialData?.backgroundImage || "",
+        backgroundImage:
+          initialData?.backgroundImage || initialData?.bannerImage || "",
         format: initialData?.format || FORMAT_OPTIONS[activeType]?.[0] || "",
         status: initialData?.status || STATUS_OPTIONS[activeType]?.[0] || "",
-        episodes: initialData?.episodes || "",
+        source: initialData?.source || SOURCE_OPTIONS[activeType]?.[0] || "",
+        episodes: initialData?.episodes || initialData?.episodeCount || "",
+        episodeCount: initialData?.episodeCount || initialData?.episodes || "",
         duration:
           initialData?.duration ||
           initialData?.runtime ||
           initialData?.averageRuntime ||
           "",
-        chapters: initialData?.chapters || "",
-        volumes: initialData?.volumes || "",
-        source: initialData?.source || "",
-        season: initialData?.season || "SPRING",
+        runtime:
+          initialData?.runtime ||
+          initialData?.duration ||
+          initialData?.averageRuntime ||
+          "",
+        chapters: initialData?.chapters || initialData?.chapterCount || "",
+        volumes: initialData?.volumes || initialData?.volumeCount || "",
+        pageCount: initialData?.pageCount || initialData?.pages || "",
+        season: initialData?.season || initialData?.seasonSeason || "SPRING",
         seasonYear: initialData?.seasonYear || new Date().getFullYear(),
         startDateYear:
           initialData?.startDateYear ||
-          initialData?.releasedYear ||
-          initialData?.publishedYear ||
+          initialData?.firstAiredYear ||
+          initialData?.releaseDateYear ||
           "",
         startDateMonth:
           initialData?.startDateMonth ||
-          initialData?.releasedMonth ||
-          initialData?.publishedMonth ||
+          initialData?.firstAiredMonth ||
+          initialData?.releaseDateMonth ||
           "",
         startDateDay:
           initialData?.startDateDay ||
-          initialData?.releasedDay ||
-          initialData?.publishedDay ||
+          initialData?.firstAiredDay ||
+          initialData?.releaseDateDay ||
           "",
-        endDateYear: initialData?.endDateYear || "",
-        endDateMonth: initialData?.endDateMonth || "",
-        endDateDay: initialData?.endDateDay || "",
+        endDateYear: initialData?.endDateYear || initialData?.lastAiredYear || "",
+        endDateMonth: initialData?.endDateMonth || initialData?.lastAiredMonth || "",
+        endDateDay: initialData?.endDateDay || initialData?.lastAiredDay || "",
         isAdult:
           typeof initialData?.isAdult === "boolean"
             ? initialData.isAdult
@@ -289,27 +331,33 @@ export function RrMediaSubmissionModal({
         countryOfOrigin:
           initialData?.countryOfOrigin || initialData?.originalCountry || "JP",
         originalLanguage: initialData?.originalLanguage || "ja",
-        contentRating:
-          initialData?.contentRating || initialData?.esrbRating || "",
-        publisher: initialData?.publisher || "",
-        authors: Array.isArray(initialData?.authors)
-          ? initialData.authors.join(", ")
-          : "",
-        artists: Array.isArray(initialData?.artists)
-          ? initialData.artists.join(", ")
-          : "",
-        platforms: Array.isArray(initialData?.platforms)
-          ? initialData.platforms.join(", ")
-          : "",
-        developers: Array.isArray(initialData?.developers)
-          ? initialData.developers.join(", ")
-          : "",
-        publishers: Array.isArray(initialData?.publishers)
-          ? initialData.publishers.join(", ")
-          : "",
+        ageRating:
+          initialData?.ageRating || initialData?.esrbRating || "",
+        ageRatingGuide: initialData?.ageRatingGuide || "",
+        website: initialData?.website || initialData?.homepage || "",
+        siteUrl: initialData?.siteUrl || "",
+        budget: initialData?.budget || "",
+        revenue: initialData?.revenue || initialData?.boxOffice || "",
+        hltbMainStory: initialData?.hltbMainStory || "",
+        hltbExtraStory: initialData?.hltbExtraStory || "",
+        hltbCompletionist: initialData?.hltbCompletionist || "",
+        series: initialData?.series || "",
+        seriesPosition: initialData?.seriesPosition || "",
         isbn10: initialData?.isbn10 || "",
         isbn13: initialData?.isbn13 || "",
-        pageCount: initialData?.pageCount || initialData?.pages || "",
+        retailPrice: initialData?.retailPrice || "",
+        retailPriceCurrency: initialData?.retailPriceCurrency || "USD",
+        anilistId: initialData?.anilistId || "",
+        malId: initialData?.malId || "",
+        aniDBId: initialData?.aniDBId || "",
+        tvDBId: initialData?.tvDBId || initialData?.tvdbId || "",
+        imdbId: initialData?.imdbId || "",
+        tmdbId: initialData?.tmdbId || "",
+        traktId: initialData?.traktId || "",
+        rawgId: initialData?.rawgId || "",
+        igdbId: initialData?.igdbId || "",
+        steamAppId: initialData?.steamAppId || "",
+        googleBookId: initialData?.googleBookId || "",
       });
 
       setSelectedGenres(
@@ -319,139 +367,67 @@ export function RrMediaSubmissionModal({
             ? initialData.subjects
             : [],
       );
+
       setSynonymsList(
         Array.isArray(initialData?.synonyms) ? initialData.synonyms : [],
       );
 
-      // Character prefill
+      // Prefill Characters
       let charList: any[] = [];
       if (Array.isArray(initialData?.characters)) {
         charList = initialData.characters.map((c: any) => ({
           characterId: c.characterId || c.id || c.character?.id,
           name:
             c.name ||
+            c.namePrimary ||
             [
               c.nameFirst || c.character?.nameFirst,
               c.nameLast || c.character?.nameLast,
             ]
               .filter(Boolean)
               .join(" ") ||
-            c.nameNative ||
-            c.character?.nameNative ||
             "Character",
           role: c.role || "MAIN",
           image: c.image || c.coverImage || c.character?.image,
         }));
-      } else if (Array.isArray(initialData?.characters?.edges)) {
-        charList = initialData.characters.edges.map((e: any) => ({
-          characterId: e.node?.id,
-          name:
-            e.node?.name?.userPreferred ||
-            [e.node?.name?.first, e.node?.name?.last]
-              .filter(Boolean)
-              .join(" ") ||
-            "Character",
-          role: e.role || "MAIN",
-          image: e.node?.image?.large || e.node?.image?.medium,
-        }));
-      } else if (Array.isArray(initialData?.animeCharacters)) {
-        charList = initialData.animeCharacters.map((ac: any) => ({
-          characterId: ac.characterId || ac.character?.id,
-          name:
-            [ac.character?.nameFirst, ac.character?.nameLast]
-              .filter(Boolean)
-              .join(" ") ||
-            ac.character?.nameNative ||
-            "Character",
-          role: ac.role || "MAIN",
-          image: ac.character?.image,
-        }));
-      } else if (Array.isArray(initialData?.mangaCharacters)) {
-        charList = initialData.mangaCharacters.map((mc: any) => ({
-          characterId: mc.characterId || mc.character?.id,
-          name:
-            [mc.character?.nameFirst, mc.character?.nameLast]
-              .filter(Boolean)
-              .join(" ") ||
-            mc.character?.nameNative ||
-            "Character",
-          role: mc.role || "MAIN",
-          image: mc.character?.image,
-        }));
       }
       setSelectedCharacters(charList);
 
-      // Helper for robust title string parsing
-      const parseRelationTitle = (item: any): string => {
-        if (!item) return "Related Media";
-        if (typeof item.title === "string" && item.title) return item.title;
-        if (typeof item.title === "object" && item.title) {
-          return (
-            item.title.english ||
-            item.title.romaji ||
-            item.title.native ||
-            item.title.userPreferred ||
-            "Related Media"
-          );
-        }
-        return (
-          item.titleEnglish ||
-          item.titleRomaji ||
-          item.titleNative ||
-          item.titleString ||
-          item.node?.title?.userPreferred ||
-          item.node?.title?.english ||
-          item.node?.title?.romaji ||
-          "Related Media"
-        );
-      };
+      // Prefill Staff
+      let staffList: any[] = [];
+      if (Array.isArray(initialData?.staff)) {
+        staffList = initialData.staff.map((s: any) => ({
+          staffId: s.staffId || s.id || s.actorId,
+          name: s.name || s.namePrimary || s.staff?.namePrimary || "Staff",
+          role: s.role || "DIRECTOR",
+          image: s.image || s.staff?.image,
+        }));
+      }
+      setSelectedStaff(staffList);
 
-      // Relation prefill
+      // Prefill Studios
+      let studioList: any[] = [];
+      if (Array.isArray(initialData?.studiosList) || Array.isArray(initialData?.studiosData)) {
+        const rawStudios = initialData.studiosList || initialData.studiosData;
+        studioList = rawStudios.map((st: any) => ({
+          studioId: st.studioId || st.id,
+          name: st.name || st.studio?.name || "Studio",
+          isMain: typeof st.isMain === "boolean" ? st.isMain : true,
+        }));
+      }
+      setSelectedStudios(studioList);
+
+      // Prefill Relations
       let relList: any[] = [];
       if (Array.isArray(initialData?.relations)) {
         relList = initialData.relations.map((r: any) => ({
-          relatedMediaId:
-            r.relatedMediaId || r.id || r.relatedAnimeId || r.relatedMangaId,
-          title: parseRelationTitle(r),
+          relatedMediaId: r.relatedMediaId || r.id,
+          title:
+            typeof r.title === "string"
+              ? r.title
+              : r.titlePrimary || r.titleEnglish || "Related Media",
           relationType: r.relationType || "SEQUEL",
-          image:
-            r.image ||
-            r.coverImage ||
-            r.coverImageLarge ||
-            r.node?.coverImage?.large,
-        }));
-      } else if (Array.isArray(initialData?.relations?.edges)) {
-        relList = initialData.relations.edges.map((e: any) => ({
-          relatedMediaId: e.node?.id,
-          title: parseRelationTitle(e.node),
-          relationType: e.relationType || "SEQUEL",
-          image: e.node?.coverImage?.large || e.node?.coverImage?.medium,
-        }));
-      } else if (Array.isArray(initialData?.animeRelations)) {
-        relList = initialData.animeRelations.map((ar: any) => ({
-          relatedMediaId:
-            ar.relatedAnimeId ||
-            ar.relatedMangaId ||
-            ar.relatedAnime?.id ||
-            ar.relatedManga?.id,
-          title: parseRelationTitle(ar.relatedAnime || ar.relatedManga),
-          relationType: ar.relationType || "SEQUEL",
-          image:
-            ar.relatedAnime?.coverImageLarge ||
-            ar.relatedManga?.coverImageLarge,
-        }));
-      } else if (Array.isArray(initialData?.mangaRelations)) {
-        relList = initialData.mangaRelations.map((mr: any) => ({
-          relatedMediaId:
-            mr.relatedMangaId ||
-            mr.relatedAnimeId ||
-            mr.relatedManga?.id ||
-            mr.relatedAnime?.id,
-          title: parseRelationTitle(mr.relatedManga || mr.relatedAnime),
-          relationType: mr.relationType || "SEQUEL",
-          image:
-            mr.relatedManga?.coverImageLarge ||
-            mr.relatedAnime?.coverImageLarge,
+          image: r.image || r.coverImage,
         }));
       }
       setSelectedRelations(relList);
@@ -462,16 +438,15 @@ export function RrMediaSubmissionModal({
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const toggleGenre = (genre: string) => {
+  const handleToggleGenre = (genre: string) => {
     setSelectedGenres((prev) =>
       prev.includes(genre) ? prev.filter((g) => g !== genre) : [...prev, genre],
     );
   };
 
-  const handleAddSynonym = () => {
-    if (newSynonym.trim() && !synonymsList.includes(newSynonym.trim())) {
-      setSynonymsList((prev) => [...prev, newSynonym.trim()]);
-      setNewSynonym("");
+  const handleAddSynonym = (syn: string) => {
+    if (syn.trim() && !synonymsList.includes(syn.trim())) {
+      setSynonymsList((prev) => [...prev, syn.trim()]);
     }
   };
 
@@ -479,17 +454,17 @@ export function RrMediaSubmissionModal({
     setSynonymsList((prev) => prev.filter((s) => s !== syn));
   };
 
-  // Image Upload helper
+  // Image Upload Handler
   const handleImageUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
-    field: "coverImage" | "bannerImage",
+    field: "coverImage" | "bannerImage" | "backgroundImage",
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const isCover = field === "coverImage";
-    if (isCover) setIsUploadingCover(true);
-    else setIsUploadingBanner(true);
+    if (field === "coverImage") setIsUploadingCover(true);
+    else if (field === "bannerImage") setIsUploadingBanner(true);
+    else setIsUploadingBackground(true);
 
     try {
       const uploadData = new FormData();
@@ -515,46 +490,62 @@ export function RrMediaSubmissionModal({
     } catch (err: any) {
       toast.error(err.message || "Failed to upload image");
     } finally {
-      if (isCover) setIsUploadingCover(false);
-      else setIsUploadingBanner(false);
+      if (field === "coverImage") setIsUploadingCover(false);
+      else if (field === "bannerImage") setIsUploadingBanner(false);
+      else setIsUploadingBackground(false);
     }
   };
 
-  // Explicit onSubmit search handlers
-  const handleCharacterSearchSubmit = async () => {
-    if (!characterSearch.trim()) return;
+  // Backend Search Helpers
+  const handleSearchCharacters = async (query: string) => {
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/aquila/submissions/search/characters?q=${encodeURIComponent(
-          characterSearch.trim(),
-        )}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/aquila/submissions/search/characters?q=${encodeURIComponent(query)}`,
       );
-      if (res.ok) {
-        const data = await res.json();
-        setCharacterResults(data);
-      }
+      if (res.ok) return await res.json();
     } catch {
-      // silent search error
+      // silent
     }
+    return [];
   };
 
-  const handleRelationSearchSubmit = async () => {
-    if (!relationSearch.trim()) return;
+  const handleSearchStaff = async (query: string) => {
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/aquila/submissions/search/relations?mediaType=${selectedMediaType}&q=${encodeURIComponent(
-          relationSearch.trim(),
-        )}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/aquila/submissions/search/actors?q=${encodeURIComponent(query)}`,
       );
-      if (res.ok) {
-        const data = await res.json();
-        setRelationResults(data);
-      }
+      if (res.ok) return await res.json();
     } catch {
-      // silent search error
+      // silent
     }
+    return [];
   };
 
+  const handleSearchStudios = async (query: string) => {
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/aquila/submissions/search/studios?q=${encodeURIComponent(query)}`,
+      );
+      if (res.ok) return await res.json();
+    } catch {
+      // silent
+    }
+    return [];
+  };
+
+  const handleSearchRelations = async (query: string) => {
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/aquila/submissions/search/relations?mediaType=${selectedMediaType}&q=${encodeURIComponent(query)}`,
+      );
+      if (res.ok) return await res.json();
+    } catch {
+      // silent
+    }
+    return [];
+  };
+
+  // Submit Handler
   const handleSubmit = async () => {
     if (!session?.accessToken) {
       toast.error("You must be logged in to submit media edits or additions.");
@@ -563,6 +554,7 @@ export function RrMediaSubmissionModal({
 
     if (
       !formData.titleEnglish &&
+      !formData.titlePrimary &&
       !formData.titleRomaji &&
       !formData.titleNative
     ) {
@@ -577,37 +569,9 @@ export function RrMediaSubmissionModal({
       genres: selectedGenres,
       subjects: selectedGenres,
       synonyms: synonymsList,
-      authors: formData.authors
-        ? formData.authors
-            .split(",")
-            .map((s: string) => s.trim())
-            .filter(Boolean)
-        : [],
-      artists: formData.artists
-        ? formData.artists
-            .split(",")
-            .map((s: string) => s.trim())
-            .filter(Boolean)
-        : [],
-      platforms: formData.platforms
-        ? formData.platforms
-            .split(",")
-            .map((s: string) => s.trim())
-            .filter(Boolean)
-        : [],
-      developers: formData.developers
-        ? formData.developers
-            .split(",")
-            .map((s: string) => s.trim())
-            .filter(Boolean)
-        : [],
-      publishers: formData.publishers
-        ? formData.publishers
-            .split(",")
-            .map((s: string) => s.trim())
-            .filter(Boolean)
-        : [],
       characters: selectedCharacters,
+      staff: selectedStaff,
+      studiosList: selectedStudios,
       relations: selectedRelations,
     };
 
@@ -652,28 +616,30 @@ export function RrMediaSubmissionModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-[92vw]! max-w-250! sm:max-w-250! h-[88vh]! max-h-225! flex flex-col p-0 gap-0 overflow-hidden bg-background/90 backdrop-blur-2xl border border-border/60 rounded-3xl shadow-2xl text-foreground [&>button]:text-foreground [&>button]:z-60">
+      <DialogContent className="w-[94vw]! max-w-280! sm:max-w-280! h-[90vh]! max-h-240! flex flex-col p-0 gap-0 overflow-hidden bg-background/95 backdrop-blur-2xl border border-border/60 rounded-3xl shadow-2xl text-foreground [&>button]:text-foreground [&>button]:z-60">
+        {/* Header */}
         <DialogHeader className="p-6 border-b border-border/50 bg-muted/20">
           <div className="flex items-center justify-between">
             <div>
               <DialogTitle className="text-xl font-bold tracking-tight flex items-center gap-2 text-foreground">
                 <Sparkles className="size-5 text-primary" />
                 {actionType === "EDIT"
-                  ? "Edit Media Metadata"
-                  : "Add New Media Entry"}
+                  ? "Edit Media Metadata (V2)"
+                  : "Add New Media Entry (V2)"}
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground mt-1">
                 {actionType === "EDIT"
-                  ? "Propose edits to this media metadata. Changes are reviewed by administrators or applied directly if you hold management permissions."
-                  : "Submit a new media title to the Aquila database."}
+                  ? "Propose metadata edits to the Aquila database. Edits will be applied directly if you hold management permissions."
+                  : "Submit a new media entry into the Aquila V2 database."}
               </DialogDescription>
             </div>
+
             {actionType === "CREATE" && (
               <Select
                 value={selectedMediaType}
                 onValueChange={(val) => setSelectedMediaType(val)}
               >
-                <SelectTrigger className="w-35 h-10 text-xs font-bold capitalize bg-background/80 border-border/70 rounded-xl shadow-2xs cursor-pointer">
+                <SelectTrigger className="w-36 h-10 text-xs font-bold capitalize bg-background/80 border-border/70 rounded-xl shadow-2xs cursor-pointer">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="bg-popover/95 backdrop-blur-md border-border/70 rounded-xl">
@@ -689,1034 +655,140 @@ export function RrMediaSubmissionModal({
           </div>
         </DialogHeader>
 
-        {/* Tab Navigation */}
+        {/* Modular Tabs Navigation */}
         <Tabs
           value={activeTab}
           onValueChange={setActiveTab}
           className="flex-1 flex flex-col overflow-hidden"
         >
           <div className="px-6 pt-3 pb-3 border-b border-border/50 bg-muted/15">
-            <TabsList className="flex items-center justify-start gap-1.5 h-11 bg-muted/60 p-1 rounded-xl w-full overflow-x-auto border border-border/50 shadow-2xs">
+            <TabsList className="flex items-center justify-start gap-1 h-11 bg-muted/60 p-1 rounded-xl w-full overflow-x-auto border border-border/50 shadow-2xs">
               <TabsTrigger
-                value="general"
-                className="px-4 text-xs rounded-lg font-bold transition-all data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-2xs whitespace-nowrap"
+                value="basic"
+                className="gap-1.5 px-3.5 text-xs rounded-lg font-bold transition-all data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-2xs whitespace-nowrap"
               >
-                General
+                <Info className="size-3.5" />
+                Basic Info
               </TabsTrigger>
               <TabsTrigger
-                value="images"
-                className="px-4 text-xs rounded-lg font-bold transition-all data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-2xs whitespace-nowrap"
+                value="release"
+                className="gap-1.5 px-3.5 text-xs rounded-lg font-bold transition-all data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-2xs whitespace-nowrap"
               >
-                Images & Links
+                <Calendar className="size-3.5" />
+                Release & Specs
               </TabsTrigger>
               <TabsTrigger
-                value="genres"
-                className="px-4 text-xs rounded-lg font-bold transition-all data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-2xs whitespace-nowrap"
+                value="assets"
+                className="gap-1.5 px-3.5 text-xs rounded-lg font-bold transition-all data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-2xs whitespace-nowrap"
               >
-                Genres & Tags
+                <ImageIcon className="size-3.5" />
+                Media Assets
               </TabsTrigger>
               <TabsTrigger
-                value="characters"
-                className="px-4 text-xs rounded-lg font-bold transition-all data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-2xs whitespace-nowrap"
+                value="taxonomy"
+                className="gap-1.5 px-3.5 text-xs rounded-lg font-bold transition-all data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-2xs whitespace-nowrap"
               >
-                Characters & Staff
+                <Tag className="size-3.5" />
+                Taxonomy & Ratings
               </TabsTrigger>
               <TabsTrigger
-                value="relations"
-                className="px-4 text-xs rounded-lg font-bold transition-all data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-2xs whitespace-nowrap"
+                value="external"
+                className="gap-1.5 px-3.5 text-xs rounded-lg font-bold transition-all data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-2xs whitespace-nowrap"
               >
-                Relations
+                <Database className="size-3.5" />
+                External IDs
+              </TabsTrigger>
+              <TabsTrigger
+                value="people"
+                className="gap-1.5 px-3.5 text-xs rounded-lg font-bold transition-all data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-2xs whitespace-nowrap"
+              >
+                <Users className="size-3.5" />
+                People & Production
               </TabsTrigger>
             </TabsList>
           </div>
 
+          {/* Tab Contents */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4 no-scrollbar">
-            {/* 1. General Tab */}
-            <TabsContent value="general" className="m-0 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="space-y-1.5 md:col-span-1">
-                  <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                    Title (English)
-                  </Label>
-                  <Input
-                    placeholder="e.g. Frieren: Beyond Journey's End"
-                    value={formData.titleEnglish || ""}
-                    onChange={(e) =>
-                      handleChange("titleEnglish", e.target.value)
-                    }
-                    className="bg-background/80 border-border/70 rounded-xl h-10 text-xs font-medium focus-visible:ring-2 focus-visible:ring-primary/20"
-                  />
-                </div>
-                <div className="space-y-1.5 md:col-span-1">
-                  <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                    Title (Romaji)
-                  </Label>
-                  <Input
-                    placeholder="e.g. Sousou no Frieren"
-                    value={formData.titleRomaji || ""}
-                    onChange={(e) =>
-                      handleChange("titleRomaji", e.target.value)
-                    }
-                    className="bg-background/80 border-border/70 rounded-xl h-10 text-xs font-medium focus-visible:ring-2 focus-visible:ring-primary/20"
-                  />
-                </div>
-                <div className="space-y-1.5 md:col-span-1">
-                  <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                    Title (Native)
-                  </Label>
-                  <Input
-                    placeholder="e.g. 葬送のフリーレン"
-                    value={formData.titleNative || ""}
-                    onChange={(e) =>
-                      handleChange("titleNative", e.target.value)
-                    }
-                    className="bg-background/80 border-border/70 rounded-xl h-10 text-xs font-medium focus-visible:ring-2 focus-visible:ring-primary/20"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                  Description
-                </Label>
-                <Textarea
-                  rows={4}
-                  placeholder="Enter synopsis or media description..."
-                  value={formData.description || ""}
-                  onChange={(e) => handleChange("description", e.target.value)}
-                  className="bg-background/80 border-border/70 rounded-xl text-xs font-medium p-3 focus-visible:ring-2 focus-visible:ring-primary/20 resize-y"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {FORMAT_OPTIONS[selectedMediaType] && (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                      Format
-                    </Label>
-                    <Select
-                      value={
-                        formData.format || FORMAT_OPTIONS[selectedMediaType][0]
-                      }
-                      onValueChange={(v) => handleChange("format", v)}
-                    >
-                      <SelectTrigger className="h-10 text-xs font-medium bg-background/80 border-border/70 rounded-xl shadow-2xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover/95 border-border/70 rounded-xl">
-                        {FORMAT_OPTIONS[selectedMediaType].map((fmt) => (
-                          <SelectItem key={fmt} value={fmt}>
-                            {fmt}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                {STATUS_OPTIONS[selectedMediaType] && (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                      Status
-                    </Label>
-                    <Select
-                      value={
-                        formData.status || STATUS_OPTIONS[selectedMediaType][0]
-                      }
-                      onValueChange={(v) => handleChange("status", v)}
-                    >
-                      <SelectTrigger className="h-10 text-xs font-medium bg-background/80 border-border/70 rounded-xl shadow-2xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover/95 border-border/70 rounded-xl">
-                        {STATUS_OPTIONS[selectedMediaType].map((st) => (
-                          <SelectItem key={st} value={st}>
-                            {st}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                {(selectedMediaType === "anime" ||
-                  selectedMediaType === "manga" ||
-                  selectedMediaType === "book") && (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                      {selectedMediaType === "anime"
-                        ? "Episodes"
-                        : selectedMediaType === "manga"
-                          ? "Chapters"
-                          : "Pages"}
-                    </Label>
-                    <Input
-                      type="number"
-                      placeholder="e.g. 28"
-                      value={
-                        selectedMediaType === "anime"
-                          ? formData.episodes || ""
-                          : selectedMediaType === "manga"
-                            ? formData.chapters || ""
-                            : formData.pageCount || ""
-                      }
-                      onChange={(e) =>
-                        handleChange(
-                          selectedMediaType === "anime"
-                            ? "episodes"
-                            : selectedMediaType === "manga"
-                              ? "chapters"
-                              : "pageCount",
-                          e.target.value,
-                        )
-                      }
-                      className="bg-background/80 border-border/70 rounded-xl h-10 text-xs font-semibold focus-visible:ring-2 focus-visible:ring-primary/20"
-                    />
-                  </div>
-                )}
-
-                {(selectedMediaType === "anime" ||
-                  selectedMediaType === "tv" ||
-                  selectedMediaType === "movie") && (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                      Duration (mins)
-                    </Label>
-                    <Input
-                      type="number"
-                      placeholder="e.g. 24"
-                      value={formData.duration || ""}
-                      onChange={(e) => handleChange("duration", e.target.value)}
-                      className="bg-background/80 border-border/70 rounded-xl h-10 text-xs font-semibold focus-visible:ring-2 focus-visible:ring-primary/20"
-                    />
-                  </div>
-                )}
-
-                {selectedMediaType === "manga" && (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                      Volumes
-                    </Label>
-                    <Input
-                      type="number"
-                      placeholder="e.g. 12"
-                      value={formData.volumes || ""}
-                      onChange={(e) => handleChange("volumes", e.target.value)}
-                      className="bg-background/80 border-border/70 rounded-xl h-10 text-xs font-semibold focus-visible:ring-2 focus-visible:ring-primary/20"
-                    />
-                  </div>
-                )}
-
-                {(selectedMediaType === "anime" ||
-                  selectedMediaType === "manga") && (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                      Source
-                    </Label>
-                    <Select
-                      value={formData.source || "ORIGINAL"}
-                      onValueChange={(v) => handleChange("source", v)}
-                    >
-                      <SelectTrigger className="h-10 text-xs font-medium bg-background/80 border-border/70 rounded-xl shadow-2xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="bg-popover/95 border-border/70 rounded-xl">
-                        <SelectItem value="ORIGINAL">Original</SelectItem>
-                        <SelectItem value="MANGA">Manga</SelectItem>
-                        <SelectItem value="LIGHT_NOVEL">Light Novel</SelectItem>
-                        <SelectItem value="VISUAL_NOVEL">
-                          Visual Novel
-                        </SelectItem>
-                        <SelectItem value="GAME">Game</SelectItem>
-                        <SelectItem value="OTHER">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                {selectedMediaType === "anime" && (
-                  <>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                        Season
-                      </Label>
-                      <Select
-                        value={formData.season || "SPRING"}
-                        onValueChange={(v) => handleChange("season", v)}
-                      >
-                        <SelectTrigger className="h-10 text-xs font-medium bg-background/80 border-border/70 rounded-xl shadow-2xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className="bg-popover/95 border-border/70 rounded-xl">
-                          <SelectItem value="WINTER">Winter</SelectItem>
-                          <SelectItem value="SPRING">Spring</SelectItem>
-                          <SelectItem value="SUMMER">Summer</SelectItem>
-                          <SelectItem value="FALL">Fall</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                        Season Year
-                      </Label>
-                      <Input
-                        type="number"
-                        placeholder="e.g. 2024"
-                        value={formData.seasonYear || ""}
-                        onChange={(e) =>
-                          handleChange("seasonYear", e.target.value)
-                        }
-                        className="bg-background/80 border-border/70 rounded-xl h-10 text-xs font-semibold focus-visible:ring-2 focus-visible:ring-primary/20"
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* Start & End Dates */}
-              <div className="space-y-2 pt-2 border-t border-border/40">
-                <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                  Start Date
-                </Label>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-[11px] font-semibold text-muted-foreground">
-                      Year
-                    </Label>
-                    <Input
-                      type="number"
-                      placeholder="YYYY"
-                      value={formData.startDateYear || ""}
-                      onChange={(e) =>
-                        handleChange("startDateYear", e.target.value)
-                      }
-                      className="bg-background/80 border-border/70 rounded-xl h-10 text-xs font-medium"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-[11px] font-semibold text-muted-foreground">
-                      Month
-                    </Label>
-                    <Input
-                      type="number"
-                      placeholder="1-12"
-                      value={formData.startDateMonth || ""}
-                      onChange={(e) =>
-                        handleChange("startDateMonth", e.target.value)
-                      }
-                      className="bg-background/80 border-border/70 rounded-xl h-10 text-xs font-medium"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-[11px] font-semibold text-muted-foreground">
-                      Day
-                    </Label>
-                    <Input
-                      type="number"
-                      placeholder="1-31"
-                      value={formData.startDateDay || ""}
-                      onChange={(e) =>
-                        handleChange("startDateDay", e.target.value)
-                      }
-                      className="bg-background/80 border-border/70 rounded-xl h-10 text-xs font-medium"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {(selectedMediaType === "anime" ||
-                selectedMediaType === "manga") && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                    End Date
-                  </Label>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="space-y-1">
-                      <Label className="text-[11px] font-semibold text-muted-foreground">
-                        Year
-                      </Label>
-                      <Input
-                        type="number"
-                        placeholder="YYYY"
-                        value={formData.endDateYear || ""}
-                        onChange={(e) =>
-                          handleChange("endDateYear", e.target.value)
-                        }
-                        className="bg-background/80 border-border/70 rounded-xl h-10 text-xs font-medium"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[11px] font-semibold text-muted-foreground">
-                        Month
-                      </Label>
-                      <Input
-                        type="number"
-                        placeholder="1-12"
-                        value={formData.endDateMonth || ""}
-                        onChange={(e) =>
-                          handleChange("endDateMonth", e.target.value)
-                        }
-                        className="bg-background/80 border-border/70 rounded-xl h-10 text-xs font-medium"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[11px] font-semibold text-muted-foreground">
-                        Day
-                      </Label>
-                      <Input
-                        type="number"
-                        placeholder="1-31"
-                        value={formData.endDateDay || ""}
-                        onChange={(e) =>
-                          handleChange("endDateDay", e.target.value)
-                        }
-                        className="bg-background/80 border-border/70 rounded-xl h-10 text-xs font-medium"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Extra Metadata Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-border/40">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                    Country of Origin
-                  </Label>
-                  <Input
-                    placeholder="e.g. JP, US, KR"
-                    value={
-                      formData.countryOfOrigin || formData.originalCountry || ""
-                    }
-                    onChange={(e) =>
-                      handleChange("countryOfOrigin", e.target.value)
-                    }
-                    className="bg-background/80 border-border/70 rounded-xl h-10 text-xs font-medium"
-                  />
-                </div>
-
-                {(selectedMediaType === "anime" ||
-                  selectedMediaType === "manga") && (
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                      Hashtag
-                    </Label>
-                    <Input
-                      placeholder="e.g. #frieren"
-                      value={formData.hashtag || ""}
-                      onChange={(e) => handleChange("hashtag", e.target.value)}
-                      className="bg-background/80 border-border/70 rounded-xl h-10 text-xs font-medium"
-                    />
-                  </div>
-                )}
-
-                {selectedMediaType === "book" && (
-                  <>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                        Authors (comma separated)
-                      </Label>
-                      <Input
-                        placeholder="e.g. J.K. Rowling"
-                        value={formData.authors || ""}
-                        onChange={(e) =>
-                          handleChange("authors", e.target.value)
-                        }
-                        className="bg-background/80 border-border/70 rounded-xl h-10 text-xs font-medium"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                        Publishers
-                      </Label>
-                      <Input
-                        placeholder="e.g. Bloomsbury"
-                        value={formData.publishers || ""}
-                        onChange={(e) =>
-                          handleChange("publishers", e.target.value)
-                        }
-                        className="bg-background/80 border-border/70 rounded-xl h-10 text-xs font-medium"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                        ISBN-10
-                      </Label>
-                      <Input
-                        placeholder="e.g. 0747532699"
-                        value={formData.isbn10 || ""}
-                        onChange={(e) => handleChange("isbn10", e.target.value)}
-                        className="bg-background/80 border-border/70 rounded-xl h-10 text-xs font-medium"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                        ISBN-13
-                      </Label>
-                      <Input
-                        placeholder="e.g. 9780747532699"
-                        value={formData.isbn13 || ""}
-                        onChange={(e) => handleChange("isbn13", e.target.value)}
-                        className="bg-background/80 border-border/70 rounded-xl h-10 text-xs font-medium"
-                      />
-                    </div>
-                  </>
-                )}
-
-                {selectedMediaType === "game" && (
-                  <>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                        Developers
-                      </Label>
-                      <Input
-                        placeholder="e.g. FromSoftware"
-                        value={formData.developers || ""}
-                        onChange={(e) =>
-                          handleChange("developers", e.target.value)
-                        }
-                        className="bg-background/80 border-border/70 rounded-xl h-10 text-xs font-medium"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                        Publishers
-                      </Label>
-                      <Input
-                        placeholder="e.g. Bandai Namco"
-                        value={formData.publishers || ""}
-                        onChange={(e) =>
-                          handleChange("publishers", e.target.value)
-                        }
-                        className="bg-background/80 border-border/70 rounded-xl h-10 text-xs font-medium"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                        Platforms
-                      </Label>
-                      <Input
-                        placeholder="e.g. PC, PS5, Xbox Series X"
-                        value={formData.platforms || ""}
-                        onChange={(e) =>
-                          handleChange("platforms", e.target.value)
-                        }
-                        className="bg-background/80 border-border/70 rounded-xl h-10 text-xs font-medium"
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
+            {/* 1. Basic Info */}
+            <TabsContent value="basic" className="m-0">
+              <RrSubmissionBasicTab
+                mediaType={selectedMediaType}
+                formData={formData}
+                onChange={handleChange}
+                formatOptions={FORMAT_OPTIONS[selectedMediaType] || []}
+                statusOptions={STATUS_OPTIONS[selectedMediaType] || []}
+                sourceOptions={SOURCE_OPTIONS[selectedMediaType] || []}
+              />
             </TabsContent>
 
-            {/* 2. Images & Links Tab */}
-            <TabsContent value="images" className="m-0 space-y-5">
-              {/* Cover Image */}
-              <div className="space-y-2 bg-card/40 border border-border/60 rounded-2xl p-4 sm:p-5 shadow-xs">
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Cover Image
-                </Label>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Paste external image URL (https://...)"
-                    value={formData.coverImage || ""}
-                    onChange={(e) => handleChange("coverImage", e.target.value)}
-                    className="flex-1 bg-background/80 border-border/70 rounded-xl h-10 text-xs font-medium"
-                  />
-                  <div className="relative">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5 text-xs h-10 rounded-xl border-border/70 font-bold"
-                      disabled={isUploadingCover}
-                    >
-                      {isUploadingCover ? (
-                        <Spinner className="size-3.5" />
-                      ) : (
-                        <Upload className="size-3.5" />
-                      )}
-                      Upload File
-                    </Button>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleImageUpload(e, "coverImage")}
-                      className="absolute inset-0 opacity-0 cursor-pointer"
-                    />
-                  </div>
-                </div>
-                {formData.coverImage && (
-                  <div className="mt-3 w-28 h-40 rounded-2xl overflow-hidden border border-border/60 shadow-lg relative group">
-                    <img
-                      src={formData.coverImage}
-                      alt="Cover preview"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Banner Image */}
-              <div className="space-y-2 bg-card/40 border border-border/60 rounded-2xl p-4 sm:p-5 shadow-xs">
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Banner Image
-                </Label>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Paste external banner URL (https://...)"
-                    value={formData.bannerImage || ""}
-                    onChange={(e) =>
-                      handleChange("bannerImage", e.target.value)
-                    }
-                    className="flex-1 bg-background/80 border-border/70 rounded-xl h-10 text-xs font-medium"
-                  />
-                  <div className="relative">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5 text-xs h-10 rounded-xl border-border/70 font-bold"
-                      disabled={isUploadingBanner}
-                    >
-                      {isUploadingBanner ? (
-                        <Spinner className="size-3.5" />
-                      ) : (
-                        <Upload className="size-3.5" />
-                      )}
-                      Upload File
-                    </Button>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handleImageUpload(e, "bannerImage")}
-                      className="absolute inset-0 opacity-0 cursor-pointer"
-                    />
-                  </div>
-                </div>
-                {formData.bannerImage && (
-                  <div className="mt-3 w-full h-28 rounded-2xl overflow-hidden border border-border/60 shadow-lg relative group">
-                    <img
-                      src={formData.bannerImage}
-                      alt="Banner preview"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-              </div>
+            {/* 2. Release & Specs */}
+            <TabsContent value="release" className="m-0">
+              <RrSubmissionReleaseTab
+                mediaType={selectedMediaType}
+                formData={formData}
+                onChange={handleChange}
+              />
             </TabsContent>
 
-            {/* 3. Genres & Tags Tab */}
-            <TabsContent value="genres" className="m-0 space-y-4">
-              <div className="space-y-2 bg-card/40 border border-border/60 rounded-2xl p-4 sm:p-5 shadow-xs">
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Genres
-                </Label>
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {(
-                    GENRE_OPTIONS[selectedMediaType] || GENRE_OPTIONS.anime
-                  ).map((genre) => {
-                    const isSelected = selectedGenres.includes(genre);
-                    return (
-                      <Badge
-                        key={genre}
-                        variant={isSelected ? "default" : "outline"}
-                        className={cn(
-                          "cursor-pointer text-xs font-bold px-3 py-1 rounded-full transition-all hover:scale-105 shadow-2xs",
-                          isSelected
-                            ? "bg-primary text-primary-foreground border-primary shadow-primary/20"
-                            : "bg-background/80 border-border/70 text-foreground hover:bg-muted",
-                        )}
-                        onClick={() => toggleGenre(genre)}
-                      >
-                        {genre}
-                      </Badge>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Synonyms */}
-              <div className="space-y-3 bg-card/40 border border-border/60 rounded-2xl p-4 sm:p-5 shadow-xs">
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Alternative Titles / Synonyms
-                </Label>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Add synonym title..."
-                    value={newSynonym}
-                    onChange={(e) => setNewSynonym(e.target.value)}
-                    onKeyDown={(e) =>
-                      e.key === "Enter" &&
-                      (e.preventDefault(), handleAddSynonym())
-                    }
-                    className="bg-background/80 border-border/70 rounded-xl h-10 text-xs font-medium"
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={handleAddSynonym}
-                    className="h-10 px-4 rounded-xl font-bold"
-                  >
-                    <Plus className="size-4" />
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {synonymsList.map((syn) => (
-                    <Badge
-                      key={syn}
-                      variant="secondary"
-                      className="gap-1.5 text-xs font-semibold py-1 px-3 rounded-xl bg-background border border-border/70"
-                    >
-                      {syn}
-                      <Trash2
-                        className="size-3.5 cursor-pointer text-muted-foreground hover:text-destructive transition-colors"
-                        onClick={() => handleRemoveSynonym(syn)}
-                      />
-                    </Badge>
-                  ))}
-                </div>
-              </div>
+            {/* 3. Media Assets */}
+            <TabsContent value="assets" className="m-0">
+              <RrSubmissionAssetsTab
+                formData={formData}
+                onChange={handleChange}
+                onImageUpload={handleImageUpload}
+                isUploadingCover={isUploadingCover}
+                isUploadingBanner={isUploadingBanner}
+                isUploadingBackground={isUploadingBackground}
+              />
             </TabsContent>
 
-            {/* 4. Characters Tab */}
-            <TabsContent value="characters" className="m-0 space-y-4">
-              <div className="space-y-3 bg-card/40 border border-border/60 rounded-2xl p-4 sm:p-5 shadow-xs">
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Attach Character from Database
-                </Label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60" />
-                    <Input
-                      placeholder="Type name & click search or press Enter..."
-                      value={characterSearch}
-                      onChange={(e) => setCharacterSearch(e.target.value)}
-                      onKeyDown={(e) =>
-                        e.key === "Enter" &&
-                        (e.preventDefault(), handleCharacterSearchSubmit())
-                      }
-                      className="pl-9 bg-background/80 border-border/70 rounded-xl h-10 text-xs font-medium"
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={handleCharacterSearchSubmit}
-                    className="gap-1.5 text-xs h-10 px-4 rounded-xl font-bold"
-                  >
-                    <Search className="size-3.5" />
-                    Search
-                  </Button>
-                </div>
-
-                {characterResults.length > 0 && (
-                  <div className="p-2 border border-border/60 rounded-xl bg-background/90 max-h-56 overflow-y-auto space-y-1.5 custom-scrollbar shadow-md">
-                    {characterResults.map((char) => {
-                      const fullName =
-                        [char.nameFirst, char.nameMiddle, char.nameLast]
-                          .filter(Boolean)
-                          .join(" ") ||
-                        char.nameNative ||
-                        "Character";
-                      return (
-                        <div
-                          key={char.id}
-                          className="flex items-center justify-between p-2.5 rounded-xl hover:bg-muted/60 text-xs cursor-pointer gap-3 transition-colors"
-                          onClick={() => {
-                            if (
-                              !selectedCharacters.some(
-                                (c) => c.characterId === char.id,
-                              )
-                            ) {
-                              setSelectedCharacters((prev) => [
-                                ...prev,
-                                {
-                                  characterId: char.id,
-                                  name: fullName,
-                                  role: "MAIN",
-                                  image: char.image,
-                                },
-                              ]);
-                            }
-                            setCharacterSearch("");
-                            setCharacterResults([]);
-                          }}
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            {char.image ? (
-                              <img
-                                src={char.image}
-                                alt={fullName}
-                                className="size-9 rounded-full object-cover shrink-0 shadow-2xs"
-                              />
-                            ) : (
-                              <div className="size-9 rounded-full bg-muted flex items-center justify-center text-xs shrink-0 font-bold">
-                                {fullName.charAt(0)}
-                              </div>
-                            )}
-                            <div className="min-w-0">
-                              <p className="font-bold text-foreground truncate">
-                                {fullName}
-                              </p>
-                              {char.nameNative && (
-                                <p className="text-[10px] text-muted-foreground truncate">
-                                  {char.nameNative}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] font-bold rounded-lg bg-primary/10 text-primary border-primary/20"
-                          >
-                            Add
-                          </Badge>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Selected Characters */}
-              <div className="space-y-3 bg-card/40 border border-border/60 rounded-2xl p-4 sm:p-5 shadow-xs">
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Selected Characters ({selectedCharacters.length})
-                </Label>
-                <div className="space-y-2">
-                  {selectedCharacters.map((char, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-2.5 rounded-xl border border-border/60 bg-background/80 text-xs gap-3 shadow-2xs"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        {char.image ? (
-                          <img
-                            src={char.image}
-                            alt={char.name}
-                            className="size-8 rounded-full object-cover shrink-0"
-                          />
-                        ) : (
-                          <div className="size-8 rounded-full bg-muted flex items-center justify-center text-xs shrink-0 font-bold">
-                            {char.name?.charAt(0) || "C"}
-                          </div>
-                        )}
-                        <span className="font-bold text-foreground truncate">
-                          {char.name}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Select
-                          value={char.role}
-                          onValueChange={(val) => {
-                            const updated = [...selectedCharacters];
-                            updated[index].role = val;
-                            setSelectedCharacters(updated);
-                          }}
-                        >
-                          <SelectTrigger className="h-8 text-xs font-bold w-30 bg-background border-border/70 rounded-lg">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="MAIN">MAIN</SelectItem>
-                            <SelectItem value="SUPPORTING">
-                              SUPPORTING
-                            </SelectItem>
-                            <SelectItem value="BACKGROUND">
-                              BACKGROUND
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="size-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full"
-                          onClick={() =>
-                            setSelectedCharacters((prev) =>
-                              prev.filter((_, i) => i !== index),
-                            )
-                          }
-                        >
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {/* 4. Taxonomy & Ratings */}
+            <TabsContent value="taxonomy" className="m-0">
+              <RrSubmissionTaxonomyTab
+                mediaType={selectedMediaType}
+                genreOptions={GENRE_OPTIONS[selectedMediaType] || GENRE_OPTIONS.anime}
+                selectedGenres={selectedGenres}
+                onToggleGenre={handleToggleGenre}
+                synonymsList={synonymsList}
+                onAddSynonym={handleAddSynonym}
+                onRemoveSynonym={handleRemoveSynonym}
+                formData={formData}
+                onChange={handleChange}
+              />
             </TabsContent>
 
-            {/* 5. Relations Tab */}
-            <TabsContent value="relations" className="m-0 space-y-4">
-              <div className="space-y-3 bg-card/40 border border-border/60 rounded-2xl p-4 sm:p-5 shadow-xs">
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Search Related Media
-                </Label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60" />
-                    <Input
-                      placeholder="Type title & click search or press Enter..."
-                      value={relationSearch}
-                      onChange={(e) => setRelationSearch(e.target.value)}
-                      onKeyDown={(e) =>
-                        e.key === "Enter" &&
-                        (e.preventDefault(), handleRelationSearchSubmit())
-                      }
-                      className="pl-9 bg-background/80 border-border/70 rounded-xl h-10 text-xs font-medium"
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    onClick={handleRelationSearchSubmit}
-                    className="gap-1.5 text-xs h-10 px-4 rounded-xl font-bold"
-                  >
-                    <Search className="size-3.5" />
-                    Search
-                  </Button>
-                </div>
+            {/* 5. External IDs */}
+            <TabsContent value="external" className="m-0">
+              <RrSubmissionExternalIdsTab
+                mediaType={selectedMediaType}
+                formData={formData}
+                onChange={handleChange}
+              />
+            </TabsContent>
 
-                {relationResults.length > 0 && (
-                  <div className="p-2 border border-border/60 rounded-xl bg-background/90 max-h-56 overflow-y-auto space-y-1.5 custom-scrollbar shadow-md">
-                    {relationResults.map((rel) => {
-                      const title =
-                        rel.titleEnglish ||
-                        rel.titleRomaji ||
-                        rel.titleString ||
-                        "Media";
-                      const img = rel.coverImageLarge || rel.coverImage;
-                      return (
-                        <div
-                          key={rel.id}
-                          className="flex items-center justify-between p-2.5 rounded-xl hover:bg-muted/60 text-xs cursor-pointer gap-3 transition-colors"
-                          onClick={() => {
-                            if (
-                              !selectedRelations.some(
-                                (r) => r.relatedMediaId === rel.id,
-                              )
-                            ) {
-                              setSelectedRelations((prev) => [
-                                ...prev,
-                                {
-                                  relatedMediaId: rel.id,
-                                  title,
-                                  relationType: "SEQUEL",
-                                  image: img,
-                                },
-                              ]);
-                            }
-                            setRelationSearch("");
-                            setRelationResults([]);
-                          }}
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            {img ? (
-                              <img
-                                src={img}
-                                alt={title}
-                                className="w-7 h-10 rounded-md object-cover shrink-0 shadow-2xs"
-                              />
-                            ) : (
-                              <div className="w-7 h-10 rounded-md bg-muted flex items-center justify-center text-[10px] shrink-0 font-bold">
-                                M
-                              </div>
-                            )}
-                            <span className="font-bold text-foreground truncate">
-                              {title}
-                            </span>
-                          </div>
-                          <Badge
-                            variant="outline"
-                            className="text-[10px] font-bold rounded-lg bg-primary/10 text-primary border-primary/20"
-                          >
-                            Add
-                          </Badge>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Selected Relations */}
-              <div className="space-y-3 bg-card/40 border border-border/60 rounded-2xl p-4 sm:p-5 shadow-xs">
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Selected Relations ({selectedRelations.length})
-                </Label>
-                <div className="space-y-2">
-                  {selectedRelations.map((rel, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-2.5 rounded-xl border border-border/60 bg-background/80 text-xs gap-3 shadow-2xs"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        {rel.image ? (
-                          <img
-                            src={rel.image}
-                            alt={rel.title}
-                            className="w-7 h-10 rounded-md object-cover shrink-0 shadow-2xs"
-                          />
-                        ) : (
-                          <div className="w-7 h-10 rounded-md bg-muted flex items-center justify-center text-[10px] shrink-0 font-bold">
-                            M
-                          </div>
-                        )}
-                        <span className="font-bold text-foreground truncate max-w-50">
-                          {rel.title}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Select
-                          value={rel.relationType}
-                          onValueChange={(val) => {
-                            const updated = [...selectedRelations];
-                            updated[index].relationType = val;
-                            setSelectedRelations(updated);
-                          }}
-                        >
-                          <SelectTrigger className="h-8 text-xs font-bold w-35 bg-background border-border/70 rounded-lg">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="SEQUEL">SEQUEL</SelectItem>
-                            <SelectItem value="PREQUEL">PREQUEL</SelectItem>
-                            <SelectItem value="ADAPTATION">
-                              ADAPTATION
-                            </SelectItem>
-                            <SelectItem value="SIDE_STORY">
-                              SIDE_STORY
-                            </SelectItem>
-                            <SelectItem value="SPIN_OFF">SPIN_OFF</SelectItem>
-                            <SelectItem value="ALTERNATIVE">
-                              ALTERNATIVE
-                            </SelectItem>
-                            <SelectItem value="OTHER">OTHER</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="size-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full"
-                          onClick={() =>
-                            setSelectedRelations((prev) =>
-                              prev.filter((_, i) => i !== index),
-                            )
-                          }
-                        >
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {/* 6. People & Production */}
+            <TabsContent value="people" className="m-0">
+              <RrSubmissionPeopleTab
+                mediaType={selectedMediaType}
+                selectedCharacters={selectedCharacters}
+                setSelectedCharacters={setSelectedCharacters}
+                selectedStaff={selectedStaff}
+                setSelectedStaff={setSelectedStaff}
+                selectedStudios={selectedStudios}
+                setSelectedStudios={setSelectedStudios}
+                selectedRelations={selectedRelations}
+                setSelectedRelations={setSelectedRelations}
+                onSearchCharacters={handleSearchCharacters}
+                onSearchStaff={handleSearchStaff}
+                onSearchStudios={handleSearchStudios}
+                onSearchRelations={handleSearchRelations}
+              />
             </TabsContent>
           </div>
         </Tabs>
 
+        {/* Footer */}
         <DialogFooter className="p-4 sm:px-6 border-t border-border/50 flex items-center justify-between bg-muted/20 backdrop-blur-xs">
           <Button
             variant="ghost"

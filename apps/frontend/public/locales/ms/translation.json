@@ -1350,7 +1350,20 @@
     "connect": "Sambung",
     "connected": "Disambungkan",
     "disconnect": "Putuskan",
-    "toggleFavorite": "Tukar Kegemaran"
+    "toggleFavorite": "Tukar Kegemaran",
+    "submission": {
+      "modalTitleEdit": "Sunting Metadata Media (V2)",
+      "modalTitleCreate": "Tambah Entri Media Baharu (V2)",
+      "tabBasic": "Maklumat Asas",
+      "tabRelease": "Keluaran & Spesifikasi",
+      "tabAssets": "Aset Media",
+      "tabTaxonomy": "Taksonomi & Penarafan",
+      "tabExternal": "ID Luaran",
+      "tabPeople": "Orang & Pengeluaran",
+      "createNewCharacter": "Cipta Watak Baharu",
+      "createNewStaff": "Cipta Ahli Staf Baharu",
+      "createNewStudio": "Cipta Studio Baharu"
+    }
   },
   "lynx": {
     "returnToSafety": "Kembali ke keselamatan",

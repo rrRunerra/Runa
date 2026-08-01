@@ -1350,7 +1350,20 @@
     "connect": "Připojit",
     "connected": "Připojeno",
     "disconnect": "Odpojit",
-    "toggleFavorite": "Přepnout oblíbené"
+    "toggleFavorite": "Přepnout oblíbené",
+    "submission": {
+      "modalTitleEdit": "Upravit metadata média (V2)",
+      "modalTitleCreate": "Přidat nový záznam média (V2)",
+      "tabBasic": "Základní informace",
+      "tabRelease": "Vydání a specifikace",
+      "tabAssets": "Médiální podklady",
+      "tabTaxonomy": "Taxonomie a hodnocení",
+      "tabExternal": "Externí ID",
+      "tabPeople": "Lidé a produkce",
+      "createNewCharacter": "Vytvořit novou postavu",
+      "createNewStaff": "Vytvořit nového člena štábu",
+      "createNewStudio": "Vytvořit nové studio"
+    }
   },
   "lynx": {
     "returnToSafety": "Návrat do bezpečí",

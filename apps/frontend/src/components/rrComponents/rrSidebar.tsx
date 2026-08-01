@@ -184,7 +184,9 @@ export default function RrSidebar({ sidebarConfig: initialSidebarConfig, ...prop
               .map((section: SidebarSection, sectionIdx: number) => (
                 <SidebarGroup key={sectionIdx}>
                   {section.section && (
-                    <SidebarGroupLabel>{section.section}</SidebarGroupLabel>
+                    <SidebarGroupLabel className="text-[11px] font-bold uppercase tracking-wider text-sidebar-foreground/60 px-2 py-1.5">
+                      {section.section}
+                    </SidebarGroupLabel>
                   )}
 
                   <SidebarMenu>
@@ -215,6 +217,11 @@ export default function RrSidebar({ sidebarConfig: initialSidebarConfig, ...prop
                               asChild
                               tooltip={item.label}
                               isActive={isActive}
+                              className={cn(
+                                "transition-all duration-200 rounded-xl",
+                                isActive &&
+                                  "bg-primary/10 text-primary border border-primary/30 shadow-xs shadow-primary/20 font-semibold data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:border-primary/30",
+                              )}
                             >
                               <Link
                                 href={item.href || "#"}
@@ -227,7 +234,16 @@ export default function RrSidebar({ sidebarConfig: initialSidebarConfig, ...prop
                                   </span>
                                 </span>
                                 {item.badge && (
-                                  <Badge variant="outline">{item.badge}</Badge>
+                                  <Badge
+                                    variant="outline"
+                                    className={cn(
+                                      "border-border/60 transition-colors",
+                                      isActive &&
+                                        "bg-primary/15 text-primary border-primary/40 font-medium",
+                                    )}
+                                  >
+                                    {item.badge}
+                                  </Badge>
                                 )}
                               </Link>
                             </SidebarMenuButton>
@@ -236,6 +252,11 @@ export default function RrSidebar({ sidebarConfig: initialSidebarConfig, ...prop
                               <SidebarMenuButton
                                 tooltip={item.label}
                                 isActive={isActive}
+                                className={cn(
+                                  "transition-all duration-200 rounded-xl",
+                                  isActive &&
+                                    "bg-primary/10 text-primary border border-primary/30 shadow-xs shadow-primary/20 font-semibold data-[active=true]:bg-primary/10 data-[active=true]:text-primary data-[active=true]:border-primary/30",
+                                )}
                               >
                                 <span className="w-full flex items-center justify-between">
                                   <span className="flex items-center gap-2">
@@ -246,7 +267,14 @@ export default function RrSidebar({ sidebarConfig: initialSidebarConfig, ...prop
                                   </span>
                                   <span className="flex items-center gap-1.5 ml-auto">
                                     {item.badge && (
-                                      <Badge variant="outline">
+                                      <Badge
+                                        variant="outline"
+                                        className={cn(
+                                          "border-border/60 transition-colors",
+                                          isActive &&
+                                            "bg-primary/15 text-primary border-primary/40 font-medium",
+                                        )}
+                                      >
                                         {item.badge}
                                       </Badge>
                                     )}
@@ -268,7 +296,7 @@ export default function RrSidebar({ sidebarConfig: initialSidebarConfig, ...prop
                                 </CollapsibleTrigger>
                               )}
                               <CollapsibleContent>
-                                <SidebarMenuSub className="">
+                                <SidebarMenuSub className="my-1 border-l border-border/40 pl-2">
                                   {item.children?.map(
                                     (
                                       child: SidebarItemChild,
@@ -284,6 +312,11 @@ export default function RrSidebar({ sidebarConfig: initialSidebarConfig, ...prop
                                             <SidebarMenuSubButton
                                               asChild
                                               isActive={isSubActive}
+                                              className={cn(
+                                                "transition-all duration-200 rounded-lg",
+                                                isSubActive &&
+                                                  "bg-primary/10 text-primary border-l-2 border-primary font-medium shadow-xs shadow-primary/10",
+                                              )}
                                             >
                                               <Link
                                                 href={child.href || "#"}
@@ -296,7 +329,14 @@ export default function RrSidebar({ sidebarConfig: initialSidebarConfig, ...prop
                                                   </span>
                                                 </span>
                                                 {child.badge && (
-                                                  <Badge variant="outline">
+                                                  <Badge
+                                                    variant="outline"
+                                                    className={cn(
+                                                      "border-border/60 transition-colors",
+                                                      isSubActive &&
+                                                        "bg-primary/15 text-primary border-primary/40 font-medium",
+                                                    )}
+                                                  >
                                                     {child.badge}
                                                   </Badge>
                                                 )}

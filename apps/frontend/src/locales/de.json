@@ -1350,7 +1350,20 @@
     "connect": "Verbinden",
     "connected": "Verbunden",
     "disconnect": "Trennen",
-    "toggleFavorite": "Favorit umschalten"
+    "toggleFavorite": "Favorit umschalten",
+    "submission": {
+      "modalTitleEdit": "Medien-Metadaten bearbeiten (V2)",
+      "modalTitleCreate": "Neuen Medieneintrag hinzufügen (V2)",
+      "tabBasic": "Basis-Info",
+      "tabRelease": "Veröffentlichung & Specs",
+      "tabAssets": "Medien-Assets",
+      "tabTaxonomy": "Taxonomie & Bewertungen",
+      "tabExternal": "Externe IDs",
+      "tabPeople": "Personen & Produktion",
+      "createNewCharacter": "Neuen Charakter erstellen",
+      "createNewStaff": "Neues Teammitglied erstellen",
+      "createNewStudio": "Neues Studio erstellen"
+    }
   },
   "lynx": {
     "returnToSafety": "Zurück zur Sicherheit",

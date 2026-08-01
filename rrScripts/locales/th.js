@@ -1350,7 +1350,20 @@ export default {
     "connect": "เชื่อมต่อ",
     "connected": "เชื่อมต่อแล้ว",
     "disconnect": "ยกเลิกการเชื่อมต่อ",
-    "toggleFavorite": "สลับรายการโปรด"
+    "toggleFavorite": "สลับรายการโปรด",
+    "submission": {
+      "modalTitleEdit": "แก้ไขข้อมูลเมตาของสื่อ (V2)",
+      "modalTitleCreate": "เพิ่มรายการสื่อใหม่ (V2)",
+      "tabBasic": "ข้อมูลพื้นฐาน",
+      "tabRelease": "การเผยแพร่และข้อมูลจำเพาะ",
+      "tabAssets": "แอสเซตสื่อ",
+      "tabTaxonomy": "อนุกรมวิธานและการจัดอันดับ",
+      "tabExternal": "ID ภายนอก",
+      "tabPeople": "บุคคลและการผลิต",
+      "createNewCharacter": "สร้างตัวละครใหม่",
+      "createNewStaff": "สร้างทีมงานใหม่",
+      "createNewStudio": "สร้างสตูดิโอใหม่"
+    }
   },
   "lynx": {
     "returnToSafety": "กลับสู่ความปลอดภัย",

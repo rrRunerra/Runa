@@ -47,7 +47,7 @@ export function RrMediaEditTvEpisodes({
           </span>
         </div>
       )}
-      <div className="max-h-[415px] overflow-y-auto pr-1 flex flex-col gap-2.5 w-full custom-scrollbar">
+      <div className="max-h-103.75 overflow-y-auto pr-1 flex flex-col gap-2.5 w-full custom-scrollbar">
         {seasons && seasons.length > 0 ? (
           seasons.map((season) => {
             const watchedInSeason = (season.episodes ?? []).filter((ep: any) =>

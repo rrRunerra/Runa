@@ -1350,7 +1350,20 @@ export default {
     "connect": "連結",
     "connected": "已連結",
     "disconnect": "中斷連結",
-    "toggleFavorite": "切換收藏"
+    "toggleFavorite": "切換收藏",
+    "submission": {
+      "modalTitleEdit": "編輯媒體中元資料 (V2)",
+      "modalTitleCreate": "新增媒體條目 (V2)",
+      "tabBasic": "基本資訊",
+      "tabRelease": "發布與規格",
+      "tabAssets": "媒體資源",
+      "tabTaxonomy": "分類與分級",
+      "tabExternal": "外部ID",
+      "tabPeople": "人員與製作",
+      "createNewCharacter": "建立新角色",
+      "createNewStaff": "建立新工作人員",
+      "createNewStudio": "建立新工作室"
+    }
   },
   "lynx": {
     "returnToSafety": "返回安全區域",

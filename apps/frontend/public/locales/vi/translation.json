@@ -1350,7 +1350,20 @@
     "connect": "Kết nối",
     "connected": "Đã kết nối",
     "disconnect": "Ngắt kết nối",
-    "toggleFavorite": "Chuyển đổi yêu thích"
+    "toggleFavorite": "Chuyển đổi yêu thích",
+    "submission": {
+      "modalTitleEdit": "Chỉnh sửa siêu dữ liệu phương tiện (V2)",
+      "modalTitleCreate": "Thêm mục phương tiện mới (V2)",
+      "tabBasic": "Thông tin cơ bản",
+      "tabRelease": "Phát hành & Thông số",
+      "tabAssets": "Tài sản phương tiện",
+      "tabTaxonomy": "Phân loại & Đánh giá",
+      "tabExternal": "ID bên ngoài",
+      "tabPeople": "Con người & Sản xuất",
+      "createNewCharacter": "Tạo nhân vật mới",
+      "createNewStaff": "Tạo nhân viên mới",
+      "createNewStudio": "Tạo studio mới"
+    }
   },
   "lynx": {
     "returnToSafety": "Quay lại an toàn",

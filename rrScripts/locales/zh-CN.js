@@ -1350,7 +1350,20 @@ export default {
     "connect": "连接",
     "connected": "已连接",
     "disconnect": "断开",
-    "toggleFavorite": "切换收藏"
+    "toggleFavorite": "切换收藏",
+    "submission": {
+      "modalTitleEdit": "编辑媒体元数据 (V2)",
+      "modalTitleCreate": "添加新媒体条目 (V2)",
+      "tabBasic": "基本信息",
+      "tabRelease": "发布与规格",
+      "tabAssets": "媒体资源",
+      "tabTaxonomy": "分类与评级",
+      "tabExternal": "外部ID",
+      "tabPeople": "人员与制作",
+      "createNewCharacter": "创建新角色",
+      "createNewStaff": "创建新工作人员",
+      "createNewStudio": "创建新工作室"
+    }
   },
   "lynx": {
     "returnToSafety": "返回安全区域",
