@@ -57,7 +57,7 @@ export class AnimeQueueService implements OnModuleInit {
       }
     }
 
-    this.logger.debug(
+    this.logger.log(
       `[AnimeQueue] Queuing upsert job for AniList ID ${anilistId} (force: ${!!options?.force}, skipRelations: ${!!options?.skipRelations})`,
     );
 
@@ -80,13 +80,13 @@ export class AnimeQueueService implements OnModuleInit {
       .pipe(
         mergeMap(async (job) => {
           try {
-            this.logger.debug(
+            this.logger.log(
               `Processing background V2 anime upsert for AniList ID: ${job.anilistId} (force: ${!!job.force}, skipRelations: ${!!job.skipRelations})`,
             );
             const fullRecord = await this.animeExternal.fetchFullV2Record(job.anilistId);
             if (fullRecord) {
               await this.animeRepository.upsertV2Record(fullRecord);
-              this.logger.debug(
+              this.logger.log(
                 `Successfully completed background V2 anime upsert for AniList ID: ${job.anilistId}`,
               );
 

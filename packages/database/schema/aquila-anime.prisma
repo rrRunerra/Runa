@@ -3,7 +3,7 @@ model AquilaAnimeV2 {
     anilistId Int? @unique
     malId     Int? @unique
     aniDBId   Int? @unique
-    tvDBId    Int? @unique
+    tvDBId    Int?
     bangumiId Int? @unique
 
     titlePrimary   String  @db.Text // primarly ENGLISH titles, but if theres none, then instert either secondary or native
@@ -93,6 +93,7 @@ model AquilaAnimeV2 {
     @@index([popularity(sort: Desc)])
     @@index([averageScore(sort: Desc)])
     @@index([nextAiringAt])
+    @@index([tvDBId])
 }
 
 model AquilaAnimeEpisode {

@@ -7,6 +7,7 @@ import { ListExternal } from './list.external';
 import { MovieService } from '../movie/movie.service';
 import { TvService } from '../tv/tv.service';
 import { AnimeService } from '../anime/anime.service';
+import { AnimeQueueService } from '../anime/anime-queue.service';
 import { MangaService } from '../manga/manga.service';
 import { GameService } from '../game/game.service';
 import { BookService } from '../book/book.service';
@@ -127,7 +128,7 @@ describe('ListService', () => {
 
   const mockMovieService = { ensureMovie: jest.fn().mockResolvedValue({ id: 1 }) };
   const mockTvService = { ensureTv: jest.fn().mockResolvedValue({ id: 1 }) };
-  const mockAnimeService = { ensureAnime: jest.fn().mockResolvedValue({ id: 1 }) };
+  const mockAnimeQueueService = { addUpsertJob: jest.fn().mockResolvedValue(undefined) };
   const mockMangaService = { ensureManga: jest.fn().mockResolvedValue({ id: 1 }) };
   const mockGameService = { ensureGame: jest.fn().mockResolvedValue({ id: 1 }) };
   const mockBookService = { ensureBook: jest.fn().mockResolvedValue({ id: 1 }) };
@@ -148,6 +149,7 @@ describe('ListService', () => {
         { provide: MovieService, useValue: mockMovieService },
         { provide: TvService, useValue: mockTvService },
         { provide: AnimeService, useValue: mockAnimeService },
+        { provide: AnimeQueueService, useValue: mockAnimeQueueService },
         { provide: MangaService, useValue: mockMangaService },
         { provide: GameService, useValue: mockGameService },
         { provide: BookService, useValue: mockBookService },
@@ -521,6 +523,104 @@ describe('ListService', () => {
 
       const result = await service.getBookList('testuser');
       expect(result.entries[0].title).toBe('Book One');
+    });
+  });
+
+  describe('Radarr / Sonarr Operations', () => {
+    it('should format getRadarrMovieList correctly with real tmdbId and imdbId, not tvDBId', async () => {
+      mockPrismaClient.aquilaMovieUserListV2.findMany.mockResolvedValue([
+        {
+          id: 10,
+          status: 'PLANNING',
+          movie: {
+            titlePrimary: 'Inception',
+            tvDBId: 78901,
+            imdbId: 'tt1375666',
+            tmdbId: 27205,
+            releaseDateYear: 2010,
+            sources: [{ provider: 'TMDB', externalId: '27205' }],
+          },
+        },
+        {
+          id: 11,
+          status: 'COMPLETED',
+          movie: {
+            titlePrimary: 'Matrix',
+            tvDBId: 54321,
+            imdbId: 'tt0133093',
+            tmdbId: null,
+            releaseDateYear: 1999,
+            sources: null,
+          },
+        },
+      ]);
+
+      const result = await service.getRadarrMovieList('testuser');
+      expect(mockPrismaClient.aquilaMovieUserListV2.findMany).toHaveBeenCalledWith({
+        where: { username: 'testuser', status: 'PLANNING' },
+        include: { movie: true },
+      });
+      expect(result).toHaveLength(2);
+      expect(result[0]).toEqual({
+        title: 'Inception',
+        imdbId: 'tt1375666',
+        tmdbId: 27205,
+        year: 2010,
+        hasFile: false,
+        monitored: true,
+      });
+      // Matrix has no tmdbId in record or sources, so tmdbId should be undefined (not tvDBId 54321!)
+      expect(result[1]).toEqual({
+        title: 'Matrix',
+        imdbId: 'tt0133093',
+        tmdbId: undefined,
+        year: 1999,
+        hasFile: true,
+        monitored: true,
+      });
+    });
+    it('should handle fetchSonarrSeries for anime without tvDBId by notifying user and queuing update', async () => {
+      mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-123' });
+      mockPrismaClient.aquilaAnimeUserListV2.findMany.mockResolvedValue([
+        {
+          id: 1,
+          anime: {
+            id: 101,
+            anilistId: 101,
+            titlePrimary: 'Naruto',
+            tvDBId: 78857,
+          },
+        },
+        {
+          id: 2,
+          anime: {
+            id: 102,
+            anilistId: 102,
+            titlePrimary: 'Bleach',
+            tvDBId: null,
+          },
+        },
+      ]);
+
+      const result = await service.fetchSonarrSeries('testuser', false, true);
+      expect(result).toEqual([
+        {
+          title: 'Naruto',
+          tvdbId: 78857,
+          monitored: true,
+        },
+      ]);
+      expect(mockNotificationService.create).toHaveBeenCalledWith(
+        'user-123',
+        expect.objectContaining({
+          title: 'Missing TVDB ID for Anime',
+          message: expect.stringContaining('Bleach'),
+        }),
+      );
+      expect(mockAnimeQueueService.addUpsertJob).toHaveBeenCalledWith(102, {
+        force: true,
+        skipRelations: true,
+      });
     });
   });
 });

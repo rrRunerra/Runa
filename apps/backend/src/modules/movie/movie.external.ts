@@ -356,6 +356,15 @@ export class MovieExternal {
                 },
               ]
             : []),
+          ...(tmdbId
+            ? [
+                {
+                  provider: 'TMDB',
+                  externalId: String(tmdbId),
+                  url: `https://www.themoviedb.org/movie/${tmdbId}`,
+                },
+              ]
+            : []),
         ],
 
         ageRating,

@@ -2,6 +2,7 @@ model AquilaMovieV2 {
     id      Int     @id @default(autoincrement())
     tvDBId  Int?    @unique
     imdbId  String? @unique
+    tmdbId  Int?    @unique
     traktId Int?    @unique
 
     titlePrimary   String  @db.Text // Primary English title (or fallback to secondary/native)

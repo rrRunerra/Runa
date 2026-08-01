@@ -123,6 +123,7 @@ export class MovieRepository {
       id: record.id,
       tvDBId: record.tvDBId,
       imdbId: record.imdbId,
+      tmdbId: record.tmdbId,
       traktId: record.traktId,
 
       titlePrimary: record.titlePrimary,
@@ -264,6 +265,7 @@ export class MovieRepository {
       where: { tvDBId },
       update: {
         imdbId: payload.imdbId ?? null,
+        tmdbId: payload.tmdbId ?? null,
         traktId: payload.traktId ?? null,
 
         titlePrimary: payload.titlePrimary,
@@ -305,6 +307,7 @@ export class MovieRepository {
       create: {
         tvDBId,
         imdbId: payload.imdbId ?? null,
+        tmdbId: payload.tmdbId ?? null,
         traktId: payload.traktId ?? null,
 
         titlePrimary: payload.titlePrimary,

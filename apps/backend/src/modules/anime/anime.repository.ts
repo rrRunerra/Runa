@@ -170,21 +170,8 @@ export class AnimeRepository {
     // Ensure external unique IDs do not conflict with existing records
     let malId = payload.malId ?? null;
     let aniDBId = payload.aniDBId ?? null;
-    let tvDBId = payload.tvDBId ?? null;
+    const tvDBId = payload.tvDBId ?? null;
     let bangumiId = payload.bangumiId ?? null;
-
-    if (tvDBId) {
-      const conflict = await this.prisma.client.aquilaAnimeV2.findUnique({
-        where: { tvDBId },
-        select: { id: true, anilistId: true },
-      });
-      if (conflict && conflict.anilistId !== payload.anilistId) {
-        this.logger.warn(
-          `tvDBId ${tvDBId} already belongs to another anime (ID ${conflict.id}), setting to null`,
-        );
-        tvDBId = null;
-      }
-    }
 
     if (malId) {
       const conflict = await this.prisma.client.aquilaAnimeV2.findUnique({

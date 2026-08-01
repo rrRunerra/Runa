@@ -60,7 +60,7 @@ export class MovieQueueService implements OnModuleInit {
       }
     }
 
-    this.logger.debug(
+    this.logger.log(
       `[MovieQueue] Queuing upsert job for TVDB ID ${tvdbId} (force: ${!!options?.force}, skipRelations: ${!!options?.skipRelations})`,
     );
 
@@ -83,13 +83,13 @@ export class MovieQueueService implements OnModuleInit {
       .pipe(
         mergeMap(async (job) => {
           try {
-            this.logger.debug(
+            this.logger.log(
               `Processing background V2 movie upsert for TVDB ID: ${job.tvdbId} (force: ${!!job.force}, skipRelations: ${!!job.skipRelations})`,
             );
             const fullRecord = await this.movieExternal.fetchFullV2Record(job.tvdbId);
             if (fullRecord) {
               await this.movieRepository.upsertV2Record(fullRecord);
-              this.logger.debug(
+              this.logger.log(
                 `Successfully completed background V2 movie upsert for TVDB ID: ${job.tvdbId}`,
               );
 

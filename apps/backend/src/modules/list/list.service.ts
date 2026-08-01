@@ -5,6 +5,8 @@ import {
   ForbiddenException,
   BadRequestException,
   InternalServerErrorException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { parsePrivacy } from '../user/user.service';
 import { $Enums } from '@runa/database';
@@ -16,6 +18,7 @@ import ListEntity from './list.entities';
 import { MovieService } from '../movie/movie.service';
 import { TvService } from '../tv/tv.service';
 import { AnimeService } from '../anime/anime.service';
+import { AnimeQueueService } from '../anime/anime-queue.service';
 import { MangaService } from '../manga/manga.service';
 import { GameService } from '../game/game.service';
 import { BookService } from '../book/book.service';
@@ -111,6 +114,8 @@ export class ListService {
     private readonly movieService: MovieService,
     private readonly tvService: TvService,
     private readonly animeService: AnimeService,
+    @Inject(forwardRef(() => AnimeQueueService))
+    private readonly animeQueueService: AnimeQueueService,
     private readonly mangaService: MangaService,
     private readonly gameService: GameService,
     private readonly bookService: BookService,
@@ -2371,15 +2376,29 @@ export class ListService {
 
   public async getRadarrMovieList(username: string): Promise<any[]> {
     const list = await this.prisma.client.aquilaMovieUserListV2.findMany({
-      where: { username: username.toLowerCase() },
+      where: { username: username.toLowerCase(), status: 'PLANNING' },
       include: { movie: true },
     });
-    return list.map((item: any) => ({
-      title: item.movie.titlePrimary,
-      tmdbId: item.movie.tvDBId ?? item.movieId,
-      hasFile: item.status === 'COMPLETED',
-      monitored: true,
-    }));
+    return list.map((item: any) => {
+      let tmdbId: number | undefined = item.movie.tmdbId ?? undefined;
+      if (!tmdbId && Array.isArray(item.movie.sources)) {
+        const tmdbSource = item.movie.sources.find(
+          (s: any) => s.provider === 'TMDB',
+        );
+        if (tmdbSource?.externalId) {
+          const parsed = parseInt(tmdbSource.externalId, 10);
+          if (!isNaN(parsed)) tmdbId = parsed;
+        }
+      }
+      return {
+        title: item.movie.titlePrimary,
+        imdbId: item.movie.imdbId ?? undefined,
+        tmdbId,
+        year: item.movie.releaseDateYear ?? undefined,
+        hasFile: item.status === 'COMPLETED',
+        monitored: true,
+      };
+    });
   }
 
   public async fetchSonarrSeries(
@@ -2390,29 +2409,52 @@ export class ListService {
     const series: any[] = [];
     if (includeTv) {
       const tvList = await this.prisma.client.aquilaTvUserListV2.findMany({
-        where: { username: username.toLowerCase() },
+        where: { username: username.toLowerCase(), status: 'PLANNING' },
         include: { tv: true },
       });
       tvList.forEach((item: any) => {
-        series.push({
-          title: item.tv.titlePrimary,
-          tvdbId: item.tv.tvDBId ?? item.tvId,
-          monitored: true,
-        });
+        if (item.tv.tvDBId) {
+          series.push({
+            title: item.tv.titlePrimary,
+            tvdbId: item.tv.tvDBId,
+            monitored: true,
+          });
+        }
       });
     }
     if (includeAnime) {
       const animeList = await this.prisma.client.aquilaAnimeUserListV2.findMany({
-        where: { username: username.toLowerCase() },
+        where: { username: username.toLowerCase(), status: 'PLANNING' },
         include: { anime: true },
       });
-      animeList.forEach((item: any) => {
-        series.push({
-          title: item.anime.titlePrimary,
-          tvdbId: item.anime.tvDBId ?? item.animeId,
-          monitored: true,
-        });
-      });
+      for (const item of animeList) {
+        if (item.anime.tvDBId) {
+          series.push({
+            title: item.anime.titlePrimary,
+            tvdbId: item.anime.tvDBId,
+            monitored: true,
+          });
+        } else {
+          const userId = await this.getUserId(username).catch(() => null);
+          if (userId) {
+            void this.notificationService.create(userId, {
+              title: 'Missing TVDB ID for Anime',
+              message: `TVDB ID is missing for anime "${item.anime.titlePrimary}". Series has been queued for a metadata update.`,
+              type: 'INFO',
+            });
+          }
+          const anilistId = item.anime.anilistId ?? item.anime.id;
+          if (anilistId) {
+            this.logger.log(
+              `[Sonarr] TVDB ID missing for anime "${item.anime.titlePrimary}" (AniList ID: ${anilistId}). Queued for background update.`,
+            );
+            void this.animeQueueService.addUpsertJob(anilistId, {
+              force: true,
+              skipRelations: true,
+            });
+          }
+        }
+      }
     }
     return series;
   }
@@ -2656,12 +2698,26 @@ export class ListService {
       if (existing) return existing.id;
     }
 
-    const rawTvdb =
-      item.tvDBId ??
-      item.media?.tvDBId ??
-      item.tmdbId ??
-      item.media?.tmdbId ??
-      item.media?.id;
+    const rawImdb = item.imdbId ?? item.media?.imdbId;
+    if (rawImdb && typeof rawImdb === 'string') {
+      const existing = await this.prisma.client.aquilaMovieV2.findUnique({
+        where: { imdbId: rawImdb },
+        select: { id: true },
+      });
+      if (existing) return existing.id;
+    }
+
+    const rawTmdb = item.tmdbId ?? item.media?.tmdbId;
+    const tmdbId = rawTmdb != null ? Number(rawTmdb) : NaN;
+    if (!isNaN(tmdbId) && tmdbId > 0) {
+      const existing = await this.prisma.client.aquilaMovieV2.findUnique({
+        where: { tmdbId },
+        select: { id: true },
+      });
+      if (existing) return existing.id;
+    }
+
+    const rawTvdb = item.tvDBId ?? item.media?.tvDBId;
     const tvDBId = rawTvdb != null ? Number(rawTvdb) : NaN;
     if (!isNaN(tvDBId) && tvDBId > 0) {
       const title =

@@ -63,7 +63,7 @@ export class GameQueueService implements OnModuleInit {
       }
     }
 
-    this.logger.debug(
+    this.logger.log(
       `[GameQueue] Queuing upsert job for RAWG ID ${rawgId} (force: ${!!options?.force}, skipRelations: ${!!options?.skipRelations})`,
     );
 
@@ -86,13 +86,13 @@ export class GameQueueService implements OnModuleInit {
       .pipe(
         mergeMap(async (job) => {
           try {
-            this.logger.debug(
+            this.logger.log(
               `Processing background V2 game upsert for RAWG ID: ${job.rawgId} (force: ${!!job.force}, skipRelations: ${!!job.skipRelations})`,
             );
             const fullRecord = await this.gameExternal.fetchFullV2Record(job.rawgId);
             if (fullRecord) {
               await this.gameRepository.upsertV2Record(fullRecord);
-              this.logger.debug(
+              this.logger.log(
                 `Successfully completed background V2 game upsert for RAWG ID: ${job.rawgId}`,
               );
 

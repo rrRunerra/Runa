@@ -57,7 +57,7 @@ export class BookQueueService implements OnModuleInit {
       }
     }
 
-    this.logger.debug(
+    this.logger.log(
       `[BookQueue] Queuing upsert job for Google Book ID ${googleBookId} (force: ${!!options?.force}, skipRelations: ${!!options?.skipRelations})`,
     );
 
@@ -80,13 +80,13 @@ export class BookQueueService implements OnModuleInit {
       .pipe(
         mergeMap(async (job) => {
           try {
-            this.logger.debug(
+            this.logger.log(
               `Processing background V2 book upsert for Google Book ID: ${job.googleBookId} (force: ${!!job.force}, skipRelations: ${!!job.skipRelations})`,
             );
             const fullRecord = await this.bookExternal.fetchFullV2Record(job.googleBookId);
             if (fullRecord) {
               await this.bookRepository.upsertV2Record(fullRecord);
-              this.logger.debug(
+              this.logger.log(
                 `Successfully completed background V2 book upsert for Google Book ID: ${job.googleBookId}`,
               );
 

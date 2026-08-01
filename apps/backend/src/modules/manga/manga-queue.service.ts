@@ -57,7 +57,7 @@ export class MangaQueueService implements OnModuleInit {
       }
     }
 
-    this.logger.debug(
+    this.logger.log(
       `[MangaQueue] Queuing upsert job for AniList ID ${anilistId} (force: ${!!options?.force}, skipRelations: ${!!options?.skipRelations})`,
     );
 
@@ -80,13 +80,13 @@ export class MangaQueueService implements OnModuleInit {
       .pipe(
         mergeMap(async (job) => {
           try {
-            this.logger.debug(
+            this.logger.log(
               `Processing background V2 manga upsert for AniList ID: ${job.anilistId} (force: ${!!job.force}, skipRelations: ${!!job.skipRelations})`,
             );
             const fullRecord = await this.mangaExternal.fetchFullV2Record(job.anilistId);
             if (fullRecord) {
               await this.mangaRepository.upsertV2Record(fullRecord);
-              this.logger.debug(
+              this.logger.log(
                 `Successfully completed background V2 manga upsert for AniList ID: ${job.anilistId}`,
               );
 
