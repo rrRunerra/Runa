@@ -1345,7 +1345,8 @@
     "voiceActorLanguage": "配音語言",
     "voiceActors": "聲優/配音員",
     "ageRating": "分級",
-    "noCharacters": "暫無角色資訊"
+    "noCharacters": "暫無角色資訊",
+    "addData": "新增資料"
   },
   "lynx": {
     "returnToSafety": "返回安全區域",

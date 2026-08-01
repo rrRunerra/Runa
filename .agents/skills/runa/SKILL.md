@@ -84,8 +84,10 @@ These skills provide deeper guidance for specific domains. Consult them when the
 - **Always** follow strict localization and internationalization (i18n) when building pages. Do not hardcode user-facing strings.
 - **Never** pass default fallback values to `t()` translation calls (e.g. `t("key", "Default Value")` — always remove default values and use `t("key")` directly without a second string parameter to prevent hydration mismatches and translation overrides).
 - **Never** edit or update language JSON files (`apps/frontend/src/locales/*.json` or `apps/frontend/public/locales/*/translation.json`) directly.
-- **Always** add or modify translation keys in `rrScripts/locales/*.js` across all languages and run `node append-locales.js` (or `node generate-locales.js`) in `rrScripts/` to automatically compile and sync locale JSON files.
-- **Always** support the following 15 languages: English US, Japanese, Korean, Chinese simplified/traditional, Polish, Russian, Norwegian, Finnish, Spanish, German, Czech, Turkish, Vietnamise, Thai, Malay.
+- **Always** add EVERY SINGLE LANGUAGE when adding or modifying translation keys. All 16 supported languages must be included: English (`en`), Czech (`cs`), German (`de`), Spanish (`es`), Finnish (`fi`), Japanese (`ja`), Korean (`ko`), Malay (`ms`), Norwegian (`no`), Polish (`pl`), Russian (`ru`), Thai (`th`), Turkish (`tr`), Vietnamese (`vi`), Simplified Chinese (`zh-CN`), Traditional Chinese (`zh-TW`).
+- **Always** use `rrScripts/append-locale.js` to add and sync translations:
+  - **Batch Mode (Recommended for AI Agents)**: Add key mappings for all 16 languages to the `batchData` object in `rrScripts/append-locale.js`, run `node append-locale.js --batch` from `rrScripts/` (which updates all `.js` files in `rrScripts/locales/`, compiles JSON files to `src/locales` and `public/locales`, and validates 100% key parity across all 16 languages), and then reset `batchData` back to `{}`.
+  - **Interactive Mode**: Run `node append-locale.js` in `rrScripts/` for step-by-step CLI prompts.
 
 ### TypeScript Types
 

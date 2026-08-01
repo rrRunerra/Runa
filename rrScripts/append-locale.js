@@ -116,6 +116,7 @@ async function run() {
   while (addMore) {
     console.log('\n--- Add New Translation Key ---');
 
+    const prompts = (await import('prompts')).default;
     // Prompt for key
     const keyResp = await prompts({
       type: 'text',

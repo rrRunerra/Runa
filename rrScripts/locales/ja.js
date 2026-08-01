@@ -1345,7 +1345,8 @@ export default {
     "voiceActorLanguage": "声優の言語",
     "voiceActors": "出演者 / 声優",
     "ageRating": "対象年齢 / レーティング",
-    "noCharacters": "キャラクター情報はありません"
+    "noCharacters": "キャラクター情報はありません",
+    "addData": "データを追加"
   },
   "lynx": {
     "returnToSafety": "安全な場所に戻る",

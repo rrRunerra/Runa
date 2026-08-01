@@ -1345,7 +1345,8 @@ export default {
     "voiceActorLanguage": "성우 언어",
     "voiceActors": "성우진",
     "ageRating": "연령 등급",
-    "noCharacters": "캐릭터 정보가 없습니다"
+    "noCharacters": "캐릭터 정보가 없습니다",
+    "addData": "데이터 추가"
   },
   "lynx": {
     "returnToSafety": "안전한 곳으로 돌아가기",

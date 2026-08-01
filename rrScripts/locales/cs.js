@@ -1345,7 +1345,8 @@ export default {
     "voiceActorLanguage": "Jazyk dabéra",
     "voiceActors": "Dabéři",
     "ageRating": "Věkové omezení",
-    "noCharacters": "Žádné informace o postavách"
+    "noCharacters": "Žádné informace o postavách",
+    "addData": "Přidat data"
   },
   "lynx": {
     "returnToSafety": "Návrat do bezpečí",

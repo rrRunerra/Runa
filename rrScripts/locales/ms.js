@@ -1345,7 +1345,8 @@ export default {
     "voiceActorLanguage": "Bahasa Pelakon Suara",
     "voiceActors": "Pelakon Suara",
     "ageRating": "Penarafan Umur",
-    "noCharacters": "Tiada maklumat watak tersedia"
+    "noCharacters": "Tiada maklumat watak tersedia",
+    "addData": "Tambah Data"
   },
   "lynx": {
     "returnToSafety": "Kembali ke keselamatan",

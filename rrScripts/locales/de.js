@@ -1345,7 +1345,8 @@ export default {
     "voiceActorLanguage": "Sprache des Synchronsprechers",
     "voiceActors": "Synchronsprecher",
     "ageRating": "Altersfreigabe",
-    "noCharacters": "Keine Charakterinformationen verfügbar"
+    "noCharacters": "Keine Charakterinformationen verfügbar",
+    "addData": "Daten hinzufügen"
   },
   "lynx": {
     "returnToSafety": "Zurück zur Sicherheit",

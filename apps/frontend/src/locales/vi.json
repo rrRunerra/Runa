@@ -1345,7 +1345,8 @@
     "voiceActorLanguage": "Ngôn ngữ diễn viên lồng tiếng",
     "voiceActors": "Diễn viên lồng tiếng",
     "ageRating": "Xếp hạng độ tuổi",
-    "noCharacters": "Không có thông tin nhân vật"
+    "noCharacters": "Không có thông tin nhân vật",
+    "addData": "Thêm dữ liệu"
   },
   "lynx": {
     "returnToSafety": "Quay lại an toàn",

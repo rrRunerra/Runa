@@ -1070,6 +1070,7 @@ export default {
     "browse": "Browse",
     "browseSubtitle": "Search for your favorite anime, manga, and more.",
     "searchNamesPlaceholder": "Search names... (try @anime, @manga to switch type)",
+    "addData": "Add Data",
     "recentlyViewed": "Recently Viewed",
     "clearHistory": "Clear history",
     "noResultsFound": "No results found for \"{{query}}\"",

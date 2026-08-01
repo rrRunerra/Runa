@@ -1345,7 +1345,8 @@
     "voiceActorLanguage": "Stemmeskuespiller språk",
     "voiceActors": "Stemmeskuespillere",
     "ageRating": "Aldersgrense",
-    "noCharacters": "Ingen karakterinformasjon tilgjengelig"
+    "noCharacters": "Ingen karakterinformasjon tilgjengelig",
+    "addData": "Legg til data"
   },
   "lynx": {
     "returnToSafety": "Gå tilbake til sikkerhet",

@@ -1345,7 +1345,8 @@
     "voiceActorLanguage": "ภาษาของนักพากย์",
     "voiceActors": "นักพากย์",
     "ageRating": "เรตติ้งอายุ",
-    "noCharacters": "ไม่มีข้อมูลตัวละคร"
+    "noCharacters": "ไม่มีข้อมูลตัวละคร",
+    "addData": "เพิ่มข้อมูล"
   },
   "lynx": {
     "returnToSafety": "กลับสู่ความปลอดภัย",

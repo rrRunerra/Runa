@@ -1345,7 +1345,8 @@
     "voiceActorLanguage": "Idioma del actor de voz",
     "voiceActors": "Actores de voz",
     "ageRating": "Clasificación por edad",
-    "noCharacters": "No hay información de personajes disponible"
+    "noCharacters": "No hay información de personajes disponible",
+    "addData": "Agregar datos"
   },
   "lynx": {
     "returnToSafety": "Volver a la seguridad",

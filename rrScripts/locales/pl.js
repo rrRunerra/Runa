@@ -1345,7 +1345,8 @@ export default {
     "voiceActorLanguage": "Język aktora głosowego",
     "voiceActors": "Aktorzy głosowi",
     "ageRating": "Kategoria wiekowa",
-    "noCharacters": "Brak dostępnych informacji o postaciach"
+    "noCharacters": "Brak dostępnych informacji o postaciach",
+    "addData": "Dodaj dane"
   },
   "lynx": {
     "returnToSafety": "Powrót do bezpieczeństwa",

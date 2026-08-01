@@ -1345,7 +1345,8 @@
     "voiceActorLanguage": "Ääninäyttelijän kieli",
     "voiceActors": "Ääninäyttelijät",
     "ageRating": "Ikäraja",
-    "noCharacters": "Ei hahmo-tietoja saatavilla"
+    "noCharacters": "Ei hahmo-tietoja saatavilla",
+    "addData": "Lisää tietoja"
   },
   "lynx": {
     "returnToSafety": "Palaa turvallisuuteen",

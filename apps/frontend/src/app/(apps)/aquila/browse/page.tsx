@@ -23,7 +23,18 @@ import { RrBrowseSearchForm } from "@/components/rrComponents/aquila/rrBrowseSea
 import { RrBrowseHistory } from "@/components/rrComponents/aquila/rrBrowseHistory";
 import RrLapplandBrowse from "@/components/rrComponents/rrImages/rrLapplandBrowse";
 import RrLapplandBrowseNotFound from "@/components/rrComponents/rrImages/rrLapplandBrowseNotFound";
-import { Plus } from "lucide-react";
+import {
+  Plus,
+  Play,
+  BookOpen,
+  Film,
+  Tv,
+  Gamepad2,
+  Book,
+  User,
+  UserCheck,
+  Sparkles,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RrMediaSubmissionModal } from "@/components/rrComponents/aquila/rrMediaSubmissionModal";
 import { useTranslation } from "react-i18next";
@@ -306,15 +317,18 @@ export default function BrowsePage(): React.JSX.Element {
   };
 
   const categories = [
-    { id: "anime", label: t("aquila.anime", "Anime") },
-    { id: "manga", label: t("aquila.manga", "Manga") },
-    { id: "movies", label: t("aquila.movie", "Movie") },
-    { id: "tv", label: t("aquila.tv", "TV Show") },
-    { id: "games", label: t("aquila.games", "Games") },
-    { id: "books", label: t("aquila.books", "Books") },
-    { id: "characters", label: t("aquila.charactersLabel", "Characters") },
-    { id: "actors", label: t("aquila.actorsLabel", "Actors") },
+    { id: "anime", label: t("aquila.anime", "Anime"), icon: Play },
+    { id: "manga", label: t("aquila.manga", "Manga"), icon: BookOpen },
+    { id: "movies", label: t("aquila.movie", "Movie"), icon: Film },
+    { id: "tv", label: t("aquila.tv", "TV Show"), icon: Tv },
+    { id: "games", label: t("aquila.games", "Games"), icon: Gamepad2 },
+    { id: "books", label: t("aquila.books", "Books"), icon: Book },
+    { id: "characters", label: t("aquila.charactersLabel", "Characters"), icon: User },
+    { id: "actors", label: t("aquila.actorsLabel", "Actors"), icon: UserCheck },
   ];
+
+  const currentCategory =
+    categories.find((c) => c.id === type) || categories[0];
 
   return (
     <div className="relative container mx-auto p-4 md:p-6 lg:p-8 flex flex-col gap-8 max-w-7xl min-h-full">
@@ -326,10 +340,16 @@ export default function BrowsePage(): React.JSX.Element {
           className="flex flex-col md:flex-row md:items-center justify-between gap-4"
         >
           <div>
-            <h1 className="text-3xl font-bold tracking-tight bg-linear-to-r from-foreground to-foreground/75 bg-clip-text text-transparent">
-              {t("aquila.browse", "Browse")}
-            </h1>
-            <p className="text-muted-foreground mt-1">
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
+                {t("aquila.browse", "Browse")}
+              </h1>
+              <span className="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-primary/10 text-primary border border-primary/20 shadow-xs flex items-center gap-1">
+                <Sparkles className="size-3" />
+                {currentCategory.label}
+              </span>
+            </div>
+            <p className="text-muted-foreground mt-1 text-sm font-medium">
               {t(
                 "aquila.browseSubtitle",
                 "Search for your favorite anime, manga, and more.",
@@ -338,34 +358,36 @@ export default function BrowsePage(): React.JSX.Element {
           </div>
 
           {/* Animated Glassmorphic Category Selector Pills */}
-          <div className="w-full md:w-auto overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden max-w-full">
-            <div className="flex flex-row flex-nowrap shrink-0 gap-1 p-1 bg-muted/40 backdrop-blur-xs border border-border/30 rounded-2xl w-max min-w-full shadow-2xs">
+          <div className="w-full md:w-auto overflow-x-auto scrollbar-none [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden max-w-full">
+            <div className="flex flex-row flex-nowrap shrink-0 gap-1.5 p-1.5 bg-card/60 backdrop-blur-md border border-border/40 rounded-2xl w-max min-w-full shadow-md">
               {categories.map((cat) => {
                 const isActive = type === cat.id;
+                const Icon = cat.icon;
                 return (
                   <button
                     key={cat.id}
                     type="button"
                     onClick={() => handleTypeChange(cat.id)}
                     className={cn(
-                      "relative px-4 py-1.5 rounded-xl text-xs font-semibold transition-colors duration-200 select-none cursor-pointer shrink-0 whitespace-nowrap text-center outline-hidden flex-1 md:flex-none",
+                      "relative px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 select-none cursor-pointer shrink-0 whitespace-nowrap text-center outline-hidden flex-1 md:flex-none flex items-center justify-center gap-1.5",
                       isActive
                         ? "text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground",
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/40",
                     )}
                   >
                     {isActive && (
                       <motion.div
                         layoutId="activeCategoryHighlight"
-                        className="absolute inset-0 bg-primary rounded-xl shadow-md shadow-primary/20"
+                        className="absolute inset-0 bg-primary text-primary-foreground rounded-xl shadow-md shadow-primary/20"
                         transition={{
                           type: "spring",
-                          stiffness: 350,
-                          damping: 25,
+                          stiffness: 380,
+                          damping: 26,
                         }}
                       />
                     )}
-                    <span className="relative z-10 whitespace-nowrap">
+                    <span className="relative z-10 flex items-center gap-1.5 whitespace-nowrap">
+                      <Icon className="size-3.5" />
                       {cat.label}
                     </span>
                   </button>
@@ -377,35 +399,29 @@ export default function BrowsePage(): React.JSX.Element {
 
         {/* Animated Search Box + Add Data Button */}
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full">
-          <div className="flex-1 w-full">
+          <div className="flex-1 min-w-0 w-full">
             <RrBrowseSearchForm
               query={query}
               onChange={handleQueryChange}
               onSubmit={handleSearchSubmit}
               placeholder={
                 ["characters", "actors"].includes(type)
-                  ? t(
-                      "aquila.searchNamesPlaceholder",
-                      "Search names... (try @anime, @manga to switch type)",
-                    )
-                  : t(
-                      "aquila.searchPlaceholder",
-                      "Search titles... (try @anime, @manga to switch type)",
-                    )
+                  ? t("aquila.searchNamesPlaceholder")
+                  : t("aquila.searchPlaceholder")
               }
               shortPlaceholder={
                 ["characters", "actors"].includes(type)
-                  ? t("aquila.shortSearchNamesPlaceholder", "Search names...")
-                  : t("aquila.shortSearchPlaceholder", "Search titles...")
+                  ? t("aquila.shortSearchNamesPlaceholder")
+                  : t("aquila.shortSearchPlaceholder")
               }
             />
           </div>
           <Button
             onClick={() => setIsAddModalOpen(true)}
-            className="h-12 px-5 gap-2 font-semibold text-xs rounded-2xl shrink-0 w-full sm:w-auto shadow-md"
+            className="h-14 px-5 gap-2 font-semibold text-xs rounded-2xl shrink-0 w-full sm:w-auto shadow-md bg-primary text-primary-foreground hover:bg-primary/90 border border-primary-foreground/10 cursor-pointer transition-all duration-200 hover:scale-[1.01]"
           >
             <Plus className="size-4" />
-            Add Data
+            {t("aquila.addData")}
           </Button>
         </div>
 

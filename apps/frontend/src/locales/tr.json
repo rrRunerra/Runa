@@ -1345,7 +1345,8 @@
     "voiceActorLanguage": "Seslendirmen Dili",
     "voiceActors": "Seslendirmenler",
     "ageRating": "Yaş Sınırı",
-    "noCharacters": "Karakter bilgisi bulunmuyor"
+    "noCharacters": "Karakter bilgisi bulunmuyor",
+    "addData": "Veri Ekle"
   },
   "lynx": {
     "returnToSafety": "Güvenli bölgeye dön",

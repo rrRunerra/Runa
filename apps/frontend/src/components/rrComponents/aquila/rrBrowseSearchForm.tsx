@@ -41,7 +41,7 @@ export const RrBrowseSearchForm = ({
       }}
       transition={{ duration: 0.2 }}
       className={cn(
-        "flex gap-4 items-center bg-card/60 backdrop-blur-xs p-3 rounded-2xl border transition-all duration-300 w-full",
+        "flex gap-4 items-center bg-card/60 backdrop-blur-xs px-3 py-1 rounded-2xl border transition-all duration-300 w-full h-14",
         isFocused
           ? "bg-background border-primary shadow-lg shadow-primary/5"
           : "border-border/40 hover:border-border/60 hover:bg-card"
