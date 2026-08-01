@@ -14,7 +14,7 @@ export interface RrMediaSectionProps {
   icon: React.ReactNode;
   items: MediaItem[];
   onIncrement: (item: MediaItem) => void;
-  updatingId: string | null;
+  updatingId?: string | null;
   onRefresh: () => void;
   dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
 }
@@ -24,7 +24,7 @@ export function RrMediaSection({
   icon,
   items,
   onIncrement,
-  updatingId,
+  updatingId = null,
   onRefresh,
   dragHandleProps,
 }: RrMediaSectionProps): React.JSX.Element {

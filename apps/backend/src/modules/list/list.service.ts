@@ -2118,7 +2118,14 @@ export class ListService {
         }
 
         if (allEpisodes.length === 0) {
-          return { success: false, message: 'No episodes found for this show' };
+          const newProgress = (entry.progress || 0) + count;
+          await this.prisma.client.aquilaTvUserListV2.update({
+            where: {
+              username_tvId: { username: username.toLowerCase(), tvId: mediaId },
+            },
+            data: { progress: newProgress },
+          });
+          return { success: true, count: newProgress };
         }
 
         // Build set of already-watched episodes
@@ -2135,6 +2142,17 @@ export class ListService {
             watchedSet.add(key);
             marked++;
           }
+        }
+
+        if (marked === 0) {
+          const newProgress = (entry.progress || 0) + count;
+          await this.prisma.client.aquilaTvUserListV2.update({
+            where: {
+              username_tvId: { username: username.toLowerCase(), tvId: mediaId },
+            },
+            data: { progress: newProgress },
+          });
+          return { success: true, count: newProgress };
         }
 
         // Build the full updated episodes array and delegate to upsertTvList

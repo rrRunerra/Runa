@@ -196,10 +196,7 @@ const RrMediaCardComponent = ({
             <div className="absolute bottom-2 right-2 z-25 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 focus-within:opacity-100 transition-all duration-200">
               <Button
                 size="icon"
-                className={cn(
-                  "size-7 sm:size-8 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground border border-primary/20 shadow-md transition-all cursor-pointer flex items-center justify-center",
-                  isUpdating && "opacity-50 cursor-not-allowed",
-                )}
+                className="size-7 sm:size-8 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground border border-primary/20 shadow-md transition-all cursor-pointer flex items-center justify-center active:scale-90"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -208,13 +205,8 @@ const RrMediaCardComponent = ({
                 onTouchStart={(e) => e.stopPropagation()}
                 onMouseDown={(e) => e.stopPropagation()}
                 onKeyDown={(e) => e.stopPropagation()}
-                disabled={isUpdating}
               >
-                {isUpdating ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Plus className="size-4.5" />
-                )}
+                <Plus className="size-4.5" />
               </Button>
             </div>
           )}

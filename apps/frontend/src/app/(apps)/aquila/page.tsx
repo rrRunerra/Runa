@@ -28,7 +28,6 @@ const DEFAULT_ORDER: CategoryType[] = [
 export default function AquilaHome(): React.JSX.Element {
   const { t } = useTranslation();
   const { data: session, status } = useSession();
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   const [categoryOrder, setCategoryOrder] =
     useState<CategoryType[]>(DEFAULT_ORDER);
@@ -102,6 +101,10 @@ export default function AquilaHome(): React.JSX.Element {
   >({});
   const inFlightKeysRef = useRef<Set<string>>(new Set());
 
+  const [optimisticWatching, setOptimisticWatching] = useState<
+    MediaItem[] | null
+  >(null);
+
   // Fetch V2 watching list using standard SWR hook
   const {
     data: rawWatching = [],
@@ -121,8 +124,11 @@ export default function AquilaHome(): React.JSX.Element {
     },
   );
 
-  // Filter out malformed entries that lack an id to prevent runtime crashes
-  const watching = rawWatching.filter((item) => item.id != null);
+  // Prioritize optimisticWatching local state for instant 0ms UI updates
+  const watching = useMemo(() => {
+    const list = optimisticWatching ?? rawWatching;
+    return list.filter((item) => item.id != null);
+  }, [optimisticWatching, rawWatching]);
 
   useEffect(() => {
     const savedOrder = localStorage.getItem("aquila_category_order");
@@ -155,36 +161,66 @@ export default function AquilaHome(): React.JSX.Element {
   useEffect(() => {
     document.title = t("aquila.homeTitle", "Aquila > Home");
     return () => {
-      // Clear any pending debounced API calls on unmount
-      Object.values(pendingIncrementsRef.current).forEach((pending) => {
+      // Flush any pending debounced API calls on unmount
+      Object.entries(pendingIncrementsRef.current).forEach(([key, pending]) => {
         if (pending.timeoutId) {
           clearTimeout(pending.timeoutId);
         }
+        if (pending.count > 0 && session?.accessToken) {
+          const [mediaType, idStr] = key.split("-");
+          const id = Number(idStr);
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/list/increment`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.accessToken}`,
+            },
+            body: JSON.stringify({ mediaType, id, count: pending.count }),
+          }).catch((err) =>
+            console.error("Failed to flush pending increment on unmount", err),
+          );
+        }
       });
     };
-  }, [t]);
+  }, [t, session?.accessToken]);
 
-  const handleIncrement = async (item: MediaItem) => {
+  const handleIncrement = (item: MediaItem) => {
     if (status !== "authenticated" || !session?.accessToken) return;
 
     const mediaType = item.type;
     const key = `${mediaType}-${item.id}`;
 
-    if (updatingId === key) return;
-
-    // Optimistic Update: Update progress in place without modifying last_updated or re-sorting
+    // 1. Instant Optimistic Update on Client
     const updatedWatching = watching.map((i) => {
-      if (String(i.id) === String(item.id) && i.type === item.type) {
+      const isTarget =
+        String(i.id) === String(item.id) &&
+        i.type?.toLowerCase() === item.type?.toLowerCase();
+
+      if (isTarget) {
+        const nextProgress = (i.progress || 0) + 1;
+        const nextMeta = i.meta
+          ? {
+              ...i.meta,
+              episode: (i.meta.episode || 0) + 1,
+            }
+          : i.type?.toLowerCase() === "tv"
+            ? { season: 1, episode: nextProgress }
+            : undefined;
+
         return {
           ...i,
-          progress: (i.progress || 0) + 1,
+          progress: nextProgress,
+          ...(nextMeta ? { meta: nextMeta } : {}),
         };
       }
       return i;
     });
 
+    // Force immediate local React re-render + update SWR cache
+    setOptimisticWatching(updatedWatching);
     mutate(updatedWatching, false);
 
+    // 2. Queue & Debounce Background Server Sync
     if (!pendingIncrementsRef.current[key]) {
       pendingIncrementsRef.current[key] = {
         count: 0,
@@ -204,7 +240,6 @@ export default function AquilaHome(): React.JSX.Element {
       const { count } = pending;
       delete pendingIncrementsRef.current[key];
       inFlightKeysRef.current.add(key);
-      setUpdatingId(key);
 
       try {
         const res = await fetch(
@@ -222,27 +257,33 @@ export default function AquilaHome(): React.JSX.Element {
         if (res.ok) {
           const result = await res.json();
           if (result.success) {
-            toast.success(t("aquila.progressUpdated", "Progress updated for {{title}}", { title: item.title }));
+            toast.success(
+              t("aquila.progressUpdated", "Progress updated for {{title}}", {
+                title: item.title,
+              }),
+            );
           } else {
             toast.error(result.message);
           }
         } else {
-          toast.error(t("aquila.failedUpdateProgress", "Failed to update progress"));
+          toast.error(
+            t("aquila.failedUpdateProgress", "Failed to update progress"),
+          );
         }
       } catch (e) {
         toast.error(t("aquila.errorOccurred", "An error occurred"));
       } finally {
         inFlightKeysRef.current.delete(key);
-        setUpdatingId(null);
-        // Only trigger server revalidation if no pending or in-flight requests remain
+        // Trigger server revalidation only if no pending or in-flight requests remain
         if (
           Object.keys(pendingIncrementsRef.current).length === 0 &&
           inFlightKeysRef.current.size === 0
         ) {
-          mutate();
+          await mutate();
+          setOptimisticWatching(null);
         }
       }
-    }, 1000);
+    }, 600);
   };
 
   const sections = useMemo<Record<CategoryType, MediaItem[]>>(() => {
@@ -349,7 +390,6 @@ export default function AquilaHome(): React.JSX.Element {
                     icon={config.icon}
                     items={items}
                     onIncrement={handleIncrement}
-                    updatingId={updatingId}
                     onRefresh={mutate}
                     dragHandleProps={{
                       onMouseDown: () => setDragAllowedCategory(category),
