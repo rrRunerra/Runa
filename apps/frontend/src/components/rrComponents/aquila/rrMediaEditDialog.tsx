@@ -56,9 +56,12 @@ interface RrMediaEditDialogMedia {
   title: MediaTitle;
   coverImage: MediaCoverImage;
   bannerImage?: string;
-  episodes?: number;
-  chapters?: number;
-  volumes?: number;
+  episodes?: any;
+  episodeCount?: number;
+  chapters?: any;
+  chapterCount?: number;
+  volumes?: any;
+  volumeCount?: number;
   seasons?: any[];
 }
 
@@ -223,6 +226,27 @@ export function RrMediaEditDialog({
 
   const mediaType = media.type;
   const scoreMax = mediaType === "game" ? 100 : 10;
+
+  const totalEpisodes = useMemo(() => {
+    if (typeof media.episodeCount === "number") return media.episodeCount;
+    if (typeof media.episodes === "number") return media.episodes;
+    if (Array.isArray(media.episodes)) return media.episodes.length;
+    return undefined;
+  }, [media]);
+
+  const totalChapters = useMemo(() => {
+    if (typeof media.chapterCount === "number") return media.chapterCount;
+    if (typeof media.chapters === "number") return media.chapters;
+    if (Array.isArray(media.chapters)) return media.chapters.length;
+    return undefined;
+  }, [media]);
+
+  const totalVolumes = useMemo(() => {
+    if (typeof media.volumeCount === "number") return media.volumeCount;
+    if (typeof media.volumes === "number") return media.volumes;
+    if (Array.isArray(media.volumes)) return media.volumes.length;
+    return undefined;
+  }, [media]);
 
   const [hasListEntry, setHasListEntry] =
     useState<boolean>(initialHasListEntry);
@@ -461,9 +485,9 @@ export function RrMediaEditDialog({
     if (isNaN(num)) return;
 
     let maxVal: number | undefined = undefined;
-    if (mediaType === "anime") maxVal = media.episodes;
+    if (mediaType === "anime") maxVal = totalEpisodes;
     else if (mediaType === "manga" || mediaType === "book")
-      maxVal = media.chapters;
+      maxVal = totalChapters;
 
     if (maxVal && num >= maxVal) {
       setListStatus("COMPLETED");
@@ -860,9 +884,9 @@ export function RrMediaEditDialog({
       <RrMediaEditGeneralFields
         mediaType={mediaType}
         scoreMax={scoreMax}
-        episodes={media.episodeCount}
-        chapters={media.chapters}
-        volumesMax={media.volumes}
+        episodes={totalEpisodes}
+        chapters={totalChapters}
+        volumesMax={totalVolumes}
         listStatus={listStatus}
         onStatusChange={(val) => {
           setListStatus(val);
@@ -871,22 +895,22 @@ export function RrMediaEditDialog({
           if (val === "COMPLETED" && isTV && media.seasons) {
             const allEps: { seasonNum: number; episodeNum: number }[] = [];
             for (const s of media.seasons) {
-              for (const ep of s.episodes) {
-                allEps.push({ seasonNum: s.number, episodeNum: ep.number });
+              for (const ep of s.episodes || []) {
+                allEps.push({ seasonNum: s.number, episodeNum: typeof ep === "number" ? ep : (ep.number ?? ep.episodeNum) });
               }
             }
             setWatchedEpisodes(allEps);
           }
 
           if (val === "COMPLETED") {
-            if (mediaType === "anime" && media.episodeCount && !progress) {
-              setProgress(media.episodeCount.toString());
+            if (mediaType === "anime" && totalEpisodes && !progress) {
+              setProgress(totalEpisodes.toString());
             } else if (
               (mediaType === "manga" || mediaType === "book") &&
-              media.chapters &&
+              totalChapters &&
               !progress
             ) {
-              setProgress(media.chapters.toString());
+              setProgress(totalChapters.toString());
             }
           }
         }}
