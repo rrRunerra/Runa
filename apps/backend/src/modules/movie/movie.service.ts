@@ -12,6 +12,7 @@ import {
 } from 'src/providers/error';
 import { AnimeQueueService } from '../anime/anime-queue.service';
 import { MangaQueueService } from '../manga/manga-queue.service';
+import { getTimestampMs } from '../../common/utils/time.utils';
 
 @Injectable()
 export class MovieService {
@@ -188,10 +189,11 @@ export class MovieService {
   ): Promise<any> {
     let movie = await this.movieRepository.findByTvdbId(tvdbId);
     const threeMonthsMs = 90 * 24 * 60 * 60 * 1000;
+    const tvdbUpdatedMs = getTimestampMs(movie?.tvdbUpdatedAt);
     const isStale =
       !movie ||
-      !movie.tvdbUpdatedAt ||
-      Date.now() - new Date(movie.tvdbUpdatedAt).getTime() >= threeMonthsMs;
+      tvdbUpdatedMs === null ||
+      Date.now() - tvdbUpdatedMs >= threeMonthsMs;
 
     if (isStale) {
       try {

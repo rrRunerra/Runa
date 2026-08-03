@@ -10,6 +10,7 @@ import {
 import { GameEntity, GameSearchEntity } from './game.entities';
 import { CacheService } from 'src/providers/cache/cache.service';
 import { GameExternal } from './game.external';
+import { getTimestampMs } from '../../common/utils/time.utils';
 
 @Injectable()
 export class GameService {
@@ -148,11 +149,11 @@ export class GameService {
   ): Promise<GameEntity | null> {
     let game = await this.gameRepository.find(rawgId);
     const threeMonthsMs = 90 * 24 * 60 * 60 * 1000;
-    const rawgUpdatedAt = (game as any)?.rawgUpdatedAt;
+    const rawgUpdatedMs = getTimestampMs((game as any)?.rawgUpdatedAt);
     const isStale =
       !game ||
-      !rawgUpdatedAt ||
-      Date.now() - new Date(rawgUpdatedAt).getTime() >= threeMonthsMs;
+      rawgUpdatedMs === null ||
+      Date.now() - rawgUpdatedMs >= threeMonthsMs;
 
     if (isStale) {
       try {

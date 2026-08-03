@@ -110,4 +110,60 @@ describe('MediaUpdateService', () => {
     expect(mockAnimeService.refreshAnime).toHaveBeenCalledWith(10);
     expect(mockAnimeService.refreshAnime).toHaveBeenCalledWith(20);
   });
+
+  it('should refresh active media every week in updateActiveMediaWeekly', async () => {
+    mockPrisma.aquilaAnimeV2.findMany.mockResolvedValue([
+      { id: 101, status: 'RELEASING' },
+      { id: 102, status: 'HIATUS' },
+      { id: 103, status: 'UNKNOWN' },
+    ]);
+    mockPrisma.aquilaMangaV2.findMany.mockResolvedValue([
+      { id: 201, status: 'RELEASING' },
+    ]);
+    mockPrisma.aquilaBookV2.findMany.mockResolvedValue([]);
+    mockPrisma.aquilaGameV2.findMany.mockResolvedValue([]);
+    mockPrisma.aquilaMovieV2.findMany.mockResolvedValue([]);
+    mockPrisma.aquilaTvV2.findMany.mockResolvedValue([]);
+
+    await service.updateActiveMediaWeekly();
+
+    expect(mockAnimeService.refreshAnime).toHaveBeenCalledWith(101);
+    expect(mockAnimeService.refreshAnime).toHaveBeenCalledWith(102);
+    expect(mockAnimeService.refreshAnime).toHaveBeenCalledWith(103);
+    expect(mockMangaService.refreshManga).toHaveBeenCalledWith(201);
+  });
+
+  it('should refresh completed media with a 5% random daily selection in updateCompletedMediaDaily', async () => {
+    mockPrisma.aquilaAnimeV2.findMany.mockResolvedValue([
+      { id: 301, status: 'FINISHED' },
+    ]);
+    mockPrisma.aquilaMangaV2.findMany.mockResolvedValue([]);
+    mockPrisma.aquilaBookV2.findMany.mockResolvedValue([]);
+    mockPrisma.aquilaGameV2.findMany.mockResolvedValue([]);
+    mockPrisma.aquilaMovieV2.findMany.mockResolvedValue([]);
+    mockPrisma.aquilaTvV2.findMany.mockResolvedValue([]);
+
+    jest.spyOn(Math, 'random').mockReturnValue(0.02); // 2% < 5% -> selected
+
+    await service.updateCompletedMediaDaily();
+
+    expect(mockAnimeService.refreshAnime).toHaveBeenCalledWith(301);
+    jest.spyOn(Math, 'random').mockRestore();
+  });
+
+  it('should skip media updated within the last 7 days in cron jobs', async () => {
+    const recentUnixSeconds = Math.floor((Date.now() - 2 * 24 * 60 * 60 * 1000) / 1000); // 2 days ago
+    mockPrisma.aquilaAnimeV2.findMany.mockResolvedValue([
+      { id: 401, status: 'RELEASING', alUpdatedAt: recentUnixSeconds },
+    ]);
+    mockPrisma.aquilaMangaV2.findMany.mockResolvedValue([]);
+    mockPrisma.aquilaBookV2.findMany.mockResolvedValue([]);
+    mockPrisma.aquilaGameV2.findMany.mockResolvedValue([]);
+    mockPrisma.aquilaMovieV2.findMany.mockResolvedValue([]);
+    mockPrisma.aquilaTvV2.findMany.mockResolvedValue([]);
+
+    await service.updateActiveMediaWeekly();
+
+    expect(mockAnimeService.refreshAnime).not.toHaveBeenCalledWith(401);
+  });
 });

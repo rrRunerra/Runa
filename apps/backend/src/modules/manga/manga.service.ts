@@ -11,6 +11,7 @@ import {
   rrTooManyRequestsException,
 } from 'src/providers/error';
 import { AnimeQueueService } from '../anime/anime-queue.service';
+import { getTimestampMs } from '../../common/utils/time.utils';
 
 @Injectable()
 export class MangaService {
@@ -198,10 +199,11 @@ export class MangaService {
   ): Promise<any> {
     let manga = await this.mangaRepository.findByAnilistId(anilistId);
     const threeMonthsMs = 90 * 24 * 60 * 60 * 1000;
+    const alUpdatedMs = getTimestampMs(manga?.alUpdatedAt);
     const isStale =
       !manga ||
-      !manga.alUpdatedAt ||
-      Date.now() - new Date(manga.alUpdatedAt).getTime() >= threeMonthsMs;
+      alUpdatedMs === null ||
+      Date.now() - alUpdatedMs >= threeMonthsMs;
 
     if (isStale) {
       try {

@@ -5,6 +5,7 @@ import { BookExternal } from './book.external';
 import { BookRepository } from './book.repository';
 import { AnimeQueueService } from '../anime/anime-queue.service';
 import { MangaQueueService } from '../manga/manga-queue.service';
+import { getTimestampMs } from '../../common/utils/time.utils';
 
 interface ExternalUpsertJob {
   googleBookId: string;
@@ -46,11 +47,15 @@ export class BookQueueService implements OnModuleInit {
     if (!options?.force) {
       try {
         const existing = await this.bookRepository.findByGoogleBookId(googleBookId);
-        if (existing && existing.googleBooksUpdatedAt) {
-          this.logger.debug(
-            `[BookQueue] Skipping Google Book ID ${googleBookId}: record updated at ${existing.googleBooksUpdatedAt}`,
-          );
-          return;
+        const updatedMs = getTimestampMs(existing?.googleBooksUpdatedAt ?? existing?.googleBookUpdatedAt);
+        if (updatedMs !== null) {
+          const threeMonthsMs = 90 * 24 * 60 * 60 * 1000;
+          if (Date.now() - updatedMs < threeMonthsMs) {
+            this.logger.debug(
+              `[BookQueue] Skipping Google Book ID ${googleBookId}: record updated at ${existing.googleBooksUpdatedAt}`,
+            );
+            return;
+          }
         }
       } catch {
         // Ignore check errors

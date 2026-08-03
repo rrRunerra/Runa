@@ -7,6 +7,7 @@ import { AnimeQueueService } from '../anime/anime-queue.service';
 import { MangaQueueService } from '../manga/manga-queue.service';
 import { MovieQueueService } from '../movie/movie-queue.service';
 import { BookQueueService } from '../book/book-queue.service';
+import { getTimestampMs } from '../../common/utils/time.utils';
 
 interface ExternalUpsertJob {
   rawgId: number;
@@ -52,11 +53,15 @@ export class GameQueueService implements OnModuleInit {
     if (!options?.force) {
       try {
         const existing = await this.gameRepository.findByRawgId(rawgId);
-        if (existing && existing.rawgUpdatedAt) {
-          this.logger.debug(
-            `[GameQueue] Skipping RAWG ID ${rawgId}: record updated at ${existing.rawgUpdatedAt}`,
-          );
-          return;
+        const updatedMs = getTimestampMs(existing?.rawgUpdatedAt);
+        if (updatedMs !== null) {
+          const threeMonthsMs = 90 * 24 * 60 * 60 * 1000;
+          if (Date.now() - updatedMs < threeMonthsMs) {
+            this.logger.debug(
+              `[GameQueue] Skipping RAWG ID ${rawgId}: record updated at ${existing.rawgUpdatedAt}`,
+            );
+            return;
+          }
         }
       } catch {
         // Ignore check error

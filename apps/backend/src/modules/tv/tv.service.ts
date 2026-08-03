@@ -12,6 +12,7 @@ import { TvQueueService } from './tv-queue.service';
 import { TvEntity, TvSearchEntity } from './tv.entities';
 import { CacheService } from 'src/providers/cache/cache.service';
 import { TvExternal } from './tv.external';
+import { getTimestampMs } from '../../common/utils/time.utils';
 
 interface DbTvResult {
   id: number;
@@ -147,11 +148,11 @@ export class TvService {
       tvdbId,
     )) as DbTvResult | null;
     const threeMonthsMs = 90 * 24 * 60 * 60 * 1000;
-    const tvUpdatedAt = (tv as any)?.tvdbUpdatedAt;
+    const tvUpdatedMs = getTimestampMs((tv as any)?.tvdbUpdatedAt);
     const isStale =
       !tv ||
-      !tvUpdatedAt ||
-      Date.now() - new Date(tvUpdatedAt).getTime() >= threeMonthsMs;
+      tvUpdatedMs === null ||
+      Date.now() - tvUpdatedMs >= threeMonthsMs;
 
     if (isStale) {
       try {

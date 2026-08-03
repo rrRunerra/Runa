@@ -5,6 +5,7 @@ import { MovieExternal } from './movie.external';
 import { MovieRepository } from './movie.repository';
 import { AnimeQueueService } from '../anime/anime-queue.service';
 import { MangaQueueService } from '../manga/manga-queue.service';
+import { getTimestampMs } from '../../common/utils/time.utils';
 
 interface ExternalUpsertJob {
   tvdbId: number;
@@ -46,9 +47,10 @@ export class MovieQueueService implements OnModuleInit {
     if (!options?.force) {
       try {
         const existing = await this.movieRepository.findByTvdbId(tvdbId);
-        if (existing && existing.tvdbUpdatedAt) {
+        const updatedMs = getTimestampMs(existing?.tvdbUpdatedAt);
+        if (updatedMs !== null) {
           const threeMonthsMs = 90 * 24 * 60 * 60 * 1000;
-          if (Date.now() - new Date(existing.tvdbUpdatedAt).getTime() < threeMonthsMs) {
+          if (Date.now() - updatedMs < threeMonthsMs) {
             this.logger.debug(
               `[MovieQueue] Skipping TVDB ID ${tvdbId}: updated < 3 months ago (${existing.tvdbUpdatedAt})`,
             );

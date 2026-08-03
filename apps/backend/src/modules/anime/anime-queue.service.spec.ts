@@ -65,7 +65,7 @@ describe('AnimeQueueService', () => {
       mockAnimeRepository.findByAnilistId.mockResolvedValue({
         id: 1,
         anilistId: 100,
-        alUpdatedAt: new Date().toISOString(),
+        alUpdatedAt: Math.floor(Date.now() / 1000),
       });
 
       service.onModuleInit();

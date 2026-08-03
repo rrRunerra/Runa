@@ -59,7 +59,7 @@ describe('MangaQueueService', () => {
       mockMangaRepository.findByAnilistId.mockResolvedValue({
         id: 1,
         anilistId: 100,
-        alUpdatedAt: 1600000000,
+        alUpdatedAt: Math.floor(Date.now() / 1000),
       });
 
       service.onModuleInit();

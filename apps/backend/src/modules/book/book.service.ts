@@ -10,6 +10,7 @@ import {
 import { BookEntity, BookSearchEntity } from './book.entities';
 import { CacheService } from 'src/providers/cache/cache.service';
 import { BookExternal } from './book.external';
+import { getTimestampMs } from '../../common/utils/time.utils';
 
 @Injectable()
 export class BookService {
@@ -148,11 +149,13 @@ export class BookService {
   ): Promise<BookEntity | null> {
     let book = await this.bookRepository.find(googleBookId);
     const threeMonthsMs = 90 * 24 * 60 * 60 * 1000;
-    const googleBookUpdatedAt = (book as any)?.googleBookUpdatedAt;
+    const googleBookUpdatedMs = getTimestampMs(
+      (book as any)?.googleBookUpdatedAt ?? (book as any)?.googleBooksUpdatedAt,
+    );
     const isStale =
       !book ||
-      !googleBookUpdatedAt ||
-      Date.now() - new Date(googleBookUpdatedAt).getTime() >= threeMonthsMs;
+      googleBookUpdatedMs === null ||
+      Date.now() - googleBookUpdatedMs >= threeMonthsMs;
 
     if (isStale) {
       try {

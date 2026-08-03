@@ -4,6 +4,7 @@ import { mergeMap, catchError } from 'rxjs/operators';
 import { AnimeExternal } from './anime.external';
 import { AnimeRepository } from './anime.repository';
 import { MangaQueueService } from '../manga/manga-queue.service';
+import { getTimestampMs } from '../../common/utils/time.utils';
 
 interface ExternalUpsertJob {
   anilistId: number;
@@ -43,9 +44,10 @@ export class AnimeQueueService implements OnModuleInit {
     if (!options?.force) {
       try {
         const existing = await this.animeRepository.findByAnilistId(anilistId);
-        if (existing && existing.alUpdatedAt) {
+        const updatedMs = getTimestampMs(existing?.alUpdatedAt);
+        if (updatedMs !== null) {
           const threeMonthsMs = 90 * 24 * 60 * 60 * 1000;
-          if (Date.now() - new Date(existing.alUpdatedAt).getTime() < threeMonthsMs) {
+          if (Date.now() - updatedMs < threeMonthsMs) {
             this.logger.debug(
               `[AnimeQueue] Skipping AniList ID ${anilistId}: updated < 3 months ago (${existing.alUpdatedAt})`,
             );

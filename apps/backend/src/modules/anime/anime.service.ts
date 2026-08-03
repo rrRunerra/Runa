@@ -15,6 +15,7 @@ import { AnimeEntity, AnimeSearchEntity } from './anime.entities';
 import { CacheService } from 'src/providers/cache/cache.service';
 import { AnimeExternal } from './anime.external';
 import { MangaQueueService } from '../manga/manga-queue.service';
+import { getTimestampMs } from '../../common/utils/time.utils';
 
 @Injectable()
 export class AnimeService {
@@ -200,10 +201,11 @@ export class AnimeService {
   ): Promise<any> {
     let anime = await this.animeRepository.findByAnilistId(anilistId);
     const threeMonthsMs = 90 * 24 * 60 * 60 * 1000;
+    const alUpdatedMs = getTimestampMs(anime?.alUpdatedAt);
     const isStale =
       !anime ||
-      !anime.alUpdatedAt ||
-      Date.now() - new Date(anime.alUpdatedAt).getTime() >= threeMonthsMs;
+      alUpdatedMs === null ||
+      Date.now() - alUpdatedMs >= threeMonthsMs;
 
     if (isStale) {
       try {
