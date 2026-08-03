@@ -302,9 +302,36 @@ export default class AnilistConnection extends BaseConnection {
       return;
     }
 
-    // 1. Query for the list entry ID
+    // 1. Query Viewer & user's specific MediaList entry ID
     let listEntryId: number | undefined;
     try {
+      // Get authenticated Viewer ID
+      const viewerRes = await fetch("https://graphql.anilist.co", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${conn.accessToken}`,
+        },
+        body: JSON.stringify({
+          query: `
+            query {
+              Viewer {
+                id
+              }
+            }
+          `,
+        }),
+      });
+
+      const viewerData = await viewerRes.json().catch(() => ({}));
+      const viewerId = viewerData.data?.Viewer?.id;
+
+      if (!viewerId) {
+        console.warn(`Could not fetch AniList Viewer ID for user ${username}`);
+        return;
+      }
+
+      // Query MediaList entry specifically for this viewerId
       const queryRes = await fetch("https://graphql.anilist.co", {
         method: "POST",
         headers: {
@@ -313,22 +340,21 @@ export default class AnilistConnection extends BaseConnection {
         },
         body: JSON.stringify({
           query: `
-            query ($mediaId: Int!) {
-              MediaList (mediaId: $mediaId) {
+            query ($mediaId: Int!, $userId: Int!) {
+              MediaList (mediaId: $mediaId, userId: $userId) {
                 id
               }
             }
           `,
           variables: {
             mediaId: providerId,
+            userId: viewerId,
           },
         }),
       });
 
-      if (queryRes.ok) {
-        const queryData = await queryRes.json();
-        listEntryId = queryData.data?.MediaList?.id;
-      }
+      const queryData = await queryRes.json().catch(() => ({}));
+      listEntryId = queryData.data?.MediaList?.id;
     } catch (err: any) {
       console.error(`Failed to query AniList entry ID for ${username}:`, err.message);
     }
@@ -360,10 +386,14 @@ export default class AnilistConnection extends BaseConnection {
         }),
       });
 
-      if (!deleteRes.ok) {
-        console.error(`Failed to delete AniList entry for user ${username}`);
+      const deleteData = await deleteRes.json().catch(() => ({}));
+      if (!deleteRes.ok || deleteData.errors) {
+        console.error(
+          `Failed to delete AniList entry for user ${username}:`,
+          deleteData.errors || deleteRes.statusText,
+        );
       } else {
-        console.log(`AniList entry deleted for user ${username}`);
+        console.log(`AniList entry deleted for user ${username} (entry ID: ${listEntryId})`);
       }
     } catch (err: any) {
       console.error(`Failed to delete AniList entry for ${username}:`, err.message);

@@ -228,23 +228,26 @@ export function RrMediaEditDialog({
   const scoreMax = mediaType === "game" ? 100 : 10;
 
   const totalEpisodes = useMemo(() => {
-    if (typeof media.episodeCount === "number") return media.episodeCount;
-    if (typeof media.episodes === "number") return media.episodes;
-    if (Array.isArray(media.episodes)) return media.episodes.length;
+    if (media.episodeCount === null) return undefined;
+    if (typeof media.episodeCount === "number" && media.episodeCount > 0) return media.episodeCount;
+    if (typeof media.episodes === "number" && media.episodes > 0) return media.episodes;
+    if (Array.isArray(media.episodes) && media.episodes.length > 0) return media.episodes.length;
     return undefined;
   }, [media]);
 
   const totalChapters = useMemo(() => {
-    if (typeof media.chapterCount === "number") return media.chapterCount;
-    if (typeof media.chapters === "number") return media.chapters;
-    if (Array.isArray(media.chapters)) return media.chapters.length;
+    if (media.chapterCount === null) return undefined;
+    if (typeof media.chapterCount === "number" && media.chapterCount > 0) return media.chapterCount;
+    if (typeof media.chapters === "number" && media.chapters > 0) return media.chapters;
+    if (Array.isArray(media.chapters) && media.chapters.length > 0) return media.chapters.length;
     return undefined;
   }, [media]);
 
   const totalVolumes = useMemo(() => {
-    if (typeof media.volumeCount === "number") return media.volumeCount;
-    if (typeof media.volumes === "number") return media.volumes;
-    if (Array.isArray(media.volumes)) return media.volumes.length;
+    if (media.volumeCount === null) return undefined;
+    if (typeof media.volumeCount === "number" && media.volumeCount > 0) return media.volumeCount;
+    if (typeof media.volumes === "number" && media.volumes > 0) return media.volumes;
+    if (Array.isArray(media.volumes) && media.volumes.length > 0) return media.volumes.length;
     return undefined;
   }, [media]);
 

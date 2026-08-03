@@ -56,10 +56,14 @@ export function RrMediaEditTvEpisodes({
                   w.seasonNum === season.number && w.episodeNum === ep.number,
               ),
             ).length;
-            const isSeasonCompleted = watchedInSeason === season.episodeCount;
+            const isSeasonCompleted = Boolean(
+              season.episodeCount &&
+                season.episodeCount > 0 &&
+                watchedInSeason === season.episodeCount,
+            );
             const isSeasonExpanded = expandedSeasonNum === season.number;
             const seasonPercent =
-              season.episodeCount > 0
+              season.episodeCount && season.episodeCount > 0
                 ? Math.round((watchedInSeason / season.episodeCount) * 100)
                 : 0;
 
@@ -110,7 +114,7 @@ export function RrMediaEditTvEpisodes({
                           : "bg-muted/60 text-muted-foreground border-border/60",
                       )}
                     >
-                      {watchedInSeason} / {season.episodeCount} Ep
+                      {watchedInSeason} / {season.episodeCount ?? "?"} Ep
                       {seasonPercent > 0 && ` (${seasonPercent}%)`}
                     </Badge>
                     {isSeasonExpanded ? (
