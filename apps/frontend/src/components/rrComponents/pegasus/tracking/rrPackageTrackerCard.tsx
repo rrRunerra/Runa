@@ -17,12 +17,22 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useTranslation } from "react-i18next";
-import { DetectedPackage } from "./rrPackageTrackerDetector";
+import {
+  DetectedPackage,
+  CARRIER_CONFIGS,
+  CarrierId,
+} from "./rrPackageTrackerDetector";
 import {
   DetailedPackageTracking,
   fetchPackageTrackingDetails,
 } from "./rrPackageTrackerService";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import { useTranslation } from "react-i18next";
 
 interface RrPackageTrackerCardProps {
   packages: DetectedPackage[];
@@ -33,6 +43,9 @@ export default function RrPackageTrackerCard({
 }: RrPackageTrackerCardProps): React.JSX.Element | null {
   const { t } = useTranslation();
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
+  const [selectedCarriers, setSelectedCarriers] = useState<
+    Record<string, CarrierId>
+  >({});
   const [trackingDetails, setTrackingDetails] =
     useState<DetailedPackageTracking | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -41,15 +54,27 @@ export default function RrPackageTrackerCard({
   const [isDismissed, setIsDismissed] = useState<boolean>(false);
 
   const currentPkg = packages[selectedIndex];
+  const activeCarrierId = currentPkg
+    ? selectedCarriers[currentPkg.trackingNumber] || currentPkg.carrierId
+    : "unknown";
+  const activeCarrierConfig =
+    CARRIER_CONFIGS[activeCarrierId] || CARRIER_CONFIGS.unknown;
+  const activeCarrierName = activeCarrierConfig.name;
+  const activeCarrierUrl = currentPkg
+    ? activeCarrierConfig.buildUrl(currentPkg.trackingNumber)
+    : "";
 
   useEffect(() => {
     if (!currentPkg) return;
     let isMounted = true;
     setLoading(true);
 
+    const carrierIdToFetch =
+      selectedCarriers[currentPkg.trackingNumber] || currentPkg.carrierId;
+
     fetchPackageTrackingDetails(
-      currentPkg.carrierId,
-      currentPkg.trackingNumber
+      carrierIdToFetch,
+      currentPkg.trackingNumber,
     ).then((details) => {
       if (isMounted) {
         setTrackingDetails(details);
@@ -60,7 +85,7 @@ export default function RrPackageTrackerCard({
     return () => {
       isMounted = false;
     };
-  }, [currentPkg]);
+  }, [currentPkg, selectedCarriers]);
 
   if (!packages || packages.length === 0 || isDismissed) {
     return null;
@@ -81,7 +106,7 @@ export default function RrPackageTrackerCard({
     setLoading(true);
     const details = await fetchPackageTrackingDetails(
       currentPkg.carrierId,
-      currentPkg.trackingNumber
+      currentPkg.trackingNumber,
     );
     setTrackingDetails(details);
     setLoading(false);
@@ -130,9 +155,56 @@ export default function RrPackageTrackerCard({
                 </span>
               )}
             </div>
-            <p className="text-[11px] text-muted-foreground truncate">
-              {currentPkg?.carrierName} • {currentPkg?.trackingNumber}
-            </p>
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground pt-0.5">
+              {/* Carrier Switcher Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="px-2 py-0.5 rounded-lg bg-muted/60 hover:bg-muted text-foreground border border-border/80 text-[11px] font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                    title="Change carrier company"
+                  >
+                    <span>{activeCarrierName}</span>
+                    <ChevronDown className="size-3 text-muted-foreground" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="start"
+                  className="w-56 bg-popover border-border max-h-60 overflow-y-auto"
+                >
+                  <div className="px-2 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                    Select Carrier Company
+                  </div>
+                  {Object.values(CARRIER_CONFIGS).map((cfg) => (
+                    <DropdownMenuItem
+                      key={cfg.id}
+                      onClick={() => {
+                        if (currentPkg) {
+                          setSelectedCarriers((prev) => ({
+                            ...prev,
+                            [currentPkg.trackingNumber]: cfg.id,
+                          }));
+                        }
+                      }}
+                      className={cn(
+                        "text-xs cursor-pointer flex items-center justify-between",
+                        activeCarrierId === cfg.id &&
+                          "bg-primary/10 text-primary font-bold",
+                      )}
+                    >
+                      <span>{cfg.name}</span>
+                      {activeCarrierId === cfg.id && (
+                        <Check className="size-3.5 text-primary" />
+                      )}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <span>•</span>
+              <span className="font-mono font-medium truncate max-w-48 text-foreground">
+                {currentPkg?.trackingNumber}
+              </span>
+            </div>
           </div>
         </div>
 
@@ -143,7 +215,9 @@ export default function RrPackageTrackerCard({
             className="p-1.5 text-xs bg-background hover:bg-muted text-muted-foreground hover:text-foreground border border-border rounded-xl transition-all font-semibold cursor-pointer shadow-xs"
             title="Refresh Live Status"
           >
-            <RefreshCw className={cn("size-3.5", loading && "animate-spin text-primary")} />
+            <RefreshCw
+              className={cn("size-3.5", loading && "animate-spin text-primary")}
+            />
           </button>
 
           <button
@@ -166,9 +240,9 @@ export default function RrPackageTrackerCard({
             )}
           </button>
 
-          {currentPkg?.carrierUrl && (
+          {activeCarrierUrl && (
             <a
-              href={currentPkg.carrierUrl}
+              href={activeCarrierUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="px-3 py-1 text-xs bg-primary text-primary-foreground hover:opacity-90 rounded-xl transition-all flex items-center gap-1.5 font-bold cursor-pointer shadow-xs"
@@ -213,11 +287,11 @@ export default function RrPackageTrackerCard({
         ) : trackingDetails ? (
           <>
             {/* Status & Estimated Delivery Row */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-muted/20 p-3 rounded-xl border border-border/40">
-              <div className="flex items-center gap-2.5">
+            <div className="flex items-center justify-between gap-3 bg-muted/20 px-3.5 py-2.5 rounded-xl border border-border/40">
+              <div className="flex items-center gap-2">
                 <span
                   className={cn(
-                    "px-2.5 py-1 text-xs font-bold rounded-lg border flex items-center gap-1.5",
+                    "px-2.5 py-1 text-xs font-bold rounded-lg border flex items-center gap-1.5 shadow-2xs",
                     getStatusBadgeStyle(trackingDetails.status),
                   )}
                 >
@@ -231,6 +305,7 @@ export default function RrPackageTrackerCard({
                   <span>
                     {t(
                       `pegasus.packageTracker.status_${trackingDetails.status}`,
+                      trackingDetails.status.replace(/_/g, " "),
                     )}
                   </span>
                 </span>
@@ -238,18 +313,20 @@ export default function RrPackageTrackerCard({
 
               <div className="text-xs text-muted-foreground flex items-center gap-1.5">
                 <Clock className="size-3.5 text-primary shrink-0" />
-                <span>{t("pegasus.packageTracker.estDelivery")}:</span>
-                <span className="font-bold text-foreground">
+                <span className="hidden sm:inline">
+                  {t("pegasus.packageTracker.estDelivery")}:
+                </span>
+                <span className="font-semibold text-foreground">
                   {trackingDetails.estimatedDelivery}
                 </span>
               </div>
             </div>
 
-            {/* Step Progress Bar */}
-            <div className="pt-2 pb-1">
+            {/* Step Progress Bar - Clean inset connecting line & node circles */}
+            <div className="px-3 py-3">
               <div className="relative flex items-center justify-between w-full">
-                {/* Connecting Line */}
-                <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-1 bg-muted rounded-full z-0">
+                {/* Connecting Line Inset strictly between center of 1st and 4th nodes (14px from edges) */}
+                <div className="absolute left-3.5 right-3.5 top-3.5 -translate-y-1/2 h-1 bg-muted rounded-full z-0 overflow-hidden">
                   <div
                     className="h-full bg-primary rounded-full transition-all duration-500"
                     style={{
@@ -270,27 +347,27 @@ export default function RrPackageTrackerCard({
                     >
                       <div
                         className={cn(
-                          "size-7 rounded-full flex items-center justify-center text-xs font-bold border transition-all duration-300",
+                          "size-7 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all duration-300 shadow-2xs bg-background",
                           isCurrent
-                            ? "bg-primary text-primary-foreground border-primary shadow-md scale-110"
+                            ? "bg-primary border-primary text-primary-foreground shadow-md ring-4 ring-primary/20 scale-110"
                             : isCompleted
-                              ? "bg-primary/90 text-primary-foreground border-primary"
-                              : "bg-card text-muted-foreground border-border",
+                              ? "bg-primary border-primary text-primary-foreground"
+                              : "bg-muted/50 border-border text-muted-foreground",
                         )}
                       >
                         {isCompleted ? (
-                          <Check className="size-3.5 stroke-3" />
+                          <Check className="size-3.5 stroke-[2.5]" />
                         ) : (
                           idx + 1
                         )}
                       </div>
                       <span
                         className={cn(
-                          "text-[10px] font-semibold tracking-tight text-center hidden sm:block max-w-20",
+                          "text-[11px] font-semibold text-center hidden sm:block max-w-20 tracking-tight",
                           isCurrent
                             ? "text-foreground font-bold"
                             : isCompleted
-                              ? "text-foreground/80"
+                              ? "text-foreground/90"
                               : "text-muted-foreground",
                         )}
                       >
@@ -305,13 +382,17 @@ export default function RrPackageTrackerCard({
             {/* Collapsible Detailed Event History Timeline */}
             <div className="border-t border-border/40 pt-3">
               <button
+                type="button"
                 onClick={() => setShowHistory((prev) => !prev)}
                 className="w-full flex items-center justify-between text-xs text-muted-foreground hover:text-foreground font-semibold py-1 transition-colors cursor-pointer"
               >
-                <span className="flex items-center gap-1.5">
+                <span className="flex items-center gap-1.5 font-bold">
                   <MapPin className="size-3.5 text-primary" />
-                  {t("pegasus.packageTracker.viewDetailedHistory")} (
-                  {trackingDetails.events.length})
+                  {t(
+                    "pegasus.packageTracker.viewDetailedHistory",
+                    "Activity History",
+                  )}{" "}
+                  ({trackingDetails.events.length})
                 </span>
                 {showHistory ? (
                   <ChevronUp className="size-4" />
@@ -321,23 +402,30 @@ export default function RrPackageTrackerCard({
               </button>
 
               {showHistory && (
-                <div className="mt-3 space-y-3 pl-2 pt-2 border-l-2 border-primary/30 ml-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                <div className="mt-3 space-y-2.5 pl-3 border-l-2 border-primary/30 ml-2 animate-in fade-in slide-in-from-top-1 duration-200">
                   {trackingDetails.events.map((event) => (
-                    <div key={event.id} className="relative pl-4 space-y-0.5">
-                      <div className="absolute -left-3.25 top-1 size-2 rounded-full bg-primary border-2 border-card" />
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                    <div
+                      key={event.id}
+                      className="relative pl-4 space-y-0.5 group"
+                    >
+                      {/* Timeline dot */}
+                      <div className="absolute -left-4.25 top-1.5 size-2.5 rounded-full bg-primary border-2 border-card ring-2 ring-primary/20" />
+                      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-1">
                         <span className="text-xs font-bold text-foreground">
                           {event.status}
                         </span>
-                        <span className="text-[10px] text-muted-foreground font-mono">
+                        <span className="text-[10px] text-muted-foreground/80 font-mono shrink-0">
                           {event.timestamp}
                         </span>
                       </div>
-                      <p className="text-[11px] text-muted-foreground">
-                        {event.description}
-                      </p>
-                      <div className="text-[10px] text-muted-foreground/80 flex items-center gap-1 pt-0.5">
-                        <MapPin className="size-3" />
+                      {event.description &&
+                        event.description !== event.status && (
+                          <p className="text-[11px] text-muted-foreground">
+                            {event.description}
+                          </p>
+                        )}
+                      <div className="text-[10px] text-muted-foreground/70 flex items-center gap-1 pt-0.5">
+                        <MapPin className="size-3 text-primary/70" />
                         <span>{event.location}</span>
                       </div>
                     </div>
@@ -353,13 +441,13 @@ export default function RrPackageTrackerCard({
               <span>
                 {t(
                   "pegasus.packageTracker.noLiveData",
-                  "No live data returned from carrier API yet. Use 'Track Package' to check directly on carrier portal."
+                  "No live data returned from carrier API yet. Use 'Track Package' to check directly on carrier portal.",
                 )}
               </span>
             </div>
-            {currentPkg?.carrierUrl && (
+            {activeCarrierUrl && (
               <a
-                href={currentPkg.carrierUrl}
+                href={activeCarrierUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary border border-primary/20 rounded-xl font-bold transition-all flex items-center justify-center gap-1.5 shrink-0"

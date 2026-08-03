@@ -7,10 +7,8 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
-import { Plus } from "lucide-react";
+import { Plus, ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +28,10 @@ import { cn } from "@/lib/utils";
 
 // Sub-components
 import { RrMailAccountCard } from "./rrMailSettingsTabComponents/rrMailAccountCard";
+import { MAIL_PROVIDER_PRESETS, type RrMailProviderPreset } from "./rrMailSettingsTabComponents/rrMailProviderPresets";
+import { RrMailLinkWizardStep1 } from "./rrMailSettingsTabComponents/rrMailLinkWizardStep1";
+import { RrMailLinkWizardStep2, type ConnectionTestState } from "./rrMailSettingsTabComponents/rrMailLinkWizardStep2";
+import { RrMailLinkWizardStep3 } from "./rrMailSettingsTabComponents/rrMailLinkWizardStep3";
 
 interface RrMailSettingsTabProps {
   onOpenChange: (open: boolean) => void;
@@ -39,22 +41,29 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
   const { data: session } = useSession();
   const { t } = useTranslation();
 
-  // Email Accounts States
+  // Accounts state
   const [emailAccounts, setEmailAccounts] = useState<any[]>([]);
-  const [isEmailAccountDialogOpen, setIsEmailAccountDialogOpen] = useState<boolean>(false);
-  const [editingEmailAccount, setEditingEmailAccount] = useState<any | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState<boolean>(false);
+  const [editingAccount, setEditingAccount] = useState<any | null>(null);
 
-  // Email Account Fields
-  const [emailAccountName, setEmailAccountName] = useState<string>("");
+  // Wizard state
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
+  const [selectedProvider, setSelectedProvider] = useState<RrMailProviderPreset>(
+    MAIL_PROVIDER_PRESETS.find((p) => p.id === "purelymail") || MAIL_PROVIDER_PRESETS[0]
+  );
+
+  // Form Fields
+  const [accountName, setAccountName] = useState<string>("");
   const [emailColor, setEmailColor] = useState<string>("#8B00FF");
-  const [emailSenderName, setEmailSenderName] = useState<string>("");
-  const [emailAddressField, setEmailAddressField] = useState<string>("");
-  const [emailLoginField, setEmailLoginField] = useState<string>("");
-  const [emailReplyTo, setEmailReplyTo] = useState<string>("");
-  const [emailOrganization, setEmailOrganization] = useState<string>("");
-  const [emailSignature, setEmailSignature] = useState<string>("");
-  const [emailUseHtmlSig, setEmailUseHtmlSig] = useState<boolean>(false);
-  const [emailPassword, setEmailPassword] = useState<string>("");
+  const [senderName, setSenderName] = useState<string>("");
+  const [emailAddress, setEmailAddress] = useState<string>("");
+  const [loginEmail, setLoginEmail] = useState<string>("");
+  const [replyTo, setReplyTo] = useState<string>("");
+  const [organization, setOrganization] = useState<string>("");
+  const [signature, setSignature] = useState<string>("");
+  const [useHtmlSig, setUseHtmlSig] = useState<boolean>(false);
+  const [password, setPassword] = useState<string>("");
+  const [isAppPassword, setIsAppPassword] = useState<boolean>(false);
 
   const [imapHost, setImapHost] = useState<string>("imap.purelymail.com");
   const [imapPort, setImapPort] = useState<string>("993");
@@ -63,6 +72,14 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
   const [smtpHost, setSmtpHost] = useState<string>("smtp.purelymail.com");
   const [smtpPort, setSmtpPort] = useState<string>("465");
   const [smtpSecure, setSmtpSecure] = useState<boolean>(true);
+
+  // Connection Test & Autodetect states
+  const [isAutodetecting, setIsAutodetecting] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
+  const [testState, setTestState] = useState<ConnectionTestState>({
+    tested: false,
+    loading: false,
+  });
 
   const { data: emailAccountsData, mutate: refetchEmailAccounts } = useSWR<any[]>(
     session?.accessToken ? [`${process.env.NEXT_PUBLIC_API_URL}/emails`, session.accessToken] : null,
@@ -92,86 +109,46 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
     return res.json().catch(() => null);
   };
 
-  const fetchEmailAccounts = (): void => {
-    refetchEmailAccounts();
-  };
-
-  const handleSaveEmailAccount = async (): Promise<void> => {
-    if (!session?.accessToken) return;
-
-    const finalEmailAddress = emailAddressField.trim() || emailLoginField.trim();
-
-    const payload = {
-      accountName: emailAccountName,
-      color: emailColor,
-      senderName: emailSenderName,
-      emailAddress: finalEmailAddress,
-      loginEmail: emailLoginField.trim() || null,
-      replyToAddress: emailReplyTo.trim() || null,
-      organization: emailOrganization.trim() || null,
-      signatureText: emailSignature || null,
-      useHtmlSignature: emailUseHtmlSig,
-      password: emailPassword,
-      imapHost,
-      imapPort: parseInt(imapPort, 10),
-      imapSecure,
-      smtpHost,
-      smtpPort: parseInt(smtpPort, 10),
-      smtpSecure,
-    };
-
-    try {
-      if (editingEmailAccount) {
-        await apiMutate(`${process.env.NEXT_PUBLIC_API_URL}/emails/${editingEmailAccount.id}`, "PUT", payload);
-      } else {
-        await apiMutate(`${process.env.NEXT_PUBLIC_API_URL}/emails`, "POST", payload);
-      }
-
-      toast.success(editingEmailAccount ? t("mailSettings.toastUpdated") : t("mailSettings.toastAdded"));
-      setIsEmailAccountDialogOpen(false);
-      fetchEmailAccounts();
-      resetEmailForm();
-      window.dispatchEvent(new CustomEvent("runa-sidebar-changed"));
-    } catch (err: any) {
-      toast.error(err.message || t("mailSettings.toastFailedSave"));
+  const handleSelectProvider = (provider: RrMailProviderPreset) => {
+    setSelectedProvider(provider);
+    if (provider.imapHost) setImapHost(provider.imapHost);
+    setImapPort(String(provider.imapPort));
+    setImapSecure(provider.imapSecure);
+    if (provider.smtpHost) setSmtpHost(provider.smtpHost);
+    setSmtpPort(String(provider.smtpPort));
+    setSmtpSecure(provider.smtpSecure);
+    if (provider.color) {
+      setEmailColor(provider.color);
     }
+    setTestState({ tested: false, loading: false });
   };
 
-  const handleDeleteEmailAccount = async (id: string): Promise<void> => {
-    if (!session?.accessToken) return;
-    if (!window.confirm(t("mailSettings.deleteConfirm"))) return;
-    try {
-      await apiMutate(`${process.env.NEXT_PUBLIC_API_URL}/emails/${id}`, "DELETE");
-      toast.success(t("mailSettings.toastRemoved"));
-      fetchEmailAccounts();
-      window.dispatchEvent(new CustomEvent("runa-sidebar-changed"));
-    } catch (err: any) {
-      toast.error(err.message || t("mailSettings.toastFailedDelete"));
-    }
-  };
-
-  const resetEmailForm = (): void => {
-    setEditingEmailAccount(null);
-    setEmailAccountName("");
+  const resetForm = () => {
+    setEditingAccount(null);
+    setCurrentStep(1);
+    const customPreset = MAIL_PROVIDER_PRESETS.find((p) => p.id === "custom") || MAIL_PROVIDER_PRESETS[0];
+    setSelectedProvider(customPreset);
+    setAccountName("");
     setEmailColor("#8B00FF");
-    setEmailSenderName("");
-    setEmailAddressField("");
-    setEmailLoginField("");
-    setEmailReplyTo("");
-    setEmailOrganization("");
-    setEmailSignature("");
-    setEmailUseHtmlSig(false);
-    setEmailPassword("");
-    setImapHost("imap.purelymail.com");
-    setImapPort("993");
+    setSenderName("");
+    setEmailAddress("");
+    setLoginEmail("");
+    setReplyTo("");
+    setOrganization("");
+    setSignature("");
+    setUseHtmlSig(false);
+    setPassword("");
+    setImapHost("");
+    setImapPort("");
     setImapSecure(true);
-    setSmtpHost("smtp.purelymail.com");
-    setSmtpPort("465");
+    setSmtpHost("");
+    setSmtpPort("");
     setSmtpSecure(true);
+    setTestState({ tested: false, loading: false });
   };
 
   const handleAutodetect = async (): Promise<void> => {
-    const autodetectEmail = emailLoginField || emailAddressField;
+    const autodetectEmail = loginEmail || emailAddress;
     if (!autodetectEmail || !autodetectEmail.includes("@")) {
       toast.error(t("mailSettings.toastEnterEmail"));
       return;
@@ -184,6 +161,7 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
       return;
     }
 
+    setIsAutodetecting(true);
     try {
       const config = await apiMutate(`${process.env.NEXT_PUBLIC_API_URL}/emails/autoconfig/${domain}`, "GET");
 
@@ -196,37 +174,187 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
 
       toast.success(t("mailSettings.toastAutodetectSuccess", { domain }));
     } catch (err) {
-      console.error("Autodetect error:", err);
-      toast.error(t("mailSettings.toastAutodetectFailed"));
-      
       setImapHost(`imap.${domain}`);
       setImapPort("993");
       setImapSecure(true);
       setSmtpHost(`smtp.${domain}`);
       setSmtpPort("465");
       setSmtpSecure(true);
+      toast.info(t("mailSettings.toastAutodetectFallback", { domain }));
+    } finally {
+      setIsAutodetecting(false);
+      setTestState({ tested: false, loading: false });
+    }
+  };
+
+  const handleTestConnection = async (): Promise<boolean> => {
+    if (!session?.accessToken) {
+      toast.error(t("mailSettings.toastAuthRequired"));
+      return false;
+    }
+
+    setTestState({ tested: false, loading: true });
+    const payload = {
+      emailAddress: emailAddress.trim(),
+      loginEmail: loginEmail.trim() || emailAddress.trim(),
+      password,
+      imapHost,
+      imapPort: parseInt(imapPort, 10) || 993,
+      imapSecure,
+      smtpHost,
+      smtpPort: parseInt(smtpPort, 10) || 465,
+      smtpSecure,
+    };
+
+    try {
+      const res = await apiMutate(`${process.env.NEXT_PUBLIC_API_URL}/emails/test-connection`, "POST", payload);
+      const isImapOk = res?.imap?.success;
+      const isSmtpOk = res?.smtp?.success;
+
+      setTestState({
+        tested: true,
+        loading: false,
+        imapSuccess: isImapOk,
+        imapError: res?.imap?.error,
+        smtpSuccess: isSmtpOk,
+        smtpError: res?.smtp?.error,
+      });
+
+      if (isImapOk && isSmtpOk) {
+        toast.success(t("mailSettings.wizard.testConnectionSuccessAll"));
+        return true;
+      } else {
+        toast.error(t("mailSettings.wizard.testConnectionFailedSome"));
+        return false;
+      }
+    } catch (err: any) {
+      setTestState({
+        tested: true,
+        loading: false,
+        imapSuccess: false,
+        imapError: err.message || "Connection test failed",
+        smtpSuccess: false,
+        smtpError: err.message || "Connection test failed",
+      });
+      toast.error(err.message || t("mailSettings.wizard.testConnectionFailed"));
+      return false;
+    }
+  };
+
+  const handleNextStep = async (): Promise<void> => {
+    if (currentStep === 1) {
+      if (!accountName.trim()) {
+        toast.error(t("mailSettings.wizard.enterAccountNameError"));
+        return;
+      }
+      if (!emailAddress.trim()) {
+        toast.error(t("mailSettings.wizard.enterEmailAddressError"));
+        return;
+      }
+      if (!loginEmail.trim()) {
+        setLoginEmail(emailAddress.trim());
+      }
+      setCurrentStep(2);
+    } else if (currentStep === 2) {
+      if (!password) {
+        toast.error(t("mailSettings.wizard.enterPasswordError"));
+        return;
+      }
+      if (!imapHost || !smtpHost) {
+        toast.error(t("mailSettings.wizard.enterHostsError"));
+        return;
+      }
+
+      // Auto connection test on proceeding if not already successfully tested
+      if (!testState.tested || !testState.imapSuccess || !testState.smtpSuccess) {
+        toast.loading(t("mailSettings.wizard.verifyingCredentialsToast"));
+        const success = await handleTestConnection();
+        toast.dismiss();
+        if (!success) {
+          toast.info(t("mailSettings.wizard.proceedAnywayTip"));
+        }
+      }
+      setCurrentStep(3);
+    }
+  };
+
+  const handleSaveEmailAccount = async (): Promise<void> => {
+    if (!session?.accessToken) return;
+
+    const finalEmailAddress = emailAddress.trim() || loginEmail.trim();
+
+    const payload = {
+      accountName: accountName.trim(),
+      color: emailColor,
+      senderName: senderName.trim() || accountName.trim(),
+      emailAddress: finalEmailAddress,
+      loginEmail: loginEmail.trim() || null,
+      replyToAddress: replyTo.trim() || null,
+      organization: organization.trim() || null,
+      signatureText: signature || null,
+      useHtmlSignature: useHtmlSig,
+      password: password,
+      imapHost: imapHost.trim(),
+      imapPort: parseInt(imapPort, 10) || 993,
+      imapSecure,
+      smtpHost: smtpHost.trim(),
+      smtpPort: parseInt(smtpPort, 10) || 465,
+      smtpSecure,
+    };
+
+    setIsSaving(true);
+    try {
+      if (editingAccount) {
+        await apiMutate(`${process.env.NEXT_PUBLIC_API_URL}/emails/${editingAccount.id}`, "PUT", payload);
+      } else {
+        await apiMutate(`${process.env.NEXT_PUBLIC_API_URL}/emails`, "POST", payload);
+      }
+
+      toast.success(editingAccount ? t("mailSettings.toastUpdated") : t("mailSettings.toastAdded"));
+      setIsDialogOpen(false);
+      refetchEmailAccounts();
+      resetForm();
+      window.dispatchEvent(new CustomEvent("runa-sidebar-changed"));
+    } catch (err: any) {
+      toast.error(err.message || t("mailSettings.toastFailedSave"));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteEmailAccount = async (id: string): Promise<void> => {
+    if (!session?.accessToken) return;
+    if (!window.confirm(t("mailSettings.deleteConfirm"))) return;
+    try {
+      await apiMutate(`${process.env.NEXT_PUBLIC_API_URL}/emails/${id}`, "DELETE");
+      toast.success(t("mailSettings.toastRemoved"));
+      refetchEmailAccounts();
+      window.dispatchEvent(new CustomEvent("runa-sidebar-changed"));
+    } catch (err: any) {
+      toast.error(err.message || t("mailSettings.toastFailedDelete"));
     }
   };
 
   const openEditEmailAccount = (account: any): void => {
-    setEditingEmailAccount(account);
-    setEmailAccountName(account.accountName);
-    setEmailColor(account.color);
-    setEmailSenderName(account.senderName);
-    setEmailAddressField(account.emailAddress);
-    setEmailLoginField(account.loginEmail || "");
-    setEmailReplyTo(account.replyToAddress || "");
-    setEmailOrganization(account.organization || "");
-    setEmailSignature(account.signatureText || "");
-    setEmailUseHtmlSig(account.useHtmlSignature);
-    setEmailPassword(account.password || "");
-    setImapHost(account.imapHost);
-    setImapPort(String(account.imapPort));
-    setImapSecure(account.imapSecure);
-    setSmtpHost(account.smtpHost);
-    setSmtpPort(String(account.smtpPort));
-    setSmtpSecure(account.smtpSecure);
-    setIsEmailAccountDialogOpen(true);
+    setEditingAccount(account);
+    setCurrentStep(1);
+    setAccountName(account.accountName || "");
+    setEmailColor(account.color || "#8B00FF");
+    setSenderName(account.senderName || "");
+    setEmailAddress(account.emailAddress || "");
+    setLoginEmail(account.loginEmail || "");
+    setReplyTo(account.replyToAddress || "");
+    setOrganization(account.organization || "");
+    setSignature(account.signatureText || "");
+    setUseHtmlSig(Boolean(account.useHtmlSignature));
+    setImapHost(account.imapHost || "");
+    setImapPort(account.imapPort ? String(account.imapPort) : "");
+    setImapSecure(account.imapSecure !== false);
+    setSmtpHost(account.smtpHost || "");
+    setSmtpPort(account.smtpPort ? String(account.smtpPort) : "");
+    setSmtpSecure(account.smtpSecure !== false);
+    setTestState({ tested: false, loading: false });
+    setIsDialogOpen(true);
   };
 
   return (
@@ -239,10 +367,10 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
           </CardDescription>
         </div>
         <Button
-          onClick={() => { resetEmailForm(); setIsEmailAccountDialogOpen(true); }}
-          className="h-8 rounded-lg cursor-pointer"
+          onClick={() => { resetForm(); setIsDialogOpen(true); }}
+          className="h-8 rounded-lg cursor-pointer font-semibold text-xs gap-1"
         >
-          <Plus className="size-3.5 mr-1" />
+          <Plus className="size-3.5" />
           {t("mailSettings.linkBtn")}
         </Button>
       </CardHeader>
@@ -257,13 +385,12 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
           />
         ))}
         {emailAccounts.length === 0 && (
-          <div className="col-span-full p-6 text-center rounded-xl border border-dashed border-border text-xs text-muted-foreground">
+          <div className="col-span-full p-8 text-center rounded-xl border border-dashed border-border text-xs text-muted-foreground">
             {t("mailSettings.noAccounts")}
           </div>
         )}
       </CardContent>
 
-      {/* Done Closing button */}
       <CardFooter className="flex justify-end pt-4 border-t border-border mt-6">
         <Button
           variant="outline"
@@ -274,288 +401,179 @@ export function RrMailSettingsTab({ onOpenChange }: RrMailSettingsTabProps): Rea
         </Button>
       </CardFooter>
 
-      {/* Thunderbird Email Setup Dialog */}
-      <Dialog open={isEmailAccountDialogOpen} onOpenChange={setIsEmailAccountDialogOpen}>
-        <DialogContent className="sm:max-w-3xl md:max-w-4xl bg-card border border-border shadow-2xl p-6 rounded-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="pb-3 border-b border-border/40 text-left">
-            <DialogTitle className="text-md font-bold">
-              {editingEmailAccount ? t("mailSettings.editTitle") : t("mailSettings.linkTitle")}
-            </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground mt-1">
+      {/* Modern 3-Step Setup Wizard Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-3xl md:max-w-4xl bg-card border border-border shadow-2xl p-6 rounded-2xl max-h-[92vh] flex flex-col justify-between overflow-y-auto">
+          <DialogHeader className="pb-3 border-b border-border/40 text-left pr-8">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-base font-bold">
+                {editingAccount ? t("mailSettings.editTitle") : t("mailSettings.linkTitle")}
+              </DialogTitle>
+              <div className="flex items-center gap-1.5 font-mono text-xs text-muted-foreground">
+                <span className="font-semibold text-primary">Step {currentStep}</span>
+                <span>/</span>
+                <span>3</span>
+              </div>
+            </div>
+            <DialogDescription className="text-xs text-muted-foreground mt-0.5">
               {t("mailSettings.dialogDesc")}
             </DialogDescription>
+
+            {/* Step Progress Indicators */}
+            <div className="grid grid-cols-3 gap-2 pt-3">
+              {[
+                { step: 1, label: t("mailSettings.wizard.step1Header") },
+                { step: 2, label: t("mailSettings.wizard.step2Header") },
+                { step: 3, label: t("mailSettings.wizard.step3Header") },
+              ].map((s) => {
+                const isActive = currentStep === s.step;
+                const isDone = currentStep > s.step;
+                return (
+                  <button
+                    key={s.step}
+                    type="button"
+                    onClick={() => {
+                      if (isDone || (s.step < currentStep)) {
+                        setCurrentStep(s.step as 1 | 2 | 3);
+                      }
+                    }}
+                    className={cn(
+                      "flex items-center gap-2 p-2 rounded-xl border text-left transition-all cursor-pointer",
+                      isActive
+                        ? "border-primary bg-primary/10 text-primary font-semibold shadow-xs"
+                        : isDone
+                        ? "border-border bg-muted/40 text-foreground"
+                        : "border-border/40 bg-card text-muted-foreground/60 opacity-70"
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "size-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0",
+                        isActive
+                          ? "bg-primary text-primary-foreground"
+                          : isDone
+                          ? "bg-emerald-500 text-white"
+                          : "bg-muted text-muted-foreground"
+                      )}
+                    >
+                      {isDone ? <Check className="size-3" /> : s.step}
+                    </div>
+                    <span className="text-[11px] truncate hidden sm:inline">{s.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </DialogHeader>
 
-          <div className="py-4 flex flex-col gap-4 text-left">
-            {/* Identity & Aesthetics */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="account-name">{t("mailSettings.accountNameLabel")}</Label>
-                <Input
-                  id="account-name"
-                  value={emailAccountName}
-                  onChange={(e) => setEmailAccountName(e.target.value)}
-                  placeholder={t("mailSettings.accountNamePlaceholder")}
-                  className="h-9 px-3 text-xs"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="account-color">{t("mailSettings.indicatorColorLabel")}</Label>
-                <div className="flex items-center gap-3">
-                  <div
-                    className="size-9 rounded-lg border border-border/80 shadow-inner shrink-0 transition-colors"
-                    style={{ backgroundColor: emailColor }}
-                  />
-                  <Input
-                    id="account-color"
-                    type="color"
-                    value={emailColor}
-                    onChange={(e) => setEmailColor(e.target.value)}
-                    className="h-9 w-14 p-0.5 bg-muted border-border rounded-lg cursor-pointer"
-                  />
-                  <div className="flex gap-1.5 items-center overflow-x-auto py-1">
-                    {["#8B00FF", "#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#EC4899", "#6366F1"].map((c) => (
-                      <button
-                        key={c}
-                        type="button"
-                        onClick={() => setEmailColor(c)}
-                        className={cn(
-                          "size-5 rounded-full border border-black/40 cursor-pointer transition-all hover:scale-110 shrink-0",
-                          emailColor === c && "ring-1 ring-primary ring-offset-1 ring-offset-background"
-                        )}
-                        style={{ backgroundColor: c }}
-                        aria-label={`Select color ${c}`}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
+          {/* Wizard Step Content */}
+          <div className="py-2">
+            {currentStep === 1 && (
+              <RrMailLinkWizardStep1
+                selectedProvider={selectedProvider}
+                onSelectProvider={handleSelectProvider}
+                accountName={accountName}
+                onChangeAccountName={setAccountName}
+                emailAddress={emailAddress}
+                onChangeEmailAddress={setEmailAddress}
+              />
+            )}
 
-            <div className="flex flex-col gap-1 mt-1">
-              <h5 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{t("mailSettings.defaultIdentityTitle")}</h5>
-              <p className="text-[10px] text-muted-foreground/60">{t("mailSettings.defaultIdentityDesc")}</p>
-            </div>
+            {currentStep === 2 && (
+              <RrMailLinkWizardStep2
+                selectedProvider={selectedProvider}
+                emailAddress={emailAddress}
+                loginEmail={loginEmail}
+                onChangeLoginEmail={setLoginEmail}
+                password={password}
+                onChangePassword={setPassword}
+                imapHost={imapHost}
+                onChangeImapHost={setImapHost}
+                imapPort={imapPort}
+                onChangeImapPort={setImapPort}
+                imapSecure={imapSecure}
+                onChangeImapSecure={setImapSecure}
+                smtpHost={smtpHost}
+                onChangeSmtpHost={setSmtpHost}
+                smtpPort={smtpPort}
+                onChangeSmtpPort={setSmtpPort}
+                smtpSecure={smtpSecure}
+                onChangeSmtpSecure={setSmtpSecure}
+                onAutodetect={handleAutodetect}
+                isAutodetecting={isAutodetecting}
+                testState={testState}
+                onTestConnection={handleTestConnection}
+              />
+            )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="sender-name">{t("mailSettings.senderNameLabel")}</Label>
-                <Input
-                  id="sender-name"
-                  value={emailSenderName}
-                  onChange={(e) => setEmailSenderName(e.target.value)}
-                  placeholder={t("mailSettings.senderNamePlaceholder")}
-                  className="h-9 px-3 text-xs"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="email-address-field">{t("mailSettings.emailAddressLabel")}</Label>
-                <Input
-                  id="email-address-field"
-                  value={emailAddressField}
-                  onChange={(e) => setEmailAddressField(e.target.value)}
-                  placeholder={t("mailSettings.emailAddressPlaceholder")}
-                  className="h-9 px-3 text-xs"
-                />
-                <p className="text-[10px] text-muted-foreground/60">
-                  {t("mailSettings.emailAddressDesc")}
-                </p>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="reply-to">{t("mailSettings.replyToLabel")}</Label>
-                <Input
-                  id="reply-to"
-                  value={emailReplyTo}
-                  onChange={(e) => setEmailReplyTo(e.target.value)}
-                  placeholder={t("mailSettings.replyToPlaceholder")}
-                  className="h-9 px-3 text-xs"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="organization">{t("mailSettings.organizationLabel")}</Label>
-                <Input
-                  id="organization"
-                  value={emailOrganization}
-                  onChange={(e) => setEmailOrganization(e.target.value)}
-                  placeholder={t("mailSettings.organizationPlaceholder")}
-                  className="h-9 px-3 text-xs"
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="email-signature">{t("mailSettings.signatureLabel")}</Label>
-                <div className="flex items-center gap-1.5">
-                  <input
-                    id="use-html"
-                    type="checkbox"
-                    checked={emailUseHtmlSig}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmailUseHtmlSig(e.target.checked)}
-                    className="size-3.5 bg-background border-border text-primary rounded-xs cursor-pointer"
-                  />
-                  <Label htmlFor="use-html" className="text-[10px] cursor-pointer">{t("mailSettings.useHtmlSigLabel")}</Label>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <textarea
-                  id="email-signature"
-                  value={emailSignature}
-                  onChange={(e) => setEmailSignature(e.target.value)}
-                  placeholder={t("mailSettings.signaturePlaceholder")}
-                  className="w-full min-h-[100px] p-3 text-xs bg-background border border-border rounded-xl focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-foreground font-mono"
-                />
-                <div className="flex flex-col bg-background/50 border border-border rounded-xl p-3 min-h-[100px] text-left">
-                  <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider mb-2 select-none">{t("mailSettings.livePreview")}</span>
-                  <div className="text-xs text-foreground/90 overflow-y-auto max-h-[80px]">
-                    {emailUseHtmlSig ? (
-                      <div dangerouslySetInnerHTML={{ __html: emailSignature || `<i>${t("mailSettings.noSignatureContent")}</i>` }} />
-                    ) : (
-                      <pre className="font-sans whitespace-pre-wrap">{emailSignature || t("mailSettings.noSignatureContent")}</pre>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between mt-1">
-              <div className="flex flex-col gap-1">
-                <h5 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{t("mailSettings.serverSettingsTitle")}</h5>
-              </div>
-              <Button
-                type="button"
-                onClick={handleAutodetect}
-                variant="outline"
-                className="h-7 rounded-lg border border-border hover:bg-muted text-[10px] px-2.5 font-semibold shrink-0 cursor-pointer"
-              >
-                {t("mailSettings.autodetectBtn")}
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="login-email">{t("mailSettings.loginEmailLabel")}</Label>
-                <Input
-                  id="login-email"
-                  value={emailLoginField}
-                  onChange={(e) => setEmailLoginField(e.target.value)}
-                  placeholder={emailAddressField || t("mailSettings.emailAddressPlaceholder")}
-                  className="h-9 px-3 text-xs"
-                />
-                <p className="text-[10px] text-muted-foreground/60">
-                  {t("mailSettings.loginEmailDesc")}
-                </p>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="email-password">{t("mailSettings.passwordLabel")}</Label>
-                <Input
-                  id="email-password"
-                  type="password"
-                  value={emailPassword}
-                  onChange={(e) => setEmailPassword(e.target.value)}
-                  placeholder={t("mailSettings.passwordPlaceholder")}
-                  className="h-9 px-3 text-xs"
-                />
-              </div>
-            </div>
-
-            {/* IMAP & SMTP Settings */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 rounded-xl border border-border bg-muted/40">
-              {/* Incoming IMAP */}
-              <div className="flex flex-col gap-3.5">
-                <span className="text-[10px] font-bold text-primary uppercase tracking-wide">{t("mailSettings.incomingImapTitle")}</span>
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="imap-host">{t("mailSettings.serverHostnameLabel")}</Label>
-                  <Input
-                    id="imap-host"
-                    value={imapHost}
-                    onChange={(e) => setImapHost(e.target.value)}
-                    placeholder="imap.purelymail.com"
-                    className="h-8 px-2.5 text-xs"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="imap-port">{t("mailSettings.portLabel")}</Label>
-                    <Input
-                      id="imap-port"
-                      value={imapPort}
-                      onChange={(e) => setImapPort(e.target.value)}
-                      placeholder="993"
-                      className="h-8 px-2.5 text-xs"
-                    />
-                  </div>
-                  <div className="flex flex-col justify-center gap-1.5 pt-4">
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        id="imap-secure"
-                        type="checkbox"
-                        checked={imapSecure}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setImapSecure(e.target.checked)}
-                        className="size-3.5 bg-background border-border text-primary rounded-xs cursor-pointer"
-                      />
-                      <Label htmlFor="imap-secure" className="text-[10px] cursor-pointer">{t("mailSettings.sslTlsLabel")}</Label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Outgoing SMTP */}
-              <div className="flex flex-col gap-3.5">
-                <span className="text-[10px] font-bold text-primary uppercase tracking-wide">{t("mailSettings.outgoingSmtpTitle")}</span>
-                <div className="flex flex-col gap-1.5">
-                  <Label htmlFor="smtp-host">{t("mailSettings.serverHostnameLabel")}</Label>
-                  <Input
-                    id="smtp-host"
-                    value={smtpHost}
-                    onChange={(e) => setSmtpHost(e.target.value)}
-                    placeholder="smtp.purelymail.com"
-                    className="h-8 px-2.5 text-xs"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="smtp-port">{t("mailSettings.portLabel")}</Label>
-                    <Input
-                      id="smtp-port"
-                      value={smtpPort}
-                      onChange={(e) => setSmtpPort(e.target.value)}
-                      placeholder="465"
-                      className="h-8 px-2.5 text-xs"
-                    />
-                  </div>
-                  <div className="flex flex-col justify-center gap-1.5 pt-4">
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        id="smtp-secure"
-                        type="checkbox"
-                        checked={smtpSecure}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSmtpSecure(e.target.checked)}
-                        className="size-3.5 bg-background border-border text-primary rounded-xs cursor-pointer"
-                      />
-                      <Label htmlFor="smtp-secure" className="text-[10px] cursor-pointer">{t("mailSettings.sslTlsLabel")}</Label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            {currentStep === 3 && (
+              <RrMailLinkWizardStep3
+                senderName={senderName}
+                onChangeSenderName={setSenderName}
+                emailAddress={emailAddress}
+                replyTo={replyTo}
+                onChangeReplyTo={setReplyTo}
+                organization={organization}
+                onChangeOrganization={setOrganization}
+                emailColor={emailColor}
+                onChangeEmailColor={setEmailColor}
+                signature={signature}
+                onChangeSignature={setSignature}
+                useHtmlSig={useHtmlSig}
+                onChangeUseHtmlSig={setUseHtmlSig}
+              />
+            )}
           </div>
 
-          <div className="flex justify-end gap-3 pt-3 border-t border-border">
+          {/* Dialog Navigation Footer */}
+          <div className="flex items-center justify-between pt-3 border-t border-border mt-2">
             <Button
-              variant="ghost"
-              onClick={() => setIsEmailAccountDialogOpen(false)}
-              className="text-muted-foreground hover:text-foreground rounded-xl text-xs h-9 cursor-pointer"
+              type="button"
+              variant="outline"
+              onClick={() => {
+                if (currentStep > 1) {
+                  setCurrentStep((currentStep - 1) as 1 | 2);
+                } else {
+                  setIsDialogOpen(false);
+                }
+              }}
+              className="text-xs h-9 px-4 rounded-xl cursor-pointer gap-1"
             >
-              {t("cancel")}
+              {currentStep > 1 ? (
+                <>
+                  <ArrowLeft className="size-3.5" />
+                  {t("back")}
+                </>
+              ) : (
+                t("cancel")
+              )}
             </Button>
-            <Button
-              onClick={handleSaveEmailAccount}
-              disabled={!emailAccountName || (!emailAddressField.trim() && !emailLoginField.trim()) || !emailPassword}
-              className="bg-primary hover:bg-primary/95 text-primary-foreground font-bold rounded-xl px-5 text-xs h-9 cursor-pointer"
-            >
-              {editingEmailAccount ? t("mailSettings.updateAccountBtn") : t("mailSettings.linkAccountBtn")}
-            </Button>
+
+            <div className="flex items-center gap-2">
+              {currentStep < 3 ? (
+                <Button
+                  type="button"
+                  onClick={handleNextStep}
+                  className="bg-primary hover:bg-primary/95 text-primary-foreground font-bold rounded-xl px-5 text-xs h-9 cursor-pointer gap-1.5"
+                >
+                  {t("next")}
+                  <ArrowRight className="size-3.5" />
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={handleSaveEmailAccount}
+                  disabled={isSaving || !accountName || (!emailAddress.trim() && !loginEmail.trim()) || !password}
+                  className="bg-primary hover:bg-primary/95 text-primary-foreground font-bold rounded-xl px-6 text-xs h-9 cursor-pointer gap-1.5"
+                >
+                  {isSaving ? (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  ) : (
+                    <Check className="size-3.5" />
+                  )}
+                  {editingAccount ? t("mailSettings.updateAccountBtn") : t("mailSettings.linkAccountBtn")}
+                </Button>
+              )}
+            </div>
           </div>
         </DialogContent>
       </Dialog>

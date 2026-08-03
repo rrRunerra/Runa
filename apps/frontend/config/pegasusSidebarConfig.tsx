@@ -6,11 +6,12 @@ import {
   FileText,
   Inbox,
   Mail,
+  Paperclip,
   Send,
   ShieldAlert,
   Trash,
 } from "lucide-react";
-import { RrComposeEmailModal } from "@/components/rrComponents/pegasus/rrComposeEmailModal";
+import { RrComposeEmailModal } from "@/components/rrComponents/pegasus/email/rrComposeEmailModal";
 import { SidebarMenuButton } from "@/components/ui/sidebar";
 import { SidebarConfig } from "@/types/SidebarConfig";
 
@@ -59,7 +60,7 @@ export const getPegasusSidebarConfig = (
         },
         {
           label: t("sidebarAttachments"),
-          icon: <FileText className="h-4 w-4" />,
+          icon: <Paperclip className="h-4 w-4" />,
           subtitle: t("sidebarAttachmentsSubtitle"),
           position: 4,
           href: "/pegasus/attachments",
@@ -100,7 +101,7 @@ export const getPegasusSidebarConfig = (
           label: t("sidebarUnifiedInbox"),
           href: "/pegasus/unified/inbox",
           preventRedirect: true,
-          icon: <Inbox className="h-4 w-4" style={{ color: "#3b82f6" }} />,
+          icon: <Inbox className="h-4 w-4" />,
           subtitle: t("sidebarAllInboxesSubtitle"),
           badge: totalUnread > 0 ? totalUnread.toString() : undefined,
         },
@@ -109,7 +110,7 @@ export const getPegasusSidebarConfig = (
           label: t("sidebarAttachments"),
           href: "/pegasus/attachments",
           preventRedirect: true,
-          icon: <FileText className="h-4 w-4" style={{ color: "#10b981" }} />,
+          icon: <Paperclip className="h-4 w-4" />,
           subtitle: t("sidebarAttachmentsSubtitle"),
         },
       ],

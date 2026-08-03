@@ -127,3 +127,42 @@ export class SendEmailDto {
   @IsOptional()
   html?: string;
 }
+
+export class TestEmailConnectionDto {
+  @IsString({ message: 'TsElCnDto-EAMBAS001: Email address must be a string' })
+  @IsOptional()
+  emailAddress?: string;
+
+  @IsString({ message: 'TsElCnDto-LEMBAS001: Login email must be a string' })
+  @IsOptional()
+  loginEmail?: string;
+
+  @IsString({ message: 'TsElCnDto-PWMBAS001: Password must be a string' })
+  @IsNotEmpty({ message: 'TsElCnDto-PWMNBE001: Password must not be empty' })
+  password: string;
+
+  @IsString({ message: 'TsElCnDto-IHMBAS001: IMAP host must be a string' })
+  @IsNotEmpty({ message: 'TsElCnDto-IHMNBE001: IMAP host must not be empty' })
+  imapHost: string;
+
+  @IsInt({ message: 'TsElCnDto-IPMBAI001: IMAP port must be an integer' })
+  @IsNotEmpty({ message: 'TsElCnDto-IPMNBE001: IMAP port must not be empty' })
+  imapPort: number;
+
+  @IsBoolean({ message: 'TsElCnDto-ISMBAB001: IMAP secure must be a boolean' })
+  @IsNotEmpty({ message: 'TsElCnDto-ISMNBE001: IMAP secure must not be empty' })
+  imapSecure: boolean;
+
+  @IsString({ message: 'TsElCnDto-SHMBAS001: SMTP host must be a string' })
+  @IsNotEmpty({ message: 'TsElCnDto-SHMNBE001: SMTP host must not be empty' })
+  smtpHost: string;
+
+  @IsInt({ message: 'TsElCnDto-SPMBAI001: SMTP port must be an integer' })
+  @IsNotEmpty({ message: 'TsElCnDto-SPMNBE001: SMTP port must not be empty' })
+  smtpPort: number;
+
+  @IsBoolean({ message: 'TsElCnDto-SSMBAB001: SMTP secure must be a boolean' })
+  @IsNotEmpty({ message: 'TsElCnDto-SSMNBE001: SMTP secure must not be empty' })
+  smtpSecure: boolean;
+}
+

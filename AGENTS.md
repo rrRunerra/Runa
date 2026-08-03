@@ -25,25 +25,6 @@ Runa/
 
 ## Build / Lint / Test Commands
 
-### Root (Turborepo)
-
-```bash
-# Build all apps/packages
-pnpm build
-
-# Run all lint checks
-pnpm lint
-
-# Format all files
-pnpm format
-
-# Type-check all packages
-pnpm check-types
-
-# Run dev servers (all apps)
-pnpm dev
-```
-
 ### Backend (NestJS) - `apps/backend`
 
 ```bash
@@ -52,9 +33,6 @@ pnpm build
 
 # Development (watch mode)
 pnpm dev
-
-# Lint (with auto-fix)
-pnpm lint
 
 # Run all tests
 pnpm test
@@ -83,12 +61,6 @@ pnpm build
 
 # Development server
 pnpm dev
-
-# Lint
-pnpm lint
-
-# Type-check (via turbo)
-pnpm check-types
 ```
 
 ### Database (Prisma) - `packages/database`

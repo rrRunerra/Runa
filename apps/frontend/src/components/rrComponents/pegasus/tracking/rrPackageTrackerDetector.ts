@@ -23,6 +23,7 @@ export type CarrierId =
   | 'packeta'
   | 'chinapost'
   | 'sps'
+  | 'skposta'
   | 'postal_international'
   | 'unknown';
 
@@ -32,7 +33,12 @@ interface CarrierConfig {
   buildUrl: (num: string) => string;
 }
 
-const CARRIER_CONFIGS: Record<CarrierId, CarrierConfig> = {
+export const CARRIER_CONFIGS: Record<CarrierId, CarrierConfig> = {
+  skposta: {
+    id: 'skposta',
+    name: 'Slovenská pošta',
+    buildUrl: (num: string) => `https://posta.sk/sledovanie-zasielok?q=${encodeURIComponent(num)}`,
+  },
   ups: {
     id: 'ups',
     name: 'UPS',
@@ -223,7 +229,8 @@ export function detectPackageTrackingNumbers(
       const num = raw.toUpperCase();
       if (!foundMap.has(num)) {
         let carrier: CarrierId = 'postal_international';
-        if (num.endsWith('US')) carrier = 'usps';
+        if (num.endsWith('SK')) carrier = 'skposta';
+        else if (num.endsWith('US')) carrier = 'usps';
         else if (num.endsWith('GB')) carrier = 'royalmail';
         else if (num.endsWith('CN')) carrier = 'chinapost';
         foundMap.set(num, createDetectedPackage(num, carrier, combinedContent, bodyHtml, bodyText));
@@ -329,6 +336,26 @@ function findEmailLinkForTrackingNumber(
   return undefined;
 }
 
+function isMarketingTrackerUrl(url: string): boolean {
+  if (!url) return true;
+  const lower = url.toLowerCase();
+  return (
+    lower.includes("/_t/c/") ||
+    lower.includes("/_t/o/") ||
+    lower.includes("sendgrid.net") ||
+    lower.includes("klaviyo") ||
+    lower.includes("mailchimp") ||
+    lower.includes("list-manage.com") ||
+    lower.includes("mandrillapp.com") ||
+    lower.includes("hs-scripts.com") ||
+    lower.includes("hubspot") ||
+    lower.includes("mailgun") ||
+    lower.includes("/click?") ||
+    lower.includes("/open?") ||
+    lower.includes("utm_source=")
+  );
+}
+
 function extractTrackingFromHtmlLinks(
   html: string,
   foundMap: Map<string, DetectedPackage>,
@@ -340,11 +367,19 @@ function extractTrackingFromHtmlLinks(
 
   while ((match = linkRegex.exec(html)) !== null) {
     const url = match[1];
-    if (!url) continue;
+    if (!url || isMarketingTrackerUrl(url)) continue;
 
+    // Check Slovenská pošta link
+    if (/posta\.sk|tandt\.posta\.sk/i.test(url)) {
+      const trkMatch = url.match(/(?:q=|tracking\/|id=|\/)([A-Z0-9]{9,15})/i);
+      const trk = trkMatch ? trkMatch[1].toUpperCase() : undefined;
+      if (trk && !foundMap.has(trk)) {
+        foundMap.set(trk, createDetectedPackage(trk, 'skposta', content, html, bodyText, url));
+      }
+    }
     // Check Packeta / Zasilkovna link
     if (/packeta|zasilkovna/i.test(url)) {
-      const trkMatch = url.match(/(?:id=|tracking\/)([Z0-9A-Z]+)/i);
+      const trkMatch = url.match(/(?:id=|tracking\/)([Z0-9]{8,12})/i);
       const trk = trkMatch ? trkMatch[1] : undefined;
       if (trk && !foundMap.has(trk)) {
         foundMap.set(trk, createDetectedPackage(trk, 'packeta', content, html, bodyText, url));
@@ -352,7 +387,7 @@ function extractTrackingFromHtmlLinks(
     }
     // Check Alza link
     if (/alza\.sk|alza\.cz/i.test(url)) {
-      const trkMatch = url.match(/(?:id=|order=|\/)([0-9A-Z]{8,12})/i);
+      const trkMatch = url.match(/(?:id=|order=|\/)(\d{8,10})/i);
       const trk = trkMatch ? trkMatch[1] : undefined;
       if (trk && !foundMap.has(trk)) {
         foundMap.set(trk, createDetectedPackage(trk, 'alza', content, html, bodyText, url));
@@ -360,45 +395,45 @@ function extractTrackingFromHtmlLinks(
     }
     // Check SPS link
     if (/sps-slovakia/i.test(url)) {
-      const trkMatch = url.match(/(?:pass=|id=|\/)([0-9A-Z]{8,12})/i);
+      const trkMatch = url.match(/(?:pass=|id=|\/)(SPS\d{8,12}|703\d{8,10}|\d{11,13})/i);
       const trk = trkMatch ? trkMatch[1] : undefined;
       if (trk && !foundMap.has(trk)) {
         foundMap.set(trk, createDetectedPackage(trk, 'sps', content, html, bodyText, url));
       }
     }
-    // Check DPD link
-    if (/dpd/i.test(url)) {
-      const trkMatch = url.match(/(?:parcelNumber=|reference=|\/)([0-9A-Z]{12,14})/i);
+    // Check DPD link (Must be DPD domain or explicit parcelNumber param, and 12-14 digits)
+    if (/dpd|mydpd/i.test(url)) {
+      const trkMatch = url.match(/(?:parcelNumber=|reference=|\/)(\d{12,14})/i);
       const trk = trkMatch ? trkMatch[1] : undefined;
-      if (trk && !foundMap.has(trk)) {
+      if (trk && /^\d{12,14}$/.test(trk) && !foundMap.has(trk)) {
         foundMap.set(trk, createDetectedPackage(trk, 'dpd', content, html, bodyText, url));
       }
     }
     // Check FedEx link
     if (/fedex\.com.*trknbr=([0-9a-z]+)/i.test(url)) {
       const trk = RegExp.$1.toUpperCase();
-      if (trk && !foundMap.has(trk)) {
+      if (trk && /^\d{12,22}$/.test(trk) && !foundMap.has(trk)) {
         foundMap.set(trk, createDetectedPackage(trk, 'fedex', content, html, bodyText, url));
       }
     }
     // Check UPS link
     if (/ups\.com.*tracknum=([0-9a-z]+)/i.test(url)) {
       const trk = RegExp.$1.toUpperCase();
-      if (trk && !foundMap.has(trk)) {
+      if (trk && /^1Z[0-9A-Z]{16}$/.test(trk) && !foundMap.has(trk)) {
         foundMap.set(trk, createDetectedPackage(trk, 'ups', content, html, bodyText, url));
       }
     }
     // Check USPS link
     if (/usps\.com.*tLabels=([0-9a-z]+)/i.test(url)) {
       const trk = RegExp.$1.toUpperCase();
-      if (trk && !foundMap.has(trk)) {
+      if (trk && /^\d{18,28}$/.test(trk) && !foundMap.has(trk)) {
         foundMap.set(trk, createDetectedPackage(trk, 'usps', content, html, bodyText, url));
       }
     }
     // Check DHL link
     if (/dhl\.com.*AWB=([0-9a-z]+)/i.test(url)) {
       const trk = RegExp.$1.toUpperCase();
-      if (trk && !foundMap.has(trk)) {
+      if (trk && /^(J[JD]\d{16,18}|\d{10})$/.test(trk) && !foundMap.has(trk)) {
         foundMap.set(trk, createDetectedPackage(trk, 'dhl', content, html, bodyText, url));
       }
     }

@@ -7,12 +7,14 @@ import { useTheme } from "next-themes";
 interface RrSanitizedEmailIframeProps {
   htmlContent: string;
   loadRemoteContent: boolean;
+  zoom?: number;
   className?: string;
 }
 
 export default function RrSanitizedEmailIframe({
   htmlContent,
   loadRemoteContent,
+  zoom = 1,
   className,
 }: RrSanitizedEmailIframeProps): React.JSX.Element {
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -63,10 +65,6 @@ export default function RrSanitizedEmailIframe({
   }, [htmlContent, loadRemoteContent]);
 
   const fullDocString = useMemo(() => {
-    const isDark = resolvedTheme === "dark";
-    const bg = "#ffffff";
-    const fg = "#1f2937";
-
     return `<!DOCTYPE html>
 <html>
 <head>
@@ -77,30 +75,8 @@ export default function RrSanitizedEmailIframe({
   html, body {
     margin: 0;
     padding: 16px;
-    background-color: ${bg} !important;
-    color: ${fg} !important;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    font-size: 14px;
-    line-height: 1.6;
     word-break: break-word;
     overflow-x: auto;
-  }
-  ${
-    isDark
-      ? `
-    html {
-      filter: invert(0.92) hue-rotate(180deg) !important;
-      background-color: #ffffff !important;
-    }
-    img, video, [style*="background-image"] {
-      filter: invert(1.08) hue-rotate(180deg) !important;
-    }
-  `
-      : ""
-  }
-  a {
-    color: #2563eb !important;
-    text-decoration: underline;
   }
   img {
     max-width: 100%;
@@ -114,14 +90,37 @@ export default function RrSanitizedEmailIframe({
 <body>
 <div id="email-content-wrapper">${sanitizedHtml}</div>
 <script>
+  var currentZoom = ${zoom};
   function updateHeight() {
     try {
       var wrapper = document.getElementById('email-content-wrapper');
-      var height = wrapper ? wrapper.scrollHeight + 32 : document.body.scrollHeight;
+      var height = wrapper ? Math.round(wrapper.getBoundingClientRect().height + 32) : document.body.scrollHeight;
       window.parent.postMessage({ type: 'RR_EMAIL_IFRAME_RESIZE', height: height }, '*');
     } catch(e) {}
   }
-  window.addEventListener('load', updateHeight);
+  function applyZoom(z) {
+    try {
+      currentZoom = z;
+      var wrapper = document.getElementById('email-content-wrapper');
+      if (wrapper) {
+        wrapper.style.zoom = z;
+        wrapper.style.transform = 'scale(' + z + ')';
+        wrapper.style.transformOrigin = 'top left';
+        wrapper.style.width = '100%';
+        wrapper.style.display = 'inline-block';
+        wrapper.style.minWidth = '100%';
+        updateHeight();
+      }
+    } catch(e) {}
+  }
+  window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'RR_SET_ZOOM' && typeof e.data.zoom === 'number') {
+      applyZoom(e.data.zoom);
+    }
+  });
+  window.addEventListener('load', function() {
+    applyZoom(currentZoom);
+  });
   window.addEventListener('resize', updateHeight);
   var observer = new MutationObserver(updateHeight);
   observer.observe(document.body, { childList: true, subtree: true, attributes: true });
@@ -131,7 +130,7 @@ export default function RrSanitizedEmailIframe({
 </script>
 </body>
 </html>`;
-  }, [sanitizedHtml, resolvedTheme]);
+  }, [sanitizedHtml]);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -148,8 +147,19 @@ export default function RrSanitizedEmailIframe({
     return () => window.removeEventListener("message", handleMessage);
   }, []);
 
+  useEffect(() => {
+    if (iframeRef.current && iframeRef.current.contentWindow) {
+      try {
+        iframeRef.current.contentWindow.postMessage(
+          { type: "RR_SET_ZOOM", zoom },
+          "*",
+        );
+      } catch (e) {}
+    }
+  }, [zoom]);
+
   return (
-    <div className="w-full overflow-hidden rounded-2xl border border-border/60 bg-card shadow-xs">
+    <div className="w-full overflow-x-auto overflow-y-hidden rounded-2xl border border-border/60 bg-card shadow-xs">
       <iframe
         ref={iframeRef}
         srcDoc={fullDocString}

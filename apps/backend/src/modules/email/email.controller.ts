@@ -16,7 +16,7 @@ import type { Response as ExpressResponse } from 'express';
 import { AuthGuard } from '../../common/guards/auth/auth.guard';
 import { EmailService, EmailAutoconfigResult } from './email.service';
 import { EmailSyncService } from './email-sync.service';
-import { EmailAccountDto, SendEmailDto, SaveDraftDto } from './email.dto';
+import { EmailAccountDto, SendEmailDto, SaveDraftDto, TestEmailConnectionDto } from './email.dto';
 
 @Controller('/emails')
 @UseGuards(AuthGuard)
@@ -29,6 +29,7 @@ export class EmailController {
   // ─────────────────────────── ACCOUNTS (Collection) ───────────────────────────
 
   @Get()
+  @Get('accounts')
   async getEmailAccounts(@Req() req: any): Promise<any[]> {
     return this.emailService.getEmailAccounts(req.user.username);
   }
@@ -109,6 +110,14 @@ export class EmailController {
     return this.emailService.fetchEmailAutoconfig(domain);
   }
 
+  @Post('test-connection')
+  async testEmailConnection(
+    @Body() body: TestEmailConnectionDto,
+  ): Promise<{ imap: { success: boolean; error?: string }; smtp: { success: boolean; error?: string } }> {
+    return this.emailService.testConnection(body);
+  }
+
+
   // ─────────────────────────── ATTACHMENTS ───────────────────────────
 
   @Get('attachments/:attachmentId')
@@ -126,6 +135,15 @@ export class EmailController {
   }
 
   // ─────────────────────────── ACCOUNT MESSAGES (Singleton) ───────────────────────────
+
+  @Get('unified/all-messages')
+  async getAllUnifiedMessages(
+    @Req() req: any,
+    @Query('limit') limit?: string,
+  ): Promise<any[]> {
+    const limitNum = limit ? parseInt(limit, 10) : undefined;
+    return this.emailService.getAllMessages(req.user.username, limitNum);
+  }
 
   @Get('unified/folders/:folder/messages')
   async getUnifiedFolderMessages(
@@ -188,6 +206,21 @@ export class EmailController {
       accountId,
       messageId,
       body,
+    );
+  }
+
+  @Post(':accountId/messages/:messageId/copy')
+  async copyMessage(
+    @Req() req: any,
+    @Param('accountId') accountId: string,
+    @Param('messageId') messageId: string,
+    @Body() body: { targetFolder: string },
+  ): Promise<any> {
+    return this.emailService.copyMessage(
+      req.user.username,
+      accountId,
+      messageId,
+      body.targetFolder,
     );
   }
 

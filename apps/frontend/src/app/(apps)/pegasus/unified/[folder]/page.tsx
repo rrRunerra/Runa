@@ -1,5 +1,5 @@
 import React from "react";
-import RrEmailFolderView from "@/components/rrComponents/pegasus/rrEmailFolderView";
+import RrEmailFolderView from "@/components/rrComponents/pegasus/email/rrEmailFolderView";
 
 interface PageProps {
   params: Promise<{
