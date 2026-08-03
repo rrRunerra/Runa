@@ -35,50 +35,24 @@ export class MediaUpdateService {
 
   /**
    * Runs weekly on Sunday at midnight.
-   * Updates all V2 media released in the past 3 months by triggering their refresh methods.
+   * Updates all V2 media that have not been updated in the last 7 days (or have null provider update timestamps).
    */
   @Cron('0 0 * * 0')
   public async updateRecentMedia(): Promise<void> {
     this.logger.log('Starting weekly background V2 media update job...');
 
-    const now = new Date();
-    const threeMonthsAgo = new Date();
-    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-
-    const targetYear = threeMonthsAgo.getFullYear();
-    const startMonthIndex = threeMonthsAgo.getFullYear() * 12 + threeMonthsAgo.getMonth();
-    const currentMonthIndex = now.getFullYear() * 12 + now.getMonth();
-
-    const isWithinPastThreeMonths = (
-      year: number | null | undefined,
-      month: number | null | undefined,
-    ): boolean => {
-      if (!year) return false;
-      const m = month ? month - 1 : 0;
-      const itemMonthIndex = year * 12 + m;
-      return itemMonthIndex >= startMonthIndex && itemMonthIndex <= currentMonthIndex;
-    };
-
     // 1. Anime V2
     try {
       const animes = await this.prisma.client.aquilaAnimeV2.findMany({
-        where: {
-          locked: false,
-          startDateYear: { gte: targetYear - 1 },
-        },
-        select: {
-          id: true,
-          startDateYear: true,
-          startDateMonth: true,
-          alUpdatedAt: true,
-        },
+        where: { locked: false },
+        select: { id: true, alUpdatedAt: true },
       });
 
-      const toUpdateAnime = animes.filter(
-        (a) =>
-          !isUpdatedInLast7Days(a.alUpdatedAt) &&
-          isWithinPastThreeMonths(a.startDateYear, a.startDateMonth),
-      );
+      const toUpdateAnime = animes.filter((a) => {
+        const updatedMs = getTimestampMs(a.alUpdatedAt);
+        if (updatedMs === null) return true;
+        return Date.now() - updatedMs >= SEVEN_DAYS_MS;
+      });
 
       this.logger.log(`Found ${toUpdateAnime.length} V2 Anime records to update.`);
       for (const item of toUpdateAnime) {
@@ -96,23 +70,15 @@ export class MediaUpdateService {
     // 2. Manga V2
     try {
       const mangas = await this.prisma.client.aquilaMangaV2.findMany({
-        where: {
-          locked: false,
-          startDateYear: { gte: targetYear - 1 },
-        },
-        select: {
-          id: true,
-          startDateYear: true,
-          startDateMonth: true,
-          alUpdatedAt: true,
-        },
+        where: { locked: false },
+        select: { id: true, alUpdatedAt: true },
       });
 
-      const toUpdateManga = mangas.filter(
-        (m) =>
-          !isUpdatedInLast7Days(m.alUpdatedAt) &&
-          isWithinPastThreeMonths(m.startDateYear, m.startDateMonth),
-      );
+      const toUpdateManga = mangas.filter((m) => {
+        const updatedMs = getTimestampMs(m.alUpdatedAt);
+        if (updatedMs === null) return true;
+        return Date.now() - updatedMs >= SEVEN_DAYS_MS;
+      });
 
       this.logger.log(`Found ${toUpdateManga.length} V2 Manga records to update.`);
       for (const item of toUpdateManga) {
@@ -130,23 +96,15 @@ export class MediaUpdateService {
     // 3. Book V2
     try {
       const books = await this.prisma.client.aquilaBookV2.findMany({
-        where: {
-          locked: false,
-          releaseDateYear: { gte: targetYear - 1 },
-        },
-        select: {
-          id: true,
-          releaseDateYear: true,
-          releaseDateMonth: true,
-          googleBooksUpdatedAt: true,
-        },
+        where: { locked: false },
+        select: { id: true, googleBooksUpdatedAt: true },
       });
 
-      const toUpdateBook = books.filter(
-        (b) =>
-          !isUpdatedInLast7Days(b.googleBooksUpdatedAt) &&
-          isWithinPastThreeMonths(b.releaseDateYear, b.releaseDateMonth),
-      );
+      const toUpdateBook = books.filter((b) => {
+        const updatedMs = getTimestampMs(b.googleBooksUpdatedAt);
+        if (updatedMs === null) return true;
+        return Date.now() - updatedMs >= SEVEN_DAYS_MS;
+      });
 
       this.logger.log(`Found ${toUpdateBook.length} V2 Book records to update.`);
       for (const item of toUpdateBook) {
@@ -164,23 +122,15 @@ export class MediaUpdateService {
     // 4. Game V2
     try {
       const games = await this.prisma.client.aquilaGameV2.findMany({
-        where: {
-          locked: false,
-          releaseDateYear: { gte: targetYear - 1 },
-        },
-        select: {
-          id: true,
-          releaseDateYear: true,
-          releaseDateMonth: true,
-          rawgUpdatedAt: true,
-        },
+        where: { locked: false },
+        select: { id: true, rawgUpdatedAt: true },
       });
 
-      const toUpdateGame = games.filter(
-        (g) =>
-          !isUpdatedInLast7Days(g.rawgUpdatedAt) &&
-          isWithinPastThreeMonths(g.releaseDateYear, g.releaseDateMonth),
-      );
+      const toUpdateGame = games.filter((g) => {
+        const updatedMs = getTimestampMs(g.rawgUpdatedAt);
+        if (updatedMs === null) return true;
+        return Date.now() - updatedMs >= SEVEN_DAYS_MS;
+      });
 
       this.logger.log(`Found ${toUpdateGame.length} V2 Game records to update.`);
       for (const item of toUpdateGame) {
@@ -198,23 +148,15 @@ export class MediaUpdateService {
     // 5. Movie V2
     try {
       const movies = await this.prisma.client.aquilaMovieV2.findMany({
-        where: {
-          locked: false,
-          releaseDateYear: { gte: targetYear - 1 },
-        },
-        select: {
-          id: true,
-          releaseDateYear: true,
-          releaseDateMonth: true,
-          tvdbUpdatedAt: true,
-        },
+        where: { locked: false },
+        select: { id: true, tvdbUpdatedAt: true },
       });
 
-      const toUpdateMovie = movies.filter(
-        (m) =>
-          !isUpdatedInLast7Days(m.tvdbUpdatedAt) &&
-          isWithinPastThreeMonths(m.releaseDateYear, m.releaseDateMonth),
-      );
+      const toUpdateMovie = movies.filter((m) => {
+        const updatedMs = getTimestampMs(m.tvdbUpdatedAt);
+        if (updatedMs === null) return true;
+        return Date.now() - updatedMs >= SEVEN_DAYS_MS;
+      });
 
       this.logger.log(`Found ${toUpdateMovie.length} V2 Movie records to update.`);
       for (const item of toUpdateMovie) {
@@ -232,23 +174,15 @@ export class MediaUpdateService {
     // 6. TV V2
     try {
       const tvs = await this.prisma.client.aquilaTvV2.findMany({
-        where: {
-          locked: false,
-          firstAiredYear: { gte: targetYear - 1 },
-        },
-        select: {
-          id: true,
-          firstAiredYear: true,
-          firstAiredMonth: true,
-          tvdbUpdatedAt: true,
-        },
+        where: { locked: false },
+        select: { id: true, tvdbUpdatedAt: true },
       });
 
-      const toUpdateTv = tvs.filter(
-        (t) =>
-          !isUpdatedInLast7Days(t.tvdbUpdatedAt) &&
-          isWithinPastThreeMonths(t.firstAiredYear, t.firstAiredMonth),
-      );
+      const toUpdateTv = tvs.filter((t) => {
+        const updatedMs = getTimestampMs(t.tvdbUpdatedAt);
+        if (updatedMs === null) return true;
+        return Date.now() - updatedMs >= SEVEN_DAYS_MS;
+      });
 
       this.logger.log(`Found ${toUpdateTv.length} V2 TV records to update.`);
       for (const item of toUpdateTv) {
