@@ -270,6 +270,7 @@ export class MediaUpdateService {
    * Runs weekly on Sunday at 3 AM.
    * Updates all media whose status is RELEASING, UNKNOWN, or HIATUS / ON_HIATUS every week.
    * Skips any media updated in the last 7 days.
+   * If provider update timestamp is null, updates it regardless of status.
    */
   @Cron('0 3 * * 0')
   public async updateActiveMediaWeekly(): Promise<void> {
@@ -283,7 +284,9 @@ export class MediaUpdateService {
       });
       const activeStatuses = new Set(['RELEASING', 'UNKNOWN', 'HIATUS', 'NOT_YET_RELEASED']);
       const toUpdate = animes.filter((item) => {
-        if (isUpdatedInLast7Days(item.alUpdatedAt)) return false;
+        const updatedMs = getTimestampMs(item.alUpdatedAt);
+        if (updatedMs === null) return true;
+        if (Date.now() - updatedMs < SEVEN_DAYS_MS) return false;
         return activeStatuses.has(String(item.status || '').toUpperCase());
       });
 
@@ -308,7 +311,9 @@ export class MediaUpdateService {
       });
       const activeStatuses = new Set(['RELEASING', 'UNKNOWN', 'HIATUS', 'NOT_YET_RELEASED']);
       const toUpdate = mangas.filter((item) => {
-        if (isUpdatedInLast7Days(item.alUpdatedAt)) return false;
+        const updatedMs = getTimestampMs(item.alUpdatedAt);
+        if (updatedMs === null) return true;
+        if (Date.now() - updatedMs < SEVEN_DAYS_MS) return false;
         return activeStatuses.has(String(item.status || '').toUpperCase());
       });
 
@@ -333,7 +338,9 @@ export class MediaUpdateService {
       });
       const activeStatuses = new Set(['RELEASING', 'UNKNOWN', 'ON_HIATUS', 'HIATUS']);
       const toUpdate = books.filter((item) => {
-        if (isUpdatedInLast7Days(item.googleBooksUpdatedAt)) return false;
+        const updatedMs = getTimestampMs(item.googleBooksUpdatedAt);
+        if (updatedMs === null) return true;
+        if (Date.now() - updatedMs < SEVEN_DAYS_MS) return false;
         return activeStatuses.has(String(item.status || '').toUpperCase());
       });
 
@@ -365,7 +372,9 @@ export class MediaUpdateService {
         'RELEASING',
       ]);
       const toUpdate = games.filter((item) => {
-        if (isUpdatedInLast7Days(item.rawgUpdatedAt)) return false;
+        const updatedMs = getTimestampMs(item.rawgUpdatedAt);
+        if (updatedMs === null) return true;
+        if (Date.now() - updatedMs < SEVEN_DAYS_MS) return false;
         return activeStatuses.has(String(item.status || '').toUpperCase());
       });
 
@@ -396,7 +405,9 @@ export class MediaUpdateService {
         'RELEASING',
       ]);
       const toUpdate = movies.filter((item) => {
-        if (isUpdatedInLast7Days(item.tvdbUpdatedAt)) return false;
+        const updatedMs = getTimestampMs(item.tvdbUpdatedAt);
+        if (updatedMs === null) return true;
+        if (Date.now() - updatedMs < SEVEN_DAYS_MS) return false;
         return activeStatuses.has(String(item.status || '').toUpperCase());
       });
 
@@ -427,7 +438,9 @@ export class MediaUpdateService {
         'RELEASING',
       ]);
       const toUpdate = tvs.filter((item) => {
-        if (isUpdatedInLast7Days(item.tvdbUpdatedAt)) return false;
+        const updatedMs = getTimestampMs(item.tvdbUpdatedAt);
+        if (updatedMs === null) return true;
+        if (Date.now() - updatedMs < SEVEN_DAYS_MS) return false;
         return activeStatuses.has(String(item.status || '').toUpperCase());
       });
 
@@ -451,6 +464,7 @@ export class MediaUpdateService {
    * Runs daily at 4 AM.
    * Updates media whose status is COMPLETED / FINISHED / ENDED / RELEASED with a 5% random chance each day.
    * Skips any media updated in the last 7 days.
+   * If provider update timestamp is null, updates it regardless of status.
    */
   @Cron('0 4 * * *')
   public async updateCompletedMediaDaily(): Promise<void> {
@@ -468,9 +482,12 @@ export class MediaUpdateService {
         where: { locked: false },
         select: { id: true, status: true, alUpdatedAt: true },
       });
-      const toUpdate = animes.filter(
-        (item) => !isUpdatedInLast7Days(item.alUpdatedAt) && isCompletedStatus(item.status) && Math.random() < 0.05,
-      );
+      const toUpdate = animes.filter((item) => {
+        const updatedMs = getTimestampMs(item.alUpdatedAt);
+        if (updatedMs === null) return true;
+        if (Date.now() - updatedMs < SEVEN_DAYS_MS) return false;
+        return isCompletedStatus(item.status) && Math.random() < 0.05;
+      });
 
       this.logger.log(`Found ${toUpdate.length} completed V2 Anime records selected for daily update.`);
       for (const item of toUpdate) {
@@ -491,9 +508,12 @@ export class MediaUpdateService {
         where: { locked: false },
         select: { id: true, status: true, alUpdatedAt: true },
       });
-      const toUpdate = mangas.filter(
-        (item) => !isUpdatedInLast7Days(item.alUpdatedAt) && isCompletedStatus(item.status) && Math.random() < 0.05,
-      );
+      const toUpdate = mangas.filter((item) => {
+        const updatedMs = getTimestampMs(item.alUpdatedAt);
+        if (updatedMs === null) return true;
+        if (Date.now() - updatedMs < SEVEN_DAYS_MS) return false;
+        return isCompletedStatus(item.status) && Math.random() < 0.05;
+      });
 
       this.logger.log(`Found ${toUpdate.length} completed V2 Manga records selected for daily update.`);
       for (const item of toUpdate) {
@@ -514,9 +534,12 @@ export class MediaUpdateService {
         where: { locked: false },
         select: { id: true, status: true, googleBooksUpdatedAt: true },
       });
-      const toUpdate = books.filter(
-        (item) => !isUpdatedInLast7Days(item.googleBooksUpdatedAt) && isCompletedStatus(item.status) && Math.random() < 0.05,
-      );
+      const toUpdate = books.filter((item) => {
+        const updatedMs = getTimestampMs(item.googleBooksUpdatedAt);
+        if (updatedMs === null) return true;
+        if (Date.now() - updatedMs < SEVEN_DAYS_MS) return false;
+        return isCompletedStatus(item.status) && Math.random() < 0.05;
+      });
 
       this.logger.log(`Found ${toUpdate.length} completed V2 Book records selected for daily update.`);
       for (const item of toUpdate) {
@@ -537,9 +560,12 @@ export class MediaUpdateService {
         where: { locked: false },
         select: { id: true, status: true, rawgUpdatedAt: true },
       });
-      const toUpdate = games.filter(
-        (item) => !isUpdatedInLast7Days(item.rawgUpdatedAt) && isCompletedStatus(item.status) && Math.random() < 0.05,
-      );
+      const toUpdate = games.filter((item) => {
+        const updatedMs = getTimestampMs(item.rawgUpdatedAt);
+        if (updatedMs === null) return true;
+        if (Date.now() - updatedMs < SEVEN_DAYS_MS) return false;
+        return isCompletedStatus(item.status) && Math.random() < 0.05;
+      });
 
       this.logger.log(`Found ${toUpdate.length} completed V2 Game records selected for daily update.`);
       for (const item of toUpdate) {
@@ -560,9 +586,12 @@ export class MediaUpdateService {
         where: { locked: false },
         select: { id: true, status: true, tvdbUpdatedAt: true },
       });
-      const toUpdate = movies.filter(
-        (item) => !isUpdatedInLast7Days(item.tvdbUpdatedAt) && isCompletedStatus(item.status) && Math.random() < 0.05,
-      );
+      const toUpdate = movies.filter((item) => {
+        const updatedMs = getTimestampMs(item.tvdbUpdatedAt);
+        if (updatedMs === null) return true;
+        if (Date.now() - updatedMs < SEVEN_DAYS_MS) return false;
+        return isCompletedStatus(item.status) && Math.random() < 0.05;
+      });
 
       this.logger.log(`Found ${toUpdate.length} completed V2 Movie records selected for daily update.`);
       for (const item of toUpdate) {
@@ -583,9 +612,12 @@ export class MediaUpdateService {
         where: { locked: false },
         select: { id: true, status: true, tvdbUpdatedAt: true },
       });
-      const toUpdate = tvs.filter(
-        (item) => !isUpdatedInLast7Days(item.tvdbUpdatedAt) && isCompletedStatus(item.status) && Math.random() < 0.05,
-      );
+      const toUpdate = tvs.filter((item) => {
+        const updatedMs = getTimestampMs(item.tvdbUpdatedAt);
+        if (updatedMs === null) return true;
+        if (Date.now() - updatedMs < SEVEN_DAYS_MS) return false;
+        return isCompletedStatus(item.status) && Math.random() < 0.05;
+      });
 
       this.logger.log(`Found ${toUpdate.length} completed V2 TV records selected for daily update.`);
       for (const item of toUpdate) {

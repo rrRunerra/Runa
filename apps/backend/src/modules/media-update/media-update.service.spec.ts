@@ -166,4 +166,19 @@ describe('MediaUpdateService', () => {
 
     expect(mockAnimeService.refreshAnime).not.toHaveBeenCalledWith(401);
   });
+
+  it('should refresh media with null provider update timestamp regardless of status', async () => {
+    mockPrisma.aquilaAnimeV2.findMany.mockResolvedValue([
+      { id: 501, status: 'FINISHED', alUpdatedAt: null },
+    ]);
+    mockPrisma.aquilaMangaV2.findMany.mockResolvedValue([]);
+    mockPrisma.aquilaBookV2.findMany.mockResolvedValue([]);
+    mockPrisma.aquilaGameV2.findMany.mockResolvedValue([]);
+    mockPrisma.aquilaMovieV2.findMany.mockResolvedValue([]);
+    mockPrisma.aquilaTvV2.findMany.mockResolvedValue([]);
+
+    await service.updateActiveMediaWeekly();
+
+    expect(mockAnimeService.refreshAnime).toHaveBeenCalledWith(501);
+  });
 });
