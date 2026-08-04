@@ -7,6 +7,7 @@ import { CacheService } from 'src/providers/cache/cache.service';
 import { GameExternal } from './game.external';
 import { WikidataService } from 'src/providers/Wikidata/wikidata.service';
 import { RawgService } from 'src/providers/Rawg/rawg.service';
+import { IgdbService } from 'src/providers/Igdb/igdb.service';
 import { SteamService } from 'src/providers/Steam/steam.service';
 import { AnimeModule } from '../anime/anime.module';
 import { MangaModule } from '../manga/manga.module';
@@ -29,8 +30,9 @@ import { BookModule } from '../book/book.module';
     GameExternal,
     WikidataService,
     RawgService,
+    IgdbService,
     SteamService,
   ],
-  exports: [GameService, GameRepository, GameQueueService, WikidataService, RawgService, SteamService],
+  exports: [GameService, GameRepository, GameQueueService, WikidataService, RawgService, IgdbService, SteamService],
 })
 export class GameModule {}

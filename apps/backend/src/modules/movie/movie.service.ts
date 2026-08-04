@@ -50,6 +50,7 @@ export class MovieService {
 
     if (cached && Array.isArray(cached) && cached.length > 0) {
       this.logger.debug(`Movie search cache hit ${cached.length} entries`);
+      void this.triggerBackgroundSearchRefresh(cleanName);
       return cached;
     }
 
@@ -67,6 +68,8 @@ export class MovieService {
 
         result = externalResults;
       }
+    } else {
+      void this.triggerBackgroundSearchRefresh(cleanName);
     }
 
     this.logger.debug(`Movies found: ${result.length}`);
@@ -76,6 +79,36 @@ export class MovieService {
     }
 
     return result;
+  }
+
+  private async triggerBackgroundSearchRefresh(cleanName: string): Promise<void> {
+    const cooldownKey = CacheService.keys.searchRefreshCooldown('movie', cleanName);
+    const inCooldown = await this.cacheService.get<boolean>(cooldownKey);
+    if (inCooldown) {
+      this.logger.debug(`Movie search background refresh skipped (cooldown active for "${cleanName}")`);
+      return;
+    }
+
+    await this.cacheService.set(cooldownKey, true, 3600);
+
+    this.logger.debug(`Movie search queueing background refresh for: "${cleanName}"`);
+    try {
+      const externalResults = await this.movieExternal.search(cleanName);
+      if (externalResults.length > 0) {
+        const tvdbIds = externalResults
+          .map((r) => r.tvdbId)
+          .filter((id): id is number => Boolean(id));
+        this.movieQueueService.addSearchUpserts(tvdbIds);
+
+        const updated = await this.movieRepository.search(cleanName);
+        const finalResults = updated.length > 0 ? updated : externalResults;
+        const cacheKey = this.cacheKeys.movieSearch(cleanName);
+        await this.cacheService.set(cacheKey, finalResults, this.cacheDuration);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`Movie background search refresh failed for "${cleanName}": ${msg}`);
+    }
   }
 
   public async getMovie(id: number): Promise<MovieEntity | undefined> {
@@ -94,7 +127,15 @@ export class MovieService {
     }
 
     this.logger.debug(`getMovie fetching from db for ID ${id}`);
-    const data = await this.movieRepository.find(id);
+    let data = await this.movieRepository.find(id);
+
+    if (!data) {
+      try {
+        data = (await this.ensureMovie(id)) || null;
+      } catch (err: unknown) {
+        data = null;
+      }
+    }
 
     if (!data) {
       throw new rrNotFoundException(`${this.moduleCode}MNF001`, {

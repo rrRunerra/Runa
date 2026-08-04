@@ -86,6 +86,27 @@ describe('MovieService', () => {
       const result = await service.search('Inception');
       expect(result).toEqual(dbResults);
     });
+
+    it('should trigger non-blocking background search refresh if not in cooldown', async () => {
+      mockCacheService.get.mockResolvedValue(null);
+      const dbResults = [{ id: 1, title: 'Inception' }];
+      mockMovieRepository.search.mockResolvedValue(dbResults);
+      mockMovieExternal.search.mockResolvedValue([{ tvdbId: 100, title: 'Inception' }]);
+
+      const result = await service.search('Inception');
+      expect(result).toEqual(dbResults);
+
+      // Wait a microtick for background promise
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      expect(mockCacheService.set).toHaveBeenCalledWith(
+        'cooldown:search-refresh:movie:inception',
+        true,
+        3600,
+      );
+      expect(mockMovieExternal.search).toHaveBeenCalledWith('Inception');
+      expect(mockMovieQueueService.addSearchUpserts).toHaveBeenCalledWith([100]);
+    });
   });
 
   describe('getMovie', () => {

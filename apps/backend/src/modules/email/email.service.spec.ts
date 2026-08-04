@@ -95,7 +95,7 @@ describe('EmailService', () => {
   });
 
   describe('getEmailAccounts', () => {
-    it('should retrieve email accounts and decrypt password', async () => {
+    it('should retrieve email accounts without exposing password', async () => {
       const mockAccounts = [
         {
           id: 'acc-1',
@@ -111,7 +111,8 @@ describe('EmailService', () => {
       const result = await service.getEmailAccounts('user-1');
 
       expect(result).toHaveLength(1);
-      expect(result[0].password).toBe('secret');
+      expect((result[0] as any).password).toBeUndefined();
+      expect(result[0].id).toBe('acc-1');
     });
   });
 

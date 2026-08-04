@@ -46,6 +46,7 @@ export class MangaService {
 
     if (cached && Array.isArray(cached) && cached.length > 0) {
       this.logger.debug(`Manga search cache hit ${cached.length} entries`);
+      void this.triggerBackgroundSearchRefresh(cleanName);
       return cached;
     }
 
@@ -83,6 +84,8 @@ export class MangaService {
           }),
         );
       }
+    } else {
+      void this.triggerBackgroundSearchRefresh(cleanName);
     }
 
     this.logger.debug(`Manga found: ${result.length}`);
@@ -92,6 +95,43 @@ export class MangaService {
     }
 
     return result;
+  }
+
+  private async triggerBackgroundSearchRefresh(cleanName: string): Promise<void> {
+    const cooldownKey = CacheService.keys.searchRefreshCooldown('manga', cleanName);
+    const inCooldown = await this.cacheService.get<boolean>(cooldownKey);
+    if (inCooldown) {
+      this.logger.debug(`Manga search background refresh skipped (cooldown active for "${cleanName}")`);
+      return;
+    }
+
+    await this.cacheService.set(cooldownKey, true, 3600);
+
+    this.logger.debug(`Manga search queueing background refresh for: "${cleanName}"`);
+    try {
+      const externalResults = await this.mangaExternal.search(cleanName);
+      if (externalResults.length > 0) {
+        for (const item of externalResults) {
+          await this.mangaRepository.upsertV2Record({
+            anilistId: item.anilistId,
+            titlePrimary: item.title,
+            titleSecondary: item.secondaryTitle,
+            coverImage: item.coverImage,
+            format: item.format,
+            status: item.status,
+            startDateYear: 1970,
+          });
+          void this.mangaQueueService.addUpsertJob(item.anilistId);
+        }
+
+        const updated = await this.mangaRepository.search(cleanName);
+        const cacheKey = this.cacheKeys.mangaSearch(cleanName);
+        await this.cacheService.set(cacheKey, updated, this.cacheDuration);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`Manga background search refresh failed for "${cleanName}": ${msg}`);
+    }
   }
 
   public async getManga(id: number): Promise<MangaEntity | undefined> {
@@ -110,7 +150,22 @@ export class MangaService {
     }
 
     this.logger.debug(`getManga fetching from db for ID ${id}`);
-    const data = await this.mangaRepository.find(id);
+    let data = await this.mangaRepository.find(id);
+
+    if (!data) {
+      const recordByAnilist = await this.mangaRepository.findByAnilistId(id);
+      if (recordByAnilist?.id) {
+        data = await this.mangaRepository.find(recordByAnilist.id);
+      }
+    }
+
+    if (!data) {
+      try {
+        data = (await this.ensureManga(id)) || null;
+      } catch (err: unknown) {
+        data = null;
+      }
+    }
 
     if (!data) {
       throw new rrNotFoundException(`${this.moduleCode}MNF001`, {
@@ -168,6 +223,7 @@ export class MangaService {
       await this.mangaRepository.upsertV2Record(fullRecord);
       if (fullRecord.relations && Array.isArray(fullRecord.relations)) {
         for (const rel of fullRecord.relations) {
+          if (rel.type === 'OTHER') continue;
           if (rel.targetType === 'MANGA' && rel.targetAnilistId) {
             void this.mangaQueueService.addUpsertJob(
               rel.targetAnilistId,

@@ -11,7 +11,7 @@ import { PrismaService } from '../../providers/database/prisma.service';
 import { CacheService } from '../../providers/cache/cache.service';
 import { encrypt as encryptServer, decrypt } from '@runa/crypto/server';
 import { generateDataKey, encrypt, wrapKey } from '@runa/crypto/node';
-import { EmailAccountDto, SendEmailDto, SaveDraftDto } from './email.dto';
+import { EmailAccountDto, SendEmailDto, SaveDraftDto, TestEmailConnectionDto } from './email.dto';
 import { NotificationGateway } from '../notification/notification.gateway';
 
 export interface EmailAutoconfigResult {
@@ -128,13 +128,6 @@ export class EmailService {
     });
 
     return list.map((account) => {
-      let decryptedPassword = '';
-      try {
-        decryptedPassword = decrypt(account.encryptedPassword);
-      } catch (e) {
-        decryptedPassword = 'Decryption failed';
-      }
-
       return {
         id: account.id,
         accountName: account.accountName,
@@ -152,7 +145,6 @@ export class EmailService {
         smtpHost: account.smtpHost,
         smtpPort: account.smtpPort,
         smtpSecure: account.smtpSecure,
-        password: decryptedPassword,
         unreadCount: (account as any).emailMessages?.length || 0,
       };
     });
@@ -163,7 +155,7 @@ export class EmailService {
     const encryptedPassword = encryptServer(rawPassword);
     const iv = encryptedPassword.split(':')[0];
 
-    return await this.prisma.client.userEmailAccount.create({
+    const account = await this.prisma.client.userEmailAccount.create({
       data: {
         username,
         accountName: data.accountName,
@@ -191,6 +183,9 @@ export class EmailService {
         encryptionIv: iv,
       },
     });
+
+    const { encryptedPassword: _, encryptionIv: __, ...safeAccount } = account;
+    return safeAccount;
   }
 
   async updateEmailAccount(
@@ -236,10 +231,13 @@ export class EmailService {
       updateData.encryptionIv = encrypted.split(':')[0];
     }
 
-    return await this.prisma.client.userEmailAccount.update({
+    const updated = await this.prisma.client.userEmailAccount.update({
       where: { id: accountId },
       data: updateData,
     });
+
+    const { encryptedPassword: _, encryptionIv: __, ...safeAccount } = updated;
+    return safeAccount;
   }
 
   async deleteEmailAccount(
@@ -543,15 +541,19 @@ export class EmailService {
         message: 'Message not found',
       });
 
+    let targetUid = message.uid;
     if (data.folder && message.folder !== data.folder) {
-      // Avoid unique constraint violation by deleting any pre-existing cached messages in destination folder with the same UID
-      await this.prisma.client.emailMessage.deleteMany({
+      const existingInDest = await this.prisma.client.emailMessage.findFirst({
         where: {
           userEmailAccountId: accountId,
           folder: data.folder,
           uid: message.uid,
+          id: { not: messageId },
         },
       });
+      if (existingInDest) {
+        targetUid = Math.floor(10000000 + Math.random() * 89999999);
+      }
 
       // Move remote messages on the IMAP server in the background
       this.moveRemoteMessages(account, [
@@ -573,9 +575,70 @@ export class EmailService {
         read: data.read !== undefined ? data.read : message.read,
         flagged: data.flagged !== undefined ? data.flagged : message.flagged,
         folder: data.folder !== undefined ? data.folder : message.folder,
+        uid: targetUid,
         labels: data.labels !== undefined ? data.labels : message.labels,
       },
     });
+  }
+
+  async copyMessage(
+    username: string,
+    accountId: string,
+    messageId: string,
+    targetFolder: string,
+  ): Promise<any> {
+    const account = await this.prisma.client.userEmailAccount.findFirst({
+      where: { id: accountId, username },
+    });
+    if (!account)
+      throw new rrNotFoundException(`${this.moduleCode}EANF006`, {
+        message: 'Email account not found',
+      });
+
+    const message = await this.prisma.client.emailMessage.findFirst({
+      where: { id: messageId, userEmailAccountId: accountId },
+      include: { attachments: true },
+    });
+    if (!message)
+      throw new rrNotFoundException(`${this.moduleCode}MNF003`, {
+        message: 'Message not found',
+      });
+
+    const newUid = Math.floor(10000000 + Math.random() * 89999999);
+
+    const copied = await this.prisma.client.emailMessage.create({
+      data: {
+        uid: newUid,
+        messageId: message.messageId
+          ? `${message.messageId}-copy-${Date.now()}`
+          : null,
+        subject: message.subject,
+        from: message.from,
+        to: message.to,
+        cc: message.cc,
+        date: message.date,
+        read: message.read,
+        flagged: message.flagged,
+        folder: targetFolder.toLowerCase(),
+        bodyText: message.bodyText,
+        bodyHtml: message.bodyHtml,
+        encryptedKey:
+          message.encryptedKey !== null
+            ? (message.encryptedKey as any)
+            : undefined,
+        userEmailAccountId: accountId,
+        attachments: {
+          create: (message.attachments || []).map((att) => ({
+            filename: att.filename,
+            contentType: att.contentType,
+            size: att.size,
+            content: att.content,
+          })),
+        },
+      },
+    });
+
+    return copied;
   }
 
   async deleteMessage(
@@ -613,18 +676,23 @@ export class EmailService {
         where: { id: messageId },
       });
     } else {
-      // Avoid unique constraint violation by deleting any pre-existing cached messages in trash folder with the same UID
-      await this.prisma.client.emailMessage.deleteMany({
-        where: {
-          userEmailAccountId: accountId,
-          folder: 'trash',
-          uid: message.uid,
-        },
-      });
+      const existingInTrash =
+        await this.prisma.client.emailMessage.findFirst({
+          where: {
+            userEmailAccountId: accountId,
+            folder: 'trash',
+            uid: message.uid,
+            id: { not: messageId },
+          },
+        });
+
+      const newUid = existingInTrash
+        ? Math.floor(10000000 + Math.random() * 89999999)
+        : message.uid;
 
       await this.prisma.client.emailMessage.update({
         where: { id: messageId },
-        data: { folder: 'trash' },
+        data: { folder: 'trash', uid: newUid },
       });
     }
 
@@ -1285,6 +1353,51 @@ export class EmailService {
     });
   }
 
+  async getAllMessages(
+    username: string,
+    limit?: number,
+  ): Promise<any[]> {
+    const accounts = await this.prisma.client.userEmailAccount.findMany({
+      where: { username },
+      select: { id: true },
+    });
+    const accountIds = accounts.map((a) => a.id);
+    const take = limit ? Number(limit) : 200;
+
+    return this.prisma.client.emailMessage.findMany({
+      where: {
+        userEmailAccountId: { in: accountIds },
+      },
+      orderBy: { date: 'desc' },
+      take,
+      select: {
+        id: true,
+        uid: true,
+        messageId: true,
+        subject: true,
+        from: true,
+        to: true,
+        cc: true,
+        bcc: true,
+        date: true,
+        read: true,
+        flagged: true,
+        folder: true,
+        encryptedKey: true,
+        userEmailAccountId: true,
+        labels: true,
+        attachments: {
+          select: {
+            id: true,
+            filename: true,
+            contentType: true,
+            size: true,
+          },
+        },
+      },
+    });
+  }
+
   async getCannedResponses(
     username: string,
     page?: number,
@@ -1416,4 +1529,69 @@ export class EmailService {
       });
     return attachment;
   }
+
+  async testConnection(data: TestEmailConnectionDto): Promise<{
+    imap: { success: boolean; error?: string };
+    smtp: { success: boolean; error?: string };
+  }> {
+    const authEmail = data.loginEmail?.trim() || data.emailAddress?.trim() || '';
+    const result = {
+      imap: { success: false, error: undefined as string | undefined },
+      smtp: { success: false, error: undefined as string | undefined },
+    };
+
+    // Test IMAP
+    try {
+      const client = new ImapFlow({
+        host: data.imapHost,
+        port: data.imapPort,
+        secure: data.imapSecure,
+        auth: {
+          user: authEmail,
+          pass: data.password,
+        },
+        logger: false,
+        clientInfo: {
+          name: 'Runa Mail Verification',
+          version: '1.0.0',
+        },
+      });
+
+      await Promise.race([
+        client.connect(),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('IMAP connection timed out after 10s')), 10000),
+        ),
+      ]);
+
+      await client.logout().catch(() => {});
+      result.imap.success = true;
+    } catch (err: any) {
+      result.imap.success = false;
+      result.imap.error = err.message || 'IMAP connection failed';
+    }
+
+    // Test SMTP
+    try {
+      const transporter = nodemailer.createTransport({
+        host: data.smtpHost,
+        port: data.smtpPort,
+        secure: data.smtpSecure,
+        auth: {
+          user: authEmail,
+          pass: data.password,
+        },
+        connectionTimeout: 10000,
+      });
+
+      await transporter.verify();
+      result.smtp.success = true;
+    } catch (err: any) {
+      result.smtp.success = false;
+      result.smtp.error = err.message || 'SMTP connection failed';
+    }
+
+    return result;
+  }
 }
+

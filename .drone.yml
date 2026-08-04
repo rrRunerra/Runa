@@ -95,6 +95,10 @@ steps:
         from_secret: GOOGLE_BOOKS_API_KEY
       RAWG_API_KEY:
         from_secret: RAWG_API_KEY
+      IGDB_CLIENT_ID:
+        from_secret: IGDB_CLIENT_ID
+      IGDB_CLIENT_SECRET:
+        from_secret: IGDB_CLIENT_SECRET
       PROD_LYNX_TOKEN:
         from_secret: PROD_LYNX_TOKEN
       DEV_LYNX_TOKEN:
@@ -160,6 +164,8 @@ steps:
       - printf "TRAKT_CLIENT_SECRET=%s\n" "$TRAKT_CLIENT_SECRET" >> .env
       - printf "GOOGLE_BOOKS_API_KEY=%s\n" "$GOOGLE_BOOKS_API_KEY" >> .env
       - printf "RAWG_API_KEY=%s\n" "$RAWG_API_KEY" >> .env
+      - printf "IGDB_CLIENT_ID=%s\n" "$IGDB_CLIENT_ID" >> .env
+      - printf "IGDB_CLIENT_SECRET=%s\n" "$IGDB_CLIENT_SECRET" >> .env
       - printf "PROD_LYNX_TOKEN=%s\n" "$PROD_LYNX_TOKEN" >> .env
       - printf "DEV_LYNX_TOKEN=%s\n" "$DEV_LYNX_TOKEN" >> .env
       - printf "DEV_SERVER=%s\n" "$DEV_SERVER" >> .env

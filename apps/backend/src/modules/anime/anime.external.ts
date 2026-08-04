@@ -7,6 +7,7 @@ import { BangumiService } from 'src/providers/Bangumi/bangumi.service';
 import { AniskipService, AniSkipTimestamps } from 'src/providers/Aniskip/aniskip.service';
 import { AnimeSearchEntity } from './anime.entities';
 import { AnimeFormat, AnimeStatus, AnimeSource, AnimeSeason, StaffRole } from '@runa/database';
+import { PrismaService } from 'src/providers/database/prisma.service';
 
 export function mapStaffRole(roleStr: string): StaffRole {
   if (!roleStr) return StaffRole.OTHER;
@@ -182,6 +183,7 @@ export class AnimeExternal {
     private readonly tvdbService: TvdbService,
     private readonly bangumiService: BangumiService,
     private readonly aniskipService: AniskipService,
+    private readonly prisma: PrismaService,
   ) {}
 
   public async search(title: string): Promise<AnimeSearchEntity[]> {
@@ -189,7 +191,9 @@ export class AnimeExternal {
       this.logger.debug(`Searching AniList for anime: "${title}"`);
       const mediaList = await this.anilistService.searchAnime(title, 30);
 
-      return mediaList.map((item) => {
+      const mapped: AnimeSearchEntity[] = [];
+
+      for (const item of mediaList) {
         const primaryTitle =
           item.title?.english || item.title?.romaji || item.title?.native || 'Untitled';
         const secondaryTitle = item.title?.romaji || item.title?.native || null;
@@ -200,19 +204,57 @@ export class AnimeExternal {
           ? (item.status.toUpperCase() as AnimeStatus)
           : AnimeStatus.NOT_YET_RELEASED;
 
-        return {
-          id: item.id,
+        const anilistId = item.id;
+        const existing = await this.prisma.client.aquilaAnimeV2.findUnique({
+          where: { anilistId },
+          select: { id: true },
+        });
+
+        let internalId: number = existing?.id ?? 0;
+        if (!internalId) {
+          try {
+            const created = await this.prisma.client.aquilaAnimeV2.upsert({
+              where: { anilistId },
+              create: {
+                anilistId,
+                titlePrimary: primaryTitle,
+                titleSecondary: secondaryTitle,
+                coverImage: item.coverImage?.extraLarge || item.coverImage?.large || null,
+                format: formatStr,
+                status: statusStr,
+                isAdult: item.isAdult ?? false,
+                startDateYear: item.startDate?.year ?? 0,
+                seasonYear: item.startDate?.year ?? 0,
+                episodeCount: item.episodes ?? null,
+              },
+              update: {},
+              select: { id: true },
+            });
+            internalId = created.id;
+          } catch (e) {
+            const raced = await this.prisma.client.aquilaAnimeV2.findUnique({
+              where: { anilistId },
+              select: { id: true },
+            });
+            internalId = raced?.id ?? anilistId;
+          }
+        }
+
+        mapped.push({
+          id: internalId,
           title: primaryTitle,
           secondaryTitle,
           coverImage: item.coverImage?.extraLarge || item.coverImage?.large || null,
-          averageScore: item.averageScore ?? null,
+          averageScore: null,
           isAdult: item.isAdult ?? false,
           format: formatStr,
           status: statusStr,
           seasonYear: item.startDate?.year ?? null,
           episodes: item.episodes ?? null,
-        };
-      });
+        });
+      }
+
+      return mapped;
     } catch (err: any) {
       this.logger.error(`External anime search error: ${err.message}`);
       return [];
@@ -577,17 +619,19 @@ export class AnimeExternal {
         };
       }),
 
-      relations: (alData.relations?.edges || []).map((edge: any) => ({
-        targetAnilistId: edge.node.id,
-        targetType: mapMediaType(edge.node?.type, edge.node?.format),
-        type: mapRelationType(edge.relationType),
-        titlePrimary:
-          edge.node?.title?.english ||
-          edge.node?.title?.romaji ||
-          edge.node?.title?.native ||
-          'Untitled',
-        format: edge.node?.format || null,
-      })),
+      relations: (alData.relations?.edges || [])
+        .map((edge: any) => ({
+          targetAnilistId: edge.node.id,
+          targetType: mapMediaType(edge.node?.type, edge.node?.format),
+          type: mapRelationType(edge.relationType),
+          titlePrimary:
+            edge.node?.title?.english ||
+            edge.node?.title?.romaji ||
+            edge.node?.title?.native ||
+            'Untitled',
+          format: edge.node?.format || null,
+        }))
+        .filter((rel: any) => rel.type !== 'OTHER'),
     };
   }
 }

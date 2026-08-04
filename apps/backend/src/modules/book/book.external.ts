@@ -187,10 +187,7 @@ export class BookExternal {
           format: 'BOOK',
           status: 'PUBLISHED',
           isAdult: info.maturityRating === 'MATURE',
-          averageScore:
-            info.averageRating != null
-              ? Math.round(info.averageRating * 20)
-              : null,
+          averageScore: null,
           releaseDateYear: publishedYear,
         });
       }
@@ -316,7 +313,7 @@ export class BookExternal {
         isAdult: info.maturityRating === 'MATURE',
         synonyms: [],
 
-        averageScore,
+        averageScore: null,
         googleBooksRating: info.averageRating || null,
         googleBooksRatingsCount: info.ratingsCount || null,
 

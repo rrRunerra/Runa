@@ -321,7 +321,6 @@ export class BookRepository {
         isAdult: payload.isAdult ?? false,
         synonyms: payload.synonyms ?? [],
 
-        averageScore: payload.averageScore ?? null,
         googleBooksRating: payload.googleBooksRating ?? null,
         googleBooksRatingsCount: payload.googleBooksRatingsCount ?? null,
 
@@ -380,7 +379,7 @@ export class BookRepository {
         isAdult: payload.isAdult ?? false,
         synonyms: payload.synonyms ?? [],
 
-        averageScore: payload.averageScore ?? null,
+        averageScore: null,
         googleBooksRating: payload.googleBooksRating ?? null,
         googleBooksRatingsCount: payload.googleBooksRatingsCount ?? null,
 

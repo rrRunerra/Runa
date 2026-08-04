@@ -30,6 +30,10 @@ export class CacheService implements OnModuleDestroy {
     animeDetail: (id: number) => `anime:${id}`,
     animeRefreshCooldown: (id: number) => `cooldown:refresh:anime:${id}`,
 
+    // Search Refresh Cooldown (1 hour per media type + query)
+    searchRefreshCooldown: (mediaType: string, name: string) =>
+      `cooldown:search-refresh:${mediaType}:${name.replace(/\+/g, ' ').trim().toLowerCase().replaceAll(' ', '')}`,
+
     // TV
     tvSearch: (name: string) =>
       `tv-search:${name.replace(/\+/g, ' ').trim().toLowerCase().replaceAll(' ', '')}`,

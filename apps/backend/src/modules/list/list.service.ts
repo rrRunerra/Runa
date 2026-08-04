@@ -103,6 +103,7 @@ function toMalMangaStatus(status: string): string {
   }
 }
 
+// Runa List Service - updated connection lookup
 @Injectable()
 export class ListService {
   private readonly logger = new Logger(ListService.name);
@@ -462,12 +463,14 @@ export class ListService {
         },
       });
 
-      if (body.updateConnection) {
+      const connectionsToSync = body.connections || oldEntry?.connections || {};
+
+      if (body.updateConnection || (connectionsToSync && Object.keys(connectionsToSync).length > 0)) {
         await this.updateConnections(
           username.toLowerCase(),
           body.animeId,
-          body.connections || {},
-          body.status,
+          connectionsToSync,
+          status,
           body.progress,
           body.score,
           body.startDate,
@@ -534,10 +537,10 @@ export class ListService {
           const conn = (entry.connections as any)[providerKey];
           if (!conn) continue;
           const providerId =
-            typeof conn === 'object' ? Number(conn.id) : Number(conn);
+            typeof conn === 'object' ? Number(conn.id ?? conn.providerId) : Number(conn);
           if (!Number.isNaN(providerId) && providerId > 0) {
             await this.connectionsManager
-              .deleteAnime(providerKey, username.toLowerCase(), providerId)
+              .deleteAnime(providerKey.toLowerCase(), username.toLowerCase(), providerId)
               .catch((err) =>
                 this.logger.error(
                   `Failed to delete anime connection for provider ${providerKey}`,
@@ -759,6 +762,23 @@ export class ListService {
         },
       });
 
+      const connectionsToSync = body.connections || oldEntry?.connections || {};
+      if (body.updateConnection || (connectionsToSync && Object.keys(connectionsToSync).length > 0)) {
+        await this.updateMangaConnections(
+          username.toLowerCase(),
+          body.mangaId,
+          connectionsToSync,
+          status,
+          body.chapters,
+          body.volumes,
+          body.score,
+          body.startDate,
+          body.endDate,
+          body.notes,
+          body.reread,
+        );
+      }
+
       const newEntry = await this.prisma.client.aquilaMangaUserListV2.findUnique({
         where: {
           username_mangaId: {
@@ -810,6 +830,25 @@ export class ListService {
       });
 
       void this.mediaStatsService.updateStatsIncremental('manga', mangaId, entry, null);
+
+      if (entry && entry.connections && typeof entry.connections === 'object') {
+        for (const providerKey of Object.keys(entry.connections as any)) {
+          const conn = (entry.connections as any)[providerKey];
+          if (!conn) continue;
+          const providerId =
+            typeof conn === 'object' ? Number(conn.id ?? conn.providerId) : Number(conn);
+          if (!Number.isNaN(providerId) && providerId > 0) {
+            await this.connectionsManager
+              .deleteManga(providerKey.toLowerCase(), username.toLowerCase(), providerId)
+              .catch((err) =>
+                this.logger.error(
+                  `Failed to delete manga connection for provider ${providerKey}`,
+                  err,
+                ),
+              );
+          }
+        }
+      }
 
       const userId = await this.getUserId(username);
       void this.statsService.recalculate(userId, 'manga');
@@ -1009,6 +1048,21 @@ export class ListService {
         },
       });
 
+      const connectionsToSync = body.connections || oldEntry?.connections || {};
+      if (body.updateConnection || (connectionsToSync && Object.keys(connectionsToSync).length > 0)) {
+        await this.updateMovieConnections(
+          username.toLowerCase(),
+          body.movieId,
+          connectionsToSync,
+          status,
+          body.score,
+          body.startDate,
+          body.endDate,
+          body.notes,
+          body.rewatched,
+        );
+      }
+
       const newEntry = await this.prisma.client.aquilaMovieUserListV2.findUnique({
         where: {
           username_movieId: {
@@ -1060,6 +1114,25 @@ export class ListService {
       });
 
       void this.mediaStatsService.updateStatsIncremental('movie', movieId, entry, null);
+
+      if (entry && entry.connections && typeof entry.connections === 'object') {
+        for (const providerKey of Object.keys(entry.connections as any)) {
+          const conn = (entry.connections as any)[providerKey];
+          if (!conn) continue;
+          const providerId =
+            typeof conn === 'object' ? Number(conn.id ?? conn.providerId) : Number(conn);
+          if (!Number.isNaN(providerId) && providerId > 0) {
+            await this.connectionsManager
+              .deleteMovie(providerKey.toLowerCase(), username.toLowerCase(), providerId)
+              .catch((err) =>
+                this.logger.error(
+                  `Failed to delete movie connection for provider ${providerKey}`,
+                  err,
+                ),
+              );
+          }
+        }
+      }
 
       const userId = await this.getUserId(username);
       void this.statsService.recalculate(userId, 'movie');
@@ -1377,6 +1450,25 @@ export class ListService {
       });
 
       void this.mediaStatsService.updateStatsIncremental('tv', tvId, entry, null);
+
+      if (entry && entry.connections && typeof entry.connections === 'object') {
+        for (const providerKey of Object.keys(entry.connections as any)) {
+          const conn = (entry.connections as any)[providerKey];
+          if (!conn) continue;
+          const providerId =
+            typeof conn === 'object' ? Number(conn.id ?? conn.providerId) : Number(conn);
+          if (!Number.isNaN(providerId) && providerId > 0) {
+            await this.connectionsManager
+              .deleteTv(providerKey.toLowerCase(), username.toLowerCase(), providerId)
+              .catch((err) =>
+                this.logger.error(
+                  `Failed to delete TV connection for provider ${providerKey}`,
+                  err,
+                ),
+              );
+          }
+        }
+      }
 
       const userId = await this.getUserId(username);
       void this.statsService.recalculate(userId, 'tv');
@@ -2094,7 +2186,14 @@ export class ListService {
         return this.upsertAnimeList(username, {
           animeId: mediaId,
           status: entry.status as any,
+          score: entry.score ?? undefined,
           progress: entry.progress + count,
+          startDate: entry.startDate ? Math.floor(entry.startDate.getTime() / 1000) : undefined,
+          endDate: entry.endDate ? Math.floor(entry.endDate.getTime() / 1000) : undefined,
+          notes: entry.notes ?? undefined,
+          rewatched: entry.rewatched ?? undefined,
+          updateConnection: true,
+          connections: entry.connections as any,
         });
       }
       case 'manga': {
@@ -2105,7 +2204,15 @@ export class ListService {
         return this.upsertMangaList(username, {
           mangaId: mediaId,
           status: entry.status as any,
-          chapters: entry.chaptersProgress + count,
+          score: entry.score ?? undefined,
+          chapters: (entry.chaptersProgress ?? 0) + count,
+          volumes: entry.volumesProgress ?? undefined,
+          startDate: entry.startDate ? Math.floor(entry.startDate.getTime() / 1000) : undefined,
+          endDate: entry.endDate ? Math.floor(entry.endDate.getTime() / 1000) : undefined,
+          notes: entry.notes ?? undefined,
+          reread: entry.reread ?? undefined,
+          updateConnection: true,
+          connections: entry.connections as any,
         });
       }
       case 'tv': {
@@ -2142,6 +2249,18 @@ export class ListService {
             },
             data: { progress: newProgress },
           });
+          void this.updateTvConnections(
+            username.toLowerCase(),
+            mediaId,
+            entry.connections,
+            entry.status,
+            entry.score ?? undefined,
+            [],
+            entry.startDate ? Math.floor(entry.startDate.getTime() / 1000) : undefined,
+            entry.endDate ? Math.floor(entry.endDate.getTime() / 1000) : undefined,
+            entry.notes ?? undefined,
+            entry.rewatched ?? 0,
+          );
           return { success: true, count: newProgress };
         }
 
@@ -2169,6 +2288,18 @@ export class ListService {
             },
             data: { progress: newProgress },
           });
+          void this.updateTvConnections(
+            username.toLowerCase(),
+            mediaId,
+            entry.connections,
+            entry.status,
+            entry.score ?? undefined,
+            entry.watchedEpisodes,
+            entry.startDate ? Math.floor(entry.startDate.getTime() / 1000) : undefined,
+            entry.endDate ? Math.floor(entry.endDate.getTime() / 1000) : undefined,
+            entry.notes ?? undefined,
+            entry.rewatched ?? 0,
+          );
           return { success: true, count: newProgress };
         }
 
@@ -2183,7 +2314,12 @@ export class ListService {
           status: entry.status as any,
           score: entry.score ?? undefined,
           rewatched: entry.rewatched ?? 0,
+          startDate: entry.startDate ? Math.floor(entry.startDate.getTime() / 1000) : undefined,
+          endDate: entry.endDate ? Math.floor(entry.endDate.getTime() / 1000) : undefined,
+          notes: entry.notes ?? undefined,
           episodes: updatedEpisodes,
+          updateConnection: true,
+          connections: entry.connections as any,
         } as any);
       }
       case 'movie': {
@@ -2191,7 +2327,17 @@ export class ListService {
           where: { username_movieId: { username: username.toLowerCase(), movieId: mediaId } },
         });
         if (!entry) throw new NotFoundException('Entry not found');
-        return this.upsertMovieList(username, { movieId: mediaId, status: entry.status });
+        return this.upsertMovieList(username, {
+          movieId: mediaId,
+          status: entry.status as any,
+          score: entry.score ?? undefined,
+          startDate: entry.startDate ? Math.floor(entry.startDate.getTime() / 1000) : undefined,
+          endDate: entry.endDate ? Math.floor(entry.endDate.getTime() / 1000) : undefined,
+          notes: entry.notes ?? undefined,
+          rewatched: entry.rewatched ?? undefined,
+          updateConnection: true,
+          connections: entry.connections as any,
+        });
       }
       case 'game': {
         const entry = await this.prisma.client.aquilaGameUserListV2.findUnique({
@@ -2201,7 +2347,13 @@ export class ListService {
         return this.upsertGameList(username, {
           gameId: mediaId,
           status: entry.status as any,
+          score: entry.score ?? undefined,
           progress: (entry.progress ?? 0) + count,
+          startDate: entry.startDate ? Math.floor(entry.startDate.getTime() / 1000) : undefined,
+          endDate: entry.endDate ? Math.floor(entry.endDate.getTime() / 1000) : undefined,
+          notes: entry.notes ?? undefined,
+          updateConnection: true,
+          connections: entry.connections as any,
         });
       }
       case 'book': {
@@ -2212,7 +2364,13 @@ export class ListService {
         return this.upsertBookList(username, {
           bookId: mediaId,
           status: entry.status as any,
+          score: entry.score ?? undefined,
           chapters: (entry.progressChapters ?? 0) + count,
+          volumes: entry.progressVolumes ?? undefined,
+          startDate: entry.startDate ? Math.floor(entry.startDate.getTime() / 1000) : undefined,
+          endDate: entry.endDate ? Math.floor(entry.endDate.getTime() / 1000) : undefined,
+          notes: entry.notes ?? undefined,
+          connections: entry.connections as any,
         });
       }
     }
@@ -3252,7 +3410,7 @@ export class ListService {
       };
 
       await this.connectionsManager
-        .syncAnime(providerKey, username, providerId, updateData)
+        .syncAnime(providerKey.toLowerCase(), username.toLowerCase(), providerId, updateData)
         .catch((err) =>
           this.logger.error(
             `Failed to update connection for provider ${providerKey}`,
@@ -3348,6 +3506,142 @@ export class ListService {
       }
     } catch (err: any) {
       this.logger.error(`Error updating TV connections for ${username}:`, err);
+    }
+  }
+
+  private async updateMangaConnections(
+    username: string,
+    mangaId: number,
+    connections: any,
+    status?: string,
+    chapters?: number,
+    volumes?: number,
+    score?: number,
+    startDate?: number,
+    endDate?: number,
+    notes?: string,
+    reread?: number,
+  ) {
+    if (!connections || typeof connections !== 'object') return;
+
+    for (const providerKey of Object.keys(connections)) {
+      const conn = connections[providerKey];
+      if (!conn) continue;
+
+      let providerId: number;
+      let connStatus = status;
+      let connChapters = chapters;
+      let connVolumes = volumes;
+      let connScore = score;
+      let connStartDate = startDate;
+      let connEndDate = endDate;
+      let connNotes = notes;
+      let connReread = reread;
+
+      if (typeof conn === 'object' && conn !== null) {
+        providerId = Number(conn.id);
+        if (conn.status !== undefined) connStatus = conn.status;
+        if (conn.chaptersOffset !== undefined) {
+          connChapters = (chapters || 0) + Number(conn.chaptersOffset);
+        } else if (conn.chapters !== undefined) {
+          connChapters = Number(conn.chapters);
+        } else if (conn.progress !== undefined) {
+          connChapters = Number(conn.progress);
+        }
+        if (conn.volumesOffset !== undefined) {
+          connVolumes = (volumes || 0) + Number(conn.volumesOffset);
+        } else if (conn.volumes !== undefined) {
+          connVolumes = Number(conn.volumes);
+        }
+        if (conn.score !== undefined) connScore = Number(conn.score);
+        if (conn.startDate !== undefined) connStartDate = conn.startDate;
+        if (conn.endDate !== undefined) connEndDate = conn.endDate;
+        if (conn.notes !== undefined) connNotes = conn.notes;
+        if (conn.reread !== undefined) connReread = Number(conn.reread);
+      } else {
+        providerId = Number(conn);
+      }
+
+      if (Number.isNaN(providerId) || providerId <= 0) continue;
+
+      const updateData: any = {
+        status: connStatus,
+        chapters: connChapters,
+        volumes: connVolumes,
+        score: connScore,
+        startDate: connStartDate,
+        endDate: connEndDate,
+        notes: connNotes,
+        reread: connReread,
+      };
+
+      await this.connectionsManager
+        .syncManga(providerKey.toLowerCase(), username.toLowerCase(), providerId, updateData)
+        .catch((err) =>
+          this.logger.error(
+            `Failed to update manga connection for provider ${providerKey}`,
+            err,
+          ),
+        );
+    }
+  }
+
+  private async updateMovieConnections(
+    username: string,
+    movieId: number,
+    connections: any,
+    status?: string,
+    score?: number,
+    startDate?: number,
+    endDate?: number,
+    notes?: string,
+    rewatched?: number,
+  ) {
+    if (!connections || typeof connections !== 'object') return;
+
+    for (const providerKey of Object.keys(connections)) {
+      const conn = connections[providerKey];
+      if (!conn) continue;
+
+      let providerId: number;
+      let connStatus = status;
+      let connScore = score;
+      let connStartDate = startDate;
+      let connEndDate = endDate;
+      let connNotes = notes;
+      let connRewatched = rewatched;
+
+      if (typeof conn === 'object' && conn !== null) {
+        providerId = Number(conn.id);
+        if (conn.status !== undefined) connStatus = conn.status;
+        if (conn.score !== undefined) connScore = Number(conn.score);
+        if (conn.startDate !== undefined) connStartDate = conn.startDate;
+        if (conn.endDate !== undefined) connEndDate = conn.endDate;
+        if (conn.notes !== undefined) connNotes = conn.notes;
+        if (conn.rewatched !== undefined) connRewatched = Number(conn.rewatched);
+      } else {
+        providerId = Number(conn);
+      }
+
+      if (Number.isNaN(providerId) || providerId <= 0) continue;
+
+      const updateData: any = {
+        status: connStatus,
+        score: connScore,
+        startDate: connStartDate,
+        endDate: connEndDate,
+        notes: connNotes,
+        rewatched: connRewatched,
+      };
+
+      await this.connectionsManager
+        .syncMovie(providerKey.toLowerCase(), username.toLowerCase(), providerId, updateData)
+        .catch((err) =>
+          this.logger.error(
+            `Failed to update movie connection for provider ${providerKey}`,
+            err,
+          ),
+        );
     }
   }
 }

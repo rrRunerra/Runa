@@ -402,7 +402,7 @@ export default function CalendarClientPage(): React.JSX.Element {
                             </div>
                           ) : (
                             dayEvents.map((event) => (
-                              <CalendarEventCard key={`${event.type}-${event.id}-${event.airingAt || event.episode}`} event={event} mediaConfig={MEDIA_CONFIG} />
+                              <CalendarEventCard key={`${event.type}-${event.id}-${event.event}-${event.episode || event.airingAt || '0'}`} event={event} mediaConfig={MEDIA_CONFIG} />
                             ))
                           )}
                         </div>
@@ -454,7 +454,7 @@ export default function CalendarClientPage(): React.JSX.Element {
                           {/* Event Tags */}
                           <div className="flex flex-col gap-1 overflow-y-auto max-h-24 no-scrollbar mt-1">
                             {dayEvents.slice(0, 3).map((event) => (
-                              <CalendarEventTag key={`${event.type}-${event.id}-${event.airingAt || event.episode}`} event={event} mediaConfig={MEDIA_CONFIG} />
+                              <CalendarEventTag key={`${event.type}-${event.id}-${event.event}-${event.episode || event.airingAt || '0'}`} event={event} mediaConfig={MEDIA_CONFIG} />
                             ))}
                             {dayEvents.length > 3 && (
                               <HoverCard openDelay={200} closeDelay={100}>
@@ -471,7 +471,7 @@ export default function CalendarClientPage(): React.JSX.Element {
                                   </p>
                                   <div className="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1 no-scrollbar">
                                     {dayEvents.map((event) => (
-                                      <CalendarEventCard key={`${event.type}-${event.id}-${event.airingAt || event.episode}`} event={event} mediaConfig={MEDIA_CONFIG} compact />
+                                      <CalendarEventCard key={`${event.type}-${event.id}-${event.event}-${event.episode || event.airingAt || '0'}`} event={event} mediaConfig={MEDIA_CONFIG} compact />
                                     ))}
                                   </div>
                                 </HoverCardContent>

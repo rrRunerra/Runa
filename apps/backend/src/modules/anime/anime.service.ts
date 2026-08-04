@@ -53,6 +53,7 @@ export class AnimeService {
 
     if (cached && Array.isArray(cached) && cached.length > 0) {
       this.logger.debug(`Anime V2 search cache hit (${cached.length} entries)`);
+      void this.triggerBackgroundSearchRefresh(cleanName);
       return cached;
     }
 
@@ -67,34 +68,15 @@ export class AnimeService {
       const externalResults = await this.animeExternal.search(cleanName);
 
       if (externalResults.length > 0) {
-        result = await Promise.all(
-          externalResults.map(async (item) => {
-            const dbRecord = await this.animeRepository.upsertV2Record({
-              anilistId: item.id,
-              titlePrimary: item.title,
-              titleSecondary: item.secondaryTitle,
-              coverImage: item.coverImage,
-              format: item.format,
-              status: item.status,
-              seasonYear: item.seasonYear || 1970,
-              startDateYear: item.seasonYear || 1970,
-            });
-            void this.animeQueueService.addUpsertJob(item.id);
+        const anilistIds = externalResults
+          .map((r) => r.id)
+          .filter((id): id is number => Boolean(id));
+        this.animeQueueService.addSearchUpserts(anilistIds);
 
-            return {
-              id: dbRecord.id,
-              anilistId: item.id,
-              title: item.title,
-              secondaryTitle: item.secondaryTitle,
-              coverImage: item.coverImage,
-              averageScore: item.averageScore,
-              isAdult: item.isAdult,
-              format: item.format,
-              status: item.status,
-            };
-          }),
-        );
+        result = externalResults;
       }
+    } else {
+      void this.triggerBackgroundSearchRefresh(cleanName);
     }
 
     this.logger.debug(`Anime V2 search found ${result.length} items`);
@@ -104,6 +86,36 @@ export class AnimeService {
     }
 
     return result;
+  }
+
+  private async triggerBackgroundSearchRefresh(cleanName: string): Promise<void> {
+    const cooldownKey = CacheService.keys.searchRefreshCooldown('anime', cleanName);
+    const inCooldown = await this.cacheService.get<boolean>(cooldownKey);
+    if (inCooldown) {
+      this.logger.debug(`Anime search background refresh skipped (cooldown active for "${cleanName}")`);
+      return;
+    }
+
+    await this.cacheService.set(cooldownKey, true, 3600);
+
+    this.logger.debug(`Anime search queueing background refresh for: "${cleanName}"`);
+    try {
+      const externalResults = await this.animeExternal.search(cleanName);
+      if (externalResults.length > 0) {
+        const anilistIds = externalResults
+          .map((r) => r.id)
+          .filter((id): id is number => Boolean(id));
+        this.animeQueueService.addSearchUpserts(anilistIds);
+
+        const updated = await this.animeRepository.search(cleanName);
+        const finalResults = updated.length > 0 ? updated : externalResults;
+        const cacheKey = this.cacheKeys.animeSearch(cleanName);
+        await this.cacheService.set(cacheKey, finalResults, this.cacheDuration);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`Anime background search refresh failed for "${cleanName}": ${msg}`);
+    }
   }
 
   public async getAnime(id: number): Promise<AnimeEntity> {
@@ -120,7 +132,22 @@ export class AnimeService {
     }
 
     this.logger.debug(`getAnime V2 fetching from db for ID ${id}`);
-    const data = await this.animeRepository.find(id);
+    let data = await this.animeRepository.find(id);
+
+    if (!data) {
+      const recordByAnilist = await this.animeRepository.findByAnilistId(id);
+      if (recordByAnilist?.id) {
+        data = await this.animeRepository.find(recordByAnilist.id);
+      }
+    }
+
+    if (!data) {
+      try {
+        data = await this.ensureAnime(id);
+      } catch (err: unknown) {
+        data = null;
+      }
+    }
 
     if (!data) {
       throw new NotFoundException(`Anime with ID ${id} not found`);
@@ -169,6 +196,7 @@ export class AnimeService {
       await this.animeRepository.upsertV2Record(fullRecord);
       if (fullRecord.relations && Array.isArray(fullRecord.relations)) {
         for (const rel of fullRecord.relations) {
+          if (rel.type === 'OTHER') continue;
           if (rel.targetType === 'ANIME' && rel.targetAnilistId) {
             void this.animeQueueService.addUpsertJob(
               rel.targetAnilistId,

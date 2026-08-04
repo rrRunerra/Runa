@@ -10,7 +10,8 @@ import { BookQueueService } from '../book/book-queue.service';
 import { getTimestampMs } from '../../common/utils/time.utils';
 
 interface ExternalUpsertJob {
-  rawgId: number;
+  igdbId?: number;
+  rawgId?: number;
   skipRelations?: boolean;
   force?: boolean;
 }
@@ -19,7 +20,7 @@ interface ExternalUpsertJob {
 export class GameQueueService implements OnModuleInit {
   private readonly logger = new Logger(GameQueueService.name);
   private readonly upsertQueue = new Subject<ExternalUpsertJob>();
-  private readonly pendingRawgIds = new Set<number>();
+  private readonly pendingIgdbIds = new Set<number>();
 
   constructor(
     private readonly gameExternal: GameExternal,
@@ -39,26 +40,26 @@ export class GameQueueService implements OnModuleInit {
   }
 
   public async addUpsertJob(
-    rawgId: number,
+    igdbId: number,
     options?: { skipRelations?: boolean; force?: boolean },
   ): Promise<void> {
-    if (!rawgId) return;
-    if (this.pendingRawgIds.has(rawgId)) {
+    if (!igdbId) return;
+    if (this.pendingIgdbIds.has(igdbId)) {
       this.logger.debug(
-        `[GameQueue] Skipping RAWG ID ${rawgId}: job already pending in queue`,
+        `[GameQueue] Skipping IGDB ID ${igdbId}: job already pending in queue`,
       );
       return;
     }
 
     if (!options?.force) {
       try {
-        const existing = await this.gameRepository.findByRawgId(rawgId);
-        const updatedMs = getTimestampMs(existing?.rawgUpdatedAt);
+        const existing = await this.gameRepository.findByIgdbId(igdbId);
+        const updatedMs = getTimestampMs(existing?.igdbUpdatedAt);
         if (updatedMs !== null) {
           const threeMonthsMs = 90 * 24 * 60 * 60 * 1000;
           if (Date.now() - updatedMs < threeMonthsMs) {
             this.logger.debug(
-              `[GameQueue] Skipping RAWG ID ${rawgId}: record updated at ${existing.rawgUpdatedAt}`,
+              `[GameQueue] Skipping IGDB ID ${igdbId}: record updated at ${existing.igdbUpdatedAt}`,
             );
             return;
           }
@@ -69,20 +70,20 @@ export class GameQueueService implements OnModuleInit {
     }
 
     this.logger.log(
-      `[GameQueue] Queuing upsert job for RAWG ID ${rawgId} (force: ${!!options?.force}, skipRelations: ${!!options?.skipRelations})`,
+      `[GameQueue] Queuing upsert job for IGDB ID ${igdbId} (force: ${!!options?.force}, skipRelations: ${!!options?.skipRelations})`,
     );
 
-    this.pendingRawgIds.add(rawgId);
+    this.pendingIgdbIds.add(igdbId);
     this.upsertQueue.next({
-      rawgId,
+      igdbId,
       skipRelations: options?.skipRelations,
       force: options?.force,
     });
   }
 
-  public addSearchUpserts(rawgIds: number[]): void {
-    for (const id of rawgIds) {
-      void this.addUpsertJob(id);
+  public addSearchUpserts(igdbIds: number[]): void {
+    for (const id of igdbIds) {
+      void this.addUpsertJob(id, { skipRelations: true });
     }
   }
 
@@ -90,35 +91,38 @@ export class GameQueueService implements OnModuleInit {
     this.upsertQueue
       .pipe(
         mergeMap(async (job) => {
+          const targetId = job.igdbId;
+          if (!targetId) return;
+
           try {
             this.logger.log(
-              `Processing background V2 game upsert for RAWG ID: ${job.rawgId} (force: ${!!job.force}, skipRelations: ${!!job.skipRelations})`,
+              `Processing background V2 game upsert for IGDB ID: ${targetId} (force: ${!!job.force}, skipRelations: ${!!job.skipRelations})`,
             );
-            const fullRecord = await this.gameExternal.fetchFullV2Record(job.rawgId);
+            const fullRecord = await this.gameExternal.fetchFullV2Record(targetId);
             if (fullRecord) {
               await this.gameRepository.upsertV2Record(fullRecord);
               this.logger.log(
-                `Successfully completed background V2 game upsert for RAWG ID: ${job.rawgId}`,
+                `Successfully completed background V2 game upsert for IGDB ID: ${targetId}`,
               );
 
               if (job.skipRelations) {
                 this.logger.debug(
-                  `[GameQueue] Skipping relations processing for RAWG ID ${job.rawgId} (skipRelations flag set)`,
+                  `[GameQueue] Skipping relations processing for IGDB ID ${targetId} (skipRelations flag set)`,
                 );
               } else if (
                 fullRecord.relations &&
                 Array.isArray(fullRecord.relations)
               ) {
                 this.logger.debug(
-                  `[GameQueue] Processing ${fullRecord.relations.length} relations for RAWG ID ${job.rawgId}`,
+                  `[GameQueue] Processing ${fullRecord.relations.length} relations for IGDB ID ${targetId}`,
                 );
                 for (const rel of fullRecord.relations) {
                   const info = `"${rel.titlePrimary || 'Unknown'}" (relation: ${rel.type || 'UNKNOWN'})`;
-                  if (rel.targetType === 'GAME' && rel.targetRawgId) {
+                  if (rel.targetType === 'GAME' && rel.targetIgdbId) {
                     this.logger.debug(
-                      `[GameQueue] Queuing related GAME RAWG ID ${rel.targetRawgId} ${info}`,
+                      `[GameQueue] Queuing related GAME IGDB ID ${rel.targetIgdbId} ${info}`,
                     );
-                    void this.addUpsertJob(rel.targetRawgId);
+                    void this.addUpsertJob(rel.targetIgdbId);
                   } else if (rel.targetType === 'ANIME' && rel.targetAnilistId) {
                     this.logger.debug(
                       `[GameQueue] Queuing related ANIME AniList ID ${rel.targetAnilistId} ${info}`,
@@ -145,10 +149,12 @@ export class GameQueueService implements OnModuleInit {
             }
           } catch (error: any) {
             this.logger.error(
-              `Background V2 game upsert failed for RAWG ID ${job.rawgId}: ${error?.message || error}`,
+              `Background V2 game upsert failed for IGDB ID ${targetId}: ${error?.message || error}`,
             );
           } finally {
-            this.pendingRawgIds.delete(job.rawgId);
+            if (targetId) {
+              this.pendingIgdbIds.delete(targetId);
+            }
           }
         }, 2),
         catchError((error) => {

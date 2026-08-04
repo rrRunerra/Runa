@@ -1,5 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
 import { GameService } from './game.service';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { GameRepository } from './game.repository';
@@ -9,18 +8,20 @@ import { GameExternal } from './game.external';
 
 describe('GameService', () => {
   let service: GameService;
-  let repository: GameRepository;
-  let queueService: GameQueueService;
 
   const mockPrisma = {};
 
   const mockGameRepository = {
+    search: jest.fn(),
+    find: jest.fn(),
+    findByIgdbId: jest.fn(),
     findByRawgId: jest.fn(),
-    toMedia: jest.fn(),
+    findSimilar: jest.fn(),
   };
 
   const mockGameQueueService = {
-    addJob: jest.fn(),
+    addUpsertJob: jest.fn(),
+    addSearchUpserts: jest.fn(),
   };
 
   const mockCacheService = {
@@ -36,8 +37,8 @@ describe('GameService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    global.fetch = jest.fn();
-    process.env.RAWG_API_KEY = 'mock-rawg-key';
+    process.env.IGDB_CLIENT_ID = 'mock-client-id';
+    process.env.IGDB_CLIENT_SECRET = 'mock-client-secret';
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -51,124 +52,52 @@ describe('GameService', () => {
     }).compile();
 
     service = module.get<GameService>(GameService);
-    repository = module.get<GameRepository>(GameRepository);
-    queueService = module.get<GameQueueService>(GameQueueService);
   });
 
   describe('search', () => {
-    it('should query RAWG API and map search results correctly', async () => {
-      const mockApiResponse = {
-        results: [
-          {
-            id: 456,
-            name: 'Mock Game',
-            background_image: 'bg-image',
-            released: '2026-06-19',
-            esrb_rating: { slug: 'mature' },
-          },
-        ],
-      };
-
-      (global.fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: jest.fn().mockResolvedValue(mockApiResponse),
-      });
+    it('should query IGDB if local DB returns no results', async () => {
+      mockGameRepository.search.mockResolvedValue([]);
+      mockGameExternal.search.mockResolvedValue([
+        { id: 10, igdbId: 456, title: 'Mock IGDB Game', coverImage: 'cover.jpg' },
+      ]);
 
       const result = await service.search('Mock');
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        'https://api.rawg.io/api/games?key=mock-rawg-key&search=Mock&page_size=20',
-      );
+      expect(mockGameRepository.search).toHaveBeenCalledWith('Mock');
+      expect(mockGameExternal.search).toHaveBeenCalledWith('Mock');
+      expect(mockGameQueueService.addSearchUpserts).toHaveBeenCalledWith([456]);
       expect(result).toEqual([
-        {
-          id: '456',
-          title: { romaji: 'Mock Game', english: 'Mock Game' },
-          coverImage: { large: 'bg-image' },
-          format: 'Game',
-          status: 'Released',
-          isAdult: true,
-        },
+        { id: 10, igdbId: 456, title: 'Mock IGDB Game', coverImage: 'cover.jpg' },
       ]);
     });
 
-    it('should return empty list if RAWG_API_KEY is not defined', async () => {
-      delete process.env.RAWG_API_KEY;
+    it('should queue background updates for local search results as well', async () => {
+      mockGameRepository.search.mockResolvedValue([
+        { id: 1, igdbId: 789, title: 'Local Game', coverImage: 'cover.jpg' },
+      ]);
 
-      const result = await service.search('Mock');
+      const result = await service.search('Local');
 
-      expect(result).toEqual([]);
-      expect(global.fetch).not.toHaveBeenCalled();
+      expect(mockGameRepository.search).toHaveBeenCalledWith('Local');
+      expect(mockGameExternal.search).not.toHaveBeenCalled();
+      expect(mockGameQueueService.addSearchUpserts).toHaveBeenCalledWith([789]);
+      expect(result.length).toBe(1);
     });
   });
 
   describe('getGame', () => {
     it('should throw error if ID is NaN', async () => {
-      await expect(service.getGame(NaN)).rejects.toThrow(
-        'Invalid game ID: NaN',
-      );
+      await expect(service.getGame(NaN)).rejects.toThrow();
     });
 
-    it('should return cached game if within CACHE_DURATION_MS without calling fetch', async () => {
-      const dbGame = { rawgId: 456, updatedAt: new Date() };
-      mockGameRepository.findByRawgId.mockResolvedValue(dbGame);
-      const mappedMedia = { id: '456', title: { romaji: 'Cached Game' } };
-      mockGameRepository.toMedia.mockReturnValue(mappedMedia);
+    it('should return game by internal ID', async () => {
+      const mockGame = { id: 10, igdbId: 456, titlePrimary: 'Internal Game' };
+      mockGameRepository.find.mockResolvedValue(mockGame);
 
-      const result = await service.getGame(456);
+      const result = await service.getGame(10);
 
-      expect(repository.findByRawgId).toHaveBeenCalledWith(456);
-      expect(repository.toMedia).toHaveBeenCalledWith(dbGame);
-      expect(global.fetch).not.toHaveBeenCalled();
-      expect(result).toBe(mappedMedia);
-    });
-
-    it('should fetch from RAWG and queue sync job on cache miss', async () => {
-      mockGameRepository.findByRawgId.mockResolvedValue(null);
-
-      const mockGameDetail = {
-        id: 456,
-        name: 'New RAWG Game',
-        background_image: 'large-bg',
-        released: '2026-06-19',
-        developers: [{ name: 'Dev Studio' }],
-        genres: [{ name: 'RPG' }],
-        platforms: [{ platform: { name: 'PC' } }],
-        metacritic: 90,
-      };
-
-      (global.fetch as jest.Mock).mockResolvedValue({
-        ok: true,
-        json: jest.fn().mockResolvedValue(mockGameDetail),
-      });
-
-      const result = await service.getGame(456);
-
-      expect(global.fetch).toHaveBeenCalled();
-      expect(queueService.addJob).toHaveBeenCalledWith(456);
-      expect(result.id).toBe('456');
-      expect(result.title.romaji).toBe('New RAWG Game');
-      expect(result.genres).toEqual(['Platform: PC', 'RPG']);
-      expect(result.averageScore).toBe(90);
-    });
-
-    it('should fall back to stale database record if fetch fails', async () => {
-      const staleGame = { rawgId: 456, updatedAt: new Date(0) }; // 1970
-      mockGameRepository.findByRawgId.mockResolvedValue(staleGame);
-
-      (global.fetch as jest.Mock).mockRejectedValue(new Error('Fetch failed'));
-      const mappedMedia = { id: '456', title: { romaji: 'Stale Game' } };
-      mockGameRepository.toMedia.mockReturnValue(mappedMedia);
-
-      const result = await service.getGame(456);
-
-      expect(result).toBe(mappedMedia);
-    });
-
-    it('should throw NotFoundException if fetch fails and no DB record exists', async () => {
-      mockGameRepository.findByRawgId.mockResolvedValue(null);
-      (global.fetch as jest.Mock).mockRejectedValue(new Error('Fetch failed'));
-
-      await expect(service.getGame(456)).rejects.toThrow(NotFoundException);
+      expect(mockGameRepository.find).toHaveBeenCalledWith(10);
+      expect(result).toBe(mockGame);
     });
   });
 });

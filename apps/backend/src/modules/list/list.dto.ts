@@ -294,6 +294,13 @@ export class SaveGameEntryDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  updateConnection?: boolean;
+
+  @IsOptional()
+  connections?: any;
 }
 
 export class SaveBookEntryDto {
@@ -328,12 +335,19 @@ export class SaveBookEntryDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  updateConnection?: boolean;
+
+  @IsOptional()
+  connections?: any;
 }
 
 export class IncrementProgressDto {
   @IsString()
   @IsNotEmpty()
-  mediaType: 'anime' | 'manga' | 'tv' | 'game' | 'book';
+  mediaType: 'anime' | 'manga' | 'tv' | 'movie' | 'game' | 'book';
 
   @Type(() => Number)
   @IsInt()

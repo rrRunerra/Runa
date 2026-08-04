@@ -35,7 +35,7 @@ export class MangaRepository {
         title: item.titlePrimary,
         secondaryTitle: item.titleSecondary || null,
         coverImage: item.coverImage || null,
-        averageScore: item.alAverageScore || item.averageScore || null,
+        averageScore: item.averageScore || null,
         isAdult: item.isAdult || false,
         format: item.format,
         status: item.status,
@@ -234,7 +234,7 @@ export class MangaRepository {
         format: payload.format || 'UNKNOWN',
         status: payload.status || 'UNKNOWN',
 
-        averageScore: payload.averageScore,
+        averageScore: null,
         favorites: payload.favorites || 0,
         popularity: payload.popularity || 0,
 
@@ -298,7 +298,6 @@ export class MangaRepository {
         format: payload.format || 'UNKNOWN',
         status: payload.status || 'UNKNOWN',
 
-        averageScore: payload.averageScore,
         favorites: payload.favorites || 0,
         popularity: payload.popularity || 0,
 
@@ -513,7 +512,7 @@ export class MangaRepository {
         });
 
         for (const rel of payload.relations) {
-          if (!rel.targetAnilistId) continue;
+          if (!rel.targetAnilistId || rel.type === 'OTHER') continue;
           let targetId: number | null = null;
           const targetTypeStr = (rel.targetType || 'MANGA').toUpperCase();
           const targetType = (

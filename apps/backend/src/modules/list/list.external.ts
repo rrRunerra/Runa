@@ -141,7 +141,6 @@ export class ListExternal {
         );
         return;
       }
-
       if (provider.deleteAnimeEntry) {
         await provider.deleteAnimeEntry(username, providerId);
       }

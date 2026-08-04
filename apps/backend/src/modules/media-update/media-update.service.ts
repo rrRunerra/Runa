@@ -123,11 +123,11 @@ export class MediaUpdateService {
     try {
       const games = await this.prisma.client.aquilaGameV2.findMany({
         where: { locked: false },
-        select: { id: true, rawgUpdatedAt: true },
+        select: { id: true, igdbUpdatedAt: true, rawgUpdatedAt: true },
       });
 
       const toUpdateGame = games.filter((g) => {
-        const updatedMs = getTimestampMs(g.rawgUpdatedAt);
+        const updatedMs = getTimestampMs(g.igdbUpdatedAt ?? g.rawgUpdatedAt);
         if (updatedMs === null) return true;
         return Date.now() - updatedMs >= SEVEN_DAYS_MS;
       });
@@ -295,7 +295,7 @@ export class MediaUpdateService {
     try {
       const games = await this.prisma.client.aquilaGameV2.findMany({
         where: { locked: false },
-        select: { id: true, status: true, rawgUpdatedAt: true },
+        select: { id: true, status: true, igdbUpdatedAt: true, rawgUpdatedAt: true },
       });
       const activeStatuses = new Set([
         'EARLY_ACCESS',
@@ -306,7 +306,7 @@ export class MediaUpdateService {
         'RELEASING',
       ]);
       const toUpdate = games.filter((item) => {
-        const updatedMs = getTimestampMs(item.rawgUpdatedAt);
+        const updatedMs = getTimestampMs(item.igdbUpdatedAt ?? item.rawgUpdatedAt);
         if (updatedMs === null) return true;
         if (Date.now() - updatedMs < SEVEN_DAYS_MS) return false;
         return activeStatuses.has(String(item.status || '').toUpperCase());
@@ -492,10 +492,10 @@ export class MediaUpdateService {
     try {
       const games = await this.prisma.client.aquilaGameV2.findMany({
         where: { locked: false },
-        select: { id: true, status: true, rawgUpdatedAt: true },
+        select: { id: true, status: true, igdbUpdatedAt: true, rawgUpdatedAt: true },
       });
       const toUpdate = games.filter((item) => {
-        const updatedMs = getTimestampMs(item.rawgUpdatedAt);
+        const updatedMs = getTimestampMs(item.igdbUpdatedAt ?? item.rawgUpdatedAt);
         if (updatedMs === null) return true;
         if (Date.now() - updatedMs < SEVEN_DAYS_MS) return false;
         return isCompletedStatus(item.status) && Math.random() < 0.05;
