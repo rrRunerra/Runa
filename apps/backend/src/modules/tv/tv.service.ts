@@ -48,6 +48,7 @@ export class TvService {
 
     if (cached && Array.isArray(cached) && cached.length > 0) {
       this.logger.debug(`TV search cache hit ${cached.length} entries`);
+      void this.triggerBackgroundSearchRefresh(cleanName);
       return cached;
     }
 
@@ -60,6 +61,8 @@ export class TvService {
       if (externalResults.length > 0) {
         result = externalResults;
       }
+    } else {
+      void this.triggerBackgroundSearchRefresh(cleanName);
     }
 
     this.logger.debug(`TV series found: ${result.length}`);
@@ -69,6 +72,31 @@ export class TvService {
     }
 
     return result;
+  }
+
+  private async triggerBackgroundSearchRefresh(cleanName: string): Promise<void> {
+    const cooldownKey = CacheService.keys.searchRefreshCooldown('tv', cleanName);
+    const inCooldown = await this.cacheService.get<boolean>(cooldownKey);
+    if (inCooldown) {
+      this.logger.debug(`TV search background refresh skipped (cooldown active for "${cleanName}")`);
+      return;
+    }
+
+    await this.cacheService.set(cooldownKey, true, 3600);
+
+    this.logger.debug(`TV search queueing background refresh for: "${cleanName}"`);
+    try {
+      const externalResults = await this.tvExternal.search(cleanName);
+      if (externalResults.length > 0) {
+        const updated = await this.tvRepository.search(cleanName);
+        const finalResults = updated.length > 0 ? updated : externalResults;
+        const cacheKey = CacheService.keys.tvSearch(cleanName);
+        await this.cacheService.set(cacheKey, finalResults, this.cacheDuration);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`TV background search refresh failed for "${cleanName}": ${msg}`);
+    }
   }
 
   public async getTv(id: number): Promise<TvEntity | undefined> {
@@ -85,7 +113,25 @@ export class TvService {
     }
 
     this.logger.debug(`getTv fetching from db`);
-    const data = await this.tvRepository.find(id);
+    let data = await this.tvRepository.find(id);
+
+    if (!data) {
+      const recordByTvdb = await this.tvRepository.findByTvdbId(id);
+      if (recordByTvdb?.id) {
+        data = await this.tvRepository.find(recordByTvdb.id);
+      }
+    }
+
+    if (!data) {
+      try {
+        const ensured = await this.ensureTv(id);
+        if (ensured?.id) {
+          data = await this.tvRepository.find(ensured.id);
+        }
+      } catch (err: unknown) {
+        data = null;
+      }
+    }
 
     if (!data) {
       throw new NotFoundException('TV series not found');

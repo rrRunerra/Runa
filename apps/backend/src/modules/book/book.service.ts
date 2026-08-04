@@ -39,6 +39,7 @@ export class BookService {
 
     if (cached && Array.isArray(cached) && cached.length > 0) {
       this.logger.debug(`Book search cache hit ${cached.length} entries`);
+      void this.triggerBackgroundSearchRefresh(cleanName);
       return cached;
     }
 
@@ -56,6 +57,8 @@ export class BookService {
 
         result = externalResults;
       }
+    } else {
+      void this.triggerBackgroundSearchRefresh(cleanName);
     }
 
     this.logger.debug(`Books found: ${result.length}`);
@@ -65,6 +68,38 @@ export class BookService {
     }
 
     return result;
+  }
+
+  private async triggerBackgroundSearchRefresh(cleanName: string): Promise<void> {
+    const cooldownKey = CacheService.keys.searchRefreshCooldown('book', cleanName);
+    const inCooldown = await this.cacheService.get<boolean>(cooldownKey);
+    if (inCooldown) {
+      this.logger.debug(`Book search background refresh skipped (cooldown active for "${cleanName}")`);
+      return;
+    }
+
+    await this.cacheService.set(cooldownKey, true, 3600);
+
+    this.logger.debug(`Book search queueing background refresh for: "${cleanName}"`);
+    try {
+      const externalResults = await this.bookExternal.search(cleanName);
+      if (externalResults.length > 0) {
+        const googleBookIds = externalResults
+          .map((r) => r.googleBookId)
+          .filter((id): id is string => Boolean(id));
+        if (googleBookIds.length > 0) {
+          this.bookQueueService.addSearchUpserts(googleBookIds);
+        }
+
+        const updated = await this.bookRepository.search(cleanName);
+        const finalResults = updated.length > 0 ? updated : externalResults;
+        const cacheKey = CacheService.keys.bookSearch(cleanName);
+        await this.cacheService.set(cacheKey, finalResults, this.cacheDuration);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`Book background search refresh failed for "${cleanName}": ${msg}`);
+    }
   }
 
   public async getBook(id: number | string): Promise<BookEntity | undefined> {
@@ -84,7 +119,15 @@ export class BookService {
     }
 
     this.logger.debug(`getBook fetching from V2 db for ID: ${id}`);
-    const data = await this.bookRepository.find(id);
+    let data = await this.bookRepository.find(id);
+
+    if (!data && typeof id === 'string') {
+      try {
+        data = (await this.ensureBook(id)) || null;
+      } catch (err: unknown) {
+        data = null;
+      }
+    }
 
     if (!data) {
       throw new rrNotFoundException(`${this.moduleCode}BNF001`, {

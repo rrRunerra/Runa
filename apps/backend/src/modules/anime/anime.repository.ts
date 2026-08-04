@@ -251,7 +251,7 @@ export class AnimeRepository {
         seasonSeason: payload.seasonSeason || 'UNKNOWN',
         seasonYear: payload.seasonYear,
 
-        averageScore: payload.averageScore,
+        averageScore: null,
         favorites: payload.favorites || 0,
         popularity: payload.popularity || 0,
 
@@ -319,7 +319,6 @@ export class AnimeRepository {
         seasonSeason: payload.seasonSeason || 'UNKNOWN',
         seasonYear: payload.seasonYear || 1970,
 
-        averageScore: payload.averageScore,
         favorites: payload.favorites || 0,
         popularity: payload.popularity || 0,
 
@@ -667,7 +666,7 @@ export class AnimeRepository {
     if (payload.relations && Array.isArray(payload.relations)) {
       try {
         for (const rel of payload.relations) {
-          if (!rel.targetAnilistId) continue;
+          if (!rel.targetAnilistId || rel.type === 'OTHER') continue;
           let targetId: number | null = null;
           const targetTypeStr = (rel.targetType || 'ANIME').toUpperCase();
           const targetType = (

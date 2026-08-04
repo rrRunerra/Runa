@@ -39,39 +39,77 @@ export class GameService {
 
     if (cached && Array.isArray(cached) && cached.length > 0) {
       this.logger.debug(`Game search cache hit ${cached.length} entries`);
+      void this.triggerBackgroundSearchRefresh(cleanName);
       return cached;
     }
 
     let result: GameSearchEntity[] = await this.gameRepository.search(cleanName);
 
     if (result.length === 0) {
-      this.logger.debug(`Local DB search empty, querying RAWG for game: "${cleanName}"`);
+      this.logger.debug(`Local DB search empty, querying IGDB for game: "${cleanName}"`);
       const externalResults = await this.gameExternal.search(cleanName);
 
       if (externalResults.length > 0) {
-        const rawgIds = externalResults
-          .map((r) => r.rawgId)
-          .filter((id): id is number => Boolean(id));
-        this.gameQueueService.addSearchUpserts(rawgIds);
-
         result = externalResults;
       }
+    } else {
+      void this.triggerBackgroundSearchRefresh(cleanName);
     }
 
     this.logger.debug(`Games found: ${result.length}`);
 
     if (result.length > 0) {
+      const igdbIds = result
+        .map((r) => r.igdbId)
+        .filter((id): id is number => Boolean(id));
+
+      if (igdbIds.length > 0) {
+        this.gameQueueService.addSearchUpserts(igdbIds);
+      }
+
       await this.cacheService.set(cacheKey, result, this.cacheDuration);
     }
 
     return result;
   }
 
+  private async triggerBackgroundSearchRefresh(cleanName: string): Promise<void> {
+    const cooldownKey = CacheService.keys.searchRefreshCooldown('game', cleanName);
+    const inCooldown = await this.cacheService.get<boolean>(cooldownKey);
+    if (inCooldown) {
+      this.logger.debug(`Game search background refresh skipped (cooldown active for "${cleanName}")`);
+      return;
+    }
+
+    await this.cacheService.set(cooldownKey, true, 3600);
+
+    this.logger.debug(`Game search queueing background refresh for: "${cleanName}"`);
+    try {
+      const externalResults = await this.gameExternal.search(cleanName);
+      if (externalResults.length > 0) {
+        const igdbIds = externalResults
+          .map((r) => r.igdbId)
+          .filter((id): id is number => Boolean(id));
+        if (igdbIds.length > 0) {
+          this.gameQueueService.addSearchUpserts(igdbIds);
+        }
+
+        const updated = await this.gameRepository.search(cleanName);
+        const finalResults = updated.length > 0 ? updated : externalResults;
+        const cacheKey = CacheService.keys.gameSearch(cleanName);
+        await this.cacheService.set(cacheKey, finalResults, this.cacheDuration);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`Game background search refresh failed for "${cleanName}": ${msg}`);
+    }
+  }
+
   public async getGame(id: number | string): Promise<GameEntity | undefined> {
     const numericId = typeof id === 'number' ? id : Number(id);
-    if (typeof id === 'number' && isNaN(numericId)) {
+    if (isNaN(numericId)) {
       throw new rrError(`${this.moduleCode}IMBAN001`, {
-        message: 'ID must be a number or string',
+        message: 'ID must be a number or numeric string',
       });
     }
 
@@ -84,7 +122,22 @@ export class GameService {
     }
 
     this.logger.debug(`getGame fetching from V2 db for ID: ${id}`);
-    const data = await this.gameRepository.find(id);
+    let data = await this.gameRepository.find(numericId);
+
+    if (!data) {
+      const recordByIgdb = await this.gameRepository.findByIgdbId(numericId);
+      if (recordByIgdb?.id) {
+        data = await this.gameRepository.find(recordByIgdb.id);
+      }
+    }
+
+    if (!data) {
+      try {
+        data = (await this.ensureGame(numericId)) || null;
+      } catch (err: unknown) {
+        data = null;
+      }
+    }
 
     if (!data) {
       throw new rrNotFoundException(`${this.moduleCode}GNF001`, {
@@ -120,7 +173,8 @@ export class GameService {
     }
 
     const existing = await this.gameRepository.find(id);
-    if (!existing || !existing.rawgId) {
+    const extId = existing?.igdbId || existing?.rawgId;
+    if (!existing || !extId) {
       throw new rrNotFoundException(`${this.moduleCode}GNFID001`, {
         message: 'Game not found in database',
       });
@@ -132,7 +186,7 @@ export class GameService {
       });
     }
 
-    await this.gameExternal.fetchAndUpsertGame(existing.rawgId, force);
+    await this.gameExternal.fetchAndUpsertGame(extId, force);
 
     await this.cacheService.del(`game:${id}`);
 
@@ -143,34 +197,36 @@ export class GameService {
   }
 
   public async ensureGame(
-    rawgId: number,
+    igdbId: number,
     title?: string,
     coverImage?: string,
   ): Promise<GameEntity | null> {
-    let game = await this.gameRepository.find(rawgId);
+    let existingRecord = await this.gameRepository.findByIgdbId(igdbId);
+    let game = existingRecord ? await this.gameRepository.find(existingRecord.id) : null;
     const threeMonthsMs = 90 * 24 * 60 * 60 * 1000;
-    const rawgUpdatedMs = getTimestampMs((game as any)?.rawgUpdatedAt);
+    const igdbUpdatedMs = getTimestampMs(existingRecord?.igdbUpdatedAt);
     const isStale =
       !game ||
-      rawgUpdatedMs === null ||
-      Date.now() - rawgUpdatedMs >= threeMonthsMs;
+      igdbUpdatedMs === null ||
+      Date.now() - igdbUpdatedMs >= threeMonthsMs;
 
     if (isStale) {
       try {
-        await this.gameExternal.fetchAndUpsertGame(rawgId);
-        game = await this.gameRepository.find(rawgId);
+        await this.gameExternal.fetchAndUpsertGame(igdbId);
+        existingRecord = await this.gameRepository.findByIgdbId(igdbId);
+        game = existingRecord ? await this.gameRepository.find(existingRecord.id) : null;
       } catch {
         if (!game) {
           this.logger.warn(
-            `ensureGame V2: External fetch failed for ${rawgId}, writing minimal stub`,
+            `ensureGame V2: External fetch failed for IGDB ID ${igdbId}, writing minimal stub`,
           );
-          await this.gameRepository.upsertV2Record({
-            rawgId,
+          const stub = await this.gameRepository.upsertV2Record({
+            igdbId,
             titlePrimary: title || 'Unknown',
             coverImage: coverImage ?? null,
             releaseDateYear: 1970,
           });
-          game = await this.gameRepository.find(rawgId);
+          game = await this.gameRepository.find(stub.id);
         }
       }
     }

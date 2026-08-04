@@ -4,6 +4,7 @@ import { AnilistService } from 'src/providers/Anilist/anilist.service';
 import { AnizipService } from 'src/providers/Anizip/anizip.service';
 import { MalService } from 'src/providers/Mal/mal.service';
 import { BangumiService } from 'src/providers/Bangumi/bangumi.service';
+import { PrismaService } from 'src/providers/database/prisma.service';
 
 function mapRelationType(relTypeStr?: string): string {
   if (!relTypeStr) return 'OTHER';
@@ -60,7 +61,7 @@ function parseAgeRating(
     return { ageRating: 'R-17+', ageRatingGuide: 'Violence & Profanity' };
   }
   if (r.includes('R+') || r.includes('MILD NUDITY')) {
-    return { ageRating: 'R+', ageRatingGuide: 'Mild Nudity & Violence' };
+    return { ageRating: 'R+', ageRatingGuide: 'Mild Nudity & Erotica' };
   }
   if (r.includes('RX') || r.includes('HENTAI')) {
     return { ageRating: 'Rx', ageRatingGuide: 'Explicit Adult Content' };
@@ -78,6 +79,7 @@ export class MangaExternal {
     private readonly anizipService: AnizipService,
     private readonly malService: MalService,
     private readonly bangumiService: BangumiService,
+    private readonly prisma: PrismaService,
   ) {}
 
   public async fetchFullV2Record(inputParam: string | number): Promise<any | null> {
@@ -100,6 +102,7 @@ export class MangaExternal {
 
       // 3. Fetch MAL Data
       const malData = malId ? await this.malService.fetchMalMangaData(malId) : null;
+
 
       // 4. Construct Primary & Secondary Titles
       const titlePrimary =
@@ -242,11 +245,13 @@ export class MangaExternal {
         for (const edge of alData.relations.edges) {
           const relNode = edge.node;
           if (!relNode) continue;
+          const relType = mapRelationType(edge.relationType);
+          if (relType === 'OTHER') continue;
           const targetType = (relNode.type || 'MANGA').toUpperCase();
           relations.push({
             targetAnilistId: relNode.id,
             targetType,
-            type: mapRelationType(edge.relationType),
+            type: relType,
             titlePrimary:
               relNode.title?.english ||
               relNode.title?.romaji ||
@@ -356,17 +361,63 @@ export class MangaExternal {
       this.logger.debug(`Searching for manga on AniList: "${title}"`);
       const results = await this.anilistService.searchManga(title, 30);
 
-      return results.map((item) => ({
-        anilistId: item.id,
-        malId: item.idMal || null,
-        title: item.title?.english || item.title?.romaji || item.title?.native || 'Untitled',
-        secondaryTitle: item.title?.english ? item.title?.romaji : null,
-        coverImage: item.coverImage?.extraLarge || item.coverImage?.large || item.coverImage?.medium || null,
-        averageScore: item.averageScore || null,
-        isAdult: item.isAdult || false,
-        format: item.format || 'UNKNOWN',
-        status: item.status || 'UNKNOWN',
-      }));
+      const mapped: any[] = [];
+      for (const item of results) {
+        const anilistId = item.id;
+        const primaryTitle = item.title?.english || item.title?.romaji || item.title?.native || 'Untitled';
+        const secondaryTitle = item.title?.english ? item.title?.romaji : null;
+        const coverImage = item.coverImage?.extraLarge || item.coverImage?.large || item.coverImage?.medium || null;
+        const formatStr = item.format || 'UNKNOWN';
+        const statusStr = item.status || 'UNKNOWN';
+
+        const existing = await this.prisma.client.aquilaMangaV2.findUnique({
+          where: { anilistId },
+          select: { id: true },
+        });
+
+        let internalId: number = existing?.id ?? 0;
+        if (!internalId) {
+          try {
+            const created = await this.prisma.client.aquilaMangaV2.upsert({
+              where: { anilistId },
+              create: {
+                anilistId,
+                malId: item.idMal || null,
+                titlePrimary: primaryTitle,
+                titleSecondary: secondaryTitle,
+                coverImage,
+                format: formatStr as any,
+                status: statusStr as any,
+                isAdult: item.isAdult || false,
+                startDateYear: item.startDate?.year ?? 0,
+              },
+              update: {},
+              select: { id: true },
+            });
+            internalId = created.id;
+          } catch (e) {
+            const raced = await this.prisma.client.aquilaMangaV2.findUnique({
+              where: { anilistId },
+              select: { id: true },
+            });
+            internalId = raced?.id ?? anilistId;
+          }
+        }
+
+        mapped.push({
+          id: internalId,
+          anilistId,
+          malId: item.idMal || null,
+          title: primaryTitle,
+          secondaryTitle,
+          coverImage,
+          averageScore: null,
+          isAdult: item.isAdult || false,
+          format: formatStr,
+          status: statusStr,
+        });
+      }
+      return mapped;
     } catch (error: any) {
       this.logger.error(`Failed to search manga on AniList: ${error?.message || error}`);
       return [];

@@ -56,23 +56,11 @@ export class GameRepository {
 
   public async find(id: number | string): Promise<GameEntity | null> {
     const numericId = typeof id === 'number' ? id : Number(id);
-    let record: any = null;
+    if (isNaN(numericId)) return null;
 
-    if (!isNaN(numericId)) {
-      record = await this.prisma.client.aquilaGameV2.findUnique({
-        where: { id: numericId },
-      });
-      if (!record) {
-        record = await this.prisma.client.aquilaGameV2.findUnique({
-          where: { rawgId: numericId },
-        });
-      }
-      if (!record) {
-        record = await this.prisma.client.aquilaGameV2.findUnique({
-          where: { igdbId: numericId },
-        });
-      }
-    }
+    const record = await this.prisma.client.aquilaGameV2.findUnique({
+      where: { id: numericId },
+    });
 
     if (!record) return null;
     const gameLocalId = record.id;
@@ -258,11 +246,27 @@ export class GameRepository {
     };
   }
 
+  public async findByIgdbId(igdbId: number): Promise<any> {
+    return this.prisma.client.aquilaGameV2.findUnique({
+      where: { igdbId },
+      select: {
+        id: true,
+        igdbId: true,
+        rawgId: true,
+        titlePrimary: true,
+        coverImage: true,
+        locked: true,
+        igdbUpdatedAt: true,
+      },
+    });
+  }
+
   public async findByRawgId(rawgId: number): Promise<any> {
     return this.prisma.client.aquilaGameV2.findUnique({
       where: { rawgId },
       select: {
         id: true,
+        igdbId: true,
         rawgId: true,
         titlePrimary: true,
         coverImage: true,
@@ -273,20 +277,30 @@ export class GameRepository {
   }
 
   public async upsertV2Record(payload: any): Promise<any> {
-    const { rawgId } = payload;
-    if (!rawgId) {
-      throw new rrError(`${this.moduleCode}NORAWGID001`, {
-        message: 'Cannot upsert AquilaGameV2 without rawgId',
+    const igdbId = payload.igdbId;
+    const rawgId = payload.rawgId;
+
+    if (!igdbId && !rawgId) {
+      throw new rrError(`${this.moduleCode}NOEXTID001`, {
+        message: 'Cannot upsert AquilaGameV2 without external ID (igdbId or rawgId)',
       });
     }
 
-    const existing = await this.prisma.client.aquilaGameV2.findUnique({
-      where: { rawgId },
-      select: { id: true, locked: true },
-    });
+    let existing: any = null;
+    if (igdbId) {
+      existing = await this.prisma.client.aquilaGameV2.findUnique({
+        where: { igdbId },
+        select: { id: true, locked: true },
+      });
+    } else if (rawgId) {
+      existing = await this.prisma.client.aquilaGameV2.findUnique({
+        where: { rawgId },
+        select: { id: true, locked: true },
+      });
+    }
 
     if (existing?.locked) {
-      this.logger.debug(`Game with RAWG ID ${rawgId} is locked, skipping upsert`);
+      this.logger.debug(`Game with ID ${existing.id} is locked, skipping upsert`);
       return existing;
     }
 
@@ -295,8 +309,10 @@ export class GameRepository {
       statusEnum = payload.status as GameStatus;
     }
 
+    const whereClause = igdbId ? { igdbId } : { rawgId: rawgId! };
+
     const dbRecord = await this.prisma.client.aquilaGameV2.upsert({
-      where: { rawgId },
+      where: whereClause,
       update: {
         igdbId: payload.igdbId ?? null,
         steamAppId: payload.steamAppId ?? null,
@@ -338,7 +354,7 @@ export class GameRepository {
         synonyms: payload.synonyms ?? [],
         trailers: payload.trailers ?? null,
 
-        averageScore: payload.averageScore ?? null,
+        averageScore: null,
         metacriticScore: payload.metacriticScore ?? null,
         metacriticUserScore: payload.metacriticUserScore ?? null,
         rawgRating: payload.rawgRating ?? null,
@@ -360,7 +376,8 @@ export class GameRepository {
         ageRatingGuide: payload.ageRatingGuide ?? null,
         contentRatings: payload.contentRatings ?? null,
 
-        rawgUpdatedAt: Math.floor(Date.now() / 1000),
+        rawgUpdatedAt: payload.rawgUpdatedAt ?? null,
+        igdbUpdatedAt: Math.floor(Date.now() / 1000),
       },
       create: {
         rawgId,
@@ -404,7 +421,6 @@ export class GameRepository {
         synonyms: payload.synonyms ?? [],
         trailers: payload.trailers ?? null,
 
-        averageScore: payload.averageScore ?? null,
         metacriticScore: payload.metacriticScore ?? null,
         metacriticUserScore: payload.metacriticUserScore ?? null,
         rawgRating: payload.rawgRating ?? null,
@@ -433,7 +449,8 @@ export class GameRepository {
         ageRatingGuide: payload.ageRatingGuide ?? null,
         contentRatings: payload.contentRatings ?? null,
 
-        rawgUpdatedAt: Math.floor(Date.now() / 1000),
+        rawgUpdatedAt: payload.rawgUpdatedAt ?? null,
+        igdbUpdatedAt: Math.floor(Date.now() / 1000),
       },
     });
 

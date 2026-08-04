@@ -546,7 +546,15 @@ export class DiscoverRepository {
         const [animeUserLists, mangaUserLists, tvUserLists, gameUserLists, bookUserLists, movieUserLists] = await Promise.all([
           this.prisma.client.aquilaAnimeUserListV2.findMany({
             where: { username: username.toLowerCase(), status: { in: ['WATCHING', 'PLANNING'] } },
-            include: { anime: true },
+            include: {
+              anime: {
+                include: {
+                  airingSchedule: {
+                    orderBy: { episodeNumber: 'asc' },
+                  },
+                },
+              },
+            },
           }),
           this.prisma.client.aquilaMangaUserListV2.findMany({
             where: { username: username.toLowerCase(), status: { in: ['READING', 'PLANNING'] } },
@@ -562,7 +570,7 @@ export class DiscoverRepository {
           }),
           this.prisma.client.aquilaBookUserListV2.findMany({
             where: { username: username.toLowerCase(), status: { in: ['READING', 'PLANNING'] } },
-            // include: { book: true },
+            include: { book: true },
           }),
           this.prisma.client.aquilaMovieUserListV2.findMany({
             where: { username: username.toLowerCase(), status: { in: ['PLANNING'] } },
@@ -574,7 +582,7 @@ export class DiscoverRepository {
         mangaList = mangaUserLists.map((l) => l.manga);
         tvList = tvUserLists.map((l) => l.tv);
         gameList = gameUserLists.map((l) => l.game);
-        // bookList = bookUserLists.map((l) => l.book);
+        bookList = bookUserLists.map((l) => l.book);
         movieList = movieUserLists.map((l) => l.movie);
       } else {
         const [animes, mangas, tvs, movies, games, books] = await Promise.all([
@@ -583,7 +591,13 @@ export class DiscoverRepository {
               OR: [
                 { startDateYear: { gte: startYear, lte: endYear } },
                 { status: 'RELEASING' },
+                { airingSchedule: { some: { airingAt: { gte: start, lte: end } } } },
               ],
+            },
+            include: {
+              airingSchedule: {
+                orderBy: { episodeNumber: 'asc' },
+              },
             },
           }),
           this.prisma.client.aquilaMangaV2.findMany({
@@ -591,13 +605,25 @@ export class DiscoverRepository {
           }),
           this.prisma.client.aquilaTvV2.findMany(),
           this.prisma.client.aquilaMovieV2.findMany({
-            where: { releaseDateYear: { gte: startYear, lte: endYear } },
+            where: {
+              releaseDateYear: { gte: startYear, lte: endYear },
+            },
           }),
           this.prisma.client.aquilaGameV2.findMany({
-            where: { releaseDateYear: { gte: startYear, lte: endYear } },
+            where: {
+              OR: [
+                { releaseDateYear: { gte: startYear, lte: endYear } },
+                { releaseDate: { gte: start, lte: end } },
+              ],
+            },
           }),
           this.prisma.client.aquilaBookV2.findMany({
-            where: { releaseDateYear: { gte: startYear, lte: endYear } },
+            where: {
+              OR: [
+                { releaseDateYear: { gte: startYear, lte: endYear } },
+                { releaseDate: { gte: start, lte: end } },
+              ],
+            },
           }),
         ]);
 
@@ -625,35 +651,57 @@ export class DiscoverRepository {
       // 1. Anime
       for (const item of animeList) {
         if (!item) continue;
+        const title = item.titlePrimary || item.titleSecondary || item.titleNative || item.titleEnglish || item.titleRomaji || '';
+        const coverImage = item.coverImage || item.coverImageLarge || null;
+
         if (item.startDateYear) {
           const d = new Date(Date.UTC(item.startDateYear, (item.startDateMonth || 1) - 1, item.startDateDay || 1));
           if (isWithinRange(d)) {
             events.push({
               id: item.id,
-              title: item.titleEnglish || item.titleRomaji || item.titleNative || '',
-              coverImage: item.coverImageLarge || null,
+              title,
+              coverImage,
               type: 'anime',
               airDate: formatDate(d),
               event: 'premiere',
             });
           }
         }
-        if (item.nextAiringEpisode) {
-          const airing = item.nextAiringEpisode as { airingAt?: number; episode?: number } | null;
-          if (airing && airing.airingAt) {
-            const d = new Date(airing.airingAt * 1000);
-            if (isWithinRange(d)) {
+
+        if (Array.isArray(item.airingSchedule) && item.airingSchedule.length > 0) {
+          for (const scheduleItem of item.airingSchedule) {
+            const d = new Date(scheduleItem.airingAt);
+            if (!isNaN(d.getTime()) && isWithinRange(d)) {
               events.push({
                 id: item.id,
-                title: item.titleEnglish || item.titleRomaji || item.titleNative || '',
-                coverImage: item.coverImageLarge || null,
+                title,
+                coverImage,
                 type: 'anime',
                 airDate: formatDate(d),
-                airingAt: airing.airingAt,
-                episode: airing.episode,
+                airingAt: Math.floor(d.getTime() / 1000),
+                episode: scheduleItem.episodeNumber,
                 event: 'airing',
               });
             }
+          }
+        } else {
+          const nextAiringDate = item.nextAiringAt
+            ? new Date(item.nextAiringAt)
+            : item.nextAiringEpisode?.airingAt
+              ? new Date(item.nextAiringEpisode.airingAt * 1000)
+              : null;
+
+          if (nextAiringDate && !isNaN(nextAiringDate.getTime()) && isWithinRange(nextAiringDate)) {
+            events.push({
+              id: item.id,
+              title,
+              coverImage,
+              type: 'anime',
+              airDate: formatDate(nextAiringDate),
+              airingAt: Math.floor(nextAiringDate.getTime() / 1000),
+              episode: item.nextAiringEpisodeNumber || item.nextAiringEpisode?.episode,
+              event: 'airing',
+            });
           }
         }
       }
@@ -661,13 +709,16 @@ export class DiscoverRepository {
       // 2. Manga
       for (const item of mangaList) {
         if (!item) continue;
+        const title = item.titlePrimary || item.titleSecondary || item.titleNative || item.titleEnglish || item.titleRomaji || '';
+        const coverImage = item.coverImage || item.coverImageLarge || null;
+
         if (item.startDateYear) {
           const d = new Date(Date.UTC(item.startDateYear, (item.startDateMonth || 1) - 1, item.startDateDay || 1));
           if (isWithinRange(d)) {
             events.push({
               id: item.id,
-              title: item.titleEnglish || item.titleRomaji || item.titleNative || '',
-              coverImage: item.coverImageLarge || null,
+              title,
+              coverImage,
               type: 'manga',
               airDate: formatDate(d),
               event: 'release',
@@ -679,19 +730,27 @@ export class DiscoverRepository {
       // 3. TV Shows
       for (const item of tvList) {
         if (!item) continue;
-        if (item.startDateYear) {
-          const d = new Date(Date.UTC(item.startDateYear, (item.startDateMonth || 1) - 1, item.startDateDay || 1));
+        const title = item.titlePrimary || item.titleSecondary || item.titleNative || item.titleEnglish || item.titleRomaji || '';
+        const coverImage = item.coverImage || null;
+
+        const firstAiredYear = item.firstAiredYear || item.startDateYear;
+        const firstAiredMonth = item.firstAiredMonth || item.startDateMonth;
+        const firstAiredDay = item.firstAiredDay || item.startDateDay;
+
+        if (firstAiredYear) {
+          const d = new Date(Date.UTC(firstAiredYear, (firstAiredMonth || 1) - 1, firstAiredDay || 1));
           if (isWithinRange(d)) {
             events.push({
               id: item.id,
-              title: item.titleEnglish || item.titleRomaji || item.titleNative || '',
-              coverImage: item.coverImage || null,
+              title,
+              coverImage,
               type: 'tv',
               airDate: formatDate(d),
               event: 'premiere',
             });
           }
         }
+
         if (item.seasons && Array.isArray(item.seasons)) {
           for (const season of item.seasons as any[]) {
             if (season.episodes && Array.isArray(season.episodes)) {
@@ -701,12 +760,12 @@ export class DiscoverRepository {
                   if (!isNaN(d.getTime()) && isWithinRange(d)) {
                     events.push({
                       id: item.id,
-                      title: item.titleEnglish || item.titleRomaji || item.titleNative || '',
-                      coverImage: item.coverImage || null,
+                      title,
+                      coverImage,
                       type: 'tv',
                       airDate: formatDate(d),
-                      episode: ep.number,
-                      episodeTitle: ep.name || undefined,
+                      episode: ep.number || ep.episodeNumber,
+                      episodeTitle: ep.name || ep.title || undefined,
                       event: 'airing',
                     });
                   }
@@ -720,29 +779,37 @@ export class DiscoverRepository {
       // 4. Movies
       for (const item of movieList) {
         if (!item) continue;
+        const title = item.titlePrimary || item.titleSecondary || item.titleNative || item.titleEnglish || item.titleRomaji || '';
+        const coverImage = item.coverImage || null;
+
         if (item.releaseDate) {
-          const d = new Date(item.releaseDate + 'T00:00:00Z');
+          const d = new Date(item.releaseDate);
           if (!isNaN(d.getTime()) && isWithinRange(d)) {
             events.push({
               id: item.id,
-              title: item.titleEnglish || item.titleRomaji || item.titleNative || '',
-              coverImage: item.coverImage || null,
+              title,
+              coverImage,
               type: 'movie',
               airDate: formatDate(d),
               event: 'release',
             });
           }
-        } else if (item.startDateYear) {
-          const d = new Date(Date.UTC(item.startDateYear, (item.startDateMonth || 1) - 1, item.startDateDay || 1));
-          if (isWithinRange(d)) {
-            events.push({
-              id: item.id,
-              title: item.titleEnglish || item.titleRomaji || item.titleNative || '',
-              coverImage: item.coverImage || null,
-              type: 'movie',
-              airDate: formatDate(d),
-              event: 'release',
-            });
+        } else {
+          const year = item.releaseDateYear || item.startDateYear;
+          const month = item.releaseDateMonth || item.startDateMonth;
+          const day = item.releaseDateDay || item.startDateDay;
+          if (year) {
+            const d = new Date(Date.UTC(year, (month || 1) - 1, day || 1));
+            if (isWithinRange(d)) {
+              events.push({
+                id: item.id,
+                title,
+                coverImage,
+                type: 'movie',
+                airDate: formatDate(d),
+                event: 'release',
+              });
+            }
           }
         }
       }
@@ -750,29 +817,49 @@ export class DiscoverRepository {
       // 5. Games
       for (const item of gameList) {
         if (!item) continue;
-        if (item.released) {
-          const d = new Date(item.released + 'T00:00:00Z');
+        const title = item.titlePrimary || item.titleSecondary || item.titleNative || item.titleString || '';
+        const coverImage = item.coverImage || null;
+
+        if (item.releaseDate) {
+          const d = new Date(item.releaseDate);
           if (!isNaN(d.getTime()) && isWithinRange(d)) {
             events.push({
               id: item.id,
-              title: item.titleString || item.titleNative || '',
-              coverImage: item.coverImage || null,
+              title,
+              coverImage,
               type: 'game',
               airDate: formatDate(d),
               event: 'release',
             });
           }
-        } else if (item.releasedYear) {
-          const d = new Date(Date.UTC(item.releasedYear, (item.releasedMonth || 1) - 1, item.releasedDay || 1));
-          if (isWithinRange(d)) {
+        } else if (item.released) {
+          const d = new Date(item.released + 'T00:00:00Z');
+          if (!isNaN(d.getTime()) && isWithinRange(d)) {
             events.push({
               id: item.id,
-              title: item.titleString || item.titleNative || '',
-              coverImage: item.coverImage || null,
+              title,
+              coverImage,
               type: 'game',
               airDate: formatDate(d),
               event: 'release',
             });
+          }
+        } else {
+          const year = item.releaseDateYear || item.releasedYear;
+          const month = item.releaseDateMonth || item.releasedMonth;
+          const day = item.releaseDateDay || item.releasedDay;
+          if (year) {
+            const d = new Date(Date.UTC(year, (month || 1) - 1, day || 1));
+            if (isWithinRange(d)) {
+              events.push({
+                id: item.id,
+                title,
+                coverImage,
+                type: 'game',
+                airDate: formatDate(d),
+                event: 'release',
+              });
+            }
           }
         }
       }
@@ -780,29 +867,49 @@ export class DiscoverRepository {
       // 6. Books
       for (const item of bookList) {
         if (!item) continue;
-        if (item.publishedDate) {
-          const d = new Date(item.publishedDate + 'T00:00:00Z');
+        const title = item.titlePrimary || item.titleSecondary || item.titleNative || item.titleString || '';
+        const coverImage = item.coverImage || null;
+
+        if (item.releaseDate) {
+          const d = new Date(item.releaseDate);
           if (!isNaN(d.getTime()) && isWithinRange(d)) {
             events.push({
               id: item.id,
-              title: item.titleString || '',
-              coverImage: item.coverImage || null,
+              title,
+              coverImage,
               type: 'book',
               airDate: formatDate(d),
               event: 'release',
             });
           }
-        } else if (item.publishedYear) {
-          const d = new Date(Date.UTC(item.publishedYear, (item.publishedMonth || 1) - 1, item.publishedDay || 1));
-          if (isWithinRange(d)) {
+        } else if (item.publishedDate) {
+          const d = new Date(item.publishedDate + 'T00:00:00Z');
+          if (!isNaN(d.getTime()) && isWithinRange(d)) {
             events.push({
               id: item.id,
-              title: item.titleString || '',
-              coverImage: item.coverImage || null,
+              title,
+              coverImage,
               type: 'book',
               airDate: formatDate(d),
               event: 'release',
             });
+          }
+        } else {
+          const year = item.releaseDateYear || item.publishedYear;
+          const month = item.releaseDateMonth || item.publishedMonth;
+          const day = item.releaseDateDay || item.publishedDay;
+          if (year) {
+            const d = new Date(Date.UTC(year, (month || 1) - 1, day || 1));
+            if (isWithinRange(d)) {
+              events.push({
+                id: item.id,
+                title,
+                coverImage,
+                type: 'book',
+                airDate: formatDate(d),
+                event: 'release',
+              });
+            }
           }
         }
       }

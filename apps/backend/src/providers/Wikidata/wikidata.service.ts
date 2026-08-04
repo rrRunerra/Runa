@@ -61,6 +61,54 @@ export class WikidataService {
     return null;
   }
 
+  private findMatchingGameEntity(searchItems: any[], targetName: string): string | null {
+    if (!Array.isArray(searchItems) || searchItems.length === 0) return null;
+    const cleanTarget = targetName.trim().toLowerCase();
+
+    // 1. Exact label match (case insensitive) AND description mentions game/software/series
+    for (const item of searchItems) {
+      const label = (item.label || '').trim().toLowerCase();
+      const desc = (item.description || '').toLowerCase();
+      if (label === cleanTarget) {
+        if (
+          desc.includes('game') ||
+          desc.includes('software') ||
+          desc.includes('series') ||
+          desc.includes('playstation') ||
+          desc.includes('nintendo') ||
+          desc.includes('xbox') ||
+          desc.includes('pc') ||
+          desc.includes('arcade') ||
+          desc.includes('franchise')
+        ) {
+          return item.id;
+        }
+      }
+    }
+
+    // 2. Exact label match (case insensitive)
+    for (const item of searchItems) {
+      const label = (item.label || '').trim().toLowerCase();
+      if (label === cleanTarget) {
+        return item.id;
+      }
+    }
+
+    // 3. Description explicitly contains "video game" or "computer game"
+    for (const item of searchItems) {
+      const label = (item.label || '').trim().toLowerCase();
+      const desc = (item.description || '').toLowerCase();
+      if (
+        (label === cleanTarget || label.startsWith(`${cleanTarget}:`)) &&
+        (desc.includes('video game') || desc.includes('computer game') || desc.includes('arcade game'))
+      ) {
+        return item.id;
+      }
+    }
+
+    return null;
+  }
+
   public async fetchGameCharacters(gameName: string): Promise<WikidataCharacter[]> {
     this.logger.debug(`Fetching game characters from Wikidata for: "${gameName}"`);
     try {
@@ -70,14 +118,16 @@ export class WikidataService {
       let gameQId: string | null = null;
       if (searchRes && searchRes.ok) {
         const searchJson = await searchRes.json();
-        if (searchJson && Array.isArray(searchJson.search) && searchJson.search.length > 0) {
-          gameQId = searchJson.search[0].id;
+        if (searchJson && Array.isArray(searchJson.search)) {
+          gameQId = this.findMatchingGameEntity(searchJson.search, gameName);
         }
       }
 
-      const filterCondition = gameQId
-        ? `{ ?character wdt:P1441 wd:${gameQId} . } UNION { ?character wdt:P1080 wd:${gameQId} . } UNION { wd:${gameQId} wdt:P674 ?character . }`
-        : `{ ?game rdfs:label "${gameName.replace(/'/g, "\\'")}"@en . ?character wdt:P1441 ?game . }`;
+      if (!gameQId) {
+        return this.getFallbackCharacters(gameName);
+      }
+
+      const filterCondition = `{ ?character wdt:P1441 wd:${gameQId} . } UNION { ?character wdt:P1080 wd:${gameQId} . } UNION { wd:${gameQId} wdt:P674 ?character . }`;
 
       const sparqlQuery = `
 SELECT DISTINCT ?character ?characterLabel ?description ?image ?genderLabel WHERE {

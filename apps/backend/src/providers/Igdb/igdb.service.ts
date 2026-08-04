@@ -1,0 +1,178 @@
+import { Injectable, Logger } from '@nestjs/common';
+
+export interface IgdbGame {
+  id: number;
+  name: string;
+  slug?: string;
+  summary?: string;
+  storyline?: string;
+  cover?: { id: number; url: string };
+  first_release_date?: number; // Unix timestamp in seconds
+  rating?: number;
+  rating_count?: number;
+  total_rating?: number;
+  total_rating_count?: number;
+  genres?: { id: number; name: string }[];
+  platforms?: { id: number; name: string }[];
+  involved_companies?: {
+    id: number;
+    company: { id: number; name: string };
+    developer: boolean;
+    publisher: boolean;
+  }[];
+  game_modes?: { id: number; name: string }[];
+  player_perspectives?: { id: number; name: string }[];
+  artworks?: { id: number; url: string }[];
+  screenshots?: { id: number; url: string }[];
+  videos?: { id: number; video_id: string; name?: string }[];
+  websites?: { id: number; category: number; url: string }[];
+  age_ratings?: { id: number; category: number; rating: number }[];
+  franchise?: { id: number; name: string };
+  franchises?: { id: number; name: string }[];
+  similar_games?: { id: number; name: string; cover?: { url: string } }[];
+}
+
+@Injectable()
+export class IgdbService {
+  private readonly logger = new Logger(IgdbService.name);
+  private readonly baseUrl = 'https://api.igdb.com/v4';
+  private accessToken: string | null = null;
+  private tokenExpiresAt = 0;
+  private queue: Promise<void> = Promise.resolve();
+
+  private getCredentials(): { clientId: string | null; clientSecret: string | null } {
+    const clientId = process.env.IGDB_CLIENT_ID || process.env.TWITCH_CLIENT_ID || null;
+    const clientSecret = process.env.IGDB_CLIENT_SECRET || process.env.TWITCH_CLIENT_SECRET || null;
+    return { clientId, clientSecret };
+  }
+
+  private async getAccessToken(): Promise<string | null> {
+    const { clientId, clientSecret } = this.getCredentials();
+    if (!clientId || !clientSecret) {
+      this.logger.warn('IGDB/Twitch credentials missing in environment variables');
+      return null;
+    }
+
+    if (this.accessToken && Date.now() < this.tokenExpiresAt - 60000) {
+      return this.accessToken;
+    }
+
+    try {
+      this.logger.debug('Requesting new IGDB/Twitch access token...');
+      const tokenUrl = `https://id.twitch.tv/oauth2/token?client_id=${clientId}&client_secret=${clientSecret}&grant_type=client_credentials`;
+      const res = await fetch(tokenUrl, { method: 'POST' });
+
+      if (!res.ok) {
+        this.logger.error(`Failed to obtain IGDB access token: ${res.statusText}`);
+        return null;
+      }
+
+      const data = await res.json();
+      this.accessToken = data.access_token;
+      this.tokenExpiresAt = Date.now() + (data.expires_in || 3600) * 1000;
+      return this.accessToken;
+    } catch (err: any) {
+      this.logger.error(`Error fetching IGDB access token: ${err?.message || err}`);
+      return null;
+    }
+  }
+
+  private getRequestDelayMs(): number {
+    const envVal = process.env.IGDB_REQUEST_DELAY_MS;
+    if (envVal) {
+      const parsed = parseInt(envVal, 10);
+      if (!isNaN(parsed) && parsed >= 0) return parsed;
+    }
+    return 250; // IGDB allows 4 requests per second
+  }
+
+  private async execSerialized<T>(fn: () => Promise<T>): Promise<T> {
+    let release: () => void;
+    const next = new Promise<void>((res) => (release = res));
+    const prev = this.queue;
+    this.queue = next;
+    await prev;
+    try {
+      const result = await fn();
+      const delayMs = this.getRequestDelayMs();
+      if (delayMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+      return result;
+    } finally {
+      release!();
+    }
+  }
+
+  private async queryIgdb(endpoint: string, queryBody: string, maxRetries = 3): Promise<any> {
+    return this.execSerialized(async () => {
+      const { clientId } = this.getCredentials();
+      const token = await this.getAccessToken();
+      if (!clientId || !token) return null;
+
+      const url = `${this.baseUrl}/${endpoint}`;
+
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Client-ID': clientId,
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'text/plain',
+            },
+            body: queryBody,
+          });
+
+          if (res.status === 429) {
+            const waitMs = 1000 * Math.pow(2, attempt) + Math.floor(Math.random() * 500);
+            this.logger.warn(`IGDB rate limit hit (429). Retrying in ${waitMs}ms...`);
+            await new Promise((resolve) => setTimeout(resolve, waitMs));
+            continue;
+          }
+
+          if (!res.ok) {
+            this.logger.warn(`IGDB request failed (${res.status}): ${await res.text()}`);
+            return null;
+          }
+
+          return await res.json();
+        } catch (err: any) {
+          if (attempt === maxRetries - 1) {
+            this.logger.error(`IGDB fetch error for ${endpoint}: ${err?.message || err}`);
+            return null;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 1000 * Math.pow(2, attempt)));
+        }
+      }
+      return null;
+    });
+  }
+
+  public formatImageUrl(url: string | undefined, size: 't_cover_big' | 't_1080p' | 't_720p' | 't_thumb' = 't_cover_big'): string | null {
+    if (!url) return null;
+    let formatted = url.startsWith('//') ? `https:${url}` : url;
+    formatted = formatted.replace(/\/t_[a-z0-9_]+/, `/${size}`);
+    return formatted;
+  }
+
+  public async searchGames(query: string, limit = 20): Promise<IgdbGame[]> {
+    const clean = query.replace(/"/g, '\\"').trim();
+    if (!clean) return [];
+
+    const body = `search "${clean}"; fields id, name, slug, summary, storyline, cover.url, first_release_date, total_rating, total_rating_count, rating, rating_count, genres.name, platforms.name, involved_companies.company.name, involved_companies.developer, involved_companies.publisher, game_modes.name, player_perspectives.name, artworks.url, screenshots.url, videos.video_id, websites.url, websites.category, age_ratings.category, age_ratings.rating; limit ${limit};`;
+
+    const data = await this.queryIgdb('games', body);
+    return Array.isArray(data) ? data : [];
+  }
+
+  public async fetchGameDetail(igdbId: number): Promise<IgdbGame | null> {
+    const body = `where id = ${igdbId}; fields id, name, slug, summary, storyline, cover.url, first_release_date, total_rating, total_rating_count, rating, rating_count, genres.name, platforms.name, involved_companies.company.name, involved_companies.developer, involved_companies.publisher, game_modes.name, player_perspectives.name, artworks.url, screenshots.url, videos.video_id, websites.url, websites.category, age_ratings.category, age_ratings.rating, franchise.name, franchises.name, similar_games.id, similar_games.name, similar_games.cover.url;`;
+
+    const data = await this.queryIgdb('games', body);
+    if (Array.isArray(data) && data.length > 0) {
+      return data[0];
+    }
+    return null;
+  }
+}
