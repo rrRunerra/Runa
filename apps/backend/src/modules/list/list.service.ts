@@ -2531,38 +2531,39 @@ export class ListService {
     if (type === 'anime') {
       items = await this.prisma.client.aquilaAnimeUserListV2.findMany({
         where: { username: username.toLowerCase() },
-        select: { anime: { select: { genres: true, format: true, startDateYear: true } } },
+        select: { anime: { select: { genres: true, format: true, startDateYear: true, status: true } } },
       });
     } else if (type === 'manga') {
       items = await this.prisma.client.aquilaMangaUserListV2.findMany({
         where: { username: username.toLowerCase() },
-        select: { manga: { select: { genres: true, format: true, startDateYear: true } } },
+        select: { manga: { select: { genres: true, format: true, startDateYear: true, status: true } } },
       });
     } else if (type === 'movie') {
       items = await this.prisma.client.aquilaMovieUserListV2.findMany({
         where: { username: username.toLowerCase() },
-        select: { movie: { select: { genres: true, releaseDateYear: true } } },
+        select: { movie: { select: { genres: true, releaseDateYear: true, status: true } } },
       });
     } else if (type === 'tv') {
       items = await this.prisma.client.aquilaTvUserListV2.findMany({
         where: { username: username.toLowerCase() },
-        select: { tv: { select: { genres: true, firstAiredYear: true } } },
+        select: { tv: { select: { genres: true, firstAiredYear: true, status: true } } },
       });
     } else if (type === 'game') {
       items = await this.prisma.client.aquilaGameUserListV2.findMany({
         where: { username: username.toLowerCase() },
-        select: { game: { select: { genres: true, releaseDateYear: true } } },
+        select: { game: { select: { genres: true, releaseDateYear: true, status: true } } },
       });
     } else if (type === 'book') {
       items = await this.prisma.client.aquilaBookUserListV2.findMany({
         where: { username: username.toLowerCase() },
-        select: { book: { select: { genres: true, releaseDateYear: true } } },
+        select: { book: { select: { genres: true, releaseDateYear: true, status: true } } },
       });
     }
 
     const genresSet = new Set<string>();
     const formatsSet = new Set<string>();
     const yearsSet = new Set<number>();
+    const statusesSet = new Set<string>();
 
     items.forEach((item: any) => {
       const media = item.anime || item.manga || item.movie || item.tv || item.game || item.book;
@@ -2571,6 +2572,7 @@ export class ListService {
         media.genres.forEach((g: string) => genresSet.add(g));
       }
       if (media.format) formatsSet.add(media.format);
+      if (media.status) statusesSet.add(media.status);
       const year = media.startDateYear ?? media.releaseDateYear ?? media.firstAiredYear;
       if (year) yearsSet.add(year);
     });
@@ -2579,6 +2581,7 @@ export class ListService {
       genres: Array.from(genresSet).sort(),
       formats: Array.from(formatsSet).sort(),
       years: Array.from(yearsSet).sort((a, b) => b - a),
+      statuses: Array.from(statusesSet).sort(),
     };
   }
 

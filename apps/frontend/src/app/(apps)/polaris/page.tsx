@@ -12,9 +12,10 @@ import { rrApps } from "@/../config/rrApps";
 import { hasPermission } from "@runa/permissions";
 import type { Constellation } from "@/types/constellation";
 import { useBookmarks } from "@/hooks/useBookmarks";
-import { Sparkles, Star } from "lucide-react";
+import { Sparkles, Star, Calendar as CalendarIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
+import { RrCalendarModal } from "@/components/rrComponents/polaris/calendar/RrCalendarModal";
 
 const constellations = REFERENCE_CONSTELLATIONS;
 
@@ -37,7 +38,7 @@ export default function Dash() {
   const starMapRef = useRef<StarMapHandle>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const { data: session, status } = useSession();
-  
+
   const greetings = [
     t("polaris.greetings.hey", "Hey"),
     t("polaris.greetings.hi", "Hi"),
@@ -49,6 +50,7 @@ export default function Dash() {
 
   const [greetingIndex, setGreetingIndex] = useState(0);
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const navigatedRef = useRef(false);
 
   useEffect(() => {
@@ -84,16 +86,18 @@ export default function Dash() {
       ? (session.user.displayName ?? session.user.username)
       : null;
 
-  const visibleReferenceConstellations = constellations.filter((constellation: Constellation): boolean => {
-    const app = rrApps.find(
-      (a) =>
-        a.name.toLowerCase() === constellation.id.toLowerCase() ||
-        a.href === constellation.redirect
-    );
-    if (!app) return true;
-    if (!app.permissions || app.permissions.length === 0) return true;
-    return hasPermission(session?.user?.permissions, app.permissions, "any");
-  });
+  const visibleReferenceConstellations = constellations.filter(
+    (constellation: Constellation): boolean => {
+      const app = rrApps.find(
+        (a) =>
+          a.name.toLowerCase() === constellation.id.toLowerCase() ||
+          a.href === constellation.redirect,
+      );
+      if (!app) return true;
+      if (!app.permissions || app.permissions.length === 0) return true;
+      return hasPermission(session?.user?.permissions, app.permissions, "any");
+    },
+  );
 
   const allConstellations = [
     ...visibleReferenceConstellations,
@@ -117,7 +121,7 @@ export default function Dash() {
     const constellationId = params.get("constellation");
     if (constellationId && allConstellations.length > 0) {
       const matched = allConstellations.find(
-        (c) => c.id.toLowerCase() === constellationId.toLowerCase()
+        (c) => c.id.toLowerCase() === constellationId.toLowerCase(),
       );
       if (matched) {
         navigatedRef.current = true;
@@ -150,14 +154,17 @@ export default function Dash() {
           {/* World Space Content Container - anchored at (0,0) of the universe */}
           <div className="absolute top-0 left-0 w-0 h-0 overflow-visible pointer-events-none">
             {/* Hero Section - Centered */}
-            <section className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center text-center w-[900px] z-10">
+            <section className="absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center text-center w-225 z-10">
               <h1 className="text-5xl md:text-7xl font-bold text-foreground tracking-widest opacity-90 mb-2 drop-shadow-lg select-none">
                 {greetings[greetingIndex]}
                 {", "}
                 {name}
               </h1>
               <h2 className="text-xl md:text-2xl text-muted-foreground font-light tracking-[0.2em] uppercase mb-4 drop-shadow-md select-none">
-                {t("polaris.explorePrompt", "What would you like to explore today?")}
+                {t(
+                  "polaris.explorePrompt",
+                  "What would you like to explore today?",
+                )}
               </h2>
               <div className="flex flex-wrap justify-center gap-3 mt-4 pointer-events-auto">
                 {allConstellations.map((constellation) => (
@@ -185,19 +192,36 @@ export default function Dash() {
         </StarMap>
       )}
 
-      {/* Floating Action Button (FAB) in the bottom-right corner to launch the Builder */}
-      <Button
-        onClick={() => setIsBuilderOpen(true)}
-        className="fixed bottom-6 right-6 z-40 h-12 rounded-full px-6 bg-background/80 hover:bg-accent border border-border text-foreground backdrop-blur-md shadow-lg transition-all duration-300 hover:scale-105 group"
-      >
-        <Sparkles className="size-4 mr-2 group-hover:animate-pulse" />
-        {t("polaris.constellationWorkspace", "Constellation Workspace")}
-      </Button>
+      {/* Floating Action Buttons in the bottom-right corner */}
+      <div className="fixed bottom-6 right-6 z-40 flex items-center gap-3">
+        <Button
+          onClick={() => setIsCalendarOpen(true)}
+          className="h-12 rounded-full px-5 bg-background/80 hover:bg-accent border border-border text-foreground backdrop-blur-md shadow-lg transition-all duration-300 hover:scale-105 group"
+        >
+          <CalendarIcon className="size-4 mr-2 text-primary" />
+          {t("polaris.calendar.calendar")}
+        </Button>
+
+        <Button
+          onClick={() => setIsBuilderOpen(true)}
+          className="h-12 rounded-full px-6 bg-background/80 hover:bg-accent border border-border text-foreground backdrop-blur-md shadow-lg transition-all duration-300 hover:scale-105 group"
+        >
+          <Sparkles className="size-4 mr-2 group-hover:animate-pulse" />
+          {t("polaris.constellationWorkspace")}
+        </Button>
+      </div>
 
       {isBuilderOpen && (
         <RrConstellationBuilderModal
           open={isBuilderOpen}
           onOpenChange={setIsBuilderOpen}
+        />
+      )}
+
+      {isCalendarOpen && (
+        <RrCalendarModal
+          open={isCalendarOpen}
+          onOpenChange={setIsCalendarOpen}
         />
       )}
     </div>

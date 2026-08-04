@@ -23,19 +23,28 @@ describe("ConnectionLoader", () => {
         DISCORD_CLIENT_SECRET: "discord-secret",
         TRAKT_CLIENT_ID: "trakt-id",
         TRAKT_CLIENT_SECRET: "trakt-secret",
+        GOOGLE_CLIENT_ID: "google-id",
+        GOOGLE_CLIENT_SECRET: "google-secret",
+        APPLE_CLIENT_ID: "apple-id",
+        APPLE_CLIENT_SECRET: "apple-secret",
+        XIAOMI_CLIENT_ID: "xiaomi-id",
+        XIAOMI_CLIENT_SECRET: "xiaomi-secret",
       },
     };
 
     const loader = new ConnectionLoader(mockDeps);
     const loaded = await loader.loadConnections();
 
-    // Check that our five provider classes are loaded successfully
-    expect(loaded.size).toBe(5);
+    // Check that our provider classes are loaded successfully
+    expect(loaded.size).toBe(8);
     expect(loaded.has(ConnectionProvider.ANILIST)).toBe(true);
     expect(loaded.has(ConnectionProvider.MAL)).toBe(true);
     expect(loaded.has(ConnectionProvider.SIMKL)).toBe(true);
     expect(loaded.has(ConnectionProvider.DISCORD)).toBe(true);
     expect(loaded.has(ConnectionProvider.TRAKT)).toBe(true);
+    expect(loaded.has(ConnectionProvider.GOOGLE)).toBe(true);
+    expect(loaded.has(ConnectionProvider.APPLE)).toBe(true);
+    expect(loaded.has(ConnectionProvider.XIAOMI)).toBe(true);
 
     const anilist = loader.getConnection(ConnectionProvider.ANILIST);
     expect(anilist).toBeDefined();

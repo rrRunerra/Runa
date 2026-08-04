@@ -97,6 +97,24 @@ function formatNumber(num: number | undefined | null): string {
   return num.toString();
 }
 
+function isValidHttpUrl(urlStr: string | undefined | null): boolean {
+  if (!urlStr || typeof urlStr !== "string") return false;
+  try {
+    const parsed = new URL(urlStr);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function safeTruncate(text: string | undefined | null, maxLength: number, fallback = ""): string {
+  if (!text) return fallback;
+  const str = String(text).trim();
+  if (!str) return fallback;
+  if (str.length <= maxLength) return str;
+  return `${str.substring(0, Math.max(0, maxLength - 3))}...`;
+}
+
 function isTikTokUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
@@ -665,24 +683,30 @@ Download and send videos from TikTok, Instagram, and YouTube Shorts.
       if (tikwmResult) {
         const { info: tikwmInfo, files: tikwmFiles } = tikwmResult;
         const displayInfo = tikwmInfo;
-        const title = displayInfo.title || "Social Media Video";
+        const rawTitle = displayInfo.title || "Social Media Video";
         const descriptionText = displayInfo.description
-          ? (displayInfo.description.length > 500 ? `${displayInfo.description.substring(0, 497)}...` : displayInfo.description)
+          ? safeTruncate(displayInfo.description, 500)
           : "No description provided.";
+        const title = safeTruncate(`${platform.icon} ${rawTitle}`, 256, `${platform.icon} Social Media Video`);
 
         const embed = new EmbedBuilder()
           .setColor(platform.color)
-          .setTitle(`${platform.icon} ${title}`)
-          .setURL(url)
-          .setDescription(`${descriptionText}\n\n🔗 [Original Video Link](${url})`)
+          .setTitle(title);
+
+        if (isValidHttpUrl(url)) {
+          embed.setURL(url);
+        }
+
+        const userAvatar = interaction.user.displayAvatarURL();
+        embed.setDescription(`${descriptionText}\n\n🔗 [Original Video Link](${url})`)
           .setTimestamp()
           .setFooter({
-            text: `Requested by ${interaction.user.username} • via ${platform.name}`,
-            iconURL: interaction.user.displayAvatarURL(),
+            text: safeTruncate(`Requested by ${interaction.user.username} • via ${platform.name}`, 2048),
+            iconURL: isValidHttpUrl(userAvatar) ? userAvatar : undefined,
           });
 
-        if (displayInfo.thumbnail) {
-          embed.setThumbnail(displayInfo.thumbnail);
+        if (isValidHttpUrl(displayInfo.thumbnail)) {
+          embed.setThumbnail(displayInfo.thumbnail!);
         }
 
         embed.addFields(
@@ -751,15 +775,22 @@ Download and send videos from TikTok, Instagram, and YouTube Shorts.
           instagramCobaltFiles = cobaltResult.files;
         } else {
           if (errStr.includes("There is no video in this post")) {
+            const title = safeTruncate(`${platform.icon} Instagram Post`, 256);
+            const userAvatar = interaction.user.displayAvatarURL();
+
             const embed = new EmbedBuilder()
               .setColor(platform.color)
-              .setTitle(`${platform.icon} Instagram Post`)
-              .setURL(url)
-              .setDescription(`🔗 [Original Post Link](${url})\n\n⚠️ Instagram image/carousel posts cannot be attached directly because download scrapers are currently unavailable.`)
+              .setTitle(title);
+
+            if (isValidHttpUrl(url)) {
+              embed.setURL(url);
+            }
+
+            embed.setDescription(`🔗 [Original Post Link](${url})\n\n⚠️ Instagram image/carousel posts cannot be attached directly because download scrapers are currently unavailable.`)
               .setTimestamp()
               .setFooter({
-                text: `Requested by ${interaction.user.username} • via ${platform.name}`,
-                iconURL: interaction.user.displayAvatarURL(),
+                text: safeTruncate(`Requested by ${interaction.user.username} • via ${platform.name}`, 2048),
+                iconURL: isValidHttpUrl(userAvatar) ? userAvatar : undefined,
               });
 
             await interaction.editReply({
@@ -778,15 +809,22 @@ Download and send videos from TikTok, Instagram, and YouTube Shorts.
     }
 
     if (isInstagramCobaltFallback) {
+      const title = safeTruncate(`${platform.icon} Instagram Post`, 256);
+      const userAvatar = interaction.user.displayAvatarURL();
+
       const embed = new EmbedBuilder()
         .setColor(platform.color)
-        .setTitle(`${platform.icon} Instagram Post`)
-        .setURL(url)
-        .setDescription(`🔗 [Original Post Link](${url})`)
+        .setTitle(title);
+
+      if (isValidHttpUrl(url)) {
+        embed.setURL(url);
+      }
+
+      embed.setDescription(`🔗 [Original Post Link](${url})`)
         .setTimestamp()
         .setFooter({
-          text: `Requested by ${interaction.user.username} • via ${platform.name}`,
-          iconURL: interaction.user.displayAvatarURL(),
+          text: safeTruncate(`Requested by ${interaction.user.username} • via ${platform.name}`, 2048),
+          iconURL: isValidHttpUrl(userAvatar) ? userAvatar : undefined,
         });
 
       try {
@@ -1024,24 +1062,30 @@ Download and send videos from TikTok, Instagram, and YouTube Shorts.
     }
 
     const displayInfo = items[0] || info;
-    const title = displayInfo.title || "Social Media Video";
+    const rawTitle = displayInfo.title || "Social Media Video";
     const descriptionText = displayInfo.description
-      ? (displayInfo.description.length > 500 ? `${displayInfo.description.substring(0, 497)}...` : displayInfo.description)
+      ? safeTruncate(displayInfo.description, 500)
       : "No description provided.";
+    const title = safeTruncate(`${platform.icon} ${rawTitle}`, 256, `${platform.icon} Social Media Video`);
 
     const embed = new EmbedBuilder()
       .setColor(platform.color)
-      .setTitle(`${platform.icon} ${title}`)
-      .setURL(url)
-      .setDescription(`${descriptionText}\n\n🔗 [Original Video Link](${url})`)
+      .setTitle(title);
+
+    if (isValidHttpUrl(url)) {
+      embed.setURL(url);
+    }
+
+    const userAvatar = interaction.user.displayAvatarURL();
+    embed.setDescription(`${descriptionText}\n\n🔗 [Original Video Link](${url})`)
       .setTimestamp()
       .setFooter({
-        text: `Requested by ${interaction.user.username} • via ${platform.name}`,
-        iconURL: interaction.user.displayAvatarURL(),
+        text: safeTruncate(`Requested by ${interaction.user.username} • via ${platform.name}`, 2048),
+        iconURL: isValidHttpUrl(userAvatar) ? userAvatar : undefined,
       });
 
-    if (displayInfo.thumbnail) {
-      embed.setThumbnail(displayInfo.thumbnail);
+    if (isValidHttpUrl(displayInfo.thumbnail)) {
+      embed.setThumbnail(displayInfo.thumbnail!);
     }
 
     embed.addFields(

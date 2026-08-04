@@ -190,3 +190,39 @@ export async function batchUpdateUserPermissions(
     return { success: false, error: errorMessage };
   }
 }
+
+export async function batchUpdateUserStorageLimit(
+  userIds: string[],
+  maxStorageBytes: number
+): Promise<BatchUpdatePermissionsResult> {
+  const session = await auth();
+  if (!session || !hasPermission(session.user.permissions, RunaFlags.ADMINISTRATOR)) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  if (userIds.length === 0) {
+    return { success: true };
+  }
+
+  try {
+    await prisma.user.updateMany({
+      where: { id: { in: userIds } },
+      data: {
+        lacertaMaxStorage: maxStorageBytes,
+      },
+    });
+
+    // Invalidate cached permissions for all updated users
+    for (const userId of userIds) {
+      const cacheKey = `user:permissions:${userId}`;
+      await cache.del(cacheKey);
+    }
+
+    return { success: true };
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : "Failed to batch update storage limits";
+    console.error("Failed to batch update storage limits:", error);
+    return { success: false, error: errorMessage };
+  }
+}
+

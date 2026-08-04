@@ -126,7 +126,16 @@ export class ConnectionController {
     @Query('state') state: string,
     @Res() res: Response,
   ): Promise<void> {
-    const [token, redirectUrl] = (state ?? '').split(':::');
+    let rawState = state ?? '';
+    try {
+      if (rawState && !rawState.includes(':::')) {
+        rawState = Buffer.from(rawState, 'base64url').toString('utf8');
+      }
+    } catch {
+      // Fallback to raw string if decoding fails
+    }
+
+    const [token, redirectUrl] = rawState.split(':::');
     const targetUrl = this.getSafeRedirectUrl(redirectUrl);
     const separator = targetUrl.includes('?') ? '&' : '?';
 

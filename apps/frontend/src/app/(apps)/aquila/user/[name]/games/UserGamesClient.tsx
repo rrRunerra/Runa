@@ -43,14 +43,6 @@ const itemVariants = {
   },
 } as const;
 
-const GAMES_PRIORITY_STATUSES = [
-  "Playing",
-  "On Hold",
-  "Completed",
-  "Dropped",
-  "Planning",
-];
-
 const SORT_OPTIONS = [
   { label: "Title", value: "title" },
   { label: "Score", value: "score" },
@@ -133,36 +125,16 @@ export default function UserGamesPage({ initialData }: { initialData?: any }) {
     initialData?.entries || [],
   );
   const [isPrivate, setIsPrivate] = useState(false);
-
-  const getInitialPriorityState = () => {
-    if (!initialData) {
-      return { index: 0, cursor: undefined, hasMore: true };
-    }
-    const len = initialData.entries?.length || 0;
-    const pageInfo = initialData.pageInfo;
-    const initialHasMore = pageInfo?.hasMore ?? len >= 30;
-    const initialNextCursor = pageInfo?.nextCursor ?? null;
-
-    if (!initialHasMore) {
-      return { index: 1, cursor: undefined, hasMore: true };
-    } else {
-      return { index: 0, cursor: initialNextCursor, hasMore: true };
-    }
-  };
-
-  const initialPState = getInitialPriorityState();
   const [nextCursor, setNextCursor] = useState<string | null | undefined>(
     initialData?.pageInfo?.nextCursor,
   );
-  const [hasMore, setHasMore] = useState(initialPState.hasMore);
+  const [hasMore, setHasMore] = useState(
+    initialData?.pageInfo?.hasMore ?? (initialData?.entries?.length || 0) >= 30,
+  );
   const [loading, setLoading] = useState(false);
   const [counts, setCounts] = useState<Record<string, number>>(
     initialData?.counts || {},
   );
-  const [priorityIdx, setPriorityIdx] = useState(initialPState.index);
-  const [priorityCursor, setPriorityCursor] = useState<
-    string | null | undefined
-  >(initialPState.cursor);
   const isFetchingRef = useRef(false);
   const isInitialMountRef = useRef(true);
 
@@ -176,7 +148,6 @@ export default function UserGamesPage({ initialData }: { initialData?: any }) {
   const fetchGameList = (
     cursorToFetch?: string | null,
     isReset = false,
-    statusOverride?: string,
     signal?: AbortSignal,
   ) => {
     if (!username) return;
@@ -189,11 +160,9 @@ export default function UserGamesPage({ initialData }: { initialData?: any }) {
       headers["Authorization"] = `Bearer ${session.accessToken}`;
     }
 
-    const effectiveStatus = statusOverride ?? activeList;
-
     const queryParams = new URLSearchParams({
       limit: "30",
-      status: effectiveStatus,
+      status: activeList,
       search: debouncedSearch,
       format: filters.format || "",
       genres: Array.isArray(filters.genres) ? filters.genres.join(",") : "",
@@ -235,26 +204,8 @@ export default function UserGamesPage({ initialData }: { initialData?: any }) {
             return [...prev, ...newEntries.filter((e: any) => !seen.has(e.id))];
           });
           setCounts(data.counts || {});
-
-          if (statusOverride !== undefined && activeList === "All") {
-            if (!pageInfo.hasMore) {
-              const pIdx = GAMES_PRIORITY_STATUSES.indexOf(statusOverride);
-              const nextIdx = pIdx + 1;
-              if (nextIdx < GAMES_PRIORITY_STATUSES.length) {
-                setPriorityIdx(nextIdx);
-                setPriorityCursor(undefined);
-                setHasMore(true);
-              } else {
-                setHasMore(false);
-              }
-            } else {
-              setPriorityCursor(pageInfo.nextCursor);
-              setHasMore(true);
-            }
-          } else {
-            setHasMore(pageInfo.hasMore);
-            setNextCursor(pageInfo.nextCursor);
-          }
+          setHasMore(pageInfo.hasMore);
+          setNextCursor(pageInfo.nextCursor);
         }
       })
       .catch((err) => {
@@ -275,20 +226,9 @@ export default function UserGamesPage({ initialData }: { initialData?: any }) {
       return;
     }
     const controller = new AbortController();
-    setPriorityIdx(0);
-    setPriorityCursor(undefined);
     setNextCursor(undefined);
     setHasMore(true);
-    if (activeList === "All") {
-      fetchGameList(
-        undefined,
-        true,
-        GAMES_PRIORITY_STATUSES[0],
-        controller.signal,
-      );
-    } else {
-      fetchGameList(undefined, true, undefined, controller.signal);
-    }
+    fetchGameList(undefined, true, controller.signal);
     return () => {
       controller.abort();
     };
@@ -315,6 +255,7 @@ export default function UserGamesPage({ initialData }: { initialData?: any }) {
     "Completed",
     "Dropped",
     "Planning",
+    "Similar",
     "Sequels",
   ];
 
@@ -364,7 +305,7 @@ export default function UserGamesPage({ initialData }: { initialData?: any }) {
                 mediaType="game"
               />
 
-              {activeList !== "Sequels" && (
+              {activeList !== "Similar" && activeList !== "Sequels" && (
                 <RrUserListFilters
                   username={username}
                   mediaType="games"
@@ -380,7 +321,7 @@ export default function UserGamesPage({ initialData }: { initialData?: any }) {
               )}
             </div>
 
-            {activeList === "Sequels" ? (
+            {activeList === "Similar" || activeList === "Sequels" ? (
               <RrUserListSequelsTab username={username} mediaType="game" />
             ) : (
               <>
@@ -444,32 +385,14 @@ export default function UserGamesPage({ initialData }: { initialData?: any }) {
                   baseUrl="/aquila/games"
                   isOwner={isOwner}
                   onRefresh={() => {
-                    if (activeList === "All") {
-                      setPriorityIdx(0);
-                      setPriorityCursor(undefined);
-                      fetchGameList(
-                        undefined,
-                        true,
-                        GAMES_PRIORITY_STATUSES[0],
-                      );
-                    } else {
-                      setNextCursor(undefined);
-                      fetchGameList(undefined, true);
-                    }
+                    setNextCursor(undefined);
+                    fetchGameList(undefined, true);
                   }}
                 />
 
                 <InfiniteScroll
                   onLoadMore={() => {
-                    if (activeList === "All") {
-                      fetchGameList(
-                        priorityCursor,
-                        false,
-                        GAMES_PRIORITY_STATUSES[priorityIdx],
-                      );
-                    } else {
-                      fetchGameList(nextCursor, false);
-                    }
+                    fetchGameList(nextCursor, false);
                   }}
                   hasMore={hasMore}
                   isLoading={loading}

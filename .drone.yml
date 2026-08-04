@@ -127,6 +127,18 @@ steps:
         from_secret: TMDB_API_KEY
       LYNX_DISABLE_TRACKING:
         from_secret: LYNX_DISABLE_TRACKING
+      GOOGLE_CLIENT_ID:
+        from_secret: GOOGLE_CLIENT_ID
+      GOOGLE_CLIENT_SECRET:
+        from_secret: GOOGLE_CLIENT_SECRET
+      APPLE_CLIENT_ID:
+        from_secret: APPLE_CLIENT_ID
+      APPLE_CLIENT_SECRET:
+        from_secret: APPLE_CLIENT_SECRET
+      XIAOMI_CLIENT_ID:
+        from_secret: XIAOMI_CLIENT_ID
+      XIAOMI_CLIENT_SECRET:
+        from_secret: XIAOMI_CLIENT_SECRET
     commands:
       - rm -f .env
       - printf "INTERNAL_API_KEY=%s\n" "$INTERNAL_API_KEY" >> .env
@@ -188,6 +200,12 @@ steps:
       - printf "ANIDB_CLIENT_VER=%s\n" "$ANIDB_CLIENT_VER" >> .env
       - printf "TMDB_API_KEY=%s\n" "$TMDB_API_KEY" >> .env
       - printf "LYNX_DISABLE_TRACKING=%s\n" "$LYNX_DISABLE_TRACKING" >> .env
+      - printf "GOOGLE_CLIENT_ID=%s\n" "$GOOGLE_CLIENT_ID" >> .env
+      - printf "GOOGLE_CLIENT_SECRET=%s\n" "$GOOGLE_CLIENT_SECRET" >> .env
+      - printf "APPLE_CLIENT_ID=%s\n" "$APPLE_CLIENT_ID" >> .env
+      - printf "APPLE_CLIENT_SECRET=%s\n" "$APPLE_CLIENT_SECRET" >> .env
+      - printf "XIAOMI_CLIENT_ID=%s\n" "$XIAOMI_CLIENT_ID" >> .env
+      - printf "XIAOMI_CLIENT_SECRET=%s\n" "$XIAOMI_CLIENT_SECRET" >> .env
       - docker compose build
       - docker compose build
       - docker compose up -d

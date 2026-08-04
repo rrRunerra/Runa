@@ -37,6 +37,9 @@ model User {
     aquilaBookReviews  AquilaBookReview[]
 
     polarisBookmarks          PolarisUserBookMarks[]
+    polarisCalendarSources    PolarisCalendarSource[]
+    polarisCalendarEvents     PolarisCalendarEvent[]
+    calendarExportToken       String?                 @unique
     emailAccounts             UserEmailAccount[]
     cannedResponses           CannedResponse[]
     devices                   Device[]
@@ -107,6 +110,7 @@ model ApiKey {
 enum ConnectionLinkedTo {
     LYNX
     AQUILA
+    POLARIS
 }
 
 model Connections {
@@ -135,6 +139,10 @@ enum ConnectionProvider {
     SIMKL
     DISCORD
     TRAKT
+    GOOGLE
+    APPLE
+    XIAOMI
+    ICAL_FEED
 }
 
 model UserStats {

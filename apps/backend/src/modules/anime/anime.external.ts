@@ -631,7 +631,12 @@ export class AnimeExternal {
             'Untitled',
           format: edge.node?.format || null,
         }))
-        .filter((rel: any) => rel.type !== 'OTHER'),
+        .filter(
+          (rel: any) =>
+            rel.format === 'MUSIC' ||
+            rel.targetType === 'MUSIC' ||
+            rel.type !== 'OTHER',
+        ),
     };
   }
 }

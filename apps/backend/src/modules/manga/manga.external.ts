@@ -5,6 +5,7 @@ import { AnizipService } from 'src/providers/Anizip/anizip.service';
 import { MalService } from 'src/providers/Mal/mal.service';
 import { BangumiService } from 'src/providers/Bangumi/bangumi.service';
 import { PrismaService } from 'src/providers/database/prisma.service';
+import { mapMediaType } from '../anime/anime.external';
 
 function mapRelationType(relTypeStr?: string): string {
   if (!relTypeStr) return 'OTHER';
@@ -246,8 +247,14 @@ export class MangaExternal {
           const relNode = edge.node;
           if (!relNode) continue;
           const relType = mapRelationType(edge.relationType);
-          if (relType === 'OTHER') continue;
-          const targetType = (relNode.type || 'MANGA').toUpperCase();
+          const format = relNode.format || 'UNKNOWN';
+          const targetType = mapMediaType(relNode.type, format);
+          if (
+            relType === 'OTHER' &&
+            format !== 'MUSIC' &&
+            targetType !== 'MUSIC'
+          )
+            continue;
           relations.push({
             targetAnilistId: relNode.id,
             targetType,
@@ -257,7 +264,7 @@ export class MangaExternal {
               relNode.title?.romaji ||
               relNode.title?.native ||
               'Unknown',
-            format: relNode.format || 'UNKNOWN',
+            format,
           });
         }
       }

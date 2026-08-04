@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Shield, RefreshCw, Save, Search, AlertCircle } from "lucide-react";
+import { Shield, RefreshCw, Save, Search, AlertCircle, HardDrive } from "lucide-react";
 import { SafeUser } from "@/actions/permissionActions";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -280,38 +280,108 @@ export default function RrSingleUserEditor({
         )}
         {/* Cloud Storage Settings (Lacerta) */}
         <div className="space-y-3 pt-4 border-t border-border/60">
-          <h3 className="text-xs font-bold text-foreground/80 tracking-wider uppercase pl-1 border-l-2 border-primary/50">
-            Cloud Storage Settings (Lacerta)
-          </h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold text-foreground/80 tracking-wider uppercase pl-1 border-l-2 border-primary/50 flex items-center gap-1.5">
+              <HardDrive className="size-3.5 text-primary" />
+              Cloud Storage Settings (Lacerta)
+            </h3>
+            <span className="text-[10px] font-mono text-muted-foreground bg-muted/30 border border-border/50 px-2 py-0.5 rounded">
+              Current DB Limit: {formatBytes(user.lacertaMaxStorage)}
+            </span>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border border-border bg-card rounded-xl">
-            {/* Max Storage Input */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground/80">
-                Storage Limit (MB)
-              </label>
-              <Input
-                type="number"
-                min={1}
-                value={userStorageLimitMb}
-                onChange={(e) => handleStorageLimitChange(e.target.value)}
-                className="h-9 bg-background/50 border-border text-xs rounded-md focus-visible:ring-primary/20 focus-visible:ring-1"
-              />
-              <p className="text-[10px] text-muted-foreground">
-                Current DB Limit: {formatBytes(user.lacertaMaxStorage)}
-              </p>
+            {/* Max Storage Input & Presets */}
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-foreground/80">
+                  Storage Quota Limit
+                </label>
+                <span className="text-[11px] font-bold text-primary font-mono">
+                  {formatBytes(editedMaxStorage)}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min={1}
+                  value={userStorageLimitMb || ""}
+                  onChange={(e) => handleStorageLimitChange(e.target.value)}
+                  className="h-8.5 bg-background/50 border-border text-xs rounded-md focus-visible:ring-primary/20 focus-visible:ring-1 font-mono"
+                  placeholder="Storage in MB"
+                />
+                <span className="text-xs font-semibold text-muted-foreground shrink-0">
+                  MB
+                </span>
+              </div>
+
+              {/* Presets */}
+              <div className="space-y-1">
+                <span className="text-[10px] text-muted-foreground font-medium">Quick Presets:</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { label: "100 MB", bytes: 100 * 1024 * 1024 },
+                    { label: "500 MB", bytes: 500 * 1024 * 1024 },
+                    { label: "1 GB", bytes: 1024 * 1024 * 1024 },
+                    { label: "5 GB", bytes: 5 * 1024 * 1024 * 1024 },
+                    { label: "10 GB", bytes: 10 * 1024 * 1024 * 1024 },
+                    { label: "50 GB", bytes: 50 * 1024 * 1024 * 1024 },
+                  ].map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => setEditedMaxStorage(preset.bytes)}
+                      className={`px-2 py-0.5 text-[10px] font-semibold rounded-md border transition-all ${
+                        editedMaxStorage === preset.bytes
+                          ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                          : "bg-muted/30 border-border/70 text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            {/* Storage Usage Info */}
-            <div className="flex flex-col justify-center space-y-1 p-2 rounded-lg bg-muted/20 border border-border/50">
-              <span className="text-xs font-semibold text-foreground/80">
-                Current Storage Used
-              </span>
-              <p className="text-sm font-bold text-foreground">
-                {formatBytes(user.lacertaStorageUsed)}
-              </p>
-              <p className="text-[10px] text-muted-foreground">
-                {((user.lacertaStorageUsed / user.lacertaMaxStorage) * 100).toFixed(1)}% of limit used
-              </p>
+            {/* Storage Usage Info & Progress */}
+            <div className="flex flex-col justify-between space-y-2 p-3 rounded-lg bg-muted/20 border border-border/50">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-foreground/80">
+                  Current Storage Usage
+                </span>
+                <span className="text-xs font-bold text-foreground">
+                  {formatBytes(user.lacertaStorageUsed)}
+                </span>
+              </div>
+
+              {/* Progress bar */}
+              {(() => {
+                const limit = editedMaxStorage || user.lacertaMaxStorage || 1;
+                const percentage = Math.min(100, Math.max(0, (user.lacertaStorageUsed / limit) * 100));
+                const barColorClass =
+                  percentage > 90
+                    ? "bg-rose-500"
+                    : percentage > 75
+                    ? "bg-amber-500"
+                    : "bg-emerald-500";
+
+                return (
+                  <div className="space-y-1.5">
+                    <div className="h-2 w-full bg-muted rounded-full overflow-hidden border border-border/30">
+                      <div
+                        className={`h-full rounded-full transition-all duration-300 ${barColorClass}`}
+                        style={{ width: `${percentage.toFixed(1)}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between items-center text-[10px] text-muted-foreground">
+                      <span>{percentage.toFixed(1)}% of allocated limit used</span>
+                      <span>{(limit - user.lacertaStorageUsed > 0 ? formatBytes(limit - user.lacertaStorageUsed) : "0 MB")} remaining</span>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>

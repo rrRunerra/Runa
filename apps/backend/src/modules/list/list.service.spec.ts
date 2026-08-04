@@ -98,6 +98,7 @@ describe('ListService', () => {
     aquilaBookUserListV2: createModelMock(),
     aquilaTvWatchedEpisodeV2: {
       findUnique: jest.fn(),
+      findMany: jest.fn().mockResolvedValue([]),
       create: jest.fn(),
       delete: jest.fn(),
       upsert: jest.fn(),
@@ -128,6 +129,7 @@ describe('ListService', () => {
 
   const mockMovieService = { ensureMovie: jest.fn().mockResolvedValue({ id: 1 }) };
   const mockTvService = { ensureTv: jest.fn().mockResolvedValue({ id: 1 }) };
+  const mockAnimeService = { ensureAnime: jest.fn().mockResolvedValue({ id: 1 }) };
   const mockAnimeQueueService = { addUpsertJob: jest.fn().mockResolvedValue(undefined) };
   const mockMangaService = { ensureManga: jest.fn().mockResolvedValue({ id: 1 }) };
   const mockGameService = { ensureGame: jest.fn().mockResolvedValue({ id: 1 }) };
@@ -664,6 +666,52 @@ describe('ListService', () => {
       expect(mockAnimeQueueService.addUpsertJob).toHaveBeenCalledWith(102, {
         force: true,
         skipRelations: true,
+      });
+    });
+  });
+
+  describe('getUserListFilters', () => {
+    it('should aggregate genres, formats, years, and statuses for anime list', async () => {
+      mockPrismaClient.aquilaAnimeUserListV2.findMany.mockResolvedValue([
+        {
+          anime: {
+            genres: ['Action', 'Adventure'],
+            format: 'TV',
+            startDateYear: 2021,
+            status: 'FINISHED',
+          },
+        },
+        {
+          anime: {
+            genres: ['Action', 'Fantasy'],
+            format: 'MOVIE',
+            startDateYear: 2023,
+            status: 'RELEASING',
+          },
+        },
+      ]);
+
+      const result = await service.getUserListFilters('testuser', 'anime');
+
+      expect(mockPrismaClient.aquilaAnimeUserListV2.findMany).toHaveBeenCalledWith({
+        where: { username: 'testuser' },
+        select: {
+          anime: {
+            select: {
+              genres: true,
+              format: true,
+              startDateYear: true,
+              status: true,
+            },
+          },
+        },
+      });
+
+      expect(result).toEqual({
+        genres: ['Action', 'Adventure', 'Fantasy'],
+        formats: ['MOVIE', 'TV'],
+        years: [2023, 2021],
+        statuses: ['FINISHED', 'RELEASING'],
       });
     });
   });

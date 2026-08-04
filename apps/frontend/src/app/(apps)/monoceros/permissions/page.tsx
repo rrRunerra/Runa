@@ -13,6 +13,7 @@ import {
   getAllUsers,
   updateUserPermissions,
   batchUpdateUserPermissions,
+  batchUpdateUserStorageLimit,
   SafeUser,
 } from "@/actions/permissionActions";
 import { Button } from "@/components/ui/button";
@@ -171,6 +172,21 @@ export default function MonocerosPermissionsPage(): React.JSX.Element {
     });
   };
 
+  const handleApplyBatchStorageLimit = (maxStorageBytes: number) => {
+    if (selectedUserIds.length === 0) return;
+
+    startTransition(async () => {
+      const result = await batchUpdateUserStorageLimit(selectedUserIds, maxStorageBytes);
+      if (result.success) {
+        toast.success(`Successfully updated storage quota for ${selectedUserIds.length} users`);
+        setSelectedUserIds([]);
+        await mutate();
+      } else {
+        toast.error(result.error || "Failed to process batch storage update");
+      }
+    });
+  };
+
   const hasIndividualChanges = useMemo(() => {
     if (!activeUser) return false;
     if (activeUser.permissions.length !== editedPermissions.length) return true;
@@ -231,6 +247,7 @@ export default function MonocerosPermissionsPage(): React.JSX.Element {
             selectedUsers={selectedUsers}
             availableGroups={availableGroups}
             onApplyBatchAction={handleApplyBatchAction}
+            onApplyBatchStorageLimit={handleApplyBatchStorageLimit}
             isSaving={isPending}
           />
         ) : activeUser ? (

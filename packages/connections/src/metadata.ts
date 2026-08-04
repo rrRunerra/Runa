@@ -7,6 +7,7 @@ export enum ConnectionCapability {
   AUTH = "AUTH",
   SHOWCASE = "SHOWCASE",
   BOOKS = "BOOKS",
+  CALENDAR = "CALENDAR",
 }
 
 export interface ConnectionSearchResult {
@@ -27,7 +28,7 @@ export interface ConnectionMetadata {
   accentColor: string;
   glowColor: string;
   capabilities: ConnectionCapability[];
-  primaryApp: "aquila" | "lynx";
+  primaryApp: "aquila" | "lynx" | "polaris";
   search?(query: string, type: "ANIME" | "MANGA" | "MOVIES" | "TV_SHOWS"): Promise<ConnectionSearchResult[]>;
 }
 
@@ -264,5 +265,38 @@ export const PROVIDERS_METADATA: ConnectionMetadata[] = [
     glowColor: "shadow-[#5865f2]/10",
     capabilities: [ConnectionCapability.AUTH, ConnectionCapability.SHOWCASE],
     primaryApp: "lynx",
+  },
+  {
+    id: "google",
+    name: "Google",
+    description: "Connect your Google Account to sync profile, login, and calendar schedules.",
+    url: "https://calendar.google.com",
+    icon: "https://upload.wikimedia.org/wikipedia/commons/a/a5/Google_Calendar_icon_%282020%29.svg",
+    accentColor: "bg-[#4285f4]/10 border-[#4285f4]/20 text-[#4285f4] hover:bg-[#4285f4]/20",
+    glowColor: "shadow-[#4285f4]/10",
+    capabilities: [ConnectionCapability.AUTH, ConnectionCapability.SHOWCASE, ConnectionCapability.CALENDAR],
+    primaryApp: "polaris",
+  },
+  {
+    id: "apple",
+    name: "Apple",
+    description: "Connect your Apple ID to sync profile, login, and iCloud calendar schedules.",
+    url: "https://www.icloud.com/calendar",
+    icon: "https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg",
+    accentColor: "bg-[#0070c9]/10 border-[#0070c9]/20 text-[#0070c9] hover:bg-[#0070c9]/20",
+    glowColor: "shadow-[#0070c9]/10",
+    capabilities: [ConnectionCapability.AUTH, ConnectionCapability.SHOWCASE, ConnectionCapability.CALENDAR],
+    primaryApp: "polaris",
+  },
+  {
+    id: "xiaomi",
+    name: "Xiaomi",
+    description: "Connect your Xiaomi Mi Account to sync profile, login, and calendar schedules.",
+    url: "https://i.mi.com",
+    icon: "https://upload.wikimedia.org/wikipedia/commons/a/ae/Xiaomi_logo_%282021-%29.svg",
+    accentColor: "bg-[#ff6900]/10 border-[#ff6900]/20 text-[#ff6900] hover:bg-[#ff6900]/20",
+    glowColor: "shadow-[#ff6900]/10",
+    capabilities: [ConnectionCapability.AUTH, ConnectionCapability.SHOWCASE, ConnectionCapability.CALENDAR],
+    primaryApp: "polaris",
   },
 ];

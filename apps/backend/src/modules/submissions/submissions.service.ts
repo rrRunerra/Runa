@@ -20,6 +20,7 @@ const MEDIA_TYPE_MAP: Record<string, MediaType> = {
   tv: MediaType.TV,
   game: MediaType.GAME,
   book: MediaType.BOOK,
+  music: MediaType.MUSIC,
 };
 
 @Injectable()
