@@ -1363,7 +1363,12 @@ export default {
       "createNewCharacter": "새 캐릭터 만들기",
       "createNewStaff": "새 스태프 추가",
       "createNewStudio": "새 스튜디오 만들기"
-    }
+    },
+    "all": "전체",
+    "compact": "컴팩트",
+    "detailed": "상세",
+    "density": "밀도",
+    "filter": "필터"
   },
   "lynx": {
     "returnToSafety": "안전한 곳으로 돌아가기",

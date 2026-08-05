@@ -1363,7 +1363,12 @@ export default {
       "createNewCharacter": "创建新角色",
       "createNewStaff": "创建新工作人员",
       "createNewStudio": "创建新工作室"
-    }
+    },
+    "all": "全部",
+    "compact": "紧凑",
+    "detailed": "详细",
+    "density": "密度",
+    "filter": "筛选"
   },
   "lynx": {
     "returnToSafety": "返回安全区域",

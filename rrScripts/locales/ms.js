@@ -1363,7 +1363,12 @@ export default {
       "createNewCharacter": "Cipta Watak Baharu",
       "createNewStaff": "Cipta Ahli Staf Baharu",
       "createNewStudio": "Cipta Studio Baharu"
-    }
+    },
+    "all": "Semua",
+    "compact": "Kompak",
+    "detailed": "Terperinci",
+    "density": "Ketumpatan",
+    "filter": "Penapis"
   },
   "lynx": {
     "returnToSafety": "Kembali ke keselamatan",

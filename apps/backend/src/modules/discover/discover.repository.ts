@@ -562,7 +562,16 @@ export class DiscoverRepository {
           }),
           this.prisma.client.aquilaTvUserListV2.findMany({
             where: { username: username.toLowerCase(), status: { in: ['WATCHING', 'PLANNING'] } },
-            include: { tv: true },
+            include: {
+              tv: {
+                include: {
+                  episodes: true,
+                  seasons: {
+                    include: { episodes: true },
+                  },
+                },
+              },
+            },
           }),
           this.prisma.client.aquilaGameUserListV2.findMany({
             where: { username: username.toLowerCase(), status: { in: ['PLAYING', 'PLANNING'] } },
@@ -603,7 +612,14 @@ export class DiscoverRepository {
           this.prisma.client.aquilaMangaV2.findMany({
             where: { startDateYear: { gte: startYear, lte: endYear } },
           }),
-          this.prisma.client.aquilaTvV2.findMany(),
+          this.prisma.client.aquilaTvV2.findMany({
+            include: {
+              episodes: true,
+              seasons: {
+                include: { episodes: true },
+              },
+            },
+          }),
           this.prisma.client.aquilaMovieV2.findMany({
             where: {
               releaseDateYear: { gte: startYear, lte: endYear },
@@ -663,6 +679,7 @@ export class DiscoverRepository {
               coverImage,
               type: 'anime',
               airDate: formatDate(d),
+              airingAt: Math.floor(d.getTime() / 1000),
               event: 'premiere',
             });
           }
@@ -721,13 +738,14 @@ export class DiscoverRepository {
               coverImage,
               type: 'manga',
               airDate: formatDate(d),
+              airingAt: Math.floor(d.getTime() / 1000),
               event: 'release',
             });
           }
         }
       }
 
-      // 3. TV Shows
+      // 3. TV Shows & Episodes
       for (const item of tvList) {
         if (!item) continue;
         const title = item.titlePrimary || item.titleSecondary || item.titleNative || item.titleEnglish || item.titleRomaji || '';
@@ -746,31 +764,61 @@ export class DiscoverRepository {
               coverImage,
               type: 'tv',
               airDate: formatDate(d),
+              airingAt: Math.floor(d.getTime() / 1000),
               event: 'premiere',
             });
           }
         }
 
-        if (item.seasons && Array.isArray(item.seasons)) {
-          for (const season of item.seasons as any[]) {
-            if (season.episodes && Array.isArray(season.episodes)) {
-              for (const ep of season.episodes) {
-                if (ep.airDate) {
-                  const d = new Date(ep.airDate + 'T00:00:00Z');
-                  if (!isNaN(d.getTime()) && isWithinRange(d)) {
-                    events.push({
-                      id: item.id,
-                      title,
-                      coverImage,
-                      type: 'tv',
-                      airDate: formatDate(d),
-                      episode: ep.number || ep.episodeNumber,
-                      episodeTitle: ep.name || ep.title || undefined,
-                      event: 'airing',
-                    });
-                  }
-                }
+        // Collect episodes from direct relation or nested season relation
+        const allEpisodes: any[] = [];
+        if (Array.isArray(item.episodes) && item.episodes.length > 0) {
+          allEpisodes.push(...item.episodes);
+        }
+        if (Array.isArray(item.seasons)) {
+          for (const season of item.seasons) {
+            if (Array.isArray(season.episodes)) {
+              allEpisodes.push(...season.episodes);
+            }
+          }
+        }
+
+        const processedEpisodeKeys = new Set<string>();
+        for (const ep of allEpisodes) {
+          if (!ep) continue;
+          const epKey = `${ep.seasonNumber || 1}-${ep.episodeNumber || ep.number}`;
+          if (processedEpisodeKeys.has(epKey)) continue;
+          processedEpisodeKeys.add(epKey);
+
+          let d: Date | null = null;
+          if (ep.airstamp) {
+            d = new Date(ep.airstamp);
+          } else if (ep.airDate) {
+            d = new Date(ep.airDate);
+          }
+
+          if (d && !isNaN(d.getTime())) {
+            // Apply airTime string if available (e.g. "21:00" or "21:00:00")
+            if (ep.airTime && typeof ep.airTime === 'string') {
+              const timeParts = ep.airTime.split(':').map(Number);
+              if (timeParts.length >= 2 && !isNaN(timeParts[0]) && !isNaN(timeParts[1])) {
+                d.setUTCHours(timeParts[0], timeParts[1], timeParts[2] || 0, 0);
               }
+            }
+
+            if (isWithinRange(d)) {
+              events.push({
+                id: item.id,
+                title,
+                coverImage,
+                type: 'tv',
+                airDate: formatDate(d),
+                airingAt: Math.floor(d.getTime() / 1000),
+                season: ep.seasonNumber !== undefined ? ep.seasonNumber : ep.season,
+                episode: ep.episodeNumber || ep.number,
+                episodeTitle: ep.titlePrimary || ep.titleSecondary || ep.titleNative || ep.name || ep.title || undefined,
+                event: 'airing',
+              });
             }
           }
         }
@@ -791,6 +839,7 @@ export class DiscoverRepository {
               coverImage,
               type: 'movie',
               airDate: formatDate(d),
+              airingAt: Math.floor(d.getTime() / 1000),
               event: 'release',
             });
           }
@@ -807,6 +856,7 @@ export class DiscoverRepository {
                 coverImage,
                 type: 'movie',
                 airDate: formatDate(d),
+                airingAt: Math.floor(d.getTime() / 1000),
                 event: 'release',
               });
             }
@@ -829,6 +879,7 @@ export class DiscoverRepository {
               coverImage,
               type: 'game',
               airDate: formatDate(d),
+              airingAt: Math.floor(d.getTime() / 1000),
               event: 'release',
             });
           }
@@ -841,6 +892,7 @@ export class DiscoverRepository {
               coverImage,
               type: 'game',
               airDate: formatDate(d),
+              airingAt: Math.floor(d.getTime() / 1000),
               event: 'release',
             });
           }
@@ -857,6 +909,7 @@ export class DiscoverRepository {
                 coverImage,
                 type: 'game',
                 airDate: formatDate(d),
+                airingAt: Math.floor(d.getTime() / 1000),
                 event: 'release',
               });
             }
@@ -879,6 +932,7 @@ export class DiscoverRepository {
               coverImage,
               type: 'book',
               airDate: formatDate(d),
+              airingAt: Math.floor(d.getTime() / 1000),
               event: 'release',
             });
           }
@@ -891,6 +945,7 @@ export class DiscoverRepository {
               coverImage,
               type: 'book',
               airDate: formatDate(d),
+              airingAt: Math.floor(d.getTime() / 1000),
               event: 'release',
             });
           }
@@ -907,6 +962,7 @@ export class DiscoverRepository {
                 coverImage,
                 type: 'book',
                 airDate: formatDate(d),
+                airingAt: Math.floor(d.getTime() / 1000),
                 event: 'release',
               });
             }

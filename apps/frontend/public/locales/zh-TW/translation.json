@@ -1363,7 +1363,12 @@
       "createNewCharacter": "建立新角色",
       "createNewStaff": "建立新工作人員",
       "createNewStudio": "建立新工作室"
-    }
+    },
+    "all": "全部",
+    "compact": "精簡",
+    "detailed": "詳細",
+    "density": "密度",
+    "filter": "篩選"
   },
   "lynx": {
     "returnToSafety": "返回安全區域",

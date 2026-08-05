@@ -1363,7 +1363,12 @@
       "createNewCharacter": "新しいキャラクターを作成",
       "createNewStaff": "新しいスタッフを作成",
       "createNewStudio": "新しいスタジオを作成"
-    }
+    },
+    "all": "すべて",
+    "compact": "コンパクト",
+    "detailed": "詳細",
+    "density": "表示密度",
+    "filter": "フィルター"
   },
   "lynx": {
     "returnToSafety": "安全な場所に戻る",

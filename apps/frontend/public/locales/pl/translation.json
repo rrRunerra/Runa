@@ -1363,7 +1363,12 @@
       "createNewCharacter": "Utwórz новую postać",
       "createNewStaff": "Utwórz nowego członka personelu",
       "createNewStudio": "Utwórz nowe studio"
-    }
+    },
+    "all": "Wszystkie",
+    "compact": "Kompaktowy",
+    "detailed": "Szczegółowy",
+    "density": "Gęstość",
+    "filter": "Filtr"
   },
   "lynx": {
     "returnToSafety": "Powrót do bezpieczeństwa",

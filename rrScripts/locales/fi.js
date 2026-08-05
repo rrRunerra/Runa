@@ -1363,7 +1363,12 @@ export default {
       "createNewCharacter": "Luo uusi hahmo",
       "createNewStaff": "Luo uusi henkilökunnan jäsen",
       "createNewStudio": "Luo uusi studio"
-    }
+    },
+    "all": "Kaikki",
+    "compact": "Kompakti",
+    "detailed": "Yksityiskohtainen",
+    "density": "Tiheys",
+    "filter": "Suodatin"
   },
   "lynx": {
     "returnToSafety": "Palaa turvallisuuteen",

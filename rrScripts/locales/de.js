@@ -1363,7 +1363,12 @@ export default {
       "createNewCharacter": "Neuen Charakter erstellen",
       "createNewStaff": "Neues Teammitglied erstellen",
       "createNewStudio": "Neues Studio erstellen"
-    }
+    },
+    "all": "Alle",
+    "compact": "Kompakt",
+    "detailed": "Detailliert",
+    "density": "Dichte",
+    "filter": "Filter"
   },
   "lynx": {
     "returnToSafety": "Zurück zur Sicherheit",

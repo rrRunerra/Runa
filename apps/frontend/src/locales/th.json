@@ -1363,7 +1363,12 @@
       "createNewCharacter": "สร้างตัวละครใหม่",
       "createNewStaff": "สร้างทีมงานใหม่",
       "createNewStudio": "สร้างสตูดิโอใหม่"
-    }
+    },
+    "all": "ทั้งหมด",
+    "compact": "กะทัดรัด",
+    "detailed": "ละเอียด",
+    "density": "ความหนาแน่น",
+    "filter": "ตัวกรอง"
   },
   "lynx": {
     "returnToSafety": "กลับสู่ความปลอดภัย",

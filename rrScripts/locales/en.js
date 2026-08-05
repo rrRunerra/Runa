@@ -1364,7 +1364,12 @@ export default {
       "createNewCharacter": "Create New Character",
       "createNewStaff": "Create New Staff Member",
       "createNewStudio": "Create New Studio"
-    }
+    },
+    "all": "All",
+    "compact": "Compact",
+    "detailed": "Detailed",
+    "density": "Density",
+    "filter": "Filter"
   },
   "lynx": {
     "returnToSafety": "Návrat do bezpečí",

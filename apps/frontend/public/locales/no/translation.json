@@ -1363,7 +1363,12 @@
       "createNewCharacter": "Opprett ny karakter",
       "createNewStaff": "Opprett nytt stabsmedlem",
       "createNewStudio": "Opprett nytt studio"
-    }
+    },
+    "all": "Alle",
+    "compact": "Kompakt",
+    "detailed": "Detaljert",
+    "density": "Tetthet",
+    "filter": "Filter"
   },
   "lynx": {
     "returnToSafety": "Gå tilbake til sikkerhet",

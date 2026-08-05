@@ -1363,7 +1363,12 @@ export default {
       "createNewCharacter": "Tạo nhân vật mới",
       "createNewStaff": "Tạo nhân viên mới",
       "createNewStudio": "Tạo studio mới"
-    }
+    },
+    "all": "Tất cả",
+    "compact": "Rút gọn",
+    "detailed": "Chi tiết",
+    "density": "Mật độ",
+    "filter": "Bộ lọc"
   },
   "lynx": {
     "returnToSafety": "Quay lại an toàn",

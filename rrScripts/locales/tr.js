@@ -1363,7 +1363,12 @@ export default {
       "createNewCharacter": "Yeni Karakter Oluştur",
       "createNewStaff": "Yeni Personel Oluştur",
       "createNewStudio": "Yeni Stüdyo Oluştur"
-    }
+    },
+    "all": "Tümü",
+    "compact": "Kompakt",
+    "detailed": "Detaylı",
+    "density": "Yoğunluk",
+    "filter": "Filtre"
   },
   "lynx": {
     "returnToSafety": "Güvenli bölgeye dön",

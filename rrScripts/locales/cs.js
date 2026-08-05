@@ -1363,7 +1363,12 @@ export default {
       "createNewCharacter": "Vytvořit novou postavu",
       "createNewStaff": "Vytvořit nového člena štábu",
       "createNewStudio": "Vytvořit nové studio"
-    }
+    },
+    "all": "Vše",
+    "compact": "Kompaktní",
+    "detailed": "Detailní",
+    "density": "Hustota",
+    "filter": "Filtr"
   },
   "lynx": {
     "returnToSafety": "Návrat do bezpečí",

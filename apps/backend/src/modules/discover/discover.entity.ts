@@ -33,6 +33,7 @@ export interface CalendarItemEntity {
   type: 'anime' | 'manga' | 'tv' | 'movie' | 'game' | 'book';
   airDate: string; // YYYY-MM-DD
   airingAt?: number; // Unix timestamp (for anime countdowns)
+  season?: number; // Season number if applicable
   episode?: number; // Episode number if applicable
   episodeTitle?: string; // TV episode title if applicable
   event: 'airing' | 'release' | 'premiere';
