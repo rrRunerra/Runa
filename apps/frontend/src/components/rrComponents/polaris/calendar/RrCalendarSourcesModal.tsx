@@ -149,7 +149,7 @@ export function RrCalendarSourcesModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl rounded-2xl border-border bg-card text-card-foreground">
+      <DialogContent className="sm:max-w-xl max-w-[calc(100vw-2rem)] rounded-2xl border-border bg-card text-card-foreground overflow-hidden">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold flex items-center gap-2">
             <Radio className="size-5 text-primary" />
@@ -201,18 +201,18 @@ export function RrCalendarSourcesModal({
 
         {/* Tab 1: Active Feeds List */}
         {activeTab === "list" && (
-          <div className="space-y-4 py-2">
+          <div className="space-y-4 py-2 min-w-0 w-full">
             {/* Quick Preset Buttons */}
             <div className="grid grid-cols-2 gap-2">
               {presets.map((preset) => (
                 <button
                   key={preset.type}
                   onClick={() => handleSelectPreset(preset)}
-                  className="p-3 rounded-xl border border-border bg-background/50 hover:bg-accent/40 text-left transition-all duration-200 flex flex-col gap-1 group"
+                  className="p-3 rounded-xl border border-border bg-background/50 hover:bg-accent/40 text-left transition-all duration-200 flex flex-col gap-1 group min-w-0"
                 >
-                  <div className="flex items-center gap-2">
-                    <img src={preset.icon} alt={preset.name} className="size-4 object-contain" />
-                    <span className="text-xs font-bold text-foreground group-hover:text-primary transition-colors">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <img src={preset.icon} alt={preset.name} className="size-4 object-contain shrink-0" />
+                    <span className="text-xs font-bold text-foreground group-hover:text-primary transition-colors truncate">
                       {preset.name}
                     </span>
                   </div>
@@ -222,7 +222,7 @@ export function RrCalendarSourcesModal({
             </div>
 
             {/* Configured Sources List */}
-            <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pt-2">
+            <div className="space-y-2 max-h-60 overflow-y-auto overflow-x-hidden custom-scrollbar pt-2 min-w-0 w-full">
               {sources.length === 0 ? (
                 <div className="text-center py-6 text-xs text-muted-foreground">
                   {t("polaris.calendar.noSourcesConfigured")}
@@ -231,16 +231,21 @@ export function RrCalendarSourcesModal({
                 sources.map((source) => (
                   <div
                     key={source.id}
-                    className="p-3 rounded-xl border border-border bg-background flex items-center justify-between gap-3"
+                    className="p-3 rounded-xl border border-border bg-background flex items-center justify-between gap-3 min-w-0 w-full"
                   >
-                    <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                       <span
                         className="size-3 rounded-full shrink-0"
                         style={{ backgroundColor: source.color || "#3b82f6" }}
                       />
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <h5 className="text-xs font-bold text-foreground truncate">{source.name}</h5>
-                        <p className="text-[10px] text-muted-foreground truncate">{source.url || source.type}</p>
+                        <p
+                          className="text-[10px] text-muted-foreground truncate"
+                          title={source.url || source.type}
+                        >
+                          {source.url || source.type}
+                        </p>
                       </div>
                     </div>
 
@@ -280,7 +285,7 @@ export function RrCalendarSourcesModal({
 
         {/* Tab 2: Add Custom iCal Feed Form */}
         {activeTab === "add" && (
-          <form onSubmit={handleAddSource} className="space-y-4 py-2">
+          <form onSubmit={handleAddSource} className="space-y-4 py-2 min-w-0 w-full">
             <div className="space-y-1.5">
               <Label htmlFor="source-name" className="text-xs font-medium">
                 {t("polaris.calendar.feedName")}
@@ -350,18 +355,18 @@ export function RrCalendarSourcesModal({
 
         {/* Tab 3: Export iCal Feed URL */}
         {activeTab === "export" && (
-          <div className="space-y-4 py-2">
+          <div className="space-y-4 py-2 min-w-0 w-full">
             <p className="text-xs text-muted-foreground">
               {t("polaris.calendar.exportDescription")}
             </p>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 min-w-0 w-full">
               <Label className="text-xs font-medium">{t("polaris.calendar.exportFeedUrl")}</Label>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0 w-full">
                 <Input
                   value={exportUrl}
                   readOnly
-                  className="rounded-xl border-border text-xs font-mono select-all"
+                  className="rounded-xl border-border text-xs font-mono select-all min-w-0 flex-1"
                 />
                 <Button
                   type="button"
