@@ -226,22 +226,26 @@ export const authOptions: NextAuthOptions = {
         typeof token.iat === "number" &&
         token.iat < token.passwordChangedAt
       ) {
-        throw new Error("Token expired due to password change");
+        return { ...token, error: "TokenExpired" };
       }
 
       if (token.accessToken) {
         const expiry = getJwtExpiry(token.accessToken as string);
-        if (!expiry) {
-          throw new Error("Invalid access token");
-        }
-        if (Date.now() >= expiry) {
-          throw new Error("Access token expired");
+        if (!expiry || Date.now() >= expiry) {
+          return { ...token, error: "AccessTokenExpired" };
         }
       }
 
       return token;
     },
     async session({ session, token }) {
+      if (token?.error) {
+        return {
+          ...session,
+          error: token.error as string,
+          user: undefined as any,
+        };
+      }
       if (token) {
         session.user = {
           ...session.user,

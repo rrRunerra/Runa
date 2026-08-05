@@ -64,11 +64,16 @@ export function RrUserListSequelsTab({
     isLoading,
     mutate: mutateSequels,
   } = useSWR<{
-    items: SimilarItem[];
-    totalCount: number;
+    items?: SimilarItem[];
+    sequels?: SimilarItem[];
+    totalCount?: number;
   }>(apiUrl, fetcher, {
     revalidateOnFocus: false,
   });
+
+  const sequelsList: SimilarItem[] = Array.isArray(data)
+    ? data
+    : (data?.items ?? data?.sequels ?? []);
 
   const isOwnList =
     session?.user?.username?.toLowerCase() === username.toLowerCase();
@@ -173,7 +178,7 @@ export function RrUserListSequelsTab({
             />
           ))}
         </div>
-      ) : !data || data.items.length === 0 ? (
+      ) : sequelsList.length === 0 ? (
         <div className="text-center py-16 px-4 rounded-2xl border border-dashed border-border bg-card/40 space-y-3">
           <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
             <Sparkles className="w-6 h-6" />
@@ -188,7 +193,7 @@ export function RrUserListSequelsTab({
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
           <AnimatePresence mode="popLayout">
-            {data.items.map((item) => (
+            {sequelsList.map((item) => (
               <motion.div
                 key={`${item.id}-${item.relationType}`}
                 layout
@@ -216,14 +221,16 @@ export function RrUserListSequelsTab({
                   <div className="absolute inset-0 bg-linear-to-t from-background/90 via-background/20 to-transparent" />
 
                   {/* Base Title Attribution */}
-                  <div className="absolute bottom-2 left-2.5 right-2.5 z-10">
-                    <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-semibold truncate bg-background/80 backdrop-blur-md px-2 py-1 rounded-md border border-border">
-                      <Layers className="w-3 h-3 shrink-0" />
-                      <span className="truncate">
-                        To: {item.baseMedia.title}
-                      </span>
+                  {item.baseMedia?.title && (
+                    <div className="absolute bottom-2 left-2.5 right-2.5 z-10">
+                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground font-semibold truncate bg-background/80 backdrop-blur-md px-2 py-1 rounded-md border border-border">
+                        <Layers className="w-3 h-3 shrink-0" />
+                        <span className="truncate">
+                          To: {item.baseMedia.title}
+                        </span>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 {/* Card Content */}

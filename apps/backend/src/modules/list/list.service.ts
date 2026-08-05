@@ -2598,7 +2598,384 @@ export class ListService {
       cursor?: string;
     },
   ): Promise<any> {
-    return { sequels: [] };
+    try {
+      const cleanUsername = username.toLowerCase();
+      const typeLower = mediaType.toLowerCase();
+      const typeUpper = (
+        typeLower === 'movie' ? 'MOVIE' : typeLower.toUpperCase()
+      ) as $Enums.MediaType;
+
+      const includeInList = options?.includeInList ?? false;
+      const search = options?.search?.trim().toLowerCase();
+      const limit = options?.limit ?? 50;
+
+      // 1. Fetch user list items for the requested media type
+      let userListEntries: any[] = [];
+      if (typeLower === 'anime') {
+        userListEntries = await this.prisma.client.aquilaAnimeUserListV2.findMany({
+          where: { username: cleanUsername },
+          include: { anime: true },
+        });
+      } else if (typeLower === 'manga') {
+        userListEntries = await this.prisma.client.aquilaMangaUserListV2.findMany({
+          where: { username: cleanUsername },
+          include: { manga: true },
+        });
+      } else if (typeLower === 'tv') {
+        userListEntries = await this.prisma.client.aquilaTvUserListV2.findMany({
+          where: { username: cleanUsername },
+          include: { tv: true },
+        });
+      } else if (typeLower === 'movie') {
+        userListEntries = await this.prisma.client.aquilaMovieUserListV2.findMany({
+          where: { username: cleanUsername },
+          include: { movie: true },
+        });
+      } else if (typeLower === 'game') {
+        userListEntries = await this.prisma.client.aquilaGameUserListV2.findMany({
+          where: { username: cleanUsername },
+          include: { game: true },
+        });
+      } else if (typeLower === 'book') {
+        userListEntries = await this.prisma.client.aquilaBookUserListV2.findMany({
+          where: { username: cleanUsername },
+          include: { book: true },
+        });
+      }
+
+      if (!userListEntries || userListEntries.length === 0) {
+        return { items: [], sequels: [], totalCount: 0 };
+      }
+
+      // Map base media items & extract base media IDs
+      const baseMediaMap = new Map<number, { id: number; title: string; coverImage?: string }>();
+      const userMediaIds: number[] = [];
+
+      for (const entry of userListEntries) {
+        const media = entry.anime || entry.manga || entry.tv || entry.movie || entry.game || entry.book;
+        if (media && media.id) {
+          userMediaIds.push(media.id);
+          const title = media.titlePrimary || media.title || media.titleEnglish || media.name || 'Unknown';
+          const coverImage = media.coverImage || media.posterPath || media.posterImage || undefined;
+          baseMediaMap.set(media.id, {
+            id: media.id,
+            title,
+            coverImage,
+          });
+        }
+      }
+
+      if (userMediaIds.length === 0) {
+        return { items: [], sequels: [], totalCount: 0 };
+      }
+
+      // 2. Fetch user list entries across ALL media types to check if target media is already in list
+      const [
+        userAnimeList,
+        userMangaList,
+        userTvList,
+        userMovieList,
+        userGameList,
+        userBookList,
+      ] = await Promise.all([
+        this.prisma.client.aquilaAnimeUserListV2.findMany({ where: { username: cleanUsername }, select: { animeId: true, status: true, score: true } }),
+        this.prisma.client.aquilaMangaUserListV2.findMany({ where: { username: cleanUsername }, select: { mangaId: true, status: true, score: true } }),
+        this.prisma.client.aquilaTvUserListV2.findMany({ where: { username: cleanUsername }, select: { tvId: true, status: true, score: true } }),
+        this.prisma.client.aquilaMovieUserListV2.findMany({ where: { username: cleanUsername }, select: { movieId: true, status: true, score: true } }),
+        this.prisma.client.aquilaGameUserListV2.findMany({ where: { username: cleanUsername }, select: { gameId: true, status: true, score: true } }),
+        this.prisma.client.aquilaBookUserListV2.findMany({ where: { username: cleanUsername }, select: { bookId: true, status: true, score: true } }),
+      ]);
+
+      const userListMap = new Map<string, { status: string; score: number | null }>();
+      userAnimeList.forEach((e: any) => userListMap.set(`ANIME_${e.animeId}`, { status: e.status, score: e.score }));
+      userMangaList.forEach((e: any) => userListMap.set(`MANGA_${e.mangaId}`, { status: e.status, score: e.score }));
+      userTvList.forEach((e: any) => userListMap.set(`TV_${e.tvId}`, { status: e.status, score: e.score }));
+      userMovieList.forEach((e: any) => userListMap.set(`MOVIE_${e.movieId}`, { status: e.status, score: e.score }));
+      userGameList.forEach((e: any) => userListMap.set(`GAME_${e.gameId}`, { status: e.status, score: e.score }));
+      userBookList.forEach((e: any) => userListMap.set(`BOOK_${e.bookId}`, { status: e.status, score: e.score }));
+
+      // 3. Query AquilaMediaRelationV2 for relations
+      const rawRelations = await this.prisma.client.aquilaMediaRelationV2.findMany({
+        where: {
+          OR: [
+            { sourceType: typeUpper, sourceId: { in: userMediaIds } },
+            { targetType: typeUpper, targetId: { in: userMediaIds } },
+          ],
+        },
+      });
+
+      const invertRel = (rel: string) => {
+        if (rel === 'SEQUEL') return 'PREQUEL';
+        if (rel === 'PREQUEL') return 'SEQUEL';
+        return rel;
+      };
+
+      const targetCandidates: Array<{
+        baseMediaId: number;
+        targetType: $Enums.MediaType;
+        targetId: number;
+        relationType: string;
+      }> = [];
+
+      for (const r of rawRelations) {
+        if (r.sourceType === typeUpper && userMediaIds.includes(r.sourceId)) {
+          targetCandidates.push({
+            baseMediaId: r.sourceId,
+            targetType: r.targetType,
+            targetId: r.targetId,
+            relationType: r.type,
+          });
+        } else if (r.targetType === typeUpper && userMediaIds.includes(r.targetId)) {
+          targetCandidates.push({
+            baseMediaId: r.targetId,
+            targetType: r.sourceType,
+            targetId: r.sourceId,
+            relationType: invertRel(r.type),
+          });
+        }
+      }
+
+
+
+      // Title-based franchise matching for TV and Movies
+      if (typeLower === 'tv' || typeLower === 'movie') {
+        for (const entry of userListEntries) {
+          const media = entry.tv || entry.movie;
+          if (!media || !media.id) continue;
+
+          const baseTitle = (media.titlePrimary || media.title || media.name || media.titleSecondary || '').trim();
+          if (!baseTitle) continue;
+
+          let rootTitle = baseTitle.split(/[:\-–—]/)[0].trim();
+          if (rootTitle.length < 3 || ['the', 'a', 'an'].includes(rootTitle.toLowerCase())) {
+            rootTitle = baseTitle;
+          }
+
+          if (rootTitle.length < 3) continue;
+
+          if (typeLower === 'tv') {
+            const matchingTvs = await this.prisma.client.aquilaTvV2.findMany({
+              where: {
+                id: { notIn: userMediaIds },
+                OR: [
+                  { titlePrimary: { contains: rootTitle, mode: 'insensitive'  } },
+                  { titleSecondary: { contains: rootTitle, mode: 'insensitive' } },
+                  { titleNative: { contains: rootTitle, mode: 'insensitive' } },
+                ],
+              },
+              take: 10,
+              orderBy: { popularity: 'desc' },
+            });
+
+            for (const item of matchingTvs) {
+              targetCandidates.push({
+                baseMediaId: media.id,
+                targetType: $Enums.MediaType.TV,
+                targetId: item.id,
+                relationType: 'SIMILAR',
+              });
+            }
+          } else if (typeLower === 'movie') {
+            const matchingMovies = await this.prisma.client.aquilaMovieV2.findMany({
+              where: {
+                id: { notIn: userMediaIds },
+                OR: [
+                  { titlePrimary: { contains: rootTitle, mode: 'insensitive' } },
+                  { titleSecondary: { contains: rootTitle, mode: 'insensitive' } },
+                  { titleNative: { contains: rootTitle, mode: 'insensitive' } },
+                ],
+              },
+              take: 10,
+              orderBy: { popularity: 'desc' },
+            });
+
+            for (const item of matchingMovies) {
+              targetCandidates.push({
+                baseMediaId: media.id,
+                targetType: $Enums.MediaType.MOVIE,
+                targetId: item.id,
+                relationType: 'SIMILAR',
+              });
+            }
+          }
+        }
+      }
+
+      // Filter target candidates based on relationType option and includeInList
+      const filteredCandidates = targetCandidates.filter((cand) => {
+        if (options?.relationType && cand.relationType.toUpperCase() !== options.relationType.toUpperCase()) {
+          return false;
+        }
+        const listKey = `${cand.targetType}_${cand.targetId}`;
+        const isAlreadyInList = userListMap.has(listKey);
+        if (!includeInList && isAlreadyInList) {
+          return false;
+        }
+        return true;
+      });
+
+      // Deduplicate candidates by (targetType, targetId)
+      const uniqueCandidatesMap = new Map<string, typeof filteredCandidates[0]>();
+      for (const cand of filteredCandidates) {
+        const key = `${cand.targetType}_${cand.targetId}`;
+        if (!uniqueCandidatesMap.has(key)) {
+          uniqueCandidatesMap.set(key, cand);
+        }
+      }
+
+      const candidatesList = Array.from(uniqueCandidatesMap.values());
+
+      // 4. Fetch target media items from DB
+      const idsByType = new Map<$Enums.MediaType, number[]>();
+      for (const cand of candidatesList) {
+        const existing = idsByType.get(cand.targetType) || [];
+        existing.push(cand.targetId);
+        idsByType.set(cand.targetType, existing);
+      }
+
+      const mediaDetailsMap = new Map<string, any>();
+
+      if (idsByType.has($Enums.MediaType.ANIME)) {
+        const animes = await this.prisma.client.aquilaAnimeV2.findMany({
+          where: { id: { in: idsByType.get($Enums.MediaType.ANIME)! } },
+        });
+        animes.forEach((a: any) => mediaDetailsMap.set(`ANIME_${a.id}`, a));
+      }
+      if (idsByType.has($Enums.MediaType.MANGA)) {
+        const mangas = await this.prisma.client.aquilaMangaV2.findMany({
+          where: { id: { in: idsByType.get($Enums.MediaType.MANGA)! } },
+        });
+        mangas.forEach((m: any) => mediaDetailsMap.set(`MANGA_${m.id}`, m));
+      }
+      if (idsByType.has($Enums.MediaType.TV)) {
+        const tvs = await this.prisma.client.aquilaTvV2.findMany({
+          where: { id: { in: idsByType.get($Enums.MediaType.TV)! } },
+        });
+        tvs.forEach((t: any) => mediaDetailsMap.set(`TV_${t.id}`, t));
+      }
+      if (idsByType.has($Enums.MediaType.MOVIE)) {
+        const movies = await this.prisma.client.aquilaMovieV2.findMany({
+          where: { id: { in: idsByType.get($Enums.MediaType.MOVIE)! } },
+        });
+        movies.forEach((m: any) => mediaDetailsMap.set(`MOVIE_${m.id}`, m));
+      }
+      if (idsByType.has($Enums.MediaType.GAME)) {
+        const games = await this.prisma.client.aquilaGameV2.findMany({
+          where: { id: { in: idsByType.get($Enums.MediaType.GAME)! } },
+        });
+        games.forEach((g: any) => mediaDetailsMap.set(`GAME_${g.id}`, g));
+      }
+      if (idsByType.has($Enums.MediaType.BOOK)) {
+        const books = await this.prisma.client.aquilaBookV2.findMany({
+          where: { id: { in: idsByType.get($Enums.MediaType.BOOK)! } },
+        });
+        books.forEach((b: any) => mediaDetailsMap.set(`BOOK_${b.id}`, b));
+      }
+
+      // 5. Construct items
+      const items: any[] = [];
+
+      for (const cand of candidatesList) {
+        const mediaKey = `${cand.targetType}_${cand.targetId}`;
+        const media = mediaDetailsMap.get(mediaKey);
+        if (!media) continue;
+
+        const title =
+          media.titlePrimary ||
+          media.title ||
+          media.name ||
+          media.titleSecondary ||
+          media.titleNative ||
+          'Unknown';
+        const titleEnglish = media.titlePrimary || media.titleEnglish || media.name || media.title;
+        const titleRomaji = media.titleSecondary || media.titleRomaji;
+
+        if (search) {
+          const matchesTitle =
+            title.toLowerCase().includes(search) ||
+            (titleEnglish && titleEnglish.toLowerCase().includes(search)) ||
+            (titleRomaji && titleRomaji.toLowerCase().includes(search));
+          if (!matchesTitle) continue;
+        }
+
+        const baseMedia = baseMediaMap.get(cand.baseMediaId) || {
+          id: cand.baseMediaId,
+          title: 'User List Item',
+        };
+
+        const userEntry = userListMap.get(mediaKey);
+
+        const coverImage =
+          media.coverImage ||
+          media.posterPath ||
+          media.posterImage ||
+          media.coverUrl ||
+          undefined;
+
+        let year: number | undefined = undefined;
+        if (typeof media.startDateYear === 'number' && media.startDateYear > 0) {
+          year = media.startDateYear;
+        } else if (typeof media.releaseYear === 'number' && media.releaseYear > 0) {
+          year = media.releaseYear;
+        } else if (typeof media.publishedYear === 'number' && media.publishedYear > 0) {
+          year = media.publishedYear;
+        } else if (media.firstAirDate) {
+          const d = new Date(media.firstAirDate);
+          if (!isNaN(d.getTime())) year = d.getFullYear();
+        } else if (media.releaseDate) {
+          const d = new Date(media.releaseDate);
+          if (!isNaN(d.getTime())) year = d.getFullYear();
+        }
+
+        items.push({
+          id: media.id,
+          mediaType: cand.targetType.toLowerCase(),
+          title,
+          titleEnglish,
+          titleRomaji,
+          coverImage,
+          format: media.format ? String(media.format) : undefined,
+          status: media.status ? String(media.status) : undefined,
+          score:
+            typeof media.averageScore === 'number'
+              ? media.averageScore
+              : typeof media.averageVote === 'number'
+              ? media.averageVote
+              : typeof media.rating === 'number'
+              ? media.rating
+              : undefined,
+          episodes:
+            typeof media.episodeCount === 'number'
+              ? media.episodeCount
+              : Array.isArray(media.episodes)
+              ? media.episodes.length
+              : undefined,
+          chapters: media.chapterCount,
+          volumes: media.volumeCount,
+          year,
+          relationType: cand.relationType,
+          isAddedToList: !!userEntry,
+          userListStatus: userEntry?.status ?? null,
+          userListScore: userEntry?.score ?? null,
+          baseMedia: {
+            id: baseMedia.id,
+            title: baseMedia.title,
+            coverImage: baseMedia.coverImage,
+          },
+        });
+      }
+
+      const slicedItems = items.slice(0, limit);
+
+      return {
+        items: slicedItems,
+        sequels: slicedItems,
+        totalCount: items.length,
+      };
+    } catch (error) {
+      this.logger.error(`Error in getMediaSequels for user ${username}: ${(error as Error).message}`, (error as Error).stack);
+      return { items: [], sequels: [], totalCount: 0 };
+    }
   }
 
   // ─────────────────────────── RADARR/SONARR/EXPORT/IMPORT ───────────────────────────

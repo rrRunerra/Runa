@@ -248,7 +248,7 @@ export default function UserMoviesPage({ initialData }: { initialData?: any }) {
     document.title = `Aquila > User > ${userData?.displayName || userData?.username} > Movies List`;
   }, [userData]);
 
-  const lists = ["All", "Completed", "Dropped", "Planning"];
+  const lists = ["All", "Completed", "Dropped", "Planning", "Similar"];
 
   return (
     <motion.div

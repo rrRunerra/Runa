@@ -256,7 +256,6 @@ export default function UserGamesPage({ initialData }: { initialData?: any }) {
     "Dropped",
     "Planning",
     "Similar",
-    "Sequels",
   ];
 
   return (

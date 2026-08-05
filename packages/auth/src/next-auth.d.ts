@@ -15,6 +15,7 @@ declare module "next-auth" {
     };
     accessToken?: string;
     iat?: number;
+    error?: string;
   }
 
   interface User {
@@ -44,5 +45,6 @@ declare module "next-auth/jwt" {
     iat?: number;
     permissionsLastChecked?: number;
     permissionsCheckInterval?: number;
+    error?: string;
   }
 }
