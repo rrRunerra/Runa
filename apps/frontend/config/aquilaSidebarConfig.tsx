@@ -287,6 +287,15 @@ export const getAquilaSidebarConfig = (
           preventRedirect: false,
           icon: <List className="h-4 w-4" />,
           subtitle: connection.provider,
+          children: [
+            {
+              label: "Browse",
+              subtitle: `Browse ${connection.provider}`,
+              href: `/aquila/user/${session?.user?.username}/connections/${connection.provider.toLowerCase()}/browse`,
+              icon: <Search className="h-4 w-4" />,
+              preventRedirect: false,
+            },
+          ],
         };
       },
     ),
