@@ -194,8 +194,9 @@ export class SubmissionsService {
         malId: data.malId ? Number(data.malId) : null,
         aniDBId: data.aniDBId ? Number(data.aniDBId) : null,
         tvDBId: data.tvDBId ? Number(data.tvDBId) : null,
-        bangumiId: data.bangumiId ? Number(data.bangumiId) : null,
-        locked: true,
+        nextAiringEpisodeNumber: data.nextAiringEpisodeNumber ? Number(data.nextAiringEpisodeNumber) : null,
+        nextAiringAt: data.nextAiringAt ? new Date(data.nextAiringAt) : null,
+        locked: typeof data.locked === 'boolean' ? data.locked : true,
       };
 
       if (actionType === 'EDIT' && mediaId) {
@@ -241,7 +242,7 @@ export class SubmissionsService {
         anilistId: data.anilistId ? Number(data.anilistId) : null,
         malId: data.malId ? Number(data.malId) : null,
         mangaUpdatesId: data.mangaUpdatesId ? String(data.mangaUpdatesId) : null,
-        locked: true,
+        locked: typeof data.locked === 'boolean' ? data.locked : true,
       };
 
       if (actionType === 'EDIT' && mediaId) {
@@ -291,7 +292,7 @@ export class SubmissionsService {
         tmdbId: data.tmdbId ? Number(data.tmdbId) : null,
         traktId: data.traktId ? Number(data.traktId) : null,
         tvmazeId: data.tvmazeId ? Number(data.tvmazeId) : null,
-        locked: true,
+        locked: typeof data.locked === 'boolean' ? data.locked : true,
       };
 
       if (actionType === 'EDIT' && mediaId) {
@@ -332,7 +333,7 @@ export class SubmissionsService {
         imdbId: data.imdbId || null,
         tmdbId: data.tmdbId ? Number(data.tmdbId) : null,
         traktId: data.traktId ? Number(data.traktId) : null,
-        locked: true,
+        locked: typeof data.locked === 'boolean' ? data.locked : true,
       };
 
       if (actionType === 'EDIT' && mediaId) {
@@ -383,7 +384,7 @@ export class SubmissionsService {
         steamAppId: data.steamAppId ? Number(data.steamAppId) : null,
         giantbombId: data.giantbombId || null,
         vndbId: data.vndbId || null,
-        locked: true,
+        locked: typeof data.locked === 'boolean' ? data.locked : true,
       };
 
       if (actionType === 'EDIT' && mediaId) {
@@ -434,7 +435,7 @@ export class SubmissionsService {
         synonyms: Array.isArray(data.synonyms) ? data.synonyms : [],
         isAdult: typeof data.isAdult === 'boolean' ? data.isAdult : false,
         googleBookId: data.googleBookId || `custom_${Date.now()}`,
-        locked: true,
+        locked: typeof data.locked === 'boolean' ? data.locked : true,
       };
 
       if (actionType === 'EDIT' && mediaId) {
@@ -448,6 +449,7 @@ export class SubmissionsService {
       throw new BadRequestException(`Unsupported mediaType: ${mediaType}`);
     }
 
+    await this.saveEpisodes(type, targetMediaId, data.episodes);
     await this.saveCharacters(type, targetMediaId, data.characters);
     await this.saveStaff(type, targetMediaId, data.staff);
     await this.saveStudios(type, targetMediaId, data.studiosList || data.studiosData);
@@ -819,4 +821,68 @@ export class SubmissionsService {
       }).catch(() => null);
     }
   }
+
+  private async saveEpisodes(mediaType: string, mediaId: number, episodes: any[]) {
+    if (!Array.isArray(episodes) || episodes.length === 0) return;
+    const type = mediaType.toLowerCase();
+
+    if (type === 'anime') {
+      await this.prisma.client.aquilaAnimeEpisode.deleteMany({ where: { animeId: mediaId } }).catch(() => null);
+      for (const ep of episodes) {
+        const epNum = Number(ep.number ?? ep.episodeNumber) || 1;
+        const epTypeStr = String(ep.type || ep.episodeType || 'REGULAR').toUpperCase();
+        await this.prisma.client.aquilaAnimeEpisode.create({
+          data: {
+            animeId: mediaId,
+            number: epNum,
+            type: epTypeStr as any,
+            titlePrimary: ep.titlePrimary || ep.title || `Episode ${epNum}`,
+            titleSecondary: ep.titleSecondary || null,
+            titleNative: ep.titleNative || null,
+            description: ep.description || ep.overview || null,
+            duration: ep.duration ? Number(ep.duration) : null,
+            airDate: ep.airDate ? new Date(ep.airDate) : null,
+            thumbnail: ep.thumbnail || ep.image || null,
+            isFiller: typeof ep.isFiller === 'boolean' ? ep.isFiller : false,
+            isRecap: typeof ep.isRecap === 'boolean' ? ep.isRecap : false,
+            opStart: ep.opStart != null ? Number(ep.opStart) : null,
+            opEnd: ep.opEnd != null ? Number(ep.opEnd) : null,
+            edStart: ep.edStart != null ? Number(ep.edStart) : null,
+            edEnd: ep.edEnd != null ? Number(ep.edEnd) : null,
+            recapStart: ep.recapStart != null ? Number(ep.recapStart) : null,
+            recapEnd: ep.recapEnd != null ? Number(ep.recapEnd) : null,
+          },
+        }).catch(() => null);
+      }
+    } else if (type === 'tv') {
+      await this.prisma.client.aquilaTvEpisodeV2.deleteMany({ where: { tvId: mediaId } }).catch(() => null);
+      for (const ep of episodes) {
+        const epNum = Number(ep.number ?? ep.episodeNumber) || 1;
+        const seasonNum = Number(ep.seasonNumber ?? ep.seasonNum) || 1;
+        await this.prisma.client.aquilaTvEpisodeV2.create({
+          data: {
+            tvId: mediaId,
+            seasonNumber: seasonNum,
+            episodeNumber: epNum,
+            titlePrimary: ep.titlePrimary || ep.title || `Episode ${epNum}`,
+            titleSecondary: ep.titleSecondary || null,
+            titleNative: ep.titleNative || null,
+            description: ep.description || ep.overview || null,
+            duration: ep.duration ? Number(ep.duration) : null,
+            airDate: ep.airDate ? new Date(ep.airDate) : null,
+            thumbnail: ep.thumbnail || ep.image || null,
+            isFiller: typeof ep.isFiller === 'boolean' ? ep.isFiller : false,
+            isRecap: typeof ep.isRecap === 'boolean' ? ep.isRecap : false,
+            opStart: ep.opStart != null ? Number(ep.opStart) : null,
+            opEnd: ep.opEnd != null ? Number(ep.opEnd) : null,
+            edStart: ep.edStart != null ? Number(ep.edStart) : null,
+            edEnd: ep.edEnd != null ? Number(ep.edEnd) : null,
+            recapStart: ep.recapStart != null ? Number(ep.recapStart) : null,
+            recapEnd: ep.recapEnd != null ? Number(ep.recapEnd) : null,
+          },
+        }).catch(() => null);
+      }
+    }
+  }
 }
+

@@ -60,7 +60,13 @@ export function RrMediaReviewFormModal({
   const { t } = useTranslation();
   const { data: session } = useSession();
 
-  const [score, setScore] = useState<number>(10);
+  const isGame =
+    mediaType === MediaType.GAME ||
+    (mediaType as string) === "game" ||
+    (mediaType as string) === "GAME";
+  const maxScore = isGame ? 100 : 10;
+
+  const [score, setScore] = useState<number>(isGame ? 70 : 7);
   const [summary, setSummary] = useState<string>("");
   const [body, setBody] = useState<string>("");
   const [isSpoiler, setIsSpoiler] = useState<boolean>(false);
@@ -74,13 +80,13 @@ export function RrMediaReviewFormModal({
       setBody(existingReview.body);
       setIsSpoiler(existingReview.isSpoiler);
     } else {
-      setScore(10);
+      setScore(isGame ? 70 : 7);
       setSummary("");
       setBody("");
       setIsSpoiler(false);
     }
     setErrorMsg(null);
-  }, [existingReview, isOpen]);
+  }, [existingReview, isOpen, isGame]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,8 +112,21 @@ export function RrMediaReviewFormModal({
     }
 
     const payload = isEdit
-      ? { mediaType, summary: summary.trim(), body: body.trim(), score, isSpoiler }
-      : { mediaType, mediaId, summary: summary.trim(), body: body.trim(), score, isSpoiler };
+      ? {
+          mediaType,
+          summary: summary.trim(),
+          body: body.trim(),
+          score,
+          isSpoiler,
+        }
+      : {
+          mediaType,
+          mediaId,
+          summary: summary.trim(),
+          body: body.trim(),
+          score,
+          isSpoiler,
+        };
 
     try {
       const res = await fetch(url, {
@@ -136,7 +155,10 @@ export function RrMediaReviewFormModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && !loading && onClose()}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => !open && !loading && onClose()}
+    >
       <DialogContent className="max-w-2xl sm:max-w-3xl w-full rounded-3xl bg-card border-border p-7 sm:p-8 shadow-2xl">
         <DialogHeader className="space-y-1.5">
           <DialogTitle className="text-2xl font-extrabold text-foreground">
@@ -155,22 +177,72 @@ export function RrMediaReviewFormModal({
           )}
 
           {/* Rating / Score Selection */}
-          <div className="space-y-2.5">
-            <Label className="text-sm font-bold text-foreground flex items-center gap-1.5">
-              <Star className="size-4.5 text-amber-400 fill-amber-400" />
-              {t("aquila.score")}: <span className="font-extrabold text-base text-primary">{score} / 10</span>
-            </Label>
-            <div className="grid grid-cols-5 sm:grid-cols-10 gap-2 w-full pt-1">
-              {Array.from({ length: 10 }, (_, i) => i + 1).map((val) => (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                <Star className="size-4.5 text-amber-400 fill-amber-400" />
+                {t("aquila.score")}:
+              </Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  type="number"
+                  min={0}
+                  max={maxScore}
+                  step={1}
+                  value={score}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    if (raw === "") {
+                      setScore(0);
+                      return;
+                    }
+                    const val = Math.min(
+                      maxScore,
+                      Math.max(0, Number(raw) || 0),
+                    );
+                    setScore(val);
+                  }}
+                  className="w-20 h-9 text-center font-extrabold text-base bg-card border-border/40 focus:border-primary"
+                />
+                <span className="text-sm font-semibold text-muted-foreground">
+                  / {maxScore}
+                </span>
+              </div>
+            </div>
+
+            {/* Range Slider */}
+            <div className="flex items-center gap-3 px-1">
+              <span className="text-xs font-semibold text-muted-foreground">
+                0
+              </span>
+              <input
+                type="range"
+                min={0}
+                max={maxScore}
+                step={1}
+                value={score}
+                onChange={(e) => setScore(Number(e.target.value))}
+                className="w-full accent-primary h-2 bg-muted rounded-lg appearance-none cursor-pointer"
+              />
+              <span className="text-xs font-semibold text-muted-foreground">
+                {maxScore}
+              </span>
+            </div>
+
+            {/* Preset Buttons */}
+            <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5 w-full pt-1">
+              {Array.from({ length: 10 }, (_, i) =>
+                isGame ? (i + 1) * 10 : i + 1,
+              ).map((val) => (
                 <Button
                   key={val}
                   type="button"
                   variant={score === val ? "default" : "outline"}
                   size="sm"
-                  className={`h-11 w-full rounded-xl font-bold text-sm cursor-pointer transition-all ${
+                  className={`h-8 w-full rounded-xl font-bold text-xs cursor-pointer transition-all ${
                     score === val
-                      ? "bg-primary text-primary-foreground shadow-md scale-105"
-                      : "bg-card border-border/40 hover:bg-accent/20"
+                      ? "bg-primary text-primary-foreground shadow-xs scale-105"
+                      : "bg-card border-border/30 hover:bg-accent/20 text-muted-foreground"
                   }`}
                   onClick={() => setScore(val)}
                 >
@@ -182,7 +254,10 @@ export function RrMediaReviewFormModal({
 
           {/* Summary Input */}
           <div className="space-y-2">
-            <Label htmlFor="review-summary" className="text-sm font-bold text-foreground">
+            <Label
+              htmlFor="review-summary"
+              className="text-sm font-bold text-foreground"
+            >
               {t("aquila.summary")}
             </Label>
             <Input
@@ -198,7 +273,10 @@ export function RrMediaReviewFormModal({
 
           {/* Body Textarea */}
           <div className="space-y-2">
-            <Label htmlFor="review-body" className="text-sm font-bold text-foreground">
+            <Label
+              htmlFor="review-body"
+              className="text-sm font-bold text-foreground"
+            >
               {t("aquila.reviewBody")}
             </Label>
             <Textarea
@@ -206,14 +284,17 @@ export function RrMediaReviewFormModal({
               value={body}
               onChange={(e) => setBody(e.target.value)}
               placeholder={t("aquila.reviewBodyPlaceholder")}
-              className="rounded-xl bg-background/60 border-border/50 text-sm p-4 min-h-[220px] resize-y leading-relaxed"
+              className="rounded-xl bg-background/60 border-border/50 text-sm p-4 min-h-55 resize-y leading-relaxed"
               required
             />
           </div>
 
           {/* Spoiler Switch */}
           <div className="flex items-center justify-between rounded-2xl bg-accent/10 p-4 border border-border/30">
-            <Label htmlFor="spoiler-toggle" className="text-sm font-semibold text-foreground cursor-pointer">
+            <Label
+              htmlFor="spoiler-toggle"
+              className="text-sm font-semibold text-foreground cursor-pointer"
+            >
               {t("aquila.containsSpoilers")}
             </Label>
             <Switch
@@ -239,7 +320,9 @@ export function RrMediaReviewFormModal({
               className="h-11 px-6 rounded-xl cursor-pointer text-xs font-bold gap-2"
             >
               {loading && <Loader2 className="size-4 animate-spin" />}
-              {existingReview ? t("aquila.updateReview") : t("aquila.submitReview")}
+              {existingReview
+                ? t("aquila.updateReview")
+                : t("aquila.submitReview")}
             </Button>
           </DialogFooter>
         </form>

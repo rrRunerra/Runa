@@ -18,6 +18,8 @@ interface RrMediaStatsDashboardProps {
   malAverageScore?: number | null;
   malFavorites?: number | null;
   malPopularity?: number | null;
+  maxScore?: number;
+  mediaType?: string;
 }
 
 const itemVariants = {
@@ -71,8 +73,13 @@ export function RrMediaStatsDashboard({
   malAverageScore,
   malFavorites,
   malPopularity,
+  maxScore,
+  mediaType,
 }: RrMediaStatsDashboardProps): React.JSX.Element {
   const { t } = useTranslation();
+
+  const effectiveMaxScore =
+    maxScore ?? (mediaType?.toLowerCase() === "game" ? 100 : 10);
 
   // Helper to translate status distribution names
   const getStatusLabel = (status: string) => {
@@ -172,7 +179,7 @@ export function RrMediaStatsDashboard({
               </span>
               <span className="text-2xl font-extrabold text-primary">
                 {localAverageScore
-                  ? `${localAverageScore.toFixed(1)} / 10`
+                  ? `${localAverageScore.toFixed(1)} / ${effectiveMaxScore}`
                   : t("aquila.notAvailable")}
               </span>
             </div>

@@ -47,6 +47,13 @@ export function RrMediaReviews({
   const { t } = useTranslation();
   const { data: session } = useSession();
 
+  const maxScore =
+    mediaType === MediaType.GAME ||
+    (mediaType as string) === "game" ||
+    (mediaType as string) === "GAME"
+      ? 100
+      : 10;
+
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingReview, setEditingReview] = useState<ReviewEntity | null>(null);
   const [revealedSpoilers, setRevealedSpoilers] = useState<
@@ -182,7 +189,7 @@ export function RrMediaReviews({
                   className="gap-1 rounded-xl px-3 py-1 text-xs font-bold"
                 >
                   <Star className="size-3.5 text-amber-400 fill-amber-400" />
-                  {avgScore} / 10
+                  {avgScore} / {maxScore}
                 </Badge>
               )}
             </h3>
@@ -223,7 +230,7 @@ export function RrMediaReviews({
                 className="gap-1 rounded-xl px-3 py-1 text-xs font-extrabold bg-card border-border/40"
               >
                 <Star className="size-3.5 text-amber-400 fill-amber-400" />
-                {userReview.score} / 10
+                {userReview.score} / {maxScore}
               </Badge>
               <Button
                 variant="ghost"
@@ -354,7 +361,7 @@ export function RrMediaReviews({
                       className="gap-1 rounded-xl px-3 py-1 text-xs font-extrabold bg-background/60 border-border/40"
                     >
                       <Star className="size-3.5 text-amber-400 fill-amber-400" />
-                      {review.score} / 10
+                      {review.score} / {maxScore}
                     </Badge>
 
                     {canDelete && (

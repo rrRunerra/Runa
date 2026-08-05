@@ -508,7 +508,7 @@ export default function GameDetailsPage(): React.JSX.Element {
                           : "N/A"}
                       </span>
                       <span className="text-xs font-semibold text-muted-foreground">
-                        / 10
+                        / 100
                       </span>
                     </div>
                   </div>
@@ -842,6 +842,8 @@ export default function GameDetailsPage(): React.JSX.Element {
                   localAverageScore={
                     game.localAverageScore ?? game.averageScore
                   }
+                  maxScore={100}
+                  mediaType="game"
                   localPopularity={game.localPopularity ?? game.popularity}
                   localFavoritesCount={
                     game.localFavoritesCount ?? game.favorites
