@@ -8,6 +8,7 @@ import {
   LacertaFlags,
   LyraFlags,
   MonocerosFlags,
+  RunaFlags,
 } from "@runa/permissions";
 
 // https://sleepopolis.com/education/constellations-stars/
@@ -104,7 +105,7 @@ export const rrApps: rrApp[] = [
     iconRightNoRing: "/monoceros/monoceros-512-right-noring.png",
     description: "Admin panel for Runa",
     descriptionShort: "Admin",
-    permissions: [MonocerosFlags.VIEW],
+    permissions: [RunaFlags.ADMINISTRATOR],
   },
 
   {

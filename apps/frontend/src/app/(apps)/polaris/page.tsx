@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import {
   EffectManagerHandle,
   CelestialEffectManager,
@@ -167,25 +168,44 @@ export default function Dash() {
                 )}
               </h2>
               <div className="flex flex-wrap justify-center gap-3 mt-4 pointer-events-auto">
-                {allConstellations.map((constellation) => (
-                  <Button
-                    key={constellation.id}
-                    variant="outline"
-                    onClick={(e) => {
-                      if (e.ctrlKey || e.metaKey) {
-                        window.location.href = constellation.redirect;
-                      } else {
-                        starMapRef.current?.navigateToConstellation(
-                          constellation.name,
-                        );
-                      }
-                    }}
-                    className="bg-background/20 text-foreground border-border hover:bg-background/40 hover:border-border/80 backdrop-blur-md rounded-xl font-medium tracking-wide transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-primary/5 cursor-pointer flex items-center gap-2 px-6 py-2.5"
-                  >
-                    <Star className="size-4 text-primary" />
-                    {constellation.name}
-                  </Button>
-                ))}
+                {allConstellations.map((constellation) => {
+                  const app = rrApps.find(
+                    (a) =>
+                      a.name.toLowerCase() === constellation.id.toLowerCase() ||
+                      a.href === constellation.redirect,
+                  );
+                  const iconSrc = app?.iconLeftRing || (constellation as any).icon;
+
+                  return (
+                    <Button
+                      key={constellation.id}
+                      variant="outline"
+                      onClick={(e) => {
+                        if (e.ctrlKey || e.metaKey) {
+                          window.location.href = constellation.redirect;
+                        } else {
+                          starMapRef.current?.navigateToConstellation(
+                            constellation.name,
+                          );
+                        }
+                      }}
+                      className="bg-background/20 text-foreground border-border hover:bg-background/40 hover:border-border/80 backdrop-blur-md rounded-xl font-medium tracking-wide transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-primary/5 cursor-pointer flex items-center gap-2.5 px-5 py-2.5"
+                    >
+                      {iconSrc ? (
+                        <Image
+                          src={iconSrc}
+                          alt={constellation.name}
+                          width={20}
+                          height={20}
+                          className="size-5 object-contain shrink-0"
+                        />
+                      ) : (
+                        <Star className="size-4 text-primary shrink-0" />
+                      )}
+                      {constellation.name}
+                    </Button>
+                  );
+                })}
               </div>
             </section>
           </div>

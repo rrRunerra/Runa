@@ -29,6 +29,8 @@ import { ChevronRight, ArrowUpRight, Bookmark, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getSafeImageUrl } from "@/lib/inputValidation";
 import React from "react";
+import { rrApps } from "@/../config/rrApps";
+import { StarConstellationModal } from "./StarConstellationModal";
 
 // Box-Muller transform for generating standard normally distributed values (mean 0, variance 1)
 function randomNormal(mean = 0, stdDev = 1): number {
@@ -106,6 +108,8 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
     ref,
   ) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    // Stores screen cursor position for reactive star repulsion physics
+    const mousePosRef = useRef<{ x: number; y: number } | null>(null);
     // Stores the screen-space head position of each active meteor, keyed by batchId-fileIndex.
     // Written in the draw loop and read by the parent via the onMeteorPositions callback.
     const meteorPositionsRef = useRef<MeteorPosition[]>([]);
@@ -221,58 +225,104 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
       isOnScreen: boolean;
     } | null>(null);
 
-    // Generate random background stars with Spooklementary-style organic Gaussian clustering
-    const backgroundStars = useRef<
-      Array<{
-        ra: number;
-        dec: number;
-        size: number;
-        opacity: number;
-        type: string;
-      }>
-    >([]);
+    // Generate random background stars with organic clustering & celestial galaxy distribution
+    interface BackgroundStar {
+      ra: number;
+      dec: number;
+      size: number;
+      opacity: number;
+      type: "circle" | "glow" | "cross";
+      color: string;
+      twinkleSpeed: number;
+      twinklePhase: number;
+      dispX: number;
+      dispY: number;
+    }
+
+    const backgroundStars = useRef<BackgroundStar[]>([]);
+    const targetStarCount = Math.max(numOfStars, 45000);
+
     if (backgroundStars.current.length === 0) {
-      const numClusters = 40;
+      const STAR_COLORS = [
+        "#ffffff",
+        "#ffffff",
+        "#ffffff",
+        "#ffffff",
+        ...rrApps.map((app) => app.color),
+      ];
+
+      const numClusters = 50;
       const clusters = Array.from({ length: numClusters }, () => ({
-        ra: Math.random() * 60 - 18,
-        dec: Math.random() * 360 - 180,
-        radiusRa: Math.random() * 12 + 4,
-        radiusDec: Math.random() * 70 + 20,
+        ra: Math.random() * 64 - 20,
+        dec: Math.random() * 370 - 185,
+        radiusRa: Math.random() * 8 + 3,
+        radiusDec: Math.random() * 45 + 15,
       }));
 
-      backgroundStars.current = Array.from({ length: numOfStars }, () => {
-        let ra, dec;
-        // 35% uniform background, 65% clustered around nebulae/dust bands
-        if (Math.random() > 0.65) {
-          ra = Math.random() * 60 - 18;
-          dec = Math.random() * 360 - 180;
-        } else {
-          const cluster = clusters[Math.floor(Math.random() * clusters.length)];
-          ra = randomNormal(cluster.ra, cluster.radiusRa * 0.4);
-          dec = randomNormal(cluster.dec, cluster.radiusDec * 0.4);
+      backgroundStars.current = Array.from({ length: targetStarCount }, () => {
+        let ra: number, dec: number;
+        const randMode = Math.random();
 
-          // Wrap dec to [-180, 180]
-          if (dec < -180) dec += 360;
-          if (dec > 180) dec -= 360;
-          // Clamp ra to [-18, 42]
-          if (ra < -18) ra = -18;
-          if (ra > 42) ra = 42;
+        if (randMode < 0.4) {
+          // 40% uniform distribution across celestial sphere
+          ra = Math.random() * 68 - 22;
+          dec = Math.random() * 390 - 195;
+        } else if (randMode < 0.8) {
+          // 40% along Galactic Plane curve
+          ra = Math.random() * 68 - 22;
+          const bandCenterDec =
+            35 * Math.sin(ra * 0.12) + (Math.random() * 20 - 10);
+          dec = randomNormal(bandCenterDec, 28);
+        } else {
+          // 20% clustered around star formation nebulae
+          const cluster =
+            clusters[Math.floor(Math.random() * clusters.length)];
+          ra = randomNormal(cluster.ra, cluster.radiusRa * 0.5);
+          dec = randomNormal(cluster.dec, cluster.radiusDec * 0.5);
         }
 
-        // Spooklementary style: tiny, varying sizes, mostly circles
-        const size =
-          Math.random() > 0.95
-            ? Math.random() * 1.2 + 0.8 // Few slightly larger stars
-            : Math.random() * 0.6 + 0.2; // Mostly very tiny stars
+        // Clamp RA & Dec to outer limits
+        if (dec < -195) dec = -195;
+        if (dec > 195) dec = 195;
+        if (ra < -22) ra = -22;
+        if (ra > 46) ra = 46;
 
-        const opacity = Math.random() * 0.65 + 0.05;
+        // Determine Star Visual Type & Scale
+        const typeRoll = Math.random();
+        let type: "circle" | "glow" | "cross" = "circle";
+        let size = 1.0;
+
+        if (typeRoll > 0.94) {
+          // 6% Major cross/flare landmark stars
+          type = "cross";
+          size = Math.random() * 2.8 + 2.6;
+        } else if (typeRoll > 0.82) {
+          // 12% Glowing halo stars
+          type = "glow";
+          size = Math.random() * 1.6 + 1.8;
+        } else {
+          // 82% Crisp standard stars
+          type = "circle";
+          size = Math.random() * 1.3 + 0.95;
+        }
+
+        const opacity = Math.random() * 0.55 + 0.35;
+        const color =
+          STAR_COLORS[Math.floor(Math.random() * STAR_COLORS.length)];
+        const twinkleSpeed = Math.random() * 0.003 + 0.001;
+        const twinklePhase = Math.random() * Math.PI * 2;
 
         return {
           ra,
           dec,
           size,
           opacity,
-          type: "circle",
+          type,
+          color,
+          twinkleSpeed,
+          twinklePhase,
+          dispX: 0,
+          dispY: 0,
         };
       });
     }
@@ -282,33 +332,78 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
       ctx: CanvasRenderingContext2D,
       x: number,
       y: number,
-      size: number,
-      opacity: number,
-      type: string = "circle",
+      star: BackgroundStar,
+      zoom: number,
+      time: number,
     ) => {
-      ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+      // Dynamic twinkle pulse based on star position and time
+      const twinkle = Math.sin(time * star.twinkleSpeed + star.twinklePhase);
+      const alpha = Math.min(
+        1,
+        Math.max(0.18, star.opacity * (0.8 + 0.28 * twinkle)),
+      );
+      const size = Math.max(0.9, star.size * zoom);
 
-      if (type === "cross") {
-        // Draw diamond/star shape
+      if (star.type === "cross") {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+
+        // 1. Soft outer radial glow
+        const glowRadius = size * 2.6;
+        const grad = ctx.createRadialGradient(x, y, 0, x, y, glowRadius);
+        grad.addColorStop(0, star.color);
+        grad.addColorStop(0.35, star.color);
+        grad.addColorStop(1, "transparent");
+        ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.moveTo(x, y - size);
-        ctx.quadraticCurveTo(x + size * 0.1, y - size * 0.1, x + size, y);
-        ctx.quadraticCurveTo(x + size * 0.1, y + size * 0.1, x, y + size);
-        ctx.quadraticCurveTo(x - size * 0.1, y + size * 0.1, x - size, y);
-        ctx.quadraticCurveTo(x - size * 0.1, y - size * 0.1, x, y - size);
+        ctx.arc(x, y, glowRadius, 0, Math.PI * 2);
         ctx.fill();
-        // Add extra glow for cross stars
-        if (size > 2) {
-          ctx.fillStyle = `rgba(255, 255, 255, ${opacity * 0.4})`;
-          ctx.beginPath();
-          ctx.arc(x, y, size * 0.8, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      } else {
-        // Simple circle for most stars
+
+        // 2. 4-point cross diffraction spikes
+        ctx.strokeStyle = star.color;
+        ctx.lineWidth = Math.max(0.75, 1.2 * zoom);
+        ctx.beginPath();
+        ctx.moveTo(x - size * 2.2, y);
+        ctx.lineTo(x + size * 2.2, y);
+        ctx.moveTo(x, y - size * 2.2);
+        ctx.lineTo(x, y + size * 2.2);
+        ctx.stroke();
+
+        // 3. Bright core
+        ctx.fillStyle = "#ffffff";
         ctx.beginPath();
         ctx.arc(x, y, size * 0.5, 0, Math.PI * 2);
         ctx.fill();
+
+        ctx.restore();
+      } else if (star.type === "glow") {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+
+        // Soft halo
+        ctx.fillStyle = star.color;
+        ctx.globalAlpha = alpha * 0.3;
+        ctx.beginPath();
+        ctx.arc(x, y, size * 1.7, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Core star
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = star.color;
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.55, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      } else {
+        // Standard circle star
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = star.color;
+        ctx.beginPath();
+        ctx.arc(x, y, size * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
       }
     };
 
@@ -415,7 +510,17 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
           }
         });
 
-        if (hasChanged || (activeTransfers && activeTransfers.length > 0)) {
+        const isMouseActive = !!mousePosRef.current;
+        const hasDisplacedStars = backgroundStars.current.some(
+          (s) => Math.abs(s.dispX) > 0.02 || Math.abs(s.dispY) > 0.02,
+        );
+
+        if (
+          hasChanged ||
+          isMouseActive ||
+          hasDisplacedStars ||
+          (activeTransfers && activeTransfers.length > 0)
+        ) {
           setTick((t) => t + 1);
         }
         animationFrame = requestAnimationFrame(animate);
@@ -443,14 +548,62 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
       ctx.lineCap = "butt";
       ctx.lineJoin = "miter";
 
-      // Clear canvas with pure black background
+      // Clear canvas with deep space black background
       ctx.fillStyle = "#000000";
       ctx.fillRect(0, 0, width, height);
 
-      // Draw background stars
-      backgroundStars.current.forEach((star) => {
-        const currentScale = BASE_SCALE * zoom;
+      const currentScale = BASE_SCALE * zoom;
+      const timeNow = performance.now();
+
+      // Cosmic background nebula glow along the galactic plane for atmospheric depth
+      const galacticClouds = [
+        { ra: 5, dec: 10, radius: 240, color: "rgba(30, 27, 75, 0.22)" },
+        { ra: 25, dec: 5, radius: 280, color: "rgba(14, 165, 233, 0.10)" },
+        { ra: -4, dec: 80, radius: 260, color: "rgba(88, 28, 135, 0.16)" },
+        { ra: 8, dec: -15, radius: 250, color: "rgba(6, 182, 212, 0.12)" },
+        { ra: -14, dec: 150, radius: 270, color: "rgba(79, 70, 229, 0.14)" },
+      ];
+
+      galacticClouds.forEach((cloud) => {
         const pos = raDecToScreen(
+          cloud.ra,
+          cloud.dec,
+          offset.x,
+          offset.y,
+          currentScale,
+        );
+        const rPx = cloud.radius * zoom;
+        if (
+          pos.x < -rPx ||
+          pos.x > width + rPx ||
+          pos.y < -rPx ||
+          pos.y > height + rPx
+        )
+          return;
+
+        const grad = ctx.createRadialGradient(
+          pos.x,
+          pos.y,
+          0,
+          pos.x,
+          pos.y,
+          rPx,
+        );
+        grad.addColorStop(0, cloud.color);
+        grad.addColorStop(1, "transparent");
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, rPx, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Draw background stars with reactive cursor repulsion physics
+      const mouse = mousePosRef.current;
+      const repelRadius = 140 * zoom;
+      const maxForce = 32 * zoom;
+
+      backgroundStars.current.forEach((star) => {
+        const basePos = raDecToScreen(
           star.ra,
           star.dec,
           offset.x,
@@ -460,14 +613,41 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
 
         // Simple optimization: don't draw if far off screen
         if (
-          pos.x < -50 ||
-          pos.x > width + 50 ||
-          pos.y < -50 ||
-          pos.y > height + 50
-        )
+          basePos.x < -60 ||
+          basePos.x > width + 60 ||
+          basePos.y < -60 ||
+          basePos.y > height + 60
+        ) {
+          star.dispX = 0;
+          star.dispY = 0;
           return;
+        }
 
-        drawStar(ctx, pos.x, pos.y, star.size * zoom, star.opacity, star.type);
+        // Compute repulsion force from cursor position
+        let targetDispX = 0;
+        let targetDispY = 0;
+
+        if (mouse) {
+          const dx = basePos.x - mouse.x;
+          const dy = basePos.y - mouse.y;
+          const distSq = dx * dx + dy * dy;
+          if (distSq < repelRadius * repelRadius && distSq > 0.1) {
+            const dist = Math.sqrt(distSq);
+            // Smooth non-linear falloff (stronger near center, soft edge)
+            const factor = Math.pow(1 - dist / repelRadius, 1.8);
+            targetDispX = (dx / dist) * factor * maxForce;
+            targetDispY = (dy / dist) * factor * maxForce;
+          }
+        }
+
+        // Smooth elastic spring physics towards target displacement
+        star.dispX += (targetDispX - star.dispX) * 0.18;
+        star.dispY += (targetDispY - star.dispY) * 0.18;
+
+        const finalX = basePos.x + star.dispX;
+        const finalY = basePos.y + star.dispY;
+
+        drawStar(ctx, finalX, finalY, star, zoom, timeNow);
       });
 
       // Draw celestial coordinate grid (if showCompass is true)
@@ -975,6 +1155,15 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
     };
 
     const handleWindowMouseMove = (e: MouseEvent) => {
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const rect = canvas.getBoundingClientRect();
+        mousePosRef.current = {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
+        };
+      }
+
       if (!isDraggingRef.current) return;
 
       // Calculate new offset
@@ -1017,6 +1206,7 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
     const handleWindowMouseUp = (e: MouseEvent) => {
       isDraggingRef.current = false;
       setIsDragging(false);
+      mousePosRef.current = null;
       window.removeEventListener("mousemove", handleWindowMouseMove);
       window.removeEventListener("mouseup", handleWindowMouseUp);
     };
@@ -1230,14 +1420,16 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
 
     // We need to handle hover separately since we moved drag to window
     const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-      if (isDraggingRef.current) return;
-
       const canvas = canvasRef.current;
       if (!canvas) return;
 
       const rect = canvas.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
+      mousePosRef.current = { x: mouseX, y: mouseY };
+
+      if (isDraggingRef.current) return;
+
       const currentScale = BASE_SCALE * zoom;
 
       // Helper for point to line segment distance
@@ -1338,23 +1530,6 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
       }
     };
 
-    const pathParts = selectedConstellation
-      ? selectedConstellation.name.split(/\s*>\s*/)
-      : [];
-    const hasPath = pathParts.length > 1;
-    const displayName = hasPath
-      ? pathParts[pathParts.length - 1]
-      : selectedConstellation?.name || "";
-    const breadcrumbPath = hasPath ? pathParts.slice(0, -1) : [];
-    const accentColor = selectedConstellation
-      ? selectedConstellation.starColor ||
-        selectedConstellation.connectionColor ||
-        "#8B5CF6"
-      : "#8B5CF6";
-    const iconUrl = selectedConstellation
-      ? getSafeImageUrl(selectedConstellation.icon)
-      : "";
-
     return (
       <div className={`relative overflow-hidden select-none ${className}`}>
         <canvas
@@ -1370,6 +1545,9 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
           }`}
           onMouseDown={handleMouseDown}
           onMouseMove={handleCanvasMouseMove}
+          onMouseLeave={() => {
+            mousePosRef.current = null;
+          }}
           onClick={handleClick}
           onWheel={handleWheel}
           onTouchStart={handleTouchStart}
@@ -1607,7 +1785,7 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
                     transform: "translateY(-50%)",
                   }}
                 >
-                  <div className="bg-card/90 backdrop-blur-xl border border-border/80 rounded-xl p-3 shadow-2xl min-w-[150px] max-w-[200px] flex flex-col gap-1 select-none animate-in fade-in zoom-in-95 duration-150">
+                  <div className="bg-card/90 backdrop-blur-xl border border-border/80 rounded-xl p-3 shadow-2xl min-w-37.5 max-w-50 flex flex-col gap-1 select-none animate-in fade-in zoom-in-95 duration-150">
                     <div className="flex items-center justify-between gap-2 border-b border-border/30 pb-1">
                       <span className="text-foreground font-extrabold text-xs truncate">
                         {constellation.name}
@@ -1629,114 +1807,10 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
           })}
 
         {/* Project Popup */}
-        {selectedConstellation && (
-          <>
-            {/* Backdrop overlay */}
-            <div
-              className="absolute inset-0 z-40 bg-black/40 backdrop-blur-[2px] cursor-default transition-all duration-300 animate-in fade-in"
-              onClick={() => setSelectedConstellation(null)}
-            />
-            {/* Popup Card */}
-            <div
-              className="absolute z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2.5rem)] max-w-sm sm:max-w-md cursor-default transition-all duration-300 animate-in fade-in zoom-in-95"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <StarCard className="w-full border-border bg-card/75 shadow-[0_0_50px_rgba(0,0,0,0.85),0_0_30px_rgba(139,92,246,0.15)] hover:border-border/80 transition-all duration-500 relative overflow-hidden group">
-                <CardHeader className="flex flex-row justify-between items-start pb-3 pt-5 z-10 relative">
-                  <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                    {/* Glowing Accent Icon Card */}
-                    <div
-                      className="size-12 rounded-xl border flex items-center justify-center relative shrink-0 overflow-hidden bg-background/80 transition-transform duration-500 group-hover:scale-105"
-                      style={{
-                        borderColor: `${accentColor}33`,
-                        boxShadow: `0 0 20px ${accentColor}1a`,
-                      }}
-                    >
-                      {iconUrl ? (
-                        <Image
-                          src={iconUrl}
-                          alt={`${displayName} icon`}
-                          width={48}
-                          height={48}
-                          className="w-full h-full object-cover"
-                          unoptimized
-                        />
-                      ) : (
-                        <Bookmark
-                          className="size-5"
-                          style={{
-                            color: accentColor,
-                            filter: `drop-shadow(0 0 4px ${accentColor}66)`,
-                          }}
-                        />
-                      )}
-                    </div>
-
-                    <div className="flex flex-col min-w-0 flex-1">
-                      {breadcrumbPath.length > 0 && (
-                        <div className="flex items-center flex-wrap gap-1 text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none mb-1.5">
-                          {breadcrumbPath.map((part, idx) => (
-                            <React.Fragment key={idx}>
-                              {idx > 0 && (
-                                <ChevronRight className="size-2.5 text-muted-foreground/70 shrink-0" />
-                              )}
-                              <span className="truncate max-w-[80px]">
-                                {part}
-                              </span>
-                            </React.Fragment>
-                          ))}
-                        </div>
-                      )}
-                      <CardTitle className="text-lg font-extrabold text-foreground tracking-wide flex items-center gap-1.5 leading-snug">
-                        <span className="truncate">{displayName}</span>
-                        <StarIcon
-                          size={14}
-                          color={accentColor}
-                          showFlare={true}
-                          showGlow={false}
-                          className="shrink-0"
-                        />
-                      </CardTitle>
-                    </div>
-                  </div>
-
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setSelectedConstellation(null)}
-                    className="size-8 text-muted-foreground hover:text-foreground hover:bg-accent/50 rounded-xl transition-all duration-300 hover:scale-105 shrink-0 cursor-pointer -mt-1 -mr-1"
-                  >
-                    <X className="size-4" />
-                  </Button>
-                </CardHeader>
-
-                <CardContent className="pb-4 pt-1 z-10 relative">
-                  <CardDescription className="text-muted-foreground text-sm leading-relaxed font-normal">
-                    {selectedConstellation.description ||
-                      "No description provided for this constellation."}
-                  </CardDescription>
-                </CardContent>
-
-                <CardFooter className="pt-2 pb-5 z-10 relative">
-                  <Link
-                    href={selectedConstellation.redirect}
-                    className="w-full"
-                  >
-                    <Button
-                      className="w-full h-11 bg-linear-to-r hover:opacity-95 text-white font-semibold rounded-xl transition-all duration-300 flex items-center justify-center gap-2 group/btn relative overflow-hidden shadow-lg border border-white/10 cursor-pointer"
-                      style={{
-                        backgroundImage: `linear-gradient(135deg, ${accentColor}dd, ${accentColor}88)`,
-                      }}
-                    >
-                      <span>Visit</span>
-                      <ArrowUpRight className="size-4 transition-transform duration-300 group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5" />
-                    </Button>
-                  </Link>
-                </CardFooter>
-              </StarCard>
-            </div>
-          </>
-        )}
+        <StarConstellationModal
+          constellation={selectedConstellation}
+          onClose={() => setSelectedConstellation(null)}
+        />
       </div>
     );
   },
