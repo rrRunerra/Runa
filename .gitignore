@@ -47,3 +47,10 @@ apps/lynx/public/globe.svg
 apps/lynx/public/next.svg
 apps/lynx/public/vercel.svg
 apps/lynx/public/window.svg
+
+# C# / .NET Build Artifacts
+**/bin/
+**/obj/
+*.user
+*.suo
+

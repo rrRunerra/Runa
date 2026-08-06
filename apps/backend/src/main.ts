@@ -31,7 +31,12 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.use(json({ limit: '5mb' }));
   app.use(urlencoded({ limit: '5mb', extended: true }));
-  app.enableCors({ origin: process.env.NEXT_PUBLIC_URL, credentials: true });
+  app.enableCors({
+    origin: true,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['*'],
+  });
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
 
   const builder = new DocumentBuilder().setTitle('API').setVersion('1.0');
