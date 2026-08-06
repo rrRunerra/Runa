@@ -30,7 +30,7 @@ public class AquilaSyncManager
     }
 
     /// <summary>
-    /// Handles episode/movie scrobble when playback threshold (80%) or manual watch event is triggered.
+    /// Handles episode/movie scrobble when playback threshold (90%) or manual watch event is triggered.
     /// </summary>
     public async Task HandleScrobbleAsync(string userId, string jellyfinItemId, int episodeNumber, int? totalEpisodes, UserAquilaConfig userConfig, string mediaType)
     {
@@ -43,8 +43,10 @@ public class AquilaSyncManager
     public async Task HandleScrobbleAsync(string userId, System.Collections.Generic.List<string> candidateItemIds, int episodeNumber, int? totalEpisodes, UserAquilaConfig userConfig, string mediaType)
     {
         var primaryId = candidateItemIds.FirstOrDefault() ?? "unknown";
-        _logger.LogInformation("[Aquila SyncManager] Processing scrobble request: User={UserId}, PrimaryItem={ItemId}, CandidateCount={Count}, EpNum={EpNum}, TotalEp={TotalEp}, Type={MediaType}",
-            userId, primaryId, candidateItemIds.Count, episodeNumber, totalEpisodes, mediaType);
+        var episodeId = candidateItemIds.LastOrDefault() ?? primaryId;
+        var seriesId = candidateItemIds.FirstOrDefault() ?? episodeId;
+        _logger.LogInformation("[Aquila SyncManager] Processing scrobble request: User={UserId}, PrimaryItem={ItemId}, EpisodeId={EpId}, SeriesId={SeriesId}, EpNum={EpNum}, TotalEp={TotalEp}, Type={MediaType}",
+            userId, primaryId, episodeId, seriesId, episodeNumber, totalEpisodes, mediaType);
 
         if (userConfig == null || string.IsNullOrWhiteSpace(userConfig.ApiKey))
         {
@@ -96,13 +98,6 @@ public class AquilaSyncManager
             _logger.LogInformation("[Aquila SyncManager] No prior list entry exists for Aquila ID {AquilaId}. Will create fresh entry on list.", aquilaMediaId);
         }
 
-        // Rule 6: Duplicate Episode Rewatch Safeguard (only applies if entry already exists)
-        if (entryExists && episodeNumber <= currentProgress && !string.Equals(status, "REWATCHING", StringComparison.OrdinalIgnoreCase))
-        {
-            _logger.LogInformation("[Aquila SyncManager] SAFEGUARD TRIGGERED: Episode #{EpNum} <= current progress ({Progress}) and status is '{Status}'. Skipping duplicate progress increment.",
-                episodeNumber, currentProgress, status);
-            return;
-        }
 
         var incrementDto = new AquilaIncrementDto
         {

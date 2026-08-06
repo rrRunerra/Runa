@@ -16,7 +16,7 @@ using Microsoft.Extensions.Logging;
 namespace Jellyfin.Plugin.Aquila.Services;
 
 /// <summary>
-/// SessionManager event listener for tracking playback progress and triggering completion scrobbles at 80%.
+/// SessionManager event listener for tracking playback progress and triggering completion scrobbles at 90%.
 /// </summary>
 public class PlaybackTracker : IHostedService, IDisposable
 {
@@ -26,7 +26,8 @@ public class PlaybackTracker : IHostedService, IDisposable
     private readonly IUserManager _userManager;
     private readonly AquilaSyncManager _syncManager;
     private readonly ILogger<PlaybackTracker> _logger;
-    private readonly ConcurrentDictionary<string, DateTime> _trackedSessions = new();
+
+    private readonly ConcurrentDictionary<string, DateTime> _scrobbledSessions = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PlaybackTracker"/> class.
@@ -67,24 +68,30 @@ public class PlaybackTracker : IHostedService, IDisposable
         return Task.CompletedTask;
     }
 
-    private bool ShouldProcessItem(string userId, string itemId, TimeSpan cooldown)
+    /// <summary>
+    /// Attempts to mark an item as scrobbled for the active user session.
+    /// Returns true if this is the first scrobble trigger for this item playback session; false if already scrobbled.
+    /// </summary>
+    private bool TryMarkItemScrobbled(string userId, string itemId)
     {
         string normUser = userId.Replace("-", "").ToLowerInvariant();
         string normItem = itemId.Replace("-", "").ToLowerInvariant();
         string key = $"{normUser}_{normItem}";
 
-        if (_trackedSessions.TryGetValue(key, out var lastProcessed))
+        if (_scrobbledSessions.TryGetValue(key, out var lastScrobbledTime))
         {
-            if (DateTime.UtcNow - lastProcessed < cooldown)
+            if (DateTime.UtcNow - lastScrobbledTime < TimeSpan.FromHours(12))
             {
-                _logger.LogDebug("[Aquila PlaybackTracker] Scrobble event ignored (cooldown active) for key {Key}", key);
+                _logger.LogDebug("[Aquila PlaybackTracker] Scrobble skipped (already scrobbled in active session) for key {Key}", key);
                 return false;
             }
         }
 
-        _trackedSessions[key] = DateTime.UtcNow;
+        _scrobbledSessions[key] = DateTime.UtcNow;
         return true;
     }
+
+
 
     private async void OnPlaybackProgress(object? sender, PlaybackProgressEventArgs e)
     {
@@ -125,10 +132,10 @@ public class PlaybackTracker : IHostedService, IDisposable
             return;
         }
 
-        double threshold = userConfig.CompletionThreshold > 0 ? userConfig.CompletionThreshold : 80.0;
+        double threshold = userConfig.CompletionThreshold > 0 ? userConfig.CompletionThreshold : 90.0;
         if (percentWatched >= threshold)
         {
-            if (!ShouldProcessItem(userId, e.Item.Id.ToString(), TimeSpan.FromSeconds(30)))
+            if (!TryMarkItemScrobbled(userId, e.Item.Id.ToString()))
             {
                 return;
             }
@@ -146,14 +153,16 @@ public class PlaybackTracker : IHostedService, IDisposable
             return;
         }
 
+        var user = e.Users.First();
+        var userId = user.Id.ToString();
+        var itemId = e.Item.Id.ToString();
+
         var config = Plugin.Instance?.Configuration;
         if (config == null || config.UserConfigs == null || !config.UserConfigs.Any())
         {
             return;
         }
 
-        var user = e.Users.First();
-        var userId = user.Id.ToString();
         var userConfig = config.UserConfigs.FirstOrDefault(u => MatchUserId(u.JellyfinUserId, userId))
                       ?? config.UserConfigs.FirstOrDefault();
 
@@ -166,7 +175,7 @@ public class PlaybackTracker : IHostedService, IDisposable
         if (!shouldScrobble && e.PlaybackPositionTicks.HasValue && e.Item.RunTimeTicks.HasValue && e.Item.RunTimeTicks.Value > 0)
         {
             double percentWatched = ((double)e.PlaybackPositionTicks.Value / e.Item.RunTimeTicks.Value) * 100.0;
-            double threshold = userConfig.CompletionThreshold > 0 ? userConfig.CompletionThreshold : 80.0;
+            double threshold = userConfig.CompletionThreshold > 0 ? userConfig.CompletionThreshold : 90.0;
             if (percentWatched >= threshold)
             {
                 shouldScrobble = true;
@@ -175,14 +184,12 @@ public class PlaybackTracker : IHostedService, IDisposable
 
         if (shouldScrobble)
         {
-            if (!ShouldProcessItem(userId, e.Item.Id.ToString(), TimeSpan.FromSeconds(30)))
+            if (TryMarkItemScrobbled(userId, itemId))
             {
-                return;
+                _logger.LogInformation("[Aquila PlaybackTracker] Playback stopped/completed for item '{ItemName}' (ID: {ItemId}, PlayedToCompletion: {Completed}). Triggering scrobble...",
+                    e.Item.Name, e.Item.Id, e.PlayedToCompletion);
+                await TriggerScrobbleAsync(e.Item, user, userConfig, config).ConfigureAwait(false);
             }
-
-            _logger.LogInformation("[Aquila PlaybackTracker] Playback stopped/completed for item '{ItemName}' (ID: {ItemId}, PlayedToCompletion: {Completed}). Triggering scrobble...",
-                e.Item.Name, e.Item.Id, e.PlayedToCompletion);
-            await TriggerScrobbleAsync(e.Item, user, userConfig, config).ConfigureAwait(false);
         }
     }
 
@@ -228,6 +235,43 @@ public class PlaybackTracker : IHostedService, IDisposable
                 var series = episode.Series ?? (episode.SeriesId != Guid.Empty ? _libraryManager.GetItemById(episode.SeriesId) as Series : null);
                 if (series != null)
                 {
+                    if (episode.ParentIndexNumber.HasValue && episode.ParentIndexNumber.Value > 1 && episode.IndexNumber.HasValue)
+                    {
+                        try
+                        {
+                            int currentSeason = episode.ParentIndexNumber.Value;
+                            int currentEpInSeason = episode.IndexNumber.Value;
+                            var allSeriesEpisodes = series.GetEpisodes((dynamic)user, new MediaBrowser.Controller.Dto.DtoOptions(), false);
+                            int calculatedAbsolute = 0;
+                            bool foundCurrent = false;
+                            foreach (var seriesEp in allSeriesEpisodes)
+                            {
+                                if (seriesEp is Episode ep)
+                                {
+                                    int sNum = ep.ParentIndexNumber ?? ep.AiredSeasonNumber ?? 1;
+                                    int eNum = ep.IndexNumber ?? 1;
+                                    if (sNum < currentSeason || (sNum == currentSeason && eNum <= currentEpInSeason))
+                                    {
+                                        calculatedAbsolute++;
+                                    }
+                                    if (ep.Id == episode.Id)
+                                    {
+                                        foundCurrent = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (foundCurrent && calculatedAbsolute > 0)
+                            {
+                                episodeNumber = calculatedAbsolute;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogDebug(ex, "[Aquila PlaybackTracker] Could not calculate cumulative episode number for '{EpName}'", episode.Name);
+                        }
+                    }
+
                     try
                     {
                         System.Collections.IEnumerable episodesList = series.GetEpisodes((dynamic)user, new MediaBrowser.Controller.Dto.DtoOptions(), false);
@@ -281,9 +325,8 @@ public class PlaybackTracker : IHostedService, IDisposable
             if (e.UserData.Played)
             {
                 string userIdStr = e.UserId.ToString();
-                if (!ShouldProcessItem(userIdStr, e.Item.Id.ToString(), TimeSpan.FromSeconds(30)))
+                if (!TryMarkItemScrobbled(userIdStr, e.Item.Id.ToString()))
                 {
-                    _logger.LogDebug("[Aquila PlaybackTracker] OnUserDataSaved ignored: cooldown active for item {ItemId}", e.Item.Id);
                     return;
                 }
 

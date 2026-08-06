@@ -18,8 +18,8 @@ The **Jellyfin Server Plugin for Aquila** integrates your Jellyfin media server 
    - Manage status (`WATCHING`, `COMPLETED`, `PAUSED`, `DROPPED`, `PLANNING`, `REWATCHING`).
    - Manage episode count progress with `-` and `+` controls.
    - Set 1–10 rating score and personal notes.
-5. **Automated 80% Playback Scrobbling**:
-   - Automatically scrobbles progress via `POST /list/increment` when 80% playback completion threshold is reached.
+5. **Automated 90% Playback Scrobbling**:
+   - Automatically scrobbles progress via `POST /list/increment` when 90% playback completion threshold is reached.
 6. **Duplicate Episode Rewatch Safeguard**:
    - Skips scrobbling if the watched episode is `<= current progress` (unless entry is marked as `REWATCHING`).
 7. **Unscored Completion Safeguard**:
@@ -63,5 +63,5 @@ The compiled assembly file will be located at:
 3. **User API Connection**:
    - **Aquila Server URL**: Base URL of your Aquila API server (e.g. `http://localhost:3000/api`).
    - **Aquila API Key**: Your personal `x-api-key`.
-   - **Playback Scrobble Threshold**: Set percentage (Default: `80%`).
+   - **Playback Scrobble Threshold**: Set percentage (Default: `90%`).
 4. Click **Save Configuration**.

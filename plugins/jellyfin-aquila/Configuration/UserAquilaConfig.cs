@@ -21,7 +21,7 @@ public class UserAquilaConfig
     public string AquilaServerUrl { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the scrobble threshold percentage (0-100). Default is 80.
+    /// Gets or sets the scrobble threshold percentage (0-100). Default is 90.
     /// </summary>
-    public double CompletionThreshold { get; set; } = 80.0;
+    public double CompletionThreshold { get; set; } = 90.0;
 }

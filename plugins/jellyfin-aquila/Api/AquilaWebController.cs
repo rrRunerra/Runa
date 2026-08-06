@@ -24,15 +24,17 @@ public class AquilaWebController : ControllerBase
 {
     private readonly AquilaApiClient _apiClient;
     private readonly MediaMappingStore _mappingStore;
+    private readonly AquilaSyncManager _syncManager;
     private readonly ILogger<AquilaWebController> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AquilaWebController"/> class.
     /// </summary>
-    public AquilaWebController(AquilaApiClient apiClient, MediaMappingStore mappingStore, ILogger<AquilaWebController> logger)
+    public AquilaWebController(AquilaApiClient apiClient, MediaMappingStore mappingStore, AquilaSyncManager syncManager, ILogger<AquilaWebController> logger)
     {
         _apiClient = apiClient;
         _mappingStore = mappingStore;
+        _syncManager = syncManager;
         _logger = logger;
     }
 

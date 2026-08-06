@@ -40,8 +40,8 @@
 
                         <div class="inputContainer">
                             <label class="inputLabel" for="CompletionThreshold">Playback Scrobble Threshold (%):</label>
-                            <input is="emby-input" id="CompletionThreshold" type="number" min="50" max="100" step="1" value="80" required />
-                            <div class="fieldDescription">Playback percentage at which an episode is marked watched (Default: 80%).</div>
+                            <input is="emby-input" id="CompletionThreshold" type="number" min="50" max="100" step="1" value="90" required />
+                            <div class="fieldDescription">Playback percentage at which an episode is marked watched (Default: 90%).</div>
                         </div>
                     </div>
 
@@ -149,7 +149,7 @@
                         var userConfig = (config.UserConfigs || []).find(function (u) { return u.JellyfinUserId === currentUserId; }) || {};
                         page.querySelector('#AquilaServerUrl').value = userConfig.AquilaServerUrl || "";
                         page.querySelector('#AquilaApiKey').value = userConfig.ApiKey || "";
-                        page.querySelector('#CompletionThreshold').value = userConfig.CompletionThreshold || 80;
+                        page.querySelector('#CompletionThreshold').value = userConfig.CompletionThreshold || 90;
 
                         // Render Admin Library Mappings
                         var container = page.querySelector('#libraryMappingsContainer');
