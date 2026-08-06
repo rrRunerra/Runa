@@ -18,7 +18,7 @@ public class UserAquilaConfig
     /// <summary>
     /// Gets or sets the base Aquila API Endpoint URL.
     /// </summary>
-    public string AquilaServerUrl { get; set; } = "http://localhost:3000/api";
+    public string AquilaServerUrl { get; set; } = string.Empty;
 
     /// <summary>
     /// Gets or sets the scrobble threshold percentage (0-100). Default is 80.

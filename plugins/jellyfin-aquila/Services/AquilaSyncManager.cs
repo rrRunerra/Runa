@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Aquila.Api;
@@ -28,12 +30,21 @@ public class AquilaSyncManager
     }
 
     /// <summary>
-    /// Handles episode/movie scrobble when playback threshold (80%) is reached.
+    /// Handles episode/movie scrobble when playback threshold (80%) or manual watch event is triggered.
     /// </summary>
     public async Task HandleScrobbleAsync(string userId, string jellyfinItemId, int episodeNumber, int? totalEpisodes, UserAquilaConfig userConfig, string mediaType)
     {
-        _logger.LogInformation("[Aquila SyncManager] Processing scrobble request: User={UserId}, ItemId={ItemId}, EpNum={EpNum}, TotalEp={TotalEp}, Type={MediaType}",
-            userId, jellyfinItemId, episodeNumber, totalEpisodes, mediaType);
+        await HandleScrobbleAsync(userId, new System.Collections.Generic.List<string> { jellyfinItemId }, episodeNumber, totalEpisodes, userConfig, mediaType).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Handles episode/movie scrobble using candidate Jellyfin item IDs (SeriesId, SeasonId, EpisodeId).
+    /// </summary>
+    public async Task HandleScrobbleAsync(string userId, System.Collections.Generic.List<string> candidateItemIds, int episodeNumber, int? totalEpisodes, UserAquilaConfig userConfig, string mediaType)
+    {
+        var primaryId = candidateItemIds.FirstOrDefault() ?? "unknown";
+        _logger.LogInformation("[Aquila SyncManager] Processing scrobble request: User={UserId}, PrimaryItem={ItemId}, CandidateCount={Count}, EpNum={EpNum}, TotalEp={TotalEp}, Type={MediaType}",
+            userId, primaryId, candidateItemIds.Count, episodeNumber, totalEpisodes, mediaType);
 
         if (userConfig == null || string.IsNullOrWhiteSpace(userConfig.ApiKey))
         {
@@ -41,18 +52,19 @@ public class AquilaSyncManager
             return;
         }
 
-        // Fetch Jellyfin Item -> Aquila Media ID mapping
-        var mapping = _mappingStore.GetMapping(userId, jellyfinItemId);
+        // Fetch Jellyfin Item -> Aquila Media ID mapping using candidate IDs
+        var mapping = _mappingStore.GetMappingForCandidateIds(userId, candidateItemIds);
         if (mapping == null)
         {
-            _logger.LogWarning("[Aquila SyncManager] No media link mapping found for Jellyfin Item {ItemId} and User {UserId}. Use the Aquila in-player button to link media.", jellyfinItemId, userId);
+            _logger.LogWarning("[Aquila SyncManager] No media link mapping found for User {UserId} across candidate IDs [{CandidateIds}]. Use the Aquila in-player button to link media.",
+                userId, string.Join(", ", candidateItemIds));
             return;
         }
 
         int aquilaMediaId = mapping.AquilaMediaId;
         string effectiveMediaType = !string.IsNullOrWhiteSpace(mapping.MediaType) ? mapping.MediaType : mediaType;
-        _logger.LogInformation("[Aquila SyncManager] Found mapping: Jellyfin Item {JellyfinId} -> Aquila ID {AquilaId} (MediaType: {MediaType})",
-            jellyfinItemId, aquilaMediaId, effectiveMediaType);
+        _logger.LogInformation("[Aquila SyncManager] Found mapping: Candidate Matches -> Aquila ID {AquilaId} (MediaType: {MediaType})",
+            aquilaMediaId, effectiveMediaType);
 
         // Fetch current list entry details from Aquila
         var listEntryDoc = await _apiClient.GetListEntryAsync(effectiveMediaType, aquilaMediaId, userConfig.ApiKey, userConfig.AquilaServerUrl).ConfigureAwait(false);
@@ -60,8 +72,9 @@ public class AquilaSyncManager
         int currentProgress = 0;
         string status = "WATCHING";
         double score = 0;
+        bool entryExists = listEntryDoc.HasValue;
 
-        if (listEntryDoc.HasValue)
+        if (entryExists)
         {
             var root = listEntryDoc.Value;
             if (root.TryGetProperty("progress", out var pProp) && pProp.ValueKind == JsonValueKind.Number)
@@ -76,83 +89,50 @@ public class AquilaSyncManager
             {
                 score = scProp.GetDouble();
             }
-            _logger.LogInformation("[Aquila SyncManager] Fetched list entry: Progress={Progress}, Status={Status}, Score={Score}", currentProgress, status, score);
+            _logger.LogInformation("[Aquila SyncManager] Fetched existing list entry: Progress={Progress}, Status={Status}, Score={Score}", currentProgress, status, score);
         }
         else
         {
-            _logger.LogInformation("[Aquila SyncManager] No prior list entry exists for Aquila ID {AquilaId}. Proceeding with fresh scrobble.", aquilaMediaId);
+            _logger.LogInformation("[Aquila SyncManager] No prior list entry exists for Aquila ID {AquilaId}. Will create fresh entry on list.", aquilaMediaId);
         }
 
-        // Rule 6: Duplicate Episode Rewatch Safeguard
-        if (episodeNumber <= currentProgress && !string.Equals(status, "REWATCHING", StringComparison.OrdinalIgnoreCase))
+        // Rule 6: Duplicate Episode Rewatch Safeguard (only applies if entry already exists)
+        if (entryExists && episodeNumber <= currentProgress && !string.Equals(status, "REWATCHING", StringComparison.OrdinalIgnoreCase))
         {
             _logger.LogInformation("[Aquila SyncManager] SAFEGUARD TRIGGERED: Episode #{EpNum} <= current progress ({Progress}) and status is '{Status}'. Skipping duplicate progress increment.",
                 episodeNumber, currentProgress, status);
             return;
         }
 
-        bool isFinalEpisode = totalEpisodes.HasValue && totalEpisodes.Value > 0 && episodeNumber >= totalEpisodes.Value;
-
-        // Rule 8: Unscored Completion Safeguard on final episode
-        if (isFinalEpisode)
+        var incrementDto = new AquilaIncrementDto
         {
-            _logger.LogInformation("[Aquila SyncManager] Final episode detected ({EpNum}/{TotalEp}). Checking score status...", episodeNumber, totalEpisodes);
-            if (score > 0)
-            {
-                var incrementDto = new AquilaIncrementDto
-                {
-                    MediaType = effectiveMediaType,
-                    Id = aquilaMediaId,
-                    Count = 1
-                };
-                await _apiClient.IncrementProgressAsync(incrementDto, userConfig.ApiKey, userConfig.AquilaServerUrl).ConfigureAwait(false);
-
-                var saveDto = new AquilaSaveEntryDto
-                {
-                    Status = "COMPLETED",
-                    Progress = totalEpisodes.Value,
-                    Score = score
-                };
-                SetSaveDtoMediaId(saveDto, effectiveMediaType, aquilaMediaId);
-                await _apiClient.SaveListEntryAsync(effectiveMediaType, saveDto, userConfig.ApiKey, userConfig.AquilaServerUrl).ConfigureAwait(false);
-                _logger.LogInformation("[Aquila SyncManager] SUCCESS: Scrobbled final episode and set status to COMPLETED for Aquila Media ID {AquilaId} (Score: {Score})", aquilaMediaId, score);
-            }
-            else
-            {
-                var incrementDto = new AquilaIncrementDto
-                {
-                    MediaType = effectiveMediaType,
-                    Id = aquilaMediaId,
-                    Count = 1
-                };
-                await _apiClient.IncrementProgressAsync(incrementDto, userConfig.ApiKey, userConfig.AquilaServerUrl).ConfigureAwait(false);
-
-                var saveDto = new AquilaSaveEntryDto
-                {
-                    Status = "WATCHING",
-                    Progress = totalEpisodes.Value
-                };
-                SetSaveDtoMediaId(saveDto, effectiveMediaType, aquilaMediaId);
-                await _apiClient.SaveListEntryAsync(effectiveMediaType, saveDto, userConfig.ApiKey, userConfig.AquilaServerUrl).ConfigureAwait(false);
-                _logger.LogInformation("[Aquila SyncManager] UNSCORED SAFEGUARD: Progress updated to max ({TotalEp}), but status maintained as WATCHING for Aquila Media ID {AquilaId}. User score required to complete.", totalEpisodes, aquilaMediaId);
-            }
+            MediaType = effectiveMediaType,
+            Id = aquilaMediaId,
+            Count = 1
+        };
+        bool success = await _apiClient.IncrementProgressAsync(incrementDto, userConfig.ApiKey, userConfig.AquilaServerUrl).ConfigureAwait(false);
+        if (success)
+        {
+            _logger.LogInformation("[Aquila SyncManager] SUCCESS: Scrobbled episode #{EpNum} for Aquila Media ID {AquilaId}", episodeNumber, aquilaMediaId);
         }
         else
         {
-            var incrementDto = new AquilaIncrementDto
+            // If entry doesn't exist on list yet, create fresh entry with progress = episodeNumber
+            int targetProgress = Math.Max(currentProgress, episodeNumber);
+            var saveDto = new AquilaSaveEntryDto
             {
-                MediaType = effectiveMediaType,
-                Id = aquilaMediaId,
-                Count = 1
+                Status = "WATCHING",
+                Progress = targetProgress
             };
-            bool success = await _apiClient.IncrementProgressAsync(incrementDto, userConfig.ApiKey, userConfig.AquilaServerUrl).ConfigureAwait(false);
-            if (success)
+            SetSaveDtoMediaId(saveDto, effectiveMediaType, aquilaMediaId);
+            bool saveSuccess = await _apiClient.SaveListEntryAsync(effectiveMediaType, saveDto, userConfig.ApiKey, userConfig.AquilaServerUrl).ConfigureAwait(false);
+            if (saveSuccess)
             {
-                _logger.LogInformation("[Aquila SyncManager] SUCCESS: Scrobbled episode #{EpNum} for Aquila Media ID {AquilaId}", episodeNumber, aquilaMediaId);
+                _logger.LogInformation("[Aquila SyncManager] SUCCESS (Fallback Upsert): Created list entry with progress {Progress} for Aquila Media ID {AquilaId}", targetProgress, aquilaMediaId);
             }
             else
             {
-                _logger.LogError("[Aquila SyncManager] FAILED to scrobble episode #{EpNum} for Aquila Media ID {AquilaId}", episodeNumber, aquilaMediaId);
+                _logger.LogError("[Aquila SyncManager] FAILED to scrobble or upsert episode #{EpNum} for Aquila Media ID {AquilaId}", episodeNumber, aquilaMediaId);
             }
         }
     }

@@ -1,9 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
 
+function formatMalNode(item: any) {
+  const englishTitle = item.alternative_titles?.en?.trim();
+  const mainTitle = item.title?.trim();
+  const displayTitle = englishTitle || mainTitle || "Untitled";
+
+  return {
+    id: item.id.toString(),
+    title: displayTitle,
+    image: item.main_picture?.medium || item.main_picture?.large || "",
+    format: item.media_type ? item.media_type.toUpperCase() : undefined,
+    episodes: item.num_episodes,
+    chapters: item.num_chapters,
+  };
+}
+
+async function fetchMalOfficial(url: string, clientId: string) {
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "X-MAL-CLIENT-ID": clientId,
+      },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data;
+    }
+  } catch (err) {
+    console.warn("Official MAL API fetch error:", err);
+  }
+  return null;
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
-  const query = searchParams.get("q");
-  const type = (searchParams.get("type") || "anime").toLowerCase();
+  const rawQuery = searchParams.get("q") || "";
+  const query = rawQuery.trim();
+  const type = (searchParams.get("type") || "anime").toLowerCase() === "manga" ? "manga" : "anime";
 
   if (!query) {
     return NextResponse.json([]);
@@ -11,70 +44,69 @@ export async function GET(req: NextRequest) {
 
   const clientId =
     process.env.NEXT_PUBLIC_MAL_CLIENT_ID || process.env.MAL_CLIENT_ID || "";
+
+  if (!clientId) {
+    return NextResponse.json(
+      { error: "MAL Client ID is not configured (NEXT_PUBLIC_MAL_CLIENT_ID / MAL_CLIENT_ID missing)" },
+      { status: 400 }
+    );
+  }
+
   const fields =
     type === "anime"
       ? "id,title,main_picture,alternative_titles,media_type,num_episodes"
       : "id,title,main_picture,alternative_titles,media_type,num_chapters,num_volumes";
 
-  if (clientId) {
-    try {
-      const res = await fetch(
-        `https://api.myanimelist.net/v2/${type}?q=${encodeURIComponent(query)}&limit=10&fields=${fields}`,
-        {
-          headers: {
-            "X-MAL-CLIENT-ID": clientId,
-          },
-        }
-      );
-      if (res.ok) {
-        const data = await res.json();
-        const results = (data.data || []).map((entry: any) => {
-          const item = entry.node || entry;
-          return {
-            id: item.id.toString(),
-            title: item.alternative_titles?.en || item.title,
-            image: item.main_picture?.medium || item.main_picture?.large,
-            format: item.media_type ? item.media_type.toUpperCase() : undefined,
-            episodes: item.num_episodes,
-            chapters: item.num_chapters,
-          };
-        });
-        return NextResponse.json(results);
-      }
-    } catch (err) {
-      console.warn(
-        "Official MAL API search error in route handler, trying Jikan fallback:",
-        err
-      );
+  // 1. Direct ID or MAL URL lookup
+  const malUrlMatch = query.match(/myanimelist\.net\/(anime|manga)\/(\d+)/i);
+  const directId = malUrlMatch ? malUrlMatch[2] : /^\d+$/.test(query) ? query : null;
+
+  if (directId) {
+    const data = await fetchMalOfficial(
+      `https://api.myanimelist.net/v2/${type}/${directId}?fields=${fields}`,
+      clientId
+    );
+    if (data && data.id) {
+      return NextResponse.json([formatMalNode(data)]);
     }
   }
 
-  // Fallback to Jikan API on server side
-  try {
-    const res = await fetch(
-      `https://api.jikan.moe/v4/${type}?q=${encodeURIComponent(query)}&limit=10`
-    );
-    if (res.ok) {
-      const data = await res.json();
-      const results = (data.data || []).map((item: any) => ({
-        id: item.mal_id.toString(),
-        title: item.title_english || item.title,
-        image: item.images?.jpg?.image_url,
-        format: item.type,
-        episodes: item.episodes,
-        chapters: item.chapters,
-      }));
+  // 2. Search Strategy 1: Exact query search (if length >= 3)
+  if (query.length >= 3) {
+    const searchUrl = `https://api.myanimelist.net/v2/${type}?q=${encodeURIComponent(query)}&limit=10&fields=${fields}`;
+    const data = await fetchMalOfficial(searchUrl, clientId);
+    const results = (data?.data || []).map((entry: any) => formatMalNode(entry.node || entry));
+
+    if (results.length > 0) {
       return NextResponse.json(results);
     }
-  } catch (err: any) {
-    return NextResponse.json(
-      { error: `MAL search failed: ${err.message || err}` },
-      { status: 500 }
-    );
   }
 
-  return NextResponse.json(
-    { error: "MAL search returned no results" },
-    { status: 404 }
-  );
+  // 3. Search Strategy 2: Sanitized query search (stripping punctuation/special characters)
+  const sanitized = query.replace(/[:\-_\/\\'"!?,.~#@$%^&*()+=<>]/g, " ").replace(/\s+/g, " ").trim();
+  if (sanitized && sanitized !== query && sanitized.length >= 3) {
+    const searchUrl = `https://api.myanimelist.net/v2/${type}?q=${encodeURIComponent(sanitized)}&limit=10&fields=${fields}`;
+    const data = await fetchMalOfficial(searchUrl, clientId);
+    const results = (data?.data || []).map((entry: any) => formatMalNode(entry.node || entry));
+    if (results.length > 0) {
+      return NextResponse.json(results);
+    }
+  }
+
+  // 4. Search Strategy 3: Leading core terms fallback (first 2-3 words if long query)
+  const words = (sanitized || query).split(/\s+/).filter(Boolean);
+  if (words.length > 2) {
+    const leadingQuery = words.slice(0, 3).join(" ");
+    if (leadingQuery.length >= 3 && leadingQuery !== sanitized && leadingQuery !== query) {
+      const searchUrl = `https://api.myanimelist.net/v2/${type}?q=${encodeURIComponent(leadingQuery)}&limit=10&fields=${fields}`;
+      const data = await fetchMalOfficial(searchUrl, clientId);
+      const results = (data?.data || []).map((entry: any) => formatMalNode(entry.node || entry));
+      if (results.length > 0) {
+        return NextResponse.json(results);
+      }
+    }
+  }
+
+  return NextResponse.json([]);
 }
+

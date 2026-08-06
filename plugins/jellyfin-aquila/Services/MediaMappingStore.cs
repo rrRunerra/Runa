@@ -77,7 +77,9 @@ public class MediaMappingStore
         }
     }
 
-    private static string GetKey(string userId, string itemId) => $"{userId}_{itemId}";
+    private static string NormalizeGuid(string id) => string.IsNullOrWhiteSpace(id) ? "" : id.Replace("-", "").ToLowerInvariant();
+
+    private static string GetKey(string userId, string itemId) => $"{NormalizeGuid(userId)}_{NormalizeGuid(itemId)}";
 
     /// <summary>
     /// Gets the mapping for a user and Jellyfin item.
@@ -85,17 +87,60 @@ public class MediaMappingStore
     public JellyfinItemMapping? GetMapping(string userId, string itemId)
     {
         var key = GetKey(userId, itemId);
-        _mappings.TryGetValue(key, out var mapping);
-        if (mapping != null)
+        if (_mappings.TryGetValue(key, out var mapping) && mapping != null)
         {
             _logger.LogInformation("[Aquila MappingStore] FOUND mapping for User={UserId}, Item={ItemId} -> AquilaId={AquilaId}",
                 userId, itemId, mapping.AquilaMediaId);
+            return mapping;
         }
-        else
+
+        var normItem = NormalizeGuid(itemId);
+        mapping = _mappings.Values.FirstOrDefault(m => NormalizeGuid(m.JellyfinItemId) == normItem);
+        if (mapping != null)
         {
-            _logger.LogInformation("[Aquila MappingStore] MISSING mapping for User={UserId}, Item={ItemId}", userId, itemId);
+            _logger.LogInformation("[Aquila MappingStore] FOUND mapping via itemId fallback for User={UserId}, Item={ItemId} -> AquilaId={AquilaId}",
+                userId, itemId, mapping.AquilaMediaId);
+            return mapping;
         }
-        return mapping;
+
+        _logger.LogInformation("[Aquila MappingStore] MISSING mapping for User={UserId}, Item={ItemId}", userId, itemId);
+        return null;
+    }
+
+    /// <summary>
+    /// Gets the mapping for a user by searching multiple candidate item IDs (SeriesId, SeasonId, ItemId).
+    /// </summary>
+    public JellyfinItemMapping? GetMappingForCandidateIds(string userId, IEnumerable<string> candidateIds)
+    {
+        var normUser = NormalizeGuid(userId);
+        var normCandidates = candidateIds.Select(NormalizeGuid).Where(id => !string.IsNullOrEmpty(id)).ToList();
+
+        foreach (var itemId in normCandidates)
+        {
+            var key = $"{normUser}_{itemId}";
+            if (_mappings.TryGetValue(key, out var mapping) && mapping != null)
+            {
+                _logger.LogInformation("[Aquila MappingStore] FOUND candidate mapping for User={UserId}, MatchedItem={ItemId} -> AquilaId={AquilaId}",
+                    userId, itemId, mapping.AquilaMediaId);
+                return mapping;
+            }
+        }
+
+        // Fallback: search by candidate itemId across all stored mappings
+        foreach (var itemId in normCandidates)
+        {
+            var mapping = _mappings.Values.FirstOrDefault(m => NormalizeGuid(m.JellyfinItemId) == itemId);
+            if (mapping != null)
+            {
+                _logger.LogInformation("[Aquila MappingStore] FOUND candidate mapping via itemId fallback: MatchedItem={ItemId} -> AquilaId={AquilaId}",
+                    itemId, mapping.AquilaMediaId);
+                return mapping;
+            }
+        }
+
+        _logger.LogInformation("[Aquila MappingStore] MISSING mapping for User={UserId} across candidate IDs: {CandidateIds}",
+            userId, string.Join(", ", candidateIds));
+        return null;
     }
 
     /// <summary>

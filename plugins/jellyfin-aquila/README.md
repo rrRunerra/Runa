@@ -11,7 +11,7 @@ The **Jellyfin Server Plugin for Aquila** integrates your Jellyfin media server 
 2. **Playback OSD Integration (Next to Heart Icon)**:
    - Injects an **Aquila logo button** right next to the Heart (`.btnFavorite`) icon in the video player OSD bar and media detail pages.
 3. **Media Link Search Modal**:
-   - Query Aquila search API (`GET /:mediaType/search?query=:title`) from within the video player.
+   - Query Aquila search API (`GET /:mediaType/search/:title`) from within the video player.
    - **Lightweight Card UI**: Displays item `title` and `coverImage`.
    - **`onClick` Selection**: Link and persist internal Aquila IDs to Jellyfin items.
 4. **In-Player Media Management**:

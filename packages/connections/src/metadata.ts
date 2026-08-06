@@ -86,10 +86,13 @@ export const PROVIDERS_METADATA: ConnectionMetadata[] = [
     capabilities: [ConnectionCapability.ANIME, ConnectionCapability.MANGA, ConnectionCapability.SHOWCASE],
     primaryApp: "aquila",
     async search(query: string, type: "ANIME" | "MANGA"): Promise<ConnectionSearchResult[]> {
-      const path = type.toLowerCase(); // 'anime' or 'manga'
+      const path = type.toLowerCase() === "manga" ? "manga" : "anime";
+      const cleanQuery = (query || "").trim();
+
+      if (!cleanQuery) return [];
 
       if (typeof window !== "undefined") {
-        const res = await fetch(`/api/mal/search?q=${encodeURIComponent(query)}&type=${path}`);
+        const res = await fetch(`/api/mal/search?q=${encodeURIComponent(cleanQuery)}&type=${path}`);
         if (!res.ok) {
           let details = res.statusText || `Status ${res.status}`;
           try {
@@ -107,59 +110,77 @@ export const PROVIDERS_METADATA: ConnectionMetadata[] = [
         typeof process !== "undefined"
           ? process.env.NEXT_PUBLIC_MAL_CLIENT_ID || process.env.MAL_CLIENT_ID || ""
           : "";
+
+      if (!clientId) {
+        throw new Error("MyAnimeList Client ID is not configured (NEXT_PUBLIC_MAL_CLIENT_ID / MAL_CLIENT_ID missing)");
+      }
+
       const fields =
         path === "anime"
           ? "id,title,main_picture,alternative_titles,media_type,num_episodes"
           : "id,title,main_picture,alternative_titles,media_type,num_chapters,num_volumes";
 
-      if (clientId) {
-        const res = await fetch(
-          `https://api.myanimelist.net/v2/${path}?q=${encodeURIComponent(query)}&limit=10&fields=${fields}`,
-          {
-            headers: {
-              "X-MAL-CLIENT-ID": clientId,
-            },
+      const formatNode = (item: any): ConnectionSearchResult => {
+        const englishTitle = item.alternative_titles?.en?.trim();
+        const mainTitle = item.title?.trim();
+        return {
+          id: item.id.toString(),
+          title: englishTitle || mainTitle || "Untitled",
+          image: item.main_picture?.medium || item.main_picture?.large,
+          format: item.media_type ? item.media_type.toUpperCase() : undefined,
+          episodes: item.num_episodes,
+          chapters: item.num_chapters,
+        };
+      };
+
+      const fetchOfficial = async (url: string) => {
+        try {
+          const res = await fetch(url, { headers: { "X-MAL-CLIENT-ID": clientId } });
+          if (res.ok) {
+            return await res.json();
           }
-        );
-        if (!res.ok) {
-          let details = res.statusText || `Status ${res.status}`;
-          try {
-            const errData = await res.json();
-            if (errData && typeof errData === "object") {
-              details = errData.message || errData.error || details;
-            }
-          } catch {}
-          throw new Error(`MyAnimeList search failed: ${details}`);
+        } catch {}
+        return null;
+      };
+
+      // 1. Direct ID / MAL URL
+      const malUrlMatch = cleanQuery.match(/myanimelist\.net\/(anime|manga)\/(\d+)/i);
+      const directId = malUrlMatch ? malUrlMatch[2] : /^\d+$/.test(cleanQuery) ? cleanQuery : null;
+
+      if (directId) {
+        const data = await fetchOfficial(`https://api.myanimelist.net/v2/${path}/${directId}?fields=${fields}`);
+        if (data && data.id) {
+          return [formatNode(data)];
         }
-        const data = await res.json();
-        return (data.data || []).map((entry: any) => {
-          const item = entry.node || entry;
-          return {
-            id: item.id.toString(),
-            title: item.alternative_titles?.en || item.title,
-            image: item.main_picture?.medium || item.main_picture?.large,
-            format: item.media_type ? item.media_type.toUpperCase() : undefined,
-            episodes: item.num_episodes,
-            chapters: item.num_chapters,
-          };
-        });
       }
 
-      const res = await fetch(
-        `https://api.jikan.moe/v4/${path}?q=${encodeURIComponent(query)}&limit=10`
-      );
-      if (!res.ok) {
-        throw new Error(`Status ${res.status}`);
+      // 2. Strategy 1: Exact query (if length >= 3)
+      if (cleanQuery.length >= 3) {
+        const data = await fetchOfficial(`https://api.myanimelist.net/v2/${path}?q=${encodeURIComponent(cleanQuery)}&limit=10&fields=${fields}`);
+        const results = (data?.data || []).map((entry: any) => formatNode(entry.node || entry));
+        if (results.length > 0) return results;
       }
-      const data = await res.json();
-      return (data.data || []).map((item: any) => ({
-        id: item.mal_id.toString(),
-        title: item.title_english || item.title,
-        image: item.images?.jpg?.image_url,
-        format: item.type,
-        episodes: item.episodes,
-        chapters: item.chapters,
-      }));
+
+      // 3. Strategy 2: Sanitized query
+      const sanitized = cleanQuery.replace(/[:\-_\/\\'"!?,.~#@$%^&*()+=<>]/g, " ").replace(/\s+/g, " ").trim();
+      if (sanitized && sanitized !== cleanQuery && sanitized.length >= 3) {
+        const data = await fetchOfficial(`https://api.myanimelist.net/v2/${path}?q=${encodeURIComponent(sanitized)}&limit=10&fields=${fields}`);
+        const results = (data?.data || []).map((entry: any) => formatNode(entry.node || entry));
+        if (results.length > 0) return results;
+      }
+
+      // 4. Strategy 3: Leading core terms
+      const words = (sanitized || cleanQuery).split(/\s+/).filter(Boolean);
+      if (words.length > 2) {
+        const leadingQuery = words.slice(0, 3).join(" ");
+        if (leadingQuery.length >= 3 && leadingQuery !== sanitized && leadingQuery !== cleanQuery) {
+          const data = await fetchOfficial(`https://api.myanimelist.net/v2/${path}?q=${encodeURIComponent(leadingQuery)}&limit=10&fields=${fields}`);
+          const results = (data?.data || []).map((entry: any) => formatNode(entry.node || entry));
+          if (results.length > 0) return results;
+        }
+      }
+
+      return [];
     },
   },
   {

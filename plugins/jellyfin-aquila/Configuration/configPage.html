@@ -28,7 +28,7 @@
                         <h3 class="sectionTitle">User API Connection</h3>
                         <div class="inputContainer">
                             <label class="inputLabel" for="AquilaServerUrl">Aquila Server URL:</label>
-                            <input is="emby-input" id="AquilaServerUrl" type="url" required placeholder="http://localhost:3000/api" />
+                            <input is="emby-input" id="AquilaServerUrl" type="url" required placeholder="https://api.runerra.org" />
                             <div class="fieldDescription">Base URL of your Aquila API server instance.</div>
                         </div>
 
@@ -49,7 +49,55 @@
                     <div class="verticalSection">
                         <h3 class="sectionTitle">Client JavaScript Injection Code</h3>
                         <p class="fieldDescription">Paste this 1-line code into <strong>Jellyfin Dashboard &gt; General &gt; Custom JavaScript code</strong> (or into your <strong>JavaScript Injector</strong> plugin):</p>
-                        <textarea is="emby-input" style="width:100%; font-family:monospace; background:rgba(0,0,0,0.5); color:#a78bfa; padding:10px; border-radius:6px; height:60px;" readonly onclick="this.select();">(function(){var s=document.createElement('script');s.src='/Aquila/WebInjection.js';document.head.appendChild(s);})();</textarea>
+                        <textarea is="emby-input" style="width:100%; font-family:monospace; background:rgba(0,0,0,0.5); color:#a78bfa; padding:10px; border-radius:6px; height:60px;" readonly onclick="this.select();">(function(){var s=document.createElement('script');s.src='/Aquila/WebInjection.js?v=10.11.11';document.head.appendChild(s);})();</textarea>
+                    </div>
+
+                    <!-- Manual Endpoint Testing Suite -->
+                    <div class="verticalSection">
+                        <h3 class="sectionTitle">Manual API Endpoint Tests</h3>
+                        <p class="fieldDescription">Test communication between Jellyfin plugin and Aquila server endpoints directly from the dashboard.</p>
+
+                        <div class="inputContainer">
+                            <label class="inputLabel" for="TestMediaId">Test Media ID / Item ID:</label>
+                            <input is="emby-input" id="TestMediaId" type="text" value="3546" placeholder="Enter Aquila Media ID or Jellyfin Item ID (e.g. 3546)" />
+                            <div class="fieldDescription">Specify a specific Media ID or Item ID to test against API endpoints.</div>
+                        </div>
+
+                        <div class="inputContainer">
+                            <label class="inputLabel" for="TestMediaType">Test Media Type:</label>
+                            <select is="emby-select" id="TestMediaType">
+                                <option value="anime">Anime</option>
+                                <option value="tv" selected>TV Series</option>
+                                <option value="movie">Movie</option>
+                                <option value="manga">Manga</option>
+                            </select>
+                        </div>
+
+                        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+                            <button is="emby-button" type="button" id="btnTestSearch" class="raised">
+                                <span>Test Search API</span>
+                            </button>
+                            <button is="emby-button" type="button" id="btnTestGetEntry" class="raised">
+                                <span>Test Get Entry</span>
+                            </button>
+                            <button is="emby-button" type="button" id="btnTestGetDetails" class="raised">
+                                <span>Test Get Details</span>
+                            </button>
+                            <button is="emby-button" type="button" id="btnTestGetMapping" class="raised">
+                                <span>Test Get Mapping</span>
+                            </button>
+                            <button is="emby-button" type="button" id="btnTestSaveMapping" class="raised">
+                                <span>Test Save Mapping</span>
+                            </button>
+                            <button is="emby-button" type="button" id="btnTestConnections" class="raised">
+                                <span>Test Connections API</span>
+                            </button>
+                        </div>
+
+                        <div class="inputContainer">
+                            <label class="inputLabel">Test Output Logs:</label>
+                            <pre id="testOutputLog" style="background:#0f172a; color:#38bdf8; font-family:monospace; padding:12px; border-radius:8px; max-height:220px; overflow-y:auto; font-size:12px; white-space:pre-wrap; border:1px solid #1e293b;">Click any test button above to execute a manual API endpoint request...</pre>
+                        </div>
                     </div>
 
                     <div>
@@ -72,7 +120,7 @@
                         if (!doc.getElementById('aquila-web-script')) {
                             var script = doc.createElement('script');
                             script.id = 'aquila-web-script';
-                            script.src = '/Aquila/WebInjection.js';
+                            script.src = '/Aquila/WebInjection.js?v=10.11.11';
                             script.defer = true;
                             doc.head.appendChild(script);
                             console.log('[Aquila Plugin] Injected /Aquila/WebInjection.js into top document head from config page.');
@@ -99,7 +147,7 @@
 
                         // Map user settings
                         var userConfig = (config.UserConfigs || []).find(function (u) { return u.JellyfinUserId === currentUserId; }) || {};
-                        page.querySelector('#AquilaServerUrl').value = userConfig.AquilaServerUrl || "http://localhost:3000/api";
+                        page.querySelector('#AquilaServerUrl').value = userConfig.AquilaServerUrl || "";
                         page.querySelector('#AquilaApiKey').value = userConfig.ApiKey || "";
                         page.querySelector('#CompletionThreshold').value = userConfig.CompletionThreshold || 80;
 
@@ -155,6 +203,95 @@
                             itemDiv.appendChild(selectEl);
                             container.appendChild(itemDiv);
                         });
+
+                        function logTestResult(title, data, success) {
+                            var logEl = page.querySelector('#testOutputLog');
+                            var time = new Date().toLocaleTimeString();
+                            var statusStr = success ? '[SUCCESS]' : '[FAILED]';
+                            var output = time + ' ' + statusStr + ' ' + title + ':\n' + JSON.stringify(data, null, 2) + '\n\n';
+                            logEl.textContent = output + logEl.textContent;
+                        }
+
+                        function getTestParams() {
+                            var mediaIdInput = page.querySelector('#TestMediaId').value.trim();
+                            var mediaTypeSelect = page.querySelector('#TestMediaType').value;
+                            return {
+                                mediaId: mediaIdInput || "3546",
+                                mediaType: mediaTypeSelect || "tv"
+                            };
+                        }
+
+                        page.querySelector('#btnTestSearch').onclick = function () {
+                            var params = getTestParams();
+                            var userId = Dashboard.getCurrentUserId();
+                            var queryParam = isNaN(Number(params.mediaId)) ? params.mediaId : 'One%20Piece';
+                            var url = ApiClient.getUrl ? ApiClient.getUrl('Aquila/Api/Search?mediaType=' + params.mediaType + '&query=' + encodeURIComponent(queryParam) + '&userId=' + encodeURIComponent(userId)) : '/Aquila/Api/Search?mediaType=' + params.mediaType + '&query=' + encodeURIComponent(queryParam);
+                            logTestResult('Executing Search Test (' + params.mediaType + ')', { url: url }, true);
+                            fetch(url).then(function (r) { return r.json(); }).then(function (d) {
+                                logTestResult('Search Test Response', d, true);
+                            }).catch(function (err) {
+                                logTestResult('Search Test Error', { message: err.message }, false);
+                            });
+                        };
+
+                        page.querySelector('#btnTestGetEntry').onclick = function () {
+                            var params = getTestParams();
+                            var url = ApiClient.getUrl ? ApiClient.getUrl('Aquila/Api/Entry?mediaType=' + params.mediaType + '&id=' + encodeURIComponent(params.mediaId)) : '/Aquila/Api/Entry?mediaType=' + params.mediaType + '&id=' + encodeURIComponent(params.mediaId);
+                            logTestResult('Executing Get Entry Test (ID: ' + params.mediaId + ', Type: ' + params.mediaType + ')', { url: url }, true);
+                            fetch(url).then(function (r) { return r.json(); }).then(function (d) {
+                                logTestResult('Get Entry Response', d, true);
+                            }).catch(function (err) {
+                                logTestResult('Get Entry Error / Not Found', { message: err.message }, false);
+                            });
+                        };
+
+                        page.querySelector('#btnTestGetDetails').onclick = function () {
+                            var params = getTestParams();
+                            var url = ApiClient.getUrl ? ApiClient.getUrl('Aquila/Api/Details?mediaType=' + params.mediaType + '&id=' + encodeURIComponent(params.mediaId)) : '/Aquila/Api/Details?mediaType=' + params.mediaType + '&id=' + encodeURIComponent(params.mediaId);
+                            logTestResult('Executing Get Details Test (ID: ' + params.mediaId + ', Type: ' + params.mediaType + ')', { url: url }, true);
+                            fetch(url).then(function (r) { return r.json(); }).then(function (d) {
+                                logTestResult('Get Details Response', d, true);
+                            }).catch(function (err) {
+                                logTestResult('Get Details Error', { message: err.message }, false);
+                            });
+                        };
+
+                        page.querySelector('#btnTestGetMapping').onclick = function () {
+                            var params = getTestParams();
+                            var userId = Dashboard.getCurrentUserId();
+                            var url = ApiClient.getUrl ? ApiClient.getUrl('Aquila/Api/Mapping?userId=' + encodeURIComponent(userId) + '&itemId=' + encodeURIComponent(params.mediaId)) : '/Aquila/Api/Mapping?userId=' + encodeURIComponent(userId) + '&itemId=' + encodeURIComponent(params.mediaId);
+                            logTestResult('Executing Get Mapping Test (ItemID: ' + params.mediaId + ')', { url: url }, true);
+                            fetch(url).then(function (r) { return r.json(); }).then(function (d) {
+                                logTestResult('Get Mapping Response', d, true);
+                            }).catch(function (err) {
+                                logTestResult('Get Mapping Response / Not Found', { message: err.message }, false);
+                            });
+                        };
+
+                        page.querySelector('#btnTestSaveMapping').onclick = function () {
+                            var params = getTestParams();
+                            var userId = Dashboard.getCurrentUserId();
+                            var aquilaId = !isNaN(Number(params.mediaId)) ? Number(params.mediaId) : 101;
+                            var url = ApiClient.getUrl ? ApiClient.getUrl('Aquila/Api/Mapping?userId=' + encodeURIComponent(userId) + '&itemId=' + encodeURIComponent(params.mediaId) + '&aquilaMediaId=' + aquilaId + '&mediaType=' + params.mediaType) : '/Aquila/Api/Mapping?userId=' + encodeURIComponent(userId) + '&itemId=' + encodeURIComponent(params.mediaId) + '&aquilaMediaId=' + aquilaId + '&mediaType=' + params.mediaType;
+                            logTestResult('Executing Save Mapping Test', { url: url }, true);
+                            fetch(url, { method: 'POST' }).then(function (r) { return r.json(); }).then(function (d) {
+                                logTestResult('Save Mapping Response', d, true);
+                            }).catch(function (err) {
+                                logTestResult('Save Mapping Error', { message: err.message }, false);
+                            });
+                        };
+
+                        page.querySelector('#btnTestConnections').onclick = function () {
+                            var params = getTestParams();
+                            var capParam = params.mediaType === 'tv' ? 'TV_SHOWS' : params.mediaType === 'movie' ? 'MOVIES' : params.mediaType.toUpperCase();
+                            var url = ApiClient.getUrl ? ApiClient.getUrl('Aquila/Api/Connections?capabilities=' + encodeURIComponent(capParam)) : '/Aquila/Api/Connections?capabilities=' + encodeURIComponent(capParam);
+                            logTestResult('Executing Connections Test (' + capParam + ')', { url: url }, true);
+                            fetch(url).then(function (r) { return r.json(); }).then(function (d) {
+                                logTestResult('Connections API Response', d, true);
+                            }).catch(function (err) {
+                                logTestResult('Connections API Error', { message: err.message }, false);
+                            });
+                        };
 
                         Dashboard.hideLoadingMsg();
                     }).catch(function (err) {

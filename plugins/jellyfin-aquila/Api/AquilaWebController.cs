@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.Aquila.Configuration;
 using Jellyfin.Plugin.Aquila.Models;
+using Jellyfin.Plugin.Aquila.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -22,27 +23,31 @@ namespace Jellyfin.Plugin.Aquila.Api;
 public class AquilaWebController : ControllerBase
 {
     private readonly AquilaApiClient _apiClient;
+    private readonly MediaMappingStore _mappingStore;
     private readonly ILogger<AquilaWebController> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="AquilaWebController"/> class.
     /// </summary>
-    public AquilaWebController(AquilaApiClient apiClient, ILogger<AquilaWebController> logger)
+    public AquilaWebController(AquilaApiClient apiClient, MediaMappingStore mappingStore, ILogger<AquilaWebController> logger)
     {
         _apiClient = apiClient;
+        _mappingStore = mappingStore;
         _logger = logger;
     }
 
     /// <summary>
     /// Serves aquila-web-injection.js with application/javascript content type and no-cache headers.
     /// </summary>
+    [HttpGet("aquila-client.js")]
     [HttpGet("WebInjection.js")]
     [Produces("application/javascript")]
     [AllowAnonymous]
     [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
     public IActionResult GetWebInjectionScript()
     {
-        Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+        Console.WriteLine("[Aquila WebController] Serving WebInjection.js");
+        Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0";
         Response.Headers["Pragma"] = "no-cache";
         Response.Headers["Expires"] = "0";
 
@@ -50,6 +55,7 @@ public class AquilaWebController : ControllerBase
         using var stream = assembly.GetManifestResourceStream("Jellyfin.Plugin.Aquila.Web.aquila-web-injection.js");
         if (stream == null)
         {
+            Console.WriteLine("[Aquila WebController] ERROR: aquila-web-injection.js manifest stream is null.");
             return NotFound("// Aquila injection script resource not found.");
         }
 
@@ -67,7 +73,8 @@ public class AquilaWebController : ControllerBase
     [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
     public IActionResult GetModalCss()
     {
-        Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
+        Console.WriteLine("[Aquila WebController] Serving Modal.css");
+        Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0";
         Response.Headers["Pragma"] = "no-cache";
         Response.Headers["Expires"] = "0";
 
@@ -75,6 +82,7 @@ public class AquilaWebController : ControllerBase
         using var stream = assembly.GetManifestResourceStream("Jellyfin.Plugin.Aquila.Web.aquila-modal.css");
         if (stream == null)
         {
+            Console.WriteLine("[Aquila WebController] ERROR: aquila-modal.css manifest stream is null.");
             return NotFound("/* Aquila modal css resource not found. */");
         }
 
@@ -83,10 +91,19 @@ public class AquilaWebController : ControllerBase
         return Content(css, "text/css", Encoding.UTF8);
     }
 
-    private static UserAquilaConfig? GetCurrentUserConfig()
+    private static UserAquilaConfig? GetCurrentUserConfig(string? userId = null)
     {
         var config = Plugin.Instance?.Configuration;
         if (config == null || config.UserConfigs == null) return null;
+
+        if (!string.IsNullOrWhiteSpace(userId))
+        {
+            var userMatch = config.UserConfigs.FirstOrDefault(u => u.JellyfinUserId == userId);
+            if (userMatch != null && !string.IsNullOrWhiteSpace(userMatch.ApiKey))
+            {
+                return userMatch;
+            }
+        }
 
         return config.UserConfigs.FirstOrDefault(u => !string.IsNullOrWhiteSpace(u.ApiKey))
             ?? config.UserConfigs.FirstOrDefault();
@@ -97,17 +114,24 @@ public class AquilaWebController : ControllerBase
     /// </summary>
     [HttpGet("Api/Search")]
     [AllowAnonymous]
-    public async Task<IActionResult> ProxySearch([FromQuery] string mediaType, [FromQuery] string query)
+    public async Task<IActionResult> ProxySearch([FromQuery] string mediaType, [FromQuery] string query, [FromQuery] string? userId = null)
     {
-        var userConfig = GetCurrentUserConfig();
+        var logPrefix = "[Aquila WebController] [PROXY SEARCH]";
+        Console.WriteLine($"{logPrefix} Received request: mediaType='{mediaType}', query='{query}', userId='{userId}'");
+        _logger.LogInformation("{LogPrefix} Request: mediaType='{MediaType}', query='{Query}', userId='{UserId}'", logPrefix, mediaType, query, userId);
+
+        var userConfig = GetCurrentUserConfig(userId);
         if (userConfig == null || string.IsNullOrWhiteSpace(userConfig.ApiKey))
         {
-            _logger.LogWarning("[Aquila Plugin] ProxySearch failed: No Aquila API Key configured for user.");
-            return BadRequest(new { message = "Aquila API Key not configured." });
+            var warn = $"{logPrefix} FAILED: No Aquila API Key configured for user '{userId}'.";
+            Console.WriteLine(warn);
+            _logger.LogWarning("{Warn}", warn);
+            return BadRequest(new { message = "Aquila API Key not configured in Jellyfin Plugin Settings." });
         }
 
-        _logger.LogInformation("[Aquila Plugin] ProxySearch for {MediaType} with query '{Query}'", mediaType, query);
+        Console.WriteLine($"{logPrefix} UserConfig found: BaseUrl='{userConfig.AquilaServerUrl}', ApiKeyPresent={!string.IsNullOrWhiteSpace(userConfig.ApiKey)}");
         var results = await _apiClient.SearchMediaAsync(mediaType, query, userConfig.ApiKey, userConfig.AquilaServerUrl).ConfigureAwait(false);
+        Console.WriteLine($"{logPrefix} Returning {results.Count} items to client.");
         return Ok(results);
     }
 
@@ -118,16 +142,21 @@ public class AquilaWebController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> ProxyGetEntry([FromQuery] string mediaType, [FromQuery] int id)
     {
+        var logPrefix = "[Aquila WebController] [PROXY GET ENTRY]";
+        Console.WriteLine($"{logPrefix} Received request: mediaType='{mediaType}', id={id}");
+        _logger.LogInformation("{LogPrefix} Request: mediaType='{MediaType}', id={MediaId}", logPrefix, mediaType, id);
+
         var userConfig = GetCurrentUserConfig();
         if (userConfig == null || string.IsNullOrWhiteSpace(userConfig.ApiKey))
         {
+            Console.WriteLine($"{logPrefix} FAILED: No Aquila API Key configured.");
             return BadRequest(new { message = "Aquila API Key not configured." });
         }
 
-        _logger.LogInformation("[Aquila Plugin] ProxyGetEntry for {MediaType} ID {MediaId}", mediaType, id);
         var entry = await _apiClient.GetListEntryAsync(mediaType, id, userConfig.ApiKey, userConfig.AquilaServerUrl).ConfigureAwait(false);
         if (!entry.HasValue)
         {
+            Console.WriteLine($"{logPrefix} Entry not found for ID {id}.");
             return NotFound(new { message = "Entry not found" });
         }
 
@@ -141,14 +170,249 @@ public class AquilaWebController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> ProxySaveEntry([FromQuery] string mediaType, [FromBody] AquilaSaveEntryDto dto)
     {
+        var logPrefix = "[Aquila WebController] [PROXY SAVE ENTRY]";
+        Console.WriteLine($"{logPrefix} Received save request for mediaType='{mediaType}'");
+        _logger.LogInformation("{LogPrefix} Request for mediaType='{MediaType}'", logPrefix, mediaType);
+
         var userConfig = GetCurrentUserConfig();
         if (userConfig == null || string.IsNullOrWhiteSpace(userConfig.ApiKey))
         {
+            Console.WriteLine($"{logPrefix} FAILED: No Aquila API Key configured.");
             return BadRequest(new { message = "Aquila API Key not configured." });
         }
 
-        _logger.LogInformation("[Aquila Plugin] ProxySaveEntry for {MediaType}", mediaType);
         var success = await _apiClient.SaveListEntryAsync(mediaType, dto, userConfig.ApiKey, userConfig.AquilaServerUrl).ConfigureAwait(false);
+        Console.WriteLine($"{logPrefix} Save entry success status: {success}");
         return success ? Ok(new { success = true }) : StatusCode(500, new { message = "Failed to save entry on Aquila API" });
+    }
+
+    /// <summary>
+    /// Proxies media details request to Aquila API.
+    /// </summary>
+    [HttpGet("Api/Details")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ProxyGetDetails([FromQuery] string mediaType, [FromQuery] int id)
+    {
+        var userConfig = GetCurrentUserConfig();
+        if (userConfig == null || string.IsNullOrWhiteSpace(userConfig.ApiKey)) return BadRequest(new { message = "Aquila API Key not configured." });
+
+        var details = await _apiClient.GetMediaDetailsAsync(mediaType, id, userConfig.ApiKey, userConfig.AquilaServerUrl).ConfigureAwait(false);
+        if (!details.HasValue) return NotFound(new { message = "Media details not found" });
+
+        return Content(details.Value.GetRawText(), "application/json", Encoding.UTF8);
+    }
+
+    /// <summary>
+    /// Proxies favorite status request to Aquila API.
+    /// </summary>
+    [HttpGet("Api/FavoriteStatus")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ProxyGetFavoriteStatus([FromQuery] string mediaType, [FromQuery] int id)
+    {
+        var userConfig = GetCurrentUserConfig();
+        if (userConfig == null || string.IsNullOrWhiteSpace(userConfig.ApiKey)) return BadRequest(new { message = "Aquila API Key not configured." });
+
+        var fav = await _apiClient.GetFavoriteStatusAsync(mediaType, id, userConfig.ApiKey, userConfig.AquilaServerUrl).ConfigureAwait(false);
+        if (!fav.HasValue) return Ok(new { favorited = false });
+
+        return Content(fav.Value.GetRawText(), "application/json", Encoding.UTF8);
+    }
+
+    /// <summary>
+    /// Proxies add favorite request to Aquila API.
+    /// </summary>
+    [HttpPost("Api/Favorite")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ProxyAddFavorite([FromQuery] string type, [FromQuery] string targetId)
+    {
+        var userConfig = GetCurrentUserConfig();
+        if (userConfig == null || string.IsNullOrWhiteSpace(userConfig.ApiKey)) return BadRequest(new { message = "Aquila API Key not configured." });
+
+        var success = await _apiClient.AddFavoriteAsync(type, targetId, userConfig.ApiKey, userConfig.AquilaServerUrl).ConfigureAwait(false);
+        return success ? Ok(new { success = true }) : StatusCode(500, new { message = "Failed to add favorite" });
+    }
+
+    /// <summary>
+    /// Proxies delete favorite request to Aquila API.
+    /// </summary>
+    [HttpDelete("Api/Favorite")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ProxyDeleteFavorite([FromQuery] string mediaType, [FromQuery] int id)
+    {
+        var userConfig = GetCurrentUserConfig();
+        if (userConfig == null || string.IsNullOrWhiteSpace(userConfig.ApiKey)) return BadRequest(new { message = "Aquila API Key not configured." });
+
+        var success = await _apiClient.DeleteFavoriteAsync(mediaType, id, userConfig.ApiKey, userConfig.AquilaServerUrl).ConfigureAwait(false);
+        return success ? Ok(new { success = true }) : StatusCode(500, new { message = "Failed to delete favorite" });
+    }
+
+    /// <summary>
+    /// Proxies delete entry request to Aquila API.
+    /// </summary>
+    [HttpDelete("Api/Entry")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ProxyDeleteEntry([FromQuery] string mediaType, [FromQuery] int id)
+    {
+        var userConfig = GetCurrentUserConfig();
+        if (userConfig == null || string.IsNullOrWhiteSpace(userConfig.ApiKey)) return BadRequest(new { message = "Aquila API Key not configured." });
+
+        var success = await _apiClient.DeleteListEntryAsync(mediaType, id, userConfig.ApiKey, userConfig.AquilaServerUrl).ConfigureAwait(false);
+        return success ? Ok(new { success = true }) : StatusCode(500, new { message = "Failed to delete entry" });
+    }
+
+    /// <summary>
+    /// Proxies toggle episode watched request to Aquila API.
+    /// </summary>
+    [HttpPost("Api/Episode")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ProxyToggleEpisode([FromQuery] int id, [FromBody] System.Text.Json.JsonElement body)
+    {
+        var userConfig = GetCurrentUserConfig();
+        if (userConfig == null || string.IsNullOrWhiteSpace(userConfig.ApiKey)) return BadRequest(new { message = "Aquila API Key not configured." });
+
+        int seasonNum = body.GetProperty("seasonNum").GetInt32();
+        int episodeNum = body.GetProperty("episodeNum").GetInt32();
+
+        var res = await _apiClient.ToggleEpisodeWatchedAsync(id, seasonNum, episodeNum, userConfig.ApiKey, userConfig.AquilaServerUrl).ConfigureAwait(false);
+        if (!res.HasValue) return StatusCode(500, new { message = "Failed to toggle episode" });
+
+        return Content(res.Value.GetRawText(), "application/json", Encoding.UTF8);
+    }
+
+    /// <summary>
+    /// Proxies increment progress request to Aquila API (/list/increment).
+    /// </summary>
+    [HttpPost("Api/Increment")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ProxyIncrementProgress([FromBody] System.Text.Json.JsonElement body)
+    {
+        var userConfig = GetCurrentUserConfig();
+        if (userConfig == null || string.IsNullOrWhiteSpace(userConfig.ApiKey)) return BadRequest(new { message = "Aquila API Key not configured." });
+
+        string mediaType = body.TryGetProperty("mediaType", out var mtProp) ? (mtProp.GetString() ?? "anime") : "anime";
+        int id = body.GetProperty("id").GetInt32();
+        int count = body.TryGetProperty("count", out var cProp) ? cProp.GetInt32() : 1;
+
+        _logger.LogInformation("[Aquila WebController] [INCREMENT] MediaType='{MediaType}', Id={Id}, Count={Count}", mediaType, id, count);
+
+        var incrementDto = new AquilaIncrementDto
+        {
+            MediaType = mediaType,
+            Id = id,
+            Count = count
+        };
+
+        var success = await _apiClient.IncrementProgressAsync(incrementDto, userConfig.ApiKey, userConfig.AquilaServerUrl).ConfigureAwait(false);
+        if (success)
+        {
+            return Ok(new { success = true });
+        }
+
+        // If /list/increment returned false/404 because entry wasn't on list yet, create entry!
+        _logger.LogInformation("[Aquila WebController] [INCREMENT FALLBACK] Entry missing on list for Id={Id}. Upserting entry...", id);
+        var saveDto = new AquilaSaveEntryDto
+        {
+            Status = "WATCHING",
+            Progress = count
+        };
+        SetSaveDtoMediaId(saveDto, mediaType, id);
+        var saveSuccess = await _apiClient.SaveListEntryAsync(mediaType, saveDto, userConfig.ApiKey, userConfig.AquilaServerUrl).ConfigureAwait(false);
+        return saveSuccess ? Ok(new { success = true }) : StatusCode(500, new { message = "Failed to increment or save progress" });
+    }
+
+    private static void SetSaveDtoMediaId(AquilaSaveEntryDto dto, string mediaType, int mediaId)
+    {
+        switch (mediaType.ToUpperInvariant())
+        {
+            case "ANIME":
+                dto.AnimeId = mediaId;
+                break;
+            case "MOVIE":
+                dto.MovieId = mediaId;
+                break;
+            case "TV":
+            default:
+                dto.TvId = mediaId;
+                break;
+        }
+    }
+
+    /// <summary>
+    /// Proxies toggle season watched request to Aquila API.
+    /// </summary>
+    [HttpPost("Api/Season")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ProxyToggleSeason([FromQuery] int id, [FromBody] System.Text.Json.JsonElement body)
+    {
+        var userConfig = GetCurrentUserConfig();
+        if (userConfig == null || string.IsNullOrWhiteSpace(userConfig.ApiKey)) return BadRequest(new { message = "Aquila API Key not configured." });
+
+        int seasonNum = body.GetProperty("seasonNum").GetInt32();
+        var episodes = body.GetProperty("episodes");
+        bool watched = body.GetProperty("watched").GetBoolean();
+
+        var success = await _apiClient.ToggleSeasonWatchedAsync(id, seasonNum, episodes, watched, userConfig.ApiKey, userConfig.AquilaServerUrl).ConfigureAwait(false);
+        return success ? Ok(new { success = true }) : StatusCode(500, new { message = "Failed to toggle season" });
+    }
+
+    /// <summary>
+    /// Proxies user active connections request to Aquila API.
+    /// </summary>
+    [HttpGet("Api/Connections")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ProxyGetConnections([FromQuery] string capabilities)
+    {
+        var userConfig = GetCurrentUserConfig();
+        if (userConfig == null || string.IsNullOrWhiteSpace(userConfig.ApiKey)) return BadRequest(new { message = "Aquila API Key not configured." });
+
+        var conn = await _apiClient.GetUserConnectionsAsync(capabilities ?? "", userConfig.ApiKey, userConfig.AquilaServerUrl).ConfigureAwait(false);
+        if (!conn.HasValue) return Ok(Array.Empty<object>());
+
+        return Content(conn.Value.GetRawText(), "application/json", Encoding.UTF8);
+    }
+
+    /// <summary>
+    /// Proxies external connection search request to Aquila API.
+    /// </summary>
+    [HttpGet("Api/ConnectionSearch")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ProxyConnectionSearch([FromQuery] string provider, [FromQuery] string mediaType, [FromQuery] string query)
+    {
+        var userConfig = GetCurrentUserConfig();
+        if (userConfig == null || string.IsNullOrWhiteSpace(userConfig.ApiKey)) return BadRequest(new { message = "Aquila API Key not configured." });
+
+        var res = await _apiClient.SearchConnectionMediaAsync(provider, mediaType, query, userConfig.ApiKey, userConfig.AquilaServerUrl).ConfigureAwait(false);
+        if (!res.HasValue) return Ok(Array.Empty<object>());
+
+        return Content(res.Value.GetRawText(), "application/json", Encoding.UTF8);
+    }
+
+    /// <summary>
+    /// Gets item mapping for a user and Jellyfin item.
+    /// </summary>
+    [HttpGet("Api/Mapping")]
+    [AllowAnonymous]
+    public IActionResult GetMapping([FromQuery] string userId, [FromQuery] string itemId)
+    {
+        _logger.LogInformation("[Aquila WebController] [GET MAPPING] Request: UserId='{UserId}', ItemId='{ItemId}'", userId, itemId);
+        var mapping = _mappingStore.GetMapping(userId, itemId);
+        if (mapping == null)
+        {
+            _logger.LogInformation("[Aquila WebController] [GET MAPPING] Not found for ItemId='{ItemId}'", itemId);
+            return NotFound(new { message = "Mapping not found" });
+        }
+        return Ok(mapping);
+    }
+
+    /// <summary>
+    /// Sets item mapping for a user and Jellyfin item.
+    /// </summary>
+    [HttpPost("Api/Mapping")]
+    [AllowAnonymous]
+    public async Task<IActionResult> SaveMapping([FromQuery] string userId, [FromQuery] string itemId, [FromQuery] int aquilaMediaId, [FromQuery] string mediaType)
+    {
+        _logger.LogInformation("[Aquila WebController] [SAVE MAPPING] Request: UserId='{UserId}', ItemId='{ItemId}', AquilaId={AquilaId}, Type='{MediaType}'", userId, itemId, aquilaMediaId, mediaType);
+        await _mappingStore.SetMappingAsync(userId, itemId, aquilaMediaId, mediaType).ConfigureAwait(false);
+        return Ok(new { success = true });
     }
 }

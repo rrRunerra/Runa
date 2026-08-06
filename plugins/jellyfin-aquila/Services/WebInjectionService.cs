@@ -15,7 +15,7 @@ public class WebInjectionService : IHostedService
 {
     private readonly IApplicationPaths _applicationPaths;
     private readonly ILogger<WebInjectionService> _logger;
-    private const string ScriptTag = "<script id=\"aquila-web-script\" src=\"/Aquila/WebInjection.js\" defer></script>";
+    private const string ScriptTag = "<script id=\"aquila-web-script\" src=\"/Aquila/aquila-client.js?v=2.0.0\" defer></script>";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="WebInjectionService"/> class.
@@ -48,7 +48,14 @@ public class WebInjectionService : IHostedService
 
                 _logger.LogInformation("[Aquila Plugin] Checking index.html at '{IndexPath}'", indexPath);
                 var html = File.ReadAllText(indexPath);
-                if (!html.Contains("aquila-web-script", StringComparison.OrdinalIgnoreCase))
+                if (html.Contains("aquila-web-script", StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogInformation("[Aquila Plugin] Updating existing aquila-web-script tag in '{IndexPath}'", indexPath);
+                    var regex = new System.Text.RegularExpressions.Regex(@"<script id=""aquila-web-script"".*?</script>", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                    html = regex.Replace(html, ScriptTag);
+                    File.WriteAllText(indexPath, html);
+                }
+                else
                 {
                     _logger.LogInformation("[Aquila Plugin] Injecting script tag into '{IndexPath}'", indexPath);
                     var bodyEndIndex = html.IndexOf("</body>", StringComparison.OrdinalIgnoreCase);
@@ -62,10 +69,6 @@ public class WebInjectionService : IHostedService
                     }
                     File.WriteAllText(indexPath, html);
                     _logger.LogInformation("[Aquila Plugin] Successfully injected /Aquila/WebInjection.js script tag into '{IndexPath}'.", indexPath);
-                }
-                else
-                {
-                    _logger.LogInformation("[Aquila Plugin] Aquila web script tag already present in '{IndexPath}'.", indexPath);
                 }
             }
         }
