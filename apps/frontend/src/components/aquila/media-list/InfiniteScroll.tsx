@@ -21,9 +21,7 @@ function getScrollParent(el: HTMLElement | null): HTMLElement | null {
   while (parent) {
     const style = window.getComputedStyle(parent);
     const overflowY = style.overflowY;
-    const isScrollable =
-      (overflowY === "auto" || overflowY === "scroll") &&
-      parent.scrollHeight > parent.clientHeight;
+    const isScrollable = overflowY === "auto" || overflowY === "scroll";
 
     if (isScrollable) {
       return parent;

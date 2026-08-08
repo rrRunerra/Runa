@@ -417,4 +417,41 @@ public class AquilaWebController : ControllerBase
         await _mappingStore.SetMappingAsync(userId, itemId, aquilaMediaId, mediaType).ConfigureAwait(false);
         return Ok(new { success = true });
     }
+
+    /// <summary>
+    /// Deletes a specific item mapping for a user and Jellyfin item from server.
+    /// </summary>
+    [HttpDelete("Api/Mapping")]
+    [AllowAnonymous]
+    public async Task<IActionResult> DeleteMapping([FromQuery] string userId, [FromQuery] string itemId)
+    {
+        _logger.LogInformation("[Aquila WebController] [DELETE MAPPING] Request: UserId='{UserId}', ItemId='{ItemId}'", userId, itemId);
+        var removed = await _mappingStore.RemoveMappingAsync(userId, itemId).ConfigureAwait(false);
+        return Ok(new { success = true, removed });
+    }
+
+    /// <summary>
+    /// Gets all item mappings stored on server (optionally filtered by user ID).
+    /// </summary>
+    [HttpGet("Api/Mappings")]
+    [AllowAnonymous]
+    public IActionResult GetAllMappings([FromQuery] string? userId = null)
+    {
+        _logger.LogInformation("[Aquila WebController] [GET MAPPINGS] Request: UserId='{UserId}'", userId);
+        var mappings = _mappingStore.GetAllMappings(userId);
+        return Ok(mappings);
+    }
+
+    /// <summary>
+    /// Deletes all item mappings stored on server (or all mappings for a specific user ID).
+    /// </summary>
+    [HttpDelete("Api/Mappings")]
+    [AllowAnonymous]
+    public async Task<IActionResult> DeleteAllMappings([FromQuery] string? userId = null)
+    {
+        _logger.LogInformation("[Aquila WebController] [DELETE ALL MAPPINGS] Request: UserId='{UserId}'", userId);
+        var count = await _mappingStore.RemoveAllMappingsAsync(userId).ConfigureAwait(false);
+        return Ok(new { success = true, count });
+    }
 }
+

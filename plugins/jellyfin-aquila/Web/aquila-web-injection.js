@@ -278,11 +278,53 @@
         return null;
     }
 
+    function resolveTitles(item) {
+        let primary = "";
+        let romaji = "";
+        let native = "";
+
+        if (item) {
+            if (typeof item.title === 'object' && item.title !== null) {
+                primary = item.title.english || item.title.userPreferred || item.title.romaji || item.title.native || "";
+                romaji = item.title.romaji || "";
+                native = item.title.native || "";
+            } else if (typeof item.title === 'string' && item.title.trim()) {
+                primary = item.title.trim();
+            }
+
+            if (!primary) {
+                primary = item.titlePrimary || item.titleEnglish || item.name || "";
+            }
+            if (!romaji) {
+                romaji = item.titleRomaji || item.titleSecondary || item.secondaryTitle || "";
+            }
+            if (!native) {
+                native = item.titleNative || "";
+            }
+        }
+
+        const displayTitle = primary || romaji || native || "Untitled";
+        const subTitle = (romaji && romaji !== displayTitle) ? romaji : ((native && native !== displayTitle) ? native : "");
+
+        return { displayTitle, subTitle, primary, romaji, native };
+    }
+
+    function clearLegacyLocalStorageMappings() {
+        try {
+            const keysToRemove = [];
+            for (let i = 0; i < localStorage.length; i++) {
+                const k = localStorage.key(i);
+                if (k && (k.startsWith('aquila_map_') || k.startsWith('aquila_map_type_'))) {
+                    keysToRemove.push(k);
+                }
+            }
+            keysToRemove.forEach(k => localStorage.removeItem(k));
+        } catch (e) {}
+    }
+
     async function saveServerMapping(userId, targetId, aquilaId, mediaType) {
         try {
             console.log(`[Aquila Plugin] Persisting mapping to server: targetId=${targetId} -> aquilaId=${aquilaId} (${mediaType})`);
-            const mappingTypeKey = `aquila_map_type_${userId}_${targetId}`;
-            localStorage.setItem(mappingTypeKey, mediaType);
             const proxyUrl = getProxyUrl(`Aquila/Api/Mapping?userId=${encodeURIComponent(userId)}&itemId=${encodeURIComponent(targetId)}&aquilaMediaId=${aquilaId}&mediaType=${encodeURIComponent(mediaType)}`);
             await fetch(proxyUrl, { method: 'POST' });
         } catch (e) {
@@ -302,27 +344,22 @@
             const item = await ApiClient.getItem(currentUserId, itemId);
             const { mediaType: defaultMediaType, title, targetId } = getItemDetails(item);
 
-            const mappingKey = `aquila_map_${currentUserId}_${targetId}`;
-            const mappingTypeKey = `aquila_map_type_${currentUserId}_${targetId}`;
+            let savedAquilaId = null;
+            let activeMediaType = defaultMediaType;
 
-            let savedAquilaId = localStorage.getItem(mappingKey);
-            let activeMediaType = localStorage.getItem(mappingTypeKey) || defaultMediaType;
-
-            if (!savedAquilaId) {
-                try {
-                    const mapRes = await fetch(getProxyUrl(`Aquila/Api/Mapping?userId=${encodeURIComponent(currentUserId)}&itemId=${encodeURIComponent(targetId)}`));
-                    if (mapRes.ok) {
-                        const mapData = await mapRes.json();
-                        if (mapData && mapData.aquilaMediaId) {
-                            savedAquilaId = mapData.aquilaMediaId.toString();
-                            if (mapData.mediaType) {
-                                activeMediaType = mapData.mediaType;
-                            }
-                            localStorage.setItem(mappingKey, savedAquilaId);
-                            localStorage.setItem(mappingTypeKey, activeMediaType);
+            try {
+                const mapRes = await fetch(getProxyUrl(`Aquila/Api/Mapping?userId=${encodeURIComponent(currentUserId)}&itemId=${encodeURIComponent(targetId)}`));
+                if (mapRes.ok) {
+                    const mapData = await mapRes.json();
+                    if (mapData && mapData.aquilaMediaId) {
+                        savedAquilaId = mapData.aquilaMediaId.toString();
+                        if (mapData.mediaType) {
+                            activeMediaType = mapData.mediaType;
                         }
                     }
-                } catch (e) {}
+                }
+            } catch (e) {
+                console.warn('[Aquila Plugin] Error fetching server mapping:', e);
             }
 
             if (savedAquilaId) {
@@ -338,7 +375,7 @@
 
     // Search View to Link Aquila Title
     async function renderSearchView(userId, targetId, initialMediaType, defaultTitle) {
-        let currentSearchType = initialMediaType || "tv";
+        let currentSearchType = (initialMediaType && initialMediaType !== 'manga') ? initialMediaType : "tv";
         const content = document.getElementById('aquila-modal-content');
 
         content.innerHTML = `
@@ -351,17 +388,16 @@
 
                 <!-- Media Type Tabs -->
                 <div class="flex items-center gap-2" id="aquila-search-type-pills">
-                    <button class="px-3 py-1 text-xs font-bold rounded-lg cursor-pointer transition-colors ${currentSearchType === 'anime' ? 'bg-primary text-primary-foreground' : 'bg-muted/60 text-muted-foreground hover:text-foreground'}" data-type="anime">Anime</button>
-                    <button class="px-3 py-1 text-xs font-bold rounded-lg cursor-pointer transition-colors ${currentSearchType === 'tv' ? 'bg-primary text-primary-foreground' : 'bg-muted/60 text-muted-foreground hover:text-foreground'}" data-type="tv">TV Shows</button>
-                    <button class="px-3 py-1 text-xs font-bold rounded-lg cursor-pointer transition-colors ${currentSearchType === 'movie' ? 'bg-primary text-primary-foreground' : 'bg-muted/60 text-muted-foreground hover:text-foreground'}" data-type="movie">Movies</button>
-                    <button class="px-3 py-1 text-xs font-bold rounded-lg cursor-pointer transition-colors ${currentSearchType === 'manga' ? 'bg-primary text-primary-foreground' : 'bg-muted/60 text-muted-foreground hover:text-foreground'}" data-type="manga">Manga</button>
+                    <button class="px-3.5 py-1.5 text-xs font-bold rounded-xl cursor-pointer transition-colors ${currentSearchType === 'anime' ? 'bg-primary text-primary-foreground shadow-xs' : 'bg-muted/60 text-muted-foreground hover:text-foreground'}" data-type="anime">Anime</button>
+                    <button class="px-3.5 py-1.5 text-xs font-bold rounded-xl cursor-pointer transition-colors ${currentSearchType === 'tv' ? 'bg-primary text-primary-foreground shadow-xs' : 'bg-muted/60 text-muted-foreground hover:text-foreground'}" data-type="tv">TV Shows</button>
+                    <button class="px-3.5 py-1.5 text-xs font-bold rounded-xl cursor-pointer transition-colors ${currentSearchType === 'movie' ? 'bg-primary text-primary-foreground shadow-xs' : 'bg-muted/60 text-muted-foreground hover:text-foreground'}" data-type="movie">Movies</button>
                 </div>
 
                 <div class="flex gap-2.5">
-                    <input type="text" id="aquila-search-input" class="w-full px-3 py-2 bg-background/80 border border-border/70 text-foreground rounded-xl text-xs font-semibold" value="${(defaultTitle || '').replace(/"/g, '&quot;')}" placeholder="Search title..." />
-                    <button class="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-4 rounded-xl text-xs cursor-pointer" id="aquila-search-btn">Search</button>
+                    <input type="text" id="aquila-search-input" class="w-full px-3.5 py-2 bg-background/80 border border-border/70 text-foreground rounded-xl text-xs font-semibold" value="${(defaultTitle || '').replace(/"/g, '&quot;')}" placeholder="Search title..." />
+                    <button class="bg-primary hover:bg-primary/90 text-primary-foreground font-bold px-5 rounded-xl text-xs cursor-pointer shadow-md shadow-primary/20" id="aquila-search-btn">Search</button>
                 </div>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 max-h-[380px] overflow-y-auto" id="aquila-search-results">
+                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-h-[420px] overflow-y-auto pr-1" id="aquila-search-results">
                     <div class="col-span-full text-center p-8 text-muted-foreground text-xs">Searching API database...</div>
                 </div>
             </div>
@@ -377,9 +413,9 @@
                 currentSearchType = pill.getAttribute('data-type');
                 document.querySelectorAll('#aquila-search-type-pills button').forEach(p => {
                     if (p.getAttribute('data-type') === currentSearchType) {
-                        p.className = 'px-3 py-1 text-xs font-bold rounded-lg cursor-pointer transition-colors bg-primary text-primary-foreground';
+                        p.className = 'px-3.5 py-1.5 text-xs font-bold rounded-xl cursor-pointer transition-colors bg-primary text-primary-foreground shadow-xs';
                     } else {
-                        p.className = 'px-3 py-1 text-xs font-bold rounded-lg cursor-pointer transition-colors bg-muted/60 text-muted-foreground hover:text-foreground';
+                        p.className = 'px-3.5 py-1.5 text-xs font-bold rounded-xl cursor-pointer transition-colors bg-muted/60 text-muted-foreground hover:text-foreground';
                     }
                 });
                 doSearch();
@@ -425,7 +461,7 @@
 
             // 3. Fallback to alternative media types if still 0
             if (items.length === 0) {
-                const fallbackTypes = ['anime', 'tv', 'manga', 'movie'].filter(t => t !== currentSearchType);
+                const fallbackTypes = ['anime', 'tv', 'movie'].filter(t => t !== currentSearchType);
                 for (const fbType of fallbackTypes) {
                     items = await fetchSearchResults(fbType, rawQuery);
                     if (items.length === 0 && cleanQuery && cleanQuery !== rawQuery) {
@@ -440,24 +476,35 @@
                 return;
             }
 
-            resultsContainer.innerHTML = items.map(item => `
-                <div class="bg-card/40 border border-border/60 rounded-xl overflow-hidden cursor-pointer hover:border-primary transition-all flex flex-col aquila-search-card" data-id="${item.id}" data-type="${item.resolvedType || currentSearchType}" data-title="${(item.title || item.name || '').replace(/"/g, '&quot;')}">
-                    <div class="relative w-full h-40 bg-muted">
-                        <img src="${item.coverImage || item.image || 'https://via.placeholder.com/130x180?text=No+Cover'}" alt="${item.title || item.name}" class="w-full h-full object-cover" />
-                        <span class="absolute top-1 right-1 uppercase text-[8px] font-extrabold bg-background/80 backdrop-blur-md px-1.5 py-0.5 rounded text-primary border border-border/60">${item.resolvedType || currentSearchType}</span>
+            resultsContainer.innerHTML = items.map(item => {
+                const { displayTitle, subTitle } = resolveTitles(item);
+                const itemType = item.resolvedType || currentSearchType;
+                const cover = item.coverImage || item.image || (typeof item.coverImage === 'object' ? item.coverImage?.large : '') || 'https://via.placeholder.com/150x225?text=No+Cover';
+                const epCount = item.episodes || item.episodeCount;
+
+                return `
+                    <div class="bg-card/40 border border-border/60 rounded-2xl overflow-hidden cursor-pointer hover:border-primary hover:shadow-lg hover:shadow-primary/10 transition-all flex flex-col h-full group aquila-search-card" data-id="${item.id}" data-type="${itemType}" data-title="${(displayTitle).replace(/"/g, '&quot;')}">
+                        <div class="relative w-full aspect-[2/3] bg-muted overflow-hidden">
+                            <img src="${cover}" alt="${displayTitle}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                            <span class="absolute top-1.5 right-1.5 uppercase text-[9px] font-extrabold bg-background/90 backdrop-blur-md px-2 py-0.5 rounded-lg text-primary border border-border/60 shadow-xs">${itemType}</span>
+                        </div>
+                        <div class="p-3 flex flex-col justify-between flex-1 gap-1 text-left">
+                            <div class="font-bold text-xs leading-snug text-foreground break-words group-hover:text-primary transition-colors">
+                                ${displayTitle}
+                            </div>
+                            ${subTitle ? `<div class="text-[10px] text-muted-foreground/80 line-clamp-2 leading-tight break-words font-normal">${subTitle}</div>` : ''}
+                            ${epCount ? `<div class="text-[10px] text-muted-foreground/60 font-medium mt-1">${epCount} Ep</div>` : ''}
+                        </div>
                     </div>
-                    <div class="p-2 text-xs font-semibold text-center text-foreground truncate">${item.title || item.name}</div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
 
             document.querySelectorAll('.aquila-search-card').forEach(card => {
-                card.addEventListener('click', () => {
+                card.addEventListener('click', async () => {
                     const aquilaId = parseInt(card.getAttribute('data-id'), 10);
                     const cardTitle = card.getAttribute('data-title');
                     const itemType = card.getAttribute('data-type') || currentSearchType;
-                    const mappingKey = `aquila_map_${userId}_${targetId}`;
-                    localStorage.setItem(mappingKey, aquilaId);
-                    saveServerMapping(userId, targetId, aquilaId, itemType);
+                    await saveServerMapping(userId, targetId, aquilaId, itemType);
                     renderFullEditDialog(userId, targetId, itemType, aquilaId, cardTitle);
                 });
             });
@@ -665,12 +712,13 @@
                         </div>
                     </div>
 
-                    <!-- Footer Delete Action Button -->
-                    ${hasListEntry ? `
-                        <div class="mt-2 flex justify-end">
-                            <button class="bg-transparent hover:bg-destructive hover:text-destructive-foreground border border-border/60 hover:border-destructive/50 text-muted-foreground text-xs font-semibold rounded-xl cursor-pointer px-4 h-9 transition-colors shadow-xs" id="aquila-delete-entry-btn">Delete</button>
-                        </div>
-                    ` : ''}
+                    <!-- Footer Action Buttons -->
+                    <div class="mt-2 flex justify-between items-center gap-2 flex-wrap">
+                        <button class="bg-transparent hover:bg-destructive/15 text-destructive border border-destructive/30 hover:border-destructive/50 text-xs font-semibold rounded-xl cursor-pointer px-4 h-9 transition-colors shadow-xs" id="aquila-unlink-mapping-btn">Unlink Title</button>
+                        ${hasListEntry ? `
+                            <button class="bg-transparent hover:bg-destructive hover:text-destructive-foreground border border-border/60 hover:border-destructive/50 text-muted-foreground text-xs font-semibold rounded-xl cursor-pointer px-4 h-9 transition-colors shadow-xs" id="aquila-delete-entry-btn">Delete Entry</button>
+                        ` : ''}
+                    </div>
                 </div>
 
                 <!-- Episodes Tab Pane (TV Shows) -->
@@ -981,6 +1029,22 @@
             }
         };
 
+        // Unlink Mapping Action
+        const unlinkBtn = document.getElementById('aquila-unlink-mapping-btn');
+        if (unlinkBtn) {
+            unlinkBtn.addEventListener('click', async () => {
+                if (confirm(`Unlink this Jellyfin title from Aquila ID #${aquilaId}?`)) {
+                    try {
+                        const proxyUrl = getProxyUrl(`Aquila/Api/Mapping?userId=${encodeURIComponent(userId)}&itemId=${encodeURIComponent(targetId)}`);
+                        await fetch(proxyUrl, { method: 'DELETE' });
+                        renderSearchView(userId, targetId, mediaType, titleText);
+                    } catch (e) {
+                        console.error('[Aquila Plugin] Error unlinking mapping:', e);
+                    }
+                }
+            });
+        }
+
         // Delete Dialog
         const deleteBtn = document.getElementById('aquila-delete-entry-btn');
         if (deleteBtn) {
@@ -1227,42 +1291,27 @@
             const { mediaType, targetId } = getItemDetails(item);
             console.log(`[Aquila WebClient] [MANUAL WATCH] TargetId=${targetId}, DefaultMediaType=${mediaType}`);
 
-            const mappingKey = `aquila_map_${userId}_${targetId}`;
-            const mappingTypeKey = `aquila_map_type_${userId}_${targetId}`;
+            console.log(`[Aquila WebClient] [MANUAL WATCH] Querying server mapping for targetId=${targetId}...`);
+            const mapRes = await fetch(getProxyUrl(`Aquila/Api/Mapping?userId=${encodeURIComponent(userId)}&itemId=${encodeURIComponent(targetId)}`));
+            if (mapRes.ok) {
+                const mapData = await mapRes.json();
+                if (mapData && mapData.aquilaMediaId) {
+                    const savedAquilaId = mapData.aquilaMediaId;
+                    const activeMediaType = mapData.mediaType || mediaType;
+                    console.log(`[Aquila WebClient] [MANUAL WATCH] Retrieved server mapping: AquilaId=${savedAquilaId}, MediaType=${activeMediaType}`);
 
-            let savedAquilaId = localStorage.getItem(mappingKey);
-            let activeMediaType = localStorage.getItem(mappingTypeKey) || mediaType;
-
-            if (!savedAquilaId) {
-                console.log(`[Aquila WebClient] [MANUAL WATCH] Local mapping missing. Querying server for targetId=${targetId}...`);
-                const mapRes = await fetch(getProxyUrl(`Aquila/Api/Mapping?userId=${encodeURIComponent(userId)}&itemId=${encodeURIComponent(targetId)}`));
-                if (mapRes.ok) {
-                    const mapData = await mapRes.json();
-                    if (mapData && mapData.aquilaMediaId) {
-                        savedAquilaId = mapData.aquilaMediaId.toString();
-                        if (mapData.mediaType) activeMediaType = mapData.mediaType;
-                        localStorage.setItem(mappingKey, savedAquilaId);
-                        localStorage.setItem(mappingTypeKey, activeMediaType);
-                        console.log(`[Aquila WebClient] [MANUAL WATCH] Retrieved server mapping: AquilaId=${savedAquilaId}, MediaType=${activeMediaType}`);
-                    }
+                    console.log(`[Aquila WebClient] [MANUAL WATCH] Sending POST to Aquila/Api/Increment: AquilaID=${savedAquilaId}, MediaType=${activeMediaType}, Count=1`);
+                    const incRes = await fetch(getProxyUrl(`Aquila/Api/Increment`), {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ mediaType: activeMediaType, id: savedAquilaId, count: 1 })
+                    });
+                    console.log(`[Aquila WebClient] [MANUAL WATCH] Increment response status: ${incRes.status}`);
                 } else {
-                    console.warn(`[Aquila WebClient] [MANUAL WATCH] Server mapping returned status ${mapRes.status} for targetId=${targetId}`);
+                    console.warn(`[Aquila WebClient] [MANUAL WATCH] Server returned empty mapping data for targetId=${targetId}`);
                 }
             } else {
-                console.log(`[Aquila WebClient] [MANUAL WATCH] Found localStorage mapping: AquilaId=${savedAquilaId}, MediaType=${activeMediaType}`);
-            }
-
-            if (savedAquilaId) {
-                const aquilaId = parseInt(savedAquilaId, 10);
-                console.log(`[Aquila WebClient] [MANUAL WATCH] Sending POST to Aquila/Api/Increment: AquilaID=${aquilaId}, MediaType=${activeMediaType}, Count=1`);
-                const incRes = await fetch(getProxyUrl(`Aquila/Api/Increment`), {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ mediaType: activeMediaType, id: aquilaId, count: 1 })
-                });
-                console.log(`[Aquila WebClient] [MANUAL WATCH] Increment response status: ${incRes.status}`);
-            } else {
-                console.warn(`[Aquila WebClient] [MANUAL WATCH] Cannot trigger scrobble: Item ${targetId} is not linked to Aquila yet.`);
+                console.warn(`[Aquila WebClient] [MANUAL WATCH] Server mapping returned status ${mapRes.status} for targetId=${targetId}`);
             }
         } catch (e) {
             console.error('[Aquila WebClient] [MANUAL WATCH EXCEPTION] Exception in handleManualWatchedClick:', e);
@@ -1271,6 +1320,7 @@
 
     function processUiUpdates() {
         try {
+            clearLegacyLocalStorageMappings();
             injectStylesAndTailwind();
             injectInlineButtons();
             removeFloatingActionButton();
@@ -1290,3 +1340,4 @@
     document.addEventListener('DOMContentLoaded', () => processUiUpdates());
     processUiUpdates();
 })();
+

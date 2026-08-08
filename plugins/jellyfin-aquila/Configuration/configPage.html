@@ -45,6 +45,20 @@
                         </div>
                     </div>
 
+                    <!-- Server Item Mappings Management -->
+                    <div class="verticalSection">
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                            <h3 class="sectionTitle" style="margin:0;">Server Item Mappings</h3>
+                            <button is="emby-button" type="button" id="btnClearAllMappings" class="raised" style="background:#dc2626; color:#ffffff; font-weight:bold;">
+                                <span>Remove All Mappings</span>
+                            </button>
+                        </div>
+                        <p class="fieldDescription">View and remove persisted links between Jellyfin media items and Aquila internal IDs stored on the server.</p>
+                        <div id="serverMappingsContainer" class="paperList" style="margin-top:1em; max-height:280px; overflow-y:auto;">
+                            <!-- Dynamically populated server item mappings -->
+                        </div>
+                    </div>
+
                     <!-- Custom JavaScript Snippet for Jellyfin Web / JavaScript Injector -->
                     <div class="verticalSection">
                         <h3 class="sectionTitle">Client JavaScript Injection Code</h3>
@@ -69,7 +83,6 @@
                                 <option value="anime">Anime</option>
                                 <option value="tv" selected>TV Series</option>
                                 <option value="movie">Movie</option>
-                                <option value="manga">Manga</option>
                             </select>
                         </div>
 
@@ -203,6 +216,81 @@
                             itemDiv.appendChild(selectEl);
                             container.appendChild(itemDiv);
                         });
+
+                        function loadServerMappings() {
+                            var mapContainer = page.querySelector('#serverMappingsContainer');
+                            mapContainer.innerHTML = '<div style="padding:1em; text-align:center; color:#94a3b8;">Loading mappings from server...</div>';
+                            var url = ApiClient.getUrl ? ApiClient.getUrl('Aquila/Api/Mappings') : '/Aquila/Api/Mappings';
+
+                            fetch(url).then(function (res) {
+                                return res.json();
+                            }).then(function (mappings) {
+                                mapContainer.innerHTML = '';
+                                if (!Array.isArray(mappings) || mappings.length === 0) {
+                                    mapContainer.innerHTML = '<div style="padding:1em; text-align:center; color:#94a3b8;">No item mappings saved on server.</div>';
+                                    return;
+                                }
+
+                                mappings.forEach(function (m) {
+                                    var row = document.createElement('div');
+                                    row.className = 'listItem listItem-border';
+                                    row.style.padding = '0.8em 1em';
+                                    row.style.display = 'flex';
+                                    row.style.alignItems = 'center';
+                                    row.style.justifyContent = 'space-between';
+
+                                    var info = document.createElement('div');
+                                    var title = document.createElement('strong');
+                                    title.style.color = '#f8fafc';
+                                    title.textContent = (m.mediaType || 'media').toUpperCase() + ' - Aquila ID #' + m.aquilaMediaId;
+
+                                    var sub = document.createElement('div');
+                                    sub.className = 'fieldDescription';
+                                    sub.textContent = 'Jellyfin Item: ' + m.jellyfinItemId + ' | User: ' + m.userId;
+
+                                    info.appendChild(title);
+                                    info.appendChild(sub);
+
+                                    var removeBtn = document.createElement('button');
+                                    removeBtn.setAttribute('is', 'emby-button');
+                                    removeBtn.type = 'button';
+                                    removeBtn.className = 'raised';
+                                    removeBtn.style.background = '#334155';
+                                    removeBtn.style.color = '#f8fafc';
+                                    removeBtn.style.fontSize = '11px';
+                                    removeBtn.innerHTML = '<span>Remove</span>';
+
+                                    removeBtn.onclick = function () {
+                                        if (confirm('Remove mapping for Item ' + m.jellyfinItemId + '?')) {
+                                            var deleteUrl = ApiClient.getUrl
+                                                ? ApiClient.getUrl('Aquila/Api/Mapping?userId=' + encodeURIComponent(m.userId) + '&itemId=' + encodeURIComponent(m.jellyfinItemId))
+                                                : '/Aquila/Api/Mapping?userId=' + encodeURIComponent(m.userId) + '&itemId=' + encodeURIComponent(m.jellyfinItemId);
+
+                                            fetch(deleteUrl, { method: 'DELETE' }).then(function () {
+                                                loadServerMappings();
+                                            });
+                                        }
+                                    };
+
+                                    row.appendChild(info);
+                                    row.appendChild(removeBtn);
+                                    mapContainer.appendChild(row);
+                                });
+                            }).catch(function (err) {
+                                mapContainer.innerHTML = '<div style="padding:1em; text-align:center; color:#ef4444;">Failed to load mappings: ' + err.message + '</div>';
+                            });
+                        }
+
+                        loadServerMappings();
+
+                        page.querySelector('#btnClearAllMappings').onclick = function () {
+                            if (confirm('Are you sure you want to remove ALL media item mappings from the server?')) {
+                                var clearUrl = ApiClient.getUrl ? ApiClient.getUrl('Aquila/Api/Mappings') : '/Aquila/Api/Mappings';
+                                fetch(clearUrl, { method: 'DELETE' }).then(function () {
+                                    loadServerMappings();
+                                });
+                            }
+                        };
 
                         function logTestResult(title, data, success) {
                             var logEl = page.querySelector('#testOutputLog');

@@ -162,4 +162,92 @@ public class MediaMappingStore
             userId, itemId, aquilaMediaId, mediaType);
         await SaveAsync().ConfigureAwait(false);
     }
+
+    /// <summary>
+    /// Gets all item mappings, optionally filtered by user ID.
+    /// </summary>
+    public List<JellyfinItemMapping> GetAllMappings(string? userId = null)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return _mappings.Values.OrderByDescending(m => m.LinkedAt).ToList();
+        }
+
+        var normUser = NormalizeGuid(userId);
+        return _mappings.Values
+            .Where(m => NormalizeGuid(m.UserId) == normUser)
+            .OrderByDescending(m => m.LinkedAt)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Removes a specific mapping for a user and Jellyfin item.
+    /// </summary>
+    public async Task<bool> RemoveMappingAsync(string userId, string itemId)
+    {
+        var key = GetKey(userId, itemId);
+        var normUser = NormalizeGuid(userId);
+        var normItem = NormalizeGuid(itemId);
+
+        var removed = _mappings.TryRemove(key, out _);
+
+        var matchingKeys = _mappings.Where(kvp =>
+            (string.IsNullOrEmpty(normUser) || NormalizeGuid(kvp.Value.UserId) == normUser) &&
+            NormalizeGuid(kvp.Value.JellyfinItemId) == normItem
+        ).Select(kvp => kvp.Key).ToList();
+
+        foreach (var k in matchingKeys)
+        {
+            if (_mappings.TryRemove(k, out _))
+            {
+                removed = true;
+            }
+        }
+
+        if (removed)
+        {
+            _logger.LogInformation("[Aquila MappingStore] REMOVED mapping: User={UserId}, Item={ItemId}", userId, itemId);
+            await SaveAsync().ConfigureAwait(false);
+        }
+        else
+        {
+            _logger.LogInformation("[Aquila MappingStore] REMOVE skipped, mapping not found: User={UserId}, Item={ItemId}", userId, itemId);
+        }
+
+        return removed;
+    }
+
+    /// <summary>
+    /// Removes all stored mappings, or all mappings for a specific user ID.
+    /// </summary>
+    public async Task<int> RemoveAllMappingsAsync(string? userId = null)
+    {
+        int removedCount = 0;
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            removedCount = _mappings.Count;
+            _mappings.Clear();
+        }
+        else
+        {
+            var normUser = NormalizeGuid(userId);
+            var keysToRemove = _mappings
+                .Where(kvp => NormalizeGuid(kvp.Value.UserId) == normUser)
+                .Select(kvp => kvp.Key)
+                .ToList();
+
+            foreach (var key in keysToRemove)
+            {
+                if (_mappings.TryRemove(key, out _))
+                {
+                    removedCount++;
+                }
+            }
+        }
+
+        _logger.LogInformation("[Aquila MappingStore] REMOVED {Count} mappings for User={UserId}", removedCount, userId ?? "ALL");
+        await SaveAsync().ConfigureAwait(false);
+        return removedCount;
+    }
 }
+
