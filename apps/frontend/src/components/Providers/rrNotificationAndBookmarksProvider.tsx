@@ -5,12 +5,14 @@ import React, {
   useContext,
   useEffect,
   useState,
+  useRef,
   useCallback,
   useMemo,
 } from "react";
 import { useSession } from "next-auth/react";
-import { io, Socket } from "socket.io-client";
 import { Notification } from "@runa/notifications";
+import { useRRCrypto } from "@/hooks/useRRCrypto";
+import { useTranslation } from "react-i18next";
 
 export interface Bookmark {
   id: string;
@@ -25,7 +27,7 @@ export interface Bookmark {
 }
 
 interface NotificationAndBookmarksContextType {
-  notifications: Notification[];
+  notifications: (Notification & { _decryptionFailed?: boolean })[];
   unreadCount: number;
   loadingNotifications: boolean;
   refetchNotifications: () => Promise<void>;
@@ -33,6 +35,9 @@ interface NotificationAndBookmarksContextType {
   loadingBookmarks: boolean;
   refetchBookmarks: () => Promise<void>;
   deleteBookmark: (id: string) => Promise<boolean>;
+  setNotifications: React.Dispatch<
+    React.SetStateAction<(Notification & { _decryptionFailed?: boolean })[]>
+  >;
 }
 
 const RrNotificationAndBookmarksContext = createContext<
@@ -56,11 +61,83 @@ export function RrNotificationAndBookmarksProvider({
 }) {
   const { data: session } = useSession();
   const token = session?.accessToken;
+  const { t } = useTranslation();
+  const crypto = useRRCrypto();
 
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const cryptoRef = useRef(crypto);
+  useEffect(() => {
+    cryptoRef.current = crypto;
+  }, [crypto]);
+
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
+
+  const [notifications, setNotifications] = useState<
+    (Notification & { _decryptionFailed?: boolean })[]
+  >([]);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [loadingNotifications, setLoadingNotifications] = useState(false);
   const [loadingBookmarks, setLoadingBookmarks] = useState(false);
+
+  const decryptNotification = useCallback(
+    async (n: any, privKey: CryptoKey | null): Promise<any> => {
+      const meta = n.metadata as any;
+      const isEncrypted = !!(meta && meta.encryptedKey);
+
+      if (!isEncrypted) return n;
+
+      const currentT = tRef.current;
+      const { unwrapKey, decrypt } = cryptoRef.current;
+
+      if (!privKey) {
+        return {
+          ...n,
+          title: currentT("encryptedNotification", {
+            defaultValue: "Encrypted Notification",
+          }),
+          message: currentT("encryptedNotificationDesc", {
+            defaultValue: "Encrypted content",
+          }),
+          _decryptionFailed: true,
+        };
+      }
+
+      try {
+        const dataKey = await unwrapKey(meta.encryptedKey);
+
+        let decryptedTitle = n.title;
+        try {
+          decryptedTitle = await decrypt(n.title, dataKey);
+        } catch {}
+
+        let decryptedMessage = n.message;
+        try {
+          decryptedMessage = await decrypt(n.message, dataKey);
+        } catch {}
+
+        return {
+          ...n,
+          title: decryptedTitle,
+          message: decryptedMessage,
+        };
+      } catch (err) {
+        console.error("Failed to decrypt notification:", err);
+        return {
+          ...n,
+          title: currentT("encryptedNotification", {
+            defaultValue: "Encrypted Notification",
+          }),
+          message: currentT("encryptedNotificationDesc", {
+            defaultValue: "Encrypted content",
+          }),
+          _decryptionFailed: true,
+        };
+      }
+    },
+    []
+  );
 
   const refetchNotifications = useCallback(async () => {
     if (!token) return;
@@ -74,14 +151,32 @@ export function RrNotificationAndBookmarksProvider({
       });
       if (res.ok) {
         const data = await res.json();
-        setNotifications(data);
+        let processed = data;
+        try {
+          const privKey = await cryptoRef.current.getPrivateKey();
+          processed = await Promise.all(
+            data.map((n: any) => decryptNotification(n, privKey))
+          );
+          processed = processed.filter((n: any) => {
+            if (n.metadata?.targetDeviceId) {
+              return (
+                n.metadata.targetDeviceId ===
+                localStorage.getItem("runa_device_id")
+              );
+            }
+            return true;
+          });
+        } catch (decErr) {
+          console.error("Failed to decrypt fetched notifications:", decErr);
+        }
+        setNotifications(processed);
       }
     } catch (err) {
       console.error("Error fetching notifications:", err);
     } finally {
       setLoadingNotifications(false);
     }
-  }, [token]);
+  }, [token, decryptNotification]);
 
   const refetchBookmarks = useCallback(async () => {
     if (!token) return;
@@ -104,7 +199,7 @@ export function RrNotificationAndBookmarksProvider({
     }
   }, [token]);
 
-  // Initial fetch and WebSocket connection
+  // Initial fetch and global event sync (runs once per authenticated session)
   useEffect(() => {
     if (!token) {
       setNotifications([]);
@@ -112,40 +207,42 @@ export function RrNotificationAndBookmarksProvider({
       return;
     }
 
-    // Fetch data once
     refetchNotifications();
     refetchBookmarks();
 
-    // Setup Socket.io connection
-    const wsUrl =
-      process.env.NEXT_PUBLIC_API_URL ||
-      (typeof window !== "undefined" ? window.location.origin : "");
-    const socket: Socket = io(`${wsUrl}/notifications`, {
-      query: { token },
-      transports: ["websocket"],
-    });
-
-    const handleCreated = (newNotification: any) => {
+    const handleCreated = (e: Event) => {
+      const customEvent = e as CustomEvent<Notification>;
+      if (!customEvent.detail) return;
+      const newNotif = customEvent.detail;
       const activeDeviceId =
         typeof window !== "undefined"
           ? localStorage.getItem("runa_device_id")
           : null;
       if (
-        newNotification.metadata?.targetDeviceId &&
-        newNotification.metadata.targetDeviceId !== activeDeviceId
+        (newNotif.metadata as any)?.targetDeviceId &&
+        (newNotif.metadata as any).targetDeviceId !== activeDeviceId
       ) {
         return;
       }
-      setNotifications((prev) => [newNotification, ...prev]);
+      setNotifications((prev) => {
+        if (prev.some((n) => n.id === newNotif.id)) return prev;
+        return [newNotif, ...prev];
+      });
     };
 
-    const handleUpdated = (updatedNotification: any) => {
+    const handleUpdated = (e: Event) => {
+      const customEvent = e as CustomEvent<Notification>;
+      if (!customEvent.detail) return;
+      const updatedNotif = customEvent.detail;
       setNotifications((prev) =>
-        prev.map((n) => (n.id === updatedNotification.id ? updatedNotification : n))
+        prev.map((n) => (n.id === updatedNotif.id ? updatedNotif : n))
       );
     };
 
-    const handleDelete = ({ id }: { id: string }) => {
+    const handleDelete = (e: Event) => {
+      const customEvent = e as CustomEvent<{ id: string }>;
+      if (!customEvent.detail) return;
+      const { id } = customEvent.detail;
       setNotifications((prev) => prev.filter((n) => n.id !== id));
     };
 
@@ -153,58 +250,50 @@ export function RrNotificationAndBookmarksProvider({
       setNotifications([]);
     };
 
-    const handleEmailNew = (data: any) => {
-      window.dispatchEvent(new CustomEvent("runa-email-new", { detail: data }));
-      window.dispatchEvent(new Event("runa-sidebar-changed"));
-    };
-
-    const handleBookmarkUpdated = (updatedBookmark: any) => {
+    const handleBookmarkUpdated = (e: Event) => {
+      const customEvent = e as CustomEvent<Bookmark>;
+      if (!customEvent.detail) return;
+      const updatedBookmark = customEvent.detail;
       setBookmarks((prev) => {
         const exists = prev.some((b) => b.id === updatedBookmark.id);
         if (exists) {
-          return prev.map((b) => (b.id === updatedBookmark.id ? updatedBookmark : b));
+          return prev.map((b) =>
+            b.id === updatedBookmark.id ? updatedBookmark : b
+          );
         }
         return [updatedBookmark, ...prev];
       });
-      window.dispatchEvent(new Event("runa-bookmarks-changed"));
     };
 
-    const handleBookmarkDeleted = ({ id }: { id: string }) => {
+    const handleBookmarkDeleted = (e: Event) => {
+      const customEvent = e as CustomEvent<{ id: string }>;
+      if (!customEvent.detail) return;
+      const { id } = customEvent.detail;
       setBookmarks((prev) => prev.filter((b) => b.id !== id));
-      window.dispatchEvent(new Event("runa-bookmarks-changed"));
     };
 
-    socket.on("notification:created", handleCreated);
-    socket.on("notification:updated", handleUpdated);
-    socket.on("notification:deleted", handleDelete);
-    socket.on("notifications:cleared", handleCleared);
-    socket.on("email:new", handleEmailNew);
-    socket.on("bookmark:updated", handleBookmarkUpdated);
-    socket.on("bookmark:deleted", handleBookmarkDeleted);
-
-    return () => {
-      socket.off("notification:created", handleCreated);
-      socket.off("notification:updated", handleUpdated);
-      socket.off("notification:deleted", handleDelete);
-      socket.off("notifications:cleared", handleCleared);
-      socket.off("email:new", handleEmailNew);
-      socket.off("bookmark:updated", handleBookmarkUpdated);
-      socket.off("bookmark:deleted", handleBookmarkDeleted);
-      socket.disconnect();
-    };
-  }, [token, refetchNotifications, refetchBookmarks]);
-
-  // Listener for global bookmarks-changed event to re-fetch/sync
-  useEffect(() => {
-    if (!token) return;
-    const handleGlobalChange = () => {
+    const handleBookmarksChanged = () => {
       refetchBookmarks();
     };
-    window.addEventListener("runa-bookmarks-changed", handleGlobalChange);
+
+    window.addEventListener("runa-notification-created", handleCreated);
+    window.addEventListener("runa-notification-updated", handleUpdated);
+    window.addEventListener("runa-notification-deleted", handleDelete);
+    window.addEventListener("runa-notifications-cleared", handleCleared);
+    window.addEventListener("runa-bookmark-updated", handleBookmarkUpdated);
+    window.addEventListener("runa-bookmark-deleted", handleBookmarkDeleted);
+    window.addEventListener("runa-bookmarks-changed", handleBookmarksChanged);
+
     return () => {
-      window.removeEventListener("runa-bookmarks-changed", handleGlobalChange);
+      window.removeEventListener("runa-notification-created", handleCreated);
+      window.removeEventListener("runa-notification-updated", handleUpdated);
+      window.removeEventListener("runa-notification-deleted", handleDelete);
+      window.removeEventListener("runa-notifications-cleared", handleCleared);
+      window.removeEventListener("runa-bookmark-updated", handleBookmarkUpdated);
+      window.removeEventListener("runa-bookmark-deleted", handleBookmarkDeleted);
+      window.removeEventListener("runa-bookmarks-changed", handleBookmarksChanged);
     };
-  }, [token, refetchBookmarks]);
+  }, [token, refetchNotifications, refetchBookmarks]);
 
   // Calculate unread Count
   const unreadCount = useMemo(() => {
@@ -258,6 +347,7 @@ export function RrNotificationAndBookmarksProvider({
         loadingBookmarks,
         refetchBookmarks,
         deleteBookmark,
+        setNotifications,
       }}
     >
       {children}

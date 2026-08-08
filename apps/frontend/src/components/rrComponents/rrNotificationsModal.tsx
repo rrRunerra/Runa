@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { io, Socket } from "socket.io-client";
 import { toast } from "sonner";
 import useSWR from "swr";
 import {
@@ -41,10 +40,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Notification,
-  NotificationStatus,
-} from "@runa/notifications";
+import { Notification, NotificationStatus } from "@runa/notifications";
 import {
   deriveMasterKey,
   encryptMasterKeyForDevice,
@@ -73,7 +69,10 @@ interface NotificationIconProps {
   decryptionFailed?: boolean;
 }
 
-function NotificationIcon({ type, decryptionFailed }: NotificationIconProps): React.JSX.Element {
+function NotificationIcon({
+  type,
+  decryptionFailed,
+}: NotificationIconProps): React.JSX.Element {
   const iconClass = cn(
     "p-2 rounded-lg border shrink-0 mt-0.5",
     decryptionFailed
@@ -334,67 +333,64 @@ export function RrNotificationsModal({
     fetchNotifications,
   ]);
 
-  // Setup WebSocket connection for live notifications
+  // Listen to live notification events dispatched by the global RrWebSocketProvider
   useEffect(() => {
-    if (!session?.accessToken) return;
-
-    const wsUrl =
-      process.env.NEXT_PUBLIC_API_URL ||
-      (typeof window !== "undefined" ? window.location.origin : "");
-    const socket: Socket = io(`${wsUrl}/notifications`, {
-      query: { token: session.accessToken },
-      transports: ["websocket"],
-    });
-
-    socket.on("notification:created", async (newNotification: Notification) => {
+    const handleCreated = (e: Event) => {
+      const customEvent = e as CustomEvent<
+        Notification & { _decryptionFailed?: boolean }
+      >;
+      if (!customEvent.detail) return;
+      const newNotification = customEvent.detail;
       if (filterType !== "ALL" && newNotification.type !== filterType) return;
-
-      const privKey = await getPrivateKey();
-      const decrypted = await decryptNotification(newNotification, privKey);
-      const targetDeviceId = (decrypted.metadata as any)?.targetDeviceId;
+      const targetDeviceId = (newNotification.metadata as any)?.targetDeviceId;
       if (
         targetDeviceId &&
         targetDeviceId !== localStorage.getItem("runa_device_id")
       ) {
         return;
       }
-      setNotifications((prev) => [decrypted, ...prev]);
-      toast.info(t("newNotificationToast", { title: decrypted.title }));
-    });
+      setNotifications((prev) => {
+        if (prev.some((n) => n.id === newNotification.id)) return prev;
+        return [newNotification, ...prev];
+      });
+    };
 
-    socket.on(
-      "notification:updated",
-      async (updatedNotification: Notification) => {
-        const privKey = await getPrivateKey();
-        const decrypted = await decryptNotification(
-          updatedNotification,
-          privKey,
-        );
-        setNotifications((prev) =>
-          prev.map((n) => (n.id === decrypted.id ? decrypted : n)),
-        );
-      },
-    );
+    const handleUpdated = (e: Event) => {
+      const customEvent = e as CustomEvent<
+        Notification & { _decryptionFailed?: boolean }
+      >;
+      if (!customEvent.detail) return;
+      const updatedNotification = customEvent.detail;
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n.id === updatedNotification.id ? updatedNotification : n,
+        ),
+      );
+    };
 
-    socket.on("notification:deleted", ({ id }: { id: string }) => {
+    const handleDelete = (e: Event) => {
+      const customEvent = e as CustomEvent<{ id: string }>;
+      if (!customEvent.detail) return;
+      const { id } = customEvent.detail;
       setNotifications((prev) => prev.filter((n) => n.id !== id));
-    });
+    };
 
-    socket.on("notifications:cleared", () => {
+    const handleCleared = () => {
       setNotifications([]);
-    });
+    };
+
+    window.addEventListener("runa-notification-created", handleCreated);
+    window.addEventListener("runa-notification-updated", handleUpdated);
+    window.addEventListener("runa-notification-deleted", handleDelete);
+    window.addEventListener("runa-notifications-cleared", handleCleared);
 
     return () => {
-      socket.disconnect();
+      window.removeEventListener("runa-notification-created", handleCreated);
+      window.removeEventListener("runa-notification-updated", handleUpdated);
+      window.removeEventListener("runa-notification-deleted", handleDelete);
+      window.removeEventListener("runa-notifications-cleared", handleCleared);
     };
-  }, [
-    session?.accessToken,
-    getPrivateKey,
-    decryptNotification,
-    router,
-    filterType,
-    t,
-  ]);
+  }, [filterType]);
 
   const handleDismiss = async (id: string) => {
     if (!session?.accessToken) return;
@@ -416,6 +412,11 @@ export function RrNotificationsModal({
             n.id === id ? { ...n, status: "READ" as NotificationStatus } : n,
           ),
         );
+        window.dispatchEvent(
+          new CustomEvent("runa-notification-updated", {
+            detail: { id, status: "READ" },
+          }),
+        );
         toast.success(t("notificationDismissed"));
       }
     } catch {
@@ -425,9 +426,7 @@ export function RrNotificationsModal({
 
   const handleMarkAllRead = async () => {
     if (!session?.accessToken) return;
-    const pendingNotifs = notifications.filter(
-      (n) => n.status === "PENDING",
-    );
+    const pendingNotifs = notifications.filter((n) => n.status === "PENDING");
     if (pendingNotifs.length === 0) return;
 
     try {
@@ -446,7 +445,7 @@ export function RrNotificationsModal({
           );
         }),
       );
-      
+
       setNotifications((prev) =>
         prev.map((n) =>
           n.status === "PENDING"
@@ -454,6 +453,13 @@ export function RrNotificationsModal({
             : n,
         ),
       );
+      pendingNotifs.forEach((n) => {
+        window.dispatchEvent(
+          new CustomEvent("runa-notification-updated", {
+            detail: { id: n.id, status: "READ" },
+          }),
+        );
+      });
       toast.success(t("allNotificationsRead"));
     } catch {
       toast.error(t("failedMarkNotificationsRead"));
@@ -472,6 +478,9 @@ export function RrNotificationsModal({
       );
       if (res.ok) {
         setNotifications((prev) => prev.filter((n) => n.id !== id));
+        window.dispatchEvent(
+          new CustomEvent("runa-notification-deleted", { detail: { id } }),
+        );
         toast.success(t("notificationDeleted"));
       } else {
         throw new Error("Failed to delete");
@@ -493,6 +502,7 @@ export function RrNotificationsModal({
       );
       if (res.ok) {
         setNotifications([]);
+        window.dispatchEvent(new CustomEvent("runa-notifications-cleared"));
         toast.success(t("allNotificationsCleared"));
       } else {
         throw new Error("Failed to clear");
@@ -546,7 +556,7 @@ export function RrNotificationsModal({
   const handleApproveDevice = async (
     id: string,
     requestPublicKey: string,
-    requestMlKemPublicKey?: string | null
+    requestMlKemPublicKey?: string | null,
   ) => {
     if (!session?.accessToken) {
       toast.error("No active session token found");
@@ -582,14 +592,15 @@ export function RrNotificationsModal({
 
       if (requestMlKemPublicKey) {
         const targetDeviceMlKemPublicKeyBytes = new Uint8Array(
-          base64UrlToBuffer(requestMlKemPublicKey)
+          base64UrlToBuffer(requestMlKemPublicKey),
         );
-        const { ciphertext, iv, mlkemCiphertext } = await hybridEncryptMasterKeyForDevice(
-          masterKeyMaterial,
-          requestPublicKey,
-          targetDeviceMlKemPublicKeyBytes,
-          ownKeyPair.privateKey
-        );
+        const { ciphertext, iv, mlkemCiphertext } =
+          await hybridEncryptMasterKeyForDevice(
+            masterKeyMaterial,
+            requestPublicKey,
+            targetDeviceMlKemPublicKeyBytes,
+            ownKeyPair.privateKey,
+          );
         encryptedMasterKeyPayload = {
           ciphertext,
           iv,
@@ -658,7 +669,7 @@ export function RrNotificationsModal({
         handleApproveDevice(
           n.id,
           (n.metadata as any)?.publicKey || "",
-          (n.metadata as any)?.mlKemPublicKey || null
+          (n.metadata as any)?.mlKemPublicKey || null,
         );
       } else {
         handleGenericStatusUpdate(n.id, "DENIED");
@@ -682,7 +693,9 @@ export function RrNotificationsModal({
       onOpenChange(false);
       const accountId = meta.emailAccountId || "unified";
       const folder = meta.emailFolder || "inbox";
-      router.push(`/pegasus/account/${accountId}/${folder}?messageId=${meta.emailMessageId}`);
+      router.push(
+        `/pegasus/account/${accountId}/${folder}?messageId=${meta.emailMessageId}`,
+      );
     }
   };
 
@@ -697,13 +710,15 @@ export function RrNotificationsModal({
             </DialogTitle>
             <div className="flex items-center gap-2">
               <Select value={filterType} onValueChange={setFilterType}>
-                <SelectTrigger className="h-8 w-[120px] text-xs">
+                <SelectTrigger className="h-8 w-30 text-xs">
                   <SelectValue placeholder="Filter" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ALL">{t("allTypes")}</SelectItem>
                   <SelectItem value="INFO">{t("info")}</SelectItem>
-                  <SelectItem value="CONFIRMATION">{t("confirmation")}</SelectItem>
+                  <SelectItem value="CONFIRMATION">
+                    {t("confirmation")}
+                  </SelectItem>
                   <SelectItem value="PROMPT">{t("prompt")}</SelectItem>
                   <SelectItem value="INTERACTIVE">{t("security")}</SelectItem>
                 </SelectContent>
@@ -762,7 +777,7 @@ export function RrNotificationsModal({
             </span>
           </div>
         ) : (
-          <ScrollArea className="max-h-[500px] pr-2 py-2">
+          <ScrollArea className="max-h-125 pr-2 py-2">
             <div className="flex flex-col gap-3">
               {notifications.map((n) => {
                 const isPending = n.status === "PENDING";
@@ -779,7 +794,8 @@ export function RrNotificationsModal({
                     key={n.id}
                     className={cn(
                       "p-4 rounded-xl border bg-card shadow-sm hover:shadow-md transition-all duration-200 flex flex-col gap-3 relative",
-                      isEmailNotif && "cursor-pointer hover:bg-muted/50 transition-colors"
+                      isEmailNotif &&
+                        "cursor-pointer hover:bg-muted/50 transition-colors",
                     )}
                     onClick={() => {
                       if (isEmailNotif) {
@@ -912,7 +928,9 @@ export function RrNotificationsModal({
                             ) : (
                               <CheckCircle className="size-3.5 mr-1" />
                             )}
-                            {n.type === "INTERACTIVE" ? t("authorize") : t("approve")}
+                            {n.type === "INTERACTIVE"
+                              ? t("authorize")
+                              : t("approve")}
                           </Button>
                         </div>
                       </div>
