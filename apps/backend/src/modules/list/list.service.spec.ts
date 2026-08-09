@@ -77,6 +77,7 @@ describe('ListService', () => {
       pageInfo: { nextCursor: null, hasMore: false, count: 0 },
     }),
     findMany: jest.fn().mockResolvedValue([]),
+    findFirst: jest.fn().mockResolvedValue(null),
     findUnique: jest.fn().mockResolvedValue(null),
     upsert: jest.fn().mockResolvedValue({}),
     create: jest.fn().mockResolvedValue({}),
@@ -521,24 +522,21 @@ describe('ListService', () => {
   describe('Game Operations', () => {
     it('should get game list', async () => {
       mockPrismaClient.user.findUnique.mockResolvedValue({ privacy: {} });
-      mockPrismaClient.aquilaGameUserListV2.paginate.mockResolvedValue({
-        data: [
-          {
-            id: 1,
-            gameId: 1,
-            status: 'PLAYING',
-            progress: 10,
-            score: 9,
-            updatedAt: new Date(),
-            createdAt: new Date(),
-            game: {
-              titlePrimary: 'Witcher 3',
-              coverImage: '',
-            },
+      mockPrismaClient.aquilaGameUserListV2.findMany.mockResolvedValueOnce([
+        {
+          id: 1,
+          gameId: 1,
+          status: 'PLAYING',
+          progress: 10,
+          score: 9,
+          updatedAt: new Date(),
+          createdAt: new Date(),
+          game: {
+            titlePrimary: 'Witcher 3',
+            coverImage: '',
           },
-        ],
-        pageInfo: { nextCursor: null, hasMore: false, count: 1 },
-      });
+        },
+      ]);
 
       const result = await service.getGameList('testuser');
       expect(result.entries[0].title).toBe('Witcher 3');
@@ -548,24 +546,21 @@ describe('ListService', () => {
   describe('Book Operations', () => {
     it('should get book list', async () => {
       mockPrismaClient.user.findUnique.mockResolvedValue({ privacy: {} });
-      mockPrismaClient.aquilaBookUserListV2.paginate.mockResolvedValue({
-        data: [
-          {
-            id: 1,
-            bookId: 1,
-            status: 'READING',
-            progressChapters: 5,
-            score: 8,
-            updatedAt: new Date(),
-            createdAt: new Date(),
-            book: {
-              titlePrimary: 'Book One',
-              coverImage: '',
-            },
+      mockPrismaClient.aquilaBookUserListV2.findMany.mockResolvedValueOnce([
+        {
+          id: 1,
+          bookId: 1,
+          status: 'READING',
+          progressChapters: 5,
+          score: 8,
+          updatedAt: new Date(),
+          createdAt: new Date(),
+          book: {
+            titlePrimary: 'Book One',
+            coverImage: '',
           },
-        ],
-        pageInfo: { nextCursor: null, hasMore: false, count: 1 },
-      });
+        },
+      ]);
 
       const result = await service.getBookList('testuser');
       expect(result.entries[0].title).toBe('Book One');
@@ -713,6 +708,144 @@ describe('ListService', () => {
         years: [2023, 2021],
         statuses: ['FINISHED', 'RELEASING'],
       });
+    });
+  });
+
+  describe('Status-ordered Media List Pagination (All Tab)', () => {
+    it('should fetch across status groups in prioritized order (Playing -> On Hold -> Completed -> Dropped -> Planning)', async () => {
+      mockPrismaClient.user.findUnique.mockResolvedValue({ privacy: {} });
+      mockPrismaClient.aquilaGameUserListV2.groupBy.mockResolvedValue([
+        { status: 'PLAYING', _count: { status: 2 } },
+        { status: 'ON_HOLD', _count: { status: 1 } },
+        { status: 'COMPLETED', _count: { status: 5 } },
+      ]);
+
+      // First status PLAYING returns 2 items
+      mockPrismaClient.aquilaGameUserListV2.findMany.mockResolvedValueOnce([
+        {
+          id: 10,
+          gameId: 101,
+          status: 'PLAYING',
+          progress: 5,
+          score: 9,
+          updatedAt: new Date(),
+          createdAt: new Date(),
+          game: { titlePrimary: 'Game Playing 1', coverImage: '' },
+        },
+        {
+          id: 11,
+          gameId: 102,
+          status: 'PLAYING',
+          progress: 8,
+          score: 8,
+          updatedAt: new Date(),
+          createdAt: new Date(),
+          game: { titlePrimary: 'Game Playing 2', coverImage: '' },
+        },
+      ]);
+
+      // Second status ON_HOLD returns 1 item
+      mockPrismaClient.aquilaGameUserListV2.findMany.mockResolvedValueOnce([
+        {
+          id: 20,
+          gameId: 201,
+          status: 'ON_HOLD',
+          progress: 2,
+          score: 7,
+          updatedAt: new Date(),
+          createdAt: new Date(),
+          game: { titlePrimary: 'Game On Hold 1', coverImage: '' },
+        },
+      ]);
+
+      // Third status COMPLETED returns 2 items
+      mockPrismaClient.aquilaGameUserListV2.findMany.mockResolvedValueOnce([
+        {
+          id: 30,
+          gameId: 301,
+          status: 'COMPLETED',
+          progress: 50,
+          score: 10,
+          updatedAt: new Date(),
+          createdAt: new Date(),
+          game: { titlePrimary: 'Game Completed 1', coverImage: '' },
+        },
+        {
+          id: 31,
+          gameId: 302,
+          status: 'COMPLETED',
+          progress: 30,
+          score: 9,
+          updatedAt: new Date(),
+          createdAt: new Date(),
+          game: { titlePrimary: 'Game Completed 2', coverImage: '' },
+        },
+      ]);
+
+      // Fourth status DROPPED returns 0
+      mockPrismaClient.aquilaGameUserListV2.findMany.mockResolvedValueOnce([]);
+      // Fifth status PLANNING returns 0
+      mockPrismaClient.aquilaGameUserListV2.findMany.mockResolvedValueOnce([]);
+
+      const result = await service.getGameList('testuser', undefined, {
+        limit: 30,
+      });
+
+      expect(result.entries).toHaveLength(5);
+      expect(result.entries[0].status).toBe('PLAYING');
+      expect(result.entries[1].status).toBe('PLAYING');
+      expect(result.entries[2].status).toBe('ON_HOLD');
+      expect(result.entries[3].status).toBe('COMPLETED');
+      expect(result.entries[4].status).toBe('COMPLETED');
+      expect(result.pageInfo.hasMore).toBe(false);
+      expect(result.pageInfo.nextCursor).toBeNull();
+    });
+
+    it('should paginate with compound cursor s_{statusIndex}_{id} when page limit is reached', async () => {
+      mockPrismaClient.user.findUnique.mockResolvedValue({ privacy: {} });
+      mockPrismaClient.aquilaGameUserListV2.groupBy.mockResolvedValue([]);
+
+      // Status PLAYING returns 3 items when limit is 2 -> slice to 2 and set nextCursor
+      mockPrismaClient.aquilaGameUserListV2.findMany.mockResolvedValueOnce([
+        {
+          id: 10,
+          gameId: 101,
+          status: 'PLAYING',
+          progress: 5,
+          score: 9,
+          updatedAt: new Date(),
+          createdAt: new Date(),
+          game: { titlePrimary: 'Game Playing 1', coverImage: '' },
+        },
+        {
+          id: 11,
+          gameId: 102,
+          status: 'PLAYING',
+          progress: 8,
+          score: 8,
+          updatedAt: new Date(),
+          createdAt: new Date(),
+          game: { titlePrimary: 'Game Playing 2', coverImage: '' },
+        },
+        {
+          id: 12,
+          gameId: 103,
+          status: 'PLAYING',
+          progress: 3,
+          score: 7,
+          updatedAt: new Date(),
+          createdAt: new Date(),
+          game: { titlePrimary: 'Game Playing 3', coverImage: '' },
+        },
+      ]);
+
+      const result = await service.getGameList('testuser', undefined, {
+        limit: 2,
+      });
+
+      expect(result.entries).toHaveLength(2);
+      expect(result.pageInfo.hasMore).toBe(true);
+      expect(result.pageInfo.nextCursor).toBe('s_0_11');
     });
   });
 });

@@ -272,6 +272,126 @@ export class ListService {
     }
   }
 
+  private async fetchOrderedMediaList(
+    model: any,
+    whereClause: any,
+    statusOrder: string[],
+    statusEnum: string | undefined,
+    query: ListQueryDto | undefined,
+    orderBy: any,
+    select: any,
+  ): Promise<{
+    data: any[];
+    pageInfo: { nextCursor: string | null; hasMore: boolean; count: number };
+  }> {
+    const limit = query?.limit ? Number(query.limit) : 30;
+    const take = Math.min(Math.max(1, limit), 100);
+
+    if (statusEnum) {
+      return model.paginate({
+        where: whereClause,
+        take,
+        cursor: query?.cursor ? (Number(query.cursor) as any) : undefined,
+        cursorField: 'id',
+        orderBy,
+        select,
+      });
+    }
+
+    let startIndex = 0;
+    let startCursorId: number | null = null;
+
+    if (query?.cursor) {
+      const cursorStr = String(query.cursor);
+      if (cursorStr.startsWith('s_')) {
+        const parts = cursorStr.split('_');
+        if (parts.length >= 3) {
+          startIndex = parseInt(parts[1], 10) || 0;
+          const parsedId = parseInt(parts[2], 10);
+          startCursorId = isNaN(parsedId) || parsedId === 0 ? null : parsedId;
+        }
+      } else {
+        const parsedId = parseInt(cursorStr, 10);
+        if (!isNaN(parsedId)) {
+          startCursorId = parsedId;
+        }
+      }
+    }
+
+    const collected: any[] = [];
+    let currentStatusIndex = Math.min(
+      Math.max(0, startIndex),
+      statusOrder.length - 1,
+    );
+    let currentCursorId: number | null = startCursorId;
+    let hasMore = false;
+    let nextCursor: string | null = null;
+
+    while (currentStatusIndex < statusOrder.length && collected.length < take) {
+      const currentStatus = statusOrder[currentStatusIndex];
+      const needed = take - collected.length;
+      const remainingToFetch = needed + 1;
+
+      const rows = await model.findMany({
+        where: {
+          ...whereClause,
+          status: currentStatus,
+        },
+        take: remainingToFetch,
+        ...(currentCursorId
+          ? { cursor: { id: currentCursorId }, skip: 1 }
+          : {}),
+        orderBy,
+        select,
+      });
+
+      if (rows.length === 0) {
+        currentStatusIndex++;
+        currentCursorId = null;
+        continue;
+      }
+
+      if (rows.length > needed) {
+        collected.push(...rows.slice(0, needed));
+        hasMore = true;
+        const lastItem = collected[collected.length - 1];
+        nextCursor = `s_${currentStatusIndex}_${lastItem.id}`;
+        break;
+      }
+
+      collected.push(...rows);
+      currentStatusIndex++;
+      currentCursorId = null;
+
+      if (collected.length === take) {
+        if (currentStatusIndex < statusOrder.length) {
+          const nextItem = await model.findFirst({
+            where: {
+              ...whereClause,
+              status: { in: statusOrder.slice(currentStatusIndex) },
+            },
+            select: { id: true, status: true },
+          });
+          if (nextItem) {
+            hasMore = true;
+            const nextStatusIdx = statusOrder.indexOf(nextItem.status);
+            nextCursor = `s_${nextStatusIdx >= 0 ? nextStatusIdx : currentStatusIndex}_0`;
+          }
+        }
+        break;
+      }
+    }
+
+    return {
+      data: collected,
+      pageInfo: {
+        count: collected.length,
+        nextCursor: hasMore ? nextCursor : null,
+        hasMore,
+      },
+    };
+  }
+
   // ─────────────────────────── ANIME ───────────────────────────
 
   public async getAnimeList(
@@ -332,13 +452,20 @@ export class ListService {
     }
 
     const [paginated, counts] = await Promise.all([
-      this.prisma.client.aquilaAnimeUserListV2.paginate({
-        where: whereClause,
-        take: query?.limit ?? 30,
-        cursor: query?.cursor ? (Number(query.cursor) as any) : undefined,
-        cursorField: 'id',
-        orderBy: this.getAnimeOrderBy(query?.sort),
-        select: {
+      this.fetchOrderedMediaList(
+        this.prisma.client.aquilaAnimeUserListV2,
+        whereClause,
+        [
+          $Enums.AnimeListStatus.WATCHING,
+          $Enums.AnimeListStatus.ON_HOLD,
+          $Enums.AnimeListStatus.COMPLETED,
+          $Enums.AnimeListStatus.DROPPED,
+          $Enums.AnimeListStatus.PLANNING,
+        ],
+        statusEnum,
+        query,
+        this.getAnimeOrderBy(query?.sort),
+        {
           id: true,
           animeId: true,
           status: true,
@@ -358,7 +485,7 @@ export class ListService {
             },
           },
         },
-      }),
+      ),
       this.getStatusCounts(this.prisma.client.aquilaAnimeUserListV2, username),
     ]);
 
@@ -628,13 +755,20 @@ export class ListService {
     }
 
     const [paginated, counts] = await Promise.all([
-      this.prisma.client.aquilaMangaUserListV2.paginate({
-        where: whereClause,
-        take: query?.limit ?? 30,
-        cursor: query?.cursor ? (Number(query.cursor) as any) : undefined,
-        cursorField: 'id',
-        orderBy: this.getMangaOrderBy(query?.sort),
-        select: {
+      this.fetchOrderedMediaList(
+        this.prisma.client.aquilaMangaUserListV2,
+        whereClause,
+        [
+          $Enums.MangaListStatus.READING,
+          $Enums.MangaListStatus.ON_HOLD,
+          $Enums.MangaListStatus.COMPLETED,
+          $Enums.MangaListStatus.DROPPED,
+          $Enums.MangaListStatus.PLANNING,
+        ],
+        statusEnum,
+        query,
+        this.getMangaOrderBy(query?.sort),
+        {
           id: true,
           mangaId: true,
           status: true,
@@ -655,7 +789,7 @@ export class ListService {
             },
           },
         },
-      }),
+      ),
       this.getStatusCounts(this.prisma.client.aquilaMangaUserListV2, username),
     ]);
 
@@ -925,13 +1059,20 @@ export class ListService {
     }
 
     const [paginated, counts] = await Promise.all([
-      this.prisma.client.aquilaMovieUserListV2.paginate({
-        where: whereClause,
-        take: query?.limit ?? 30,
-        cursor: query?.cursor ? (Number(query.cursor) as any) : undefined,
-        cursorField: 'id',
-        orderBy: this.getMovieOrderBy(query?.sort),
-        select: {
+      this.fetchOrderedMediaList(
+        this.prisma.client.aquilaMovieUserListV2,
+        whereClause,
+        [
+          $Enums.MovieListStatus.WATCHING,
+          $Enums.MovieListStatus.ON_HOLD,
+          $Enums.MovieListStatus.COMPLETED,
+          $Enums.MovieListStatus.DROPPED,
+          $Enums.MovieListStatus.PLANNING,
+        ],
+        statusEnum,
+        query,
+        this.getMovieOrderBy(query?.sort),
+        {
           id: true,
           movieId: true,
           status: true,
@@ -948,7 +1089,7 @@ export class ListService {
             },
           },
         },
-      }),
+      ),
       this.getStatusCounts(this.prisma.client.aquilaMovieUserListV2, username),
     ]);
 
@@ -1209,13 +1350,20 @@ export class ListService {
     }
 
     const [paginated, counts] = await Promise.all([
-      this.prisma.client.aquilaTvUserListV2.paginate({
-        where: whereClause,
-        take: query?.limit ?? 30,
-        cursor: query?.cursor ? (Number(query.cursor) as any) : undefined,
-        cursorField: 'id',
-        orderBy: this.getTvOrderBy(query?.sort),
-        select: {
+      this.fetchOrderedMediaList(
+        this.prisma.client.aquilaTvUserListV2,
+        whereClause,
+        [
+          $Enums.TvListStatus.WATCHING,
+          $Enums.TvListStatus.ON_HOLD,
+          $Enums.TvListStatus.COMPLETED,
+          $Enums.TvListStatus.DROPPED,
+          $Enums.TvListStatus.PLANNING,
+        ],
+        statusEnum,
+        query,
+        this.getTvOrderBy(query?.sort),
+        {
           id: true,
           tvId: true,
           status: true,
@@ -1240,7 +1388,7 @@ export class ListService {
             },
           },
         },
-      }),
+      ),
       this.getStatusCounts(this.prisma.client.aquilaTvUserListV2, username),
     ]);
 
@@ -1545,13 +1693,20 @@ export class ListService {
     }
 
     const [paginated, counts] = await Promise.all([
-      this.prisma.client.aquilaGameUserListV2.paginate({
-        where: whereClause,
-        take: query?.limit ?? 30,
-        cursor: query?.cursor ? (Number(query.cursor) as any) : undefined,
-        cursorField: 'id',
-        orderBy: this.getGameOrderBy(query?.sort),
-        select: {
+      this.fetchOrderedMediaList(
+        this.prisma.client.aquilaGameUserListV2,
+        whereClause,
+        [
+          $Enums.GameListStatus.PLAYING,
+          $Enums.GameListStatus.ON_HOLD,
+          $Enums.GameListStatus.COMPLETED,
+          $Enums.GameListStatus.DROPPED,
+          $Enums.GameListStatus.PLANNING,
+        ],
+        statusEnum,
+        query,
+        this.getGameOrderBy(query?.sort),
+        {
           id: true,
           gameId: true,
           status: true,
@@ -1569,7 +1724,7 @@ export class ListService {
             },
           },
         },
-      }),
+      ),
       this.getStatusCounts(this.prisma.client.aquilaGameUserListV2, username),
     ]);
 
@@ -1796,13 +1951,20 @@ export class ListService {
     }
 
     const [paginated, counts] = await Promise.all([
-      this.prisma.client.aquilaBookUserListV2.paginate({
-        where: whereClause,
-        take: query?.limit ?? 30,
-        cursor: query?.cursor ? (Number(query.cursor) as any) : undefined,
-        cursorField: 'id',
-        orderBy: this.getBookOrderBy(query?.sort),
-        select: {
+      this.fetchOrderedMediaList(
+        this.prisma.client.aquilaBookUserListV2,
+        whereClause,
+        [
+          $Enums.BookListStatus.READING,
+          $Enums.BookListStatus.ON_HOLD,
+          $Enums.BookListStatus.COMPLETED,
+          $Enums.BookListStatus.DROPPED,
+          $Enums.BookListStatus.PLANNING,
+        ],
+        statusEnum,
+        query,
+        this.getBookOrderBy(query?.sort),
+        {
           id: true,
           bookId: true,
           status: true,
@@ -1822,7 +1984,7 @@ export class ListService {
             },
           },
         },
-      }),
+      ),
       this.getStatusCounts(this.prisma.client.aquilaBookUserListV2, username),
     ]);
 
