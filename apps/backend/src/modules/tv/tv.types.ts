@@ -97,11 +97,21 @@ export interface TvdbEpisode {
   runtime?: number;
 }
 
+export interface TvdbPaginationLinks {
+  prev?: string | null;
+  self?: string | null;
+  next?: string | null;
+  total_items?: number;
+  page_size?: number;
+}
+
 export interface TvdbEpisodesResponse {
   status: string;
-  data: {
-    episodes: TvdbEpisode[];
+  data?: {
+    series?: any;
+    episodes?: TvdbEpisode[];
   };
+  links?: TvdbPaginationLinks;
 }
 
 export interface TvdbTranslation {
@@ -113,3 +123,4 @@ export interface TvdbTranslationResponse {
   status: string;
   data: TvdbTranslation;
 }
+

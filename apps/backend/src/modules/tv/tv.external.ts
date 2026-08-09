@@ -142,6 +142,75 @@ export class TvExternal {
     return res.json() as Promise<T>;
   }
 
+  // ── TVDB Episodes Pagination ───────────────────────────────────────────────
+
+  private async fetchAllTvdbEpisodes(tvdbId: number): Promise<TvdbEpisode[]> {
+    const allEpisodes: TvdbEpisode[] = [];
+    let page = 0;
+    const maxPages = 50; // Safety guard for up to 25,000 episodes
+    let seasonType = 'official';
+
+    try {
+      while (page < maxPages) {
+        const url = `${this.baseUrl}/series/${tvdbId}/episodes/${seasonType}/eng?page=${page}`;
+        const res = await this.tvdbFetch<TvdbEpisodesResponse>(url);
+        const dataObj: any = res?.data;
+        const episodes: TvdbEpisode[] = Array.isArray(dataObj)
+          ? dataObj
+          : Array.isArray(dataObj?.episodes)
+            ? dataObj.episodes
+            : [];
+
+        if (episodes.length === 0) {
+          // If page 0 with 'official' season type returned 0 episodes, try fallback to 'default'
+          if (page === 0 && seasonType === 'official') {
+            seasonType = 'default';
+            const defaultUrl = `${this.baseUrl}/series/${tvdbId}/episodes/default/eng?page=0`;
+            const defaultRes = await this.tvdbFetch<TvdbEpisodesResponse>(defaultUrl);
+            const defaultDataObj: any = defaultRes?.data;
+            const defaultEps: TvdbEpisode[] = Array.isArray(defaultDataObj)
+              ? defaultDataObj
+              : Array.isArray(defaultDataObj?.episodes)
+                ? defaultDataObj.episodes
+                : [];
+
+            if (defaultEps.length > 0) {
+              allEpisodes.push(...defaultEps);
+              const hasNext =
+                Boolean(defaultRes?.links?.next) ||
+                Boolean(
+                  defaultRes?.links?.total_items &&
+                    allEpisodes.length < defaultRes.links.total_items,
+                );
+              if (!hasNext) break;
+              page++;
+              continue;
+            }
+          }
+          break;
+        }
+
+        allEpisodes.push(...episodes);
+
+        const hasNext =
+          Boolean(res?.links?.next) ||
+          Boolean(
+            res?.links?.total_items && allEpisodes.length < res.links.total_items,
+          );
+
+        if (!hasNext) {
+          break;
+        }
+        page++;
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`Failed fetching all TVDB episodes for series ${tvdbId}: ${msg}`);
+    }
+
+    return allEpisodes;
+  }
+
   // ── TVMaze Fetch ───────────────────────────────────────────────────────────
 
   private async fetchTvmazeData(
@@ -166,40 +235,27 @@ export class TvExternal {
       }
 
       if (showData?.id) {
-        const fullRes = await fetch(`https://api.tvmaze.com/shows/${showData.id}?embed[]=episodes&embed[]=cast&embed[]=crew`);
-        const fullShow: TvmazeShow = fullRes.ok ? await fullRes.json() : showData;
-
-        let seasons: any[] = [];
-        try {
-          const sRes = await fetch(`https://api.tvmaze.com/shows/${showData.id}/seasons`);
-          if (sRes.ok) seasons = await sRes.json();
-        } catch { /* ignore */ }
-
         return {
-          tvmazeId: fullShow.id,
-          name: fullShow.name,
-          type: fullShow.type,
-          language: fullShow.language,
-          genres: fullShow.genres || [],
-          status: fullShow.status,
-          runtime: fullShow.runtime || fullShow.averageRuntime,
-          premiered: fullShow.premiered,
-          ended: fullShow.ended,
-          officialSite: fullShow.officialSite,
-          rating: fullShow.rating?.average || null,
-          network: fullShow.network?.name || fullShow.webChannel?.name || null,
-          networkCountry: fullShow.network?.country?.code || null,
-          poster: fullShow.image?.original || fullShow.image?.medium || null,
-          summary: fullShow.summary ? fullShow.summary.replace(/<[^>]*>?/gm, '') : null,
-          imdbId: fullShow.externals?.imdb || null,
-          thetvdbId: fullShow.externals?.thetvdb || null,
-          tvrageId: fullShow.externals?.tvrage || null,
-          broadcastTime: fullShow.schedule?.time || null,
-          broadcastDays: fullShow.schedule?.days || [],
-          episodes: fullShow._embedded?.episodes || [],
-          seasons,
-          cast: fullShow._embedded?.cast || [],
-          crew: fullShow._embedded?.crew || [],
+          tvmazeId: showData.id,
+          name: showData.name,
+          type: showData.type,
+          language: showData.language,
+          genres: showData.genres || [],
+          status: showData.status,
+          runtime: showData.runtime || showData.averageRuntime,
+          premiered: showData.premiered,
+          ended: showData.ended,
+          officialSite: showData.officialSite,
+          rating: showData.rating?.average || null,
+          network: showData.network?.name || showData.webChannel?.name || null,
+          networkCountry: showData.network?.country?.code || null,
+          poster: showData.image?.original || showData.image?.medium || null,
+          summary: showData.summary ? showData.summary.replace(/<[^>]*>?/gm, '') : null,
+          imdbId: showData.externals?.imdb || null,
+          thetvdbId: showData.externals?.thetvdb || null,
+          tvrageId: showData.externals?.tvrage || null,
+          broadcastTime: showData.schedule?.time || null,
+          broadcastDays: showData.schedule?.days || [],
         };
       }
     } catch {
@@ -207,6 +263,7 @@ export class TvExternal {
     }
     return null;
   }
+
 
   // ── OMDb / IMDb Fetch ──────────────────────────────────────────────────────
 
@@ -336,17 +393,15 @@ export class TvExternal {
 
   public async fetchAndUpsertTv(tvdbId: number, force = false): Promise<void> {
     try {
-      // 1. Fetch primary TVDB data
-      const [seriesData, transData, episodesData] = await Promise.all([
+      // 1. Fetch primary TVDB data in parallel
+      const [seriesData, transData, rawTvdbEpisodes] = await Promise.all([
         this.tvdbFetch<TvdbSeriesResponse>(
           `${this.baseUrl}/series/${tvdbId}/extended`,
         ),
         this.tvdbFetch<TvdbTranslationResponse>(
           `${this.baseUrl}/series/${tvdbId}/translations/eng`,
         ),
-        this.tvdbFetch<TvdbEpisodesResponse>(
-          `${this.baseUrl}/series/${tvdbId}/episodes/official/eng`,
-        ),
+        this.fetchAllTvdbEpisodes(tvdbId),
       ]);
 
       if (!seriesData.data) {
@@ -357,7 +412,6 @@ export class TvExternal {
 
       const series = seriesData.data;
       const translation = transData.data;
-      const rawTvdbEpisodes = episodesData.data?.episodes || [];
 
       const englishName = translation?.name || series.name;
       const englishOverview = translation?.overview || series.overview || '';
@@ -459,10 +513,36 @@ export class TvExternal {
         }
       }
 
-      // Build seasons + episodes (merge TVDB + TVMaze)
-      const rawTvmazeEpisodes = tvmazeData?.episodes || [];
+      // Build seasons + episodes from TVDB
       const seasonsMap = new Map<number, any>();
       const episodesList: any[] = [];
+
+      // Pre-populate all official/aired seasons defined on the series (even if 0 episodes aired yet, e.g. upcoming season 25)
+      for (const s of series.seasons || []) {
+        // Only include official/aired order seasons (type 1 or where type is undefined/null or name indicates Aired/Official)
+        if (s.type && s.type.id && s.type.id !== 1) {
+          continue;
+        }
+        const sNum = s.number;
+        if (sNum === undefined || sNum === null || isNaN(sNum)) continue;
+
+        if (!seasonsMap.has(sNum)) {
+          const sName =
+            s.nameTranslations?.find((t: any) => t.language === 'eng')?.name ||
+            s.name ||
+            (sNum === 0 ? 'Specials' : `Season ${sNum}`);
+
+          seasonsMap.set(sNum, {
+            seasonNumber: sNum,
+            tvdbSeasonId: s.id || null,
+            tvmazeSeasonId: null,
+            titlePrimary: sName,
+            posterImage: s.image || null,
+            airDateYear: firstAired.year,
+            episodeCount: 0,
+          });
+        }
+      }
 
       if (rawTvdbEpisodes.length > 0) {
         for (const ep of rawTvdbEpisodes) {
@@ -470,15 +550,19 @@ export class TvExternal {
           const eNum = ep.number ?? 1;
 
           if (!seasonsMap.has(sNum)) {
-            const tvdbSeason = series.seasons?.find((s) => s.number === sNum);
-            const tvmazeSeason = tvmazeData?.seasons?.find((s: any) => s.number === sNum);
-            const posterImage = tvdbSeason?.image || tvmazeSeason?.image?.original || null;
+            const tvdbSeason = series.seasons?.find(
+              (s) => s.number === sNum && (!s.type || s.type.id === 1),
+            );
+            const posterImage = tvdbSeason?.image || null;
 
             seasonsMap.set(sNum, {
               seasonNumber: sNum,
               tvdbSeasonId: tvdbSeason?.id || null,
-              tvmazeSeasonId: tvmazeSeason?.id || null,
-              titlePrimary: tvdbSeason?.nameTranslations?.find((t: any) => t.language === 'eng')?.name || tvdbSeason?.name || (sNum === 0 ? 'Specials' : `Season ${sNum}`),
+              tvmazeSeasonId: null,
+              titlePrimary:
+                tvdbSeason?.nameTranslations?.find((t: any) => t.language === 'eng')?.name ||
+                tvdbSeason?.name ||
+                (sNum === 0 ? 'Specials' : `Season ${sNum}`),
               posterImage,
               airDateYear: firstAired.year,
               episodeCount: 0,
@@ -487,65 +571,27 @@ export class TvExternal {
           const seasonObj = seasonsMap.get(sNum);
           seasonObj.episodeCount++;
 
-          const tvmazeEp = rawTvmazeEpisodes.find((e: any) => e.season === sNum && e.number === eNum);
-
           const epName =
             ep.nameTranslations?.find((t) => t.language === 'eng')?.name ||
             ep.name ||
-            tvmazeEp?.name ||
             `Episode ${eNum}`;
           const epOverview =
             ep.overviewTranslations?.find((t) => t.language === 'eng')?.overview ||
             ep.overview ||
-            (tvmazeEp?.summary ? tvmazeEp.summary.replace(/<[^>]*>?/gm, '') : null);
+            null;
 
           episodesList.push({
             seasonNumber: sNum,
             episodeNumber: eNum,
             titlePrimary: epName,
             description: epOverview,
-            duration: ep.runtime ? Number(ep.runtime) : (tvmazeEp?.runtime || null),
-            airDate: ep.aired || tvmazeEp?.airdate || null,
-            airTime: tvmazeEp?.airtime || null,
-            airstamp: tvmazeEp?.airstamp || null,
-            rating: tvmazeEp?.rating?.average ? Number(tvmazeEp.rating.average) : null,
-            episodeType: tvmazeEp?.type || (sNum === 0 ? 'special' : 'regular'),
-            thumbnail: ep.image || tvmazeEp?.image?.original || null,
-            isFiller: false,
-            isRecap: false,
-          });
-        }
-      } else if (rawTvmazeEpisodes.length > 0) {
-        for (const ep of rawTvmazeEpisodes) {
-          const sNum = ep.season || 1;
-          const eNum = ep.number || 1;
-
-          if (!seasonsMap.has(sNum)) {
-            const tvmazeSeason = tvmazeData?.seasons?.find((s: any) => s.number === sNum);
-            seasonsMap.set(sNum, {
-              seasonNumber: sNum,
-              tvmazeSeasonId: tvmazeSeason?.id || null,
-              titlePrimary: sNum === 0 ? 'Specials' : `Season ${sNum}`,
-              posterImage: ep.image?.original || tvmazeSeason?.image?.original || null,
-              airDateYear: ep.airdate ? parseInt(ep.airdate.split('-')[0], 10) : null,
-              episodeCount: 0,
-            });
-          }
-          const seasonObj = seasonsMap.get(sNum);
-          seasonObj.episodeCount++;
-
-          episodesList.push({
-            seasonNumber: sNum,
-            episodeNumber: eNum,
-            titlePrimary: ep.name || `Episode ${eNum}`,
-            description: ep.summary ? ep.summary.replace(/<[^>]*>?/gm, '') : null,
-            duration: ep.runtime || null,
-            airDate: ep.airdate || null,
-            airTime: ep.airtime || null,
-            airstamp: ep.airstamp || null,
-            rating: ep.rating?.average ? Number(ep.rating.average) : null,
-            episodeType: ep.type || 'regular',
-            thumbnail: ep.image?.original || ep.image?.medium || null,
+            duration: ep.runtime ? Number(ep.runtime) : (series.averageRuntime || null),
+            airDate: ep.aired || null,
+            airTime: tvmazeData?.broadcastTime || null,
+            airstamp: null,
+            rating: null,
+            episodeType: sNum === 0 ? 'special' : 'regular',
+            thumbnail: ep.image || null,
             isFiller: false,
             isRecap: false,
           });
