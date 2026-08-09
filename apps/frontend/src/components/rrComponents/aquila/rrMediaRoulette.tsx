@@ -170,9 +170,9 @@ export function RrMediaRoulette({
       headers["Authorization"] = `Bearer ${session.accessToken}`;
     }
 
-    // Query status = Planning. Limit set to 150 items.
+    // Query status = Planning. Limit set to 100 items (backend max is 100).
     const queryParams = new URLSearchParams({
-      limit: "150",
+      limit: "100",
       status: "Planning",
     });
 
