@@ -67,13 +67,18 @@ export class MemoryCache implements Cache {
 }
 
 export class RedisCache implements Cache {
-  private client: Redis;
+  public client: Redis;
 
   constructor(redisUrlOrClient: string | Redis) {
     if (typeof redisUrlOrClient === "string") {
       this.client = new Redis(redisUrlOrClient, {
-        maxRetriesPerRequest: 1,
-        lazyConnect: true,
+        maxRetriesPerRequest: 3,
+        enableOfflineQueue: true,
+        connectTimeout: 5000,
+        lazyConnect: false,
+        retryStrategy(times) {
+          return Math.min(times * 100, 3000);
+        },
       });
     } else {
       this.client = redisUrlOrClient;
@@ -104,7 +109,7 @@ export class RedisCache implements Cache {
   }
 
   public async keys(pattern: string = "*"): Promise<string[]> {
-    return this.client.keys(pattern);
+    return this.client.keys(pattern || "*");
   }
 
   public async ttl(key: string): Promise<number> {
@@ -116,135 +121,168 @@ export class RedisCache implements Cache {
   }
 
   public async disconnect(): Promise<void> {
-    await this.client.quit();
+    try {
+      if (this.client.status !== "end") {
+        await this.client.quit();
+      }
+    } catch {
+      this.client.disconnect();
+    }
   }
 }
 
 export class FallbackCache implements Cache {
-  private redis: RedisCache;
-  private memory: MemoryCache;
-  private isRedisOffline = false;
+  public readonly client: Redis;
+  private readonly redis: RedisCache;
+  private readonly memory: MemoryCache;
+  private hasLoggedOffline = false;
 
   constructor(redisUrl: string) {
-    const client = new Redis(redisUrl, {
-      maxRetriesPerRequest: 1,
-      enableOfflineQueue: false,
-      connectTimeout: 2000,
+    this.client = new Redis(redisUrl, {
+      maxRetriesPerRequest: 3,
+      enableOfflineQueue: true,
+      connectTimeout: 5000,
+      lazyConnect: false,
+      retryStrategy(times) {
+        return Math.min(times * 100, 3000);
+      },
     });
 
-    client.on("error", (err) => {
-      if (!this.isRedisOffline) {
+    this.client.on("error", (err) => {
+      if (!this.hasLoggedOffline) {
         console.warn(
-          `[CACHE] Redis error encountered, falling back to In-Memory cache. Error: ${err.message}`
+          `[CACHE] Redis connection error: ${err.message}. Falling back to In-Memory cache if unavailable.`
         );
-        this.isRedisOffline = true;
+        this.hasLoggedOffline = true;
       }
     });
 
-    client.on("connect", () => {
-      if (this.isRedisOffline) {
-        console.log("[CACHE] Redis connection re-established, returning to Redis cache.");
-        this.isRedisOffline = false;
+    this.client.on("ready", () => {
+      if (this.hasLoggedOffline) {
+        console.log("[CACHE] Redis connection is ready. Returning to Redis cache.");
+        this.hasLoggedOffline = false;
       }
     });
 
-    this.redis = new RedisCache(client);
+    this.redis = new RedisCache(this.client);
     this.memory = new MemoryCache();
   }
 
+  private isRedisAvailable(): boolean {
+    const status = this.client.status;
+    return status === "ready" || status === "connect" || status === "connecting";
+  }
+
+  private handleRedisError(operation: string, err: unknown): void {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!this.hasLoggedOffline) {
+      console.warn(`[CACHE] Redis ${operation} failed, falling back to In-Memory cache. Error: ${msg}`);
+      this.hasLoggedOffline = true;
+    }
+  }
+
   public async get<T>(key: string): Promise<T | null> {
-    if (this.isRedisOffline) {
-      return this.memory.get<T>(key);
+    if (this.isRedisAvailable()) {
+      try {
+        return await this.redis.get<T>(key);
+      } catch (err: unknown) {
+        this.handleRedisError("get", err);
+        return this.memory.get<T>(key);
+      }
     }
-    try {
-      return await this.redis.get<T>(key);
-    } catch (err: unknown) {
-      this.isRedisOffline = true;
-      const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`[CACHE] Redis get failed, falling back to In-Memory cache. Error: ${msg}`);
-      return this.memory.get<T>(key);
-    }
+    return this.memory.get<T>(key);
   }
 
   public async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
-    if (this.isRedisOffline) {
-      return this.memory.set<T>(key, value, ttlSeconds);
+    if (this.isRedisAvailable()) {
+      try {
+        await this.redis.set<T>(key, value, ttlSeconds);
+        return;
+      } catch (err: unknown) {
+        this.handleRedisError("set", err);
+        await this.memory.set<T>(key, value, ttlSeconds);
+        return;
+      }
     }
-    try {
-      await this.redis.set<T>(key, value, ttlSeconds);
-    } catch (err: unknown) {
-      this.isRedisOffline = true;
-      const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`[CACHE] Redis set failed, falling back to In-Memory cache. Error: ${msg}`);
-      await this.memory.set<T>(key, value, ttlSeconds);
-    }
+    await this.memory.set<T>(key, value, ttlSeconds);
   }
 
   public async del(key: string): Promise<void> {
-    if (this.isRedisOffline) {
-      return this.memory.del(key);
+    if (this.isRedisAvailable()) {
+      try {
+        await this.redis.del(key);
+        return;
+      } catch (err: unknown) {
+        this.handleRedisError("del", err);
+        await this.memory.del(key);
+        return;
+      }
     }
-    try {
-      await this.redis.del(key);
-    } catch (err: unknown) {
-      this.isRedisOffline = true;
-      const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`[CACHE] Redis del failed, falling back to In-Memory cache. Error: ${msg}`);
-      await this.memory.del(key);
+    await this.memory.del(key);
+  }
+
+  public async keys(pattern?: string): Promise<string[]> {
+    if (this.isRedisAvailable()) {
+      try {
+        return await this.redis.keys(pattern ?? "*");
+      } catch (err: unknown) {
+        this.handleRedisError("keys", err);
+        return this.memory.keys(pattern);
+      }
     }
+    return this.memory.keys(pattern);
+  }
+
+  public async ttl(key: string): Promise<number> {
+    if (this.isRedisAvailable()) {
+      try {
+        return await this.redis.ttl(key);
+      } catch (err: unknown) {
+        this.handleRedisError("ttl", err);
+        return this.memory.ttl(key);
+      }
+    }
+    return this.memory.ttl(key);
+  }
+
+  public async flush(): Promise<void> {
+    if (this.isRedisAvailable()) {
+      try {
+        await this.redis.flush();
+        await this.memory.flush();
+        return;
+      } catch (err: unknown) {
+        this.handleRedisError("flush", err);
+        await this.memory.flush();
+        return;
+      }
+    }
+    await this.memory.flush();
   }
 
   public async disconnect(): Promise<void> {
     await this.redis.disconnect();
   }
-
-  public async keys(pattern?: string): Promise<string[]> {
-    if (this.isRedisOffline) {
-      return this.memory.keys(pattern);
-    }
-    try {
-      return await this.redis.keys(pattern);
-    } catch (err: unknown) {
-      this.isRedisOffline = true;
-      const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`[CACHE] Redis keys failed, falling back to In-Memory cache. Error: ${msg}`);
-      return this.memory.keys(pattern);
-    }
-  }
-
-  public async ttl(key: string): Promise<number> {
-    if (this.isRedisOffline) {
-      return this.memory.ttl(key);
-    }
-    try {
-      return await this.redis.ttl(key);
-    } catch (err: unknown) {
-      this.isRedisOffline = true;
-      const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`[CACHE] Redis ttl failed, falling back to In-Memory cache. Error: ${msg}`);
-      return this.memory.ttl(key);
-    }
-  }
-
-  public async flush(): Promise<void> {
-    if (this.isRedisOffline) {
-      return this.memory.flush();
-    }
-    try {
-      await this.redis.flush();
-    } catch (err: unknown) {
-      this.isRedisOffline = true;
-      const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`[CACHE] Redis flush failed, falling back to In-Memory cache. Error: ${msg}`);
-      await this.memory.flush();
-    }
-  }
 }
 
+declare global {
+  var __runaCacheGlobal: Cache | undefined;
+}
+
+let cachedClient: Cache | undefined = globalThis.__runaCacheGlobal;
+
 export function createCacheClient(): Cache {
+  if (cachedClient) {
+    return cachedClient;
+  }
+
   const redisUrl = process.env.REDIS_URL;
   if (redisUrl && process.env.CACHE_DRIVER === "redis") {
-    return new FallbackCache(redisUrl);
+    cachedClient = new FallbackCache(redisUrl);
+  } else {
+    cachedClient = new MemoryCache();
   }
-  return new MemoryCache();
+
+  globalThis.__runaCacheGlobal = cachedClient;
+  return cachedClient;
 }
