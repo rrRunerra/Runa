@@ -112,10 +112,18 @@
         let title = item.Name || "";
         let targetId = item.Id;
 
-        if (item.Type === "Episode") {
+        if (item.Type === "Episode" || item.Type === "Season") {
             title = item.SeriesName || item.Name;
             targetId = item.SeriesId || item.Id;
         }
+
+        const candidateIds = [
+            item.SeriesId,
+            item.SeasonId,
+            item.Id,
+            item.ParentId,
+            ...(item.AncestorIds || [])
+        ].filter(Boolean);
 
         let mediaType = "tv";
         if (pluginConfig && Array.isArray(pluginConfig.mappings) && pluginConfig.mappings.length > 0) {
@@ -143,7 +151,7 @@
             }
         }
 
-        return { mediaType, title, targetId };
+        return { mediaType, title, targetId, candidateIds };
     }
 
     function getProxyUrl(path) {
@@ -342,13 +350,14 @@
         try {
             const currentUserId = ApiClient.getCurrentUserId();
             const item = await ApiClient.getItem(currentUserId, itemId);
-            const { mediaType: defaultMediaType, title, targetId } = getItemDetails(item);
+            const { mediaType: defaultMediaType, title, targetId, candidateIds } = getItemDetails(item);
 
             let savedAquilaId = null;
             let activeMediaType = defaultMediaType;
 
             try {
-                const mapRes = await fetch(getProxyUrl(`Aquila/Api/Mapping?userId=${encodeURIComponent(currentUserId)}&itemId=${encodeURIComponent(targetId)}`));
+                const candParam = (candidateIds && candidateIds.length > 0) ? `&candidateIds=${encodeURIComponent(candidateIds.join(','))}` : '';
+                const mapRes = await fetch(getProxyUrl(`Aquila/Api/Mapping?userId=${encodeURIComponent(currentUserId || '')}&itemId=${encodeURIComponent(targetId)}${candParam}`));
                 if (mapRes.ok) {
                     const mapData = await mapRes.json();
                     if (mapData && mapData.aquilaMediaId) {
@@ -363,9 +372,9 @@
             }
 
             if (savedAquilaId) {
-                renderFullEditDialog(currentUserId, targetId, activeMediaType, parseInt(savedAquilaId, 10), title);
+                renderFullEditDialog(currentUserId, targetId, activeMediaType, parseInt(savedAquilaId, 10), title, candidateIds);
             } else {
-                renderSearchView(currentUserId, targetId, activeMediaType, title);
+                renderSearchView(currentUserId, targetId, activeMediaType, title, candidateIds);
             }
         } catch (err) {
             console.error('[Aquila Plugin] Item fetch error:', err);
@@ -374,7 +383,7 @@
     }
 
     // Search View to Link Aquila Title
-    async function renderSearchView(userId, targetId, initialMediaType, defaultTitle) {
+    async function renderSearchView(userId, targetId, initialMediaType, defaultTitle, candidateIds = []) {
         let currentSearchType = (initialMediaType && initialMediaType !== 'manga') ? initialMediaType : "tv";
         const content = document.getElementById('aquila-modal-content');
 
@@ -424,7 +433,7 @@
 
         const fetchSearchResults = async (type, q) => {
             try {
-                const proxyUrl = getProxyUrl(`Aquila/Api/Search?mediaType=${encodeURIComponent(type)}&query=${encodeURIComponent(q)}&userId=${encodeURIComponent(userId)}`);
+                const proxyUrl = getProxyUrl(`Aquila/Api/Search?mediaType=${encodeURIComponent(type)}&query=${encodeURIComponent(q)}&userId=${encodeURIComponent(userId || '')}`);
                 const res = await fetch(proxyUrl);
                 if (res.ok) {
                     const items = await res.json();
@@ -505,7 +514,7 @@
                     const cardTitle = card.getAttribute('data-title');
                     const itemType = card.getAttribute('data-type') || currentSearchType;
                     await saveServerMapping(userId, targetId, aquilaId, itemType);
-                    renderFullEditDialog(userId, targetId, itemType, aquilaId, cardTitle);
+                    renderFullEditDialog(userId, targetId, itemType, aquilaId, cardTitle, candidateIds);
                 });
             });
         };
@@ -516,7 +525,7 @@
     }
 
     // Full 1:1 RrMediaEditDialog Implementation
-    async function renderFullEditDialog(userId, targetId, mediaType, aquilaId, fallbackTitle) {
+    async function renderFullEditDialog(userId, targetId, mediaType, aquilaId, fallbackTitle, candidateIds = []) {
         const content = document.getElementById('aquila-modal-content');
         content.innerHTML = '<div class="text-center p-16 text-muted-foreground font-semibold">Loading media details & entry...</div>';
 
@@ -870,6 +879,8 @@
 
         window.aquilaUnlinkProvider = (providerKey) => {
             delete connections[providerKey];
+            if (providerKey === 'mal') delete connections['myanimelist'];
+            if (providerKey === 'myanimelist') delete connections['mal'];
             renderConnectionsGrid();
         };
 
@@ -1033,14 +1044,13 @@
         const unlinkBtn = document.getElementById('aquila-unlink-mapping-btn');
         if (unlinkBtn) {
             unlinkBtn.addEventListener('click', async () => {
-                if (confirm(`Unlink this Jellyfin title from Aquila ID #${aquilaId}?`)) {
-                    try {
-                        const proxyUrl = getProxyUrl(`Aquila/Api/Mapping?userId=${encodeURIComponent(userId)}&itemId=${encodeURIComponent(targetId)}`);
-                        await fetch(proxyUrl, { method: 'DELETE' });
-                        renderSearchView(userId, targetId, mediaType, titleText);
-                    } catch (e) {
-                        console.error('[Aquila Plugin] Error unlinking mapping:', e);
-                    }
+                try {
+                    const candParam = (candidateIds && candidateIds.length > 0) ? `&candidateIds=${encodeURIComponent(candidateIds.join(','))}` : '';
+                    const proxyUrl = getProxyUrl(`Aquila/Api/Mapping?userId=${encodeURIComponent(userId || '')}&itemId=${encodeURIComponent(targetId)}${candParam}`);
+                    await fetch(proxyUrl, { method: 'DELETE' });
+                    renderSearchView(userId, targetId, mediaType, titleText, candidateIds);
+                } catch (e) {
+                    console.error('[Aquila Plugin] Error unlinking mapping:', e);
                 }
             });
         }
@@ -1288,11 +1298,12 @@
             const item = await ApiClient.getItem(userId, itemId);
             console.log(`[Aquila WebClient] [MANUAL WATCH] Item fetched: Name='${item.Name}', Type='${item.Type}', SeriesName='${item.SeriesName}', SeriesId='${item.SeriesId}'`);
 
-            const { mediaType, targetId } = getItemDetails(item);
+            const { mediaType, targetId, candidateIds } = getItemDetails(item);
             console.log(`[Aquila WebClient] [MANUAL WATCH] TargetId=${targetId}, DefaultMediaType=${mediaType}`);
 
             console.log(`[Aquila WebClient] [MANUAL WATCH] Querying server mapping for targetId=${targetId}...`);
-            const mapRes = await fetch(getProxyUrl(`Aquila/Api/Mapping?userId=${encodeURIComponent(userId)}&itemId=${encodeURIComponent(targetId)}`));
+            const candParam = (candidateIds && candidateIds.length > 0) ? `&candidateIds=${encodeURIComponent(candidateIds.join(','))}` : '';
+            const mapRes = await fetch(getProxyUrl(`Aquila/Api/Mapping?userId=${encodeURIComponent(userId || '')}&itemId=${encodeURIComponent(targetId)}${candParam}`));
             if (mapRes.ok) {
                 const mapData = await mapRes.json();
                 if (mapData && mapData.aquilaMediaId) {

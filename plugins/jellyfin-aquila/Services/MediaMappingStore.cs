@@ -77,9 +77,16 @@ public class MediaMappingStore
         }
     }
 
-    private static string NormalizeGuid(string id) => string.IsNullOrWhiteSpace(id) ? "" : id.Replace("-", "").ToLowerInvariant();
+    private static string NormalizeGuid(string? id)
+    {
+        if (string.IsNullOrWhiteSpace(id) || id.Equals("undefined", StringComparison.OrdinalIgnoreCase) || id.Equals("null", StringComparison.OrdinalIgnoreCase))
+        {
+            return "";
+        }
+        return id.Replace("-", "").ToLowerInvariant();
+    }
 
-    private static string GetKey(string userId, string itemId) => $"{NormalizeGuid(userId)}_{NormalizeGuid(itemId)}";
+    private static string GetKey(string? userId, string itemId) => $"{NormalizeGuid(userId)}_{NormalizeGuid(itemId)}";
 
     /// <summary>
     /// Gets the mapping for a user and Jellyfin item.
@@ -181,19 +188,49 @@ public class MediaMappingStore
     }
 
     /// <summary>
-    /// Removes a specific mapping for a user and Jellyfin item.
+    /// Removes a specific mapping for a user and Jellyfin item (and optional candidate IDs).
     /// </summary>
-    public async Task<bool> RemoveMappingAsync(string userId, string itemId)
+    public async Task<bool> RemoveMappingAsync(string? userId, string itemId, IEnumerable<string>? candidateIds = null)
     {
-        var key = GetKey(userId, itemId);
         var normUser = NormalizeGuid(userId);
         var normItem = NormalizeGuid(itemId);
 
-        var removed = _mappings.TryRemove(key, out _);
+        var normCandidateSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (!string.IsNullOrEmpty(normItem))
+        {
+            normCandidateSet.Add(normItem);
+        }
 
+        if (candidateIds != null)
+        {
+            foreach (var cand in candidateIds)
+            {
+                var normCand = NormalizeGuid(cand);
+                if (!string.IsNullOrEmpty(normCand))
+                {
+                    normCandidateSet.Add(normCand);
+                }
+            }
+        }
+
+        var removed = false;
+
+        // Try direct key removals if user is provided
+        if (!string.IsNullOrEmpty(normUser))
+        {
+            foreach (var cand in normCandidateSet)
+            {
+                if (_mappings.TryRemove($"{normUser}_{cand}", out _))
+                {
+                    removed = true;
+                }
+            }
+        }
+
+        // Also remove all mappings matching any of the candidate item IDs (handling item fallback mappings and all user variations)
         var matchingKeys = _mappings.Where(kvp =>
-            (string.IsNullOrEmpty(normUser) || NormalizeGuid(kvp.Value.UserId) == normUser) &&
-            NormalizeGuid(kvp.Value.JellyfinItemId) == normItem
+            normCandidateSet.Contains(NormalizeGuid(kvp.Value.JellyfinItemId)) ||
+            normCandidateSet.Contains(NormalizeGuid(kvp.Key.Split('_').LastOrDefault() ?? ""))
         ).Select(kvp => kvp.Key).ToList();
 
         foreach (var k in matchingKeys)
@@ -206,12 +243,14 @@ public class MediaMappingStore
 
         if (removed)
         {
-            _logger.LogInformation("[Aquila MappingStore] REMOVED mapping: User={UserId}, Item={ItemId}", userId, itemId);
+            _logger.LogInformation("[Aquila MappingStore] REMOVED mapping: User={UserId}, Item={ItemId}, Candidates=[{CandidateIds}]",
+                userId, itemId, string.Join(", ", normCandidateSet));
             await SaveAsync().ConfigureAwait(false);
         }
         else
         {
-            _logger.LogInformation("[Aquila MappingStore] REMOVE skipped, mapping not found: User={UserId}, Item={ItemId}", userId, itemId);
+            _logger.LogInformation("[Aquila MappingStore] REMOVE skipped, mapping not found: User={UserId}, Item={ItemId}, Candidates=[{CandidateIds}]",
+                userId, itemId, string.Join(", ", normCandidateSet));
         }
 
         return removed;

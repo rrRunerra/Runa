@@ -261,15 +261,14 @@
                                     removeBtn.innerHTML = '<span>Remove</span>';
 
                                     removeBtn.onclick = function () {
-                                        if (confirm('Remove mapping for Item ' + m.jellyfinItemId + '?')) {
-                                            var deleteUrl = ApiClient.getUrl
-                                                ? ApiClient.getUrl('Aquila/Api/Mapping?userId=' + encodeURIComponent(m.userId) + '&itemId=' + encodeURIComponent(m.jellyfinItemId))
-                                                : '/Aquila/Api/Mapping?userId=' + encodeURIComponent(m.userId) + '&itemId=' + encodeURIComponent(m.jellyfinItemId);
+                                        var userParam = m.userId ? encodeURIComponent(m.userId) : '';
+                                        var deleteUrl = ApiClient.getUrl
+                                            ? ApiClient.getUrl('Aquila/Api/Mapping?userId=' + userParam + '&itemId=' + encodeURIComponent(m.jellyfinItemId))
+                                            : '/Aquila/Api/Mapping?userId=' + userParam + '&itemId=' + encodeURIComponent(m.jellyfinItemId);
 
-                                            fetch(deleteUrl, { method: 'DELETE' }).then(function () {
-                                                loadServerMappings();
-                                            });
-                                        }
+                                        fetch(deleteUrl, { method: 'DELETE' }).then(function () {
+                                            loadServerMappings();
+                                        });
                                     };
 
                                     row.appendChild(info);
@@ -284,12 +283,10 @@
                         loadServerMappings();
 
                         page.querySelector('#btnClearAllMappings').onclick = function () {
-                            if (confirm('Are you sure you want to remove ALL media item mappings from the server?')) {
-                                var clearUrl = ApiClient.getUrl ? ApiClient.getUrl('Aquila/Api/Mappings') : '/Aquila/Api/Mappings';
-                                fetch(clearUrl, { method: 'DELETE' }).then(function () {
-                                    loadServerMappings();
-                                });
-                            }
+                            var clearUrl = ApiClient.getUrl ? ApiClient.getUrl('Aquila/Api/Mappings') : '/Aquila/Api/Mappings';
+                            fetch(clearUrl, { method: 'DELETE' }).then(function () {
+                                loadServerMappings();
+                            });
                         };
 
                         function logTestResult(title, data, success) {

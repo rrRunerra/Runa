@@ -390,14 +390,28 @@ public class AquilaWebController : ControllerBase
     }
 
     /// <summary>
-    /// Gets item mapping for a user and Jellyfin item.
+    /// Gets item mapping for a user and Jellyfin item (with optional candidate IDs).
     /// </summary>
     [HttpGet("Api/Mapping")]
     [AllowAnonymous]
-    public IActionResult GetMapping([FromQuery] string userId, [FromQuery] string itemId)
+    public IActionResult GetMapping([FromQuery] string? userId, [FromQuery] string itemId, [FromQuery] string? candidateIds = null)
     {
-        _logger.LogInformation("[Aquila WebController] [GET MAPPING] Request: UserId='{UserId}', ItemId='{ItemId}'", userId, itemId);
-        var mapping = _mappingStore.GetMapping(userId, itemId);
+        _logger.LogInformation("[Aquila WebController] [GET MAPPING] Request: UserId='{UserId}', ItemId='{ItemId}', Candidates='{Candidates}'", userId, itemId, candidateIds);
+
+        var idList = new System.Collections.Generic.List<string>();
+        if (!string.IsNullOrWhiteSpace(candidateIds))
+        {
+            idList.AddRange(candidateIds.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        }
+        if (!string.IsNullOrWhiteSpace(itemId) && !idList.Contains(itemId, StringComparer.OrdinalIgnoreCase))
+        {
+            idList.Add(itemId);
+        }
+
+        var mapping = idList.Count > 1
+            ? _mappingStore.GetMappingForCandidateIds(userId ?? "", idList)
+            : _mappingStore.GetMapping(userId ?? "", itemId);
+
         if (mapping == null)
         {
             _logger.LogInformation("[Aquila WebController] [GET MAPPING] Not found for ItemId='{ItemId}'", itemId);
@@ -411,22 +425,29 @@ public class AquilaWebController : ControllerBase
     /// </summary>
     [HttpPost("Api/Mapping")]
     [AllowAnonymous]
-    public async Task<IActionResult> SaveMapping([FromQuery] string userId, [FromQuery] string itemId, [FromQuery] int aquilaMediaId, [FromQuery] string mediaType)
+    public async Task<IActionResult> SaveMapping([FromQuery] string? userId, [FromQuery] string itemId, [FromQuery] int aquilaMediaId, [FromQuery] string mediaType)
     {
         _logger.LogInformation("[Aquila WebController] [SAVE MAPPING] Request: UserId='{UserId}', ItemId='{ItemId}', AquilaId={AquilaId}, Type='{MediaType}'", userId, itemId, aquilaMediaId, mediaType);
-        await _mappingStore.SetMappingAsync(userId, itemId, aquilaMediaId, mediaType).ConfigureAwait(false);
+        await _mappingStore.SetMappingAsync(userId ?? "", itemId, aquilaMediaId, mediaType).ConfigureAwait(false);
         return Ok(new { success = true });
     }
 
     /// <summary>
-    /// Deletes a specific item mapping for a user and Jellyfin item from server.
+    /// Deletes a specific item mapping for a user and Jellyfin item from server (with optional candidate IDs).
     /// </summary>
     [HttpDelete("Api/Mapping")]
     [AllowAnonymous]
-    public async Task<IActionResult> DeleteMapping([FromQuery] string userId, [FromQuery] string itemId)
+    public async Task<IActionResult> DeleteMapping([FromQuery] string? userId, [FromQuery] string itemId, [FromQuery] string? candidateIds = null)
     {
-        _logger.LogInformation("[Aquila WebController] [DELETE MAPPING] Request: UserId='{UserId}', ItemId='{ItemId}'", userId, itemId);
-        var removed = await _mappingStore.RemoveMappingAsync(userId, itemId).ConfigureAwait(false);
+        _logger.LogInformation("[Aquila WebController] [DELETE MAPPING] Request: UserId='{UserId}', ItemId='{ItemId}', Candidates='{Candidates}'", userId, itemId, candidateIds);
+
+        var idList = new System.Collections.Generic.List<string>();
+        if (!string.IsNullOrWhiteSpace(candidateIds))
+        {
+            idList.AddRange(candidateIds.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        }
+
+        var removed = await _mappingStore.RemoveMappingAsync(userId, itemId, idList).ConfigureAwait(false);
         return Ok(new { success = true, removed });
     }
 
