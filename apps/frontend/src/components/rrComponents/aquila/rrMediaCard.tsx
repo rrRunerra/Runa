@@ -37,16 +37,16 @@ const getProgressIcon = (type: string) => {
   switch (type) {
     case "anime":
     case "tv":
-      return <Tv className="size-3" />;
+      return <Tv className="size-2.5 sm:size-3 shrink-0" />;
     case "manga":
     case "book":
-      return <BookOpen className="size-3" />;
+      return <BookOpen className="size-2.5 sm:size-3 shrink-0" />;
     case "game":
-      return <Gamepad2 className="size-3" />;
+      return <Gamepad2 className="size-2.5 sm:size-3 shrink-0" />;
     case "movie":
-      return <Film className="size-3" />;
+      return <Film className="size-2.5 sm:size-3 shrink-0" />;
     default:
-      return <Play className="size-3" />;
+      return <Play className="size-2.5 sm:size-3 shrink-0" />;
   }
 };
 
@@ -137,7 +137,7 @@ const RrMediaCardComponent = ({
   return (
     <>
       <div
-        className="group relative flex flex-col w-full bg-card hover:bg-accent/5 rounded-2xl border border-border/40 hover:border-primary/30 transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5 select-none"
+        className="group relative flex flex-col w-full bg-card hover:bg-accent/5 rounded-xl sm:rounded-2xl border border-border/40 hover:border-primary/30 transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg hover:shadow-primary/5 select-none"
         onTouchStart={startLongPress}
         onTouchEnd={cancelLongPress}
         onTouchMove={cancelLongPress}
@@ -150,7 +150,7 @@ const RrMediaCardComponent = ({
         onContextMenu={handleContextMenu}
       >
         {/* Poster Image Container */}
-        <div className="relative aspect-2/3 w-full rounded-t-2xl overflow-hidden bg-muted">
+        <div className="relative aspect-2/3 w-full rounded-t-xl sm:rounded-t-2xl overflow-hidden bg-muted">
           <Link
             href={href}
             prefetch={false}
@@ -162,7 +162,7 @@ const RrMediaCardComponent = ({
                 src={item.image}
                 alt={item.title}
                 fill
-                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 25vw, (max-width: 1536px) 20vw, 15vw"
+                sizes="(max-width: 640px) 33vw, (max-width: 1024px) 25vw, (max-width: 1536px) 20vw, 15vw"
                 className="object-cover transition-transform duration-500 ease-out group-hover:scale-105"
                 priority={false}
               />
@@ -178,11 +178,11 @@ const RrMediaCardComponent = ({
 
           {/* Edit Button (Menu) */}
           {isOwner && (
-            <div className="absolute top-2 right-2 z-20 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-all duration-200">
+            <div className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 z-20 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-all duration-200">
               <Button
                 size="icon"
                 variant="secondary"
-                className="size-7 sm:size-8 rounded-lg bg-background/85 hover:bg-background border border-border/40 text-muted-foreground hover:text-foreground backdrop-blur-xs transition-all shadow-sm cursor-pointer"
+                className="size-6 sm:size-8 rounded-md sm:rounded-lg bg-background/85 hover:bg-background border border-border/40 text-muted-foreground hover:text-foreground backdrop-blur-xs transition-all shadow-sm cursor-pointer"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -192,17 +192,17 @@ const RrMediaCardComponent = ({
                 onMouseDown={(e) => e.stopPropagation()}
                 onKeyDown={(e) => e.stopPropagation()}
               >
-                <Menu className="size-4" />
+                <Menu className="size-3 sm:size-4" />
               </Button>
             </div>
           )}
 
           {/* Quick Increment Button (Floating at bottom-right of poster) */}
           {isOwner && onIncrement && (
-            <div className="absolute bottom-2 right-2 z-25 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 focus-within:opacity-100 transition-all duration-200">
+            <div className="absolute bottom-1.5 right-1.5 sm:bottom-2 sm:right-2 z-25 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 focus-within:opacity-100 transition-all duration-200">
               <Button
                 size="icon"
-                className="size-7 sm:size-8 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground border border-primary/20 shadow-md transition-all cursor-pointer flex items-center justify-center active:scale-90"
+                className="size-6 sm:size-8 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground border border-primary/20 shadow-md transition-all cursor-pointer flex items-center justify-center active:scale-90"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
@@ -212,7 +212,7 @@ const RrMediaCardComponent = ({
                 onMouseDown={(e) => e.stopPropagation()}
                 onKeyDown={(e) => e.stopPropagation()}
               >
-                <Plus className="size-4.5" />
+                <Plus className="size-3.5 sm:size-4.5" />
               </Button>
             </div>
           )}
@@ -233,7 +233,7 @@ const RrMediaCardComponent = ({
         </div>
 
         {/* Metadata Details Area */}
-        <div className="p-3 flex flex-col flex-1 gap-2.5">
+        <div className="p-2 sm:p-3 flex flex-col flex-1 gap-1.5 sm:gap-2.5">
           <Link
             href={href}
             prefetch={false}
@@ -242,19 +242,19 @@ const RrMediaCardComponent = ({
           >
             <h4
               title={item.title}
-              className="font-semibold text-xs sm:text-sm text-foreground line-clamp-2 leading-tight group-hover/title:text-primary transition-colors duration-200 tracking-wide wrap-break-word"
+              className="font-semibold text-[11px] sm:text-xs md:text-sm text-foreground line-clamp-2 leading-tight group-hover/title:text-primary transition-colors duration-200 tracking-normal sm:tracking-wide wrap-break-word"
             >
               {item.title}
             </h4>
           </Link>
 
           {/* Stats Row */}
-          <div className="flex items-center gap-1.5 mt-auto w-full min-w-0">
+          <div className="flex items-center gap-1 sm:gap-1.5 mt-auto w-full min-w-0">
             {showProgress &&
               item.progress !== undefined &&
               item.progress > 0 &&
               mediaType !== "movie" && (
-                <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 bg-primary/5 text-primary border border-primary/10 text-[10px] font-semibold min-w-0 max-w-full">
+                <span className="inline-flex items-center gap-0.5 sm:gap-1 rounded-full px-1.5 sm:px-2 py-0.5 bg-primary/5 text-primary border border-primary/10 text-[9px] sm:text-[10px] font-semibold min-w-0 max-w-full">
                   {getProgressIcon(mediaType)}
                   <span className="truncate whitespace-nowrap">
                     {mediaType === "tv"
@@ -275,8 +275,8 @@ const RrMediaCardComponent = ({
               )}
 
             {showScore && score !== undefined && score > 0 && (
-              <span className="inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 bg-amber-500/5 text-amber-500 border border-amber-500/10 text-[10px] font-semibold min-w-0">
-                <Star className="size-3 fill-current shrink-0" />
+              <span className="inline-flex items-center gap-0.5 rounded-full px-1 sm:px-1.5 py-0.5 bg-amber-500/5 text-amber-500 border border-amber-500/10 text-[9px] sm:text-[10px] font-semibold min-w-0">
+                <Star className="size-2.5 sm:size-3 fill-current shrink-0" />
                 <span className="truncate whitespace-nowrap">{score}</span>
               </span>
             )}

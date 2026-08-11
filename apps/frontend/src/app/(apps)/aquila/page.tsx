@@ -345,12 +345,12 @@ export default function AquilaHome(): React.JSX.Element {
   }
 
   return (
-    <div className="relative w-full min-h-full flex flex-col flex-1 p-6 md:p-8">
+    <div className="relative w-full min-h-full flex flex-col flex-1 p-3 sm:p-6 md:p-8">
       {/* Fixed SVG Background Wallpaper */}
       <RrLapplandBook className="fixed right-0 top-0 h-screen w-auto opacity-[0.06] text-foreground pointer-events-none select-none z-0 object-contain -scale-x-100 transition-opacity duration-300" />
 
       {/* Main Content Pane */}
-      <div className="relative z-10 flex-1 flex flex-col gap-8">
+      <div className="relative z-10 flex-1 flex flex-col gap-6 sm:gap-8">
         {watching.length === 0 ? (
           <div className="flex-1 flex flex-col justify-center items-center text-center py-16 px-6 select-none relative z-10 bg-card/60 backdrop-blur-md border border-border/40 rounded-3xl max-w-lg mx-auto shadow-sm my-auto">
             <div className="space-y-4 max-w-sm">
@@ -379,7 +379,7 @@ export default function AquilaHome(): React.JSX.Element {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col gap-8 pb-16">
+          <div className="flex flex-col gap-6 sm:gap-8 pb-16">
             {categoryOrder.map((category) => {
               const items = sections[category];
               if (!items || items.length === 0) return null;
@@ -395,7 +395,7 @@ export default function AquilaHome(): React.JSX.Element {
                   onDragOver={handleDragOver}
                   onDragEnd={handleDragEnd}
                   className={cn(
-                    "transition-all duration-300 rounded-3xl p-5 bg-card/40 backdrop-blur-xs border border-border/30 shadow-xs hover:border-border/50",
+                    "transition-all duration-300 rounded-2xl sm:rounded-3xl p-3 sm:p-5 bg-card/40 backdrop-blur-xs border border-border/30 shadow-xs hover:border-border/50",
                     draggedCategory === category &&
                       "opacity-30 border-2 border-dashed border-primary/45 bg-primary/10 scale-[0.99] shadow-lg",
                   )}

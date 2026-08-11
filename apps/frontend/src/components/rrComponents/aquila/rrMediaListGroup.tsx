@@ -68,7 +68,7 @@ export function RrMediaListGroup({
       </h3>
 
       {displayType === "grid" && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3.5 md:gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-[repeat(auto-fill,minmax(140px,1fr))]">
           {entries.map((entry) => {
             const mappedItem: MediaItem = {
               id: entry.id,
