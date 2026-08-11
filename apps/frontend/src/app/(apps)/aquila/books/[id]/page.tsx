@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import BookDetailsPage from "./BookDetailsClient";
-import { getMediaDetails, cleanDescription } from "@/lib/metadata";
+import { getMediaDetails, formatMediaMetadataDescription } from "@/lib/metadata";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -23,7 +23,7 @@ export async function generateMetadata({
     (book as any).titlePrimary ??
     (book as any).titleSecondary ??
     "Book Details";
-  const description = cleanDescription((book as any).description, 160);
+  const description = formatMediaMetadataDescription(book, "book");
   const image = (book as any).coverImage ?? "";
   const keywords: string[] = Array.isArray((book as any).genres)
     ? (book as any).genres

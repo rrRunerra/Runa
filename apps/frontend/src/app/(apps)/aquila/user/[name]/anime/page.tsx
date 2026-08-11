@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import UserAnimePage from "./UserAnimeClient";
-import { getUserProfile } from "@/lib/metadata";
+import { getUserProfile, getUserListCounts, formatUserListDescription } from "@/lib/metadata";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@runa/auth";
 
@@ -10,7 +10,10 @@ interface PageProps {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { name } = await params;
-  const user = await getUserProfile(name);
+  const [user, counts] = await Promise.all([
+    getUserProfile(name),
+    getUserListCounts("anime", name),
+  ]);
 
   if (!user) {
     return {
@@ -21,7 +24,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const displayName = user.displayName || user.username;
   const title = `${displayName}'s Anime List`;
-  const description = `Check out ${displayName}'s tracked anime on Aquila.`;
+  const description = formatUserListDescription("anime", counts, displayName);
   const image = user.avatarUrl;
 
   return {

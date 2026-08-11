@@ -331,6 +331,16 @@ export class ListController {
   }
 
   @Public()
+  @Get('/:mediaType/user/:username/counts')
+  public async getUserListCounts(
+    @Param('mediaType') mediaType: string,
+    @Param('username') username: string,
+    @Req() req: any,
+  ): Promise<Record<string, number>> {
+    return this.listService.getUserListCounts(mediaType, username, req.user?.username);
+  }
+
+  @Public()
   @Get('/:mediaType/user/:username/filters')
   public async getUserListFilters(
     @Param('mediaType') mediaType: string,

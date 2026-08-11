@@ -2692,6 +2692,59 @@ export class ListService {
     return { success: true, count };
   }
 
+  public async getUserListCounts(
+    mediaType: string,
+    username: string,
+    requester?: string,
+  ): Promise<Record<string, number>> {
+    let type = mediaType.toLowerCase();
+    if (type === 'movies') type = 'movie';
+    else if (type === 'books') type = 'book';
+    else if (type === 'games') type = 'game';
+
+    let table: any = null;
+    let privacyKey = '';
+
+    if (type === 'anime') {
+      table = this.prisma.client.aquilaAnimeUserListV2;
+      privacyKey = 'animeList';
+    } else if (type === 'manga') {
+      table = this.prisma.client.aquilaMangaUserListV2;
+      privacyKey = 'mangaList';
+    } else if (type === 'movie') {
+      table = this.prisma.client.aquilaMovieUserListV2;
+      privacyKey = 'movieList';
+    } else if (type === 'tv') {
+      table = this.prisma.client.aquilaTvUserListV2;
+      privacyKey = 'tvList';
+    } else if (type === 'game') {
+      table = this.prisma.client.aquilaGameUserListV2;
+      privacyKey = 'gameList';
+    } else if (type === 'book') {
+      table = this.prisma.client.aquilaBookUserListV2;
+      privacyKey = 'bookList';
+    } else {
+      return { all: 0 };
+    }
+
+    const owner = await this.prisma.client.user.findUnique({
+      where: { username: username.toLowerCase() },
+      select: { privacy: true },
+    });
+
+    if (!owner) {
+      throw new NotFoundException(`User ${username} not found`);
+    }
+
+    const isOwner = requester?.toLowerCase() === username.toLowerCase();
+    const privacy = parsePrivacy(owner.privacy);
+    if ((privacy.profile || (privacy as any)[privacyKey]) && !isOwner) {
+      throw new ForbiddenException('This list is private');
+    }
+
+    return this.getStatusCounts(table, username);
+  }
+
   public async getUserListFilters(username: string, mediaType: string): Promise<any> {
     const type = mediaType.toLowerCase();
     let items: any[] = [];

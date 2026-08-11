@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import AnimeDetailsPage from "./AnimeDetailsClient";
-import { getMediaDetails, cleanDescription } from "@/lib/metadata";
+import { getMediaDetails, formatMediaMetadataDescription } from "@/lib/metadata";
 import { AnimeEntity } from "@/types/anime.entities";
 
 interface PageProps {
@@ -25,7 +25,7 @@ export async function generateMetadata({
     anime.titleSecondary ??
     anime.titleNative ??
     "Anime Details";
-  const description = cleanDescription(anime.description, 160);
+  const description = formatMediaMetadataDescription(anime, "anime");
   const image =
     typeof anime.coverImage === "string"
       ? anime.coverImage

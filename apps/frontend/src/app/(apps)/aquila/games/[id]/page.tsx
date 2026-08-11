@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import GameDetailsPage from "./GameDetailsClient";
-import { getMediaDetails, cleanDescription } from "@/lib/metadata";
+import { getMediaDetails, formatMediaMetadataDescription } from "@/lib/metadata";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -23,7 +23,7 @@ export async function generateMetadata({
     (game as any).titlePrimary ??
     (game as any).titleSecondary ??
     "Game Details";
-  const description = cleanDescription((game as any).description, 160);
+  const description = formatMediaMetadataDescription(game, "game");
   const image = (game as any).coverImage ?? "";
   const bannerImage =
     (game as any).bannerImage ?? (game as any).backgroundImage ?? image;

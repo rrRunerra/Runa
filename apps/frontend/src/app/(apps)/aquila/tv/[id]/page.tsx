@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import TvDetailsPage from "./TvDetailsClient";
-import { getMediaDetails, cleanDescription } from "@/lib/metadata";
+import { getMediaDetails, formatMediaMetadataDescription } from "@/lib/metadata";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     (tv as any).titlePrimary ??
     (tv as any).titleSecondary ??
     "TV Show Details";
-  const description = cleanDescription((tv as any).description, 160);
+  const description = formatMediaMetadataDescription(tv, "tv");
   const image = (tv as any).coverImage ?? "";
   const keywords: string[] = Array.isArray((tv as any).genres)
     ? (tv as any).genres

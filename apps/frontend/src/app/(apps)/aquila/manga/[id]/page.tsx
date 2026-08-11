@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import MangaDetailsPage from "./MangaDetailsClient";
-import { getMediaDetails, cleanDescription } from "@/lib/metadata";
+import { getMediaDetails, formatMediaMetadataDescription } from "@/lib/metadata";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -21,7 +21,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     (manga as any).titlePrimary ??
     (manga as any).titleSecondary ??
     "Manga Details";
-  const description = cleanDescription((manga as any).description, 160);
+  const description = formatMediaMetadataDescription(manga, "manga");
   const image = (manga as any).coverImage ?? "";
 
   return {
