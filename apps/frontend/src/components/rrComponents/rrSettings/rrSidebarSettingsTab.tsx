@@ -205,7 +205,10 @@ export function RrSidebarSettingsTab({
     for (let i = 0; i < index; i++) {
       if (!tempPositions[positions[i]]) {
         toast.warning(
-          t("sidebar.positionMustBeFilled", { required: positions[i], target: pos }),
+          t("sidebar.positionMustBeFilled", {
+            required: positions[i],
+            target: pos,
+          }),
         );
         return;
       }
@@ -311,7 +314,7 @@ export function RrSidebarSettingsTab({
           type="button"
           onClick={() => handleFocusSlot(pos)}
           className={cn(
-            "flex flex-col items-center justify-center gap-0.5 px-2.5 py-1 rounded-xl transition-all duration-200 min-w-[54px] min-h-[44px] border relative cursor-pointer outline-none select-none",
+            "flex flex-col items-center justify-center gap-1 px-3 sm:px-3.5 py-2 rounded-2xl transition-all duration-200 min-w-15 sm:min-w-17 min-h-12.5 sm:min-h-13.5 border relative cursor-pointer outline-none select-none",
             isFocused
               ? "bg-primary/10 border-primary text-foreground font-semibold shadow-[0_0_8px_rgba(139,92,246,0.35)] scale-105 z-10"
               : isAssigned
@@ -321,17 +324,17 @@ export function RrSidebarSettingsTab({
         >
           {isAssigned ? (
             <>
-              <span className="scale-90 transition-transform duration-200 group-hover/slot:scale-100">
+              <span className="scale-100 transition-transform duration-200 group-hover/slot:scale-105 [&>svg]:size-5">
                 {item.icon}
               </span>
-              <span className="text-[9px] tracking-tight font-medium truncate max-w-[48px]">
+              <span className="text-[10px] sm:text-[11px] leading-tight tracking-tight font-medium truncate max-w-14">
                 {item.label}
               </span>
             </>
           ) : (
             <>
-              <span className="text-[10px] font-bold opacity-45">+{pos}</span>
-              <span className="text-[8px] tracking-tight opacity-30 font-medium">
+              <span className="text-xs font-bold opacity-45">+{pos}</span>
+              <span className="text-[9px] tracking-tight opacity-30 font-medium">
                 {t("sidebar.emptySlot")}
               </span>
             </>
@@ -383,7 +386,7 @@ export function RrSidebarSettingsTab({
               id="app-select"
               value={selectedAppHref}
               onChange={(e) => setSelectedAppHref(e.target.value)}
-              className="px-3 py-1.5 bg-background border border-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground cursor-pointer font-medium min-w-[140px]"
+              className="px-3 py-1.5 bg-background border border-border rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-primary/50 text-foreground cursor-pointer font-medium min-w-35"
             >
               {rrApps
                 .filter((app) => app.name.toLowerCase() !== "polaris")
@@ -398,20 +401,20 @@ export function RrSidebarSettingsTab({
 
         {/* Interactive Live Dock Selector */}
         <CardContent className="flex items-center justify-center py-4 w-full">
-          <div className="flex items-center justify-between gap-1 px-3 py-2 bg-card/95 border border-border rounded-full shadow-2xl w-full select-none max-w-sm">
+          <div className="flex items-center justify-between gap-1 sm:gap-2 px-3.5 py-2.5 bg-card/95 border border-border rounded-full shadow-2xl w-full select-none max-w-md">
             {/* Left slots */}
-            <div className="flex items-center gap-0.5 flex-1 justify-around">
+            <div className="flex items-center gap-0.5 sm:gap-1 flex-1 justify-around">
               <InteractiveDockSlot pos="1" />
               <InteractiveDockSlot pos="2" />
             </div>
 
             {/* Switcher Button */}
-            <div className="flex items-center justify-center size-10.5 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 shrink-0 mx-1.5">
-              <LayoutGrid className="size-4" />
+            <div className="flex items-center justify-center size-11 sm:size-12 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 shrink-0 mx-1 sm:mx-1.5">
+              <LayoutGrid className="size-5 sm:size-5.5" />
             </div>
 
             {/* Right slots */}
-            <div className="flex items-center gap-0.5 flex-1 justify-around">
+            <div className="flex items-center gap-0.5 sm:gap-1 flex-1 justify-around">
               <InteractiveDockSlot pos="3" />
               <InteractiveDockSlot pos="4" />
             </div>
@@ -439,7 +442,7 @@ export function RrSidebarSettingsTab({
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="flex flex-col gap-4 max-h-[300px] overflow-y-auto pr-1 no-scrollbar p-3">
+        <CardContent className="flex flex-col gap-4 max-h-75 overflow-y-auto pr-1 no-scrollbar p-3">
           {Object.entries(groupedItems).map(([secName, items]) => (
             <div key={secName} className="flex flex-col gap-1.5">
               <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider px-1">
