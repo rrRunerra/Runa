@@ -3615,25 +3615,6 @@ export class ListService {
             tvdbId: item.anime.tvDBId,
             monitored: true,
           });
-        } else {
-          const userId = await this.getUserId(username).catch(() => null);
-          if (userId) {
-            void this.notificationService.create(userId, {
-              title: 'Missing TVDB ID for Anime',
-              message: `TVDB ID is missing for anime "${item.anime.titlePrimary}". Series has been queued for a metadata update.`,
-              type: 'INFO',
-            });
-          }
-          const anilistId = item.anime.anilistId ?? item.anime.id;
-          if (anilistId) {
-            this.logger.log(
-              `[Sonarr] TVDB ID missing for anime "${item.anime.titlePrimary}" (AniList ID: ${anilistId}). Queued for background update.`,
-            );
-            void this.animeQueueService.addUpsertJob(anilistId, {
-              force: true,
-              skipRelations: true,
-            });
-          }
         }
       }
     }

@@ -7,11 +7,9 @@ import { ListExternal } from './list.external';
 import { MovieService } from '../movie/movie.service';
 import { TvService } from '../tv/tv.service';
 import { AnimeService } from '../anime/anime.service';
-import { AnimeQueueService } from '../anime/anime-queue.service';
 import { MangaService } from '../manga/manga.service';
 import { GameService } from '../game/game.service';
 import { BookService } from '../book/book.service';
-import { NotificationService } from '../notification/notification.service';
 import { MediaStatsService } from './media-stats.service';
 
 jest.mock('@runa/database', () => ({
@@ -131,11 +129,9 @@ describe('ListService', () => {
   const mockMovieService = { ensureMovie: jest.fn().mockResolvedValue({ id: 1 }) };
   const mockTvService = { ensureTv: jest.fn().mockResolvedValue({ id: 1 }) };
   const mockAnimeService = { ensureAnime: jest.fn().mockResolvedValue({ id: 1 }) };
-  const mockAnimeQueueService = { addUpsertJob: jest.fn().mockResolvedValue(undefined) };
   const mockMangaService = { ensureManga: jest.fn().mockResolvedValue({ id: 1 }) };
   const mockGameService = { ensureGame: jest.fn().mockResolvedValue({ id: 1 }) };
   const mockBookService = { ensureBook: jest.fn().mockResolvedValue({ id: 1 }) };
-  const mockNotificationService = { create: jest.fn().mockResolvedValue({}) };
   const mockMediaStatsService = {
     updateStatsIncremental: jest.fn().mockResolvedValue(undefined),
   };
@@ -152,11 +148,9 @@ describe('ListService', () => {
         { provide: MovieService, useValue: mockMovieService },
         { provide: TvService, useValue: mockTvService },
         { provide: AnimeService, useValue: mockAnimeService },
-        { provide: AnimeQueueService, useValue: mockAnimeQueueService },
         { provide: MangaService, useValue: mockMangaService },
         { provide: GameService, useValue: mockGameService },
         { provide: BookService, useValue: mockBookService },
-        { provide: NotificationService, useValue: mockNotificationService },
         { provide: MediaStatsService, useValue: mockMediaStatsService },
       ],
     }).compile();
@@ -722,8 +716,7 @@ describe('ListService', () => {
       ]);
     });
 
-    it('should handle fetchSonarrSeries for anime without tvDBId by notifying user and queuing update', async () => {
-      mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-123' });
+    it('should handle fetchSonarrSeries for anime without tvDBId by ignoring missing items without notifications or queue jobs', async () => {
       mockPrismaClient.aquilaAnimeUserListV2.findMany.mockResolvedValue([
         {
           id: 1,
@@ -764,17 +757,6 @@ describe('ListService', () => {
           monitored: true,
         },
       ]);
-      expect(mockNotificationService.create).toHaveBeenCalledWith(
-        'user-123',
-        expect.objectContaining({
-          title: 'Missing TVDB ID for Anime',
-          message: expect.stringContaining('Bleach'),
-        }),
-      );
-      expect(mockAnimeQueueService.addUpsertJob).toHaveBeenCalledWith(102, {
-        force: true,
-        skipRelations: true,
-      });
     });
   });
 
