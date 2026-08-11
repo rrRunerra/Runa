@@ -86,7 +86,9 @@ function computeScoreStats(scores: number[]): ScoreStatsEntity {
   }
 
   scores.forEach((s) => {
-    const key = Math.round(s).toString();
+    const normalized = s > 10 ? s / 10 : s;
+    const rounded = Math.min(10, Math.max(1, Math.round(normalized)));
+    const key = rounded.toString();
     if (key in scoreDistribution) {
       scoreDistribution[key] = (scoreDistribution[key] || 0) + 1;
     }
@@ -96,12 +98,13 @@ function computeScoreStats(scores: number[]): ScoreStatsEntity {
   let standardDeviation = 0;
 
   if (scores.length > 0) {
+    const normalizedScores = scores.map((s) => (s > 10 ? s / 10 : s));
     meanScore = parseFloat(
-      (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2),
+      (normalizedScores.reduce((a, b) => a + b, 0) / normalizedScores.length).toFixed(2),
     );
     const variance =
-      scores.reduce((a, b) => a + Math.pow(b - meanScore, 2), 0) /
-      scores.length;
+      normalizedScores.reduce((a, b) => a + Math.pow(b - meanScore, 2), 0) /
+      normalizedScores.length;
     standardDeviation = parseFloat(Math.sqrt(variance).toFixed(2));
   }
 
@@ -116,7 +119,10 @@ function extractScoreStats<T extends { score: number | null }>(
   entries: T[],
 ): { scores: number[]; stats: ScoreStatsEntity } {
   const scores = entries
-    .map((e) => e.score)
+    .map((e) => {
+      if (e.score === null || e.score === undefined || e.score <= 0) return null;
+      return e.score > 10 ? parseFloat((e.score / 10).toFixed(2)) : e.score;
+    })
     .filter((s): s is number => s !== null && s > 0);
   return { scores, stats: computeScoreStats(scores) };
 }

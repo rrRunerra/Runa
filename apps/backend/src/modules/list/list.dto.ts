@@ -111,6 +111,8 @@ export class SaveAnimeEntryDto {
 
   @IsOptional()
   @IsNumber()
+  @Min(0)
+  @Max(10)
   score?: number;
 
   @IsOptional()
@@ -159,6 +161,8 @@ export class SaveMangaEntryDto {
 
   @IsOptional()
   @IsNumber()
+  @Min(0)
+  @Max(10)
   score?: number;
 
   @IsOptional()
@@ -199,6 +203,8 @@ export class SaveMovieEntryDto {
 
   @IsOptional()
   @IsNumber()
+  @Min(0)
+  @Max(10)
   score?: number;
 
   @IsOptional()
@@ -236,6 +242,8 @@ export class SaveTvEntryDto {
 
   @IsOptional()
   @IsNumber()
+  @Min(0)
+  @Max(10)
   score?: number;
 
   @IsOptional()
@@ -281,6 +289,8 @@ export class SaveGameEntryDto {
 
   @IsOptional()
   @IsNumber()
+  @Min(0)
+  @Max(10)
   score?: number;
 
   @IsOptional()
@@ -322,6 +332,8 @@ export class SaveBookEntryDto {
 
   @IsOptional()
   @IsNumber()
+  @Min(0)
+  @Max(10)
   score?: number;
 
   @IsOptional()

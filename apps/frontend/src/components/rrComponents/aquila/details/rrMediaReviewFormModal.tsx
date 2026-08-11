@@ -60,13 +60,9 @@ export function RrMediaReviewFormModal({
   const { t } = useTranslation();
   const { data: session } = useSession();
 
-  const isGame =
-    mediaType === MediaType.GAME ||
-    (mediaType as string) === "game" ||
-    (mediaType as string) === "GAME";
-  const maxScore = isGame ? 100 : 10;
+  const maxScore = 10;
 
-  const [score, setScore] = useState<number>(isGame ? 70 : 7);
+  const [score, setScore] = useState<number>(7);
   const [summary, setSummary] = useState<string>("");
   const [body, setBody] = useState<string>("");
   const [isSpoiler, setIsSpoiler] = useState<boolean>(false);
@@ -80,13 +76,13 @@ export function RrMediaReviewFormModal({
       setBody(existingReview.body);
       setIsSpoiler(existingReview.isSpoiler);
     } else {
-      setScore(isGame ? 70 : 7);
+      setScore(7);
       setSummary("");
       setBody("");
       setIsSpoiler(false);
     }
     setErrorMsg(null);
-  }, [existingReview, isOpen, isGame]);
+  }, [existingReview, isOpen]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -188,7 +184,7 @@ export function RrMediaReviewFormModal({
                   type="number"
                   min={0}
                   max={maxScore}
-                  step={1}
+                  step={0.1}
                   value={score}
                   onChange={(e) => {
                     const raw = e.target.value;
@@ -198,9 +194,21 @@ export function RrMediaReviewFormModal({
                     }
                     const val = Math.min(
                       maxScore,
-                      Math.max(0, Number(raw) || 0),
+                      Math.max(0, parseFloat(Number(raw).toFixed(2)) || 0),
                     );
                     setScore(val);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+                      e.preventDefault();
+                      const step = e.ctrlKey || e.metaKey ? 1 : 0.1;
+                      const current = Number(score) || 0;
+                      const next =
+                        e.key === "ArrowUp"
+                          ? Math.min(maxScore, parseFloat((current + step).toFixed(2)))
+                          : Math.max(0, parseFloat((current - step).toFixed(2)));
+                      setScore(next);
+                    }
                   }}
                   className="w-20 h-9 text-center font-extrabold text-base bg-card border-border/40 focus:border-primary"
                 />
@@ -219,9 +227,11 @@ export function RrMediaReviewFormModal({
                 type="range"
                 min={0}
                 max={maxScore}
-                step={1}
+                step={0.1}
                 value={score}
-                onChange={(e) => setScore(Number(e.target.value))}
+                onChange={(e) =>
+                  setScore(parseFloat(Number(e.target.value).toFixed(2)))
+                }
                 className="w-full accent-primary h-2 bg-muted rounded-lg appearance-none cursor-pointer"
               />
               <span className="text-xs font-semibold text-muted-foreground">
@@ -231,9 +241,7 @@ export function RrMediaReviewFormModal({
 
             {/* Preset Buttons */}
             <div className="grid grid-cols-5 sm:grid-cols-10 gap-1.5 w-full pt-1">
-              {Array.from({ length: 10 }, (_, i) =>
-                isGame ? (i + 1) * 10 : i + 1,
-              ).map((val) => (
+              {Array.from({ length: 10 }, (_, i) => i + 1).map((val) => (
                 <Button
                   key={val}
                   type="button"

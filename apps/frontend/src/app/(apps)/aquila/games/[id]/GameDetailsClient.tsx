@@ -508,7 +508,7 @@ export default function GameDetailsPage(): React.JSX.Element {
                           : "N/A"}
                       </span>
                       <span className="text-xs font-semibold text-muted-foreground">
-                        / 100
+                        / 10
                       </span>
                     </div>
                   </div>

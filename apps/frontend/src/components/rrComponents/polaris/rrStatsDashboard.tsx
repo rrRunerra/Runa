@@ -362,14 +362,38 @@ export default function RrStatsDashboard({
       );
     }
 
+    const formatName = (rawName: string) => {
+      const key = rawName.toLowerCase();
+      switch (key) {
+        case "watching":
+        case "current":
+          return t("aquila.watching", "Watching");
+        case "reading":
+          return t("aquila.reading", "Reading");
+        case "playing":
+          return t("aquila.playing", "Playing");
+        case "completed":
+          return t("aquila.completed", "Completed");
+        case "on_hold":
+        case "paused":
+          return t("aquila.onHold", "On Hold");
+        case "dropped":
+          return t("aquila.dropped", "Dropped");
+        case "planning":
+          return t("aquila.planning", "Planning");
+        default:
+          return rawName.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+      }
+    };
+
     const sorted = Object.entries(dist)
-      .map(([name, val]) => ({ name, value: val }))
+      .map(([name, val]) => ({ name: formatName(name), value: Math.round(Number(val) || 0) }))
       .sort((a, b) => b.value - a.value);
 
     const pieData = sorted.slice(0, 6);
     const otherVal = sorted.slice(6).reduce((acc, curr) => acc + curr.value, 0);
     if (otherVal > 0) {
-      pieData.push({ name: t("polaris.lists.other"), value: otherVal });
+      pieData.push({ name: t("polaris.lists.other", "Other"), value: otherVal });
     }
 
     return (
@@ -460,13 +484,25 @@ export default function RrStatsDashboard({
       );
     }
 
-    // Prepare score distribution data for Recharts BarChart
-    const scoreData = Object.entries(stats.scoreDistribution || {}).map(
-      ([score, count]) => ({
-        name: score,
-        count: count as number,
-      }),
-    );
+    // Prepare score distribution data for Recharts BarChart (round to nearest whole numbers 1-10)
+    const scoreDistMap: Record<string, number> = {};
+    for (let i = 1; i <= 10; i++) {
+      scoreDistMap[i.toString()] = 0;
+    }
+    if (stats.scoreDistribution) {
+      Object.entries(stats.scoreDistribution).forEach(([score, count]) => {
+        const rounded = Math.min(10, Math.max(1, Math.round(Number(score))));
+        if (!isNaN(rounded)) {
+          scoreDistMap[rounded.toString()] =
+            (scoreDistMap[rounded.toString()] || 0) + (Number(count) || 0);
+        }
+      });
+    }
+
+    const scoreData = Object.entries(scoreDistMap).map(([score, count]) => ({
+      name: score,
+      count: Math.round(count),
+    }));
 
     // Prepare progress/count distribution data if available
     const progressData = stats.episodeCountDistribution

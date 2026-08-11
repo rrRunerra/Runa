@@ -583,7 +583,7 @@
         let connections = listEntry?.connections || {};
         let updateConnection = Object.keys(connections).length > 0;
 
-        const scoreMax = mediaType === "game" ? 100 : 10;
+        const scoreMax = 10;
         const totalEpisodes = rawMedia.episodeCount || (Array.isArray(rawMedia.episodes) ? rawMedia.episodes.length : undefined);
 
         let seasons = rawMedia.seasons || [];
@@ -660,7 +660,7 @@
                                 <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 px-0.5">
                                     ${ICONS.star} Score <span class="text-[10px] text-muted-foreground/60 font-normal lowercase">(0 - ${scoreMax})</span>
                                 </label>
-                                <input type="number" id="aquila-score-input" min="0" max="${scoreMax}" step="0.5" value="${score}" placeholder="0 - ${scoreMax}" class="bg-background/80 border border-border/70 text-foreground h-10 px-3 text-xs font-semibold rounded-xl" />
+                                <input type="number" id="aquila-score-input" min="0" max="${scoreMax}" step="0.1" value="${score}" placeholder="0 - ${scoreMax}" class="bg-background/80 border border-border/70 text-foreground h-10 px-3 text-xs font-semibold rounded-xl" />
                             </div>
 
                             <!-- Rewatches -->

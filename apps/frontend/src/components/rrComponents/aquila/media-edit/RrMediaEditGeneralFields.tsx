@@ -227,8 +227,21 @@ export function RrMediaEditGeneralFields({
                 type="number"
                 min="0"
                 max={scoreMax}
+                step="0.1"
                 value={score}
                 onChange={(e) => onScoreChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+                    e.preventDefault();
+                    const step = e.ctrlKey || e.metaKey ? 1 : 0.1;
+                    const current = parseFloat(score) || 0;
+                    const next =
+                      e.key === "ArrowUp"
+                        ? Math.min(scoreMax, parseFloat((current + step).toFixed(2)))
+                        : Math.max(0, parseFloat((current - step).toFixed(2)));
+                    onScoreChange(next.toString());
+                  }
+                }}
                 placeholder={`0 - ${scoreMax}`}
                 className="border-0 bg-transparent text-foreground focus-visible:ring-0 h-full w-full px-3 text-xs font-semibold placeholder:font-normal"
               />

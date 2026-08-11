@@ -41,9 +41,20 @@ export default function RrStatsTab({ name }: StatsTabProps): React.ReactNode {
       
       totalItems += stat.count || 0;
       
-      if (stat.meanScore > 0) {
-        totalScore += stat.meanScore * (stat.count || 1);
-        scoredItemsCount += (stat.count || 1);
+      let scoredCount = 0;
+      if (stat.scoreDistribution && typeof stat.scoreDistribution === "object") {
+        scoredCount = Object.values(stat.scoreDistribution).reduce(
+          (acc: number, val: any) => acc + (Number(val) || 0),
+          0
+        );
+      } else if (stat.meanScore > 0) {
+        scoredCount = stat.count || 1;
+      }
+
+      if (stat.meanScore > 0 && scoredCount > 0) {
+        const normalizedMean = stat.meanScore > 10 ? stat.meanScore / 10 : Number(stat.meanScore);
+        totalScore += normalizedMean * scoredCount;
+        scoredItemsCount += scoredCount;
       }
     });
 

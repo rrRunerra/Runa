@@ -23,7 +23,8 @@
     "db:assign-admin": "dotenvx run -f ../../.env -- ts-node -r tsconfig-paths/register src/scripts/assign-admin.ts",
     "db:update-anime-tvdb": "dotenvx run -f ../../.env -- ts-node -r tsconfig-paths/register src/scripts/update-anime-tvdb.ts",
     "db:update-media-stats": "dotenvx run -f ../../.env -- ts-node -r tsconfig-paths/register src/scripts/update-media-stats.ts",
-    "db:seed-random-stats": "dotenvx run -f ../../.env -- ts-node -r tsconfig-paths/register src/scripts/seed-random-stats.ts"
+    "db:seed-random-stats": "dotenvx run -f ../../.env -- ts-node -r tsconfig-paths/register src/scripts/seed-random-stats.ts",
+    "db:migrate-game-scores": "dotenvx run -f ../../.env -- ts-node -r tsconfig-paths/register src/scripts/migrate-game-scores.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1106.0",

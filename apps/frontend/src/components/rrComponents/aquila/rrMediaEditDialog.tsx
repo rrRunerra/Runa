@@ -225,7 +225,7 @@ export function RrMediaEditDialog({
   }, [mediaDetails, initialMedia]);
 
   const mediaType = media.type;
-  const scoreMax = mediaType === "game" ? 100 : 10;
+  const scoreMax = 10;
 
   const totalEpisodes = useMemo(() => {
     if (media.episodeCount === null) return undefined;
@@ -456,15 +456,26 @@ export function RrMediaEditDialog({
       setScore("");
       return;
     }
-    let num = Number(val);
-    if (isNaN(num)) return;
-    if (num > scoreMax) {
-      num = scoreMax;
+    const sanitized = val.replace(/,/g, ".");
+    if (/^\d*\.?\d*$/.test(sanitized)) {
+      let formattedVal = sanitized;
+      const parts = sanitized.split(".");
+      if (parts.length > 1 && parts[1].length > 2) {
+        formattedVal = `${parts[0]}.${parts[1].slice(0, 2)}`;
+      }
+      const num = parseFloat(formattedVal);
+      if (!isNaN(num)) {
+        if (num > scoreMax) {
+          setScore(scoreMax.toString());
+          return;
+        }
+        if (num < 0) {
+          setScore("0");
+          return;
+        }
+      }
+      setScore(formattedVal);
     }
-    if (num < 0) {
-      num = 0;
-    }
-    setScore(num.toString());
   };
 
   const triggerAutoCompleteDates = (targetStatus: string): void => {

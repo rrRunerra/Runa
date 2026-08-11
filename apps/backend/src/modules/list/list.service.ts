@@ -1797,6 +1797,11 @@ export class ListService {
         ? toPrismaStatus(body.status)
         : (oldEntry?.status ?? 'PLANNING');
 
+      let score = body.score;
+      if (score !== undefined && score !== null && score > 10) {
+        score = parseFloat((score / 10).toFixed(2));
+      }
+
       await this.prisma.client.aquilaGameUserListV2.upsert({
         where: {
           username_gameId: {
@@ -1807,7 +1812,7 @@ export class ListService {
         update: {
           status,
           progress: body.progress,
-          score: body.score,
+          score,
           startDate: toDate(body.startDate),
           endDate: toDate(body.endDate),
           notes: body.notes,
@@ -1817,7 +1822,7 @@ export class ListService {
           gameId,
           status,
           progress: body.progress ?? 0,
-          score: body.score,
+          score,
           startDate: toDate(body.startDate),
           endDate: toDate(body.endDate),
           notes: body.notes,
