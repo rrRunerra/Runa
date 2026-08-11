@@ -91,6 +91,7 @@ describe('ListController', () => {
     toggleSeasonWatched: jest.fn(),
     getUserListFilters: jest.fn(),
     getRadarrMovieList: jest.fn(),
+    getRadarrAnimeMovieList: jest.fn(),
     fetchSonarrSeries: jest.fn(),
   };
 
@@ -210,6 +211,49 @@ describe('ListController', () => {
         2,
       );
       expect(result).toEqual({ success: true });
+    });
+  });
+
+  describe('Radarr / Sonarr Endpoints', () => {
+    it('should call getRadarrMovieList', async () => {
+      const mockReq = { user: { username: 'testuser' } };
+      mockListService.getRadarrMovieList.mockResolvedValue([{ title: 'Movie 1' }]);
+
+      const result = await controller.getRadarrMovieList(mockReq);
+      expect(service.getRadarrMovieList).toHaveBeenCalledWith('testuser');
+      expect(result).toEqual([{ title: 'Movie 1' }]);
+    });
+
+    it('should call getRadarrAnimeMovieList', async () => {
+      const mockReq = { user: { username: 'testuser' } };
+      mockListService.getRadarrAnimeMovieList.mockResolvedValue([{ title: 'Anime Movie 1' }]);
+
+      const result = await controller.getRadarrAnimeMovieList(mockReq);
+      expect(service.getRadarrAnimeMovieList).toHaveBeenCalledWith('testuser');
+      expect(result).toEqual([{ title: 'Anime Movie 1' }]);
+    });
+
+    it('should call getSonarrTvList', async () => {
+      const mockReq = { user: { username: 'testuser' } };
+      mockListService.fetchSonarrSeries.mockResolvedValue([{ title: 'TV 1' }]);
+
+      const result = await controller.getSonarrTvList(mockReq);
+      expect(service.fetchSonarrSeries).toHaveBeenCalledWith('testuser', true, false);
+      expect(result).toEqual([{ title: 'TV 1' }]);
+    });
+
+    it('should call getSonarrAnimeList', async () => {
+      const mockReq = { user: { username: 'testuser' } };
+      mockListService.fetchSonarrSeries.mockResolvedValue([{ title: 'Anime 1' }]);
+
+      const result = await controller.getSonarrAnimeList(mockReq);
+      expect(service.fetchSonarrSeries).toHaveBeenCalledWith('testuser', false, true);
+      expect(result).toEqual([{ title: 'Anime 1' }]);
+    });
+
+    it('should return quality profiles', () => {
+      const result = controller.getQualityProfiles();
+      expect(result).toEqual([{ id: 1, name: 'Any' }]);
     });
   });
 });

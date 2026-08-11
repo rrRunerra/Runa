@@ -568,25 +568,25 @@ User-scoped media lists tracking watching, reading, playing and reading progress
 
 Compatible API mocks for Radarr/Sonarr list import integrations.
 
-### `GET /radarr/api/v3/movie` (or `/api/v3/movie`)
+### `GET /list/radarr/movie/api/v3/movie`
 - **Auth Required**: Yes (usually via API key headers)
 - **Returns**: Movie entries in `PLANNING` state mapped to Radarr model schema (including resolved IMDB and TMDB IDs)
 
-### `GET /radarr/api/v3/qualityprofile` (or `/api/v3/qualityprofile`)
+### `GET /list/radarr/anime/api/v3/movie`
 - **Auth Required**: Yes
-- **Returns**: Default profile lists `[{ id: 1, name: "Any" }]`
+- **Returns**: Anime movie entries (format: `MOVIE` only) in `PLANNING` state mapped to Radarr model schema (including resolved IMDB and TMDB IDs)
 
-### `GET /sonarr/api/v3/series` (or `/api/v3/series`)
-- **Auth Required**: Yes
-- **Returns**: TV & Anime planning entries mapped to Sonarr schema (including Fribb mapped TVDB IDs for AniList records)
-
-### `GET /sonarr/tv/api/v3/series`
+### `GET /list/sonarr/tv/api/v3/series`
 - **Auth Required**: Yes
 - **Returns**: TV planning entries Sonarr schema list
 
-### `GET /sonarr/anime/api/v3/series`
+### `GET /list/sonarr/anime/api/v3/series`
 - **Auth Required**: Yes
-- **Returns**: Anime planning entries Sonarr schema list
+- **Returns**: Anime planning entries (excluding format `MOVIE`) Sonarr schema list
+
+### `GET /list/*api/v3/qualityprofile`
+- **Auth Required**: Yes
+- **Returns**: Default profile lists `[{ id: 1, name: "Any" }]`
 
 ---
 

@@ -3227,6 +3227,75 @@ export class ListService {
     });
   }
 
+  public async getRadarrAnimeMovieList(username: string): Promise<any[]> {
+    const list = await this.prisma.client.aquilaAnimeUserListV2.findMany({
+      where: {
+        username: username.toLowerCase(),
+        status: 'PLANNING',
+        anime: {
+          format: 'MOVIE',
+        },
+      },
+      include: { anime: true },
+    });
+
+    return list.map((item: any) => {
+      let tmdbId: number | undefined;
+      let imdbId: string | undefined;
+
+      if (Array.isArray(item.anime.sources)) {
+        const tmdbSource = item.anime.sources.find(
+          (s: any) => s.provider === 'TMDB',
+        );
+        if (tmdbSource?.externalId) {
+          const parsed = parseInt(tmdbSource.externalId, 10);
+          if (!isNaN(parsed)) tmdbId = parsed;
+        }
+
+        const imdbSource = item.anime.sources.find(
+          (s: any) => s.provider === 'IMDB',
+        );
+        if (imdbSource?.externalId) {
+          imdbId = String(imdbSource.externalId);
+        }
+      }
+
+      if (!tmdbId && Array.isArray(item.anime.externalLinks)) {
+        for (const link of item.anime.externalLinks) {
+          const url = link?.url || '';
+          const tmdbMatch = url.match(/themoviedb\.org\/movie\/(\d+)/i);
+          if (tmdbMatch) {
+            const parsed = parseInt(tmdbMatch[1], 10);
+            if (!isNaN(parsed)) {
+              tmdbId = parsed;
+              break;
+            }
+          }
+        }
+      }
+
+      if (!imdbId && Array.isArray(item.anime.externalLinks)) {
+        for (const link of item.anime.externalLinks) {
+          const url = link?.url || '';
+          const imdbMatch = url.match(/imdb\.com\/title\/(tt\d+)/i);
+          if (imdbMatch) {
+            imdbId = imdbMatch[1];
+            break;
+          }
+        }
+      }
+
+      return {
+        title: item.anime.titlePrimary,
+        imdbId,
+        tmdbId,
+        year: item.anime.startDateYear ?? item.anime.seasonYear ?? undefined,
+        hasFile: item.status === 'COMPLETED',
+        monitored: true,
+      };
+    });
+  }
+
   public async fetchSonarrSeries(
     username: string,
     includeTv = true,
@@ -3250,7 +3319,13 @@ export class ListService {
     }
     if (includeAnime) {
       const animeList = await this.prisma.client.aquilaAnimeUserListV2.findMany({
-        where: { username: username.toLowerCase(), status: 'PLANNING' },
+        where: {
+          username: username.toLowerCase(),
+          status: 'PLANNING',
+          anime: {
+            format: { not: 'MOVIE' },
+          },
+        },
         include: { anime: true },
       });
       for (const item of animeList) {

@@ -620,6 +620,67 @@ describe('ListService', () => {
         monitored: true,
       });
     });
+
+    it('should format getRadarrAnimeMovieList correctly for MOVIE format only', async () => {
+      mockPrismaClient.aquilaAnimeUserListV2.findMany.mockResolvedValue([
+        {
+          id: 20,
+          status: 'PLANNING',
+          anime: {
+            id: 201,
+            titlePrimary: 'Your Name.',
+            startDateYear: 2016,
+            sources: [
+              { provider: 'TMDB', externalId: '372058' },
+              { provider: 'IMDB', externalId: 'tt5311514' },
+            ],
+            externalLinks: [],
+          },
+        },
+        {
+          id: 21,
+          status: 'COMPLETED',
+          anime: {
+            id: 202,
+            titlePrimary: 'A Silent Voice',
+            startDateYear: 2016,
+            sources: null,
+            externalLinks: [
+              { site: 'TheMovieDB', url: 'https://www.themoviedb.org/movie/283566' },
+              { site: 'IMDb', url: 'https://www.imdb.com/title/tt5323662/' },
+            ],
+          },
+        },
+      ]);
+
+      const result = await service.getRadarrAnimeMovieList('testuser');
+      expect(mockPrismaClient.aquilaAnimeUserListV2.findMany).toHaveBeenCalledWith({
+        where: {
+          username: 'testuser',
+          status: 'PLANNING',
+          anime: { format: 'MOVIE' },
+        },
+        include: { anime: true },
+      });
+      expect(result).toHaveLength(2);
+      expect(result[0]).toEqual({
+        title: 'Your Name.',
+        imdbId: 'tt5311514',
+        tmdbId: 372058,
+        year: 2016,
+        hasFile: false,
+        monitored: true,
+      });
+      expect(result[1]).toEqual({
+        title: 'A Silent Voice',
+        imdbId: 'tt5323662',
+        tmdbId: 283566,
+        year: 2016,
+        hasFile: true,
+        monitored: true,
+      });
+    });
+
     it('should handle fetchSonarrSeries for anime without tvDBId by notifying user and queuing update', async () => {
       mockPrismaClient.user.findUnique.mockResolvedValue({ id: 'user-123' });
       mockPrismaClient.aquilaAnimeUserListV2.findMany.mockResolvedValue([
@@ -644,6 +705,14 @@ describe('ListService', () => {
       ]);
 
       const result = await service.fetchSonarrSeries('testuser', false, true);
+      expect(mockPrismaClient.aquilaAnimeUserListV2.findMany).toHaveBeenCalledWith({
+        where: {
+          username: 'testuser',
+          status: 'PLANNING',
+          anime: { format: { not: 'MOVIE' } },
+        },
+        include: { anime: true },
+      });
       expect(result).toEqual([
         {
           title: 'Naruto',
