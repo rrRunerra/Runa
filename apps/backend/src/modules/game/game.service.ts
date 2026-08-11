@@ -173,8 +173,7 @@ export class GameService {
     }
 
     const existing = await this.gameRepository.find(id);
-    const extId = existing?.igdbId || existing?.rawgId;
-    if (!existing || !extId) {
+    if (!existing) {
       throw new rrNotFoundException(`${this.moduleCode}GNFID001`, {
         message: 'Game not found in database',
       });
@@ -186,7 +185,7 @@ export class GameService {
       });
     }
 
-    await this.gameExternal.fetchAndUpsertGame(extId, force);
+    await this.gameExternal.resolveAndUpsertGame(existing, force);
 
     await this.cacheService.del(`game:${id}`);
 

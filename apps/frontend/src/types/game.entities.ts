@@ -57,6 +57,7 @@ export interface GameImages {
   cover?: string;
   banner?: string;
   screenshots?: string[];
+  artworks?: string[];
 }
 
 export interface GameSearchEntity {
@@ -115,6 +116,18 @@ export interface GameEntity {
   trailers?: GameTrailerV2Entity[];
   locked: boolean;
 
+  requirements?: {
+    pc?: { minimum?: string; recommended?: string } | null;
+    mac?: { minimum?: string; recommended?: string } | null;
+    linux?: { minimum?: string; recommended?: string } | null;
+  } | null;
+  languages?: string[];
+  controllerSupport?: string | null;
+  achievements?: {
+    total?: number;
+    highlighted?: Array<{ name: string; path?: string; description?: string; hidden?: boolean }>;
+  } | null;
+
   averageScore?: number | null;
   metacriticScore?: number | null;
   metacriticUserScore?: number | null;
@@ -136,6 +149,10 @@ export interface GameEntity {
 
   statusDistribution?: Record<string, number>;
   scoreDistribution?: Record<string, number>;
+
+  averagePlaytime?: number | null;
+  totalPlaytimeSum?: number | null;
+  playtimeCount?: number | null;
 
   sources?: MediaSourceOrigin[] | null;
 
@@ -165,4 +182,5 @@ export interface GameEntity {
   localScoreDistribution?: Record<string, number>;
   localTotalScoreSum?: number;
   localScoredCount?: number;
+  localAveragePlaytime?: number;
 }

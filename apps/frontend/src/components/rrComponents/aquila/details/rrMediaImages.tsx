@@ -3,7 +3,14 @@
 import React, { useMemo, useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { ImageIcon, Maximize2, X, ChevronLeft, ChevronRight, Layers } from "lucide-react";
+import {
+  ImageIcon,
+  Maximize2,
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Layers,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +40,9 @@ const itemVariants = {
   },
 };
 
-export function RrMediaImages({ anime }: RrMediaImagesProps): React.JSX.Element {
+export function RrMediaImages({
+  anime,
+}: RrMediaImagesProps): React.JSX.Element {
   const { t } = useTranslation();
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -47,7 +56,7 @@ export function RrMediaImages({ anime }: RrMediaImagesProps): React.JSX.Element 
       category: "poster" | "background" | "banner" | "screencap",
       provider?: string,
       title?: string,
-      aspectRatio?: "poster" | "banner" | "landscape"
+      aspectRatio?: "poster" | "banner" | "landscape",
     ) => {
       if (!url || seen.has(url)) return;
       seen.add(url);
@@ -57,46 +66,115 @@ export function RrMediaImages({ anime }: RrMediaImagesProps): React.JSX.Element 
         category,
         provider,
         title,
-        aspectRatio: aspectRatio || (category === "poster" ? "poster" : category === "banner" ? "banner" : "landscape"),
+        aspectRatio:
+          aspectRatio ||
+          (category === "poster"
+            ? "poster"
+            : category === "banner"
+              ? "banner"
+              : "landscape"),
       });
     };
 
     // Main Cover & Banner
-    if (anime.coverImage) addImage(anime.coverImage, "poster", "Cover", anime.titlePrimary, "poster");
-    if (anime.bannerImage) addImage(anime.bannerImage, "banner", "Banner", anime.titlePrimary, "banner");
+    if (anime.coverImage)
+      addImage(
+        anime.coverImage,
+        "poster",
+        "Cover",
+        anime.titlePrimary,
+        "poster",
+      );
+    if (anime.bannerImage)
+      addImage(
+        anime.bannerImage,
+        "banner",
+        "Banner",
+        anime.titlePrimary,
+        "banner",
+      );
 
     // AniList Cover & Banner
-    if (anime.images?.anilist?.cover?.extraLarge) addImage(anime.images.anilist.cover.extraLarge, "poster", "AniList", "Extra Large Cover", "poster");
-    if (anime.images?.anilist?.banner) addImage(anime.images.anilist.banner, "banner", "AniList", "Banner", "banner");
+    if (anime.images?.anilist?.cover?.extraLarge)
+      addImage(
+        anime.images.anilist.cover.extraLarge,
+        "poster",
+        "AniList",
+        "Extra Large Cover",
+        "poster",
+      );
+    if (anime.images?.anilist?.banner)
+      addImage(
+        anime.images.anilist.banner,
+        "banner",
+        "AniList",
+        "Banner",
+        "banner",
+      );
 
     // MAL Pictures
-    if (anime.images?.mal?.pictures && Array.isArray(anime.images.mal.pictures)) {
-      anime.images.mal.pictures.forEach((pic, i) => addImage(pic, "poster", "MyAnimeList", `MAL Picture ${i + 1}`, "poster"));
+    if (
+      anime.images?.mal?.pictures &&
+      Array.isArray(anime.images.mal.pictures)
+    ) {
+      anime.images.mal.pictures.forEach((pic, i) =>
+        addImage(
+          pic,
+          "poster",
+          "MyAnimeList",
+          `MAL Picture ${i + 1}`,
+          "poster",
+        ),
+      );
     }
 
     // TVDB Posters
-    if (anime.images?.tvdb?.posters && Array.isArray(anime.images.tvdb.posters)) {
-      anime.images.tvdb.posters.forEach((pic, i) => addImage(pic, "poster", "TheTVDB", `TVDB Poster ${i + 1}`, "poster"));
+    if (
+      anime.images?.tvdb?.posters &&
+      Array.isArray(anime.images.tvdb.posters)
+    ) {
+      anime.images.tvdb.posters.forEach((pic, i) =>
+        addImage(pic, "poster", "TheTVDB", `TVDB Poster ${i + 1}`, "poster"),
+      );
     }
 
     // TVDB Backgrounds
-    if (anime.images?.tvdb?.backgrounds && Array.isArray(anime.images.tvdb.backgrounds)) {
-      anime.images.tvdb.backgrounds.forEach((pic, i) => addImage(pic, "background", "TheTVDB", `TVDB Background ${i + 1}`, "landscape"));
+    if (
+      anime.images?.tvdb?.backgrounds &&
+      Array.isArray(anime.images.tvdb.backgrounds)
+    ) {
+      anime.images.tvdb.backgrounds.forEach((pic, i) =>
+        addImage(
+          pic,
+          "background",
+          "TheTVDB",
+          `TVDB Background ${i + 1}`,
+          "landscape",
+        ),
+      );
     }
 
     // TVDB Banners
-    if (anime.images?.tvdb?.banners && Array.isArray(anime.images.tvdb.banners)) {
-      anime.images.tvdb.banners.forEach((pic, i) => addImage(pic, "banner", "TheTVDB", `TVDB Banner ${i + 1}`, "banner"));
+    if (
+      anime.images?.tvdb?.banners &&
+      Array.isArray(anime.images.tvdb.banners)
+    ) {
+      anime.images.tvdb.banners.forEach((pic, i) =>
+        addImage(pic, "banner", "TheTVDB", `TVDB Banner ${i + 1}`, "banner"),
+      );
     }
 
-    // Episode Screencaps
-    if (anime.episodes && Array.isArray(anime.episodes)) {
-      anime.episodes.forEach((ep) => {
-        if (ep.thumbnail) {
-          const epTitle = ep.titlePrimary || ep.titleSecondary || `Episode ${ep.number}`;
-          addImage(ep.thumbnail, "screencap", "Episode", `EP ${ep.number}: ${epTitle}`, "landscape");
-        }
-      });
+    // IGDB Screenshots & Artworks (Games)
+    const rawImages = anime.images as any;
+    if (rawImages?.screenshots && Array.isArray(rawImages.screenshots)) {
+      rawImages.screenshots.forEach((pic: string, i: number) =>
+        addImage(pic, "screencap", "IGDB", `Screenshot ${i + 1}`, "landscape"),
+      );
+    }
+    if (rawImages?.artworks && Array.isArray(rawImages.artworks)) {
+      rawImages.artworks.forEach((pic: string, i: number) =>
+        addImage(pic, "background", "IGDB", `Artwork ${i + 1}`, "landscape"),
+      );
     }
 
     return list;
@@ -117,15 +195,20 @@ export function RrMediaImages({ anime }: RrMediaImagesProps): React.JSX.Element 
 
   const handlePrev = () => {
     if (lightboxIndex == null) return;
-    setLightboxIndex((prev) => (prev! > 0 ? prev! - 1 : filteredImages.length - 1));
+    setLightboxIndex((prev) =>
+      prev! > 0 ? prev! - 1 : filteredImages.length - 1,
+    );
   };
 
   const handleNext = () => {
     if (lightboxIndex == null) return;
-    setLightboxIndex((prev) => (prev! < filteredImages.length - 1 ? prev! + 1 : 0));
+    setLightboxIndex((prev) =>
+      prev! < filteredImages.length - 1 ? prev! + 1 : 0,
+    );
   };
 
-  const currentLightboxImage = lightboxIndex != null ? filteredImages[lightboxIndex] : null;
+  const currentLightboxImage =
+    lightboxIndex != null ? filteredImages[lightboxIndex] : null;
 
   return (
     <motion.div variants={itemVariants} className="space-y-5">
@@ -190,7 +273,11 @@ export function RrMediaImages({ anime }: RrMediaImagesProps): React.JSX.Element 
               onClick={() => setLightboxIndex(idx)}
               className={cn(
                 "group relative rounded-2xl overflow-hidden bg-card/45 border border-border/30 cursor-pointer shadow-xs hover:border-primary/50 transition-all duration-300",
-                isPoster ? "aspect-2/3" : isBanner ? "aspect-21/9 col-span-2" : "aspect-16/9"
+                isPoster
+                  ? "aspect-2/3"
+                  : isBanner
+                    ? "aspect-21/9 col-span-2"
+                    : "aspect-video",
               )}
             >
               <Image
@@ -210,12 +297,18 @@ export function RrMediaImages({ anime }: RrMediaImagesProps): React.JSX.Element 
                 </div>
                 <div>
                   {img.provider && (
-                    <Badge variant="secondary" className="text-[9px] py-0 px-1.5 mb-1 rounded-md">
+                    <Badge
+                      variant="secondary"
+                      className="text-[9px] py-0 px-1.5 mb-1 rounded-md"
+                    >
                       {img.provider}
                     </Badge>
                   )}
                   {img.title && (
-                    <p className="text-xs font-bold text-white truncate" title={img.title}>
+                    <p
+                      className="text-xs font-bold text-white truncate"
+                      title={img.title}
+                    >
                       {img.title}
                     </p>
                   )}
@@ -227,7 +320,10 @@ export function RrMediaImages({ anime }: RrMediaImagesProps): React.JSX.Element 
       </div>
 
       {/* Lightbox Preview Modal */}
-      <Dialog open={lightboxIndex != null} onOpenChange={(open) => !open && setLightboxIndex(null)}>
+      <Dialog
+        open={lightboxIndex != null}
+        onOpenChange={(open) => !open && setLightboxIndex(null)}
+      >
         <DialogContent className="sm:max-w-none w-fit max-w-[95vw] max-h-[92vh] bg-background/95 border-border/40 backdrop-blur-2xl p-3 sm:p-5 rounded-3xl overflow-hidden flex flex-col items-center justify-center gap-3 shadow-2xl">
           <DialogTitle className="sr-only">
             {currentLightboxImage?.title || "Image Lightbox"}

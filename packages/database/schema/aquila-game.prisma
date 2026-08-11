@@ -66,12 +66,23 @@ model AquilaGameV2 {
     hltbExtraStory    Int?
     hltbCompletionist Int?
 
+    // Extended IGDB & Platform Metadata
+    requirements      Json?    @db.JsonB
+    languages         String[] @db.Text
+    controllerSupport String?
+    achievements      Json?    @db.JsonB
+
     favorites          Int  @default(0)
     popularity         Int  @default(0)
     totalScoreSum      Int? @db.Integer
     scoredCount        Int? @db.Integer
     statusDistribution Json @default("{}") @db.JsonB
     scoreDistribution  Json @default("{}") @db.JsonB
+
+    // Playtime Stats (calculated from user list progress column in hours)
+    averagePlaytime  Float?
+    totalPlaytimeSum Float? @default(0)
+    playtimeCount    Int?   @default(0)
 
     sources Json? @db.JsonB // Data origins: [{ provider: "RAWG", externalId: "...", fieldsProvided: [...] }]
 

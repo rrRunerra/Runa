@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { Star, Heart, Users } from "lucide-react";
+import { Star, Heart, Users, Clock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
 
@@ -9,6 +9,7 @@ interface RrMediaStatsDashboardProps {
   localAverageScore?: number | null;
   localPopularity?: number | null;
   localFavoritesCount?: number | null;
+  localAveragePlaytime?: number | null;
   localStatusDistribution?: Record<string, number> | null;
   localScoreDistribution?: Record<string, number> | null;
   showCounters?: boolean;
@@ -64,6 +65,7 @@ export function RrMediaStatsDashboard({
   localAverageScore = 0,
   localPopularity = 0,
   localFavoritesCount = 0,
+  localAveragePlaytime,
   localStatusDistribution = {},
   localScoreDistribution = {},
   showCounters = true,
@@ -80,6 +82,7 @@ export function RrMediaStatsDashboard({
 
   const effectiveMaxScore =
     maxScore ?? (mediaType?.toLowerCase() === "game" ? 100 : 10);
+  const isGame = mediaType?.toLowerCase() === "game";
 
   // Helper to translate status distribution names
   const getStatusLabel = (status: string) => {
@@ -166,7 +169,7 @@ export function RrMediaStatsDashboard({
     <motion.div variants={itemVariants} className="space-y-6">
       {/* Counters Grid */}
       {showCounters && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className={`grid grid-cols-1 ${isGame ? "md:grid-cols-3" : "md:grid-cols-2"} gap-4`}>
           {/* Score Card */}
           <div className="bg-card/45 border border-border/30 backdrop-blur-md p-5 rounded-2xl flex flex-col gap-4">
             <div className="flex items-center gap-2 text-muted-foreground text-xs font-semibold uppercase tracking-wider">
@@ -184,6 +187,26 @@ export function RrMediaStatsDashboard({
               </span>
             </div>
           </div>
+
+          {/* Average Playtime Card (for Games) */}
+          {isGame && (
+            <div className="bg-card/45 border border-border/30 backdrop-blur-md p-5 rounded-2xl flex flex-col gap-4">
+              <div className="flex items-center gap-2 text-muted-foreground text-xs font-semibold uppercase tracking-wider">
+                <Clock className="size-4 text-emerald-400 fill-emerald-400/20" />
+                <span>{t("aquila.averagePlaytime", "Average Playtime")}</span>
+              </div>
+              <div className="border-t border-border/20 pt-3 flex flex-col">
+                <span className="text-[10px] text-muted-foreground font-medium">
+                  {t("aquila.calculatedLocally", "Calculated locally from user lists")}
+                </span>
+                <span className="text-2xl font-extrabold text-emerald-400">
+                  {localAveragePlaytime != null && localAveragePlaytime > 0
+                    ? `${localAveragePlaytime.toFixed(1)} hrs`
+                    : t("aquila.notAvailable", "N/A")}
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Favorites / Popularity Card */}
           <div className="bg-card/45 border border-border/30 backdrop-blur-md p-5 rounded-2xl flex flex-col gap-4">

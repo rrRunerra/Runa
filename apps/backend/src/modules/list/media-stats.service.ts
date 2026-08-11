@@ -107,6 +107,8 @@ export class MediaStatsService {
       // 3. Compute score stats and distributions
       let totalScoreSum = 0;
       let scoredCount = 0;
+      let totalPlaytimeSum = 0;
+      let playtimeCount = 0;
       const statusDist: Record<string, number> = {};
       const scoreDist: Record<string, number> = {};
 
@@ -121,21 +123,34 @@ export class MediaStatsService {
           totalScoreSum += entry.score;
           scoredCount += 1;
         }
+        if (type === 'game' && entry.progress && entry.progress > 0) {
+          totalPlaytimeSum += entry.progress;
+          playtimeCount += 1;
+        }
       }
 
       const avgScore = scoredCount > 0 ? parseFloat((totalScoreSum / scoredCount).toFixed(2)) : 0;
+      const avgPlaytime = type === 'game' && playtimeCount > 0 ? parseFloat((totalPlaytimeSum / playtimeCount).toFixed(2)) : null;
+
+      const updateData: any = {
+        popularity,
+        favorites: favoritesCount,
+        averageScore: avgScore,
+        statusDistribution: statusDist,
+        scoreDistribution: scoreDist,
+        totalScoreSum,
+        scoredCount,
+      };
+
+      if (type === 'game') {
+        updateData.averagePlaytime = avgPlaytime;
+        updateData.totalPlaytimeSum = totalPlaytimeSum;
+        updateData.playtimeCount = playtimeCount;
+      }
 
       const updatedMedia = await this.prisma.client[config.model].update({
         where: { id: mediaId },
-        data: {
-          popularity,
-          favorites: favoritesCount,
-          averageScore: avgScore,
-          statusDistribution: statusDist,
-          scoreDistribution: scoreDist,
-          totalScoreSum,
-          scoredCount,
-        },
+        data: updateData,
       });
 
       await this.updateCache(type, media, updatedMedia);
@@ -171,6 +186,8 @@ export class MediaStatsService {
       let popularity = media.popularity ?? 0;
       let totalScoreSum = media.totalScoreSum ?? 0;
       let scoredCount = media.scoredCount ?? 0;
+      let totalPlaytimeSum = media.totalPlaytimeSum ?? 0;
+      let playtimeCount = media.playtimeCount ?? 0;
 
       let statusDist: Record<string, number> = {};
       if (media.statusDistribution && typeof media.statusDistribution === 'object') {
@@ -195,6 +212,10 @@ export class MediaStatsService {
           totalScoreSum = Math.max(0, totalScoreSum - oldEntry.score);
           scoredCount = Math.max(0, scoredCount - 1);
         }
+        if (type === 'game' && oldEntry.progress && oldEntry.progress > 0) {
+          totalPlaytimeSum = Math.max(0, totalPlaytimeSum - oldEntry.progress);
+          playtimeCount = Math.max(0, playtimeCount - 1);
+        }
       }
 
       // Process addition of new stats values
@@ -210,20 +231,33 @@ export class MediaStatsService {
           totalScoreSum += newEntry.score;
           scoredCount += 1;
         }
+        if (type === 'game' && newEntry.progress && newEntry.progress > 0) {
+          totalPlaytimeSum += newEntry.progress;
+          playtimeCount += 1;
+        }
       }
 
       const avgScore = scoredCount > 0 ? parseFloat((totalScoreSum / scoredCount).toFixed(2)) : 0;
+      const avgPlaytime = type === 'game' && playtimeCount > 0 ? parseFloat((totalPlaytimeSum / playtimeCount).toFixed(2)) : null;
+
+      const updateData: any = {
+        popularity,
+        averageScore: avgScore,
+        statusDistribution: statusDist,
+        scoreDistribution: scoreDist,
+        totalScoreSum,
+        scoredCount,
+      };
+
+      if (type === 'game') {
+        updateData.averagePlaytime = avgPlaytime;
+        updateData.totalPlaytimeSum = totalPlaytimeSum;
+        updateData.playtimeCount = playtimeCount;
+      }
 
       const updatedMedia = await this.prisma.client[config.model].update({
         where: { id: mediaId },
-        data: {
-          popularity,
-          averageScore: avgScore,
-          statusDistribution: statusDist,
-          scoreDistribution: scoreDist,
-          totalScoreSum,
-          scoredCount,
-        },
+        data: updateData,
       });
 
       await this.updateCache(type, media, updatedMedia);
@@ -291,6 +325,9 @@ export class MediaStatsService {
           scoreDistribution: newMedia.scoreDistribution,
           totalScoreSum: newMedia.totalScoreSum,
           scoredCount: newMedia.scoredCount,
+          averagePlaytime: newMedia.averagePlaytime,
+          totalPlaytimeSum: newMedia.totalPlaytimeSum,
+          playtimeCount: newMedia.playtimeCount,
         };
         await this.cacheService.set(cacheKey, updated, 60 * 60);
         this.logger.debug(`Cache hot-updated for key: ${cacheKey}`);

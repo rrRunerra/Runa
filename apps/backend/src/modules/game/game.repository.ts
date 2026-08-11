@@ -184,12 +184,21 @@ export class GameRepository {
       hltbExtraStory: record.hltbExtraStory,
       hltbCompletionist: record.hltbCompletionist,
 
+      requirements: record.requirements,
+      languages: record.languages,
+      controllerSupport: record.controllerSupport,
+      achievements: record.achievements,
+
       favorites: record.favorites,
       popularity: record.popularity,
       totalScoreSum: record.totalScoreSum,
       scoredCount: record.scoredCount,
       statusDistribution: (record.statusDistribution as Record<string, number>) || {},
       scoreDistribution: (record.scoreDistribution as Record<string, number>) || {},
+
+      averagePlaytime: record.averagePlaytime,
+      totalPlaytimeSum: record.totalPlaytimeSum,
+      playtimeCount: record.playtimeCount,
 
       sources: record.sources,
 
@@ -276,23 +285,30 @@ export class GameRepository {
     });
   }
 
-  public async upsertV2Record(payload: any): Promise<any> {
+  public async upsertV2Record(payload: any, targetInternalId?: number): Promise<any> {
     const igdbId = payload.igdbId;
     const rawgId = payload.rawgId;
 
-    if (!igdbId && !rawgId) {
+    if (!igdbId && !rawgId && !targetInternalId) {
       throw new rrError(`${this.moduleCode}NOEXTID001`, {
-        message: 'Cannot upsert AquilaGameV2 without external ID (igdbId or rawgId)',
+        message: 'Cannot upsert AquilaGameV2 without external ID or target ID',
       });
     }
 
     let existing: any = null;
-    if (igdbId) {
+    if (targetInternalId) {
+      existing = await this.prisma.client.aquilaGameV2.findUnique({
+        where: { id: targetInternalId },
+        select: { id: true, locked: true },
+      });
+    }
+    if (!existing && igdbId) {
       existing = await this.prisma.client.aquilaGameV2.findUnique({
         where: { igdbId },
         select: { id: true, locked: true },
       });
-    } else if (rawgId) {
+    }
+    if (!existing && rawgId) {
       existing = await this.prisma.client.aquilaGameV2.findUnique({
         where: { rawgId },
         select: { id: true, locked: true },
@@ -309,7 +325,11 @@ export class GameRepository {
       statusEnum = payload.status as GameStatus;
     }
 
-    const whereClause = igdbId ? { igdbId } : { rawgId: rawgId! };
+    const whereClause = existing
+      ? { id: existing.id }
+      : igdbId
+        ? { igdbId }
+        : { rawgId: rawgId! };
 
     const dbRecord = await this.prisma.client.aquilaGameV2.upsert({
       where: whereClause,
@@ -354,7 +374,11 @@ export class GameRepository {
         synonyms: payload.synonyms ?? [],
         trailers: payload.trailers ?? null,
 
-        averageScore: null,
+        requirements: payload.requirements ?? null,
+        languages: payload.languages ?? [],
+        controllerSupport: payload.controllerSupport ?? null,
+        achievements: payload.achievements ?? null,
+
         metacriticScore: payload.metacriticScore ?? null,
         metacriticUserScore: payload.metacriticUserScore ?? null,
         rawgRating: payload.rawgRating ?? null,
@@ -420,6 +444,11 @@ export class GameRepository {
         isAdult: payload.isAdult ?? false,
         synonyms: payload.synonyms ?? [],
         trailers: payload.trailers ?? null,
+
+        requirements: payload.requirements ?? null,
+        languages: payload.languages ?? [],
+        controllerSupport: payload.controllerSupport ?? null,
+        achievements: payload.achievements ?? null,
 
         metacriticScore: payload.metacriticScore ?? null,
         metacriticUserScore: payload.metacriticUserScore ?? null,

@@ -13,6 +13,10 @@ import {
   ImageIcon,
   Gamepad2,
   Clock,
+  Languages,
+  Trophy,
+  Monitor,
+  EyeOff,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
@@ -77,18 +81,107 @@ const itemVariants = {
   },
 };
 
-const formatCompactNumber = (num: number | null | undefined): string => {
-  if (num == null || isNaN(num)) return "0";
-  if (num >= 1_000_000_000) {
-    return (num / 1_000_000_000).toFixed(1).replace(/\.0$/, "") + "b";
-  }
-  if (num >= 1_000_000) {
-    return (num / 1_000_000).toFixed(1).replace(/\.0$/, "") + "m";
-  }
-  if (num >= 1_000) {
-    return (num / 1_000).toFixed(1).replace(/\.0$/, "") + "k";
-  }
-  return num.toString();
+const hasReqs = (reqObj: any) => {
+  if (!reqObj) return false;
+  const minOk = typeof reqObj.minimum === "string" ? reqObj.minimum.trim().length > 0 : !!reqObj.minimum;
+  const recOk = typeof reqObj.recommended === "string" ? reqObj.recommended.trim().length > 0 : !!reqObj.recommended;
+  return minOk || recOk;
+};
+
+const SystemRequirementsSection = ({ requirements }: { requirements: any }) => {
+  if (!requirements) return null;
+
+  const hasPc = hasReqs(requirements.pc);
+  const hasMac = hasReqs(requirements.mac);
+  const hasLinux = hasReqs(requirements.linux);
+
+  if (!hasPc && !hasMac && !hasLinux) return null;
+
+  const defaultPlatform = hasPc ? "pc" : hasMac ? "mac" : "linux";
+  const [platform, setPlatform] = useState<"pc" | "mac" | "linux">(defaultPlatform);
+
+  const currentReq = requirements[platform];
+  const currentHasReqs = hasReqs(currentReq);
+  const hasBoth = currentReq && !!currentReq.minimum && !!currentReq.recommended;
+
+  return (
+    <div className="bg-card/45 border border-border/30 backdrop-blur-md p-5 rounded-2xl space-y-4 flex flex-col h-full w-full">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm font-bold text-foreground">
+          <Monitor className="size-4 text-primary" />
+          <span>System Requirements</span>
+        </div>
+        <div className="flex gap-1">
+          {hasPc && (
+            <Button
+              variant={platform === "pc" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setPlatform("pc")}
+              className="text-xs h-7 px-2.5 rounded-lg cursor-pointer"
+            >
+              Windows
+            </Button>
+          )}
+          {hasMac && (
+            <Button
+              variant={platform === "mac" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setPlatform("mac")}
+              className="text-xs h-7 px-2.5 rounded-lg cursor-pointer"
+            >
+              macOS
+            </Button>
+          )}
+          {hasLinux && (
+            <Button
+              variant={platform === "linux" ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setPlatform("linux")}
+              className="text-xs h-7 px-2.5 rounded-lg cursor-pointer"
+            >
+              Linux
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {!currentHasReqs ? (
+        <div className="p-6 text-center text-muted-foreground text-xs bg-card/60 rounded-xl border border-border/30">
+          No system requirements listed for {platform === "pc" ? "Windows" : platform === "mac" ? "macOS" : "Linux"}.
+        </div>
+      ) : (
+        <div
+          className={cn(
+            "gap-4 text-xs w-full flex-1",
+            hasBoth ? "grid grid-cols-1 md:grid-cols-2" : "flex flex-col",
+          )}
+        >
+          {currentReq?.minimum && (
+            <div className="bg-card/60 border border-border/30 p-4 rounded-xl space-y-2 w-full flex-1">
+              <span className="font-bold text-primary uppercase text-[10px] tracking-wider block">
+                Minimum Requirements
+              </span>
+              <div
+                className="text-muted-foreground leading-relaxed whitespace-pre-line text-xs [&>ul]:list-disc [&>ul]:pl-4 [&>strong]:text-foreground [&>strong]:font-semibold"
+                dangerouslySetInnerHTML={{ __html: currentReq.minimum }}
+              />
+            </div>
+          )}
+          {currentReq?.recommended && (
+            <div className="bg-card/60 border border-border/30 p-4 rounded-xl space-y-2 w-full flex-1">
+              <span className="font-bold text-emerald-400 uppercase text-[10px] tracking-wider block">
+                Recommended Requirements
+              </span>
+              <div
+                className="text-muted-foreground leading-relaxed whitespace-pre-line text-xs [&>ul]:list-disc [&>ul]:pl-4 [&>strong]:text-foreground [&>strong]:font-semibold"
+                dangerouslySetInnerHTML={{ __html: currentReq.recommended }}
+              />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default function GameDetailsPage(): React.JSX.Element {
@@ -123,27 +216,19 @@ export default function GameDetailsPage(): React.JSX.Element {
 
   const hasListEntry = !!listEntry;
 
-  const getHighResRawgUrl = (url: string | null | undefined): string => {
-    if (!url) return "";
-    return url.replace(/\/media\/crop\/\d+\/\d+\//, "/media/");
-  };
-
   // ─── Display Titles & Images ─────────────────────────────────────────────
 
   const displayTitle =
     game?.titlePrimary || game?.titleSecondary || t("aquila.gameDetails");
 
-  const coverUrl = getHighResRawgUrl(
-    game?.coverImage || game?.images?.cover || "",
-  );
+  const coverUrl = game?.coverImage || game?.images?.cover || "";
 
-  const bannerUrl = getHighResRawgUrl(
+  const bannerUrl =
     game?.bannerImage ||
-      game?.backgroundImage ||
-      game?.images?.banner ||
-      game?.images?.screenshots?.[0] ||
-      "",
-  );
+    game?.backgroundImage ||
+    game?.images?.banner ||
+    game?.images?.screenshots?.[0] ||
+    "";
 
   // ─── External Sources & Providers ───────────────────────────────────────
 
@@ -493,7 +578,7 @@ export default function GameDetailsPage(): React.JSX.Element {
             <div className="bg-card/65 border border-border/40 backdrop-blur-xl rounded-2xl p-5 space-y-4">
               {/* Top Key Stats Block */}
               <div className="space-y-2.5">
-                {/* Average Score Card (Full Width) */}
+                {/* Average Score Card */}
                 <div className="flex items-center gap-3 p-3.5 rounded-xl bg-primary/10 border border-primary/20 transition-all shadow-xs">
                   <div className="p-2.5 rounded-xl bg-primary/20 text-primary shrink-0">
                     <Star className="size-5 fill-primary/40" />
@@ -515,9 +600,8 @@ export default function GameDetailsPage(): React.JSX.Element {
                   </div>
                 </div>
 
-                {/* Favorites & Popularity (2 Columns) */}
+                {/* Favorites & Popularity */}
                 <div className="grid grid-cols-2 gap-2.5">
-                  {/* Favorites */}
                   <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20 transition-colors min-w-0">
                     <div className="p-2 rounded-lg bg-rose-500/20 text-rose-500 shrink-0">
                       <Heart className="size-4 fill-rose-500/40" />
@@ -526,22 +610,12 @@ export default function GameDetailsPage(): React.JSX.Element {
                       <span className="text-[10px] font-bold text-rose-500/90 uppercase tracking-wider truncate">
                         {t("aquila.favorites")}
                       </span>
-                      <span
-                        className="text-base font-extrabold text-foreground tracking-tight leading-none mt-0.5"
-                        title={(
-                          game.localFavoritesCount ??
-                          game.favorites ??
-                          0
-                        ).toLocaleString()}
-                      >
-                        {formatCompactNumber(
-                          game.localFavoritesCount ?? game.favorites,
-                        )}
+                      <span className="text-base font-extrabold text-foreground tracking-tight leading-none mt-0.5">
+                        {game.localFavoritesCount ?? game.favorites ?? 0}
                       </span>
                     </div>
                   </div>
 
-                  {/* Popularity */}
                   <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-blue-500/10 border border-blue-500/20 transition-colors min-w-0">
                     <div className="p-2 rounded-lg bg-blue-500/20 text-blue-500 shrink-0">
                       <Users className="size-4 fill-blue-500/40" />
@@ -550,24 +624,15 @@ export default function GameDetailsPage(): React.JSX.Element {
                       <span className="text-[10px] font-bold text-blue-500/90 uppercase tracking-wider truncate">
                         {t("aquila.popularity")}
                       </span>
-                      <span
-                        className="text-base font-extrabold text-foreground tracking-tight leading-none mt-0.5"
-                        title={(
-                          game.localPopularity ??
-                          game.popularity ??
-                          0
-                        ).toLocaleString()}
-                      >
-                        {formatCompactNumber(
-                          game.localPopularity ?? game.popularity,
-                        )}
+                      <span className="text-base font-extrabold text-foreground tracking-tight leading-none mt-0.5">
+                        {game.localPopularity ?? game.popularity ?? 0}
                       </span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Show More / Show Less Toggle Button (Mobile/Tablet only) */}
+              {/* Show More / Show Less Toggle Button */}
               <Button
                 variant="ghost"
                 size="sm"
@@ -584,7 +649,7 @@ export default function GameDetailsPage(): React.JSX.Element {
                 )}
               </Button>
 
-              {/* Information Details (Collapsible on mobile, always shown on desktop) */}
+              {/* Information Details */}
               <div
                 className={cn(
                   "space-y-4 pt-2 border-t border-border/40",
@@ -603,6 +668,17 @@ export default function GameDetailsPage(): React.JSX.Element {
                     <RrMediaInfoRow
                       label="Metacritic"
                       value={`${game.metacriticScore} / 100`}
+                    />
+                  )}
+                  {game.controllerSupport && (
+                    <RrMediaInfoRow
+                      label="Controller"
+                      value={
+                        <Badge variant="outline" className="text-[10px]">
+                          <Gamepad2 className="size-3 mr-1 text-primary inline" />
+                          {game.controllerSupport}
+                        </Badge>
+                      }
                     />
                   )}
                   {developersAndPublishers.length > 0 && (
@@ -648,6 +724,39 @@ export default function GameDetailsPage(): React.JSX.Element {
                           </Badge>
                         ))}
                       </div>
+                    </div>
+                  )}
+
+                  {game.languages && game.languages.length > 0 && (
+                    <div className="flex flex-col gap-1 text-sm pt-1 border-t border-border/20">
+                      <span className="text-muted-foreground text-xs font-medium flex items-center gap-1">
+                        <Languages className="size-3 text-muted-foreground" />
+                        Supported Languages
+                      </span>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {game.languages.slice(0, 8).map((lang, idx) => (
+                          <Badge key={idx} variant="outline" className="text-[10px]">
+                            {lang}
+                          </Badge>
+                        ))}
+                        {game.languages.length > 8 && (
+                          <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                            +{game.languages.length - 8} more
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {game.achievements && (game.achievements.total ?? 0) > 0 && (
+                    <div className="pt-2 border-t border-border/30 flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground flex items-center gap-1.5 font-medium">
+                        <Trophy className="size-3.5 text-amber-400" />
+                        Achievements
+                      </span>
+                      <Badge variant="secondary" className="text-[10px]">
+                        {game.achievements.total} Total
+                      </Badge>
                     </div>
                   )}
 
@@ -760,6 +869,15 @@ export default function GameDetailsPage(): React.JSX.Element {
                   <BarChart3 className="size-3.5 mr-1.5" />
                   {t("aquila.stats")}
                 </TabsTrigger>
+                {game.achievements && (
+                  <TabsTrigger
+                    value="achievements"
+                    className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                  >
+                    <Trophy className="size-3.5 mr-1.5" />
+                    Achievements
+                  </TabsTrigger>
+                )}
                 <TabsTrigger
                   value="reviews"
                   className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
@@ -798,14 +916,25 @@ export default function GameDetailsPage(): React.JSX.Element {
                 {/* Similar Series Carousel */}
                 <RrMediaSimilar mediaType="game" mediaId={id} />
 
-                {/* Trailer & Friends Progress */}
+                {/* Trailer & System Requirements Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
                   <RrMediaTrailer trailer={trailerObj} />
+                  {game.requirements ? (
+                    <SystemRequirementsSection requirements={game.requirements} />
+                  ) : (
+                    <RrMediaFriendsProgress
+                      mediaId={game.id.toString()}
+                      mediaType="game"
+                    />
+                  )}
+                </div>
+
+                {game.requirements && (
                   <RrMediaFriendsProgress
                     mediaId={game.id.toString()}
                     mediaType="game"
                   />
-                </div>
+                )}
               </TabsContent>
 
               {/* Characters Tab Content */}
@@ -850,6 +979,9 @@ export default function GameDetailsPage(): React.JSX.Element {
                   localAverageScore={
                     game.localAverageScore ?? game.averageScore
                   }
+                  localAveragePlaytime={
+                    game.localAveragePlaytime ?? game.averagePlaytime
+                  }
                   maxScore={100}
                   mediaType="game"
                   localPopularity={game.localPopularity ?? game.popularity}
@@ -865,6 +997,77 @@ export default function GameDetailsPage(): React.JSX.Element {
                   showCounters={true}
                 />
               </TabsContent>
+
+              {/* Achievements Tab Content */}
+              {game.achievements && (
+                <TabsContent value="achievements" className="space-y-6 outline-none">
+                  <div className="bg-card/45 border border-border/30 backdrop-blur-md p-6 rounded-2xl space-y-6">
+                    <div className="flex items-center justify-between border-b border-border/30 pb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400">
+                          <Trophy className="size-6" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold text-foreground">Steam Achievements</h3>
+                          <p className="text-xs text-muted-foreground">
+                            Total {game.achievements.total ?? 0} achievements available
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant="outline" className="text-xs font-bold px-3 py-1 border-amber-500/30 text-amber-400 bg-amber-500/10">
+                        {game.achievements.total ?? 0} Achievements
+                      </Badge>
+                    </div>
+
+                    {game.achievements.highlighted && game.achievements.highlighted.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                        {game.achievements.highlighted.map((ach: any, idx: number) => (
+                          <div
+                            key={idx}
+                            className="flex items-start gap-3 p-3.5 rounded-xl bg-card/60 border border-border/30 hover:border-border/60 transition-all"
+                          >
+                            {ach.path ? (
+                              <div className="relative size-12 rounded-lg overflow-hidden shrink-0 bg-black/40 border border-border/40 mt-0.5">
+                                <Image
+                                  src={ach.path}
+                                  alt={ach.name || "Achievement"}
+                                  fill
+                                  sizes="48px"
+                                  className="object-cover"
+                                />
+                              </div>
+                            ) : (
+                              <div className="size-12 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 text-amber-400 mt-0.5">
+                                <Trophy className="size-6" />
+                              </div>
+                            )}
+                            <div className="flex flex-col min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-1">
+                                <span className="text-xs font-bold text-foreground" title={ach.name}>
+                                  {ach.name}
+                                </span>
+                                {ach.hidden && (
+                                  <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-purple-500/40 text-purple-400 bg-purple-500/10 shrink-0">
+                                    <EyeOff className="size-2.5 mr-0.5" />
+                                    Hidden
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-xs text-muted-foreground leading-relaxed mt-1 whitespace-normal break-words">
+                                {ach.description || (ach.hidden ? "Secret achievement" : "")}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-8 text-center text-muted-foreground">
+                        No detailed achievement list preview available for this game.
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+              )}
 
               {/* Reviews Tab Content */}
               <TabsContent value="reviews" className="space-y-6 outline-none">

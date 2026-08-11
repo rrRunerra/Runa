@@ -204,11 +204,21 @@ export class GameExternal {
         }
       }
 
-      const coverImage = this.igdbService.formatImageUrl(game.cover?.url, 't_cover_big');
-      const bannerImage = this.igdbService.formatImageUrl(game.artworks?.[0]?.url || game.screenshots?.[0]?.url, 't_1080p') || coverImage;
+      const coverImage =
+        this.igdbService.formatImageUrl(game.cover?.url, 't_1080p') ||
+        this.igdbService.formatImageUrl(game.cover?.url, 't_cover_big');
+      const bannerImage =
+        this.igdbService.formatImageUrl(
+          game.artworks?.[0]?.url || game.screenshots?.[0]?.url,
+          't_1080p',
+        ) || coverImage;
 
-      const screenshots = (game.screenshots || []).map((s) => this.igdbService.formatImageUrl(s.url, 't_1080p')).filter(Boolean);
-      const artworks = (game.artworks || []).map((a) => this.igdbService.formatImageUrl(a.url, 't_1080p')).filter(Boolean);
+      const screenshots = (game.screenshots || [])
+        .map((s) => this.igdbService.formatImageUrl(s.url, 't_1080p'))
+        .filter((u): u is string => Boolean(u));
+      const artworks = (game.artworks || [])
+        .map((a) => this.igdbService.formatImageUrl(a.url, 't_1080p'))
+        .filter((u): u is string => Boolean(u));
 
       const images = {
         cover: coverImage,
@@ -217,13 +227,93 @@ export class GameExternal {
         artworks,
       };
 
-      const igdbRating = game.rating ? Math.round(game.rating * 10) / 10 : game.total_rating ? Math.round(game.total_rating * 10) / 10 : null;
+      const igdbRating = game.rating
+        ? Math.round(game.rating * 10) / 10
+        : game.total_rating
+          ? Math.round(game.total_rating * 10) / 10
+          : null;
       const igdbRatingCount = game.rating_count || game.total_rating_count || null;
 
       let websiteUrl: string | null = null;
+      let steamAppId: number | null = null;
+
       if (game.websites && Array.isArray(game.websites)) {
         const official = game.websites.find((w) => w.category === 1);
         websiteUrl = official?.url || game.websites[0]?.url || null;
+
+        const steamWeb = game.websites.find(
+          (w) => w.category === 13 || (w.url && w.url.includes('steampowered.com/app/')),
+        );
+        if (steamWeb?.url) {
+          const match = steamWeb.url.match(/\/app\/(\d+)/);
+          if (match?.[1]) {
+            steamAppId = parseInt(match[1], 10);
+          }
+        }
+      }
+
+      // Languages from IGDB
+      const igdbLanguages = (game.language_supports || [])
+        .map((ls) => ls.language?.name)
+        .filter((name): name is string => Boolean(name));
+
+      let requirements: any = null;
+      let languages: string[] = Array.from(new Set(igdbLanguages));
+      let controllerSupport: string | null = null;
+      let achievements: any = null;
+
+      // Fetch Steam details if steamAppId is present
+      if (steamAppId) {
+        try {
+          const steamDetails: any = await this.steamService.fetchAppDetails(steamAppId);
+          if (steamDetails) {
+            if (steamDetails.pc_requirements || steamDetails.mac_requirements || steamDetails.linux_requirements) {
+              requirements = {
+                pc: steamDetails.pc_requirements || null,
+                mac: steamDetails.mac_requirements || null,
+                linux: steamDetails.linux_requirements || null,
+              };
+            }
+
+            if (steamDetails.supported_languages) {
+              const cleanedLangs = String(steamDetails.supported_languages)
+                .replace(/<[^>]*>/g, '')
+                .replace(/\*/g, '')
+                .split(',')
+                .map((l) => l.trim())
+                .filter(Boolean);
+              languages = Array.from(new Set([...languages, ...cleanedLangs]));
+            }
+
+            if (steamDetails.controller_support) {
+              const cs = String(steamDetails.controller_support).toLowerCase();
+              controllerSupport = cs === 'full' ? 'Full Controller Support' : cs === 'partial' ? 'Partial Controller Support' : cs;
+            }
+
+            let allAchievements = await this.steamService.fetchAllAchievements(steamAppId);
+            const parentAppId = steamDetails.fullgame?.appid ? Number(steamDetails.fullgame.appid) : null;
+            if (allAchievements.length === 0 && parentAppId && !isNaN(parentAppId)) {
+              this.logger.debug(
+                `DLC App ID ${steamAppId} returned 0 achievements, trying parent game App ID ${parentAppId}...`,
+              );
+              allAchievements = await this.steamService.fetchAllAchievements(parentAppId);
+            }
+
+            if (allAchievements.length > 0) {
+              achievements = {
+                total: allAchievements.length,
+                highlighted: allAchievements,
+              };
+            } else if (steamDetails.achievements) {
+              achievements = {
+                total: steamDetails.achievements.total || 0,
+                highlighted: steamDetails.achievements.highlighted || [],
+              };
+            }
+          }
+        } catch (err: any) {
+          this.logger.warn(`Failed to fetch Steam details for steamAppId ${steamAppId}: ${err?.message || err}`);
+        }
       }
 
       let characters: any[] = [];
@@ -255,6 +345,10 @@ export class GameExternal {
         'trailers',
         'studios',
         'staff',
+        'requirements',
+        'languages',
+        'controllerSupport',
+        'achievements',
       ];
 
       const sources = [
@@ -269,6 +363,7 @@ export class GameExternal {
 
       return {
         igdbId: game.id,
+        steamAppId,
         titlePrimary: game.name,
         titleSecondary: null,
         titleNative: null,
@@ -304,6 +399,11 @@ export class GameExternal {
         synonyms: [],
         trailers: trailers.length > 0 ? trailers : null,
 
+        requirements,
+        languages,
+        controllerSupport,
+        achievements,
+
         averageScore: null,
         metacriticScore: null,
         metacriticUserScore: null,
@@ -334,12 +434,92 @@ export class GameExternal {
   }
 
   public async fetchAndUpsertGame(
-    igdbId: number,
+    igdbIdOrExtId: number,
     force = false,
   ): Promise<void> {
+    await this.resolveAndUpsertGame({ id: igdbIdOrExtId }, force);
+  }
+
+  public async resolveAndUpsertGame(
+    target: {
+      id?: number;
+      igdbId?: number | null;
+      steamAppId?: number | null;
+      giantbombId?: string | null;
+      titlePrimary?: string | null;
+      slug?: string | null;
+      rawgId?: number | null;
+    },
+    force = false,
+  ): Promise<void> {
+    let igdbId: number | null = target.igdbId ?? null;
+    let targetInternalId: number | undefined = target.id;
+
+    const existing = await this.prisma.client.aquilaGameV2.findFirst({
+      where: {
+        OR: [
+          ...(target.id ? [{ id: target.id }] : []),
+          ...(target.igdbId ? [{ igdbId: target.igdbId }] : []),
+          ...(target.rawgId ? [{ rawgId: target.rawgId }] : []),
+        ],
+      },
+      select: {
+        id: true,
+        igdbId: true,
+        steamAppId: true,
+        giantbombId: true,
+        titlePrimary: true,
+        slug: true,
+        rawgId: true,
+      },
+    });
+
+    if (existing) {
+      targetInternalId = existing.id;
+      if (existing.igdbId) {
+        igdbId = existing.igdbId;
+      }
+    }
+
+    if (!igdbId) {
+      const steamAppId = target.steamAppId ?? existing?.steamAppId;
+      const giantbombId = target.giantbombId ?? existing?.giantbombId;
+      const titlePrimary = target.titlePrimary ?? existing?.titlePrimary;
+      const slug = target.slug ?? existing?.slug;
+
+      if (steamAppId) {
+        this.logger.debug(`Resolving IGDB ID via Steam App ID mapping: ${steamAppId}`);
+        igdbId = await this.igdbService.findIgdbIdByExternalId(steamAppId, 1);
+      }
+      if (!igdbId && giantbombId) {
+        this.logger.debug(`Resolving IGDB ID via GiantBomb ID mapping: ${giantbombId}`);
+        igdbId = await this.igdbService.findIgdbIdByExternalId(giantbombId, 14);
+      }
+      if (!igdbId && titlePrimary) {
+        this.logger.debug(`Resolving IGDB ID via title/slug: "${titlePrimary}" (slug: ${slug ?? 'none'})`);
+        igdbId = await this.igdbService.findIgdbIdByTitleOrSlug(
+          titlePrimary,
+          slug ?? undefined,
+        );
+      }
+    }
+
+    if (!igdbId && target.id) {
+      igdbId = target.id;
+    }
+
+    if (!igdbId) {
+      this.logger.warn(`Could not resolve IGDB ID for game target: ${JSON.stringify(target)}`);
+      return;
+    }
+
+    this.logger.debug(`Fetching full V2 game record for IGDB ID ${igdbId} (target internal ID: ${targetInternalId ?? 'new'})`);
     const fullRecord = await this.fetchFullV2Record(igdbId);
     if (fullRecord) {
-      await this.gameRepository.upsertV2Record(fullRecord);
+      if (existing?.rawgId) {
+        fullRecord.rawgId = existing.rawgId;
+      }
+      await this.gameRepository.upsertV2Record(fullRecord, targetInternalId);
     }
   }
 }

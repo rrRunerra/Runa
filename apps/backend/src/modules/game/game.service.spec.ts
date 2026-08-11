@@ -33,6 +33,7 @@ describe('GameService', () => {
   const mockGameExternal = {
     search: jest.fn(),
     fetchAndUpsertGame: jest.fn(),
+    resolveAndUpsertGame: jest.fn(),
   };
 
   beforeEach(async () => {

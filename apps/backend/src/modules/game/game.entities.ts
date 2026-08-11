@@ -73,12 +73,21 @@ export interface GameEntity {
   hltbExtraStory?: number | null;
   hltbCompletionist?: number | null;
 
+  requirements?: any;
+  languages?: string[];
+  controllerSupport?: string | null;
+  achievements?: any;
+
   favorites: number;
   popularity: number;
   totalScoreSum?: number | null;
   scoredCount?: number | null;
   statusDistribution?: any;
   scoreDistribution?: any;
+
+  averagePlaytime?: number | null;
+  totalPlaytimeSum?: number | null;
+  playtimeCount?: number | null;
 
   sources?: any;
 
