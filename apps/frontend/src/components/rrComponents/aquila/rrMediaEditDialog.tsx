@@ -493,17 +493,74 @@ export function RrMediaEditDialog({
     }
   };
 
+  const isMangaBookFullyRead = (newChapters?: string, newVolumes?: string): boolean => {
+    if (mediaType !== "manga" && mediaType !== "book") return false;
+
+    const currentCh = Number(newChapters ?? progress);
+    const currentVol = Number(newVolumes ?? volumes);
+
+    let chDone = true;
+    if (totalChapters && totalChapters > 0) {
+      chDone = !isNaN(currentCh) && currentCh >= totalChapters;
+    }
+
+    let volDone = true;
+    if (totalVolumes && totalVolumes > 0) {
+      volDone = !isNaN(currentVol) && currentVol >= totalVolumes;
+    }
+
+    if ((!totalChapters || totalChapters <= 0) && (!totalVolumes || totalVolumes <= 0)) {
+      return false;
+    }
+
+    return chDone && volDone;
+  };
+
   const handleProgressChange = (val: string): void => {
-    setProgress(val);
-    const num = Number(val);
-    if (isNaN(num)) return;
+    let num = Number(val);
+    if (isNaN(num)) {
+      setProgress(val);
+      return;
+    }
 
     let maxVal: number | undefined = undefined;
     if (mediaType === "anime") maxVal = totalEpisodes;
     else if (mediaType === "manga" || mediaType === "book")
       maxVal = totalChapters;
 
-    if (maxVal && num >= maxVal) {
+    if (maxVal && maxVal > 0 && num > maxVal) {
+      num = maxVal;
+      val = maxVal.toString();
+    }
+
+    setProgress(val);
+
+    if (mediaType === "manga" || mediaType === "book") {
+      if (isMangaBookFullyRead(val, volumes)) {
+        setListStatus("COMPLETED");
+        triggerAutoCompleteDates("COMPLETED");
+      }
+    } else if (maxVal && maxVal > 0 && num >= maxVal) {
+      setListStatus("COMPLETED");
+      triggerAutoCompleteDates("COMPLETED");
+    }
+  };
+
+  const handleVolumesChange = (val: string): void => {
+    let num = Number(val);
+    if (isNaN(num)) {
+      setVolumes(val);
+      return;
+    }
+
+    let maxVal: number | undefined = totalVolumes;
+    if (maxVal && maxVal > 0 && num > maxVal) {
+      val = maxVal.toString();
+    }
+
+    setVolumes(val);
+
+    if ((mediaType === "manga" || mediaType === "book") && isMangaBookFullyRead(progress, val)) {
       setListStatus("COMPLETED");
       triggerAutoCompleteDates("COMPLETED");
     }
@@ -692,6 +749,44 @@ export function RrMediaEditDialog({
     if (!session?.accessToken) {
       toast.error(t("aquila.loginToSave"));
       return;
+    }
+
+    if (listStatus === "COMPLETED" || listStatus === "FINISHED") {
+      if (
+        !score ||
+        score.trim() === "" ||
+        Number(score) === 0 ||
+        isNaN(Number(score))
+      ) {
+        const msg = t(
+          "aquila.scoreRequiredForCompleted",
+          "A score is required when marking status as Completed or Finished.",
+        );
+        setSaveError(msg);
+        toast.error(msg);
+        return;
+      }
+
+      if (mediaType === "manga" || mediaType === "book") {
+        let chMatch = true;
+        if (totalChapters && totalChapters > 0) {
+          chMatch = Boolean(progress && Number(progress) >= totalChapters);
+        }
+        let volMatch = true;
+        if (totalVolumes && totalVolumes > 0) {
+          volMatch = Boolean(volumes && Number(volumes) >= totalVolumes);
+        }
+
+        if (!chMatch || !volMatch) {
+          const msg = t(
+            "aquila.chaptersAndVolumesMustMatchCompleted",
+            "Both chapter and volume counts must match total count to set status to Completed.",
+          );
+          setSaveError(msg);
+          toast.error(msg);
+          return;
+        }
+      }
     }
 
     setIsSubmitting(true);
@@ -919,12 +1014,13 @@ export function RrMediaEditDialog({
           if (val === "COMPLETED") {
             if (mediaType === "anime" && totalEpisodes && !progress) {
               setProgress(totalEpisodes.toString());
-            } else if (
-              (mediaType === "manga" || mediaType === "book") &&
-              totalChapters &&
-              !progress
-            ) {
-              setProgress(totalChapters.toString());
+            } else if (mediaType === "manga" || mediaType === "book") {
+              if (totalChapters && (!progress || Number(progress) < totalChapters)) {
+                setProgress(totalChapters.toString());
+              }
+              if (totalVolumes && (!volumes || Number(volumes) < totalVolumes)) {
+                setVolumes(totalVolumes.toString());
+              }
             }
           }
         }}
@@ -935,7 +1031,7 @@ export function RrMediaEditDialog({
         progress={progress}
         onProgressChange={handleProgressChange}
         volumes={volumes}
-        onVolumesChange={setVolumes}
+        onVolumesChange={handleVolumesChange}
         startDate={startDate}
         onStartDateChange={setStartDate}
         finishDate={finishDate}

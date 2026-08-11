@@ -214,39 +214,64 @@ export function RrMediaEditGeneralFields({
           </div>
 
           {/* Score */}
-          <div className="sm:col-span-2 flex flex-col gap-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 px-0.5">
-              <Star className="size-3.5 text-primary" />
-              {t("aquila.score")}
-              <span className="text-[10px] text-muted-foreground/60 font-normal lowercase">
-                (0 - {scoreMax})
-              </span>
-            </Label>
-            <div className="flex bg-background/80 border border-border/70 rounded-xl overflow-hidden focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/20 transition-all h-10 shadow-2xs">
-              <Input
-                type="number"
-                min="0"
-                max={scoreMax}
-                step="0.1"
-                value={score}
-                onChange={(e) => onScoreChange(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "ArrowUp" || e.key === "ArrowDown") {
-                    e.preventDefault();
-                    const step = e.ctrlKey || e.metaKey ? 1 : 0.1;
-                    const current = parseFloat(score) || 0;
-                    const next =
-                      e.key === "ArrowUp"
-                        ? Math.min(scoreMax, parseFloat((current + step).toFixed(2)))
-                        : Math.max(0, parseFloat((current - step).toFixed(2)));
-                    onScoreChange(next.toString());
-                  }
-                }}
-                placeholder={`0 - ${scoreMax}`}
-                className="border-0 bg-transparent text-foreground focus-visible:ring-0 h-full w-full px-3 text-xs font-semibold placeholder:font-normal"
-              />
-            </div>
-          </div>
+          {(() => {
+            const isScoreMissing =
+              (listStatus === "COMPLETED" || listStatus === "FINISHED") &&
+              (!score || score.trim() === "" || Number(score) === 0 || isNaN(Number(score)));
+
+            return (
+              <div className="sm:col-span-2 flex flex-col gap-1.5">
+                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 px-0.5">
+                  <Star className={cn("size-3.5", isScoreMissing ? "text-destructive" : "text-primary")} />
+                  {t("aquila.score")}
+                  <span className="text-[10px] text-muted-foreground/60 font-normal lowercase">
+                    (0 - {scoreMax})
+                  </span>
+                  {isScoreMissing && (
+                    <span className="text-[10px] text-destructive font-bold lowercase ml-auto">
+                      *{t("aquila.required", "Required")}
+                    </span>
+                  )}
+                </Label>
+                <div
+                  className={cn(
+                    "flex bg-background/80 border rounded-xl overflow-hidden transition-all h-10 shadow-2xs",
+                    isScoreMissing
+                      ? "border-destructive/80 focus-within:border-destructive focus-within:ring-2 focus-within:ring-destructive/20"
+                      : "border-border/70 focus-within:border-primary/60 focus-within:ring-2 focus-within:ring-primary/20",
+                  )}
+                >
+                  <Input
+                    type="number"
+                    min="0"
+                    max={scoreMax}
+                    step="0.1"
+                    value={score}
+                    onChange={(e) => onScoreChange(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+                        e.preventDefault();
+                        const step = e.ctrlKey || e.metaKey ? 1 : 0.1;
+                        const current = parseFloat(score) || 0;
+                        const next =
+                          e.key === "ArrowUp"
+                            ? Math.min(scoreMax, parseFloat((current + step).toFixed(2)))
+                            : Math.max(0, parseFloat((current - step).toFixed(2)));
+                        onScoreChange(next.toString());
+                      }
+                    }}
+                    placeholder={`0 - ${scoreMax}`}
+                    className="border-0 bg-transparent text-foreground focus-visible:ring-0 h-full w-full px-3 text-xs font-semibold placeholder:font-normal"
+                  />
+                </div>
+                {isScoreMissing && (
+                  <span className="text-[10px] text-destructive font-semibold px-0.5 animate-in fade-in slide-in-from-top-1">
+                    {t("aquila.scoreRequiredForCompleted", "A score is required when marking status as Completed/Finished.")}
+                  </span>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Rewatches (Anime/Manga/TV/Movie/Book - Not Games) */}
           {mediaType !== "game" && (

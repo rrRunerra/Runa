@@ -545,6 +545,23 @@ export class ListService {
 
       const animeId = Number(body.animeId);
 
+      const anime = await this.prisma.client.aquilaAnimeV2.findUnique({
+        where: { id: animeId },
+        select: { episodeCount: true },
+      });
+
+      if (
+        anime?.episodeCount != null &&
+        anime.episodeCount > 0 &&
+        body.progress !== undefined &&
+        body.progress !== null &&
+        body.progress > anime.episodeCount
+      ) {
+        throw new BadRequestException(
+          `Progress count (${body.progress}) cannot exceed total episode count (${anime.episodeCount}).`,
+        );
+      }
+
       const oldEntry = await this.prisma.client.aquilaAnimeUserListV2.findUnique({
         where: {
           username_animeId: {
@@ -557,6 +574,19 @@ export class ListService {
       const status = body.status
         ? toPrismaStatus(body.status)
         : (oldEntry?.status ?? 'PLANNING');
+
+      const effectiveScore = body.score !== undefined ? body.score : oldEntry?.score;
+      if (
+        (status === 'COMPLETED' || status === 'FINISHED') &&
+        (effectiveScore === null ||
+          effectiveScore === undefined ||
+          effectiveScore === 0 ||
+          Number.isNaN(effectiveScore))
+      ) {
+        throw new BadRequestException(
+          'Score is required when marking an entry as Completed/Finished.',
+        );
+      }
 
       await this.prisma.client.aquilaAnimeUserListV2.upsert({
         where: {
@@ -620,7 +650,7 @@ export class ListService {
       this.logger.error(error);
       return {
         success: false,
-        message: 'Failed to update anime list',
+        message: error instanceof BadRequestException ? error.message : 'Failed to update anime list',
         error,
       };
     }
@@ -849,6 +879,35 @@ export class ListService {
 
       const mangaId = Number(body.mangaId);
 
+      const manga = await this.prisma.client.aquilaMangaV2.findUnique({
+        where: { id: mangaId },
+        select: { chapterCount: true, volumeCount: true },
+      });
+
+      if (
+        manga?.chapterCount != null &&
+        manga.chapterCount > 0 &&
+        body.chapters !== undefined &&
+        body.chapters !== null &&
+        body.chapters > manga.chapterCount
+      ) {
+        throw new BadRequestException(
+          `Chapter progress (${body.chapters}) cannot exceed total chapter count (${manga.chapterCount}).`,
+        );
+      }
+
+      if (
+        manga?.volumeCount != null &&
+        manga.volumeCount > 0 &&
+        body.volumes !== undefined &&
+        body.volumes !== null &&
+        body.volumes > manga.volumeCount
+      ) {
+        throw new BadRequestException(
+          `Volume progress (${body.volumes}) cannot exceed total volume count (${manga.volumeCount}).`,
+        );
+      }
+
       const oldEntry = await this.prisma.client.aquilaMangaUserListV2.findUnique({
         where: {
           username_mangaId: {
@@ -861,6 +920,43 @@ export class ListService {
       const status = body.status
         ? toPrismaStatus(body.status)
         : (oldEntry?.status ?? 'PLANNING');
+
+      const effectiveScore = body.score !== undefined ? body.score : oldEntry?.score;
+      if (status === 'COMPLETED' || status === 'FINISHED') {
+        if (
+          effectiveScore === null ||
+          effectiveScore === undefined ||
+          effectiveScore === 0 ||
+          Number.isNaN(effectiveScore)
+        ) {
+          throw new BadRequestException(
+            'Score is required when marking an entry as Completed/Finished.',
+          );
+        }
+
+        const effectiveChapters = body.chapters !== undefined ? body.chapters : oldEntry?.chaptersProgress;
+        const effectiveVolumes = body.volumes !== undefined ? body.volumes : oldEntry?.volumesProgress;
+
+        if (
+          manga?.chapterCount != null &&
+          manga.chapterCount > 0 &&
+          (effectiveChapters == null || effectiveChapters < manga.chapterCount)
+        ) {
+          throw new BadRequestException(
+            `Both chapter count (${manga.chapterCount}) and volume count (${manga.volumeCount ?? 'N/A'}) must match total count to set status to Completed.`,
+          );
+        }
+
+        if (
+          manga?.volumeCount != null &&
+          manga.volumeCount > 0 &&
+          (effectiveVolumes == null || effectiveVolumes < manga.volumeCount)
+        ) {
+          throw new BadRequestException(
+            `Both chapter count (${manga.chapterCount ?? 'N/A'}) and volume count (${manga.volumeCount}) must match total count to set status to Completed.`,
+          );
+        }
+      }
 
       await this.prisma.client.aquilaMangaUserListV2.upsert({
         where: {
@@ -926,7 +1022,7 @@ export class ListService {
       this.logger.error(error);
       return {
         success: false,
-        message: 'Failed to update manga list',
+        message: error instanceof BadRequestException ? error.message : 'Failed to update manga list',
         error,
       };
     }
@@ -1138,6 +1234,7 @@ export class ListService {
   public async upsertMovieList(
     username: string,
     body: SaveMovieEntryDto,
+    skipScoreCheck = false,
   ): Promise<{ success: boolean; message: string; error?: any }> {
     try {
       const user = await this.prisma.client.user.findUnique({
@@ -1158,6 +1255,20 @@ export class ListService {
           },
         },
       });
+
+      const effectiveScore = body.score !== undefined ? body.score : oldEntry?.score;
+      if (
+        !skipScoreCheck &&
+        (status === 'COMPLETED' || status === 'FINISHED') &&
+        (effectiveScore === null ||
+          effectiveScore === undefined ||
+          effectiveScore === 0 ||
+          Number.isNaN(effectiveScore))
+      ) {
+        throw new BadRequestException(
+          'Score is required when marking an entry as Completed/Finished.',
+        );
+      }
 
       await this.prisma.client.aquilaMovieUserListV2.upsert({
         where: {
@@ -1217,7 +1328,7 @@ export class ListService {
       this.logger.error(error);
       return {
         success: false,
-        message: 'Failed to update movie list',
+        message: error instanceof BadRequestException ? error.message : 'Failed to update movie list',
         error,
       };
     }
@@ -1470,6 +1581,34 @@ export class ListService {
       const tvId = Number(body.tvId);
       const status = toPrismaStatus(body.status);
 
+      const tv = await this.prisma.client.aquilaTvV2.findUnique({
+        where: { id: tvId },
+        select: { episodeCount: true, seasonCount: true },
+      });
+
+      if (body.episodes && Array.isArray(body.episodes)) {
+        if (
+          tv?.episodeCount != null &&
+          tv.episodeCount > 0 &&
+          body.episodes.length > tv.episodeCount
+        ) {
+          throw new BadRequestException(
+            `Watched episode count (${body.episodes.length}) cannot exceed total episode count (${tv.episodeCount}).`,
+          );
+        }
+
+        if (tv?.seasonCount != null && tv.seasonCount > 0) {
+          const invalidEp = body.episodes.find(
+            (ep) => ep.seasonNum > tv.seasonCount!,
+          );
+          if (invalidEp) {
+            throw new BadRequestException(
+              `Season number (${invalidEp.seasonNum}) cannot exceed total season count (${tv.seasonCount}).`,
+            );
+          }
+        }
+      }
+
       const oldEntry = await this.prisma.client.aquilaTvUserListV2.findUnique({
         where: {
           username_tvId: {
@@ -1478,6 +1617,19 @@ export class ListService {
           },
         },
       });
+
+      const effectiveScore = body.score !== undefined ? body.score : oldEntry?.score;
+      if (
+        (status === 'COMPLETED' || status === 'FINISHED') &&
+        (effectiveScore === null ||
+          effectiveScore === undefined ||
+          effectiveScore === 0 ||
+          Number.isNaN(effectiveScore))
+      ) {
+        throw new BadRequestException(
+          'Score is required when marking an entry as Completed/Finished.',
+        );
+      }
 
       const listEntry = await this.prisma.client.aquilaTvUserListV2.upsert({
         where: {
@@ -1802,6 +1954,19 @@ export class ListService {
         score = parseFloat((score / 10).toFixed(2));
       }
 
+      const effectiveScore = score !== undefined ? score : oldEntry?.score;
+      if (
+        (status === 'COMPLETED' || status === 'FINISHED') &&
+        (effectiveScore === null ||
+          effectiveScore === undefined ||
+          effectiveScore === 0 ||
+          Number.isNaN(effectiveScore))
+      ) {
+        throw new BadRequestException(
+          'Score is required when marking an entry as Completed/Finished.',
+        );
+      }
+
       await this.prisma.client.aquilaGameUserListV2.upsert({
         where: {
           username_gameId: {
@@ -1843,7 +2008,7 @@ export class ListService {
       this.logger.error(error);
       return {
         success: false,
-        message: 'Failed to update game list',
+        message: error instanceof BadRequestException ? error.message : 'Failed to update game list',
         error,
       };
     }
@@ -2045,6 +2210,35 @@ export class ListService {
 
       const bookId = Number(body.bookId);
 
+      const book = await this.prisma.client.aquilaBookV2.findUnique({
+        where: { id: bookId },
+        select: { chapterCount: true, volumeCount: true },
+      });
+
+      if (
+        book?.chapterCount != null &&
+        book.chapterCount > 0 &&
+        body.chapters !== undefined &&
+        body.chapters !== null &&
+        body.chapters > book.chapterCount
+      ) {
+        throw new BadRequestException(
+          `Chapter progress (${body.chapters}) cannot exceed total chapter count (${book.chapterCount}).`,
+        );
+      }
+
+      if (
+        book?.volumeCount != null &&
+        book.volumeCount > 0 &&
+        body.volumes !== undefined &&
+        body.volumes !== null &&
+        body.volumes > book.volumeCount
+      ) {
+        throw new BadRequestException(
+          `Volume progress (${body.volumes}) cannot exceed total volume count (${book.volumeCount}).`,
+        );
+      }
+
       const oldEntry = await this.prisma.client.aquilaBookUserListV2.findUnique({
         where: {
           username_bookId: {
@@ -2057,6 +2251,43 @@ export class ListService {
       const status = body.status
         ? toPrismaStatus(body.status)
         : (oldEntry?.status ?? 'PLANNING');
+
+      const effectiveScore = body.score !== undefined ? body.score : oldEntry?.score;
+      if (status === 'COMPLETED' || status === 'FINISHED') {
+        if (
+          effectiveScore === null ||
+          effectiveScore === undefined ||
+          effectiveScore === 0 ||
+          Number.isNaN(effectiveScore)
+        ) {
+          throw new BadRequestException(
+            'Score is required when marking an entry as Completed/Finished.',
+          );
+        }
+
+        const effectiveChapters = body.chapters !== undefined ? body.chapters : oldEntry?.progressChapters;
+        const effectiveVolumes = body.volumes !== undefined ? body.volumes : oldEntry?.progressVolumes;
+
+        if (
+          book?.chapterCount != null &&
+          book.chapterCount > 0 &&
+          (effectiveChapters == null || effectiveChapters < book.chapterCount)
+        ) {
+          throw new BadRequestException(
+            `Both chapter count (${book.chapterCount}) and volume count (${book.volumeCount ?? 'N/A'}) must match total count to set status to Completed.`,
+          );
+        }
+
+        if (
+          book?.volumeCount != null &&
+          book.volumeCount > 0 &&
+          (effectiveVolumes == null || effectiveVolumes < book.volumeCount)
+        ) {
+          throw new BadRequestException(
+            `Both chapter count (${book.chapterCount ?? 'N/A'}) and volume count (${book.volumeCount}) must match total count to set status to Completed.`,
+          );
+        }
+      }
 
       await this.prisma.client.aquilaBookUserListV2.upsert({
         where: {
@@ -2101,7 +2332,7 @@ export class ListService {
       this.logger.error(error);
       return {
         success: false,
-        message: 'Failed to update book list',
+        message: error instanceof BadRequestException ? error.message : 'Failed to update book list',
         error,
       };
     }
@@ -2494,17 +2725,21 @@ export class ListService {
           where: { username_movieId: { username: username.toLowerCase(), movieId: mediaId } },
         });
         if (!entry) throw new NotFoundException('Entry not found');
-        return this.upsertMovieList(username, {
-          movieId: mediaId,
-          status: entry.status as any,
-          score: entry.score ?? undefined,
-          startDate: entry.startDate ? Math.floor(entry.startDate.getTime() / 1000) : undefined,
-          endDate: entry.endDate ? Math.floor(entry.endDate.getTime() / 1000) : undefined,
-          notes: entry.notes ?? undefined,
-          rewatched: entry.rewatched ?? undefined,
-          updateConnection: true,
-          connections: entry.connections as any,
-        });
+        return this.upsertMovieList(
+          username,
+          {
+            movieId: mediaId,
+            status: 'COMPLETED',
+            score: entry.score ?? undefined,
+            startDate: entry.startDate ? Math.floor(entry.startDate.getTime() / 1000) : Math.floor(Date.now() / 1000),
+            endDate: entry.endDate ? Math.floor(entry.endDate.getTime() / 1000) : Math.floor(Date.now() / 1000),
+            notes: entry.notes ?? undefined,
+            rewatched: entry.status === 'COMPLETED' ? (entry.rewatched ?? 0) + count : entry.rewatched,
+            updateConnection: true,
+            connections: entry.connections as any,
+          },
+          true,
+        );
       }
       case 'game': {
         const entry = await this.prisma.client.aquilaGameUserListV2.findUnique({
@@ -2563,6 +2798,17 @@ export class ListService {
       });
     }
 
+    const tv = await this.prisma.client.aquilaTvV2.findUnique({
+      where: { id: tvId },
+      select: { episodeCount: true, seasonCount: true },
+    });
+
+    if (tv?.seasonCount != null && tv.seasonCount > 0 && seasonNum > tv.seasonCount) {
+      throw new BadRequestException(
+        `Season number (${seasonNum}) cannot exceed total season count (${tv.seasonCount}).`,
+      );
+    }
+
     const existing = await this.prisma.client.aquilaTvWatchedEpisodeV2.findUnique({
       where: {
         listId_seasonNum_episodeNum: {
@@ -2578,6 +2824,15 @@ export class ListService {
         where: { id: existing.id },
       });
     } else {
+      const currentCount = await this.prisma.client.aquilaTvWatchedEpisodeV2.count({
+        where: { listId: listEntry.id },
+      });
+      if (tv?.episodeCount != null && tv.episodeCount > 0 && currentCount + 1 > tv.episodeCount) {
+        throw new BadRequestException(
+          `Watched episode count cannot exceed total episode count (${tv.episodeCount}).`,
+        );
+      }
+
       await this.prisma.client.aquilaTvWatchedEpisodeV2.create({
         data: {
           listId: listEntry.id,
@@ -2631,6 +2886,17 @@ export class ListService {
           status: $Enums.TvListStatus.WATCHING,
         },
       });
+    }
+
+    const tv = await this.prisma.client.aquilaTvV2.findUnique({
+      where: { id: tvId },
+      select: { episodeCount: true, seasonCount: true },
+    });
+
+    if (tv?.seasonCount != null && tv.seasonCount > 0 && seasonNum > tv.seasonCount) {
+      throw new BadRequestException(
+        `Season number (${seasonNum}) cannot exceed total season count (${tv.seasonCount}).`,
+      );
     }
 
     if (watched) {
