@@ -1132,8 +1132,8 @@
     "anilistStaffId": "ID Kakitangan AniList",
     "tvdbPeopleId": "ID Orang TVDB",
     "rolesAndAppearances": "Peranan & Penampilan",
-    "animeVoiced": "Suara Anime",
-    "moviesPlayed": "Lakonan Filem",
+    "animeVoiced": "Alih Suara Anime",
+    "moviesPlayed": "Filem Dilakonkan",
     "tvRoles": "Peranan TV",
     "noMappedRoles": "Tiada peranan yang dipetakan untuk pelakon ini.",
     "unknownCharacter": "Watak Tidak Dikenali",
@@ -1400,7 +1400,20 @@
       "viewDetails": "Lihat Butiran",
       "listView": "Paparan Senarai",
       "gridView": "Paparan Grid"
-    }
+    },
+    "staffDetails": "Butiran Kakitangan",
+    "unknownStaff": "Ahli Kakitangan Tidak Diketahui",
+    "staffNotFound": "Ahli kakitangan tidak ditemui",
+    "staffInfo": "Maklumat Kakitangan",
+    "staffRolesAndAppearances": "Peranan & Hasil Kerja Kakitangan",
+    "noMappedStaffRoles": "Tiada peranan kakitangan yang dipetakan ditemui.",
+    "worksAsStaff": "Peranan Kakitangan",
+    "voiceActingRoles": "Peranan Alih Suara",
+    "animeRoles": "Peranan Anime",
+    "mangaRoles": "Peranan Manga",
+    "movieRoles": "Peranan Filem",
+    "bookRoles": "Peranan Buku",
+    "gameRoles": "Peranan Permainan"
   },
   "lynx": {
     "returnToSafety": "Kembali ke keselamatan",

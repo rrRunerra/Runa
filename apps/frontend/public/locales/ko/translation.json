@@ -1132,9 +1132,9 @@
     "anilistStaffId": "AniList 스태프 ID",
     "tvdbPeopleId": "TVDB 인물 ID",
     "rolesAndAppearances": "출연 및 담당 역할",
-    "animeVoiced": "담당 애니메이션",
+    "animeVoiced": "애니메이션 성우",
     "moviesPlayed": "출연 영화",
-    "tvRoles": "출연 TV 프로그램",
+    "tvRoles": "TV 역할",
     "noMappedRoles": "이 인물의 출연 정보가 없습니다.",
     "unknownCharacter": "알 수 없는 캐릭터",
     "animeDetails": "애니메이션 상세 정보",
@@ -1400,7 +1400,20 @@
       "viewDetails": "상세보기",
       "listView": "목록 보기",
       "gridView": "그리드 보기"
-    }
+    },
+    "staffDetails": "스태프 상세 정보",
+    "unknownStaff": "알 수 없는 스태프",
+    "staffNotFound": "스태프를 찾을 수 없습니다",
+    "staffInfo": "스태프 정보",
+    "staffRolesAndAppearances": "담당 역할 및 참여 작품",
+    "noMappedStaffRoles": "이 스태프의 매핑된 역할 정보가 없습니다.",
+    "worksAsStaff": "스태프 역할",
+    "voiceActingRoles": "성우 및 출연 역할",
+    "animeRoles": "애니메이션 역할",
+    "mangaRoles": "만화 역할",
+    "movieRoles": "영화 역할",
+    "bookRoles": "도서 역할",
+    "gameRoles": "게임 역할"
   },
   "lynx": {
     "returnToSafety": "안전한 곳으로 돌아가기",

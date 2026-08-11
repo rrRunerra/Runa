@@ -1132,8 +1132,8 @@ export default {
     "anilistStaffId": "AniList Staff-ID",
     "tvdbPeopleId": "TVDB Henkilö-ID",
     "rolesAndAppearances": "Roolit ja esiintymiset",
-    "animeVoiced": "Ääniroolit animessa",
-    "moviesPlayed": "Esiintymiset elokuvissa",
+    "animeVoiced": "Ääninäyttelyt anime",
+    "moviesPlayed": "Näytellyt elokuvat",
     "tvRoles": "TV-roolit",
     "noMappedRoles": "Tälle näyttelijälle ei löytynyt määritettyjä rooleja.",
     "unknownCharacter": "Tuntematon hahmo",
@@ -1400,7 +1400,20 @@ export default {
       "viewDetails": "Näytä tiedot",
       "listView": "Luettelonäkymä",
       "gridView": "Ruudukkonäkymä"
-    }
+    },
+    "staffDetails": "Henkilökunnan tiedot",
+    "unknownStaff": "Tuntematon henkilökunnan jäsen",
+    "staffNotFound": "Henkilökunnan jäsentä ei löytynyt",
+    "staffInfo": "Tietoa henkilökunnasta",
+    "staffRolesAndAppearances": "Roolit ja teokset",
+    "noMappedStaffRoles": "Tälle henkilölle ei löytynyt merkittyjä rooleja.",
+    "worksAsStaff": "Henkilöstöroolit",
+    "voiceActingRoles": "Ääninäyttelyroolit",
+    "animeRoles": "Anime-roolit",
+    "mangaRoles": "Manga-roolit",
+    "movieRoles": "Elokuvaroolit",
+    "bookRoles": "Kirjaroolit",
+    "gameRoles": "Peliroolit"
   },
   "lynx": {
     "returnToSafety": "Palaa turvallisuuteen",

@@ -1132,8 +1132,8 @@ export default {
     "anilistStaffId": "AniList Personel ID",
     "tvdbPeopleId": "TVDB Kişi ID",
     "rolesAndAppearances": "Roller & Göründüğü Eserler",
-    "animeVoiced": "Seslendirdiği Animeler",
-    "moviesPlayed": "Oynadığı Filmler",
+    "animeVoiced": "Seslendirilen Anime",
+    "moviesPlayed": "Oynanan Filmler",
     "tvRoles": "TV Rolleri",
     "noMappedRoles": "Bu oyuncu için eşleşmiş bir rol bulunamadı.",
     "unknownCharacter": "Bilinmeyen Karakter",
@@ -1400,7 +1400,20 @@ export default {
       "viewDetails": "Detayları Gör",
       "listView": "Liste Görünümü",
       "gridView": "Izgara Görünümü"
-    }
+    },
+    "staffDetails": "Personel Detayları",
+    "unknownStaff": "Bilinmeyen Personel Üyesi",
+    "staffNotFound": "Personel üyesi bulunamadı",
+    "staffInfo": "Personel Bilgisi",
+    "staffRolesAndAppearances": "Personel Rolleri ve Çalışmaları",
+    "noMappedStaffRoles": "Bu personel üyesi için eşleşen rol bulunamadı.",
+    "worksAsStaff": "Personel Rolleri",
+    "voiceActingRoles": "Seslendirme Rolleri",
+    "animeRoles": "Anime Rolleri",
+    "mangaRoles": "Manga Rolleri",
+    "movieRoles": "Film Rolleri",
+    "bookRoles": "Kitap Rolleri",
+    "gameRoles": "Oyun Rolleri"
   },
   "lynx": {
     "returnToSafety": "Güvenli bölgeye dön",

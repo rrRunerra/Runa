@@ -20,6 +20,14 @@ export class ActorController {
   }
 
   @Public()
+  @Get('staff/:id')
+  async getStaff(
+    @Param() params: ActorDetailDto,
+  ): Promise<ActorDetailEntity> {
+    return this.actorService.getActor(params.id);
+  }
+
+  @Public()
   @Get('search/:query')
   async searchActor(
     @Param('query') query: string,

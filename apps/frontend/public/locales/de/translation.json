@@ -1132,7 +1132,7 @@
     "anilistStaffId": "AniList Staff-ID",
     "tvdbPeopleId": "TVDB Personen-ID",
     "rolesAndAppearances": "Rollen & Auftritte",
-    "animeVoiced": "Gesprochene Animes",
+    "animeVoiced": "Synchronisiertes Anime",
     "moviesPlayed": "Gespielte Filme",
     "tvRoles": "TV-Rollen",
     "noMappedRoles": "Keine Rollen für diesen Schauspieler hinterlegt.",
@@ -1400,7 +1400,20 @@
       "viewDetails": "Details anzeigen",
       "listView": "Listenansicht",
       "gridView": "Rasteransicht"
-    }
+    },
+    "staffDetails": "Mitarbeiter-Details",
+    "unknownStaff": "Unbekanntes Mitglied",
+    "staffNotFound": "Mitarbeiter nicht gefunden",
+    "staffInfo": "Mitarbeiterinfo",
+    "staffRolesAndAppearances": "Rollen & Arbeiten",
+    "noMappedStaffRoles": "Keine zugewiesenen Mitarbeiterrollen für dieses Mitglied gefunden.",
+    "worksAsStaff": "Mitarbeiter-Rollen",
+    "voiceActingRoles": "Synchronsprecher-Rollen",
+    "animeRoles": "Anime-Rollen",
+    "mangaRoles": "Manga-Rollen",
+    "movieRoles": "Film-Rollen",
+    "bookRoles": "Buch-Rollen",
+    "gameRoles": "Spiel-Rollen"
   },
   "lynx": {
     "returnToSafety": "Zurück zur Sicherheit",

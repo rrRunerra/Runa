@@ -1132,8 +1132,8 @@
     "anilistStaffId": "ID personálu AniList",
     "tvdbPeopleId": "ID osoby TVDB",
     "rolesAndAppearances": "Role a účinkování",
-    "animeVoiced": "Dabováno v anime",
-    "moviesPlayed": "Hráno ve filmech",
+    "animeVoiced": "Dabované anime",
+    "moviesPlayed": "Odehrané filmy",
     "tvRoles": "TV role",
     "noMappedRoles": "Pro tohoto herce nebyly nalezeny žádné role.",
     "unknownCharacter": "Neznámá postava",
@@ -1400,7 +1400,20 @@
       "viewDetails": "Zobrazit podrobnosti",
       "listView": "Zobrazení seznamu",
       "gridView": "Mřížka"
-    }
+    },
+    "staffDetails": "Detaily personálu",
+    "unknownStaff": "Neznámý člen personálu",
+    "staffNotFound": "Člen personálu nenalezen",
+    "staffInfo": "Informace o personálu",
+    "staffRolesAndAppearances": "Role a díla personálu",
+    "noMappedStaffRoles": "Pro tohoto člena personálu nebyly nalezeny žádné namapované role.",
+    "worksAsStaff": "Role v produkci",
+    "voiceActingRoles": "Dabing a role",
+    "animeRoles": "Anime role",
+    "mangaRoles": "Manga role",
+    "movieRoles": "Film role",
+    "bookRoles": "Knižní role",
+    "gameRoles": "Herní role"
   },
   "lynx": {
     "returnToSafety": "Návrat do bezpečí",

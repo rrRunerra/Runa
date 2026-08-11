@@ -1132,9 +1132,9 @@ export default {
     "anilistStaffId": "AniList 职员 ID",
     "tvdbPeopleId": "TVDB 人物 ID",
     "rolesAndAppearances": "出演与担当职责",
-    "animeVoiced": "配音动漫",
+    "animeVoiced": "动画配音",
     "moviesPlayed": "参演电影",
-    "tvRoles": "参演电视剧",
+    "tvRoles": "剧集作品",
     "noMappedRoles": "未找到该演员的相关角色信息。",
     "unknownCharacter": "未知角色",
     "animeDetails": "动漫详情",
@@ -1400,7 +1400,20 @@ export default {
       "viewDetails": "查看详情",
       "listView": "列表视图",
       "gridView": "网格视图"
-    }
+    },
+    "staffDetails": "职员详情",
+    "unknownStaff": "未知工作人员",
+    "staffNotFound": "未找到工作人员",
+    "staffInfo": "职员信息",
+    "staffRolesAndAppearances": "职员职务与参与作品",
+    "noMappedStaffRoles": "未找到该工作人员的相关职务。",
+    "worksAsStaff": "幕后职务",
+    "voiceActingRoles": "配音与演出角色",
+    "animeRoles": "动画作品",
+    "mangaRoles": "漫画作品",
+    "movieRoles": "电影作品",
+    "bookRoles": "图书作品",
+    "gameRoles": "游戏作品"
   },
   "lynx": {
     "returnToSafety": "返回安全区域",

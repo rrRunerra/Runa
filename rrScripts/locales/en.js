@@ -1401,7 +1401,20 @@ export default {
       "viewDetails": "View Details",
       "listView": "List View",
       "gridView": "Grid View"
-    }
+    },
+    "staffDetails": "Staff Details",
+    "unknownStaff": "Unknown Staff Member",
+    "staffNotFound": "Staff member not found",
+    "staffInfo": "Staff Info",
+    "staffRolesAndAppearances": "Staff Roles & Works",
+    "noMappedStaffRoles": "No mapped staff roles found for this staff member.",
+    "worksAsStaff": "Staff Roles",
+    "voiceActingRoles": "Voice Acting Roles",
+    "animeRoles": "Anime Roles",
+    "mangaRoles": "Manga Roles",
+    "movieRoles": "Movie Roles",
+    "bookRoles": "Book Roles",
+    "gameRoles": "Game Roles"
   },
   "lynx": {
     "returnToSafety": "Návrat do bezpečí",

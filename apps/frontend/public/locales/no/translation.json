@@ -1132,8 +1132,8 @@
     "anilistStaffId": "AniList Staff-ID",
     "tvdbPeopleId": "TVDB Person-ID",
     "rolesAndAppearances": "Roller og opptredener",
-    "animeVoiced": "Stemme i anime",
-    "moviesPlayed": "Spilt i filmer",
+    "animeVoiced": "Stemmegitt anime",
+    "moviesPlayed": "Spilte filmer",
     "tvRoles": "TV-roller",
     "noMappedRoles": "Ingen roller registrert på denne skuespilleren.",
     "unknownCharacter": "Ukjent karakter",
@@ -1400,7 +1400,20 @@
       "viewDetails": "Vis detaljer",
       "listView": "Listevisning",
       "gridView": "Rutenettvisning"
-    }
+    },
+    "staffDetails": "Stabdetaljer",
+    "unknownStaff": "Ukjent stabsmedlem",
+    "staffNotFound": "Finner ikke stabsmedlemmet",
+    "staffInfo": "Stabsinformasjon",
+    "staffRolesAndAppearances": "Stabroller og verker",
+    "noMappedStaffRoles": "Ingen kartlagte stabroller funnet for dette medlemmet.",
+    "worksAsStaff": "Stabroller",
+    "voiceActingRoles": "Stemmeskuespillerroller",
+    "animeRoles": "Anime-roller",
+    "mangaRoles": "Manga-roller",
+    "movieRoles": "Filmroller",
+    "bookRoles": "Bokroller",
+    "gameRoles": "Spillroller"
   },
   "lynx": {
     "returnToSafety": "Gå tilbake til sikkerhet",

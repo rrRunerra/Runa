@@ -42,43 +42,16 @@ export class ActorRepository {
       const roles: ActorRoleAppearanceV2[] = [];
 
       for (const mc of mediaChars) {
-        let mediaTitle = 'Unknown';
-        let coverImage: string | null = null;
-
-        if (mc.mediaType === MediaType.ANIME) {
-          const a = await this.prisma.client.aquilaAnimeV2.findUnique({
-            where: { id: mc.mediaId },
-            select: { titlePrimary: true, coverImage: true },
-          });
-          if (a) {
-            mediaTitle = a.titlePrimary;
-            coverImage = a.coverImage;
-          }
-        } else if (mc.mediaType === MediaType.MANGA) {
-          const m = await this.prisma.client.aquilaMangaV2.findUnique({
-            where: { id: mc.mediaId },
-            select: { titlePrimary: true, coverImage: true },
-          });
-          if (m) {
-            mediaTitle = m.titlePrimary;
-            coverImage = m.coverImage;
-          }
-        } else if (mc.mediaType === MediaType.MOVIE) {
-          const mv = await this.prisma.client.aquilaMovieV2.findUnique({
-            where: { id: mc.mediaId },
-            select: { titlePrimary: true, coverImage: true },
-          });
-          if (mv) {
-            mediaTitle = mv.titlePrimary;
-            coverImage = mv.coverImage;
-          }
-        }
+        const { titlePrimary, coverImage } = await this.getMediaTitleAndCover(
+          mc.mediaType,
+          mc.mediaId,
+        );
 
         roles.push({
           id: mc.id,
           mediaType: mc.mediaType as any,
           mediaId: mc.mediaId,
-          titlePrimary: mediaTitle,
+          titlePrimary,
           coverImage,
           role: mc.role,
           customRole: null,
@@ -88,43 +61,16 @@ export class ActorRepository {
       }
 
       for (const ms of mediaStaff) {
-        let mediaTitle = 'Unknown';
-        let coverImage: string | null = null;
-
-        if (ms.mediaType === MediaType.ANIME) {
-          const a = await this.prisma.client.aquilaAnimeV2.findUnique({
-            where: { id: ms.mediaId },
-            select: { titlePrimary: true, coverImage: true },
-          });
-          if (a) {
-            mediaTitle = a.titlePrimary;
-            coverImage = a.coverImage;
-          }
-        } else if (ms.mediaType === MediaType.MANGA) {
-          const m = await this.prisma.client.aquilaMangaV2.findUnique({
-            where: { id: ms.mediaId },
-            select: { titlePrimary: true, coverImage: true },
-          });
-          if (m) {
-            mediaTitle = m.titlePrimary;
-            coverImage = m.coverImage;
-          }
-        } else if (ms.mediaType === MediaType.MOVIE) {
-          const mv = await this.prisma.client.aquilaMovieV2.findUnique({
-            where: { id: ms.mediaId },
-            select: { titlePrimary: true, coverImage: true },
-          });
-          if (mv) {
-            mediaTitle = mv.titlePrimary;
-            coverImage = mv.coverImage;
-          }
-        }
+        const { titlePrimary, coverImage } = await this.getMediaTitleAndCover(
+          ms.mediaType,
+          ms.mediaId,
+        );
 
         roles.push({
           id: ms.id,
           mediaType: ms.mediaType as any,
           mediaId: ms.mediaId,
-          titlePrimary: mediaTitle,
+          titlePrimary,
           coverImage,
           role: ms.role,
           customRole: ms.customRole,
@@ -153,6 +99,72 @@ export class ActorRepository {
         message: 'Failed to fetch actor details from database',
       });
     }
+  }
+
+  private async getMediaTitleAndCover(
+    mediaType: MediaType | string,
+    mediaId: number,
+  ): Promise<{ titlePrimary: string; coverImage: string | null }> {
+    let mediaTitle = 'Unknown';
+    let coverImage: string | null = null;
+
+    if (mediaType === MediaType.ANIME) {
+      const a = await this.prisma.client.aquilaAnimeV2.findUnique({
+        where: { id: mediaId },
+        select: { titlePrimary: true, coverImage: true },
+      });
+      if (a) {
+        mediaTitle = a.titlePrimary;
+        coverImage = a.coverImage;
+      }
+    } else if (mediaType === MediaType.MANGA) {
+      const m = await this.prisma.client.aquilaMangaV2.findUnique({
+        where: { id: mediaId },
+        select: { titlePrimary: true, coverImage: true },
+      });
+      if (m) {
+        mediaTitle = m.titlePrimary;
+        coverImage = m.coverImage;
+      }
+    } else if (mediaType === MediaType.MOVIE) {
+      const mv = await this.prisma.client.aquilaMovieV2.findUnique({
+        where: { id: mediaId },
+        select: { titlePrimary: true, coverImage: true },
+      });
+      if (mv) {
+        mediaTitle = mv.titlePrimary;
+        coverImage = mv.coverImage;
+      }
+    } else if (mediaType === MediaType.TV) {
+      const tv = await this.prisma.client.aquilaTvV2.findUnique({
+        where: { id: mediaId },
+        select: { titlePrimary: true, coverImage: true },
+      });
+      if (tv) {
+        mediaTitle = tv.titlePrimary;
+        coverImage = tv.coverImage;
+      }
+    } else if (mediaType === MediaType.BOOK) {
+      const bk = await this.prisma.client.aquilaBookV2.findUnique({
+        where: { id: mediaId },
+        select: { titlePrimary: true, coverImage: true },
+      });
+      if (bk) {
+        mediaTitle = bk.titlePrimary;
+        coverImage = bk.coverImage;
+      }
+    } else if (mediaType === MediaType.GAME) {
+      const gm = await this.prisma.client.aquilaGameV2.findUnique({
+        where: { id: mediaId },
+        select: { titlePrimary: true, coverImage: true },
+      });
+      if (gm) {
+        mediaTitle = gm.titlePrimary;
+        coverImage = gm.coverImage;
+      }
+    }
+
+    return { titlePrimary: mediaTitle, coverImage };
   }
 
   public async search(query: string): Promise<any[]> {

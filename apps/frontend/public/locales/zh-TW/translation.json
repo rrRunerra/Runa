@@ -1132,9 +1132,9 @@
     "anilistStaffId": "AniList 職員 ID",
     "tvdbPeopleId": "TVDB 人物 ID",
     "rolesAndAppearances": "出演與擔當職責",
-    "animeVoiced": "配音動漫",
+    "animeVoiced": "動畫配音",
     "moviesPlayed": "參演電影",
-    "tvRoles": "參演電視劇",
+    "tvRoles": "劇集作品",
     "noMappedRoles": "未找到該演員的相關角色信息。",
     "unknownCharacter": "未知角色",
     "animeDetails": "動漫詳情",
@@ -1400,7 +1400,20 @@
       "viewDetails": "查看詳情",
       "listView": "列表檢視",
       "gridView": "網格檢視"
-    }
+    },
+    "staffDetails": "職員詳情",
+    "unknownStaff": "未知工作人員",
+    "staffNotFound": "未找到工作人員",
+    "staffInfo": "職員資訊",
+    "staffRolesAndAppearances": "職員職務與參與作品",
+    "noMappedStaffRoles": "未找到該工作人員的相關職務。",
+    "worksAsStaff": "幕後職務",
+    "voiceActingRoles": "配音與演出角色",
+    "animeRoles": "動畫作品",
+    "mangaRoles": "漫畫作品",
+    "movieRoles": "電影作品",
+    "bookRoles": "圖書作品",
+    "gameRoles": "遊戲作品"
   },
   "lynx": {
     "returnToSafety": "返回安全區域",

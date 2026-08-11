@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { Users, ChevronDown, ChevronUp } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -48,12 +49,14 @@ export function RrMediaStaff({
         {displayedStaff.map((item) => {
           const person = item.staff;
           if (!person) return null;
+          const staffId = item.staffId || person.id;
           const displayName = person.namePrimary || person.nameNative || t("aquila.unknown", "Unknown");
 
           return (
-            <div
+            <Link
               key={item.id}
-              className="flex items-center gap-2.5 p-2.5 bg-card/45 border border-border/30 backdrop-blur-md rounded-2xl overflow-hidden shadow-xs hover:border-border/50 transition-all"
+              href={`/aquila/staff/${staffId}`}
+              className="flex items-center gap-2.5 p-2.5 bg-card/45 border border-border/30 backdrop-blur-md rounded-2xl overflow-hidden shadow-xs hover:border-border/50 hover:bg-accent/10 transition-all duration-300 group/staff cursor-pointer"
             >
               <div className="relative size-10 rounded-xl overflow-hidden shrink-0 bg-muted border border-border/20">
                 {person.image ? (
@@ -62,7 +65,7 @@ export function RrMediaStaff({
                     alt={displayName}
                     fill
                     sizes="40px"
-                    className="object-cover"
+                    className="object-cover group-hover/staff:scale-105 transition-transform duration-300"
                   />
                 ) : (
                   <div className="size-full flex items-center justify-center text-xs text-muted-foreground font-bold">
@@ -72,19 +75,19 @@ export function RrMediaStaff({
               </div>
               <div className="min-w-0 flex-1">
                 <p
-                  className="text-xs font-bold text-foreground truncate"
+                  className="text-xs font-bold text-foreground group-hover/staff:text-primary transition-colors duration-150 truncate"
                   title={displayName}
                 >
                   {displayName}
                 </p>
                 <p
-                  className="text-[10px] text-muted-foreground truncate capitalize"
+                  className="text-[10px] text-muted-foreground truncate capitalize mt-0.5"
                   title={item.role}
                 >
                   {item.role}
                 </p>
               </div>
-            </div>
+            </Link>
           );
         })}
       </div>

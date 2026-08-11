@@ -42,7 +42,7 @@ function getMediaUrl(type: string, mediaId?: string): string {
   if (t === "GAME") return `/aquila/games/${mediaId}`;
   if (t === "BOOK") return `/aquila/books/${mediaId}`;
   if (t === "CHARACTER") return `/aquila/characters/${mediaId}`;
-  if (t === "STAFF") return `/aquila/actors/${mediaId}`;
+  if (t === "STAFF") return `/aquila/staff/${mediaId}`;
   if (t === "USER") return `/polaris/user/${mediaId}`;
   return `/aquila/browse`;
 }
