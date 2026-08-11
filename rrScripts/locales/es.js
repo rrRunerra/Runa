@@ -1382,7 +1382,25 @@ export default {
     "recommendationReasonPlaceholder": "Explica qué hace que estos dos títulos sean similares o por qué les gustaría a los fans...",
     "selectTargetMedia": "Selecciona un elemento de medios",
     "submitRecommendation": "Enviar recomendación",
-    "loadMoreRecommendations": "Cargando más recomendaciones..."
+    "loadMoreRecommendations": "Cargando más recomendaciones...",
+    "rankings": {
+      "title": "Clasificaciones de medios",
+      "subtitle": "Descubre los 100 medios mejor valorados en múltiples plataformas y filtros personalizados.",
+      "source": "Fuente de clasificación",
+      "allGenres": "Todos los géneros",
+      "allYears": "Todos los años",
+      "allSeasons": "Todas las temporadas",
+      "allFormats": "Todos los formatos",
+      "allStatuses": "Todos los estados",
+      "resetFilters": "Restablecer filtros",
+      "noResults": "Ningún resultado de clasificación coincide con los filtros seleccionados.",
+      "top100": "Top 100",
+      "rank": "Rango",
+      "score": "Puntuación",
+      "viewDetails": "Ver detalles",
+      "listView": "Vista de lista",
+      "gridView": "Vista de cuadrícula"
+    }
   },
   "lynx": {
     "returnToSafety": "Volver a la seguridad",
@@ -2611,5 +2629,7 @@ export default {
     "zoomOut": "Alejar",
     "resetZoom": "Restablecer zoom al 100%",
     "ariaSkyCanvas": "Lienzo celeste del diseñador de constelaciones. Haga clic para colocar estrellas, conectarlas y ajustar la configuración."
-  }
+  },
+  "sidebarRankings": "Clasificaciones",
+  "sidebarSearch": "Buscar"
 };

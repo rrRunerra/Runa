@@ -1382,7 +1382,25 @@
     "recommendationReasonPlaceholder": "说明这两部作品的相似之处，或者粉丝为什么会喜欢它...",
     "selectTargetMedia": "请选择一个媒体",
     "submitRecommendation": "提交推荐",
-    "loadMoreRecommendations": "加载更多推荐..."
+    "loadMoreRecommendations": "加载更多推荐...",
+    "rankings": {
+      "title": "媒体排行榜",
+      "subtitle": "通过多平台评分与组合筛选，探索前100部最高评分作品。",
+      "source": "排名来源",
+      "allGenres": "所有类型",
+      "allYears": "所有年份",
+      "allSeasons": "所有季度",
+      "allFormats": "所有格式",
+      "allStatuses": "所有状态",
+      "resetFilters": "重置筛选",
+      "noResults": "没有符合所选筛选条件的排名结果。",
+      "top100": "前100名",
+      "rank": "排名",
+      "score": "评分",
+      "viewDetails": "查看详情",
+      "listView": "列表视图",
+      "gridView": "网格视图"
+    }
   },
   "lynx": {
     "returnToSafety": "返回安全区域",
@@ -2611,5 +2629,7 @@
     "zoomOut": "缩小",
     "resetZoom": "重置缩放为 100%",
     "ariaSkyCanvas": "星座设计师天空画布。点击以放置星星、连接它们并调整设置。"
-  }
+  },
+  "sidebarRankings": "排行榜",
+  "sidebarSearch": "搜索"
 }

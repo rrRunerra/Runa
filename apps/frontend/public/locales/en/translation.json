@@ -1383,7 +1383,25 @@
     "recommendationReasonPlaceholder": "Explain what makes these two titles similar or why fans would enjoy it...",
     "selectTargetMedia": "Select a media item",
     "submitRecommendation": "Submit Recommendation",
-    "loadMoreRecommendations": "Loading more recommendations..."
+    "loadMoreRecommendations": "Loading more recommendations...",
+    "rankings": {
+      "title": "Media Rankings",
+      "subtitle": "Discover the top 100 highest-rated media across multiple platforms and custom filters.",
+      "source": "Ranking Source",
+      "allGenres": "All Genres",
+      "allYears": "All Years",
+      "allSeasons": "All Seasons",
+      "allFormats": "All Formats",
+      "allStatuses": "All Statuses",
+      "resetFilters": "Reset Filters",
+      "noResults": "No ranking results match your selected filters.",
+      "top100": "Top 100",
+      "rank": "Rank",
+      "score": "Score",
+      "viewDetails": "View Details",
+      "listView": "List View",
+      "gridView": "Grid View"
+    }
   },
   "lynx": {
     "returnToSafety": "Návrat do bezpečí",
@@ -2611,5 +2629,7 @@
     "zoomOut": "Zoom Out",
     "resetZoom": "Reset Zoom to 100%",
     "ariaSkyCanvas": "Constellation designer sky canvas. Click to place stars, connect them, and adjust settings."
-  }
+  },
+  "sidebarRankings": "Rankings",
+  "sidebarSearch": "Search"
 }

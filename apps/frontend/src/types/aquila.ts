@@ -207,3 +207,54 @@ export interface Media {
   maturityRating?: string | null;
   publisher?: string | null;
 }
+
+export interface RankingSourceOption {
+  id: string;
+  name: string;
+  maxScore: number;
+}
+
+export interface RankedMediaItem {
+  rank: number;
+  id: number | string;
+  title: string;
+  secondaryTitle: string | null;
+  coverImage: string | null;
+  bannerImage?: string | null;
+  format: string;
+  status: string;
+  year: number | null;
+  season?: string | null;
+  genres: string[];
+  averageScore: number | null;
+  externalScore?: number | null;
+  externalScoreSource?: string | null;
+  externalScoreMax?: number | null;
+  popularity?: number | null;
+  favorites?: number | null;
+  scoredCount?: number | null;
+  isAdult?: boolean;
+}
+
+export interface RankingsMetadata {
+  totalCount: number;
+  limit: number;
+  page: number;
+  source: string;
+  hasMore: boolean;
+}
+
+export interface RankingsResponse {
+  items: RankedMediaItem[];
+  metadata: RankingsMetadata;
+}
+
+export interface RankingsMetaResponse {
+  sources: RankingSourceOption[];
+  genres: string[];
+  years: number[];
+  seasons: string[];
+  formats: string[];
+  statuses: string[];
+}
+

@@ -1382,7 +1382,25 @@
     "recommendationReasonPlaceholder": "Forklar hva som gjør disse to titlene like eller hvorfor fans vil like det...",
     "selectTargetMedia": "Velg et medieelement",
     "submitRecommendation": "Send inn anbefaling",
-    "loadMoreRecommendations": "Laster flere anbefalinger..."
+    "loadMoreRecommendations": "Laster flere anbefalinger...",
+    "rankings": {
+      "title": "Medierangeringer",
+      "subtitle": "Oppdag de 100 høyest rangerte mediene på tvers av flere plattformer og tilpassede filtre.",
+      "source": "Rangeringskilde",
+      "allGenres": "Alle sjangre",
+      "allYears": "Alle år",
+      "allSeasons": "Alle sesonger",
+      "allFormats": "Alle formater",
+      "allStatuses": "Alle statuser",
+      "resetFilters": "Tilbakestill filtre",
+      "noResults": "Ingen rangeringsresultater samsvarer med de valgte filtrene.",
+      "top100": "Topp 100",
+      "rank": "Rang",
+      "score": "Poengsum",
+      "viewDetails": "Vis detaljer",
+      "listView": "Listevisning",
+      "gridView": "Rutenettvisning"
+    }
   },
   "lynx": {
     "returnToSafety": "Gå tilbake til sikkerhet",
@@ -2611,5 +2629,7 @@
     "zoomOut": "Zoom ut",
     "resetZoom": "Nullstill zoom til 100 %",
     "ariaSkyCanvas": "Stjernebildetegnerens himmeltegneområde. Klikk for å plassere stjerner, koble dem sammen og justere innstillinger."
-  }
+  },
+  "sidebarRankings": "Rangeringer",
+  "sidebarSearch": "Søk"
 }

@@ -15,6 +15,7 @@ import {
   Calendar,
   User,
   Users,
+  Trophy,
 } from "lucide-react";
 
 import type { NavbarConfig } from "@/types/NavbarConfig";
@@ -46,6 +47,22 @@ export const getAquilaSidebarConfig = (
         preventRedirect: false,
         subtitle: t("sidebarBrowse"),
         position: 2,
+        children: [
+          {
+            label: t("sidebarSearch"),
+            href: "/aquila/browse",
+            preventRedirect: false,
+            subtitle: t("sidebarSearch"),
+            icon: <Search className="h-3.5 w-3.5" />,
+          },
+          {
+            label: t("sidebarRankings"),
+            href: "/aquila/rankings",
+            preventRedirect: false,
+            subtitle: t("sidebarRankings"),
+            icon: <Trophy className="h-3.5 w-3.5" />,
+          },
+        ],
       },
       {
         label: t("sidebarCalendar"),
@@ -141,6 +158,24 @@ export const getAquilaSidebarConfig = (
         icon: <Search className="h-4 w-4" />,
         preventRedirect: false,
         subtitle: t("sidebarBrowse"),
+        children: [
+          {
+            dataKey: "Search",
+            label: t("sidebarSearch"),
+            href: "/aquila/browse",
+            preventRedirect: false,
+            subtitle: t("sidebarSearch"),
+            icon: <Search className="h-3.5 w-3.5" />,
+          },
+          {
+            dataKey: "Rankings",
+            label: t("sidebarRankings"),
+            href: "/aquila/rankings",
+            preventRedirect: false,
+            subtitle: t("sidebarRankings"),
+            icon: <Trophy className="h-3.5 w-3.5" />,
+          },
+        ],
       },
       {
         dataKey: "Calendar",

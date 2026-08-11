@@ -1382,7 +1382,25 @@
     "recommendationReasonPlaceholder": "두 작품의 공통점이나 팬들이 좋아할 만한 이유를 설명해주세요...",
     "selectTargetMedia": "미디어를 선택하세요",
     "submitRecommendation": "추천 등록",
-    "loadMoreRecommendations": "추천 더 불러오는 중..."
+    "loadMoreRecommendations": "추천 더 불러오는 중...",
+    "rankings": {
+      "title": "미디어 순위",
+      "subtitle": "다양한 플랫폼과 사용자 지정 필터를 통해 최고 평점의 상위 100개 미디어를 찾아보세요.",
+      "source": "순위 기준",
+      "allGenres": "모든 장르",
+      "allYears": "모든 연도",
+      "allSeasons": "모든 시즌",
+      "allFormats": "모든 형식",
+      "allStatuses": "모든 상태",
+      "resetFilters": "필터 초기화",
+      "noResults": "선택한 필터와 일치하는 순위 결과가 없습니다.",
+      "top100": "상위 100",
+      "rank": "순위",
+      "score": "점수",
+      "viewDetails": "상세보기",
+      "listView": "목록 보기",
+      "gridView": "그리드 보기"
+    }
   },
   "lynx": {
     "returnToSafety": "안전한 곳으로 돌아가기",
@@ -2611,5 +2629,7 @@
     "zoomOut": "축소",
     "resetZoom": "배율을 100%로 재설정",
     "ariaSkyCanvas": "별자리 디자이너 하늘 캔버스입니다. 클릭하여 별을 배치하고, 별들을 연결하고 설정을 조정합니다."
-  }
+  },
+  "sidebarRankings": "순위",
+  "sidebarSearch": "검색"
 }

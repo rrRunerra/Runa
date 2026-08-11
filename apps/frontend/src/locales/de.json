@@ -1382,7 +1382,25 @@
     "recommendationReasonPlaceholder": "Erklären Sie, was diese beiden Titel ähnlich macht oder warum Fans sie mögen würden...",
     "selectTargetMedia": "Wählen Sie ein Medium",
     "submitRecommendation": "Empfehlung absenden",
-    "loadMoreRecommendations": "Weitere Empfehlungen laden..."
+    "loadMoreRecommendations": "Weitere Empfehlungen laden...",
+    "rankings": {
+      "title": "Medien-Ranglisten",
+      "subtitle": "Entdecken Sie die Top 100 der am besten bewerteten Medien über mehrere Plattformen und benutzerdefinierte Filter.",
+      "source": "Ranglistenquelle",
+      "allGenres": "Alle Genres",
+      "allYears": "Alle Jahre",
+      "allSeasons": "Alle Jahreszeiten",
+      "allFormats": "Alle Formate",
+      "allStatuses": "Alle Status",
+      "resetFilters": "Filter zurücksetzen",
+      "noResults": "Keine Ranglistenergebnisse entsprechen Ihren ausgewählten Filtern.",
+      "top100": "Top 100",
+      "rank": "Rang",
+      "score": "Bewertung",
+      "viewDetails": "Details anzeigen",
+      "listView": "Listenansicht",
+      "gridView": "Rasteransicht"
+    }
   },
   "lynx": {
     "returnToSafety": "Zurück zur Sicherheit",
@@ -2611,5 +2629,7 @@
     "zoomOut": "Verkleinern",
     "resetZoom": "Zoom auf 100% zurücksetzen",
     "ariaSkyCanvas": "Sternbild-Designer Himmels-Arbeitsfläche. Klicken Sie, um Sterne zu platzieren, sie zu verbinden und Einstellungen anzupassen."
-  }
+  },
+  "sidebarRankings": "Ranglisten",
+  "sidebarSearch": "Suche"
 }

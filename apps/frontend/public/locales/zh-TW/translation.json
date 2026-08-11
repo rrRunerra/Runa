@@ -1382,7 +1382,25 @@
     "recommendationReasonPlaceholder": "說明這兩部作品的相似之處，或者粉絲為什麼會喜歡它...",
     "selectTargetMedia": "請選擇一個媒體",
     "submitRecommendation": "提交推薦",
-    "loadMoreRecommendations": "加載更多推薦..."
+    "loadMoreRecommendations": "加載更多推薦...",
+    "rankings": {
+      "title": "媒體排行榜",
+      "subtitle": "透過多平台評分與組合篩選，探索前100部最高評分作品。",
+      "source": "排名來源",
+      "allGenres": "所有類型",
+      "allYears": "所有年份",
+      "allSeasons": "所有季度",
+      "allFormats": "所有格式",
+      "allStatuses": "所有狀態",
+      "resetFilters": "重設篩選",
+      "noResults": "沒有符合所選篩選條件的排名結果。",
+      "top100": "前100名",
+      "rank": "排名",
+      "score": "評分",
+      "viewDetails": "查看詳情",
+      "listView": "列表檢視",
+      "gridView": "網格檢視"
+    }
   },
   "lynx": {
     "returnToSafety": "返回安全區域",
@@ -2611,5 +2629,7 @@
     "zoomOut": "縮小",
     "resetZoom": "重置縮放為 100%",
     "ariaSkyCanvas": "星座設計師天空畫布。點擊以放置星星、連接它們並調整設定。"
-  }
+  },
+  "sidebarRankings": "排行榜",
+  "sidebarSearch": "搜尋"
 }

@@ -117,5 +117,20 @@ export class CacheService implements OnModuleDestroy {
       sort?: string,
     ) =>
       `recommendations:${mediaType.toLowerCase()}:${mediaId}:${cursor || 'start'}:${take || 10}:${sort || 'score'}`,
+
+    // Rankings
+    rankingsMeta: (mediaType: string) => `rankings-meta:${mediaType.toLowerCase()}`,
+    rankingsList: (
+      mediaType: string,
+      source: string,
+      genres: string,
+      year: number | string,
+      season: string,
+      format: string,
+      status: string,
+      limit: number | string,
+      page: number | string,
+    ) =>
+      `rankings:${mediaType.toLowerCase()}:${source}:${genres}:${year}:${season}:${format}:${status}:${limit}:${page}`,
   };
 }

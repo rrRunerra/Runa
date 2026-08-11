@@ -1382,7 +1382,25 @@ export default {
     "recommendationReasonPlaceholder": "Selitä, mikä tekee näistä kahdesta teoksesta samankaltaisia tai miksi fanit pitäisivät siitä...",
     "selectTargetMedia": "Valitse mediakohde",
     "submitRecommendation": "Lähetä suositus",
-    "loadMoreRecommendations": "Ladataan lisää suosituksia..."
+    "loadMoreRecommendations": "Ladataan lisää suosituksia...",
+    "rankings": {
+      "title": "Mediasijoitukset",
+      "subtitle": "Löydä 100 parhaiten arvioitua mediaa useilta alustoilta mukautetuilla suodattimilla.",
+      "source": "Sijoituslähde",
+      "allGenres": "Kaikki genret",
+      "allYears": "Kaikki vuodet",
+      "allSeasons": "Kaikki kaudet",
+      "allFormats": "Kaikki muodot",
+      "allStatuses": "Kaikki tilat",
+      "resetFilters": "Nollaa suodattimet",
+      "noResults": "Valitsemillasi suodattimilla ei löytynyt sijoitustuloksia.",
+      "top100": "Top 100",
+      "rank": "Sijoitus",
+      "score": "Pisteet",
+      "viewDetails": "Näytä tiedot",
+      "listView": "Luettelonäkymä",
+      "gridView": "Ruudukkonäkymä"
+    }
   },
   "lynx": {
     "returnToSafety": "Palaa turvallisuuteen",
@@ -2611,5 +2629,7 @@ export default {
     "zoomOut": "Loitonna",
     "resetZoom": "Nollaa zoom 100 %:iin",
     "ariaSkyCanvas": "Tähtikuviosuunnittelijan taivaankangas. Klikkaa asettaaksesi tähtiä, yhdistääksesi niitä ja säätääksesi asetuksia."
-  }
+  },
+  "sidebarRankings": "Sijoitukset",
+  "sidebarSearch": "Haku"
 };

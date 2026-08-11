@@ -1382,7 +1382,25 @@
     "recommendationReasonPlaceholder": "Terangkan perkara yang membuatkan kedua-dua tajuk ini serupa atau sebab peminat akan menikmatinya...",
     "selectTargetMedia": "Pilih item media",
     "submitRecommendation": "Hantar Syoran",
-    "loadMoreRecommendations": "Memuatkan lebih banyak syoran..."
+    "loadMoreRecommendations": "Memuatkan lebih banyak syoran...",
+    "rankings": {
+      "title": "Kedudukan Media",
+      "subtitle": "Temui 100 media dengan penilaian tertinggi merentasi pelbagai platform dan penapis tersuai.",
+      "source": "Sumber Kedudukan",
+      "allGenres": "Semua Genre",
+      "allYears": "Semua Tahun",
+      "allSeasons": "Semua Musim",
+      "allFormats": "Semua Format",
+      "allStatuses": "Semua Status",
+      "resetFilters": "Tetapkan Semula Penapis",
+      "noResults": "Tiada hasil kedudukan yang sepadan dengan penapis yang anda pilih.",
+      "top100": "Top 100",
+      "rank": "Kedudukan",
+      "score": "Skor",
+      "viewDetails": "Lihat Butiran",
+      "listView": "Paparan Senarai",
+      "gridView": "Paparan Grid"
+    }
   },
   "lynx": {
     "returnToSafety": "Kembali ke keselamatan",
@@ -2611,5 +2629,7 @@
     "zoomOut": "Zum Keluar",
     "resetZoom": "Set semula Zum ke 100%",
     "ariaSkyCanvas": "Kanvas langit pereka buruj. Klik untuk meletakkan bintang, menyambungkannya, dan melaraskan tetapan."
-  }
+  },
+  "sidebarRankings": "Kedudukan",
+  "sidebarSearch": "Cari"
 }

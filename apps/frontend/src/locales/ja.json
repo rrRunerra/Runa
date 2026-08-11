@@ -1382,7 +1382,25 @@
     "recommendationReasonPlaceholder": "この2つの作品の共通点やおすすめしたい理由を書いてください...",
     "selectTargetMedia": "メディアを選択してください",
     "submitRecommendation": "おすすめを送信",
-    "loadMoreRecommendations": "さらに読み込み中..."
+    "loadMoreRecommendations": "さらに読み込み中...",
+    "rankings": {
+      "title": "メディアランキング",
+      "subtitle": "複数のプラットフォームとカスタムフィルターから、最高評価のトップ100を発見します。",
+      "source": "ランキング基準",
+      "allGenres": "すべてのジャンル",
+      "allYears": "すべての年",
+      "allSeasons": "すべてのシーズン",
+      "allFormats": "すべてのフォーマット",
+      "allStatuses": "すべてのステータス",
+      "resetFilters": "フィルターをリセット",
+      "noResults": "選択したフィルターに一致するランキング結果はありません。",
+      "top100": "トップ 100",
+      "rank": "順位",
+      "score": "スコア",
+      "viewDetails": "詳細を見る",
+      "listView": "リスト表示",
+      "gridView": "グリッド表示"
+    }
   },
   "lynx": {
     "returnToSafety": "安全な場所に戻る",
@@ -2611,5 +2629,7 @@
     "zoomOut": "ズームアウト",
     "resetZoom": "ズームを100%にリセット",
     "ariaSkyCanvas": "星座デザイナーのスカイキャンバス。クリックして星を配置し、接続し、設定を調整します。"
-  }
+  },
+  "sidebarRankings": "ランキング",
+  "sidebarSearch": "検索"
 }

@@ -1382,7 +1382,25 @@ export default {
     "recommendationReasonPlaceholder": "Bu iki eseri benzer kılan özellikleri veya hayranların neden seveceğini açıklayın...",
     "selectTargetMedia": "Bir medya öğesi seçin",
     "submitRecommendation": "Tavsiyeyi Gönder",
-    "loadMoreRecommendations": "Daha fazla tavsiye yükleniyor..."
+    "loadMoreRecommendations": "Daha fazla tavsiye yükleniyor...",
+    "rankings": {
+      "title": "Medya Sıralamaları",
+      "subtitle": "Birden fazla platformda ve özel filtrelerle en yüksek puanlı ilk 100 medyayı keşfedin.",
+      "source": "Sıralama Kaynağı",
+      "allGenres": "Tüm Türler",
+      "allYears": "Tüm Yıllar",
+      "allSeasons": "Tüm Sezonlar",
+      "allFormats": "Tüm Formatlar",
+      "allStatuses": "Tüm Durumlar",
+      "resetFilters": "Filtreleri Sıfırla",
+      "noResults": "Seçtiğiniz filtrelere uygun sıralama sonucu bulunamadı.",
+      "top100": "İlk 100",
+      "rank": "Sıra",
+      "score": "Puan",
+      "viewDetails": "Detayları Gör",
+      "listView": "Liste Görünümü",
+      "gridView": "Izgara Görünümü"
+    }
   },
   "lynx": {
     "returnToSafety": "Güvenli bölgeye dön",
@@ -2611,5 +2629,7 @@ export default {
     "zoomOut": "Uzaklaştır",
     "resetZoom": "Yakınlaştırmayı %100'e sıfırla",
     "ariaSkyCanvas": "Takımyıldız tasarımcısı gökyüzü tuvali. Yıldız yerleştirmek, onları bağlamak ve ayarları düzenlemek için tıklayın."
-  }
+  },
+  "sidebarRankings": "Sıralamalar",
+  "sidebarSearch": "Ara"
 };

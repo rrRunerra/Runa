@@ -1382,7 +1382,25 @@ export default {
     "recommendationReasonPlaceholder": "Giải thích điều gì khiến hai tác phẩm này tương đồng hoặc tại sao người hâm mộ sẽ thích...",
     "selectTargetMedia": "Chọn một mục phương tiện",
     "submitRecommendation": "Gửi đề xuất",
-    "loadMoreRecommendations": "Đang tải thêm đề xuất..."
+    "loadMoreRecommendations": "Đang tải thêm đề xuất...",
+    "rankings": {
+      "title": "Bảng xếp hạng phương tiện",
+      "subtitle": "Khám phá top 100 phương tiện được đánh giá cao nhất trên nhiều nền tảng và bộ lọc tùy chỉnh.",
+      "source": "Nguồn xếp hạng",
+      "allGenres": "Tất cả thể loại",
+      "allYears": "Tất cả các năm",
+      "allSeasons": "Tất cả các mùa",
+      "allFormats": "Tất cả định dạng",
+      "allStatuses": "Tất cả trạng thái",
+      "resetFilters": "Đặt lại bộ lọc",
+      "noResults": "Không có kết quả xếp hạng nào phù hợp với bộ lọc đã chọn.",
+      "top100": "Top 100",
+      "rank": "Hạng",
+      "score": "Điểm",
+      "viewDetails": "Xem chi tiết",
+      "listView": "Xem dạng danh sách",
+      "gridView": "Xem dạng lưới"
+    }
   },
   "lynx": {
     "returnToSafety": "Quay lại an toàn",
@@ -2611,5 +2629,7 @@ export default {
     "zoomOut": "Thu nhỏ",
     "resetZoom": "Đặt lại thu phóng về 100%",
     "ariaSkyCanvas": "Canvas thiết kế bầu trời chòm sao. Nhấp để đặt các ngôi sao, kết nối chúng và điều chỉnh cài đặt."
-  }
+  },
+  "sidebarRankings": "Bảng xếp hạng",
+  "sidebarSearch": "Tìm kiếm"
 };

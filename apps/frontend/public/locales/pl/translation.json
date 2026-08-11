@@ -1382,7 +1382,25 @@
     "recommendationReasonPlaceholder": "Wyjaśnij, co łączy te dwa tytuły lub dlaczego fani będą nimi zachwyceni...",
     "selectTargetMedia": "Wybierz element mediów",
     "submitRecommendation": "Wyślij rekomendację",
-    "loadMoreRecommendations": "Ładowanie kolejnych rekomendacji..."
+    "loadMoreRecommendations": "Ładowanie kolejnych rekomendacji...",
+    "rankings": {
+      "title": "Rankingi mediów",
+      "subtitle": "Odkryj 100 najwyżej ocenianych mediów na wielu platformach z niestandardowymi filtrami.",
+      "source": "Źródło rankingu",
+      "allGenres": "Wszystkie gatunki",
+      "allYears": "Wszystkie lata",
+      "allSeasons": "Wszystkie sezony",
+      "allFormats": "Wszystkie formaty",
+      "allStatuses": "Wszystkie statusy",
+      "resetFilters": "Resetuj filtry",
+      "noResults": "Brak wyników rankingu pasujących do wybranych filtrów.",
+      "top100": "Top 100",
+      "rank": "Pozycja",
+      "score": "Ocena",
+      "viewDetails": "Pokaż szczegóły",
+      "listView": "Widok listy",
+      "gridView": "Widok siatki"
+    }
   },
   "lynx": {
     "returnToSafety": "Powrót do bezpieczeństwa",
@@ -2611,5 +2629,7 @@
     "zoomOut": "Pomniejsz",
     "resetZoom": "Resetuj powiększenie do 100%",
     "ariaSkyCanvas": "Niebiańskie płótno projektanta gwiazdozbiorów. Klikaj, aby umieszczać gwiazdy, łączyć je i dostosowywać ustawienia."
-  }
+  },
+  "sidebarRankings": "Rankingi",
+  "sidebarSearch": "Szukaj"
 }

@@ -1382,7 +1382,25 @@ export default {
     "recommendationReasonPlaceholder": "อธิบายสิ่งที่ทำให้สองเรื่องนี้คล้ายกันหรือทำไมแฟนๆ ถึงจะชอบ...",
     "selectTargetMedia": "เลือกรายการสื่อ",
     "submitRecommendation": "ส่งคำแนะนำ",
-    "loadMoreRecommendations": "กำลังโหลดคำแนะนำเพิ่มเติม..."
+    "loadMoreRecommendations": "กำลังโหลดคำแนะนำเพิ่มเติม...",
+    "rankings": {
+      "title": "อันดับสื่อ",
+      "subtitle": "ค้นพบสื่อยอดนิยม 100 อันดับแรกที่มีคะแนนสูงสุดจากหลากหลายแพลตฟอร์มพร้อมตัวกรองแบบกำหนดเอง",
+      "source": "แหล่งจัดอันดับ",
+      "allGenres": "ทุกประเภท",
+      "allYears": "ทุกปี",
+      "allSeasons": "ทุกฤดูกาล",
+      "allFormats": "ทุกรูปแบบ",
+      "allStatuses": "ทุกสถานะ",
+      "resetFilters": "ล้างตัวกรอง",
+      "noResults": "ไม่มีผลการจัดอันดับที่ตรงกับตัวกรองที่คุณเลือก",
+      "top100": "100 อันดับแรก",
+      "rank": "อันดับ",
+      "score": "คะแนน",
+      "viewDetails": "ดูรายละเอียด",
+      "listView": "มุมมองรายการ",
+      "gridView": "มุมมองตาราง"
+    }
   },
   "lynx": {
     "returnToSafety": "กลับสู่ความปลอดภัย",
@@ -2611,5 +2629,7 @@ export default {
     "zoomOut": "ซูมออก",
     "resetZoom": "รีเซ็ตการซูมเป็น 100%",
     "ariaSkyCanvas": "ผืนผ้าใบออกแบบกลุ่มดาวบนท้องฟ้า คลิกเพื่อวางดวงดาว เชื่อมต่อพวกมัน และปรับแต่งการตั้งค่า"
-  }
+  },
+  "sidebarRankings": "อันดับ",
+  "sidebarSearch": "ค้นหา"
 };
