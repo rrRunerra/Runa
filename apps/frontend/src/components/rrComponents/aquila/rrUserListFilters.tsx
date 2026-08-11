@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export interface RrUserListFilterState {
   format?: string;
@@ -193,19 +194,77 @@ export function RrUserListFilters({
     }
   };
 
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = React.useState(false);
+
+  const activeFilterCount =
+    (filters.format ? 1 : 0) +
+    (Array.isArray(filters.genres) && filters.genres.length > 0 ? 1 : 0) +
+    (filters.year ? 1 : 0) +
+    (filters.mediaStatus ? 1 : 0) +
+    (sort !== "last_updated" ? 1 : 0);
+
   return (
-    <div className="relative flex flex-col gap-4 w-full bg-card/20 backdrop-blur-xl border border-border/40 p-4 rounded-2xl shadow-xl select-none">
-      <div className="flex flex-col xl:flex-row gap-3 items-stretch xl:items-center justify-between">
-        {/* Left Side: Search bar */}
-        <div className="relative flex-1 max-w-full xl:max-w-xs">
-          <Lucide.Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60" />
-          <Input
-            placeholder={resolvedSearchPlaceholder}
-            suppressHydrationWarning
-            className="pl-9 h-9.5 bg-background/40 border border-border/40 focus-visible:ring-1 focus-visible:ring-primary/30 rounded-xl placeholder:text-muted-foreground/40 text-xs"
-            value={searchVal}
-            onChange={(e) => setSearchVal(e.target.value)}
-          />
+    <div className="relative flex flex-col gap-3 w-full border-t border-border/40 pt-3 select-none">
+      <div className="flex flex-col xl:flex-row gap-2.5 items-stretch xl:items-center justify-between">
+        {/* Left Side: Search bar + Mobile Filter toggle */}
+        <div className="flex items-center gap-2 flex-1 max-w-full xl:max-w-xs">
+          <div className="relative flex-1">
+            <Lucide.Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground/60" />
+            <Input
+              placeholder={resolvedSearchPlaceholder}
+              suppressHydrationWarning
+              className="pl-9 h-9.5 bg-background/40 border border-border/40 focus-visible:ring-1 focus-visible:ring-primary/30 rounded-xl placeholder:text-muted-foreground/40 text-xs"
+              value={searchVal}
+              onChange={(e) => setSearchVal(e.target.value)}
+            />
+            {searchVal && (
+              <button
+                type="button"
+                onClick={() => setSearchVal("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground size-4 flex items-center justify-center cursor-pointer"
+              >
+                <Lucide.X className="size-3" />
+              </button>
+            )}
+          </div>
+
+          {/* Mobile Filter Toggle Button */}
+          <Button
+            type="button"
+            variant={
+              isMobileFiltersOpen || activeFilterCount > 0
+                ? "secondary"
+                : "outline"
+            }
+            size="sm"
+            onClick={() => setIsMobileFiltersOpen((prev) => !prev)}
+            className={cn(
+              "xl:hidden h-9.5 px-3 rounded-xl gap-1.5 shrink-0 font-medium text-xs border-border/40 transition-all cursor-pointer",
+              activeFilterCount > 0 &&
+                "border-primary/50 text-primary bg-primary/10",
+            )}
+          >
+            <Lucide.SlidersHorizontal className="size-3.5" />
+            <span>{t("aquila.searchFilters")}</span>
+            {activeFilterCount > 0 && (
+              <span className="size-4.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+                {activeFilterCount}
+              </span>
+            )}
+          </Button>
+
+          {/* Reset Filters Button (Mobile) */}
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleReset}
+              className="xl:hidden size-9.5 rounded-xl hover:bg-muted/30 text-muted-foreground hover:text-foreground cursor-pointer transition-colors shrink-0"
+              title={t("aquila.resetAllFilters")}
+            >
+              <Lucide.RotateCcw className="size-4" />
+            </Button>
+          )}
         </div>
 
         {/* Lappland: fills the gap, pushed right to sit next to the filters */}
@@ -213,16 +272,21 @@ export function RrUserListFilters({
           <RrLapplandLayingRight className="h-16 w-auto text-foreground/20" />
         </div>
 
-        {/* Right Side: Row of Select Dropdowns */}
-        <div className="flex flex-wrap items-center gap-2">
+        {/* Right Side: Row / Grid of Select Dropdowns */}
+        <div
+          className={cn(
+            "grid grid-cols-2 gap-2 w-full xl:w-auto xl:flex xl:flex-wrap xl:items-center xl:gap-2",
+            !isMobileFiltersOpen && "hidden xl:flex",
+          )}
+        >
           {/* Format/Type Filter */}
           {availableFormats.length > 0 && (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 w-full xl:w-auto">
               <Select
                 value={filters.format || "all"}
                 onValueChange={(v) => handleFilterChange("format", v)}
               >
-                <SelectTrigger className="h-9.5 min-w-25 bg-background/40 border border-border/40 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
+                <SelectTrigger className="h-9.5 w-full xl:w-auto xl:min-w-25 bg-background/40 border border-border/40 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
                   <SelectValue placeholder={t("aquila.format")} />
                 </SelectTrigger>
                 <SelectContent className="bg-popover/95 backdrop-blur-md border border-border/40 rounded-xl">
@@ -239,12 +303,12 @@ export function RrUserListFilters({
 
           {/* Media Release Status Filter */}
           {availableStatuses.length > 0 && (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 w-full xl:w-auto">
               <Select
                 value={filters.mediaStatus || "all"}
                 onValueChange={(v) => handleFilterChange("mediaStatus", v)}
               >
-                <SelectTrigger className="h-9.5 min-w-25 bg-background/40 border border-border/40 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
+                <SelectTrigger className="h-9.5 w-full xl:w-auto xl:min-w-25 bg-background/40 border border-border/40 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
                   <SelectValue placeholder={t("aquila.status")} />
                 </SelectTrigger>
                 <SelectContent className="bg-popover/95 backdrop-blur-md border border-border/40 rounded-xl">
@@ -261,12 +325,12 @@ export function RrUserListFilters({
 
           {/* Genres Filter */}
           {availableGenres.length > 0 && (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 w-full xl:w-auto">
               <Select
                 value={activeGenre || "all"}
                 onValueChange={(v) => handleFilterChange("genres", v)}
               >
-                <SelectTrigger className="h-9.5 min-w-27.5 bg-background/40 border border-border/40 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
+                <SelectTrigger className="h-9.5 w-full xl:w-auto xl:min-w-27.5 bg-background/40 border border-border/40 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
                   <SelectValue placeholder={t("aquila.genre")} />
                 </SelectTrigger>
                 <SelectContent className="bg-popover/95 backdrop-blur-md border border-border/40 rounded-xl max-h-60">
@@ -283,12 +347,12 @@ export function RrUserListFilters({
 
           {/* Year Filter */}
           {availableYears.length > 0 && (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 w-full xl:w-auto">
               <Select
                 value={filters.year || "all"}
                 onValueChange={(v) => handleFilterChange("year", v)}
               >
-                <SelectTrigger className="h-9.5 min-w-22.5 bg-background/40 border border-border/40 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
+                <SelectTrigger className="h-9.5 w-full xl:w-auto xl:min-w-22.5 bg-background/40 border border-border/40 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
                   <SelectValue placeholder={t("aquila.year")} />
                 </SelectTrigger>
                 <SelectContent className="bg-popover/95 backdrop-blur-md border border-border/40 rounded-xl max-h-60">
@@ -304,9 +368,9 @@ export function RrUserListFilters({
           )}
 
           {/* Sort Dropdown */}
-          <div className="flex items-center gap-1.5 border-l border-border/40 pl-2 ml-1">
+          <div className="col-span-2 xl:col-span-1 flex items-center gap-1.5 xl:border-l xl:border-border/40 xl:pl-2 xl:ml-1 w-full xl:w-auto">
             <span
-              className="text-[10px] font-semibold text-muted-foreground/80 hidden sm:inline uppercase tracking-wider"
+              className="text-[10px] font-semibold text-muted-foreground/80 hidden sm:inline uppercase tracking-wider shrink-0"
               suppressHydrationWarning
             >
               {t("aquila.sort")}
@@ -315,7 +379,7 @@ export function RrUserListFilters({
               value={sort}
               onValueChange={(v) => setSort(v as UserListSortType)}
             >
-              <SelectTrigger className="h-9.5 min-w-28.75 bg-background/40 border border-border/40 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
+              <SelectTrigger className="h-9.5 w-full xl:w-auto xl:min-w-28.75 bg-background/40 border border-border/40 text-xs rounded-xl focus:ring-1 focus:ring-primary/30">
                 <SelectValue placeholder={t("aquila.sortBy")} />
               </SelectTrigger>
               <SelectContent className="bg-popover/95 backdrop-blur-md border border-border/40 rounded-xl">
@@ -330,13 +394,13 @@ export function RrUserListFilters({
             </Select>
           </div>
 
-          {/* Reset Filters Button */}
+          {/* Reset Filters Button (Desktop) */}
           {hasActiveFilters && (
             <Button
               variant="ghost"
               size="icon"
               onClick={handleReset}
-              className="size-9.5 rounded-xl hover:bg-muted/30 text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+              className="hidden xl:inline-flex size-9.5 rounded-xl hover:bg-muted/30 text-muted-foreground hover:text-foreground cursor-pointer transition-colors shrink-0"
               title={t("aquila.resetAllFilters")}
             >
               <Lucide.RotateCcw className="size-4" />

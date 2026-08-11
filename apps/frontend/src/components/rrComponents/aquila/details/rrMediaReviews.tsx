@@ -175,25 +175,25 @@ export function RrMediaReviews({
   return (
     <div className="space-y-6 outline-none">
       {/* Header Statistics & Action Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-6 rounded-3xl bg-card/60 border border-border/30 backdrop-blur-xl shadow-lg">
-        <div className="flex items-center gap-3.5">
-          <div className="size-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-bold">
-            <MessageSquare className="size-6" />
+      <div className="flex flex-row items-center justify-between gap-3 p-4 sm:p-6 rounded-3xl bg-card/60 border border-border/30 backdrop-blur-xl shadow-lg">
+        <div className="flex items-center gap-3 sm:gap-3.5 min-w-0">
+          <div className="size-10 sm:size-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0">
+            <MessageSquare className="size-5 sm:size-6" />
           </div>
-          <div>
-            <h3 className="text-lg font-extrabold text-foreground flex items-center gap-2.5">
-              {t("aquila.reviews")}
+          <div className="min-w-0">
+            <h3 className="text-base sm:text-lg font-extrabold text-foreground flex items-center gap-2 truncate">
+              <span>{t("aquila.reviews")}</span>
               {avgScore && (
                 <Badge
                   variant="secondary"
-                  className="gap-1 rounded-xl px-3 py-1 text-xs font-bold"
+                  className="gap-1 rounded-xl px-2 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs font-bold shrink-0"
                 >
-                  <Star className="size-3.5 text-amber-400 fill-amber-400" />
+                  <Star className="size-3 sm:size-3.5 text-amber-400 fill-amber-400" />
                   {avgScore} / {maxScore}
                 </Badge>
               )}
             </h3>
-            <p className="text-xs text-muted-foreground font-medium">
+            <p className="text-[11px] sm:text-xs text-muted-foreground font-medium truncate">
               {totalItems} {totalItems === 1 ? "review" : "reviews"} submitted
             </p>
           </div>
@@ -203,10 +203,10 @@ export function RrMediaReviews({
           <Button
             onClick={handleOpenCreateModal}
             size="default"
-            className="h-11 px-5 rounded-xl font-bold text-sm gap-2 cursor-pointer shadow-md hover:scale-[1.02] transition-all"
+            className="h-9 sm:h-11 px-3 sm:px-5 rounded-xl font-bold text-xs sm:text-sm gap-1.5 sm:gap-2 cursor-pointer shadow-md hover:scale-[1.02] transition-all shrink-0"
           >
-            <Plus className="size-4" />
-            {t("aquila.writeReview")}
+            <Plus className="size-3.5 sm:size-4" />
+            <span>{t("aquila.writeReview")}</span>
           </Button>
         )}
       </div>
