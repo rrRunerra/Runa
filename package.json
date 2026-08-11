@@ -14,9 +14,9 @@
     "packages/*"
   ],
   "devDependencies": {
-    "@dotenvx/dotenvx": "^2.11.1",
-    "prettier": "^3.9.5",
-    "turbo": "^2.10.5",
+    "@dotenvx/dotenvx": "^2.20.1",
+    "prettier": "^3.9.6",
+    "turbo": "^2.10.9",
     "typescript": "7.0.2"
   },
   "packageManager": "pnpm@11.13.1",
@@ -24,7 +24,7 @@
     "node": ">=18"
   },
   "dependencies": {
-    "lucide-react": "1.24.0",
-    "react": "19.2.7"
+    "lucide-react": "1.31.0",
+    "react": "19.2.8"
   }
 }

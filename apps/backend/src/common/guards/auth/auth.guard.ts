@@ -180,7 +180,7 @@ export class AuthGuard implements CanActivate {
           });
         }
 
-        permissions = user.permissions ?? [];
+        permissions = user.permissions
 
         const ttl = this.isRedis ? 86400 : 2; // 2s TTL for in-memory cache to allow quick updates, 24h for Redis
         await this.cacheService.set(cacheKey, permissions, ttl);
@@ -190,7 +190,7 @@ export class AuthGuard implements CanActivate {
         id: payload.sub,
         username: payload.name,
         email: payload.email,
-        permissions,
+        permissions: permissions || [],
       };
       return true;
     } catch (error) {

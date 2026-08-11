@@ -2467,7 +2467,7 @@ export class ListService {
 
         // Build the full updated episodes array and delegate to upsertTvList
         const updatedEpisodes = [...watchedSet].map((key) => {
-          const [s, e] = key.split('-').map(Number);
+          const [s, e] = (key as string).split('-').map(Number);
           return { seasonNum: s, episodeNum: e };
         });
 
