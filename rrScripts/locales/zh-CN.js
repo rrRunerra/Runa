@@ -1368,7 +1368,21 @@ export default {
     "compact": "紧凑",
     "detailed": "详细",
     "density": "密度",
-    "filter": "筛选"
+    "filter": "筛选",
+    "recommendations": "推荐",
+    "recommendMedia": "推荐媒体",
+    "noRecommendations": "暂无推荐",
+    "noRecommendationsDesc": "成为第一个推荐相似或相关作品的人吧！",
+    "yourRecommendation": "你的推荐",
+    "editRecommendation": "编辑推荐",
+    "deleteRecommendation": "删除推荐",
+    "deleteRecommendationConfirm": "确定要删除此推荐吗？",
+    "searchMediaToRecommend": "搜索要推荐的媒体...",
+    "recommendationReason": "为什么推荐这部作品？",
+    "recommendationReasonPlaceholder": "说明这两部作品的相似之处，或者粉丝为什么会喜欢它...",
+    "selectTargetMedia": "请选择一个媒体",
+    "submitRecommendation": "提交推荐",
+    "loadMoreRecommendations": "加载更多推荐..."
   },
   "lynx": {
     "returnToSafety": "返回安全区域",

@@ -1368,7 +1368,21 @@
     "compact": "Kompak",
     "detailed": "Terperinci",
     "density": "Ketumpatan",
-    "filter": "Penapis"
+    "filter": "Penapis",
+    "recommendations": "Syoran",
+    "recommendMedia": "Syor Media",
+    "noRecommendations": "Belum ada syoran",
+    "noRecommendationsDesc": "Jadilah yang pertama mengesyorkan sesuatu yang serupa atau pelengkap!",
+    "yourRecommendation": "Syoran Anda",
+    "editRecommendation": "Sunting Syoran",
+    "deleteRecommendation": "Padam Syoran",
+    "deleteRecommendationConfirm": "Adakah anda pasti mahu memadamkan syoran ini?",
+    "searchMediaToRecommend": "Cari media untuk disyorkan...",
+    "recommendationReason": "Mengapa anda mengesyorkan ini?",
+    "recommendationReasonPlaceholder": "Terangkan perkara yang membuatkan kedua-dua tajuk ini serupa atau sebab peminat akan menikmatinya...",
+    "selectTargetMedia": "Pilih item media",
+    "submitRecommendation": "Hantar Syoran",
+    "loadMoreRecommendations": "Memuatkan lebih banyak syoran..."
   },
   "lynx": {
     "returnToSafety": "Kembali ke keselamatan",

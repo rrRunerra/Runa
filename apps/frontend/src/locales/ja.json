@@ -1368,7 +1368,21 @@
     "compact": "コンパクト",
     "detailed": "詳細",
     "density": "表示密度",
-    "filter": "フィルター"
+    "filter": "フィルター",
+    "recommendations": "おすすめ",
+    "recommendMedia": "メディアをおすすめする",
+    "noRecommendations": "まだおすすめはありません",
+    "noRecommendationsDesc": "類似作品やおすすめ作品を最初に投稿しましょう！",
+    "yourRecommendation": "あなたのおすすめ",
+    "editRecommendation": "おすすめを編集",
+    "deleteRecommendation": "おすすめを削除",
+    "deleteRecommendationConfirm": "このおすすめを削除してもよろしいですか？",
+    "searchMediaToRecommend": "おすすめするメディアを検索...",
+    "recommendationReason": "おすすめする理由は？",
+    "recommendationReasonPlaceholder": "この2つの作品の共通点やおすすめしたい理由を書いてください...",
+    "selectTargetMedia": "メディアを選択してください",
+    "submitRecommendation": "おすすめを送信",
+    "loadMoreRecommendations": "さらに読み込み中..."
   },
   "lynx": {
     "returnToSafety": "安全な場所に戻る",

@@ -1368,7 +1368,21 @@
     "compact": "Kompakti",
     "detailed": "Yksityiskohtainen",
     "density": "Tiheys",
-    "filter": "Suodatin"
+    "filter": "Suodatin",
+    "recommendations": "Suositukset",
+    "recommendMedia": "Suosittele mediaa",
+    "noRecommendations": "Ei suosituksia vielä",
+    "noRecommendationsDesc": "Ole ensimmäinen, joka suosittelee jotain vastaavaa tai täydentävää!",
+    "yourRecommendation": "Sinun suosituksesi",
+    "editRecommendation": "Muokkaa suositusta",
+    "deleteRecommendation": "Poista suositus",
+    "deleteRecommendationConfirm": "Haluatko varmasti poistaa tämän suosituksen?",
+    "searchMediaToRecommend": "Hae suositeltavaa mediaa...",
+    "recommendationReason": "Miksi suosittelet tätä?",
+    "recommendationReasonPlaceholder": "Selitä, mikä tekee näistä kahdesta teoksesta samankaltaisia tai miksi fanit pitäisivät siitä...",
+    "selectTargetMedia": "Valitse mediakohde",
+    "submitRecommendation": "Lähetä suositus",
+    "loadMoreRecommendations": "Ladataan lisää suosituksia..."
   },
   "lynx": {
     "returnToSafety": "Palaa turvallisuuteen",

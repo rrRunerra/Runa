@@ -1368,7 +1368,21 @@ export default {
     "compact": "Kompakt",
     "detailed": "Detaylı",
     "density": "Yoğunluk",
-    "filter": "Filtre"
+    "filter": "Filtre",
+    "recommendations": "Tavsiyeler",
+    "recommendMedia": "Medya Tavsiye Et",
+    "noRecommendations": "Henüz tavsiye yok",
+    "noRecommendationsDesc": "Benzer veya tamamlayıcı bir şeyler tavsiye eden ilk kişi olun!",
+    "yourRecommendation": "Senin Tavsiyen",
+    "editRecommendation": "Tavsiyeyi Düzenle",
+    "deleteRecommendation": "Tavsiyeyi Sil",
+    "deleteRecommendationConfirm": "Bu tavsiyeyi silmek istediğinizden emin misiniz?",
+    "searchMediaToRecommend": "Tavsiye edilecek medyayı ara...",
+    "recommendationReason": "Bunu neden tavsiye ediyorsunuz?",
+    "recommendationReasonPlaceholder": "Bu iki eseri benzer kılan özellikleri veya hayranların neden seveceğini açıklayın...",
+    "selectTargetMedia": "Bir medya öğesi seçin",
+    "submitRecommendation": "Tavsiyeyi Gönder",
+    "loadMoreRecommendations": "Daha fazla tavsiye yükleniyor..."
   },
   "lynx": {
     "returnToSafety": "Güvenli bölgeye dön",

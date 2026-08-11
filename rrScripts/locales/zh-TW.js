@@ -1368,7 +1368,21 @@ export default {
     "compact": "精簡",
     "detailed": "詳細",
     "density": "密度",
-    "filter": "篩選"
+    "filter": "篩選",
+    "recommendations": "推薦",
+    "recommendMedia": "推薦媒體",
+    "noRecommendations": "暫無推薦",
+    "noRecommendationsDesc": "成為第一個推薦相似或相關作品的人吧！",
+    "yourRecommendation": "你的推薦",
+    "editRecommendation": "編輯推薦",
+    "deleteRecommendation": "刪除推薦",
+    "deleteRecommendationConfirm": "確定要刪除此推薦嗎？",
+    "searchMediaToRecommend": "搜尋要推薦的媒體...",
+    "recommendationReason": "為什麼推薦這部作品？",
+    "recommendationReasonPlaceholder": "說明這兩部作品的相似之處，或者粉絲為什麼會喜歡它...",
+    "selectTargetMedia": "請選擇一個媒體",
+    "submitRecommendation": "提交推薦",
+    "loadMoreRecommendations": "加載更多推薦..."
   },
   "lynx": {
     "returnToSafety": "返回安全區域",

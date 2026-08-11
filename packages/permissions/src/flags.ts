@@ -48,6 +48,7 @@ export const AquilaFlags = defineFlags(
     "IMPORT_LIST",
     "MEDIA_REFRESH",
     "MANAGE_REVIEWS",
+    "MANAGE_RECOMMENDATIONS",
   ],
   200,
 );

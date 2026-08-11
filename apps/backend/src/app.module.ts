@@ -29,6 +29,7 @@ import { FriendsModule } from './modules/friends/friends.module';
 
 import { SubmissionsModule } from './modules/submissions/submissions.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
+import { RecommendationsModule } from './modules/recommendations/recommendations.module';
 import { CalendarModule } from './modules/calendar/calendar.module';
 
 @Module({
@@ -69,6 +70,7 @@ import { CalendarModule } from './modules/calendar/calendar.module';
     FriendsModule,
     SubmissionsModule,
     ReviewsModule,
+    RecommendationsModule,
     CalendarModule,
     ThrottlerModule.forRoot({
       throttlers: [

@@ -1368,7 +1368,21 @@
     "compact": "Kompaktowy",
     "detailed": "Szczegółowy",
     "density": "Gęstość",
-    "filter": "Filtr"
+    "filter": "Filtr",
+    "recommendations": "Rekomendacje",
+    "recommendMedia": "Poleć medium",
+    "noRecommendations": "Brak jeszcze rekomendacji",
+    "noRecommendationsDesc": "Bądź pierwszym, który poleci coś podobnego lub uzupełniającego!",
+    "yourRecommendation": "Twoja rekomendacja",
+    "editRecommendation": "Edytuj rekomendację",
+    "deleteRecommendation": "Usuń rekomendację",
+    "deleteRecommendationConfirm": "Czy na pewno chcesz usunąć tę rekomendację?",
+    "searchMediaToRecommend": "Szukaj medium do polecenia...",
+    "recommendationReason": "Dlaczego to polecasz?",
+    "recommendationReasonPlaceholder": "Wyjaśnij, co łączy te dwa tytuły lub dlaczego fani będą nimi zachwyceni...",
+    "selectTargetMedia": "Wybierz element mediów",
+    "submitRecommendation": "Wyślij rekomendację",
+    "loadMoreRecommendations": "Ładowanie kolejnych rekomendacji..."
   },
   "lynx": {
     "returnToSafety": "Powrót do bezpieczeństwa",

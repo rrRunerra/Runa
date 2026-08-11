@@ -1368,7 +1368,21 @@ export default {
     "compact": "Компактный",
     "detailed": "Подробный",
     "density": "Плотность",
-    "filter": "Фильтр"
+    "filter": "Фильтр",
+    "recommendations": "Рекомендации",
+    "recommendMedia": "Рекомендовать медиа",
+    "noRecommendations": "Рекомендаций пока нет",
+    "noRecommendationsDesc": "Будьте первым, кто порекомендует что-то похожее!",
+    "yourRecommendation": "Ваша рекомендация",
+    "editRecommendation": "Редактировать рекомендацию",
+    "deleteRecommendation": "Удалить рекомендацию",
+    "deleteRecommendationConfirm": "Вы уверены, что хотите удалить эту рекомендацию?",
+    "searchMediaToRecommend": "Поиск медиа для рекомендации...",
+    "recommendationReason": "Почему вы это рекомендуете?",
+    "recommendationReasonPlaceholder": "Объясните, что объединяет эти два произведения или почему они понравятся поклонникам...",
+    "selectTargetMedia": "Выберите медиа",
+    "submitRecommendation": "Отправить рекомендацию",
+    "loadMoreRecommendations": "Загрузка рекомендаций..."
   },
   "lynx": {
     "returnToSafety": "Вернуться в безопасность",

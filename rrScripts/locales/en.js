@@ -1369,7 +1369,21 @@ export default {
     "compact": "Compact",
     "detailed": "Detailed",
     "density": "Density",
-    "filter": "Filter"
+    "filter": "Filter",
+    "recommendations": "Recommendations",
+    "recommendMedia": "Recommend Media",
+    "noRecommendations": "No recommendations yet",
+    "noRecommendationsDesc": "Be the first to recommend something similar or complementary!",
+    "yourRecommendation": "Your Recommendation",
+    "editRecommendation": "Edit Recommendation",
+    "deleteRecommendation": "Delete Recommendation",
+    "deleteRecommendationConfirm": "Are you sure you want to delete this recommendation?",
+    "searchMediaToRecommend": "Search media to recommend...",
+    "recommendationReason": "Why do you recommend this?",
+    "recommendationReasonPlaceholder": "Explain what makes these two titles similar or why fans would enjoy it...",
+    "selectTargetMedia": "Select a media item",
+    "submitRecommendation": "Submit Recommendation",
+    "loadMoreRecommendations": "Loading more recommendations..."
   },
   "lynx": {
     "returnToSafety": "Návrat do bezpečí",

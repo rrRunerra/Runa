@@ -1368,7 +1368,21 @@ export default {
     "compact": "Kompakt",
     "detailed": "Detailliert",
     "density": "Dichte",
-    "filter": "Filter"
+    "filter": "Filter",
+    "recommendations": "Empfehlungen",
+    "recommendMedia": "Medium empfehlen",
+    "noRecommendations": "Noch keine Empfehlungen",
+    "noRecommendationsDesc": "Seien Sie der Erste, der etwas Ähnliches oder Passendes empfiehlt!",
+    "yourRecommendation": "Ihre Empfehlung",
+    "editRecommendation": "Empfehlung bearbeiten",
+    "deleteRecommendation": "Empfehlung löschen",
+    "deleteRecommendationConfirm": "Sind Sie sicher, dass Sie diese Empfehlung löschen möchten?",
+    "searchMediaToRecommend": "Medium zum Empfehlen suchen...",
+    "recommendationReason": "Warum empfehlen Sie dies?",
+    "recommendationReasonPlaceholder": "Erklären Sie, was diese beiden Titel ähnlich macht oder warum Fans sie mögen würden...",
+    "selectTargetMedia": "Wählen Sie ein Medium",
+    "submitRecommendation": "Empfehlung absenden",
+    "loadMoreRecommendations": "Weitere Empfehlungen laden..."
   },
   "lynx": {
     "returnToSafety": "Zurück zur Sicherheit",

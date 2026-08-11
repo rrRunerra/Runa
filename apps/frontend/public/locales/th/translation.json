@@ -1368,7 +1368,21 @@
     "compact": "กะทัดรัด",
     "detailed": "ละเอียด",
     "density": "ความหนาแน่น",
-    "filter": "ตัวกรอง"
+    "filter": "ตัวกรอง",
+    "recommendations": "คำแนะนำ",
+    "recommendMedia": "แนะนำสื่อ",
+    "noRecommendations": "ยังไม่มีคำแนะนำ",
+    "noRecommendationsDesc": "เป็นคนแรกที่แนะนำผลงานที่คล้ายกันหรือเสริมกัน!",
+    "yourRecommendation": "คำแนะนำของคุณ",
+    "editRecommendation": "แก้ไขคำแนะนำ",
+    "deleteRecommendation": "ลบคำแนะนำ",
+    "deleteRecommendationConfirm": "คุณแน่ใจหรือไม่ว่าต้องการลบคำแนะนำนี้?",
+    "searchMediaToRecommend": "ค้นหาสื่อเพื่อแนะนำ...",
+    "recommendationReason": "ทำไมคุณถึงแนะนำเรื่องนี้?",
+    "recommendationReasonPlaceholder": "อธิบายสิ่งที่ทำให้สองเรื่องนี้คล้ายกันหรือทำไมแฟนๆ ถึงจะชอบ...",
+    "selectTargetMedia": "เลือกรายการสื่อ",
+    "submitRecommendation": "ส่งคำแนะนำ",
+    "loadMoreRecommendations": "กำลังโหลดคำแนะนำเพิ่มเติม..."
   },
   "lynx": {
     "returnToSafety": "กลับสู่ความปลอดภัย",

@@ -36,6 +36,10 @@ model User {
     aquilaGameReviews  AquilaGameReview[]
     aquilaBookReviews  AquilaBookReview[]
 
+    // RECOMMENDATIONS
+    aquilaRecommendations     AquilaRecommendation[]
+    aquilaRecommendationVotes AquilaRecommendationVote[]
+
     polarisBookmarks          PolarisUserBookMarks[]
     polarisCalendarSources    PolarisCalendarSource[]
     polarisCalendarEvents     PolarisCalendarEvent[]

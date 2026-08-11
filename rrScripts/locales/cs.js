@@ -1368,7 +1368,21 @@ export default {
     "compact": "Kompaktní",
     "detailed": "Detailní",
     "density": "Hustota",
-    "filter": "Filtr"
+    "filter": "Filtr",
+    "recommendations": "Doporučení",
+    "recommendMedia": "Doporučit médium",
+    "noRecommendations": "Zatím žádná doporučení",
+    "noRecommendationsDesc": "Buďte první, kdo doporučí něco podobného nebo doplňujícího!",
+    "yourRecommendation": "Vaše doporučení",
+    "editRecommendation": "Upravit doporučení",
+    "deleteRecommendation": "Smazat doporučení",
+    "deleteRecommendationConfirm": "Opravdu chcete toto doporučení smazat?",
+    "searchMediaToRecommend": "Hledat médium k doporučení...",
+    "recommendationReason": "Proč to doporučujete?",
+    "recommendationReasonPlaceholder": "Vysvětlete, v čem jsou si tyto dva tituly podobné nebo proč by se líbily fanouškům...",
+    "selectTargetMedia": "Vyberte položku média",
+    "submitRecommendation": "Odeslat doporučení",
+    "loadMoreRecommendations": "Načítání dalších doporučení..."
   },
   "lynx": {
     "returnToSafety": "Návrat do bezpečí",

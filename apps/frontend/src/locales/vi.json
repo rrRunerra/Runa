@@ -1368,7 +1368,21 @@
     "compact": "Rút gọn",
     "detailed": "Chi tiết",
     "density": "Mật độ",
-    "filter": "Bộ lọc"
+    "filter": "Bộ lọc",
+    "recommendations": "Đề xuất",
+    "recommendMedia": "Đề xuất phương tiện",
+    "noRecommendations": "Chưa có đề xuất nào",
+    "noRecommendationsDesc": "Hãy là người đầu tiên đề xuất nội dung tương tự hoặc bổ sung!",
+    "yourRecommendation": "Đề xuất của bạn",
+    "editRecommendation": "Chỉnh sửa đề xuất",
+    "deleteRecommendation": "Xóa đề xuất",
+    "deleteRecommendationConfirm": "Bạn có chắc chắn muốn xóa đề xuất này không?",
+    "searchMediaToRecommend": "Tìm kiếm phương tiện để đề xuất...",
+    "recommendationReason": "Tại sao bạn đề xuất nội dung này?",
+    "recommendationReasonPlaceholder": "Giải thích điều gì khiến hai tác phẩm này tương đồng hoặc tại sao người hâm mộ sẽ thích...",
+    "selectTargetMedia": "Chọn một mục phương tiện",
+    "submitRecommendation": "Gửi đề xuất",
+    "loadMoreRecommendations": "Đang tải thêm đề xuất..."
   },
   "lynx": {
     "returnToSafety": "Quay lại an toàn",

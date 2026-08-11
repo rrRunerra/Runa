@@ -1368,7 +1368,21 @@
     "compact": "컴팩트",
     "detailed": "상세",
     "density": "밀도",
-    "filter": "필터"
+    "filter": "필터",
+    "recommendations": "추천",
+    "recommendMedia": "미디어 추천하기",
+    "noRecommendations": "아직 추천이 없습니다",
+    "noRecommendationsDesc": "유사하거나 함께 보기 좋은 작품을 첫 번째로 추천해보세요!",
+    "yourRecommendation": "내 추천",
+    "editRecommendation": "추천 수정",
+    "deleteRecommendation": "추천 삭제",
+    "deleteRecommendationConfirm": "이 추천을 정말 삭제하시겠습니까?",
+    "searchMediaToRecommend": "추천할 미디어 검색...",
+    "recommendationReason": "이 작품을 추천하는 이유는 무엇인가요?",
+    "recommendationReasonPlaceholder": "두 작품의 공통점이나 팬들이 좋아할 만한 이유를 설명해주세요...",
+    "selectTargetMedia": "미디어를 선택하세요",
+    "submitRecommendation": "추천 등록",
+    "loadMoreRecommendations": "추천 더 불러오는 중..."
   },
   "lynx": {
     "returnToSafety": "안전한 곳으로 돌아가기",

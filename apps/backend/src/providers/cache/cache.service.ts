@@ -107,5 +107,15 @@ export class CacheService implements OnModuleDestroy {
       addedWithin: string,
     ) =>
       `discover:${mediaType.toLowerCase()}:${page}:${limit}:${year}:${format}:${status}:${search}:${sort}:${addedWithin}`,
+
+    // Recommendations
+    recommendations: (
+      mediaType: string,
+      mediaId: number | string,
+      cursor?: string,
+      take?: number,
+      sort?: string,
+    ) =>
+      `recommendations:${mediaType.toLowerCase()}:${mediaId}:${cursor || 'start'}:${take || 10}:${sort || 'score'}`,
   };
 }

@@ -42,7 +42,8 @@ import RrLapplandImageNotFound from "@/components/rrComponents/rrImages/rrLappla
 import { RrMediaRefreshButton } from "@/components/rrComponents/aquila/rrMediaRefreshButton";
 import { RrMediaDetailsSkeleton } from "@/components/rrComponents/aquila/details/rrMediaDetailsSkeleton";
 import { RrMediaReviews } from "@/components/rrComponents/aquila/details/rrMediaReviews";
-import { MessageSquare } from "lucide-react";
+import { RrMediaRecommendations } from "@/components/rrComponents/aquila/details/rrMediaRecommendations";
+import { MessageSquare, Sparkles } from "lucide-react";
 import { MediaType } from "@/types/aquila";
 import { TvEntity } from "@/types/tv.entities";
 import { RrMediaInfoRow } from "@/components/rrComponents/aquila/details/rrMediaInfoRow";
@@ -808,6 +809,13 @@ export default function TvDetailsPage(): React.JSX.Element {
                   <MessageSquare className="size-3.5 mr-1.5" />
                   {t("aquila.reviews")}
                 </TabsTrigger>
+                <TabsTrigger
+                  value="recommendations"
+                  className="rounded-xl px-3.5 py-2 text-xs font-bold data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all cursor-pointer"
+                >
+                  <Sparkles className="size-3.5 mr-1.5" />
+                  {t("aquila.recommendations")}
+                </TabsTrigger>
               </TabsList>
 
               {/* Overview Tab Content */}
@@ -1218,7 +1226,7 @@ export default function TvDetailsPage(): React.JSX.Element {
                                   >
                                     <div className="flex items-center gap-3 p-3">
                                       {/* Thumbnail */}
-                                      <div className="relative w-28 sm:w-32 aspect-16/9 rounded-xl overflow-hidden shrink-0 bg-muted border border-border/20 shadow-xs">
+                                      <div className="relative w-28 sm:w-32 aspect-video rounded-xl overflow-hidden shrink-0 bg-muted border border-border/20 shadow-xs">
                                         {epImage ? (
                                           <Image
                                             src={epImage}
@@ -1300,6 +1308,17 @@ export default function TvDetailsPage(): React.JSX.Element {
               {/* Reviews Tab Content */}
               <TabsContent value="reviews" className="space-y-6 outline-none">
                 <RrMediaReviews mediaType={MediaType.TV} mediaId={Number(id)} />
+              </TabsContent>
+
+              {/* Recommendations Tab Content */}
+              <TabsContent
+                value="recommendations"
+                className="space-y-6 outline-none"
+              >
+                <RrMediaRecommendations
+                  mediaType={MediaType.TV}
+                  mediaId={Number(id)}
+                />
               </TabsContent>
             </Tabs>
           </div>

@@ -1368,7 +1368,21 @@ export default {
     "compact": "Kompakt",
     "detailed": "Detaljert",
     "density": "Tetthet",
-    "filter": "Filter"
+    "filter": "Filter",
+    "recommendations": "Anbefalinger",
+    "recommendMedia": "Anbefal media",
+    "noRecommendations": "Ingen anbefalinger ennå",
+    "noRecommendationsDesc": "Vær den første til å anbefale noe lignende eller komplementært!",
+    "yourRecommendation": "Din anbefaling",
+    "editRecommendation": "Rediger anbefaling",
+    "deleteRecommendation": "Slett anbefaling",
+    "deleteRecommendationConfirm": "Er du sikker på at du vil slette denne anbefalingen?",
+    "searchMediaToRecommend": "Søk etter media å anbefale...",
+    "recommendationReason": "Hvorfor anbefaler du dette?",
+    "recommendationReasonPlaceholder": "Forklar hva som gjør disse to titlene like eller hvorfor fans vil like det...",
+    "selectTargetMedia": "Velg et medieelement",
+    "submitRecommendation": "Send inn anbefaling",
+    "loadMoreRecommendations": "Laster flere anbefalinger..."
   },
   "lynx": {
     "returnToSafety": "Gå tilbake til sikkerhet",
