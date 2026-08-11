@@ -3468,7 +3468,13 @@ export class ListService {
 
   public async getRadarrMovieList(username: string): Promise<any[]> {
     const list = await this.prisma.client.aquilaMovieUserListV2.findMany({
-      where: { username: username.toLowerCase(), status: 'PLANNING' },
+      where: {
+        username: username.toLowerCase(),
+        status: 'PLANNING',
+        movie: {
+          status: { in: ['RELEASED'] },
+        },
+      },
       include: { movie: true },
     });
     return list.map((item: any) => {
@@ -3500,6 +3506,7 @@ export class ListService {
         status: 'PLANNING',
         anime: {
           format: 'MOVIE',
+          status: { in: ['FINISHED', 'RELEASING'] },
         },
       },
       include: { anime: true },
@@ -3570,7 +3577,13 @@ export class ListService {
     const series: any[] = [];
     if (includeTv) {
       const tvList = await this.prisma.client.aquilaTvUserListV2.findMany({
-        where: { username: username.toLowerCase(), status: 'PLANNING' },
+        where: {
+          username: username.toLowerCase(),
+          status: 'PLANNING',
+          tv: {
+            status: { in: ['ENDED', 'RETURNING_SERIES'] },
+          },
+        },
         include: { tv: true },
       });
       tvList.forEach((item: any) => {
@@ -3590,6 +3603,7 @@ export class ListService {
           status: 'PLANNING',
           anime: {
             format: { not: 'MOVIE' },
+            status: { in: ['FINISHED', 'RELEASING'] },
           },
         },
         include: { anime: true },

@@ -598,7 +598,13 @@ describe('ListService', () => {
 
       const result = await service.getRadarrMovieList('testuser');
       expect(mockPrismaClient.aquilaMovieUserListV2.findMany).toHaveBeenCalledWith({
-        where: { username: 'testuser', status: 'PLANNING' },
+        where: {
+          username: 'testuser',
+          status: 'PLANNING',
+          movie: {
+            status: { in: ['RELEASED'] },
+          },
+        },
         include: { movie: true },
       });
       expect(result).toHaveLength(2);
@@ -658,7 +664,10 @@ describe('ListService', () => {
         where: {
           username: 'testuser',
           status: 'PLANNING',
-          anime: { format: 'MOVIE' },
+          anime: {
+            format: 'MOVIE',
+            status: { in: ['FINISHED', 'RELEASING'] },
+          },
         },
         include: { anime: true },
       });
@@ -679,6 +688,38 @@ describe('ListService', () => {
         hasFile: true,
         monitored: true,
       });
+    });
+
+    it('should handle fetchSonarrSeries for tv series with status filter', async () => {
+      mockPrismaClient.aquilaTvUserListV2.findMany.mockResolvedValue([
+        {
+          id: 1,
+          tv: {
+            id: 301,
+            titlePrimary: 'Breaking Bad',
+            tvDBId: 81189,
+          },
+        },
+      ]);
+
+      const result = await service.fetchSonarrSeries('testuser', true, false);
+      expect(mockPrismaClient.aquilaTvUserListV2.findMany).toHaveBeenCalledWith({
+        where: {
+          username: 'testuser',
+          status: 'PLANNING',
+          tv: {
+            status: { in: ['ENDED', 'RETURNING_SERIES'] },
+          },
+        },
+        include: { tv: true },
+      });
+      expect(result).toEqual([
+        {
+          title: 'Breaking Bad',
+          tvdbId: 81189,
+          monitored: true,
+        },
+      ]);
     });
 
     it('should handle fetchSonarrSeries for anime without tvDBId by notifying user and queuing update', async () => {
@@ -709,7 +750,10 @@ describe('ListService', () => {
         where: {
           username: 'testuser',
           status: 'PLANNING',
-          anime: { format: { not: 'MOVIE' } },
+          anime: {
+            format: { not: 'MOVIE' },
+            status: { in: ['FINISHED', 'RELEASING'] },
+          },
         },
         include: { anime: true },
       });
