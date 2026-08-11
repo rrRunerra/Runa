@@ -23,6 +23,7 @@ import {
   BarChart3,
   ImageIcon,
   MessageSquare,
+  Sparkles,
 } from "lucide-react";
 import { MediaType } from "@/types/aquila";
 
@@ -983,7 +984,8 @@ export default function AnimeDetailsPage(): React.JSX.Element {
 
               {/* Episodes Tab Content */}
               <TabsContent value="episodes" className="space-y-6 outline-none">
-                {(anime.episodes?.length > 0 || anime.airingSchedule?.length > 0) ? (
+                {anime.episodes?.length > 0 ||
+                anime.airingSchedule?.length > 0 ? (
                   <RrMediaEpisodes
                     episodes={anime.episodes}
                     airingSchedule={anime.airingSchedule}
@@ -1040,12 +1042,21 @@ export default function AnimeDetailsPage(): React.JSX.Element {
 
               {/* Reviews Tab Content */}
               <TabsContent value="reviews" className="space-y-6 outline-none">
-                <RrMediaReviews mediaType={MediaType.ANIME} mediaId={Number(id)} />
+                <RrMediaReviews
+                  mediaType={MediaType.ANIME}
+                  mediaId={Number(id)}
+                />
               </TabsContent>
 
               {/* Recommendations Tab Content */}
-              <TabsContent value="recommendations" className="space-y-6 outline-none">
-                <RrMediaRecommendations mediaType={MediaType.ANIME} mediaId={Number(id)} />
+              <TabsContent
+                value="recommendations"
+                className="space-y-6 outline-none"
+              >
+                <RrMediaRecommendations
+                  mediaType={MediaType.ANIME}
+                  mediaId={Number(id)}
+                />
               </TabsContent>
             </Tabs>
           </div>
