@@ -288,7 +288,7 @@ export class IgdbService {
 
     const data = await this.queryIgdb('games', body);
     let results: IgdbGame[] = Array.isArray(data) ? data : [];
-    console.log(JSON.stringify(results.map(r => r.game_type), null, 2))
+
 
     // Populate category from game_type if available (IGDB deprecated category in favor of game_type)
     for (const g of results) {

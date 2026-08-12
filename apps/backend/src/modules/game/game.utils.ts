@@ -31,7 +31,8 @@ export function filterByGameType<
       return true;
     }
 
-    return [0, 2, 8, 9, 10].includes(typeId);
+    // Allowed: 0 (Main Game), 2 (Expansion), 4 (Standalone Expansion), 8 (Remake), 9 (Remaster), 10 (Expanded Game)
+    return [0, 2, 4, 8, 9, 10].includes(typeId);
   });
 
   // 2. Filter out Special Edition, Collector's Edition, GOTY, Day One Edition, etc. unless explicitly searched
