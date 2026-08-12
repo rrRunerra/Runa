@@ -61,14 +61,29 @@ export function filterByGameType<
     }
   }
 
-  // 3. Deduplicate by title
-  const seenTitles = new Set<string>();
+  // 3. Deduplicate by unique identity (igdbId, steamAppId, rawgId, internal id, or title fallback)
+  const seenKeys = new Set<string>();
   const deduplicated: T[] = [];
   for (const item of filtered) {
-    const title = (item.title || item.titlePrimary || item.name || '').toLowerCase().trim();
-    if (!title) continue;
-    if (!seenTitles.has(title)) {
-      seenTitles.add(title);
+
+    const igdbId = (item as any).igdbId;
+    const steamAppId = (item as any).steamAppId;
+    const rawgId = (item as any).rawgId;
+    const itemId = (item as any).id;
+
+    let key = '';
+    if (igdbId !== undefined && igdbId !== null && igdbId !== 0) {
+      key = `igdb:${igdbId}`;
+    } else if (steamAppId !== undefined && steamAppId !== null && steamAppId !== 0) {
+      key = `steam:${steamAppId}`;
+    } else if (rawgId !== undefined && rawgId !== null && rawgId !== 0) {
+      key = `rawg:${rawgId}`;
+    } else if (itemId !== undefined && itemId !== null && itemId !== 0) {
+      key = `id:${itemId}`;
+    } 
+
+    if (!seenKeys.has(key)) {
+      seenKeys.add(key);
       deduplicated.push(item);
     }
   }
