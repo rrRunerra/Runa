@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { filterByGameType } from '../../modules/game/game.utils';
 
 export interface IgdbGame {
   id: number;
@@ -31,6 +32,8 @@ export interface IgdbGame {
   franchises?: { id: number; name: string }[];
   similar_games?: { id: number; name: string; cover?: { url: string } }[];
   language_supports?: { id: number; language?: { id: number; name: string }; language_support_type?: { id: number; name: string } }[];
+  category?: number; // Deprecated by IGDB; use game_type
+  game_type?: number | { id: number; type: string }; // IGDB Game Type (0=Main, 1=DLC, 2=Expansion, 3=Bundle, 4=Standalone, 5=Mod, 6=Episode, 7=Season, 8=Remake, 9=Remaster, 10=Expanded, 11=Port, 12=Fork, 13=Pack, 14=Update)
   external_games?: { id: number; category: number; uid: string }[];
 }
 
@@ -271,14 +274,33 @@ export class IgdbService {
     return null;
   }
 
-  public async searchGames(query: string, limit = 20): Promise<IgdbGame[]> {
+  public async searchGames(
+    query: string,
+    limit = 20,
+    options?: { mainGameOnly?: boolean },
+  ): Promise<IgdbGame[]> {
     const clean = query.replace(/"/g, '\\"').trim();
     if (!clean) return [];
 
-    const body = `search "${clean}"; fields id, name, slug, summary, storyline, cover.url, first_release_date, total_rating, total_rating_count, rating, rating_count, genres.name, platforms.name, involved_companies.company.name, involved_companies.developer, involved_companies.publisher, game_modes.name, player_perspectives.name, artworks.url, screenshots.url, videos.video_id, videos.name, websites.url, websites.category, age_ratings.category, age_ratings.rating, language_supports.language.name; limit ${limit};`;
+    const mainOnly = options?.mainGameOnly !== false;
+
+    const body = `search "${clean}"; fields id, name, game_type, category, slug, summary, storyline, cover.url, first_release_date, total_rating, total_rating_count, rating, rating_count, genres.name, platforms.name, involved_companies.company.name, involved_companies.developer, involved_companies.publisher, game_modes.name, player_perspectives.name, artworks.url, screenshots.url, videos.video_id, videos.name, websites.url, age_ratings.rating, language_supports.language.name; limit ${limit};`;
 
     const data = await this.queryIgdb('games', body);
-    return Array.isArray(data) ? data : [];
+    let results: IgdbGame[] = Array.isArray(data) ? data : [];
+    console.log(JSON.stringify(results.map(r => r.game_type), null, 2))
+
+    // Populate category from game_type if available (IGDB deprecated category in favor of game_type)
+    for (const g of results) {
+      if (g.category === undefined && g.game_type !== undefined) {
+        g.category = typeof g.game_type === 'number' ? g.game_type : (g.game_type as any)?.id;
+      }
+    }
+
+    if (mainOnly) {
+      results = filterByGameType(results, clean);
+    }
+    return results;
   }
 
   public async fetchGameDetail(igdbId: number): Promise<IgdbGame | null> {

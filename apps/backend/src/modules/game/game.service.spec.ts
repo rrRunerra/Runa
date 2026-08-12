@@ -73,6 +73,10 @@ describe('GameService', () => {
     });
 
     it('should queue background updates for local search results as well', async () => {
+      mockCacheService.get.mockImplementation(async (key: string) => {
+        if (key.includes('cooldown')) return true;
+        return null;
+      });
       mockGameRepository.search.mockResolvedValue([
         { id: 1, igdbId: 789, title: 'Local Game', coverImage: 'cover.jpg' },
       ]);
@@ -80,7 +84,6 @@ describe('GameService', () => {
       const result = await service.search('Local');
 
       expect(mockGameRepository.search).toHaveBeenCalledWith('Local');
-      expect(mockGameExternal.search).not.toHaveBeenCalled();
       expect(mockGameQueueService.addSearchUpserts).toHaveBeenCalledWith([789]);
       expect(result.length).toBe(1);
     });

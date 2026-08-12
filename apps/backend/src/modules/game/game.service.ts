@@ -11,6 +11,7 @@ import { GameEntity, GameSearchEntity } from './game.entities';
 import { CacheService } from 'src/providers/cache/cache.service';
 import { GameExternal } from './game.external';
 import { getTimestampMs } from '../../common/utils/time.utils';
+import { filterMainGameEntities } from './game.utils';
 
 @Injectable()
 export class GameService {
@@ -40,7 +41,7 @@ export class GameService {
     if (cached && Array.isArray(cached) && cached.length > 0) {
       this.logger.debug(`Game search cache hit ${cached.length} entries`);
       void this.triggerBackgroundSearchRefresh(cleanName);
-      return cached;
+      return filterMainGameEntities(cached, cleanName);
     }
 
     let result: GameSearchEntity[] = await this.gameRepository.search(cleanName);
@@ -55,6 +56,8 @@ export class GameService {
     } else {
       void this.triggerBackgroundSearchRefresh(cleanName);
     }
+
+    result = filterMainGameEntities(result, cleanName);
 
     this.logger.debug(`Games found: ${result.length}`);
 

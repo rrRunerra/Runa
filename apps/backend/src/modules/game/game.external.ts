@@ -59,10 +59,15 @@ export class GameExternal {
       .trim();
   }
 
-  public async search(query: string): Promise<GameSearchEntity[]> {
+  public async search(
+    query: string,
+    options?: { mainGameOnly?: boolean },
+  ): Promise<GameSearchEntity[]> {
     try {
       this.logger.debug(`Searching IGDB for games: "${query}"`);
-      const results = await this.igdbService.searchGames(query);
+      const results = await this.igdbService.searchGames(query, 20, {
+        mainGameOnly: options?.mainGameOnly ?? true,
+      });
 
       if (!results) {
         throw new rrError(`${this.moduleCode}SRCHF001`, {

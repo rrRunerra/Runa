@@ -3,6 +3,7 @@ import { PrismaService } from '../../providers/database/prisma.service';
 import { MediaType, RelationType, StaffRole, GameStatus, CharacterRole } from '@runa/database';
 import { GameEntity, GameSearchEntity } from './game.entities';
 import { rrError } from 'src/providers/error';
+import { filterMainGameEntities } from './game.utils';
 
 @Injectable()
 export class GameRepository {
@@ -32,7 +33,9 @@ export class GameRepository {
         orderBy: { popularity: 'desc' },
       });
 
-      return records.map((item) => ({
+      const resultsToReturn = filterMainGameEntities(records, clean);
+
+      return resultsToReturn.map((item) => ({
         id: item.id,
         rawgId: item.rawgId,
         igdbId: item.igdbId,
@@ -296,22 +299,50 @@ export class GameRepository {
     }
 
     let existing: any = null;
+    const selectFields = {
+      id: true,
+      locked: true,
+      igdbId: true,
+      rawgId: true,
+      steamAppId: true,
+      giantbombId: true,
+      vndbId: true,
+    };
+
     if (targetInternalId) {
       existing = await this.prisma.client.aquilaGameV2.findUnique({
         where: { id: targetInternalId },
-        select: { id: true, locked: true },
+        select: selectFields,
       });
     }
     if (!existing && igdbId) {
       existing = await this.prisma.client.aquilaGameV2.findUnique({
         where: { igdbId },
-        select: { id: true, locked: true },
+        select: selectFields,
       });
     }
     if (!existing && rawgId) {
       existing = await this.prisma.client.aquilaGameV2.findUnique({
         where: { rawgId },
-        select: { id: true, locked: true },
+        select: selectFields,
+      });
+    }
+    if (!existing && payload.steamAppId) {
+      existing = await this.prisma.client.aquilaGameV2.findUnique({
+        where: { steamAppId: payload.steamAppId },
+        select: selectFields,
+      });
+    }
+    if (!existing && payload.giantbombId) {
+      existing = await this.prisma.client.aquilaGameV2.findUnique({
+        where: { giantbombId: payload.giantbombId },
+        select: selectFields,
+      });
+    }
+    if (!existing && payload.vndbId) {
+      existing = await this.prisma.client.aquilaGameV2.findUnique({
+        where: { vndbId: payload.vndbId },
+        select: selectFields,
       });
     }
 
@@ -320,6 +351,34 @@ export class GameRepository {
       return existing;
     }
 
+    // Helper to check for external ID collisions with OTHER records in DB
+    const sanitizeExternalId = async (
+      field: 'igdbId' | 'rawgId' | 'steamAppId' | 'giantbombId' | 'vndbId',
+      val: any,
+    ): Promise<any> => {
+      if (val === undefined || val === null) return existing ? (existing[field] ?? null) : null;
+      const collision = await this.prisma.client.aquilaGameV2.findFirst({
+        where: {
+          [field]: val,
+          ...(existing ? { NOT: { id: existing.id } } : {}),
+        },
+        select: { id: true },
+      });
+      if (collision) {
+        this.logger.warn(
+          `[GameRepository] Unique constraint collision: ${field}=${val} is already assigned to AquilaGameV2 ID ${collision.id}. Omitting ${field} for target ID ${existing?.id ?? 'new'}.`,
+        );
+        return existing ? (existing[field] ?? null) : null;
+      }
+      return val;
+    };
+
+    const igdbIdToUse = await sanitizeExternalId('igdbId', payload.igdbId);
+    const rawgIdToUse = await sanitizeExternalId('rawgId', payload.rawgId);
+    const steamAppIdToUse = await sanitizeExternalId('steamAppId', payload.steamAppId);
+    const giantbombIdToUse = await sanitizeExternalId('giantbombId', payload.giantbombId);
+    const vndbIdToUse = await sanitizeExternalId('vndbId', payload.vndbId);
+
     let statusEnum: GameStatus = GameStatus.RELEASED;
     if (payload.status && payload.status in GameStatus) {
       statusEnum = payload.status as GameStatus;
@@ -327,17 +386,22 @@ export class GameRepository {
 
     const whereClause = existing
       ? { id: existing.id }
-      : igdbId
-        ? { igdbId }
-        : { rawgId: rawgId! };
+      : igdbIdToUse
+        ? { igdbId: igdbIdToUse }
+        : rawgIdToUse
+          ? { rawgId: rawgIdToUse }
+          : steamAppIdToUse
+            ? { steamAppId: steamAppIdToUse }
+            : { id: 0 };
 
     const dbRecord = await this.prisma.client.aquilaGameV2.upsert({
       where: whereClause,
       update: {
-        igdbId: payload.igdbId ?? null,
-        steamAppId: payload.steamAppId ?? null,
-        giantbombId: payload.giantbombId ?? null,
-        vndbId: payload.vndbId ?? null,
+        igdbId: igdbIdToUse,
+        steamAppId: steamAppIdToUse,
+        giantbombId: giantbombIdToUse,
+        vndbId: vndbIdToUse,
+        rawgId: rawgIdToUse,
 
         titlePrimary: payload.titlePrimary,
         titleSecondary: payload.titleSecondary ?? null,
@@ -404,11 +468,11 @@ export class GameRepository {
         igdbUpdatedAt: Math.floor(Date.now() / 1000),
       },
       create: {
-        rawgId,
-        igdbId: payload.igdbId ?? null,
-        steamAppId: payload.steamAppId ?? null,
-        giantbombId: payload.giantbombId ?? null,
-        vndbId: payload.vndbId ?? null,
+        rawgId: rawgIdToUse,
+        igdbId: igdbIdToUse,
+        steamAppId: steamAppIdToUse,
+        giantbombId: giantbombIdToUse,
+        vndbId: vndbIdToUse,
 
         titlePrimary: payload.titlePrimary,
         titleSecondary: payload.titleSecondary ?? null,
