@@ -20,6 +20,7 @@ import {
   DialogContent,
   DialogDescription,
   DialogFooter,
+  DialogPortal,
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
@@ -153,7 +154,30 @@ export function SettingsDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-[96vw] max-w-[96vw] xl:max-w-[1550px] 2xl:max-w-[1680px] p-0 gap-0 overflow-hidden rounded-2xl flex flex-col md:flex-row h-[92dvh] max-h-[92dvh] md:h-[90vh] md:max-h-[90vh]">
+        <DialogContent
+          onPointerDownOutside={(e) => {
+            const target = e.detail?.originalEvent
+              ?.target as HTMLElement | null;
+            if (target?.closest("[data-rr-dock]")) {
+              e.preventDefault();
+            }
+          }}
+          onFocusOutside={(e) => {
+            const target = e.detail?.originalEvent
+              ?.target as HTMLElement | null;
+            if (target?.closest("[data-rr-dock]")) {
+              e.preventDefault();
+            }
+          }}
+          onInteractOutside={(e) => {
+            const target = e.detail?.originalEvent
+              ?.target as HTMLElement | null;
+            if (target?.closest("[data-rr-dock]")) {
+              e.preventDefault();
+            }
+          }}
+          className="w-[96vw] max-w-[96vw] xl:max-w-[1550px] 2xl:max-w-[1680px] p-0 gap-0 overflow-visible rounded-2xl flex flex-col md:flex-row top-3 md:top-1/2 translate-y-0 md:-translate-y-1/2 h-[calc(100dvh-6.25rem)] max-h-[calc(100dvh-6.25rem)] md:h-[90vh] md:max-h-[90vh]"
+        >
           <DialogTitle className="sr-only">
             {t("settingsDialog.title")}
           </DialogTitle>
@@ -161,7 +185,7 @@ export function SettingsDialog({
             {t("settingsDialog.description")}
           </DialogDescription>
           <SidebarProvider
-            className="items-start h-full w-full min-h-0"
+            className="items-start h-full w-full min-h-0 overflow-hidden rounded-2xl border border-border"
             style={{ minHeight: "100%" }}
           >
             {/* Desktop Left Sidebar */}
@@ -287,12 +311,17 @@ export function SettingsDialog({
               )}
             </main>
           </SidebarProvider>
-
-          {/* Mobile Bottom Dock Tabs Switcher */}
-          <div className="md:hidden">
-            <RrBottomDock pathname="" items={mobileDockItems} />
-          </div>
         </DialogContent>
+        {/* Mobile Bottom Dock Tabs Switcher OUTSIDE Modal Card */}
+        <DialogPortal>
+          <div className="md:hidden pointer-events-auto" data-rr-dock="true">
+            <RrBottomDock
+              pathname=""
+              items={mobileDockItems}
+              className="fixed bottom-3 left-1/2 -translate-x-1/2  pointer-events-auto cursor-pointer"
+            />
+          </div>
+        </DialogPortal>
       </Dialog>
       <RrConstellationBuilderModal
         open={isConstellationBuilderOpen}

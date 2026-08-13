@@ -268,26 +268,27 @@ export function RrArrSettingsTab({
     if (!setFooterContent) return;
 
     setFooterContent(
-      <div className="flex items-center justify-between w-full">
+      <div className="flex items-center justify-between w-full gap-2">
         <Button
           type="button"
           variant="outline"
           size="sm"
           onClick={handleReset}
           disabled={isSaving}
-          className="text-xs gap-1.5 cursor-pointer text-muted-foreground hover:text-foreground"
+          className="text-xs gap-1.5 cursor-pointer text-muted-foreground hover:text-foreground shrink-0 px-2.5 sm:px-3"
         >
           <RotateCcw className="size-3.5" />
-          Reset Defaults
+          <span className="hidden sm:inline">Reset Defaults</span>
+          <span className="sm:hidden">Reset</span>
         </Button>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={() => onOpenChange(false)}
             disabled={isSaving}
-            className="text-xs cursor-pointer"
+            className="text-xs cursor-pointer px-2 sm:px-3"
           >
             Cancel
           </Button>
@@ -296,17 +297,18 @@ export function RrArrSettingsTab({
             onClick={handleSave}
             disabled={isSaving}
             size="sm"
-            className="text-xs px-5 gap-1.5 cursor-pointer"
+            className="text-xs px-3 sm:px-5 gap-1.5 cursor-pointer"
           >
             {isSaving ? (
               <>
                 <Spinner className="size-3.5" />
-                Saving...
+                <span>Saving...</span>
               </>
             ) : (
               <>
                 <Save className="size-3.5" />
-                Save Settings
+                <span>Save</span>
+                <span className="hidden sm:inline"> Settings</span>
               </>
             )}
           </Button>

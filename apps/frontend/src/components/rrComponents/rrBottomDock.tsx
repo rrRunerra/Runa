@@ -33,6 +33,7 @@ interface RrBottomDockProps {
   navConfig?: SidebarConfig;
   setOpenMobile?: (open: boolean) => void;
   items?: DockItemData[];
+  className?: string;
 }
 
 export default function RrBottomDock({
@@ -40,25 +41,16 @@ export default function RrBottomDock({
   navConfig,
   setOpenMobile,
   items: customItems,
+  className,
 }: RrBottomDockProps): React.JSX.Element | null {
   // If custom items are provided, render them
   if (customItems) {
     return (
-      <div
-        onContextMenu={(e) => e.preventDefault()}
-        className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-background/85 backdrop-blur-2xl border border-border/80 shadow-2xl w-[calc(100%-1.5rem)] sm:w-[calc(100%-2rem)] max-w-md sm:max-w-lg select-none rounded-full overflow-hidden"
-      >
-        <div className="flex items-center overflow-x-auto no-scrollbar px-2 py-2 sm:py-2.5 snap-x snap-mandatory w-full">
-          {customItems.map((item) => (
-            <div
-              key={item.label}
-              className="flex-[0_0_20%] shrink-0 snap-center flex justify-center"
-            >
-              <RrDockItem item={item} pathname={pathname} />
-            </div>
-          ))}
-        </div>
-      </div>
+      <RrCustomBottomDock
+        customItems={customItems}
+        pathname={pathname}
+        className={className}
+      />
     );
   }
 
@@ -261,7 +253,7 @@ function RrDockItem({
   );
 
   const buttonClass = cn(
-    "relative flex flex-col items-center justify-center gap-1 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full transition-colors duration-200 min-w-15 sm:min-w-17 min-h-12.5 sm:min-h-13.5",
+    "relative flex flex-col items-center justify-center gap-1 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full transition-colors duration-200 min-w-15 sm:min-w-17 min-h-12.5 sm:min-h-13.5 cursor-pointer pointer-events-auto",
     item.isActive
       ? "text-primary font-bold"
       : "text-muted-foreground/70 hover:text-foreground",
@@ -388,5 +380,109 @@ function RrDockItem({
     <Link href={item.href || "#"} className={buttonClass}>
       {content}
     </Link>
+  );
+}
+
+function RrCustomBottomDock({
+  customItems,
+  pathname,
+  className,
+}: {
+  customItems: DockItemData[];
+  pathname: string;
+  className?: string;
+}): React.JSX.Element {
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const isDraggingRef = React.useRef(false);
+  const hasDraggedRef = React.useRef(false);
+  const startXRef = React.useRef(0);
+  const scrollLeftRef = React.useRef(0);
+  const [isGrabbing, setIsGrabbing] = React.useState(false);
+
+  // Auto-scroll active item into view
+  React.useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const activeEl = el.querySelector<HTMLElement>("[data-active='true']");
+    if (activeEl) {
+      activeEl.scrollIntoView({
+        behavior: "smooth",
+        inline: "center",
+        block: "nearest",
+      });
+    }
+  }, [customItems]);
+
+  const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    const el = scrollRef.current;
+    if (!el) return;
+    if (e.deltaY !== 0) {
+      el.scrollLeft += e.deltaY;
+    }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0 || !scrollRef.current) return;
+    isDraggingRef.current = true;
+    hasDraggedRef.current = false;
+    startXRef.current = e.pageX;
+    scrollLeftRef.current = scrollRef.current.scrollLeft;
+    setIsGrabbing(true);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current || !scrollRef.current) return;
+    const dx = e.pageX - startXRef.current;
+    if (Math.abs(dx) > 5) {
+      hasDraggedRef.current = true;
+    }
+    scrollRef.current.scrollLeft = scrollLeftRef.current - dx;
+  };
+
+  const handleMouseUpOrLeave = () => {
+    isDraggingRef.current = false;
+    setIsGrabbing(false);
+  };
+
+  const handleClickCapture = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (hasDraggedRef.current) {
+      e.stopPropagation();
+      e.preventDefault();
+      hasDraggedRef.current = false;
+    }
+  };
+
+  return (
+    <div
+      onContextMenu={(e) => e.preventDefault()}
+      className={cn(
+        "fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-background/85 backdrop-blur-2xl border border-border/80 shadow-2xl w-[calc(100%-1.5rem)] sm:w-[calc(100%-2rem)] max-w-md sm:max-w-lg select-none rounded-full overflow-hidden pointer-events-auto",
+        className,
+      )}
+    >
+      <div
+        ref={scrollRef}
+        onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUpOrLeave}
+        onMouseLeave={handleMouseUpOrLeave}
+        onClickCapture={handleClickCapture}
+        className={cn(
+          "flex items-center overflow-x-auto no-scrollbar px-2 py-2 sm:py-2.5 snap-x snap-mandatory w-full touch-pan-x cursor-grab active:cursor-grabbing",
+          isGrabbing && "snap-none select-none",
+        )}
+      >
+        {customItems.map((item) => (
+          <div
+            key={item.label}
+            data-active={item.isActive ? "true" : "false"}
+            className="flex-[0_0_20%] shrink-0 snap-center flex justify-center"
+          >
+            <RrDockItem item={item} pathname={pathname} />
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
