@@ -117,11 +117,11 @@ export class SaveAnimeEntryDto {
 
   @IsOptional()
   @IsInt()
-  startDate?: number;
+  startDate?: number | null;
 
   @IsOptional()
   @IsInt()
-  endDate?: number;
+  endDate?: number | null;
 
   @IsOptional()
   @IsString()
@@ -167,11 +167,11 @@ export class SaveMangaEntryDto {
 
   @IsOptional()
   @IsInt()
-  startDate?: number;
+  startDate?: number | null;
 
   @IsOptional()
   @IsInt()
-  endDate?: number;
+  endDate?: number | null;
 
   @IsOptional()
   @IsString()
@@ -209,11 +209,11 @@ export class SaveMovieEntryDto {
 
   @IsOptional()
   @IsInt()
-  startDate?: number;
+  startDate?: number | null;
 
   @IsOptional()
   @IsInt()
-  endDate?: number;
+  endDate?: number | null;
 
   @IsOptional()
   @IsString()
@@ -248,11 +248,11 @@ export class SaveTvEntryDto {
 
   @IsOptional()
   @IsInt()
-  startDate?: number;
+  startDate?: number | null;
 
   @IsOptional()
   @IsInt()
-  endDate?: number;
+  endDate?: number | null;
 
   @IsOptional()
   @IsString()
@@ -295,11 +295,11 @@ export class SaveGameEntryDto {
 
   @IsOptional()
   @IsInt()
-  startDate?: number;
+  startDate?: number | null;
 
   @IsOptional()
   @IsInt()
-  endDate?: number;
+  endDate?: number | null;
 
   @IsOptional()
   @IsString()
@@ -338,11 +338,11 @@ export class SaveBookEntryDto {
 
   @IsOptional()
   @IsInt()
-  startDate?: number;
+  startDate?: number | null;
 
   @IsOptional()
   @IsInt()
-  endDate?: number;
+  endDate?: number | null;
 
   @IsOptional()
   @IsString()

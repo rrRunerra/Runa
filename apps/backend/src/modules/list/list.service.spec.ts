@@ -1003,4 +1003,65 @@ describe('ListService', () => {
       expect(result.pageInfo.nextCursor).toBe('s_0_11');
     });
   });
+
+  describe('incrementProgress and date removal', () => {
+    it('should transition status from PLANNING to WATCHING for anime when incrementing progress', async () => {
+      mockPrismaClient.aquilaAnimeUserListV2.findUnique.mockResolvedValueOnce({
+        username: 'testuser',
+        animeId: 10,
+        status: 'PLANNING',
+        progress: 0,
+        score: null,
+        startDate: null,
+        endDate: null,
+        notes: null,
+        rewatched: 0,
+        connections: {},
+      });
+      mockPrismaClient.aquilaAnimeV2.findUnique.mockResolvedValueOnce({ episodeCount: 12 });
+      mockPrismaClient.user.findUnique.mockResolvedValueOnce({ privacy: {} });
+      mockPrismaClient.aquilaAnimeUserListV2.upsert.mockResolvedValueOnce({});
+      mockPrismaClient.aquilaAnimeUserListV2.findUnique.mockResolvedValueOnce({
+        username: 'testuser',
+        animeId: 10,
+        status: 'WATCHING',
+        progress: 1,
+      });
+
+      await service.incrementProgress('testuser', 'anime', 10, 1);
+
+      expect(mockPrismaClient.aquilaAnimeUserListV2.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          update: expect.objectContaining({
+            status: 'WATCHING',
+            progress: 1,
+          }),
+        }),
+      );
+    });
+
+    it('should pass null to Prisma update when startDate and endDate are set to null', async () => {
+      mockPrismaClient.user.findUnique.mockResolvedValueOnce({ privacy: {} });
+      mockPrismaClient.aquilaAnimeV2.findUnique.mockResolvedValueOnce({ episodeCount: 12 });
+      mockPrismaClient.aquilaAnimeUserListV2.findUnique.mockResolvedValueOnce(null);
+      mockPrismaClient.aquilaAnimeUserListV2.upsert.mockResolvedValueOnce({});
+      mockPrismaClient.aquilaAnimeUserListV2.findUnique.mockResolvedValueOnce({});
+
+      await service.upsertAnimeList('testuser', {
+        animeId: 10,
+        startDate: null,
+        endDate: null,
+      });
+
+      expect(mockPrismaClient.aquilaAnimeUserListV2.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          update: expect.objectContaining({
+            startDate: null,
+            endDate: null,
+          }),
+        }),
+      );
+    });
+  });
 });
+

@@ -41,10 +41,12 @@ function toPrismaStatus(status: any): any {
   return s;
 }
 
-function toDate(val?: number | Date | null): Date | undefined {
-  if (val === undefined || val === null) return undefined;
+function toDate(val?: number | Date | null): Date | null | undefined {
+  if (val === null) return null;
+  if (val === undefined) return undefined;
   if (val instanceof Date) return val;
   if (typeof val === 'number') {
+    if (val === 0) return null;
     const ms = val < 10000000000 ? val * 1000 : val;
     return new Date(ms);
   }
@@ -571,9 +573,32 @@ export class ListService {
         },
       });
 
-      const status = body.status
+      let status = body.status
         ? toPrismaStatus(body.status)
         : (oldEntry?.status ?? 'PLANNING');
+
+      const effectiveProgress = body.progress !== undefined ? body.progress : (oldEntry?.progress ?? 0);
+      if (status === 'PLANNING' && effectiveProgress > 0) {
+        status = 'WATCHING';
+      }
+
+      let startDateVal = toDate(body.startDate);
+      if (
+        !startDateVal &&
+        (status === 'WATCHING' || status === 'READING' || status === 'PLAYING' || status === 'COMPLETED' || status === 'FINISHED') &&
+        !oldEntry?.startDate
+      ) {
+        startDateVal = new Date();
+      }
+
+      let endDateVal = toDate(body.endDate);
+      if (
+        endDateVal === undefined &&
+        (status === 'COMPLETED' || status === 'FINISHED') &&
+        !oldEntry?.endDate
+      ) {
+        endDateVal = new Date();
+      }
 
       const effectiveScore = body.score !== undefined ? body.score : oldEntry?.score;
       if (
@@ -599,8 +624,8 @@ export class ListService {
           status,
           progress: body.progress,
           score: body.score,
-          startDate: toDate(body.startDate),
-          endDate: toDate(body.endDate),
+          startDate: startDateVal,
+          endDate: endDateVal,
           notes: body.notes,
           rewatched: body.rewatched,
           connections: body.connections,
@@ -611,8 +636,8 @@ export class ListService {
           status,
           progress: body.progress ?? 0,
           score: body.score,
-          startDate: toDate(body.startDate),
-          endDate: toDate(body.endDate),
+          startDate: startDateVal,
+          endDate: endDateVal,
           notes: body.notes,
           rewatched: body.rewatched ?? 0,
           connections: body.connections,
@@ -917,9 +942,33 @@ export class ListService {
         },
       });
 
-      const status = body.status
+      let status = body.status
         ? toPrismaStatus(body.status)
         : (oldEntry?.status ?? 'PLANNING');
+
+      const effectiveChapters = body.chapters !== undefined ? body.chapters : (oldEntry?.chaptersProgress ?? 0);
+      const effectiveVolumes = body.volumes !== undefined ? body.volumes : (oldEntry?.volumesProgress ?? 0);
+      if (status === 'PLANNING' && (effectiveChapters > 0 || effectiveVolumes > 0)) {
+        status = 'READING';
+      }
+
+      let startDateVal = toDate(body.startDate);
+      if (
+        !startDateVal &&
+        (status === 'WATCHING' || status === 'READING' || status === 'PLAYING' || status === 'COMPLETED' || status === 'FINISHED') &&
+        !oldEntry?.startDate
+      ) {
+        startDateVal = new Date();
+      }
+
+      let endDateVal = toDate(body.endDate);
+      if (
+        endDateVal === undefined &&
+        (status === 'COMPLETED' || status === 'FINISHED') &&
+        !oldEntry?.endDate
+      ) {
+        endDateVal = new Date();
+      }
 
       const effectiveScore = body.score !== undefined ? body.score : oldEntry?.score;
       if (status === 'COMPLETED' || status === 'FINISHED') {
@@ -933,9 +982,6 @@ export class ListService {
             'Score is required when marking an entry as Completed/Finished.',
           );
         }
-
-        const effectiveChapters = body.chapters !== undefined ? body.chapters : oldEntry?.chaptersProgress;
-        const effectiveVolumes = body.volumes !== undefined ? body.volumes : oldEntry?.volumesProgress;
 
         if (
           manga?.chapterCount != null &&
@@ -970,8 +1016,8 @@ export class ListService {
           chaptersProgress: body.chapters,
           volumesProgress: body.volumes,
           score: body.score,
-          startDate: toDate(body.startDate),
-          endDate: toDate(body.endDate),
+          startDate: startDateVal,
+          endDate: endDateVal,
           notes: body.notes,
           reread: body.reread,
           connections: body.connections,
@@ -983,8 +1029,8 @@ export class ListService {
           chaptersProgress: body.chapters ?? 0,
           volumesProgress: body.volumes ?? 0,
           score: body.score,
-          startDate: toDate(body.startDate),
-          endDate: toDate(body.endDate),
+          startDate: startDateVal,
+          endDate: endDateVal,
           notes: body.notes,
           reread: body.reread ?? 0,
           connections: body.connections,
@@ -1243,7 +1289,6 @@ export class ListService {
       const isPrivate = !!(privacy.profile || privacy.movieList);
 
       const movieId = Number(body.movieId);
-      const status = toPrismaStatus(body.status);
 
       const oldEntry = await this.prisma.client.aquilaMovieUserListV2.findUnique({
         where: {
@@ -1253,6 +1298,28 @@ export class ListService {
           },
         },
       });
+
+      let status = body.status
+        ? toPrismaStatus(body.status)
+        : (oldEntry?.status ?? 'PLANNING');
+
+      let startDateVal = toDate(body.startDate);
+      if (
+        !startDateVal &&
+        (status === 'COMPLETED' || status === 'FINISHED') &&
+        !oldEntry?.startDate
+      ) {
+        startDateVal = new Date();
+      }
+
+      let endDateVal = toDate(body.endDate);
+      if (
+        endDateVal === undefined &&
+        (status === 'COMPLETED' || status === 'FINISHED') &&
+        !oldEntry?.endDate
+      ) {
+        endDateVal = new Date();
+      }
 
       const effectiveScore = body.score !== undefined ? body.score : oldEntry?.score;
       if (
@@ -1278,8 +1345,8 @@ export class ListService {
         update: {
           status,
           score: body.score,
-          startDate: toDate(body.startDate),
-          endDate: toDate(body.endDate),
+          startDate: startDateVal,
+          endDate: endDateVal,
           notes: body.notes,
           rewatched: body.rewatched,
           connections: body.connections,
@@ -1289,8 +1356,8 @@ export class ListService {
           movieId,
           status,
           score: body.score,
-          startDate: toDate(body.startDate),
-          endDate: toDate(body.endDate),
+          startDate: startDateVal,
+          endDate: endDateVal,
           notes: body.notes,
           rewatched: body.rewatched ?? 0,
           connections: body.connections,
@@ -1577,7 +1644,43 @@ export class ListService {
       const isPrivate = !!(privacy.profile || privacy.tvList);
 
       const tvId = Number(body.tvId);
-      const status = toPrismaStatus(body.status);
+
+      const oldEntry = await this.prisma.client.aquilaTvUserListV2.findUnique({
+        where: {
+          username_tvId: {
+            username: username.toLowerCase(),
+            tvId,
+          },
+        },
+      });
+
+      let status = body.status
+        ? toPrismaStatus(body.status)
+        : (oldEntry?.status ?? 'PLANNING');
+
+      const episodeListCount = body.episodes && Array.isArray(body.episodes) ? body.episodes.length : 0;
+      const effectiveProgress = episodeListCount > 0 ? episodeListCount : (oldEntry?.progress ?? 0);
+      if (status === 'PLANNING' && effectiveProgress > 0) {
+        status = 'WATCHING';
+      }
+
+      let startDateVal = toDate(body.startDate);
+      if (
+        !startDateVal &&
+        (status === 'WATCHING' || status === 'READING' || status === 'PLAYING' || status === 'COMPLETED' || status === 'FINISHED') &&
+        !oldEntry?.startDate
+      ) {
+        startDateVal = new Date();
+      }
+
+      let endDateVal = toDate(body.endDate);
+      if (
+        endDateVal === undefined &&
+        (status === 'COMPLETED' || status === 'FINISHED') &&
+        !oldEntry?.endDate
+      ) {
+        endDateVal = new Date();
+      }
 
       const tv = await this.prisma.client.aquilaTvV2.findUnique({
         where: { id: tvId },
@@ -1607,15 +1710,6 @@ export class ListService {
         }
       }
 
-      const oldEntry = await this.prisma.client.aquilaTvUserListV2.findUnique({
-        where: {
-          username_tvId: {
-            username: username.toLowerCase(),
-            tvId,
-          },
-        },
-      });
-
       const effectiveScore = body.score !== undefined ? body.score : oldEntry?.score;
       if (
         (status === 'COMPLETED' || status === 'FINISHED') &&
@@ -1639,8 +1733,8 @@ export class ListService {
         update: {
           status,
           score: body.score,
-          startDate: toDate(body.startDate),
-          endDate: toDate(body.endDate),
+          startDate: startDateVal,
+          endDate: endDateVal,
           notes: body.notes,
           rewatched: body.rewatched,
           connections: body.connections,
@@ -1650,8 +1744,8 @@ export class ListService {
           tvId,
           status,
           score: body.score,
-          startDate: toDate(body.startDate),
-          endDate: toDate(body.endDate),
+          startDate: startDateVal,
+          endDate: endDateVal,
           notes: body.notes,
           rewatched: body.rewatched ?? 0,
           connections: body.connections,
@@ -1943,9 +2037,32 @@ export class ListService {
         },
       });
 
-      const status = body.status
+      let status = body.status
         ? toPrismaStatus(body.status)
         : (oldEntry?.status ?? 'PLANNING');
+
+      const effectiveProgress = body.progress !== undefined ? body.progress : (oldEntry?.progress ?? 0);
+      if (status === 'PLANNING' && effectiveProgress > 0) {
+        status = 'PLAYING';
+      }
+
+      let startDateVal = toDate(body.startDate);
+      if (
+        !startDateVal &&
+        (status === 'WATCHING' || status === 'READING' || status === 'PLAYING' || status === 'COMPLETED' || status === 'FINISHED') &&
+        !oldEntry?.startDate
+      ) {
+        startDateVal = new Date();
+      }
+
+      let endDateVal = toDate(body.endDate);
+      if (
+        endDateVal === undefined &&
+        (status === 'COMPLETED' || status === 'FINISHED') &&
+        !oldEntry?.endDate
+      ) {
+        endDateVal = new Date();
+      }
 
       let score = body.score;
       if (score !== undefined && score !== null && score > 10) {
@@ -1976,8 +2093,8 @@ export class ListService {
           status,
           progress: body.progress,
           score,
-          startDate: toDate(body.startDate),
-          endDate: toDate(body.endDate),
+          startDate: startDateVal,
+          endDate: endDateVal,
           notes: body.notes,
         },
         create: {
@@ -1986,8 +2103,8 @@ export class ListService {
           status,
           progress: body.progress ?? 0,
           score,
-          startDate: toDate(body.startDate),
-          endDate: toDate(body.endDate),
+          startDate: startDateVal,
+          endDate: endDateVal,
           notes: body.notes,
           private: isPrivate,
         },
@@ -2246,9 +2363,33 @@ export class ListService {
         },
       });
 
-      const status = body.status
+      let status = body.status
         ? toPrismaStatus(body.status)
         : (oldEntry?.status ?? 'PLANNING');
+
+      const effectiveChapters = body.chapters !== undefined ? body.chapters : (oldEntry?.progressChapters ?? 0);
+      const effectiveVolumes = body.volumes !== undefined ? body.volumes : (oldEntry?.progressVolumes ?? 0);
+      if (status === 'PLANNING' && (effectiveChapters > 0 || effectiveVolumes > 0)) {
+        status = 'READING';
+      }
+
+      let startDateVal = toDate(body.startDate);
+      if (
+        !startDateVal &&
+        (status === 'WATCHING' || status === 'READING' || status === 'PLAYING' || status === 'COMPLETED' || status === 'FINISHED') &&
+        !oldEntry?.startDate
+      ) {
+        startDateVal = new Date();
+      }
+
+      let endDateVal = toDate(body.endDate);
+      if (
+        endDateVal === undefined &&
+        (status === 'COMPLETED' || status === 'FINISHED') &&
+        !oldEntry?.endDate
+      ) {
+        endDateVal = new Date();
+      }
 
       const effectiveScore = body.score !== undefined ? body.score : oldEntry?.score;
       if (status === 'COMPLETED' || status === 'FINISHED') {
@@ -2262,9 +2403,6 @@ export class ListService {
             'Score is required when marking an entry as Completed/Finished.',
           );
         }
-
-        const effectiveChapters = body.chapters !== undefined ? body.chapters : oldEntry?.progressChapters;
-        const effectiveVolumes = body.volumes !== undefined ? body.volumes : oldEntry?.progressVolumes;
 
         if (
           book?.chapterCount != null &&
@@ -2299,8 +2437,8 @@ export class ListService {
           progressChapters: body.chapters,
           progressVolumes: body.volumes,
           score: body.score,
-          startDate: toDate(body.startDate),
-          endDate: toDate(body.endDate),
+          startDate: startDateVal,
+          endDate: endDateVal,
           notes: body.notes,
         },
         create: {
@@ -2572,12 +2710,17 @@ export class ListService {
           where: { username_animeId: { username: username.toLowerCase(), animeId: mediaId } },
         });
         if (!entry) throw new NotFoundException('Entry not found');
+        const status = entry.status === 'PLANNING' ? 'WATCHING' : (entry.status as any);
         return this.upsertAnimeList(username, {
           animeId: mediaId,
-          status: entry.status as any,
+          status,
           score: entry.score ?? undefined,
           progress: entry.progress + count,
-          startDate: entry.startDate ? Math.floor(entry.startDate.getTime() / 1000) : undefined,
+          startDate: entry.startDate
+            ? Math.floor(entry.startDate.getTime() / 1000)
+            : entry.status === 'PLANNING'
+              ? Math.floor(Date.now() / 1000)
+              : undefined,
           endDate: entry.endDate ? Math.floor(entry.endDate.getTime() / 1000) : undefined,
           notes: entry.notes ?? undefined,
           rewatched: entry.rewatched ?? undefined,
@@ -2590,13 +2733,18 @@ export class ListService {
           where: { username_mangaId: { username: username.toLowerCase(), mangaId: mediaId } },
         });
         if (!entry) throw new NotFoundException('Entry not found');
+        const status = entry.status === 'PLANNING' ? 'READING' : (entry.status as any);
         return this.upsertMangaList(username, {
           mangaId: mediaId,
-          status: entry.status as any,
+          status,
           score: entry.score ?? undefined,
           chapters: (entry.chaptersProgress ?? 0) + count,
           volumes: entry.volumesProgress ?? undefined,
-          startDate: entry.startDate ? Math.floor(entry.startDate.getTime() / 1000) : undefined,
+          startDate: entry.startDate
+            ? Math.floor(entry.startDate.getTime() / 1000)
+            : entry.status === 'PLANNING'
+              ? Math.floor(Date.now() / 1000)
+              : undefined,
           endDate: entry.endDate ? Math.floor(entry.endDate.getTime() / 1000) : undefined,
           notes: entry.notes ?? undefined,
           reread: entry.reread ?? undefined,
@@ -2632,20 +2780,30 @@ export class ListService {
 
         if (allEpisodes.length === 0) {
           const newProgress = (entry.progress || 0) + count;
+          const newStatus = entry.status === 'PLANNING' ? 'WATCHING' : entry.status;
+          const newStartDate = entry.startDate
+            ? entry.startDate
+            : entry.status === 'PLANNING'
+              ? new Date()
+              : undefined;
           await this.prisma.client.aquilaTvUserListV2.update({
             where: {
               username_tvId: { username: username.toLowerCase(), tvId: mediaId },
             },
-            data: { progress: newProgress },
+            data: {
+              progress: newProgress,
+              status: newStatus,
+              ...(newStartDate && !entry.startDate ? { startDate: newStartDate } : {}),
+            },
           });
           void this.updateTvConnections(
             username.toLowerCase(),
             mediaId,
             entry.connections,
-            entry.status,
+            newStatus,
             entry.score ?? undefined,
             [],
-            entry.startDate ? Math.floor(entry.startDate.getTime() / 1000) : undefined,
+            newStartDate ? Math.floor(newStartDate.getTime() / 1000) : undefined,
             entry.endDate ? Math.floor(entry.endDate.getTime() / 1000) : undefined,
             entry.notes ?? undefined,
             entry.rewatched ?? 0,
@@ -2671,20 +2829,30 @@ export class ListService {
 
         if (marked === 0) {
           const newProgress = (entry.progress || 0) + count;
+          const newStatus = entry.status === 'PLANNING' ? 'WATCHING' : entry.status;
+          const newStartDate = entry.startDate
+            ? entry.startDate
+            : entry.status === 'PLANNING'
+              ? new Date()
+              : undefined;
           await this.prisma.client.aquilaTvUserListV2.update({
             where: {
               username_tvId: { username: username.toLowerCase(), tvId: mediaId },
             },
-            data: { progress: newProgress },
+            data: {
+              progress: newProgress,
+              status: newStatus,
+              ...(newStartDate && !entry.startDate ? { startDate: newStartDate } : {}),
+            },
           });
           void this.updateTvConnections(
             username.toLowerCase(),
             mediaId,
             entry.connections,
-            entry.status,
+            newStatus,
             entry.score ?? undefined,
             entry.watchedEpisodes,
-            entry.startDate ? Math.floor(entry.startDate.getTime() / 1000) : undefined,
+            newStartDate ? Math.floor(newStartDate.getTime() / 1000) : undefined,
             entry.endDate ? Math.floor(entry.endDate.getTime() / 1000) : undefined,
             entry.notes ?? undefined,
             entry.rewatched ?? 0,
@@ -2698,12 +2866,17 @@ export class ListService {
           return { seasonNum: s, episodeNum: e };
         });
 
+        const status = entry.status === 'PLANNING' ? 'WATCHING' : (entry.status as any);
         return this.upsertTvList(username, {
           tvId: mediaId,
-          status: entry.status as any,
+          status,
           score: entry.score ?? undefined,
           rewatched: entry.rewatched ?? 0,
-          startDate: entry.startDate ? Math.floor(entry.startDate.getTime() / 1000) : undefined,
+          startDate: entry.startDate
+            ? Math.floor(entry.startDate.getTime() / 1000)
+            : entry.status === 'PLANNING'
+              ? Math.floor(Date.now() / 1000)
+              : undefined,
           endDate: entry.endDate ? Math.floor(entry.endDate.getTime() / 1000) : undefined,
           notes: entry.notes ?? undefined,
           episodes: updatedEpisodes,
@@ -2737,12 +2910,17 @@ export class ListService {
           where: { username_gameId: { username: username.toLowerCase(), gameId: mediaId } },
         });
         if (!entry) throw new NotFoundException('Entry not found');
+        const status = entry.status === 'PLANNING' ? 'PLAYING' : (entry.status as any);
         return this.upsertGameList(username, {
           gameId: mediaId,
-          status: entry.status as any,
+          status,
           score: entry.score ?? undefined,
           progress: (entry.progress ?? 0) + count,
-          startDate: entry.startDate ? Math.floor(entry.startDate.getTime() / 1000) : undefined,
+          startDate: entry.startDate
+            ? Math.floor(entry.startDate.getTime() / 1000)
+            : entry.status === 'PLANNING'
+              ? Math.floor(Date.now() / 1000)
+              : undefined,
           endDate: entry.endDate ? Math.floor(entry.endDate.getTime() / 1000) : undefined,
           notes: entry.notes ?? undefined,
           updateConnection: true,
@@ -2754,13 +2932,18 @@ export class ListService {
           where: { username_bookId: { username: username.toLowerCase(), bookId: mediaId } },
         });
         if (!entry) throw new NotFoundException('Entry not found');
+        const status = entry.status === 'PLANNING' ? 'READING' : (entry.status as any);
         return this.upsertBookList(username, {
           bookId: mediaId,
-          status: entry.status as any,
+          status,
           score: entry.score ?? undefined,
           chapters: (entry.progressChapters ?? 0) + count,
           volumes: entry.progressVolumes ?? undefined,
-          startDate: entry.startDate ? Math.floor(entry.startDate.getTime() / 1000) : undefined,
+          startDate: entry.startDate
+            ? Math.floor(entry.startDate.getTime() / 1000)
+            : entry.status === 'PLANNING'
+              ? Math.floor(Date.now() / 1000)
+              : undefined,
           endDate: entry.endDate ? Math.floor(entry.endDate.getTime() / 1000) : undefined,
           notes: entry.notes ?? undefined,
           connections: entry.connections as any,
@@ -2837,9 +3020,16 @@ export class ListService {
       where: { listId: listEntry.id },
     });
 
+    const newStatus = (!existing && listEntry.status === 'PLANNING') ? $Enums.TvListStatus.WATCHING : listEntry.status;
+    const newStartDate = (!existing && listEntry.status === 'PLANNING' && !listEntry.startDate) ? new Date() : listEntry.startDate;
+
     await this.prisma.client.aquilaTvUserListV2.update({
       where: { id: listEntry.id },
-      data: { progress: count },
+      data: {
+        progress: count,
+        status: newStatus,
+        ...(newStartDate !== listEntry.startDate ? { startDate: newStartDate } : {}),
+      },
     });
 
     const watchedEps = await this.prisma.client.aquilaTvWatchedEpisodeV2.findMany({
@@ -2850,9 +3040,13 @@ export class ListService {
       username.toLowerCase(),
       tvId,
       listEntry.connections,
-      listEntry.status,
+      newStatus,
       listEntry.score ?? undefined,
       watchedEps,
+      newStartDate ? Math.floor(newStartDate.getTime() / 1000) : undefined,
+      listEntry.endDate ? Math.floor(listEntry.endDate.getTime() / 1000) : undefined,
+      listEntry.notes ?? undefined,
+      listEntry.rewatched ?? 0,
     );
 
     return { success: true, watched: !existing, count };
@@ -4366,8 +4560,8 @@ export class ListService {
     status?: string,
     progress?: number,
     score?: number,
-    startDate?: number,
-    endDate?: number,
+    startDate?: number | null,
+    endDate?: number | null,
     notes?: string,
     rewatched?: number,
   ) {
@@ -4409,8 +4603,8 @@ export class ListService {
         status: connStatus,
         progress: connProgress,
         score: connScore,
-        startDate: connStartDate,
-        endDate: connEndDate,
+        startDate: connStartDate ?? undefined,
+        endDate: connEndDate ?? undefined,
         notes: connNotes,
         rewatched: connRewatched,
       };
@@ -4433,8 +4627,8 @@ export class ListService {
     status?: string,
     score?: number,
     watchedEpisodes?: { seasonNum: number; episodeNum: number }[],
-    startDate?: number,
-    endDate?: number,
+    startDate?: number | null,
+    endDate?: number | null,
     notes?: string,
     rewatched?: number,
   ) {
@@ -4470,8 +4664,8 @@ export class ListService {
         status: connStatus,
         score: connScore,
         watchedEpisodes,
-        startDate: connStartDate,
-        endDate: connEndDate,
+        startDate: connStartDate ?? undefined,
+        endDate: connEndDate ?? undefined,
         notes: connNotes,
         rewatched: connRewatched,
       };
@@ -4495,8 +4689,8 @@ export class ListService {
     chapters?: number,
     volumes?: number,
     score?: number,
-    startDate?: number,
-    endDate?: number,
+    startDate?: number | null,
+    endDate?: number | null,
     notes?: string,
     reread?: number,
   ) {
@@ -4547,8 +4741,8 @@ export class ListService {
         chapters: connChapters,
         volumes: connVolumes,
         score: connScore,
-        startDate: connStartDate,
-        endDate: connEndDate,
+        startDate: connStartDate ?? undefined,
+        endDate: connEndDate ?? undefined,
         notes: connNotes,
         reread: connReread,
       };
@@ -4570,8 +4764,8 @@ export class ListService {
     connections: any,
     status?: string,
     score?: number,
-    startDate?: number,
-    endDate?: number,
+    startDate?: number | null,
+    endDate?: number | null,
     notes?: string,
     rewatched?: number,
   ) {
@@ -4606,8 +4800,8 @@ export class ListService {
       const updateData: any = {
         status: connStatus,
         score: connScore,
-        startDate: connStartDate,
-        endDate: connEndDate,
+        startDate: connStartDate ?? undefined,
+        endDate: connEndDate ?? undefined,
         notes: connNotes,
         rewatched: connRewatched,
       };

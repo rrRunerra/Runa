@@ -2,8 +2,8 @@ export interface AnimeUpdateData {
   status?: string;
   progress?: number;
   score?: number;
-  startDate?: number;
-  endDate?: number;
+  startDate?: number | null;
+  endDate?: number | null;
   notes?: string;
   rewatched?: number;
 }
@@ -13,8 +13,8 @@ export interface MangaUpdateData {
   chapters?: number;
   volumes?: number;
   score?: number;
-  startDate?: number;
-  endDate?: number;
+  startDate?: number | null;
+  endDate?: number | null;
   notes?: string;
   reread?: number;
 }
@@ -22,8 +22,8 @@ export interface MangaUpdateData {
 export interface MovieUpdateData {
   status?: string;
   score?: number;
-  startDate?: number;
-  endDate?: number;
+  startDate?: number | null;
+  endDate?: number | null;
   notes?: string;
   rewatched?: number;
 }
@@ -31,8 +31,8 @@ export interface MovieUpdateData {
 export interface TvUpdateData {
   status?: string;
   score?: number;
-  startDate?: number;
-  endDate?: number;
+  startDate?: number | null;
+  endDate?: number | null;
   notes?: string;
   rewatched?: number;
   watchedEpisodes?: { seasonNum: number; episodeNum: number }[];
