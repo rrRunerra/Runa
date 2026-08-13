@@ -1159,8 +1159,6 @@ export class ListService {
         this.prisma.client.aquilaMovieUserListV2,
         whereClause,
         [
-          $Enums.MovieListStatus.WATCHING,
-          $Enums.MovieListStatus.ON_HOLD,
           $Enums.MovieListStatus.COMPLETED,
           $Enums.MovieListStatus.DROPPED,
           $Enums.MovieListStatus.PLANNING,
@@ -2418,14 +2416,7 @@ export class ListService {
       orderBy: { updatedAt: 'desc' },
     });
 
-    const moviesWatching = await this.prisma.client.aquilaMovieUserListV2.findMany({
-      where: {
-        username: username.toLowerCase(),
-        status: $Enums.MovieListStatus.WATCHING,
-      },
-      include: { movie: true },
-      orderBy: { updatedAt: 'desc' },
-    });
+    const moviesWatching: any[] = [];
 
     const gamesPlaying = await this.prisma.client.aquilaGameUserListV2.findMany({
       where: {
@@ -3466,13 +3457,34 @@ export class ListService {
 
   // ─────────────────────────── RADARR/SONARR/EXPORT/IMPORT ───────────────────────────
 
+  private async getArrSettings(username: string): Promise<any> {
+    const user = await this.prisma.client.user.findUnique({
+      where: { username: username.toLowerCase() },
+      select: { profileSettings: true },
+    });
+    const profileSettings = (user?.profileSettings as Record<string, any>) || {};
+    return profileSettings.arrSettings || {};
+  }
+
   public async getRadarrMovieList(username: string): Promise<any[]> {
+    const arrSettings = await this.getArrSettings(username);
+    const config = arrSettings.radarrMovie || {};
+    const monitored = config.monitored ?? true;
+    const listStatuses =
+      Array.isArray(config.listStatuses) && config.listStatuses.length > 0
+        ? config.listStatuses
+        : ['PLANNING'];
+    const movieStatuses =
+      Array.isArray(config.movieStatuses) && config.movieStatuses.length > 0
+        ? config.movieStatuses
+        : ['RELEASED'];
+
     const list = await this.prisma.client.aquilaMovieUserListV2.findMany({
       where: {
         username: username.toLowerCase(),
-        status: 'PLANNING',
+        status: { in: listStatuses },
         movie: {
-          status: { in: ['RELEASED'] },
+          status: { in: movieStatuses },
         },
       },
       include: { movie: true },
@@ -3494,19 +3506,35 @@ export class ListService {
         tmdbId,
         year: item.movie.releaseDateYear ?? undefined,
         hasFile: item.status === 'COMPLETED',
-        monitored: true,
+        monitored,
       };
     });
   }
 
   public async getRadarrAnimeMovieList(username: string): Promise<any[]> {
+    const arrSettings = await this.getArrSettings(username);
+    const config = arrSettings.radarrAnime || {};
+    const monitored = config.monitored ?? true;
+    const listStatuses =
+      Array.isArray(config.listStatuses) && config.listStatuses.length > 0
+        ? config.listStatuses
+        : ['PLANNING'];
+    const animeStatuses =
+      Array.isArray(config.animeStatuses) && config.animeStatuses.length > 0
+        ? config.animeStatuses
+        : ['FINISHED', 'RELEASING'];
+    const animeMovieFormats =
+      Array.isArray(config.animeMovieFormats) && config.animeMovieFormats.length > 0
+        ? config.animeMovieFormats
+        : ['MOVIE'];
+
     const list = await this.prisma.client.aquilaAnimeUserListV2.findMany({
       where: {
         username: username.toLowerCase(),
-        status: 'PLANNING',
+        status: { in: listStatuses },
         anime: {
-          format: 'MOVIE',
-          status: { in: ['FINISHED', 'RELEASING'] },
+          format: { in: animeMovieFormats },
+          status: { in: animeStatuses },
         },
       },
       include: { anime: true },
@@ -3564,9 +3592,86 @@ export class ListService {
         tmdbId,
         year: item.anime.startDateYear ?? item.anime.seasonYear ?? undefined,
         hasFile: item.status === 'COMPLETED',
-        monitored: true,
+        monitored,
       };
     });
+  }
+
+  public async fetchSonarrTv(username: string): Promise<any[]> {
+    const arrSettings = await this.getArrSettings(username);
+    const config = arrSettings.sonarrTv || {};
+    const monitored = config.monitored ?? true;
+    const listStatuses =
+      Array.isArray(config.listStatuses) && config.listStatuses.length > 0
+        ? config.listStatuses
+        : ['PLANNING', 'WATCHING'];
+    const tvStatuses =
+      Array.isArray(config.tvStatuses) && config.tvStatuses.length > 0
+        ? config.tvStatuses
+        : ['RETURNING_SERIES', 'ENDED'];
+
+    const series: any[] = [];
+    const tvList = await this.prisma.client.aquilaTvUserListV2.findMany({
+      where: {
+        username: username.toLowerCase(),
+        status: { in: listStatuses },
+        tv: {
+          status: { in: tvStatuses },
+        },
+      },
+      include: { tv: true },
+    });
+    tvList.forEach((item: any) => {
+      if (item.tv.tvDBId) {
+        series.push({
+          title: item.tv.titlePrimary,
+          tvdbId: item.tv.tvDBId,
+          monitored,
+        });
+      }
+    });
+    return series;
+  }
+
+  public async fetchSonarrAnime(username: string): Promise<any[]> {
+    const arrSettings = await this.getArrSettings(username);
+    const config = arrSettings.sonarrAnime || {};
+    const monitored = config.monitored ?? true;
+    const listStatuses =
+      Array.isArray(config.listStatuses) && config.listStatuses.length > 0
+        ? config.listStatuses
+        : ['PLANNING', 'WATCHING'];
+    const animeStatuses =
+      Array.isArray(config.animeStatuses) && config.animeStatuses.length > 0
+        ? config.animeStatuses
+        : ['FINISHED', 'RELEASING'];
+    const animeFormats =
+      Array.isArray(config.animeFormats) && config.animeFormats.length > 0
+        ? config.animeFormats
+        : ['TV', 'TV_SHORT'];
+
+    const series: any[] = [];
+    const animeList = await this.prisma.client.aquilaAnimeUserListV2.findMany({
+      where: {
+        username: username.toLowerCase(),
+        status: { in: listStatuses },
+        anime: {
+          format: { in: animeFormats },
+          status: { in: animeStatuses },
+        },
+      },
+      include: { anime: true },
+    });
+    for (const item of animeList) {
+      if (item.anime.tvDBId) {
+        series.push({
+          title: item.anime.titlePrimary,
+          tvdbId: item.anime.tvDBId,
+          monitored,
+        });
+      }
+    }
+    return series;
   }
 
   public async fetchSonarrSeries(
@@ -3576,47 +3681,12 @@ export class ListService {
   ): Promise<any[]> {
     const series: any[] = [];
     if (includeTv) {
-      const tvList = await this.prisma.client.aquilaTvUserListV2.findMany({
-        where: {
-          username: username.toLowerCase(),
-          status: 'PLANNING',
-          tv: {
-            status: { in: ['ENDED', 'RETURNING_SERIES'] },
-          },
-        },
-        include: { tv: true },
-      });
-      tvList.forEach((item: any) => {
-        if (item.tv.tvDBId) {
-          series.push({
-            title: item.tv.titlePrimary,
-            tvdbId: item.tv.tvDBId,
-            monitored: true,
-          });
-        }
-      });
+      const tvSeries = await this.fetchSonarrTv(username);
+      series.push(...tvSeries);
     }
     if (includeAnime) {
-      const animeList = await this.prisma.client.aquilaAnimeUserListV2.findMany({
-        where: {
-          username: username.toLowerCase(),
-          status: 'PLANNING',
-          anime: {
-            format: { not: 'MOVIE' },
-            status: { in: ['FINISHED', 'RELEASING'] },
-          },
-        },
-        include: { anime: true },
-      });
-      for (const item of animeList) {
-        if (item.anime.tvDBId) {
-          series.push({
-            title: item.anime.titlePrimary,
-            tvdbId: item.anime.tvDBId,
-            monitored: true,
-          });
-        }
-      }
+      const animeSeries = await this.fetchSonarrAnime(username);
+      series.push(...animeSeries);
     }
     return series;
   }

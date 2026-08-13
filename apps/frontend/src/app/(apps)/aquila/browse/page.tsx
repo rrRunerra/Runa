@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RrMediaSubmissionModal } from "@/components/rrComponents/aquila/rrMediaSubmissionModal";
+import { RrPillNav } from "@/components/rrComponents/rrPillNav";
 import { useTranslation } from "react-i18next";
 
 export default function BrowsePage(): React.JSX.Element {
@@ -358,43 +359,12 @@ export default function BrowsePage(): React.JSX.Element {
           </div>
 
           {/* Animated Glassmorphic Category Selector Pills */}
-          <div className="w-full md:w-auto overflow-x-auto scrollbar-none [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden max-w-full">
-            <div className="flex flex-row flex-nowrap shrink-0 gap-1.5 p-1.5 bg-card/60 backdrop-blur-md border border-border/40 rounded-2xl w-max min-w-full shadow-md">
-              {categories.map((cat) => {
-                const isActive = type === cat.id;
-                const Icon = cat.icon;
-                return (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => handleTypeChange(cat.id)}
-                    className={cn(
-                      "relative px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 select-none cursor-pointer shrink-0 whitespace-nowrap text-center outline-hidden flex-1 md:flex-none flex items-center justify-center gap-1.5",
-                      isActive
-                        ? "text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/40",
-                    )}
-                  >
-                    {isActive && (
-                      <motion.div
-                        layoutId="activeCategoryHighlight"
-                        className="absolute inset-0 bg-primary text-primary-foreground rounded-xl shadow-md shadow-primary/20"
-                        transition={{
-                          type: "spring",
-                          stiffness: 380,
-                          damping: 26,
-                        }}
-                      />
-                    )}
-                    <span className="relative z-10 flex items-center gap-1.5 whitespace-nowrap">
-                      <Icon className="size-3.5" />
-                      {cat.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+          <RrPillNav
+            items={categories}
+            activeId={type}
+            onChange={handleTypeChange}
+            layoutId="browseCategoryHighlight"
+          />
         </motion.div>
 
         {/* Animated Search Box + Add Data Button */}

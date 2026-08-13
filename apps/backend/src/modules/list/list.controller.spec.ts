@@ -21,9 +21,7 @@ jest.mock('@runa/database', () => ({
     },
     MovieListStatus: {
       PLANNING: 'PLANNING',
-      WATCHING: 'WATCHING',
       COMPLETED: 'COMPLETED',
-      ON_HOLD: 'ON_HOLD',
       DROPPED: 'DROPPED',
     },
     TvListStatus: {
@@ -93,6 +91,8 @@ describe('ListController', () => {
     getRadarrMovieList: jest.fn(),
     getRadarrAnimeMovieList: jest.fn(),
     fetchSonarrSeries: jest.fn(),
+    fetchSonarrTv: jest.fn(),
+    fetchSonarrAnime: jest.fn(),
   };
 
   const mockAuthGuard = {
@@ -235,19 +235,19 @@ describe('ListController', () => {
 
     it('should call getSonarrTvList', async () => {
       const mockReq = { user: { username: 'testuser' } };
-      mockListService.fetchSonarrSeries.mockResolvedValue([{ title: 'TV 1' }]);
+      mockListService.fetchSonarrTv.mockResolvedValue([{ title: 'TV 1' }]);
 
       const result = await controller.getSonarrTvList(mockReq);
-      expect(service.fetchSonarrSeries).toHaveBeenCalledWith('testuser', true, false);
+      expect(service.fetchSonarrTv).toHaveBeenCalledWith('testuser');
       expect(result).toEqual([{ title: 'TV 1' }]);
     });
 
     it('should call getSonarrAnimeList', async () => {
       const mockReq = { user: { username: 'testuser' } };
-      mockListService.fetchSonarrSeries.mockResolvedValue([{ title: 'Anime 1' }]);
+      mockListService.fetchSonarrAnime.mockResolvedValue([{ title: 'Anime 1' }]);
 
       const result = await controller.getSonarrAnimeList(mockReq);
-      expect(service.fetchSonarrSeries).toHaveBeenCalledWith('testuser', false, true);
+      expect(service.fetchSonarrAnime).toHaveBeenCalledWith('testuser');
       expect(result).toEqual([{ title: 'Anime 1' }]);
     });
 

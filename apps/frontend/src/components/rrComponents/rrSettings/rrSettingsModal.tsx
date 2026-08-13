@@ -19,6 +19,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
@@ -43,6 +44,7 @@ import { RrSidebarSettingsTab } from "./rrSidebarSettingsTab";
 import { RrMailSettingsTab } from "./rrMailSettingsTab";
 import { RrApiKeysTab } from "./rrApiKeysTab";
 import { RrListsTab } from "./rrListsTab";
+import { RrArrSettingsTab } from "./rrArrSettingsTab";
 import { RrConstellationBuilderModal } from "../rrConstellationBuilderModal";
 
 type rrCategory =
@@ -54,6 +56,7 @@ type rrCategory =
   | "mailAccounts"
   | "apiKeys"
   | "lists"
+  | "arrServices"
   | "constellation";
 
 export interface rrSettingsDialogProps {
@@ -72,6 +75,14 @@ export function SettingsDialog({
   const isMobile = useIsMobile();
   const pathname = usePathname();
   const isPegasus = pathname.startsWith("/pegasus");
+
+  const [footerContent, setFooterContent] = useState<React.ReactNode | null>(
+    null,
+  );
+
+  useEffect(() => {
+    setFooterContent(null);
+  }, [activeCategory]);
 
   useEffect(() => {
     if (open) {
@@ -99,6 +110,9 @@ export function SettingsDialog({
           break;
         case "lists":
           setActiveCategory("lists");
+          break;
+        case "arrServices":
+          setActiveCategory("arrServices");
           break;
         default:
           setActiveCategory("account");
@@ -139,7 +153,7 @@ export function SettingsDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="w-[95vw] sm:w-full max-w-[95vw] md:max-w-5xl lg:max-w-6xl p-0 gap-0 overflow-hidden rounded-2xl flex flex-col md:flex-row h-[84dvh] max-h-[84dvh] md:h-180 md:max-h-180">
+        <DialogContent className="w-[96vw] max-w-[96vw] xl:max-w-[1550px] 2xl:max-w-[1680px] p-0 gap-0 overflow-hidden rounded-2xl flex flex-col md:flex-row h-[92dvh] max-h-[92dvh] md:h-[90vh] md:max-h-[90vh]">
           <DialogTitle className="sr-only">
             {t("settingsDialog.title")}
           </DialogTitle>
@@ -153,7 +167,7 @@ export function SettingsDialog({
             {/* Desktop Left Sidebar */}
             <Sidebar
               collapsible="none"
-              className="hidden md:flex border-r h-full bg-card"
+              className="hidden md:flex border-r h-full bg-card min-w-55"
             >
               <SidebarContent>
                 <SidebarGroup>
@@ -181,7 +195,9 @@ export function SettingsDialog({
                               className="w-full flex items-center gap-2"
                             >
                               <item.icon className="size-4" />
-                              <span>{t("settingsDialog." + item.id)}</span>
+                              <span>
+                                {item.name || t("settingsDialog." + item.id)}
+                              </span>
                             </button>
                           </SidebarMenuButton>
                         </SidebarMenuItem>
@@ -206,7 +222,8 @@ export function SettingsDialog({
                       <BreadcrumbSeparator className="hidden md:block" />
                       <BreadcrumbItem>
                         <BreadcrumbPage>
-                          {t("settingsDialog." + activeCategory)}
+                          {navItems.find((n) => n.id === activeCategory)
+                            ?.name || t("settingsDialog." + activeCategory)}
                         </BreadcrumbPage>
                       </BreadcrumbItem>
                     </BreadcrumbList>
@@ -215,7 +232,7 @@ export function SettingsDialog({
               </header>
 
               {/* Tab Panel Content */}
-              <div className="flex-1 overflow-y-auto no-scrollbar p-4 sm:p-6 pb-28 md:pb-16">
+              <div className="flex-1 overflow-y-auto no-scrollbar p-4 sm:p-6 pb-4 md:pb-4">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={activeCategory}
@@ -252,9 +269,22 @@ export function SettingsDialog({
                         setActiveCategory={setActiveCategory}
                       />
                     )}
+                    {activeCategory === "arrServices" && (
+                      <RrArrSettingsTab
+                        onOpenChange={onOpenChange}
+                        setFooterContent={setFooterContent}
+                      />
+                    )}
                   </motion.div>
                 </AnimatePresence>
               </div>
+
+              {/* Modal Footer (pinned at absolute bottom of main) */}
+              {footerContent && (
+                <DialogFooter className="border-t border-border px-4 sm:px-6 py-3 bg-card shrink-0 flex items-center justify-between sm:justify-between gap-3 w-full">
+                  {footerContent}
+                </DialogFooter>
+              )}
             </main>
           </SidebarProvider>
 

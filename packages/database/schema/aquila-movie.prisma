@@ -140,9 +140,7 @@ model AquilaMovieRecommendationV2 {
 
 enum MovieListStatus {
     PLANNING
-    WATCHING
     COMPLETED
-    ON_HOLD
     DROPPED
 }
 

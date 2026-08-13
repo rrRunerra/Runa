@@ -165,7 +165,7 @@ export class UpdateSettingsDto {
   @IsNotEmpty({
     message: 'UeSgDto-PMNBE001: Profile settings must not be empty',
   })
-  profileSettings!: Record<string, string | number | boolean | null>;
+  profileSettings!: Record<string, any>;
 }
 
 // --- MFA: TOTP ---

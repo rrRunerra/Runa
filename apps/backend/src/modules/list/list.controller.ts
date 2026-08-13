@@ -389,13 +389,13 @@ export class ListController {
   // /sonarr/tv  inside sonarr
   @Get('sonarr/tv/api/v3/series')
   public async getSonarrTvList(@Req() req: any): Promise<any[]> {
-    return this.listService.fetchSonarrSeries(req.user.username, true, false);
+    return this.listService.fetchSonarrTv(req.user.username);
   }
 
   // /sonarr/anime  inside sonarr
   @Get('sonarr/anime/api/v3/series')
   public async getSonarrAnimeList(@Req() req: any): Promise<any[]> {
-    return this.listService.fetchSonarrSeries(req.user.username, false, true);
+    return this.listService.fetchSonarrAnime(req.user.username);
   }
 
   @Get('*api/v3/qualityprofile')
