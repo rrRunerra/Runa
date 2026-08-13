@@ -1,25 +1,19 @@
 model AquilaMusicV2 {
-    id        Int  @id @default(autoincrement())
-    anilistId Int? @unique
-    malId     Int? @unique
+    id Int @id @default(autoincrement())
 
     titlePrimary   String  @db.Text
     titleSecondary String? @db.Text
-    titleNative    String? @db.Text
 
     coverImage  String? @db.Text
     bannerImage String? @db.Text
     images      Json?   @db.JsonB
 
-    description     String? @db.Text
-    countryOfOrigin String?
+    description String? @db.Text
 
-    format String? @default("MUSIC")
     status String?
 
-    averageScore Float?
-    favorites    Int    @default(0)
-    popularity   Int    @default(0)
+    favorites  Int @default(0)
+    popularity Int @default(0)
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt

@@ -273,7 +273,7 @@ enum AnimeFormat {
     SPECIAL
     OVA
     ONA
-    MUSIC // When fetched from external sources and format is music, save it into music table, not anime table
+    MUSIC
     UNKNOWN
 }
 

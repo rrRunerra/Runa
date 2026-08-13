@@ -113,19 +113,6 @@ export class AnimeRepository {
                 status: true,
               },
             });
-          } else if (r.targetType === MediaType.MUSIC) {
-            targetMedia = await this.prisma.client.aquilaMusicV2.findUnique({
-              where: { id: r.targetId },
-              select: {
-                id: true,
-                anilistId: true,
-                titlePrimary: true,
-                titleSecondary: true,
-                coverImage: true,
-                format: true,
-                status: true,
-              },
-            });
           }
 
           return {
@@ -680,18 +667,11 @@ export class AnimeRepository {
       try {
         for (const rel of payload.relations) {
           if (!rel.targetAnilistId) continue;
-          if (
-            rel.type === 'OTHER' &&
-            rel.format !== 'MUSIC' &&
-            rel.targetType !== 'MUSIC'
-          ) {
+          if (rel.type === 'OTHER') {
             continue;
           }
           let targetId: number | null = null;
-          const isMusic = rel.format === 'MUSIC' || rel.targetType === 'MUSIC';
-          const targetTypeStr = isMusic
-            ? 'MUSIC'
-            : (rel.targetType || 'ANIME').toUpperCase();
+          const targetTypeStr = (rel.targetType || 'ANIME').toUpperCase();
           const targetType = (
             targetTypeStr in MediaType ? targetTypeStr : 'ANIME'
           ) as MediaType;
@@ -741,30 +721,6 @@ export class AnimeRepository {
                 });
               } catch {
                 targetRecord = await this.prisma.client.aquilaMangaV2.findUnique({
-                  where: { anilistId: rel.targetAnilistId },
-                  select: { id: true },
-                });
-              }
-            }
-            if (targetRecord) targetId = targetRecord.id;
-          } else if (targetType === MediaType.MUSIC) {
-            let targetRecord = await this.prisma.client.aquilaMusicV2.findUnique({
-              where: { anilistId: rel.targetAnilistId },
-              select: { id: true },
-            });
-            if (!targetRecord) {
-              try {
-                targetRecord = await this.prisma.client.aquilaMusicV2.create({
-                  data: {
-                    anilistId: rel.targetAnilistId,
-                    titlePrimary: rel.titlePrimary || 'Unknown',
-                    coverImage: rel.coverImage || null,
-                    format: rel.format || 'MUSIC',
-                  },
-                  select: { id: true },
-                });
-              } catch {
-                targetRecord = await this.prisma.client.aquilaMusicV2.findUnique({
                   where: { anilistId: rel.targetAnilistId },
                   select: { id: true },
                 });

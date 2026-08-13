@@ -14,7 +14,19 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import { Sparkles, Info, Calendar, ImageIcon, Tag, Database, Users, Tv, Lock, Unlock, Calculator } from "lucide-react";
+import {
+  Sparkles,
+  Info,
+  Calendar,
+  ImageIcon,
+  Tag,
+  Database,
+  Users,
+  Tv,
+  Lock,
+  Unlock,
+  Calculator,
+} from "lucide-react";
 
 import { RrSubmissionBasicTab } from "../submission/rrSubmissionBasicTab";
 import { RrSubmissionReleaseTab } from "../submission/rrSubmissionReleaseTab";
@@ -35,17 +47,52 @@ export interface RrAnimeEditModalProps {
 }
 
 const GENRES = [
-  "Action", "Adventure", "Comedy", "Drama", "Ecchi", "Fantasy", "Horror",
-  "Mahou Shoujo", "Mecha", "Music", "Mystery", "Psychological", "Romance",
-  "Sci-Fi", "Slice of Life", "Sports", "Supernatural", "Thriller",
+  "Action",
+  "Adventure",
+  "Comedy",
+  "Drama",
+  "Ecchi",
+  "Fantasy",
+  "Horror",
+  "Mahou Shoujo",
+  "Mecha",
+  "Music",
+  "Mystery",
+  "Psychological",
+  "Romance",
+  "Sci-Fi",
+  "Slice of Life",
+  "Sports",
+  "Supernatural",
+  "Thriller",
 ];
 
-const FORMATS = ["TV", "TV_SHORT", "MOVIE", "SPECIAL", "OVA", "ONA", "MUSIC", "UNKNOWN"];
-const STATUSES = ["FINISHED", "RELEASING", "NOT_YET_RELEASED", "CANCELLED", "HIATUS", "UNKNOWN"];
+const FORMATS = ["TV", "TV_SHORT", "MOVIE", "SPECIAL", "OVA", "ONA", "UNKNOWN"];
+const STATUSES = [
+  "FINISHED",
+  "RELEASING",
+  "NOT_YET_RELEASED",
+  "CANCELLED",
+  "HIATUS",
+  "UNKNOWN",
+];
 const SOURCES = [
-  "ORIGINAL", "MANGA", "LIGHT_NOVEL", "VISUAL_NOVEL", "VIDEO_GAME", "OTHER",
-  "NOVEL", "DOUJINSHI", "ANIME", "WEB_NOVEL", "LIVE_ACTION", "GAME", "COMIC",
-  "MULTIMEDIA_PROJECT", "PICTURE_BOOK", "UNKNOWN",
+  "ORIGINAL",
+  "MANGA",
+  "LIGHT_NOVEL",
+  "VISUAL_NOVEL",
+  "VIDEO_GAME",
+  "OTHER",
+  "NOVEL",
+  "DOUJINSHI",
+  "ANIME",
+  "WEB_NOVEL",
+  "LIVE_ACTION",
+  "GAME",
+  "COMIC",
+  "MULTIMEDIA_PROJECT",
+  "PICTURE_BOOK",
+  "UNKNOWN",
 ];
 
 export function RrAnimeEditModal({
@@ -63,7 +110,9 @@ export function RrAnimeEditModal({
   const [isUploadingBanner, setIsUploadingBanner] = useState(false);
 
   // Unlocking / Locking State
-  const [isLocked, setIsLocked] = useState<boolean>(initialData?.locked ?? false);
+  const [isLocked, setIsLocked] = useState<boolean>(
+    initialData?.locked ?? false,
+  );
 
   // Form State
   const [formData, setFormData] = useState<Record<string, any>>({});
@@ -81,32 +130,55 @@ export function RrAnimeEditModal({
     if (isOpen) {
       setIsLocked(initialData?.locked ?? false);
       setFormData({
-        titlePrimary: initialData?.titlePrimary || initialData?.titleEnglish || initialData?.title?.english || "",
-        titleEnglish: initialData?.titleEnglish || initialData?.titlePrimary || initialData?.title?.english || "",
-        titleSecondary: initialData?.titleSecondary || initialData?.titleRomaji || initialData?.title?.romaji || "",
-        titleRomaji: initialData?.titleRomaji || initialData?.titleSecondary || initialData?.title?.romaji || "",
-        titleNative: initialData?.titleNative || initialData?.title?.native || "",
+        titlePrimary:
+          initialData?.titlePrimary ||
+          initialData?.titleEnglish ||
+          initialData?.title?.english ||
+          "",
+        titleEnglish:
+          initialData?.titleEnglish ||
+          initialData?.titlePrimary ||
+          initialData?.title?.english ||
+          "",
+        titleSecondary:
+          initialData?.titleSecondary ||
+          initialData?.titleRomaji ||
+          initialData?.title?.romaji ||
+          "",
+        titleRomaji:
+          initialData?.titleRomaji ||
+          initialData?.titleSecondary ||
+          initialData?.title?.romaji ||
+          "",
+        titleNative:
+          initialData?.titleNative || initialData?.title?.native || "",
         tagline: initialData?.tagline || "",
         description: initialData?.description || "",
-        coverImage: initialData?.coverImageLarge || initialData?.coverImage || "",
+        coverImage:
+          initialData?.coverImageLarge || initialData?.coverImage || "",
         bannerImage: initialData?.bannerImage || "",
         format: initialData?.format || "TV",
         status: initialData?.status || "FINISHED",
         source: initialData?.source || "MANGA",
         season: initialData?.season || initialData?.seasonSeason || "SPRING",
-        seasonSeason: initialData?.seasonSeason || initialData?.season || "SPRING",
+        seasonSeason:
+          initialData?.seasonSeason || initialData?.season || "SPRING",
         seasonYear: initialData?.seasonYear || new Date().getFullYear(),
         episodes: initialData?.episodes || initialData?.episodeCount || "",
         episodeCount: initialData?.episodeCount || initialData?.episodes || "",
         duration: initialData?.duration || initialData?.episodeDuration || "",
-        episodeDuration: initialData?.episodeDuration || initialData?.duration || "",
+        episodeDuration:
+          initialData?.episodeDuration || initialData?.duration || "",
         startDateYear: initialData?.startDateYear || "",
         startDateMonth: initialData?.startDateMonth || "",
         startDateDay: initialData?.startDateDay || "",
         endDateYear: initialData?.endDateYear || "",
         endDateMonth: initialData?.endDateMonth || "",
         endDateDay: initialData?.endDateDay || "",
-        isAdult: typeof initialData?.isAdult === "boolean" ? initialData.isAdult : false,
+        isAdult:
+          typeof initialData?.isAdult === "boolean"
+            ? initialData.isAdult
+            : false,
         hashtag: initialData?.hashtag || "",
         countryOfOrigin: initialData?.countryOfOrigin || "JP",
         originalLanguage: initialData?.originalLanguage || "ja",
@@ -123,8 +195,12 @@ export function RrAnimeEditModal({
         bangumiId: initialData?.bangumiId || "",
       });
 
-      setSelectedGenres(Array.isArray(initialData?.genres) ? initialData.genres : []);
-      setSynonymsList(Array.isArray(initialData?.synonyms) ? initialData.synonyms : []);
+      setSelectedGenres(
+        Array.isArray(initialData?.genres) ? initialData.genres : [],
+      );
+      setSynonymsList(
+        Array.isArray(initialData?.synonyms) ? initialData.synonyms : [],
+      );
 
       // Prefill episodes list
       if (Array.isArray(initialData?.episodes)) {
@@ -141,11 +217,18 @@ export function RrAnimeEditModal({
             characterId: c.characterId || c.id || c.character?.id,
             name:
               typeof c.name === "object" && c.name !== null
-                ? c.name.english || c.name.romaji || c.name.primary || c.name.native || "Character"
-                : c.name || c.namePrimary || c.character?.namePrimary || "Character",
+                ? c.name.english ||
+                  c.name.romaji ||
+                  c.name.primary ||
+                  c.name.native ||
+                  "Character"
+                : c.name ||
+                  c.namePrimary ||
+                  c.character?.namePrimary ||
+                  "Character",
             image: c.image || c.coverImage || c.character?.image,
             role: c.role || "MAIN",
-          }))
+          })),
         );
       }
       if (Array.isArray(initialData?.staff)) {
@@ -155,14 +238,21 @@ export function RrAnimeEditModal({
             staffId: s.staffId || s.id || s.actorId || s.staff?.id,
             name:
               typeof s.name === "object" && s.name !== null
-                ? s.name.english || s.name.romaji || s.name.primary || s.name.native || "Staff"
+                ? s.name.english ||
+                  s.name.romaji ||
+                  s.name.primary ||
+                  s.name.native ||
+                  "Staff"
                 : s.name || s.namePrimary || s.staff?.namePrimary || "Staff",
             image: s.image || s.staff?.image,
             role: s.role || "DIRECTOR",
-          }))
+          })),
         );
       }
-      if (Array.isArray(initialData?.studiosList) || Array.isArray(initialData?.studiosData)) {
+      if (
+        Array.isArray(initialData?.studiosList) ||
+        Array.isArray(initialData?.studiosData)
+      ) {
         const rawStudios = initialData.studiosList || initialData.studiosData;
         setSelectedStudios(
           rawStudios.map((st: any) => ({
@@ -173,7 +263,7 @@ export function RrAnimeEditModal({
                 ? st.name.primary || st.name.english || "Studio"
                 : st.name || st.studio?.name || "Studio",
             isMain: typeof st.isMain === "boolean" ? st.isMain : true,
-          }))
+          })),
         );
       }
       if (Array.isArray(initialData?.relations)) {
@@ -183,11 +273,18 @@ export function RrAnimeEditModal({
             relatedMediaId: r.relatedMediaId || r.id,
             title:
               typeof r.title === "object" && r.title !== null
-                ? r.title.english || r.title.romaji || r.title.primary || r.title.native || "Related Media"
-                : r.title || r.titlePrimary || r.titleEnglish || "Related Media",
+                ? r.title.english ||
+                  r.title.romaji ||
+                  r.title.primary ||
+                  r.title.native ||
+                  "Related Media"
+                : r.title ||
+                  r.titlePrimary ||
+                  r.titleEnglish ||
+                  "Related Media",
             image: r.image || r.coverImage,
             relationType: r.relationType || "SEQUEL",
-          }))
+          })),
         );
       }
     }
@@ -227,11 +324,14 @@ export function RrAnimeEditModal({
       const uploadData = new FormData();
       uploadData.append("file", file);
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/public/upload`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${session?.accessToken}` },
-        body: uploadData,
-      });
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/public/upload`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${session?.accessToken}` },
+          body: uploadData,
+        },
+      );
 
       if (!res.ok) throw new Error("Failed to upload image");
       const json = await res.json();
@@ -239,7 +339,8 @@ export function RrAnimeEditModal({
       toast.success("Image uploaded successfully!");
     } catch (err: any) {
       toast.error(err.message || "Failed to upload image");
-    } fontally: {
+    }
+    fontally: {
       if (field === "coverImage") setIsUploadingCover(false);
       else setIsUploadingBanner(false);
     }
@@ -265,19 +366,22 @@ export function RrAnimeEditModal({
     };
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/aquila/submissions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.accessToken}`,
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/aquila/submissions`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+          body: JSON.stringify({
+            mediaType: "anime",
+            actionType,
+            mediaId: mediaId ? Number(mediaId) : undefined,
+            data: payloadData,
+          }),
         },
-        body: JSON.stringify({
-          mediaType: "anime",
-          actionType,
-          mediaId: mediaId ? Number(mediaId) : undefined,
-          data: payloadData,
-        }),
-      });
+      );
 
       if (!res.ok) {
         const errorJson = await res.json().catch(() => ({}));
@@ -302,10 +406,13 @@ export function RrAnimeEditModal({
             <div>
               <DialogTitle className="text-xl font-bold tracking-tight flex items-center gap-2 text-foreground">
                 <Sparkles className="size-5 text-primary" />
-                {actionType === "EDIT" ? "Edit Anime Metadata" : "Add New Anime Entry"}
+                {actionType === "EDIT"
+                  ? "Edit Anime Metadata"
+                  : "Add New Anime Entry"}
               </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground mt-1">
-                Edit anime metadata, schedule, episodes, staff, studios, and lock state.
+                Edit anime metadata, schedule, episodes, staff, studios, and
+                lock state.
               </DialogDescription>
             </div>
 
@@ -318,7 +425,8 @@ export function RrAnimeEditModal({
             >
               {isLocked ? (
                 <>
-                  <Lock className="size-4 text-destructive-foreground" /> Entry Locked
+                  <Lock className="size-4 text-destructive-foreground" /> Entry
+                  Locked
                 </>
               ) : (
                 <>
@@ -329,32 +437,61 @@ export function RrAnimeEditModal({
           </div>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+        <Tabs
+          value={activeTab}
+          onValueChange={setActiveTab}
+          className="flex-1 flex flex-col overflow-hidden"
+        >
           <div className="px-6 pt-3 pb-3 border-b border-border/50 bg-muted/15">
-            <TabsList className="flex items-center justify-start gap-1 h-11 bg-muted/60 p-1 rounded-xl w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden scrollbar-none border border-border/50 shadow-2xs">
-              <TabsTrigger value="basic" className="gap-1.5 px-3 text-xs rounded-lg font-bold transition-all data-[state=active]:bg-background data-[state=active]:text-primary whitespace-nowrap">
+            <TabsList className="flex items-center justify-start gap-1 h-11 bg-muted/60 p-1 rounded-xl w-full overflow-x-auto scrollbar-none [&::-webkit-scrollbar]:hidden border border-border/50 shadow-2xs">
+              <TabsTrigger
+                value="basic"
+                className="gap-1.5 px-3 text-xs rounded-lg font-bold transition-all data-[state=active]:bg-background data-[state=active]:text-primary whitespace-nowrap"
+              >
                 <Info className="size-3.5" /> Basic Info
               </TabsTrigger>
-              <TabsTrigger value="release" className="gap-1.5 px-3 text-xs rounded-lg font-bold transition-all data-[state=active]:bg-background data-[state=active]:text-primary whitespace-nowrap">
+              <TabsTrigger
+                value="release"
+                className="gap-1.5 px-3 text-xs rounded-lg font-bold transition-all data-[state=active]:bg-background data-[state=active]:text-primary whitespace-nowrap"
+              >
                 <Calendar className="size-3.5" /> Release & Specs
               </TabsTrigger>
-              <TabsTrigger value="episodes" className="gap-1.5 px-3 text-xs rounded-lg font-bold transition-all data-[state=active]:bg-background data-[state=active]:text-primary whitespace-nowrap">
+              <TabsTrigger
+                value="episodes"
+                className="gap-1.5 px-3 text-xs rounded-lg font-bold transition-all data-[state=active]:bg-background data-[state=active]:text-primary whitespace-nowrap"
+              >
                 <Tv className="size-3.5" /> Episodes & Schedule
               </TabsTrigger>
-              <TabsTrigger value="assets" className="gap-1.5 px-3 text-xs rounded-lg font-bold transition-all data-[state=active]:bg-background data-[state=active]:text-primary whitespace-nowrap">
+              <TabsTrigger
+                value="assets"
+                className="gap-1.5 px-3 text-xs rounded-lg font-bold transition-all data-[state=active]:bg-background data-[state=active]:text-primary whitespace-nowrap"
+              >
                 <ImageIcon className="size-3.5" /> Assets
               </TabsTrigger>
-              <TabsTrigger value="taxonomy" className="gap-1.5 px-3 text-xs rounded-lg font-bold transition-all data-[state=active]:bg-background data-[state=active]:text-primary whitespace-nowrap">
+              <TabsTrigger
+                value="taxonomy"
+                className="gap-1.5 px-3 text-xs rounded-lg font-bold transition-all data-[state=active]:bg-background data-[state=active]:text-primary whitespace-nowrap"
+              >
                 <Tag className="size-3.5" /> Taxonomy & Ratings
               </TabsTrigger>
-              <TabsTrigger value="people" className="gap-1.5 px-3 text-xs rounded-lg font-bold transition-all data-[state=active]:bg-background data-[state=active]:text-primary whitespace-nowrap">
+              <TabsTrigger
+                value="people"
+                className="gap-1.5 px-3 text-xs rounded-lg font-bold transition-all data-[state=active]:bg-background data-[state=active]:text-primary whitespace-nowrap"
+              >
                 <Users className="size-3.5" /> Characters, Staff & Studios
               </TabsTrigger>
-              <TabsTrigger value="external" className="gap-1.5 px-3 text-xs rounded-lg font-bold transition-all data-[state=active]:bg-background data-[state=active]:text-primary whitespace-nowrap">
+              <TabsTrigger
+                value="external"
+                className="gap-1.5 px-3 text-xs rounded-lg font-bold transition-all data-[state=active]:bg-background data-[state=active]:text-primary whitespace-nowrap"
+              >
                 <Database className="size-3.5" /> External IDs
               </TabsTrigger>
-              <TabsTrigger value="metrics" className="gap-1.5 px-3 text-xs rounded-lg font-bold transition-all data-[state=active]:bg-background data-[state=active]:text-amber-500 whitespace-nowrap">
-                <Calculator className="size-3.5 text-amber-500" /> System Metrics
+              <TabsTrigger
+                value="metrics"
+                className="gap-1.5 px-3 text-xs rounded-lg font-bold transition-all data-[state=active]:bg-background data-[state=active]:text-amber-500 whitespace-nowrap"
+              >
+                <Calculator className="size-3.5 text-amber-500" /> System
+                Metrics
               </TabsTrigger>
             </TabsList>
           </div>
@@ -372,7 +509,11 @@ export function RrAnimeEditModal({
             </TabsContent>
 
             <TabsContent value="release">
-              <RrSubmissionReleaseTab mediaType="anime" formData={formData} onChange={handleChange} />
+              <RrSubmissionReleaseTab
+                mediaType="anime"
+                formData={formData}
+                onChange={handleChange}
+              />
             </TabsContent>
 
             <TabsContent value="episodes">
@@ -423,28 +564,36 @@ export function RrAnimeEditModal({
                 setSelectedRelations={setSelectedRelations}
                 onSearchCharacters={async (q) => {
                   try {
-                    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/aquila/submissions/search/characters?q=${encodeURIComponent(q)}`);
+                    const res = await fetch(
+                      `${process.env.NEXT_PUBLIC_API_URL}/aquila/submissions/search/characters?q=${encodeURIComponent(q)}`,
+                    );
                     if (res.ok) return await res.json();
                   } catch {}
                   return [];
                 }}
                 onSearchStaff={async (q) => {
                   try {
-                    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/aquila/submissions/search/actors?q=${encodeURIComponent(q)}`);
+                    const res = await fetch(
+                      `${process.env.NEXT_PUBLIC_API_URL}/aquila/submissions/search/actors?q=${encodeURIComponent(q)}`,
+                    );
                     if (res.ok) return await res.json();
                   } catch {}
                   return [];
                 }}
                 onSearchStudios={async (q) => {
                   try {
-                    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/aquila/submissions/search/studios?q=${encodeURIComponent(q)}`);
+                    const res = await fetch(
+                      `${process.env.NEXT_PUBLIC_API_URL}/aquila/submissions/search/studios?q=${encodeURIComponent(q)}`,
+                    );
                     if (res.ok) return await res.json();
                   } catch {}
                   return [];
                 }}
                 onSearchRelations={async (q) => {
                   try {
-                    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/aquila/submissions/search/relations?mediaType=anime&q=${encodeURIComponent(q)}`);
+                    const res = await fetch(
+                      `${process.env.NEXT_PUBLIC_API_URL}/aquila/submissions/search/relations?mediaType=anime&q=${encodeURIComponent(q)}`,
+                    );
                     if (res.ok) return await res.json();
                   } catch {}
                   return [];
@@ -453,19 +602,36 @@ export function RrAnimeEditModal({
             </TabsContent>
 
             <TabsContent value="external">
-              <RrSubmissionExternalIdsTab mediaType="anime" formData={formData} onChange={handleChange} />
+              <RrSubmissionExternalIdsTab
+                mediaType="anime"
+                formData={formData}
+                onChange={handleChange}
+              />
             </TabsContent>
 
             <TabsContent value="metrics">
-              <RrSubmissionInternalMetricsTab mediaType="anime" initialData={initialData} />
+              <RrSubmissionInternalMetricsTab
+                mediaType="anime"
+                initialData={initialData}
+              />
             </TabsContent>
           </div>
 
           <DialogFooter className="p-4 border-t border-border/50 bg-muted/20 gap-3">
-            <Button type="button" variant="outline" onClick={onClose} className="h-10 px-5 rounded-xl text-xs font-bold">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              className="h-10 px-5 rounded-xl text-xs font-bold"
+            >
               Cancel
             </Button>
-            <Button type="button" onClick={handleSubmit} disabled={isSubmitting} className="h-10 px-6 rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90">
+            <Button
+              type="button"
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className="h-10 px-6 rounded-xl text-xs font-bold bg-primary text-primary-foreground hover:bg-primary/90"
+            >
               {isSubmitting ? "Submitting..." : "Submit Anime Edits"}
             </Button>
           </DialogFooter>

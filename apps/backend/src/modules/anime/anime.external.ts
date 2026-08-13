@@ -52,7 +52,6 @@ export function mapMediaType(typeStr?: string, formatStr?: string): string {
     return 'MANGA';
   }
   if (typeUpper === 'ANIME') {
-    if (formatUpper === 'MUSIC') return 'MUSIC';
     return 'ANIME';
   }
   if (typeUpper === 'MOVIE' || formatUpper === 'MOVIE') return 'MOVIE';
@@ -194,6 +193,7 @@ export class AnimeExternal {
       const mapped: AnimeSearchEntity[] = [];
 
       for (const item of mediaList) {
+        if (item.format?.toUpperCase() === 'MUSIC') continue;
         const primaryTitle =
           item.title?.english || item.title?.romaji || item.title?.native || 'Untitled';
         const secondaryTitle = item.title?.romaji || item.title?.native || null;
@@ -266,6 +266,11 @@ export class AnimeExternal {
     const alData = await this.anilistService.fetchFullAnime(inputParam);
     if (!alData) {
       this.logger.warn(`Anime "${inputParam}" not found on AniList`);
+      return null;
+    }
+
+    if (alData.format?.toUpperCase() === 'MUSIC') {
+      this.logger.debug(`Skipping AniList ID ${alData.id}: format is MUSIC`);
       return null;
     }
 
@@ -631,12 +636,7 @@ export class AnimeExternal {
             'Untitled',
           format: edge.node?.format || null,
         }))
-        .filter(
-          (rel: any) =>
-            rel.format === 'MUSIC' ||
-            rel.targetType === 'MUSIC' ||
-            rel.type !== 'OTHER',
-        ),
+        .filter((rel: any) => rel.format?.toUpperCase() !== 'MUSIC' && rel.type !== 'OTHER'),
     };
   }
 }

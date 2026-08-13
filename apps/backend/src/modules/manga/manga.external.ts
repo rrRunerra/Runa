@@ -249,12 +249,7 @@ export class MangaExternal {
           const relType = mapRelationType(edge.relationType);
           const format = relNode.format || 'UNKNOWN';
           const targetType = mapMediaType(relNode.type, format);
-          if (
-            relType === 'OTHER' &&
-            format !== 'MUSIC' &&
-            targetType !== 'MUSIC'
-          )
-            continue;
+          if (relType === 'OTHER') continue;
           relations.push({
             targetAnilistId: relNode.id,
             targetType,

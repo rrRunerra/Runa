@@ -104,11 +104,7 @@ export class MangaQueueService implements OnModuleInit {
                   `[MangaQueue] Processing ${fullRecord.relations.length} relations for AniList ID ${job.anilistId}`,
                 );
                 for (const rel of fullRecord.relations) {
-                  if (
-                    rel.type === 'OTHER' &&
-                    rel.format !== 'MUSIC' &&
-                    rel.targetType !== 'MUSIC'
-                  ) {
+                  if (rel.type === 'OTHER') {
                     continue;
                   }
                   const info = `"${rel.titlePrimary || 'Unknown'}" (format: ${rel.format || 'UNKNOWN'}, relation: ${rel.type || 'UNKNOWN'})`;
@@ -117,11 +113,7 @@ export class MangaQueueService implements OnModuleInit {
                       `[MangaQueue] Queuing related MANGA AniList ID ${rel.targetAnilistId} ${info}`,
                     );
                     void this.addUpsertJob(rel.targetAnilistId);
-                  } else if (
-                    rel.targetType === 'ANIME' &&
-                    rel.format !== 'MUSIC' &&
-                    rel.targetAnilistId
-                  ) {
+                  } else if (rel.targetType === 'ANIME' && rel.targetAnilistId) {
                     this.logger.debug(
                       `[MangaQueue] Queuing related ANIME AniList ID ${rel.targetAnilistId} ${info}`,
                     );
