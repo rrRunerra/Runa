@@ -340,12 +340,14 @@ export function RrArrSettingsTab({
   return (
     <div className="flex flex-col gap-6 p-2 h-full">
       {/* Sub-navigation bar tab switcher */}
-      <RrPillNav
-        items={ARR_NAV_ITEMS}
-        activeId={activeTab}
-        onChange={(id) => setActiveTab(id)}
-        layoutId="arrSettingsCategoryHighlight"
-      />
+      <div className="flex justify-end w-full">
+        <RrPillNav
+          items={ARR_NAV_ITEMS}
+          activeId={activeTab}
+          onChange={(id) => setActiveTab(id)}
+          layoutId="arrSettingsCategoryHighlight"
+        />
+      </div>
 
       {activeTab === "sonarr" && (
         <div className="flex flex-col gap-5 w-full">

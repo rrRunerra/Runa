@@ -1,6 +1,21 @@
 import React from "react";
-import { BaseSpotlightFeature, SpotlightAction, SpotlightActionContext } from "../BaseSpotlightFeature";
-import { Moon, Sun, Laptop, Palette, Settings, Bell, Sparkles, PanelLeft, LogOut, Shield } from "lucide-react";
+import {
+  BaseSpotlightFeature,
+  SpotlightAction,
+  SpotlightActionContext,
+} from "../BaseSpotlightFeature";
+import {
+  Moon,
+  Sun,
+  Laptop,
+  Palette,
+  Settings,
+  Bell,
+  Sparkles,
+  PanelLeft,
+  LogOut,
+  Shield,
+} from "lucide-react";
 import { THEMES } from "../../../../config/themes";
 import { settingsNavConfig } from "../../../../config/settings";
 
@@ -33,7 +48,10 @@ export default class RunaSpotlightFeature extends BaseSpotlightFeature {
           name: "interfaceTheme",
           label: context.t("spotlight.interfaceTheme"),
           type: "select",
-          options: THEMES.map((t) => ({ label: context.t("spotlight.themeWithName", { name: t.name }), value: t.id })),
+          options: THEMES.map((t) => ({
+            label: context.t("spotlight.themeWithName", { name: t.name }),
+            value: t.id,
+          })),
         },
       ],
       action: (params) => {
@@ -46,24 +64,18 @@ export default class RunaSpotlightFeature extends BaseSpotlightFeature {
     });
 
     // 2. Settings (parameterized), notifications, appearance
-    const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
-
-    const settingsOptions = settingsNavConfig.filter((c) => {
-      if (c.id === "mailAccounts") {
-        return !!context.pathname?.startsWith("/pegasus");
-      }
-      if (c.id === "sidebar") {
-        return isMobile;
-      }
-      return true;
-    }).map((c) => {
-      const Icon = c.icon;
-      return {
-        label: context.t("settingsDialog." + c.id, { defaultValue: c.name }),
-        value: c.id,
-        icon: <Icon className="size-4 text-foreground/70" />,
-      };
-    });
+    const settingsOptions = settingsNavConfig
+      .filter((c) => {
+        return true;
+      })
+      .map((c) => {
+        const Icon = c.icon;
+        return {
+          label: context.t("settingsDialog." + c.id, { defaultValue: c.name }),
+          value: c.id,
+          icon: <Icon className="size-4 text-foreground/70" />,
+        };
+      });
 
     actions.push(
       {
@@ -104,7 +116,7 @@ export default class RunaSpotlightFeature extends BaseSpotlightFeature {
         action: () => {
           window.dispatchEvent(new CustomEvent("runa-open-appearance"));
         },
-      }
+      },
     );
 
     // 3. Constellation builder workspace

@@ -51,6 +51,7 @@ import { useRRCrypto } from "@/hooks/useRRCrypto";
 import { useTranslation } from "react-i18next";
 import { RrLanguageSelector } from "./rrLanguageSelector";
 import { RrFriendsModal } from "./rrFriendsModal";
+import { RrSidebarUserCard } from "./rrSidebarUserCard";
 
 export default function RrUserMenu({ session }: { session: Session | null }) {
   const { unreadCount } = useNotificationAndBookmarks();
@@ -162,68 +163,17 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
             <DropdownMenuTrigger asChild>
               <SidebarMenuButton
                 size="lg"
-                className="relative h-12 w-full flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-300 border border-border/40 hover:border-border/85 hover:bg-muted/50 data-[state=open]:bg-muted/80 data-[state=open]:border-border overflow-hidden isolate transform-[translate3d(0,0,0)]"
+                className="h-12 w-full p-0 border-0 bg-transparent hover:bg-transparent focus-visible:ring-0 overflow-hidden cursor-pointer"
               >
-                {/* Custom card bg image */}
-                {session.user?.sidebarCardBackgroundUrl && (
-                  <>
-                    <div
-                      className="absolute inset-0 bg-cover bg-center z-0"
-                      style={{
-                        backgroundImage: `url(${getSafeImageUrl(session.user.sidebarCardBackgroundUrl)})`,
-                      }}
-                    />
-                    <div className="absolute inset-0 bg-linear-to-r from-black/85 via-black/40 to-transparent z-0" />
-                  </>
-                )}
-
-                {/* User avatar */}
-                <div className="relative shrink-0 z-10">
-                  <Avatar className="h-9 w-9 border border-zinc-800/60 shadow-sm">
-                    <AvatarImage
-                      src={
-                        session.user?.avatarUrl
-                          ? getSafeImageUrl(session.user.avatarUrl)
-                          : ""
-                      }
-                    />
-                    <AvatarFallback>
-                      {session.user?.username?.charAt(0).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  {/* Notification badge with numbers */}
-                  {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[8px] font-bold text-primary-foreground border border-zinc-950">
-                      {unreadCount}
-                    </span>
-                  )}
-                </div>
-
-                {/*username and email*/}
-                <div className="grid flex-1 text-left text-sm leading-tight ml-1.5 z-10">
-                  <span
-                    className={cn(
-                      "truncate font-semibold",
-                      session.user?.sidebarCardBackgroundUrl
-                        ? "text-white"
-                        : "text-foreground",
-                    )}
-                  >
-                    {session.user.displayName ?? session.user?.username}
-                  </span>
-                  {/* <span
-                    className={cn(
-                      "truncate text-xs",
-                      session.user?.sidebarCardBackgroundUrl
-                        ? "text-zinc-300"
-                        : "text-muted-foreground/75",
-                    )}
-                  >
-                    {session.user?.email}
-                  </span> */}
-                </div>
-
-                <ChevronsUpDown className="ml-auto" />
+                <RrSidebarUserCard
+                  sidebarCardBackgroundUrl={session.user?.sidebarCardBackgroundUrl}
+                  avatarUrl={session.user?.avatarUrl}
+                  displayName={session.user?.displayName}
+                  username={session.user?.username}
+                  unreadCount={unreadCount}
+                  showChevrons
+                  className="h-full w-full border-border/40 hover:border-border/85 hover:bg-muted/50 data-[state=open]:bg-muted/80 data-[state=open]:border-border"
+                />
               </SidebarMenuButton>
             </DropdownMenuTrigger>
 
@@ -237,56 +187,16 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
               {/* User banner card */}
               <DropdownMenuLabel className="p-0 font-normal">
                 <Link href={`/polaris/user/${session.user.username}`}>
-                  <div className="relative overflow-hidden flex-row flex items-center gap-3.5 px-3 py-2.5 text-left text-sm  border border-border/50 hover:border-border hover:bg-muted rounded-xl mb-2 transition-all duration-200 isolate transform-[translate3d(0,0,0)]">
-                    {/* Custom Card Background Image */}
-                    {session.user?.sidebarCardBackgroundUrl && (
-                      <>
-                        <div
-                          className="absolute inset-0 bg-cover bg-center z-0"
-                          style={{
-                            backgroundImage: `url(${getSafeImageUrl(session.user.sidebarCardBackgroundUrl)})`,
-                          }}
-                        />
-                        <div className="absolute inset-0 bg-linear-to-r from-black/85 via-black/40 to-transparent z-0" />
-                      </>
-                    )}
-
-                    <Avatar className="h-9 w-9 border border-zinc-300 dark:border-zinc-800/60 z-10 shrink-0">
-                      <AvatarImage
-                        src={
-                          session.user?.avatarUrl
-                            ? getSafeImageUrl(session.user.avatarUrl)
-                            : ""
-                        }
-                        alt={session.user?.username}
-                      />
-                      <AvatarFallback>
-                        {session.user?.username?.charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="grid flex-1 text-left text-sm leading-tight z-10">
-                      <span
-                        className={cn(
-                          "truncate font-bold",
-                          session.user?.sidebarCardBackgroundUrl
-                            ? "text-white"
-                            : "text-foreground",
-                        )}
-                      >
-                        {session.user?.username}
-                      </span>
-                      <span
-                        className={cn(
-                          "truncate text-xs",
-                          session.user?.sidebarCardBackgroundUrl
-                            ? "text-zinc-300"
-                            : "text-muted-foreground/80",
-                        )}
-                      >
-                        {session.user?.email}
-                      </span>
-                    </div>
-                  </div>
+                  <RrSidebarUserCard
+                    sidebarCardBackgroundUrl={session.user?.sidebarCardBackgroundUrl}
+                    avatarUrl={session.user?.avatarUrl}
+                    displayName={session.user?.displayName}
+                    username={session.user?.username}
+                    email={session.user?.email}
+                    showEmail
+                    showChevrons={false}
+                    className="border-border/50 hover:border-border hover:bg-muted mb-2 py-2.5"
+                  />
                 </Link>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />

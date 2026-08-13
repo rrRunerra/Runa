@@ -1,12 +1,11 @@
-import React, { ComponentPropsWithoutRef } from "react";
+import React from "react";
 import { User, ExternalLink } from "lucide-react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getConnectionIcon, getConnectionProfileUrl } from "./rrConnectionHelpers";
 import { useTranslation } from "react-i18next";
 import { Session } from "next-auth";
 import { RrProfileFriendsCard } from "./rrProfileFriendsCard";
+import { RrMarkdownBioPreview } from "@/components/rrComponents/rrMarkdownBioPreview";
 
 interface Connection {
   id: string;
@@ -75,35 +74,10 @@ export default function RrOverviewTab({
             <CardTitle className="text-sm font-semibold uppercase tracking-wider">{t("polaris.overview.aboutMe")}</CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground leading-relaxed">
-            {bio ? (
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  h1: (props) => <h1 className="text-base font-bold text-foreground mt-4 mb-2" {...props} />,
-                  h2: (props) => <h2 className="text-sm font-bold text-foreground mt-3 mb-1.5" {...props} />,
-                  h3: (props) => <h3 className="text-xs font-bold text-foreground mt-2 mb-1" {...props} />,
-                  p: (props) => <p className="mb-3 last:mb-0 text-muted-foreground leading-relaxed" {...props} />,
-                  ul: (props) => <ul className="list-disc pl-5 mb-3 flex flex-col gap-1" {...props} />,
-                  ol: (props) => <ol className="list-decimal pl-5 mb-3 flex flex-col gap-1" {...props} />,
-                  li: (props) => <li className="text-sm text-muted-foreground" {...props} />,
-                  strong: (props) => <strong className="font-semibold text-foreground" {...props} />,
-                  em: (props) => <em className="italic" {...props} />,
-                  code: ({ children, className, ...props }: ComponentPropsWithoutRef<"code">) => {
-                    const isInline = !String(children).includes("\n");
-                    return isInline ? (
-                      <code className="bg-muted px-1.5 py-0.5 rounded font-mono text-xs border" {...props}>{children}</code>
-                    ) : (
-                      <pre className="bg-muted border p-3 rounded-md overflow-x-auto my-3 font-mono text-xs text-foreground"><code className={className} {...props}>{children}</code></pre>
-                    );
-                  },
-                  a: (props) => <a className="text-primary hover:underline font-medium" target="_blank" rel="noopener noreferrer" {...props} />
-                }}
-              >
-                {bio}
-              </ReactMarkdown>
-            ) : (
-              <p className="italic text-muted-foreground/60">{t("polaris.overview.noBio")}</p>
-            )}
+            <RrMarkdownBioPreview
+              content={bio}
+              emptyFallbackText={t("polaris.overview.noBio")}
+            />
           </CardContent>
         </Card>
       </div>

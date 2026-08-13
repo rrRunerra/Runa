@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { usePathname } from "next/navigation";
+
 import { settingsNavConfig } from "../../../config/settings";
 import { useTranslation } from "react-i18next";
 
@@ -74,8 +74,6 @@ export function SettingsDialog({
   const [isConstellationBuilderOpen, setIsConstellationBuilderOpen] =
     useState(false);
   const isMobile = useIsMobile();
-  const pathname = usePathname();
-  const isPegasus = pathname.startsWith("/pegasus");
 
   const [footerContent, setFooterContent] = useState<React.ReactNode | null>(
     null,
@@ -119,24 +117,32 @@ export function SettingsDialog({
           setActiveCategory("account");
       }
     }
-  }, [open, isPegasus]);
+  }, [open]);
 
-  const navItems: { id: rrCategory; name: string; icon: React.ElementType }[] =
-    settingsNavConfig
-      .filter((item) => {
-        if (item.id === "sidebar" && !isMobile) return false;
-        if (
-          item.visibleOn &&
-          !item.visibleOn.some((route) => pathname.startsWith(route))
-        )
-          return false;
-        return true;
-      })
-      .map((item) => ({
-        id: item.id as rrCategory,
-        name: item.label,
-        icon: item.icon,
-      }));
+  const navItems: {
+    id: rrCategory;
+    name: string;
+    icon: React.ElementType;
+    app: string;
+  }[] = settingsNavConfig.map((item) => ({
+    id: item.id as rrCategory,
+    name: item.label,
+    icon: item.icon,
+    app: item.app || "General",
+  }));
+
+  const groupedNavItems = React.useMemo(() => {
+    const groups: { app: string; items: typeof navItems }[] = [];
+    navItems.forEach((item) => {
+      let group = groups.find((g) => g.app === item.app);
+      if (!group) {
+        group = { app: item.app, items: [] };
+        groups.push(group);
+      }
+      group.items.push(item);
+    });
+    return groups;
+  }, [navItems]);
 
   const mobileDockItems = navItems.map((item) => ({
     label: t("settingsDialog." + item.id),
@@ -194,41 +200,43 @@ export function SettingsDialog({
               className="hidden md:flex border-r h-full bg-card min-w-55"
             >
               <SidebarContent>
-                <SidebarGroup>
-                  <div className="px-3 py-2 mb-2 text-[10px] font-bold text-muted-foreground/75 uppercase tracking-wider">
-                    {t("settingsDialog.dashboard")}
-                  </div>
-                  <SidebarGroupContent>
-                    <SidebarMenu>
-                      {navItems.map((item) => (
-                        <SidebarMenuItem key={item.id}>
-                          <SidebarMenuButton
-                            asChild
-                            isActive={activeCategory === item.id}
-                            onClick={() => {
-                              if (item.id === "constellation") {
-                                setIsConstellationBuilderOpen(true);
-                              } else {
-                                setActiveCategory(item.id);
-                              }
-                            }}
-                            className="cursor-pointer"
-                          >
-                            <button
-                              type="button"
-                              className="w-full flex items-center gap-2"
+                {groupedNavItems.map((group) => (
+                  <SidebarGroup key={group.app} className="py-1">
+                    <div className="px-3 py-1.5 text-[10px] font-bold text-muted-foreground/75 uppercase tracking-wider">
+                      {group.app}
+                    </div>
+                    <SidebarGroupContent>
+                      <SidebarMenu>
+                        {group.items.map((item) => (
+                          <SidebarMenuItem key={item.id}>
+                            <SidebarMenuButton
+                              asChild
+                              isActive={activeCategory === item.id}
+                              onClick={() => {
+                                if (item.id === "constellation") {
+                                  setIsConstellationBuilderOpen(true);
+                                } else {
+                                  setActiveCategory(item.id);
+                                }
+                              }}
+                              className="cursor-pointer"
                             >
-                              <item.icon className="size-4" />
-                              <span>
-                                {item.name || t("settingsDialog." + item.id)}
-                              </span>
-                            </button>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      ))}
-                    </SidebarMenu>
-                  </SidebarGroupContent>
-                </SidebarGroup>
+                              <button
+                                type="button"
+                                className="w-full flex items-center gap-2"
+                              >
+                                <item.icon className="size-4" />
+                                <span>
+                                  {item.name || t("settingsDialog." + item.id)}
+                                </span>
+                              </button>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        ))}
+                      </SidebarMenu>
+                    </SidebarGroupContent>
+                  </SidebarGroup>
+                ))}
               </SidebarContent>
             </Sidebar>
 
@@ -256,7 +264,7 @@ export function SettingsDialog({
               </header>
 
               {/* Tab Panel Content */}
-              <div className="flex-1 overflow-y-auto no-scrollbar p-4 sm:p-6 pb-4 md:pb-4">
+              <div className="flex-1 flex flex-col min-h-0 overflow-y-auto no-scrollbar p-4 sm:p-6 pb-4 md:pb-4">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={activeCategory}
@@ -264,10 +272,13 @@ export function SettingsDialog({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -12 }}
                     transition={{ duration: 0.2 }}
-                    className="min-h-full"
+                    className="flex-1 flex flex-col min-h-0 h-full"
                   >
                     {activeCategory === "account" && (
-                      <RrAccountSettingsTab onOpenChange={onOpenChange} />
+                      <RrAccountSettingsTab
+                        onOpenChange={onOpenChange}
+                        setFooterContent={setFooterContent}
+                      />
                     )}
                     {activeCategory === "security" && (
                       <RrSecuritySettingsTab onOpenChange={onOpenChange} />
@@ -281,7 +292,7 @@ export function SettingsDialog({
                     {activeCategory === "sidebar" && (
                       <RrSidebarSettingsTab onOpenChange={onOpenChange} />
                     )}
-                    {activeCategory === "mailAccounts" && isPegasus && (
+                    {activeCategory === "mailAccounts" && (
                       <RrMailSettingsTab onOpenChange={onOpenChange} />
                     )}
                     {activeCategory === "apiKeys" && (
