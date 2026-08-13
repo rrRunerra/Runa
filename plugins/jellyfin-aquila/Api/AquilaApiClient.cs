@@ -33,7 +33,7 @@ public class AquilaApiClient
     /// <summary>
     /// Searches media by title via GET /:mediaType/search/:title.
     /// </summary>
-    public async Task<List<AquilaSearchResult>> SearchMediaAsync(string mediaType, string title, string apiKey, string baseUrl)
+    public virtual async Task<List<AquilaSearchResult>> SearchMediaAsync(string mediaType, string title, string apiKey, string baseUrl)
     {
         var logPrefix = "[Aquila ApiClient] [SEARCH]";
         try
@@ -104,7 +104,7 @@ public class AquilaApiClient
     /// <summary>
     /// Increments user list progress via POST /list/increment.
     /// </summary>
-    public async Task<bool> IncrementProgressAsync(AquilaIncrementDto dto, string apiKey, string baseUrl)
+    public virtual async Task<bool> IncrementProgressAsync(AquilaIncrementDto dto, string apiKey, string baseUrl)
     {
         var logPrefix = "[Aquila ApiClient] [INCREMENT]";
         try
@@ -152,7 +152,7 @@ public class AquilaApiClient
     /// <summary>
     /// Fetches list entry details via GET /list/:mediaType/entry/:id.
     /// </summary>
-    public async Task<JsonElement?> GetListEntryAsync(string mediaType, int mediaId, string apiKey, string baseUrl)
+    public virtual async Task<JsonElement?> GetListEntryAsync(string mediaType, int mediaId, string apiKey, string baseUrl)
     {
         var logPrefix = "[Aquila ApiClient] [GET ENTRY]";
         try
@@ -196,7 +196,7 @@ public class AquilaApiClient
     /// <summary>
     /// Saves/upserts list entry via POST /list/:mediaType/entry/save.
     /// </summary>
-    public async Task<bool> SaveListEntryAsync(string mediaType, AquilaSaveEntryDto dto, string apiKey, string baseUrl)
+    public virtual async Task<bool> SaveListEntryAsync(string mediaType, AquilaSaveEntryDto dto, string apiKey, string baseUrl)
     {
         var logPrefix = "[Aquila ApiClient] [SAVE ENTRY]";
         try
@@ -237,7 +237,7 @@ public class AquilaApiClient
     /// <summary>
     /// Fetches media metadata details via GET /:mediaType/:id.
     /// </summary>
-    public async Task<JsonElement?> GetMediaDetailsAsync(string mediaType, int id, string apiKey, string baseUrl)
+    public virtual async Task<JsonElement?> GetMediaDetailsAsync(string mediaType, int id, string apiKey, string baseUrl)
     {
         var logPrefix = "[Aquila ApiClient] [GET DETAILS]";
         try
@@ -264,7 +264,7 @@ public class AquilaApiClient
     /// <summary>
     /// Fetches favorite status via GET /favorites/:mediaType/:id/status.
     /// </summary>
-    public async Task<JsonElement?> GetFavoriteStatusAsync(string mediaType, int id, string apiKey, string baseUrl)
+    public virtual async Task<JsonElement?> GetFavoriteStatusAsync(string mediaType, int id, string apiKey, string baseUrl)
     {
         var logPrefix = "[Aquila ApiClient] [FAVORITE STATUS]";
         try
@@ -291,7 +291,7 @@ public class AquilaApiClient
     /// <summary>
     /// Adds a favorite via POST /favorites.
     /// </summary>
-    public async Task<bool> AddFavoriteAsync(string type, string targetId, string apiKey, string baseUrl)
+    public virtual async Task<bool> AddFavoriteAsync(string type, string targetId, string apiKey, string baseUrl)
     {
         var logPrefix = "[Aquila ApiClient] [ADD FAVORITE]";
         try
@@ -317,7 +317,7 @@ public class AquilaApiClient
     /// <summary>
     /// Removes a favorite via DELETE /favorites/:mediaType/:id.
     /// </summary>
-    public async Task<bool> DeleteFavoriteAsync(string mediaType, int id, string apiKey, string baseUrl)
+    public virtual async Task<bool> DeleteFavoriteAsync(string mediaType, int id, string apiKey, string baseUrl)
     {
         var logPrefix = "[Aquila ApiClient] [DELETE FAVORITE]";
         try
@@ -340,7 +340,7 @@ public class AquilaApiClient
     /// <summary>
     /// Deletes a user list entry via DELETE /list/:mediaType/entry/:id.
     /// </summary>
-    public async Task<bool> DeleteListEntryAsync(string mediaType, int id, string apiKey, string baseUrl)
+    public virtual async Task<bool> DeleteListEntryAsync(string mediaType, int id, string apiKey, string baseUrl)
     {
         var logPrefix = "[Aquila ApiClient] [DELETE ENTRY]";
         try
@@ -363,7 +363,7 @@ public class AquilaApiClient
     /// <summary>
     /// Toggles a TV episode watched state via POST /list/tv/entry/:id/episode.
     /// </summary>
-    public async Task<JsonElement?> ToggleEpisodeWatchedAsync(int id, int seasonNum, int episodeNum, string apiKey, string baseUrl)
+    public virtual async Task<JsonElement?> ToggleEpisodeWatchedAsync(int id, int seasonNum, int episodeNum, string apiKey, string baseUrl)
     {
         var logPrefix = "[Aquila ApiClient] [TOGGLE EPISODE]";
         try
@@ -393,7 +393,7 @@ public class AquilaApiClient
     /// <summary>
     /// Toggles a TV season watched state via POST /list/tv/entry/:id/season.
     /// </summary>
-    public async Task<bool> ToggleSeasonWatchedAsync(int id, int seasonNum, JsonElement episodes, bool watched, string apiKey, string baseUrl)
+    public virtual async Task<bool> ToggleSeasonWatchedAsync(int id, int seasonNum, JsonElement episodes, bool watched, string apiKey, string baseUrl)
     {
         var logPrefix = "[Aquila ApiClient] [TOGGLE SEASON]";
         try
@@ -419,7 +419,7 @@ public class AquilaApiClient
     /// <summary>
     /// Fetches user active connections via GET /connections?capabilities=...
     /// </summary>
-    public async Task<JsonElement?> GetUserConnectionsAsync(string capabilities, string apiKey, string baseUrl)
+    public virtual async Task<JsonElement?> GetUserConnectionsAsync(string capabilities, string apiKey, string baseUrl)
     {
         var logPrefix = "[Aquila ApiClient] [GET CONNECTIONS]";
         try
@@ -446,7 +446,7 @@ public class AquilaApiClient
     /// <summary>
     /// Searches external connection media via GET /connections/:provider/search?query=...&mediaType=...
     /// </summary>
-    public async Task<JsonElement?> SearchConnectionMediaAsync(string provider, string mediaType, string query, string apiKey, string baseUrl)
+    public virtual async Task<JsonElement?> SearchConnectionMediaAsync(string provider, string mediaType, string query, string apiKey, string baseUrl)
     {
         var logPrefix = "[Aquila ApiClient] [CONNECTION SEARCH]";
         try

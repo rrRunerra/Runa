@@ -421,15 +421,86 @@ public class AquilaWebController : ControllerBase
     }
 
     /// <summary>
-    /// Sets item mapping for a user and Jellyfin item.
+    /// Sets item mapping for a user and Jellyfin item (supporting optional list of ordered entries via body or query parameters).
     /// </summary>
     [HttpPost("Api/Mapping")]
     [AllowAnonymous]
-    public async Task<IActionResult> SaveMapping([FromQuery] string? userId, [FromQuery] string itemId, [FromQuery] int aquilaMediaId, [FromQuery] string mediaType)
+    public async Task<IActionResult> SaveMapping(
+        [FromQuery] string? userId,
+        [FromQuery] string itemId,
+        [FromQuery] int? aquilaMediaId = null,
+        [FromQuery] string? mediaType = null,
+        [FromBody] System.Collections.Generic.List<LinkedMediaEntry>? entries = null)
     {
-        _logger.LogInformation("[Aquila WebController] [SAVE MAPPING] Request: UserId='{UserId}', ItemId='{ItemId}', AquilaId={AquilaId}, Type='{MediaType}'", userId, itemId, aquilaMediaId, mediaType);
-        await _mappingStore.SetMappingAsync(userId ?? "", itemId, aquilaMediaId, mediaType).ConfigureAwait(false);
+        _logger.LogInformation("[Aquila WebController] [SAVE MAPPING] Request: UserId='{UserId}', ItemId='{ItemId}', AquilaId={AquilaId}, Type='{MediaType}', EntriesCount={EntriesCount}",
+            userId, itemId, aquilaMediaId, mediaType, entries?.Count ?? 0);
+
+        if (entries != null && entries.Count > 0)
+        {
+            await _mappingStore.SetMappingAsync(userId ?? "", itemId, entries).ConfigureAwait(false);
+        }
+        else if (aquilaMediaId.HasValue && aquilaMediaId.Value > 0)
+        {
+            await _mappingStore.SetMappingAsync(userId ?? "", itemId, aquilaMediaId.Value, mediaType ?? "tv").ConfigureAwait(false);
+        }
+        else
+        {
+            return BadRequest(new { message = "Either aquilaMediaId or entries array must be provided." });
+        }
+
         return Ok(new { success = true });
+    }
+
+    /// <summary>
+    /// Adds or updates a single entry in a user's ordered entries list for a Jellyfin item.
+    /// </summary>
+    [HttpPost("Api/Mapping/Entry")]
+    [AllowAnonymous]
+    public async Task<IActionResult> AddOrUpdateEntry([FromQuery] string? userId, [FromQuery] string itemId, [FromBody] LinkedMediaEntry entry)
+    {
+        _logger.LogInformation("[Aquila WebController] [ADD/UPDATE ENTRY] Request: UserId='{UserId}', ItemId='{ItemId}', AquilaId={AquilaId}, Type='{MediaType}'",
+            userId, itemId, entry.AquilaMediaId, entry.MediaType);
+
+        if (entry.AquilaMediaId <= 0)
+        {
+            return BadRequest(new { message = "Invalid aquilaMediaId." });
+        }
+
+        await _mappingStore.AddOrUpdateEntryAsync(userId ?? "", itemId, entry).ConfigureAwait(false);
+        return Ok(new { success = true });
+    }
+
+    /// <summary>
+    /// Deletes a specific linked entry from a user's item mapping by Aquila Media ID.
+    /// </summary>
+    [HttpDelete("Api/Mapping/Entry")]
+    [AllowAnonymous]
+    public async Task<IActionResult> DeleteEntry([FromQuery] string? userId, [FromQuery] string itemId, [FromQuery] int aquilaMediaId)
+    {
+        _logger.LogInformation("[Aquila WebController] [DELETE ENTRY] Request: UserId='{UserId}', ItemId='{ItemId}', AquilaId={AquilaId}",
+            userId, itemId, aquilaMediaId);
+
+        var removed = await _mappingStore.RemoveEntryAsync(userId ?? "", itemId, aquilaMediaId).ConfigureAwait(false);
+        return Ok(new { success = true, removed });
+    }
+
+    /// <summary>
+    /// Reorders the linked entries for a user and Jellyfin item.
+    /// </summary>
+    [HttpPut("Api/Mapping/Reorder")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ReorderEntries([FromQuery] string? userId, [FromQuery] string itemId, [FromBody] System.Collections.Generic.List<int> aquilaMediaIdsInOrder)
+    {
+        _logger.LogInformation("[Aquila WebController] [REORDER ENTRIES] Request: UserId='{UserId}', ItemId='{ItemId}', Order=[{Ids}]",
+            userId, itemId, string.Join(", ", aquilaMediaIdsInOrder ?? new System.Collections.Generic.List<int>()));
+
+        if (aquilaMediaIdsInOrder == null)
+        {
+            return BadRequest(new { message = "aquilaMediaIdsInOrder payload is required." });
+        }
+
+        var success = await _mappingStore.ReorderEntriesAsync(userId ?? "", itemId, aquilaMediaIdsInOrder).ConfigureAwait(false);
+        return Ok(new { success });
     }
 
     /// <summary>

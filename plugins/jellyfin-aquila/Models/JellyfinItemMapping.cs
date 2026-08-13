@@ -37,4 +37,37 @@ public class JellyfinItemMapping
     /// </summary>
     [JsonPropertyName("linkedAt")]
     public DateTime LinkedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>
+    /// Gets or sets the ordered list of linked media entries for this user and item.
+    /// </summary>
+    [JsonPropertyName("entries")]
+    public System.Collections.Generic.List<LinkedMediaEntry> Entries { get; set; } = new();
+
+    /// <summary>
+    /// Gets the list of linked media entries sorted by sequence order.
+    /// Falls back to a single entry created from AquilaMediaId for legacy mappings.
+    /// </summary>
+    public System.Collections.Generic.List<LinkedMediaEntry> GetOrderedEntries()
+    {
+        if (Entries != null && Entries.Count > 0)
+        {
+            return System.Linq.Enumerable.ToList(System.Linq.Enumerable.OrderBy(Entries, e => e.Order));
+        }
+
+        if (AquilaMediaId > 0)
+        {
+            return new System.Collections.Generic.List<LinkedMediaEntry>
+            {
+                new LinkedMediaEntry
+                {
+                    AquilaMediaId = AquilaMediaId,
+                    MediaType = MediaType,
+                    Order = 1
+                }
+            };
+        }
+
+        return new System.Collections.Generic.List<LinkedMediaEntry>();
+    }
 }

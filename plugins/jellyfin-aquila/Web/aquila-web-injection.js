@@ -28,34 +28,38 @@
                         theme: {
                             extend: {
                                 colors: {
-                                    border: 'hsl(var(--border) / <alpha-value>)',
-                                    input: 'hsl(var(--input) / <alpha-value>)',
-                                    ring: 'hsl(var(--ring) / <alpha-value>)',
-                                    background: 'hsl(var(--background) / <alpha-value>)',
-                                    foreground: 'hsl(var(--foreground) / <alpha-value>)',
+                                    border: 'var(--border)',
+                                    input: 'var(--input)',
+                                    ring: 'var(--ring)',
+                                    background: 'var(--background)',
+                                    foreground: 'var(--foreground)',
                                     primary: {
-                                        DEFAULT: 'hsl(var(--primary) / <alpha-value>)',
-                                        foreground: 'hsl(var(--primary-foreground) / <alpha-value>)'
+                                        DEFAULT: 'var(--primary)',
+                                        foreground: 'var(--primary-foreground)'
                                     },
                                     secondary: {
-                                        DEFAULT: 'hsl(var(--secondary) / <alpha-value>)',
-                                        foreground: 'hsl(var(--secondary-foreground) / <alpha-value>)'
+                                        DEFAULT: 'var(--secondary)',
+                                        foreground: 'var(--secondary-foreground)'
                                     },
                                     destructive: {
-                                        DEFAULT: 'hsl(var(--destructive) / <alpha-value>)',
-                                        foreground: 'hsl(var(--destructive-foreground) / <alpha-value>)'
+                                        DEFAULT: 'var(--destructive)',
+                                        foreground: 'var(--destructive-foreground)'
                                     },
                                     muted: {
-                                        DEFAULT: 'hsl(var(--muted) / <alpha-value>)',
-                                        foreground: 'hsl(var(--muted-foreground) / <alpha-value>)'
+                                        DEFAULT: 'var(--muted)',
+                                        foreground: 'var(--muted-foreground)'
                                     },
                                     card: {
-                                        DEFAULT: 'hsl(var(--card) / <alpha-value>)',
-                                        foreground: 'hsl(var(--card-foreground) / <alpha-value>)'
+                                        DEFAULT: 'var(--card)',
+                                        foreground: 'var(--card-foreground)'
                                     },
                                     popover: {
-                                        DEFAULT: 'hsl(var(--popover) / <alpha-value>)',
-                                        foreground: 'hsl(var(--popover-foreground) / <alpha-value>)'
+                                        DEFAULT: 'var(--popover)',
+                                        foreground: 'var(--popover-foreground)'
+                                    },
+                                    accent: {
+                                        DEFAULT: 'var(--accent)',
+                                        foreground: 'var(--accent-foreground)'
                                     }
                                 }
                             }
@@ -193,7 +197,7 @@
         backdrop.className = 'dark aquila-modal-backdrop';
 
         backdrop.innerHTML = `
-            <div class="relative flex flex-col gap-0 max-h-[90vh] w-[92vw] max-w-[680px] p-0 overflow-hidden bg-background/95 backdrop-blur-2xl border border-border/60 text-foreground shadow-2xl rounded-3xl" id="aquila-modal-card">
+            <div class="relative flex flex-col gap-0 max-h-[90vh] w-[92vw] max-w-[680px] p-0 overflow-hidden bg-[#0d0e15] border border-white/10 text-foreground shadow-2xl rounded-3xl" id="aquila-modal-card">
                 <div id="aquila-modal-content" class="flex flex-col h-full overflow-hidden"></div>
             </div>
         `;
@@ -330,13 +334,51 @@
         } catch (e) {}
     }
 
-    async function saveServerMapping(userId, targetId, aquilaId, mediaType) {
+    async function saveServerMapping(userId, targetId, aquilaId, mediaType, displayTitle = "", maxProgress = null) {
         try {
             console.log(`[Aquila Plugin] Persisting mapping to server: targetId=${targetId} -> aquilaId=${aquilaId} (${mediaType})`);
             const proxyUrl = getProxyUrl(`Aquila/Api/Mapping?userId=${encodeURIComponent(userId)}&itemId=${encodeURIComponent(targetId)}&aquilaMediaId=${aquilaId}&mediaType=${encodeURIComponent(mediaType)}`);
             await fetch(proxyUrl, { method: 'POST' });
         } catch (e) {
             console.error('[Aquila Plugin] Failed to persist mapping to server:', e);
+        }
+    }
+
+    async function addServerMappingEntry(userId, targetId, entry) {
+        try {
+            console.log(`[Aquila Plugin] Appending entry to mapping: targetId=${targetId} -> aquilaId=${entry.aquilaMediaId}`);
+            const proxyUrl = getProxyUrl(`Aquila/Api/Mapping/Entry?userId=${encodeURIComponent(userId)}&itemId=${encodeURIComponent(targetId)}`);
+            await fetch(proxyUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(entry)
+            });
+        } catch (e) {
+            console.error('[Aquila Plugin] Failed to append entry to server:', e);
+        }
+    }
+
+    async function removeServerMappingEntry(userId, targetId, aquilaId) {
+        try {
+            console.log(`[Aquila Plugin] Removing entry from mapping: targetId=${targetId} -> aquilaId=${aquilaId}`);
+            const proxyUrl = getProxyUrl(`Aquila/Api/Mapping/Entry?userId=${encodeURIComponent(userId)}&itemId=${encodeURIComponent(targetId)}&aquilaMediaId=${aquilaId}`);
+            await fetch(proxyUrl, { method: 'DELETE' });
+        } catch (e) {
+            console.error('[Aquila Plugin] Failed to remove entry from server:', e);
+        }
+    }
+
+    async function reorderServerMappingEntries(userId, targetId, idsInOrder) {
+        try {
+            console.log(`[Aquila Plugin] Reordering mapping entries: targetId=${targetId} -> order=[${idsInOrder.join(', ')}]`);
+            const proxyUrl = getProxyUrl(`Aquila/Api/Mapping/Reorder?userId=${encodeURIComponent(userId)}&itemId=${encodeURIComponent(targetId)}`);
+            await fetch(proxyUrl, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(idsInOrder)
+            });
+        } catch (e) {
+            console.error('[Aquila Plugin] Failed to reorder entries on server:', e);
         }
     }
 
@@ -383,17 +425,18 @@
     }
 
     // Search View to Link Aquila Title
-    async function renderSearchView(userId, targetId, initialMediaType, defaultTitle, candidateIds = []) {
+    async function renderSearchView(userId, targetId, initialMediaType, defaultTitle, candidateIds = [], isAppendMode = false) {
         let currentSearchType = (initialMediaType && initialMediaType !== 'manga') ? initialMediaType : "tv";
         const content = document.getElementById('aquila-modal-content');
 
         content.innerHTML = `
             <div class="p-6 flex flex-col gap-4">
                 <div class="flex justify-between items-center">
-                    <h3 class="m-0 text-lg font-bold text-foreground">Link Media to Aquila</h3>
+                    <h3 class="m-0 text-lg font-bold text-foreground">${isAppendMode ? 'Add Linked Season / Entry' : 'Link Media to Aquila'}</h3>
                     <button class="text-muted-foreground hover:text-foreground text-xl font-bold bg-transparent border-0 cursor-pointer" id="aquila-modal-close-btn">&times;</button>
                 </div>
-                <p class="m-0 text-muted-foreground text-xs">This title is not linked to an Aquila Realm entry yet. Search and select a title below to link it.</p>
+                <p class="m-0 text-muted-foreground text-xs">${isAppendMode ? 'Search and select an additional season or entry to append to this media link sequence.' : 'This title is not linked to an Aquila Realm entry yet. Search and select a title below to link it.'}</p>
+
 
                 <!-- Media Type Tabs -->
                 <div class="flex items-center gap-2" id="aquila-search-type-pills">
@@ -513,7 +556,11 @@
                     const aquilaId = parseInt(card.getAttribute('data-id'), 10);
                     const cardTitle = card.getAttribute('data-title');
                     const itemType = card.getAttribute('data-type') || currentSearchType;
-                    await saveServerMapping(userId, targetId, aquilaId, itemType);
+                    if (isAppendMode) {
+                        await addServerMappingEntry(userId, targetId, { aquilaMediaId: aquilaId, mediaType: itemType, displayTitle: cardTitle });
+                    } else {
+                        await saveServerMapping(userId, targetId, aquilaId, itemType, cardTitle);
+                    }
                     renderFullEditDialog(userId, targetId, itemType, aquilaId, cardTitle, candidateIds);
                 });
             });
@@ -526,6 +573,9 @@
 
     // Full 1:1 RrMediaEditDialog Implementation
     async function renderFullEditDialog(userId, targetId, mediaType, aquilaId, fallbackTitle, candidateIds = []) {
+        console.group('[Aquila Plugin] [RENDER FULL EDIT DIALOG]');
+        console.log('[Aquila Plugin] Init params:', { userId, targetId, mediaType, aquilaId, fallbackTitle, candidateIds });
+
         const content = document.getElementById('aquila-modal-content');
         content.innerHTML = '<div class="text-center p-16 text-muted-foreground font-semibold">Loading media details & entry...</div>';
 
@@ -533,31 +583,92 @@
         let isFavorited = false;
         let listEntry = null;
         let userConnectionsList = [];
+        let currentMapping = null;
 
         const capParam = mediaType === "tv" ? "TV_SHOWS" : mediaType === "movie" ? "MOVIES" : mediaType.toUpperCase();
 
         try {
-            const [detRes, favRes, entryRes, connRes] = await Promise.all([
-                fetch(getProxyUrl(`Aquila/Api/Details?mediaType=${encodeURIComponent(mediaType)}&id=${aquilaId}`)).catch(() => null),
-                fetch(getProxyUrl(`Aquila/Api/FavoriteStatus?mediaType=${encodeURIComponent(mediaType)}&id=${aquilaId}`)).catch(() => null),
-                fetch(getProxyUrl(`Aquila/Api/Entry?mediaType=${encodeURIComponent(mediaType)}&id=${aquilaId}`)).catch(() => null),
-                fetch(getProxyUrl(`Aquila/Api/Connections?capabilities=${encodeURIComponent(capParam)}`)).catch(() => null)
+            console.log('[Aquila Plugin] Fetching parallel data from Aquila proxy endpoints...');
+            const [detRes, favRes, entryRes, connRes, mapRes] = await Promise.all([
+                fetch(getProxyUrl(`Aquila/Api/Details?mediaType=${encodeURIComponent(mediaType)}&id=${aquilaId}`)).catch(e => { console.error('[Aquila Plugin] Details fetch error:', e); return null; }),
+                fetch(getProxyUrl(`Aquila/Api/FavoriteStatus?mediaType=${encodeURIComponent(mediaType)}&id=${aquilaId}`)).catch(e => { console.error('[Aquila Plugin] FavoriteStatus fetch error:', e); return null; }),
+                fetch(getProxyUrl(`Aquila/Api/Entry?mediaType=${encodeURIComponent(mediaType)}&id=${aquilaId}`)).catch(e => { console.error('[Aquila Plugin] Entry fetch error:', e); return null; }),
+                fetch(getProxyUrl(`Aquila/Api/Connections?capabilities=${encodeURIComponent(capParam)}`)).catch(e => { console.error('[Aquila Plugin] Connections fetch error:', e); return null; }),
+                fetch(getProxyUrl(`Aquila/Api/Mapping?userId=${encodeURIComponent(userId || '')}&itemId=${encodeURIComponent(targetId)}`)).catch(e => { console.error('[Aquila Plugin] Mapping fetch error:', e); return null; })
             ]);
 
-            if (detRes && detRes.ok) mediaDetails = await detRes.json();
+            if (detRes && detRes.ok) {
+                mediaDetails = await detRes.json();
+                console.log('[Aquila Plugin] Loaded Media Details:', mediaDetails);
+            }
             if (favRes && favRes.ok) {
                 const favData = await favRes.json();
                 isFavorited = Boolean(favData.favorited);
+                console.log('[Aquila Plugin] Favorite Status:', isFavorited);
             }
-            if (entryRes && entryRes.ok) listEntry = await entryRes.json();
+            if (entryRes && entryRes.ok) {
+                listEntry = await entryRes.json();
+                console.log('[Aquila Plugin] Loaded User List Entry:', listEntry);
+            }
             if (connRes && connRes.ok) {
                 const connData = await connRes.json();
+                console.log('[Aquila Plugin] Raw Active User Connections Response:', connData);
                 if (Array.isArray(connData)) {
-                    userConnectionsList = connData.map((c) => (c.provider || "").toLowerCase());
+                    userConnectionsList = connData.map((c) => (c.provider || c.name || "").toLowerCase());
                 }
+                console.log('[Aquila Plugin] Parsed User Connections List:', userConnectionsList);
+            }
+            if (mapRes && mapRes.ok) {
+                currentMapping = await mapRes.json();
+                console.log('[Aquila Plugin] Loaded Server Mapping for Item:', currentMapping);
             }
         } catch (e) {
             console.warn('[Aquila Plugin] Error during parallel data fetch:', e);
+        }
+
+        let jellyfinSeasons = [];
+        let seasonMappings = {};
+        if (typeof ApiClient !== 'undefined' && ApiClient.getItems) {
+            try {
+                const sRes = await ApiClient.getItems(userId, { parentId: targetId, includeItemTypes: "Season", sortBy: "SortName" });
+                if (sRes && Array.isArray(sRes.Items) && sRes.Items.length > 0) {
+                    jellyfinSeasons = sRes.Items;
+                    console.log('[Aquila Plugin] [SEASONS] Found Jellyfin seasons for targetId=', targetId, jellyfinSeasons);
+                    await Promise.all(jellyfinSeasons.map(async (s) => {
+                        try {
+                            const mRes = await fetch(getProxyUrl(`Aquila/Api/Mapping?userId=${encodeURIComponent(userId || '')}&itemId=${encodeURIComponent(s.Id)}`));
+                            if (mRes.ok) {
+                                const mData = await mRes.json();
+                                if (mData && mData.aquilaMediaId) {
+                                    let displayTitle = mData.displayTitle || (mData.entries && mData.entries[0]?.displayTitle);
+                                    const sType = mData.mediaType || mediaType;
+                                    if (!displayTitle) {
+                                        try {
+                                            const dRes = await fetch(getProxyUrl(`Aquila/Api/Details?mediaType=${encodeURIComponent(sType)}&id=${mData.aquilaMediaId}`));
+                                            if (dRes.ok) {
+                                                const dData = await dRes.json();
+                                                const rawT = dData || {};
+                                                displayTitle = (typeof rawT.title === 'object' && rawT.title !== null)
+                                                    ? (rawT.title.english || rawT.title.romaji || rawT.titlePrimary || s.Name)
+                                                    : (rawT.title || rawT.titlePrimary || s.Name);
+                                            }
+                                        } catch (e) {
+                                            // fallback
+                                        }
+                                    }
+                                    mData.resolvedTitle = displayTitle || `Aquila #${mData.aquilaMediaId}`;
+                                    seasonMappings[s.Id] = mData;
+                                    console.log(`[Aquila Plugin] [SEASONS] Found mapping for season '${s.Name}' (${s.Id}):`, mData);
+                                }
+                            }
+                        } catch (err) {
+                            // unmapped season
+                        }
+                    }));
+                }
+            } catch (e) {
+                console.warn('[Aquila Plugin] Failed to fetch Jellyfin seasons:', e);
+            }
         }
 
         const rawMedia = mediaDetails || { id: aquilaId, type: mediaType, title: fallbackTitle };
@@ -583,6 +694,7 @@
         let connections = listEntry?.connections || {};
         let updateConnection = Object.keys(connections).length > 0;
 
+        // Dates leave empty unless user specified
         const scoreMax = 10;
         const totalEpisodes = rawMedia.episodeCount || (Array.isArray(rawMedia.episodes) ? rawMedia.episodes.length : undefined);
 
@@ -602,6 +714,9 @@
                     }))
             }));
         }
+
+        console.log('[Aquila Plugin] Modal State ready:', { titleText, listStatus, progress, startDateStr, finishDateStr, userConnectionsList, hasListEntry });
+        console.groupEnd();
 
         content.innerHTML = `
             <!-- Header Banner Section (1:1 RrMediaEditDialogHeader) -->
@@ -697,6 +812,49 @@
                         </div>
                     </div>
 
+                    <!-- Jellyfin Seasons & Mapped Media Section Card -->
+                    ${jellyfinSeasons.length > 0 ? `
+                        <div class="bg-card/40 border border-border/60 backdrop-blur-xs rounded-2xl p-4 sm:p-5 flex flex-col gap-3 shadow-xs">
+                            <div class="flex items-center justify-between">
+                                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 px-0.5">
+                                    ${ICONS.link} Seasons & Linked Aquila Media
+                                </label>
+                                <span class="text-[10px] text-muted-foreground font-semibold bg-muted px-2 py-0.5 rounded-lg">${jellyfinSeasons.length} Seasons</span>
+                            </div>
+                            <div class="flex flex-col gap-2 max-h-[260px] overflow-y-auto pr-1">
+                                ${jellyfinSeasons.map(s => {
+                                    const sMap = seasonMappings[s.Id];
+                                    const isMapped = Boolean(sMap && sMap.aquilaMediaId);
+                                    const sAquilaId = sMap?.aquilaMediaId;
+                                    const sTitle = sMap?.resolvedTitle || sMap?.displayTitle || (sMap ? `Aquila #${sAquilaId}` : 'Unlinked');
+                                    const sType = sMap?.mediaType || mediaType;
+                                    const safeName = (s.Name || 'Season').replace(/'/g, "\\'");
+                                    return `
+                                        <div class="flex items-center justify-between bg-background/80 border border-border/60 rounded-xl p-2.5 px-3 text-xs shrink-0">
+                                            <div class="flex items-center gap-2 min-w-0">
+                                                <span class="font-extrabold text-[10px] text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-lg shrink-0">${s.Name}</span>
+                                                ${isMapped ? `
+                                                    <span class="font-bold text-foreground truncate max-w-[160px] sm:max-w-[260px]">${sTitle}</span>
+                                                    <span class="font-mono text-[10px] text-muted-foreground font-semibold shrink-0">#${sAquilaId}</span>
+                                                ` : `
+                                                    <span class="text-muted-foreground/70 italic text-[11px]">Unlinked (not mapped)</span>
+                                                `}
+                                            </div>
+                                            <div class="flex items-center gap-1 shrink-0">
+                                                ${isMapped ? `
+                                                    <button class="p-1.5 text-primary hover:bg-primary/15 rounded-lg cursor-pointer text-xs font-bold flex items-center justify-center" title="Edit this season's Aquila media" onclick="window.aquilaEditSeasonMedia('${s.Id}', '${sType}', ${sAquilaId}, '${safeName}')">✏️ Edit</button>
+                                                    <button class="p-1 text-destructive hover:bg-destructive/15 rounded-lg cursor-pointer text-xs font-semibold" title="Unlink this season" onclick="window.aquilaUnlinkSeasonMedia('${s.Id}')">Unlink</button>
+                                                ` : `
+                                                    <button class="bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 text-[11px] font-bold px-2.5 py-1 rounded-xl cursor-pointer transition-all" onclick="window.aquilaLinkSeasonMedia('${s.Id}', '${safeName}')">+ Link Media</button>
+                                                `}
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
                     <!-- Notes Section Card -->
                     <div class="bg-card/40 border border-border/60 backdrop-blur-xs rounded-2xl p-4 sm:p-5 flex flex-col gap-2 shadow-xs">
                         <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 px-0.5">
@@ -775,6 +933,7 @@
             isFavorited = nextState;
             favBtn.className = `size-10 rounded-xl flex items-center justify-center border transition-all cursor-pointer shadow-xs ${isFavorited ? 'bg-destructive/15 border-destructive/30 text-destructive shadow-destructive/10' : 'bg-background/80 border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted/60'}`;
             favBtn.innerHTML = isFavorited ? ICONS.heartFilled : ICONS.heart;
+            console.log('[Aquila Plugin] [FAVORITE TOGGLE] Next state:', nextState, 'Aquila ID:', aquilaId);
 
             try {
                 if (nextState) {
@@ -814,20 +973,32 @@
             });
         }
 
+        window.aquilaLinkSeasonMedia = (seasonId, seasonName) => {
+            console.log('[Aquila Plugin] [LINK SEASON MEDIA] Opening search for seasonId:', seasonId, 'Name:', seasonName);
+            renderSearchView(userId, seasonId, mediaType, `${titleText} ${seasonName}`, candidateIds);
+        };
+
+        window.aquilaEditSeasonMedia = (seasonId, sType, sAquilaId, seasonName) => {
+            console.log('[Aquila Plugin] [EDIT SEASON MEDIA] Editing Aquila ID:', sAquilaId, 'for seasonId:', seasonId);
+            renderFullEditDialog(userId, seasonId, sType, sAquilaId, `${titleText} ${seasonName}`, candidateIds);
+        };
+
+        window.aquilaUnlinkSeasonMedia = async (seasonId) => {
+            console.log('[Aquila Plugin] [UNLINK SEASON MEDIA] Unlinking seasonId:', seasonId);
+            try {
+                await fetch(getProxyUrl(`Aquila/Api/Mapping?userId=${encodeURIComponent(userId || '')}&itemId=${encodeURIComponent(seasonId)}`), { method: 'DELETE' });
+                renderFullEditDialog(userId, targetId, mediaType, aquilaId, fallbackTitle, candidateIds);
+            } catch (e) {
+                console.error('[Aquila Plugin] Failed to unlink season:', e);
+            }
+        };
+
         // Status Select
         const statusSelect = document.getElementById('aquila-status-select');
         statusSelect.addEventListener('change', (e) => {
             listStatus = e.target.value;
+            console.log('[Aquila Plugin] [STATUS SELECT CHANGE] New listStatus:', listStatus);
             if (listStatus === "COMPLETED") {
-                const today = new Date().toISOString().split('T')[0];
-                if (!finishDateStr) {
-                    finishDateStr = today;
-                    document.getElementById('aquila-finish-date').value = today;
-                }
-                if (!startDateStr) {
-                    startDateStr = today;
-                    document.getElementById('aquila-start-date').value = today;
-                }
                 if (mediaType === "anime" && totalEpisodes && !progress) {
                     progress = totalEpisodes.toString();
                     const progInput = document.getElementById('aquila-progress-input');
@@ -841,17 +1012,39 @@
         const connContainer = document.getElementById('aquila-connections-container');
         connToggle.addEventListener('change', (e) => {
             updateConnection = e.target.checked;
+            console.log('[Aquila Plugin] [CONNECTION TOGGLE] updateConnection =', updateConnection);
             if (updateConnection) connContainer.classList.remove('hidden');
             else connContainer.classList.add('hidden');
         });
 
-        // Active Connections Grid
+        // Active Connections Grid (Filtered to only user-connected providers or linked ones)
         function renderConnectionsGrid() {
             const grid = document.getElementById('aquila-connections-grid');
             if (!grid) return;
 
-            const filteredProviders = BASE_PROVIDERS.filter(p => p.caps.includes(capParam));
-            grid.innerHTML = filteredProviders.map(p => {
+            const connectedProviders = BASE_PROVIDERS.filter(p => {
+                const pKeyLower = p.key.toLowerCase();
+                const isUserConnected = userConnectionsList.includes(pKeyLower) ||
+                    (pKeyLower === 'mal' && userConnectionsList.includes('myanimelist')) ||
+                    (pKeyLower === 'myanimelist' && userConnectionsList.includes('mal'));
+                const isAlreadyLinked = !!connections[p.key] ||
+                    (p.key === 'mal' && !!connections['myanimelist']) ||
+                    (p.key === 'myanimelist' && !!connections['mal']);
+                return p.caps.includes(capParam) && (isUserConnected || isAlreadyLinked);
+            });
+
+            console.log('[Aquila Plugin] [CONNECTIONS GRID FILTER] User active connections:', userConnectionsList, 'Filtered providers:', connectedProviders.map(p => p.key));
+
+            if (connectedProviders.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full text-center py-5 text-xs text-muted-foreground bg-background/50 border border-dashed border-border/70 rounded-xl flex items-center justify-center gap-2 font-medium">
+                        No active connections connected to your Aquila account. Connect external accounts in your Aquila Settings tab.
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = connectedProviders.map(p => {
                 const connVal = connections[p.key] || (p.key === 'mal' ? connections['myanimelist'] : (p.key === 'myanimelist' ? connections['mal'] : undefined));
                 const linkedId = typeof connVal === 'object' ? connVal?.id : connVal;
 
@@ -1247,95 +1440,12 @@
         }
     }
 
-    function hookJellyfinApiClient() {
-        if (typeof ApiClient !== 'undefined') {
-            if (ApiClient.markPlayed && !ApiClient._aquilaHooked) {
-                ApiClient._aquilaHooked = true;
-                const originalMarkPlayed = ApiClient.markPlayed;
-                ApiClient.markPlayed = async function (userId, itemId, datePlayed) {
-                    console.log(`[Aquila WebClient] [INTERCEPT] ApiClient.markPlayed called for userId=${userId}, itemId=${itemId}, datePlayed=${datePlayed}`);
-                    const result = await originalMarkPlayed.apply(this, arguments);
-                    try {
-                        console.log(`[Aquila WebClient] [INTERCEPT] Executing handleManualWatchedClick for itemId=${itemId}`);
-                        handleManualWatchedClick(userId, itemId);
-                    } catch (e) {
-                        console.error('[Aquila WebClient] [INTERCEPT ERROR] Exception in handleManualWatchedClick:', e);
-                    }
-                    return result;
-                };
-                console.log('[Aquila WebClient] Successfully registered ApiClient.markPlayed interceptor.');
-            }
-
-            if (!ApiClient._aquilaStopHooked) {
-                const stopFnName = ApiClient.stopReportingPlayback ? 'stopReportingPlayback' : (ApiClient.sendSessionProgressStop ? 'sendSessionProgressStop' : null);
-                if (stopFnName) {
-                    ApiClient._aquilaStopHooked = true;
-                    const originalStop = ApiClient[stopFnName];
-                    ApiClient[stopFnName] = async function (options) {
-                        console.log(`[Aquila WebClient] [STOP INTERCEPT] ${stopFnName} called:`, options);
-                        const result = await originalStop.apply(this, arguments);
-                        try {
-                            const itemId = options?.ItemId || options?.itemId;
-                            const userId = options?.UserId || options?.userId || ApiClient.getCurrentUserId();
-                            if (itemId && userId) {
-                                console.log(`[Aquila WebClient] [STOP INTERCEPT] Triggering watched handler for completed itemId=${itemId}...`);
-                                handleManualWatchedClick(userId, itemId);
-                            }
-                        } catch (e) {
-                            console.error('[Aquila WebClient] [STOP INTERCEPT ERROR]:', e);
-                        }
-                        return result;
-                    };
-                    console.log(`[Aquila WebClient] Successfully registered ApiClient.${stopFnName} interceptor.`);
-                }
-            }
-        }
-    }
-
-    async function handleManualWatchedClick(userId, itemId) {
-        try {
-            console.log(`[Aquila WebClient] [MANUAL WATCH] Fetching item details from Jellyfin for itemId=${itemId}...`);
-            const item = await ApiClient.getItem(userId, itemId);
-            console.log(`[Aquila WebClient] [MANUAL WATCH] Item fetched: Name='${item.Name}', Type='${item.Type}', SeriesName='${item.SeriesName}', SeriesId='${item.SeriesId}'`);
-
-            const { mediaType, targetId, candidateIds } = getItemDetails(item);
-            console.log(`[Aquila WebClient] [MANUAL WATCH] TargetId=${targetId}, DefaultMediaType=${mediaType}`);
-
-            console.log(`[Aquila WebClient] [MANUAL WATCH] Querying server mapping for targetId=${targetId}...`);
-            const candParam = (candidateIds && candidateIds.length > 0) ? `&candidateIds=${encodeURIComponent(candidateIds.join(','))}` : '';
-            const mapRes = await fetch(getProxyUrl(`Aquila/Api/Mapping?userId=${encodeURIComponent(userId || '')}&itemId=${encodeURIComponent(targetId)}${candParam}`));
-            if (mapRes.ok) {
-                const mapData = await mapRes.json();
-                if (mapData && mapData.aquilaMediaId) {
-                    const savedAquilaId = mapData.aquilaMediaId;
-                    const activeMediaType = mapData.mediaType || mediaType;
-                    console.log(`[Aquila WebClient] [MANUAL WATCH] Retrieved server mapping: AquilaId=${savedAquilaId}, MediaType=${activeMediaType}`);
-
-                    console.log(`[Aquila WebClient] [MANUAL WATCH] Sending POST to Aquila/Api/Increment: AquilaID=${savedAquilaId}, MediaType=${activeMediaType}, Count=1`);
-                    const incRes = await fetch(getProxyUrl(`Aquila/Api/Increment`), {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ mediaType: activeMediaType, id: savedAquilaId, count: 1 })
-                    });
-                    console.log(`[Aquila WebClient] [MANUAL WATCH] Increment response status: ${incRes.status}`);
-                } else {
-                    console.warn(`[Aquila WebClient] [MANUAL WATCH] Server returned empty mapping data for targetId=${targetId}`);
-                }
-            } else {
-                console.warn(`[Aquila WebClient] [MANUAL WATCH] Server mapping returned status ${mapRes.status} for targetId=${targetId}`);
-            }
-        } catch (e) {
-            console.error('[Aquila WebClient] [MANUAL WATCH EXCEPTION] Exception in handleManualWatchedClick:', e);
-        }
-    }
-
     function processUiUpdates() {
         try {
             clearLegacyLocalStorageMappings();
             injectStylesAndTailwind();
             injectInlineButtons();
             removeFloatingActionButton();
-            hookJellyfinApiClient();
         } catch (e) {
             console.error('[Aquila Plugin] Exception during UI iteration:', e);
         }

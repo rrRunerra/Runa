@@ -151,23 +151,134 @@ public class MediaMappingStore
     }
 
     /// <summary>
-    /// Saves or updates a mapping.
+    /// Saves or updates a mapping with a list of ordered linked entries for a user.
     /// </summary>
-    public async Task SetMappingAsync(string userId, string itemId, int aquilaMediaId, string mediaType)
+    public async Task SetMappingAsync(string userId, string itemId, List<LinkedMediaEntry> entries)
     {
+        var key = GetKey(userId, itemId);
+
+        // Normalize order sequence (1-indexed)
+        var orderedEntries = entries.Select((e, idx) => new LinkedMediaEntry
+        {
+            AquilaMediaId = e.AquilaMediaId,
+            MediaType = e.MediaType,
+            Order = idx + 1,
+            MaxProgress = e.MaxProgress,
+            DisplayTitle = e.DisplayTitle
+        }).ToList();
+
+        var first = orderedEntries.FirstOrDefault();
+
         var mapping = new JellyfinItemMapping
         {
             UserId = userId,
             JellyfinItemId = itemId,
-            AquilaMediaId = aquilaMediaId,
-            MediaType = mediaType,
-            LinkedAt = DateTime.UtcNow
+            AquilaMediaId = first?.AquilaMediaId ?? 0,
+            MediaType = first?.MediaType ?? string.Empty,
+            LinkedAt = DateTime.UtcNow,
+            Entries = orderedEntries
         };
-        var key = GetKey(userId, itemId);
+
         _mappings[key] = mapping;
-        _logger.LogInformation("[Aquila MappingStore] SET mapping: User={UserId}, Item={ItemId} -> AquilaId={AquilaId} (MediaType: {MediaType})",
-            userId, itemId, aquilaMediaId, mediaType);
+        _logger.LogInformation("[Aquila MappingStore] SET mapping: User={UserId}, Item={ItemId} -> {Count} ordered entries",
+            userId, itemId, orderedEntries.Count);
         await SaveAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Saves or updates a single mapping for backward compatibility.
+    /// </summary>
+    public async Task SetMappingAsync(string userId, string itemId, int aquilaMediaId, string mediaType)
+    {
+        var entries = new List<LinkedMediaEntry>
+        {
+            new LinkedMediaEntry
+            {
+                AquilaMediaId = aquilaMediaId,
+                MediaType = mediaType,
+                Order = 1
+            }
+        };
+        await SetMappingAsync(userId, itemId, entries).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Appends or updates a single entry in a user's ordered entries list for a Jellyfin item.
+    /// </summary>
+    public async Task AddOrUpdateEntryAsync(string userId, string itemId, LinkedMediaEntry entry)
+    {
+        var mapping = GetMapping(userId, itemId);
+        var entries = mapping?.GetOrderedEntries() ?? new List<LinkedMediaEntry>();
+
+        var existing = entries.FirstOrDefault(e => e.AquilaMediaId == entry.AquilaMediaId);
+        if (existing != null)
+        {
+            existing.MediaType = !string.IsNullOrWhiteSpace(entry.MediaType) ? entry.MediaType : existing.MediaType;
+            if (entry.MaxProgress.HasValue) existing.MaxProgress = entry.MaxProgress;
+            if (!string.IsNullOrWhiteSpace(entry.DisplayTitle)) existing.DisplayTitle = entry.DisplayTitle;
+        }
+        else
+        {
+            entry.Order = entries.Count + 1;
+            entries.Add(entry);
+        }
+
+        await SetMappingAsync(userId, itemId, entries).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Removes a specific linked entry from a user's item mapping by Aquila Media ID.
+    /// </summary>
+    public async Task<bool> RemoveEntryAsync(string userId, string itemId, int aquilaMediaId)
+    {
+        var mapping = GetMapping(userId, itemId);
+        if (mapping == null) return false;
+
+        var entries = mapping.GetOrderedEntries();
+        int removedCount = entries.RemoveAll(e => e.AquilaMediaId == aquilaMediaId);
+        if (removedCount == 0) return false;
+
+        if (entries.Count == 0)
+        {
+            await RemoveMappingAsync(userId, itemId).ConfigureAwait(false);
+        }
+        else
+        {
+            await SetMappingAsync(userId, itemId, entries).ConfigureAwait(false);
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Reorders the linked entries for a user and Jellyfin item given an ordered list of Aquila Media IDs.
+    /// </summary>
+    public async Task<bool> ReorderEntriesAsync(string userId, string itemId, List<int> aquilaMediaIdsInOrder)
+    {
+        var mapping = GetMapping(userId, itemId);
+        if (mapping == null) return false;
+
+        var currentEntries = mapping.GetOrderedEntries();
+        var entryMap = currentEntries.ToDictionary(e => e.AquilaMediaId);
+
+        var newEntries = new List<LinkedMediaEntry>();
+        foreach (var id in aquilaMediaIdsInOrder)
+        {
+            if (entryMap.TryGetValue(id, out var entry))
+            {
+                newEntries.Add(entry);
+                entryMap.Remove(id);
+            }
+        }
+
+        // Append any remaining entries that weren't specified in the order array
+        foreach (var remaining in entryMap.Values)
+        {
+            newEntries.Add(remaining);
+        }
+
+        await SetMappingAsync(userId, itemId, newEntries).ConfigureAwait(false);
+        return true;
     }
 
     /// <summary>

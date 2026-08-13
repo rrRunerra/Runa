@@ -228,9 +228,18 @@ public class PlaybackTracker : IHostedService, IDisposable
             {
                 episodeNumber = episode.IndexNumber ?? 1;
 
-                if (episode.SeriesId != Guid.Empty) candidateIds.Add(episode.SeriesId.ToString());
-                if (episode.Series != null && episode.Series.Id != Guid.Empty) candidateIds.Add(episode.Series.Id.ToString());
-                if (episode.SeasonId != Guid.Empty) candidateIds.Add(episode.SeasonId.ToString());
+                // Priority: Episode -> Season -> Series
+                candidateIds.Add(episode.Id.ToString());
+
+                if (episode.SeasonId != Guid.Empty && !candidateIds.Contains(episode.SeasonId.ToString(), StringComparer.OrdinalIgnoreCase))
+                    candidateIds.Add(episode.SeasonId.ToString());
+                if (episode.Season != null && episode.Season.Id != Guid.Empty && !candidateIds.Contains(episode.Season.Id.ToString(), StringComparer.OrdinalIgnoreCase))
+                    candidateIds.Add(episode.Season.Id.ToString());
+
+                if (episode.SeriesId != Guid.Empty && !candidateIds.Contains(episode.SeriesId.ToString(), StringComparer.OrdinalIgnoreCase))
+                    candidateIds.Add(episode.SeriesId.ToString());
+                if (episode.Series != null && episode.Series.Id != Guid.Empty && !candidateIds.Contains(episode.Series.Id.ToString(), StringComparer.OrdinalIgnoreCase))
+                    candidateIds.Add(episode.Series.Id.ToString());
 
                 var series = episode.Series ?? (episode.SeriesId != Guid.Empty ? _libraryManager.GetItemById(episode.SeriesId) as Series : null);
                 if (series != null)
@@ -299,7 +308,10 @@ public class PlaybackTracker : IHostedService, IDisposable
                 _logger.LogInformation("[Aquila PlaybackTracker] Movie '{MovieName}' (MovieId: {MovieId})", fullItem.Name, fullItem.Id);
             }
 
-            candidateIds.Add(fullItem.Id.ToString());
+            if (!candidateIds.Contains(fullItem.Id.ToString(), StringComparer.OrdinalIgnoreCase))
+            {
+                candidateIds.Add(fullItem.Id.ToString());
+            }
 
             await _syncManager.HandleScrobbleAsync(userId, candidateIds, episodeNumber, totalEpisodes, userConfig, mediaType).ConfigureAwait(false);
         }

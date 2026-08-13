@@ -57,6 +57,20 @@ public class AquilaSaveEntryDto
     public string? Notes { get; set; }
 
     /// <summary>
+    /// Gets or sets start date (Unix timestamp in seconds).
+    /// </summary>
+    [JsonPropertyName("startDate")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public long? StartDate { get; set; }
+
+    /// <summary>
+    /// Gets or sets end date (Unix timestamp in seconds).
+    /// </summary>
+    [JsonPropertyName("endDate")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public long? EndDate { get; set; }
+
+    /// <summary>
     /// Gets or sets the rewatched count.
     /// </summary>
     [JsonPropertyName("rewatched")]

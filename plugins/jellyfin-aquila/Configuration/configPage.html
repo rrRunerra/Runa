@@ -105,6 +105,12 @@
                             <button is="emby-button" type="button" id="btnTestConnections" class="raised">
                                 <span>Test Connections API</span>
                             </button>
+                            <button is="emby-button" type="button" id="btnTestMultiEntryAutoAdvance" class="raised" style="background:#8b5cf6; color:#ffffff; font-weight:bold;">
+                                <span>Test Multi-Entry Auto-Advance (Mock)</span>
+                            </button>
+                            <button is="emby-button" type="button" id="btnTestMultiEntryReorder" class="raised" style="background:#06b6d4; color:#ffffff; font-weight:bold;">
+                                <span>Test Multi-Entry Reorder</span>
+                            </button>
                         </div>
 
                         <div class="inputContainer">
@@ -375,6 +381,56 @@
                                 logTestResult('Connections API Response', d, true);
                             }).catch(function (err) {
                                 logTestResult('Connections API Error', { message: err.message }, false);
+                            });
+                        };
+
+                        page.querySelector('#btnTestMultiEntryAutoAdvance').onclick = function () {
+                            var userId = Dashboard.getCurrentUserId();
+                            var itemId = page.querySelector('#TestMediaId').value.trim() || 'mock-anime-series-100';
+                            var saveUrl = ApiClient.getUrl ? ApiClient.getUrl('Aquila/Api/Mapping?userId=' + encodeURIComponent(userId) + '&itemId=' + encodeURIComponent(itemId)) : '/Aquila/Api/Mapping?userId=' + encodeURIComponent(userId) + '&itemId=' + encodeURIComponent(itemId);
+
+                            var mockEntries = [
+                                { aquilaMediaId: 101, mediaType: 'anime', order: 1, maxProgress: 12, displayTitle: 'Season 1 (12/12 Ep)' },
+                                { aquilaMediaId: 102, mediaType: 'anime', order: 2, maxProgress: 12, displayTitle: 'Season 2 (0/12 Ep)' }
+                            ];
+
+                            logTestResult('1. Saving Multi-Entry Mapping for User ' + userId, { itemId: itemId, entries: mockEntries }, true);
+
+                            fetch(saveUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(mockEntries)
+                            }).then(function (r) { return r.json(); }).then(function (res) {
+                                logTestResult('2. Mapping Saved. Fetching saved mapping from server...', res, true);
+                                var getUrl = ApiClient.getUrl ? ApiClient.getUrl('Aquila/Api/Mapping?userId=' + encodeURIComponent(userId) + '&itemId=' + encodeURIComponent(itemId)) : '/Aquila/Api/Mapping?userId=' + encodeURIComponent(userId) + '&itemId=' + encodeURIComponent(itemId);
+                                return fetch(getUrl);
+                            }).then(function (r) { return r.json(); }).then(function (savedMap) {
+                                logTestResult('3. Server Mapping Retrieved', savedMap, true);
+                                logTestResult('4. Simulating Auto-Advance Logic', {
+                                    explanation: 'Season 1 (ID: 101) progress is 12/12 (Maxed). Next scrobble automatically targets Season 2 (ID: 102).'
+                                }, true);
+                            }).catch(function (err) {
+                                logTestResult('Multi-Entry Auto-Advance Test Error', { message: err.message }, false);
+                            });
+                        };
+
+                        page.querySelector('#btnTestMultiEntryReorder').onclick = function () {
+                            var userId = Dashboard.getCurrentUserId();
+                            var itemId = page.querySelector('#TestMediaId').value.trim() || 'mock-anime-series-100';
+                            var reorderUrl = ApiClient.getUrl ? ApiClient.getUrl('Aquila/Api/Mapping/Reorder?userId=' + encodeURIComponent(userId) + '&itemId=' + encodeURIComponent(itemId)) : '/Aquila/Api/Mapping/Reorder?userId=' + encodeURIComponent(userId) + '&itemId=' + encodeURIComponent(itemId);
+
+                            var newOrderIds = [102, 101]; // Season 2 first, Season 1 second
+                            logTestResult('Reordering Entries to [102, 101]', { itemId: itemId, newOrder: newOrderIds }, true);
+
+                            fetch(reorderUrl, {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(newOrderIds)
+                            }).then(function (r) { return r.json(); }).then(function (d) {
+                                logTestResult('Reorder Result', d, true);
+                                loadServerMappings();
+                            }).catch(function (err) {
+                                logTestResult('Reorder Error', { message: err.message }, false);
                             });
                         };
 
