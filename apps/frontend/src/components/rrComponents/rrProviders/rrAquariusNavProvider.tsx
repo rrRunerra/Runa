@@ -3,7 +3,7 @@
 import React, { useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useTranslation } from "react-i18next";
-import { getAquariusSidebarConfig } from "../../../../config/aquariusSidebarConfig";
+import { getAquariusSidebarConfig } from "@/config/sidebarConfigs/aquariusSidebarConfig";
 import RrSidebar from "../rrSidebar";
 import { filterSidebarConfig } from "@/lib/navigation";
 

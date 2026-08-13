@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useTranslation } from "react-i18next";
-import { getAquilaSidebarConfig } from "../../../../config/aquilaSidebarConfig";
+import { getAquilaSidebarConfig } from "@/config/sidebarConfigs/aquilaSidebarConfig";
 import RrSidebar from "../rrSidebar";
 import { filterSidebarConfig } from "@/lib/navigation";
 

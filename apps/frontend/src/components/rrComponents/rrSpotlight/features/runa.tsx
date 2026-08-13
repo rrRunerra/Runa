@@ -16,8 +16,8 @@ import {
   LogOut,
   Shield,
 } from "lucide-react";
-import { THEMES } from "../../../../config/themes";
-import { settingsNavConfig } from "../../../../config/settings";
+import { THEMES } from "@/config/themes";
+import { settingsNavConfig } from "@/config/settings";
 
 export default class RunaSpotlightFeature extends BaseSpotlightFeature {
   id = "runa";

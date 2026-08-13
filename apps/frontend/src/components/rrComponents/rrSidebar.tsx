@@ -36,7 +36,7 @@ import { LayoutGroup, motion } from "framer-motion";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import RrBottomDock from "./rrBottomDock";
-import { rrApps } from "../../../config/rrApps";
+import { rrApps } from "@/config/rrApps";
 import { Badge } from "../ui/badge";
 import {
   Collapsible,

@@ -1799,7 +1799,7 @@
     "accountNameDesc": "Anzeigename für dieses E-Mail-Konto in Pegasus."
   },
   "securitySettings": {
-    "changePasswordTitle": "Passwort ändern",
+    "changePasswordTitle": "Konto-Passwort ändern",
     "changePasswordDesc": "Aktualisieren Sie Ihr Kontopasswort.",
     "currentPasswordLabel": "Aktuelles Passwort",
     "newPasswordLabel": "Neues Passwort",
@@ -1819,7 +1819,7 @@
     "unknownUserAgent": "Unbekannter User Agent",
     "lastActiveLabel": "Zuletzt aktiv",
     "totpSetupTitle": "Authenticator-App einrichten",
-    "totpSetupDesc": "Scannen Sie den QR-Code unten oder geben Sie den geheimen Schlüssel manuell in Ihre TOTP-Anwendung ein.",
+    "totpSetupDesc": "Scannen Sie den QR-Code unten oder geben Sie den geheimen Schlüssel manuell in Ihre Authentifikator-App ein.",
     "manualSecretKey": "Manueller Geheimcode",
     "verificationCodeLabel": "Verifizierungscode",
     "enabling": "Aktivierung...",
@@ -1875,7 +1875,7 @@
     "regenerateBtn": "Regenerieren",
     "verificationMethods": "Verifizierungsmethoden",
     "totpTitle": "Authenticator-App",
-    "totpDesc": "Verwenden Sie Apps wie Google Authenticator oder 1Password, um 6-stellige Verifizierungscodes zu generieren.",
+    "totpDesc": "Verwenden Sie Apps wie Ente Auth oder Proton Authenticator, um 6-stellige Bestätigungscodes zu generieren.",
     "statusActive": "Aktiv",
     "statusInactive": "Inaktiv",
     "disconnectBtn": "Trennen",
@@ -1895,7 +1895,7 @@
     "noPasskeys": "Noch keine Passkeys registriert.",
     "activeSession": "Aktive Sitzung",
     "sessionTokenLabel": "Sitzungstoken",
-    "sessionSettingsTitle": "Sitzungseinstellungen",
+    "sessionSettingsTitle": "Sitzung",
     "sessionSettingsDesc": "Wenn Ihre Berechtigungen kürzlich aktualisiert wurden oder Sie keinen Zugriff auf Ressourcen haben, auf die Sie Zugriff haben sollten, versuchen Sie, Ihre aktive Sitzung manuell zu aktualisieren, um die Änderungen sofort ohne Abmeldung anzuwenden.",
     "lastRefreshLabel": "Letzte Aktualisierung",
     "neverThisSession": "Niemals in dieser Sitzung",
@@ -1908,7 +1908,22 @@
     "linkNewDeviceTitle": "Neues Gerät verknüpfen",
     "linkNewDeviceDesc": "Geben Sie den 10-stelligen Code ein, der auf dem zu autorisierenden Gerät angezeigt wird",
     "authorizeBtn": "Autorisieren",
-    "noDevices": "Keine registrierten Geräte gefunden."
+    "noDevices": "Keine registrierten Geräte gefunden.",
+    "subTabs": {
+      "password": "Passwort & Sitzung",
+      "mfa": "Zwei-Faktor-Auth",
+      "devices": "Verbundene Geräte"
+    },
+    "mfaStatusTitle": "Zwei-Faktor-Authentifizierung",
+    "mfaEnabledDesc": "Der 2FA-Schutz ist auf Ihrem Konto derzeit aktiv.",
+    "mfaDisabledDesc": "Der 2FA-Schutz ist deaktiviert. Richten Sie unten eine Methode ein.",
+    "disableAllMfaTitle": "Zwei-Faktor-Authentifizierung ausschalten",
+    "disableAllMfaDesc": "Sind Sie sicher, dass Sie 2FA ausschalten möchten? Dadurch werden Ihre Authentifikator-App, E-Mail-OTP deaktiviert und alle Passkeys entfernt.",
+    "turnOff2faBtn": "2FA ausschalten",
+    "allMfaDisabledSuccess": "Zwei-Faktor-Authentifizierung erfolgreich ausgeschaltet.",
+    "registerBtn": "Registrieren",
+    "saveCodesFirstPrompt": "Bitte kopieren oder laden Sie Ihre Codes zuerst herunter",
+    "regenerateCodesTitle": "Backup-Codes neu generieren"
   },
   "sidebar": {
     "positionMustBeFilled": "Position {{required}} muss ausgefüllt sein, bevor Position {{target}} ausgewählt werden kann.",

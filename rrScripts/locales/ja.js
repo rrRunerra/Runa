@@ -1799,7 +1799,7 @@ export default {
     "accountNameDesc": "Pegasusでのこのメールアカウントの表示名。"
   },
   "securitySettings": {
-    "changePasswordTitle": "パスワードの変更",
+    "changePasswordTitle": "アカウントのパスワードを変更",
     "changePasswordDesc": "アカウントのパスワードを更新します。",
     "currentPasswordLabel": "現在のパスワード",
     "newPasswordLabel": "新しいパスワード",
@@ -1819,7 +1819,7 @@ export default {
     "unknownUserAgent": "不明なユーザーエージェント",
     "lastActiveLabel": "最終アクティブ",
     "totpSetupTitle": "認証アプリの設定",
-    "totpSetupDesc": "以下のQRコードをスキャンするか、シークレットキーを認証アプリに手動で入力してください。",
+    "totpSetupDesc": "以下の QR コードをスキャンするか、認証アプリにシークレットキーを手動で入力してください。",
     "manualSecretKey": "手動入力用キー",
     "verificationCodeLabel": "認証コード",
     "enabling": "有効化中...",
@@ -1875,7 +1875,7 @@ export default {
     "regenerateBtn": "再生成",
     "verificationMethods": "認証方法",
     "totpTitle": "認証アプリ",
-    "totpDesc": "Google Authenticatorや1Passwordなどのアプリを使用して、6桁の検証コードを生成します。",
+    "totpDesc": "Ente Auth や Proton Authenticator などのアプリを使用して 6 桁の認証コードを生成します。",
     "statusActive": "有効",
     "statusInactive": "無効",
     "disconnectBtn": "解除する",
@@ -1895,7 +1895,7 @@ export default {
     "noPasskeys": "登録されているパスキーはまだありません。",
     "activeSession": "アクティブなセッション",
     "sessionTokenLabel": "セッショントークン",
-    "sessionSettingsTitle": "セッション設定",
+    "sessionSettingsTitle": "セッション",
     "sessionSettingsDesc": "最近権限が更新された場合や、アクセス権があるはずの機能が表示されない場合は、アクティブなセッションを手動で更新して、ログアウトせずに変更を即座に適用してください。",
     "lastRefreshLabel": "最終更新",
     "neverThisSession": "このセッションでは未更新",
@@ -1908,7 +1908,22 @@ export default {
     "linkNewDeviceTitle": "新しいデバイスのリンク",
     "linkNewDeviceDesc": "追加したいデバイスに表示されている10桁のコードを入力してください",
     "authorizeBtn": "承認する",
-    "noDevices": "登録されているデバイスは見つかりませんでした。"
+    "noDevices": "登録されているデバイスは見つかりませんでした。",
+    "subTabs": {
+      "password": "パスワードとセッション",
+      "mfa": "2 段階認証",
+      "devices": "接続されたデバイス"
+    },
+    "mfaStatusTitle": "2 段階認証",
+    "mfaEnabledDesc": "2FA 保護は現在アカウントで有効です。",
+    "mfaDisabledDesc": "2FA 保護は無効です。以下の認証方法を設定してください。",
+    "disableAllMfaTitle": "2 段階認証をオフにする",
+    "disableAllMfaDesc": "2FA をオフにしてもよろしいですか？これにより認証アプリ、メール OTP が無効になり、登録済みのパスキーがすべて削除されます。",
+    "turnOff2faBtn": "2FA をオフにする",
+    "allMfaDisabledSuccess": "2 段階認証が正常にオフになりました。",
+    "registerBtn": "登録",
+    "saveCodesFirstPrompt": "最初にコードをコピーまたはダウンロードしてください",
+    "regenerateCodesTitle": "バックアップコードを再生成"
   },
   "sidebar": {
     "positionMustBeFilled": "ポジション {{target}} を選択する前に、ポジション {{required}} を設定する必要があります。",

@@ -1799,7 +1799,7 @@ export default {
     "accountNameDesc": "Label paparan untuk akaun mel ini dalam Pegasus."
   },
   "securitySettings": {
-    "changePasswordTitle": "Tukar Kata Laluan",
+    "changePasswordTitle": "Tukar Kata Laluan Akaun",
     "changePasswordDesc": "Kemas kini kata laluan akaun anda.",
     "currentPasswordLabel": "Kata Laluan Semasa",
     "newPasswordLabel": "Kata Laluan Baru",
@@ -1819,7 +1819,7 @@ export default {
     "unknownUserAgent": "User Agent Tidak Dikenali",
     "lastActiveLabel": "Aktif Terakhir",
     "totpSetupTitle": "Sediakan Aplikasi Pengesah",
-    "totpSetupDesc": "Imbas kod QR di bawah or masukkan kunci rahsia secara manual ke dalam aplikasi TOTP anda.",
+    "totpSetupDesc": "Imbas kod QR di bawah atau masukkan kunci rahsia secara manual ke dalam aplikasi pengesah anda.",
     "manualSecretKey": "Kunci Rahsia Manual",
     "verificationCodeLabel": "Kod Pengesahan",
     "enabling": "Mengaktifkan...",
@@ -1875,7 +1875,7 @@ export default {
     "regenerateBtn": "Jana Semula",
     "verificationMethods": "Kaedah Pengesahan",
     "totpTitle": "Aplikasi Pengesah",
-    "totpDesc": "Gunakan aplikasi seperti Google Authenticator atau 1Password untuk menjana kod pengesahan 6 digit.",
+    "totpDesc": "Gunakan aplikasi seperti Ente Auth atau Proton Authenticator untuk menjana kod pengesahan 6 digit.",
     "statusActive": "Aktif",
     "statusInactive": "Tidak Aktif",
     "disconnectBtn": "Putuskan",
@@ -1895,7 +1895,7 @@ export default {
     "noPasskeys": "Belum ada kunci laluan didaftarkan.",
     "activeSession": "Sesi Aktif",
     "sessionTokenLabel": "Token Sesi",
-    "sessionSettingsTitle": "Tetapan Sesi",
+    "sessionSettingsTitle": "Sesi",
     "sessionSettingsDesc": "Jika kebenaran anda dikemas kini baru-baru ini atau anda tidak mempunyai akses kepada perkara yang sepatutnya anda akses, cuba segarkan sesi aktif anda secara manual untuk menggunakan perubahan dengan segera tanpa log keluar.",
     "lastRefreshLabel": "Segaran Terakhir",
     "neverThisSession": "Tidak pernah sesi ini",
@@ -1908,7 +1908,22 @@ export default {
     "linkNewDeviceTitle": "Sambung Peranti Baru",
     "linkNewDeviceDesc": "Masukkan kod 10 digit yang ditunjukkan pada peranti yang ingin anda sahkan",
     "authorizeBtn": "Sahkan",
-    "noDevices": "Tiada peranti berdaftar ditemui."
+    "noDevices": "Tiada peranti berdaftar ditemui.",
+    "subTabs": {
+      "password": "Kata Laluan & Sesi",
+      "mfa": "Pengesahan Dua Faktor",
+      "devices": "Peranti Terhubung"
+    },
+    "mfaStatusTitle": "Pengesahan Dua Faktor",
+    "mfaEnabledDesc": "Perlindungan 2FA kini aktif pada akaun anda.",
+    "mfaDisabledDesc": "Perlindungan 2FA dinyahaktifkan. Sediakan kaedah pengesahan di bawah.",
+    "disableAllMfaTitle": "Nyahaktifkan Pengesahan Dua Faktor",
+    "disableAllMfaDesc": "Adakah anda pasti mahu mematikan 2FA? Ini akan menyahtayangkan aplikasi pengesah, OTP e-mel, dan mengalih keluar semua Passkey.",
+    "turnOff2faBtn": "Matikan 2FA",
+    "allMfaDisabledSuccess": "Pengesahan Dua Faktor berjaya dimatikan.",
+    "registerBtn": "Daftar",
+    "saveCodesFirstPrompt": "Sila salin atau muat turun kod anda terlebih dahulu",
+    "regenerateCodesTitle": "Jana Semula Kod Sandaran"
   },
   "sidebar": {
     "positionMustBeFilled": "Posisi {{required}} mesti diisi sebelum memilih Posisi {{target}}.",

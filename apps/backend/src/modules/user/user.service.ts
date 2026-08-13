@@ -471,11 +471,17 @@ export class UserService {
     }
 
     const secret = generateSecret();
-    const otpauthUrl = generateURI({
-      issuer: 'Runa',
-      label: user.username,
+    const issuer = process.env.NODE_ENV === 'development' ? 'Polaris Dev' : 'Polaris';
+    const label = user.email ? `${user.username} | ${user.email}` : user.username;
+    let otpauthUrl = generateURI({
+      issuer,
+      label,
       secret,
     });
+
+    const baseUrl = (process.env.NEXTAUTH_URL ?? process.env.NEXT_PUBLIC_URL ?? 'http://localhost:3000').replace(/\/$/, '');
+    const iconUrl = `${baseUrl}/polaris/polaris-512-left-noring.png`;
+    otpauthUrl += `&image=${encodeURIComponent(iconUrl)}`;
 
     // Store pending TOTP secret for 10 minutes
     await this.cacheService.set(`pending-totp:${userId}`, secret, 600);
@@ -663,8 +669,9 @@ export class UserService {
       process.env.RP_ID ??
       new URL(process.env.NEXT_PUBLIC_URL ?? 'http://localhost:3000').hostname;
 
+    const rpName = process.env.NODE_ENV === 'development' ? 'Polaris Dev' : 'Polaris';
     const options = await generateRegistrationOptions({
-      rpName: 'Runa',
+      rpName,
       rpID,
       userID: new Uint8Array(Buffer.from(user.id)),
       userName: user.username,
@@ -1122,11 +1129,17 @@ export class UserService {
   }> {
     const plain: string[] = [];
     const hashed: string[] = [];
+    const CHARS = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
 
     for (let i = 0; i < 10; i++) {
-      const code = crypto.randomBytes(5).toString('hex');
-      plain.push(code);
-      hashed.push(await bcrypt.hash(code, 10));
+      const bytes = crypto.randomBytes(16);
+      let code = '';
+      for (let b = 0; b < 16; b++) {
+        code += CHARS[bytes[b] % CHARS.length];
+      }
+      const formatted = `${code.slice(0, 4)}-${code.slice(4, 8)}-${code.slice(8, 12)}-${code.slice(12, 16)}`;
+      plain.push(formatted);
+      hashed.push(await bcrypt.hash(formatted, 10));
     }
 
     return { plain, hashed };

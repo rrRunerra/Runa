@@ -1799,7 +1799,7 @@ export default {
     "accountNameDesc": "此郵箱帳號在 Pegasus 中顯示的名稱。"
   },
   "securitySettings": {
-    "changePasswordTitle": "修改密碼",
+    "changePasswordTitle": "變更帳戶密碼",
     "changePasswordDesc": "更新您的帳戶密碼。",
     "currentPasswordLabel": "目前密碼",
     "newPasswordLabel": "新密碼",
@@ -1819,7 +1819,7 @@ export default {
     "unknownUserAgent": "未知設備/瀏覽器",
     "lastActiveLabel": "最後活躍時間",
     "totpSetupTitle": "設定驗證器應用程式",
-    "totpSetupDesc": "掃描下方 QR Code，或者將金鑰手動輸入到您的 TOTP 驗證應用程式中。",
+    "totpSetupDesc": "掃描下方二維碼或將金鑰手動輸入到您的身分驗證器應用程式中。",
     "manualSecretKey": "手動輸入金鑰",
     "verificationCodeLabel": "驗證碼",
     "enabling": "正在啟用...",
@@ -1875,7 +1875,7 @@ export default {
     "regenerateBtn": "重新生成",
     "verificationMethods": "驗證方式",
     "totpTitle": "驗證器應用程式",
-    "totpDesc": "使用 Google Authenticator 或 1Password 等應用程式生成 6 位數驗證碼。",
+    "totpDesc": "使用 Ente Auth 或 Proton Authenticator 等應用程式產生 6 位數驗證碼。",
     "statusActive": "已啟用",
     "statusInactive": "未啟用",
     "disconnectBtn": "中斷連線",
@@ -1895,7 +1895,7 @@ export default {
     "noPasskeys": "尚未註冊任何通行密鑰。",
     "activeSession": "目前工作階段",
     "sessionTokenLabel": "工作階段權杖",
-    "sessionSettingsTitle": "工作階段設定",
+    "sessionSettingsTitle": "階段作業",
     "sessionSettingsDesc": "如果您的權限近期有更新，或者遇到了本應有權訪問但無法訪問的情況，請嘗試手動重新整理目前工作階段，無需登出即可立即套用變更。",
     "lastRefreshLabel": "最近重新整理時間",
     "neverThisSession": "目前工作階段未重新整理",
@@ -1908,7 +1908,22 @@ export default {
     "linkNewDeviceTitle": "連接新裝置",
     "linkNewDeviceDesc": "輸入您要授權的裝置上顯示的 10 位數代碼",
     "authorizeBtn": "授權裝置",
-    "noDevices": "未找到已註冊 of 裝置。"
+    "noDevices": "未找到已註冊 of 裝置。",
+    "subTabs": {
+      "password": "密碼與階段作業",
+      "mfa": "雙重身分驗證",
+      "devices": "已連線裝置"
+    },
+    "mfaStatusTitle": "雙重身分驗證",
+    "mfaEnabledDesc": "雙重驗證保護目前在您的帳戶上處於開啟狀態。",
+    "mfaDisabledDesc": "雙重驗證保護處於關閉狀態。請在下方設定驗證方式。",
+    "disableAllMfaTitle": "關閉雙重身分驗證",
+    "disableAllMfaDesc": "您確定要關閉 2FA 嗎？這將停用您的身分驗證器應用程式、電子郵件 OTP 並移除所有已註冊的 Passkey。",
+    "turnOff2faBtn": "關閉 2FA",
+    "allMfaDisabledSuccess": "已成功關閉雙重身分驗證。",
+    "registerBtn": "註冊",
+    "saveCodesFirstPrompt": "請先複製或下載您的代碼",
+    "regenerateCodesTitle": "重新產生備份代碼"
   },
   "sidebar": {
     "positionMustBeFilled": "在選擇位置 {{target}} 之前，必須先設定好位置 {{required}}。",

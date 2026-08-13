@@ -1799,7 +1799,7 @@ export default {
     "accountNameDesc": "Tämän sähköpostitilin näyttönimi Pegasusissa."
   },
   "securitySettings": {
-    "changePasswordTitle": "Vaihda salasana",
+    "changePasswordTitle": "Vaihda tilin salasana",
     "changePasswordDesc": "Päivitä tilisi salasana.",
     "currentPasswordLabel": "Nykyinen salasana",
     "newPasswordLabel": "Uusi salasana",
@@ -1819,7 +1819,7 @@ export default {
     "unknownUserAgent": "Tuntematon selain/laite",
     "lastActiveLabel": "Viimeksi aktiivinen",
     "totpSetupTitle": "Määritä todennussovellus",
-    "totpSetupDesc": "Skannaa alla oleva QR-koodi tai syötä salainen avain manuaalisesti TOTP-sovellukseesi.",
+    "totpSetupDesc": "Skannaa alla oleva QR-koodi tai syötä salainen avain manuaalisesti tunnistussovellukseesi.",
     "manualSecretKey": "Manuaalinen salainen avain",
     "verificationCodeLabel": "Vahvistuskoodi",
     "enabling": "Otetaan käyttöön...",
@@ -1875,7 +1875,7 @@ export default {
     "regenerateBtn": "Luo uudelleen",
     "verificationMethods": "Todennusmenetelmät",
     "totpTitle": "Todennussovellus",
-    "totpDesc": "Käytä Google Authenticatorin tai 1Passwordin kaltaisia sovelluksia 6-numeroisten vahvistuskoodien luomiseen.",
+    "totpDesc": "Käytä sovelluksia kuten Ente Auth tai Proton Authenticator 6-numeroisten vahvistuskoodien luomiseen.",
     "statusActive": "Aktiivinen",
     "statusInactive": "Ei aktiivinen",
     "disconnectBtn": "Katkaise yhteys",
@@ -1895,7 +1895,7 @@ export default {
     "noPasskeys": "Ei rekisteröityjä pääsyavaimia.",
     "activeSession": "Aktiivinen istunto",
     "sessionTokenLabel": "Istuntotunnus",
-    "sessionSettingsTitle": "Istunnon asetukset",
+    "sessionSettingsTitle": "Istunto",
     "sessionSettingsDesc": "Jos käyttöoikeutesi ovat muuttuneet äskettäin tai sinulla ei ole pääsyä tarvitsemiisi resursseihin, kokeile päivittää istuntosi manuaalisesti ottaaksesi muutokset käyttöön heti ilman uloskirjautumista.",
     "lastRefreshLabel": "Viimeisin päivitys",
     "neverThisSession": "Ei koskaan tässä istunnossa",
@@ -1908,7 +1908,22 @@ export default {
     "linkNewDeviceTitle": "Linkitä uusi laite",
     "linkNewDeviceDesc": "Syötä 10-numeroinen koodi, joka näkyy laitteessa, jonka haluat valtuuttaa",
     "authorizeBtn": "Valtuuta",
-    "noDevices": "Rekisteröityjä laitteita ei löytynyt."
+    "noDevices": "Rekisteröityjä laitteita ei löytynyt.",
+    "subTabs": {
+      "password": "Salasana ja istunto",
+      "mfa": "Kaksivaiheinen tunnistautuminen",
+      "devices": "Yhdistetyt laitteet"
+    },
+    "mfaStatusTitle": "Kaksivaiheinen tunnistautuminen",
+    "mfaEnabledDesc": "2FA-suojaus on tällä hetkellä aktiivinen tililläsi.",
+    "mfaDisabledDesc": "2FA-suojaus on pois käytöstä. Määritä tunnistustapa alta.",
+    "disableAllMfaTitle": "Kytke kaksivaiheinen tunnistautuminen pois",
+    "disableAllMfaDesc": "Oletko varma, että haluat kytkeä 2FA:n pois päältä? Tämä poistaa käytöstä authenticator-sovelluksen, sähköpostin OTP:n ja kaikki passkey-avaimet.",
+    "turnOff2faBtn": "Kytke 2FA pois",
+    "allMfaDisabledSuccess": "Kaksivaiheinen tunnistautuminen kytketty pois onnistuneesti.",
+    "registerBtn": "Rekisteröi",
+    "saveCodesFirstPrompt": "Kopioi tai lataa koodit ensin",
+    "regenerateCodesTitle": "Luo varakoodit uudelleen"
   },
   "sidebar": {
     "positionMustBeFilled": "Paikka {{required}} on täytettävä ennen kuin paikka {{target}} voidaan valita.",

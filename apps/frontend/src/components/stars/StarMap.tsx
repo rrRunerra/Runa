@@ -8,28 +8,14 @@ import {
   forwardRef,
   useImperativeHandle,
 } from "react";
-import Image from "next/image";
 import { raDecToScreen, distance } from "@/lib/coordinates";
 import type { Constellation } from "@/types/constellation";
 import type { Star } from "@/types/star";
 import { StarMapControls } from "./StarMapControls";
-import {
-  StarCard,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/components/stars/StarCard";
 import { StarIcon } from "@/components/icons/StarIcon";
-import Link from "next/link";
-import { Card } from "../ui/card";
-import { Button } from "../ui/button";
-import { ChevronRight, ArrowUpRight, Bookmark, X } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { getSafeImageUrl } from "@/lib/inputValidation";
+
 import React from "react";
-import { rrApps } from "@/../config/rrApps";
+import { rrApps } from "@/config/rrApps";
 import { StarConstellationModal } from "./StarConstellationModal";
 
 // Box-Muller transform for generating standard normally distributed values (mean 0, variance 1)
@@ -275,8 +261,7 @@ export const StarMap = forwardRef<StarMapHandle, StarMapProps>(
           dec = randomNormal(bandCenterDec, 28);
         } else {
           // 20% clustered around star formation nebulae
-          const cluster =
-            clusters[Math.floor(Math.random() * clusters.length)];
+          const cluster = clusters[Math.floor(Math.random() * clusters.length)];
           ra = randomNormal(cluster.ra, cluster.radiusRa * 0.5);
           dec = randomNormal(cluster.dec, cluster.radiusDec * 0.5);
         }

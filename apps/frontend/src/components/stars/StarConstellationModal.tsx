@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { X, ArrowUpRight, Sparkles, Layers } from "lucide-react";
 import type { Constellation } from "@/types/constellation";
-import { rrApps } from "@/../config/rrApps";
+import { rrApps } from "@/config/rrApps";
 import { getSafeImageUrl } from "@/lib/inputValidation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

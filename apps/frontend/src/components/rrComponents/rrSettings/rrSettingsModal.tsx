@@ -4,7 +4,7 @@ import * as React from "react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-import { settingsNavConfig } from "../../../config/settings";
+import { settingsNavConfig } from "@/config/settings";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -37,15 +37,15 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import RrBottomDock from "../rrBottomDock";
 
 // New modular settings tab components
-import { RrAccountSettingsTab } from "./rrAccountSettingsTab";
-import { RrSecuritySettingsTab } from "./rrSecuritySettingsTab";
-import { RrPrivacySettingsTab } from "./rrPrivacySettingsTab";
-import { RrConnectionsTab } from "./rrConnectionsTab";
-import { RrSidebarSettingsTab } from "./rrSidebarSettingsTab";
-import { RrMailSettingsTab } from "./rrMailSettingsTab";
-import { RrApiKeysTab } from "./rrApiKeysTab";
-import { RrListsTab } from "./rrListsTab";
-import { RrArrSettingsTab } from "./rrArrSettingsTab";
+import { RrAccountSettingsTab } from "./rrAccountSettingsTab/rrAccountSettingsTab";
+import { RrSecuritySettingsTab } from "./rrSecuritySettingsTab/rrSecuritySettingsTab";
+import { RrPrivacySettingsTab } from "./rrPrivacySettingsTab/rrPrivacySettingsTab";
+import { RrConnectionsTab } from "./rrConnectionsTab/rrConnectionsTab";
+import { RrSidebarSettingsTab } from "./rrSidebarSettingsTab/rrSidebarSettingsTab";
+import { RrMailSettingsTab } from "./rrMailSettingsTab/rrMailSettingsTab";
+import { RrApiKeysTab } from "./rrApiKeysTab/rrApiKeysTab";
+import { RrListsTab } from "./rrListsTab/rrListsTab";
+import { RrArrSettingsTab } from "./rrArrSettingsTab/rrArrSettingsTab";
 import { RrConstellationBuilderModal } from "../rrConstellationBuilderModal";
 
 type rrCategory =
@@ -281,7 +281,10 @@ export function SettingsDialog({
                       />
                     )}
                     {activeCategory === "security" && (
-                      <RrSecuritySettingsTab onOpenChange={onOpenChange} />
+                      <RrSecuritySettingsTab
+                        onOpenChange={onOpenChange}
+                        setFooterContent={setFooterContent}
+                      />
                     )}
                     {activeCategory === "privacy" && (
                       <RrPrivacySettingsTab onOpenChange={onOpenChange} />

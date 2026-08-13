@@ -3,7 +3,7 @@
 import React, { useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useTranslation } from "react-i18next";
-import { getLyraSidebarConfig } from "../../../../config/lyraSidebarConfig";
+import { getLyraSidebarConfig } from "@/config/sidebarConfigs/lyraSidebarConfig";
 import RrSidebar from "../rrSidebar";
 import { filterSidebarConfig } from "@/lib/navigation";
 

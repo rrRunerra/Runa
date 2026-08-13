@@ -9,7 +9,7 @@ import { REFERENCE_CONSTELLATIONS } from "@/lib/constellations";
 import { useSession } from "next-auth/react";
 import { useRef, useState, useEffect } from "react";
 import { RrConstellationBuilderModal } from "@/components/rrComponents/rrConstellationBuilderModal";
-import { rrApps } from "@/../config/rrApps";
+import { rrApps } from "@/config/rrApps";
 import { hasPermission } from "@runa/permissions";
 import type { Constellation } from "@/types/constellation";
 import { useBookmarks } from "@/hooks/useBookmarks";

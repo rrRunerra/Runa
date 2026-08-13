@@ -1799,7 +1799,7 @@ export default {
     "accountNameDesc": "Отображаемое имя этого почтового аккаунта в Pegasus."
   },
   "securitySettings": {
-    "changePasswordTitle": "Изменить пароль",
+    "changePasswordTitle": "Изменить пароль аккаунта",
     "changePasswordDesc": "Обновите пароль вашей учетной записи.",
     "currentPasswordLabel": "Текущий пароль",
     "newPasswordLabel": "Новый пароль",
@@ -1819,7 +1819,7 @@ export default {
     "unknownUserAgent": "Неизвестное устройство/браузер",
     "lastActiveLabel": "Последняя активность",
     "totpSetupTitle": "Настройка приложения аутентификации",
-    "totpSetupDesc": "Отсканируйте QR-код ниже или введите секретный ключ вручную в приложении TOTP.",
+    "totpSetupDesc": "Отсканируйте QR-код ниже или введите секретный ключ вручную в приложение-аутентификатор.",
     "manualSecretKey": "Секретный ключ вручную",
     "verificationCodeLabel": "Код подтверждения",
     "enabling": "Включение...",
@@ -1875,7 +1875,7 @@ export default {
     "regenerateBtn": "Обновить",
     "verificationMethods": "Способы верификации",
     "totpTitle": "Приложение аутентификации",
-    "totpDesc": "Используйте такие приложения, как Google Authenticator или 1Password, для генерации 6-значных кодов.",
+    "totpDesc": "Используйте приложения, такие как Ente Auth или Proton Authenticator, для генерации 6-значных кодов.",
     "statusActive": "Активен",
     "statusInactive": "Неактивен",
     "disconnectBtn": "Отключить",
@@ -1895,7 +1895,7 @@ export default {
     "noPasskeys": "Нет зарегистрированных ключей доступа.",
     "activeSession": "Активная сессия",
     "sessionTokenLabel": "Токен сессии",
-    "sessionSettingsTitle": "Настройки сессии",
+    "sessionSettingsTitle": "Сессия",
     "sessionSettingsDesc": "Если ваши права доступа недавно изменились или у вас нет доступа к нужным ресурсам, попробуйте обновить сессию вручную, чтобы применить изменения без выхода из системы.",
     "lastRefreshLabel": "Последнее обновление",
     "neverThisSession": "Не обновлялось в этой сессии",
@@ -1908,7 +1908,22 @@ export default {
     "linkNewDeviceTitle": "Подключить новое устройство",
     "linkNewDeviceDesc": "Введите 10-значный код, отображаемый на устройстве, которое вы хотите авторизовать",
     "authorizeBtn": "Авторизовать",
-    "noDevices": "Зарегистрированных устройств не найдено."
+    "noDevices": "Зарегистрированных устройств не найдено.",
+    "subTabs": {
+      "password": "Пароль и сессия",
+      "mfa": "Двухфакторная аутентификация",
+      "devices": "Подключенные устройства"
+    },
+    "mfaStatusTitle": "Двухфакторная аутентификация",
+    "mfaEnabledDesc": "Защита 2FA в настоящее время активна для вашего аккаунта.",
+    "mfaDisabledDesc": "Защита 2FA отключена. Настройте способ аутентификации ниже.",
+    "disableAllMfaTitle": "Отключить двухфакторную аутентификацию",
+    "disableAllMfaDesc": "Вы уверены, что хотите отключить 2FA? Это отключит приложение-аутентификатор, OTP по email и удалит все зарегистрированные ключи доступа.",
+    "turnOff2faBtn": "Отключить 2FA",
+    "allMfaDisabledSuccess": "Двухфакторная аутентификация успешно отключена.",
+    "registerBtn": "Зарегистрировать",
+    "saveCodesFirstPrompt": "Сначала скопируйте или скачайте коды",
+    "regenerateCodesTitle": "Перегенерировать резервные коды"
   },
   "sidebar": {
     "positionMustBeFilled": "Сначала необходимо настроить ячейку {{required}}, прежде чем выбирать ячейку {{target}}.",

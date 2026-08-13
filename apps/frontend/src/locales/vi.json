@@ -1799,7 +1799,7 @@
     "accountNameDesc": "Nhãn hiển thị cho tài khoản thư này trong Pegasus."
   },
   "securitySettings": {
-    "changePasswordTitle": "Thay đổi mật khẩu",
+    "changePasswordTitle": "Thay đổi mật khẩu tài khoản",
     "changePasswordDesc": "Cập nhật mật khẩu tài khoản của bạn.",
     "currentPasswordLabel": "Mật khẩu hiện tại",
     "newPasswordLabel": "Mật khẩu mới",
@@ -1819,7 +1819,7 @@
     "unknownUserAgent": "Thiết bị/Trình duyệt không xác định",
     "lastActiveLabel": "Hoạt động gần nhất",
     "totpSetupTitle": "Thiết lập ứng dụng xác thực",
-    "totpSetupDesc": "Quét mã QR bên dưới hoặc nhập khóa bí mật thủ công vào ứng dụng TOTP của bạn.",
+    "totpSetupDesc": "Quét mã QR bên dưới hoặc nhập khóa bí mật thủ công vào ứng dụng xác thực của bạn.",
     "manualSecretKey": "Khóa bí mật thủ công",
     "verificationCodeLabel": "Mã xác thực",
     "enabling": "Đang kích hoạt...",
@@ -1875,7 +1875,7 @@
     "regenerateBtn": "Tạo lại",
     "verificationMethods": "Phương thức xác thực",
     "totpTitle": "Ứng dụng xác thực",
-    "totpDesc": "Sử dụng các ứng dụng như Google Authenticator hoặc 1Password để tạo mã xác thực 6 chữ số.",
+    "totpDesc": "Sử dụng các ứng dụng như Ente Auth hoặc Proton Authenticator để tạo mã xác thực 6 chữ số.",
     "statusActive": "Đang hoạt động",
     "statusInactive": "Không hoạt động",
     "disconnectBtn": "Hủy kết nối",
@@ -1895,7 +1895,7 @@
     "noPasskeys": "Chưa có khóa xác thực nào được đăng ký.",
     "activeSession": "Phiên hoạt động",
     "sessionTokenLabel": "Token phiên",
-    "sessionSettingsTitle": "Cài đặt phiên",
+    "sessionSettingsTitle": "Phiên",
     "sessionSettingsDesc": "Nếu quyền hạn của bạn mới được cập nhật hoặc bạn không truy cập được nội dung được phép, hãy thử làm mới phiên hoạt động thủ công để áp dụng các thay đổi ngay lập tức mà không cần đăng xuất.",
     "lastRefreshLabel": "Lần làm mới cuối",
     "neverThisSession": "Chưa làm mới trong phiên này",
@@ -1908,7 +1908,22 @@
     "linkNewDeviceTitle": "Liên kết thiết bị mới",
     "linkNewDeviceDesc": "Nhập mã 10 chữ số hiển thị trên thiết bị bạn muốn ủy quyền",
     "authorizeBtn": "Ủy quyền",
-    "noDevices": "Không tìm thấy thiết bị đăng ký."
+    "noDevices": "Không tìm thấy thiết bị đăng ký.",
+    "subTabs": {
+      "password": "Mật khẩu & Phiên",
+      "mfa": "Xác thực hai yếu tố",
+      "devices": "Thiết bị đã kết nối"
+    },
+    "mfaStatusTitle": "Xác thực hai yếu tố",
+    "mfaEnabledDesc": "Bảo vệ 2FA hiện đang hoạt động trên tài khoản của bạn.",
+    "mfaDisabledDesc": "Bảo vệ 2FA đã bị tắt. Hãy thiết lập phương thức xác thực bên dưới.",
+    "disableAllMfaTitle": "Tắt xác thực hai yếu tố",
+    "disableAllMfaDesc": "Bạn có chắc chắn muốn tắt 2FA không? Thao tác này sẽ tắt Ứng dụng xác thực, OTP qua email và xóa tất cả Passkey đã đăng ký.",
+    "turnOff2faBtn": "Tắt 2FA",
+    "allMfaDisabledSuccess": "Tắt xác thực hai yếu tố thành công.",
+    "registerBtn": "Đăng ký",
+    "saveCodesFirstPrompt": "Vui lòng sao chép hoặc tải xuống mã của bạn trước",
+    "regenerateCodesTitle": "Tạo lại mã dự phòng"
   },
   "sidebar": {
     "positionMustBeFilled": "Vị trí {{required}} phải được thiết lập trước khi chọn vị trí {{target}}.",

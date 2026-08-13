@@ -1799,7 +1799,7 @@ export default {
     "accountNameDesc": "ป้ายชื่อแสดงสำหรับบัญชีไปรษณีย์นี้ใน Pegasus"
   },
   "securitySettings": {
-    "changePasswordTitle": "เปลี่ยนรหัสผ่าน",
+    "changePasswordTitle": "เปลี่ยนรหัสผ่านบัญชี",
     "changePasswordDesc": "อัปเดตรหัสผ่านบัญชีของคุณ",
     "currentPasswordLabel": "รหัสผ่านปัจจุบัน",
     "newPasswordLabel": "รหัสผ่านใหม่",
@@ -1819,7 +1819,7 @@ export default {
     "unknownUserAgent": "ไม่ทราบอุปกรณ์/เบราว์เซอร์",
     "lastActiveLabel": "ใช้งานล่าสุด",
     "totpSetupTitle": "ตั้งค่าแอปยืนยันตัวตน",
-    "totpSetupDesc": "สแกนรหัส QR ด้านล่าง หรือป้อนรหัสคีย์ลับด้วยตนเองลงในแอป TOTP ของคุณ",
+    "totpSetupDesc": "สแกนรหัส QR ด้านล่างหรือป้อนคีย์ลับด้วยตนเองลงในแอปยืนยันตัวตนของคุณ",
     "manualSecretKey": "รหัสคีย์ลับป้อนเอง",
     "verificationCodeLabel": "รหัสยืนยัน",
     "enabling": "กำลังเปิดใช้งาน...",
@@ -1875,7 +1875,7 @@ export default {
     "regenerateBtn": "สร้างใหม่",
     "verificationMethods": "วิธีการยืนยันตัวตน",
     "totpTitle": "แอปยืนยันตัวตน",
-    "totpDesc": "ใช้แอปพลิเคชันอย่างเช่น Google Authenticator หรือ 1Password เพื่อสร้างรหัสยืนยัน 6 หลัก",
+    "totpDesc": "ใช้แอปพลิเคชันอย่าง Ente Auth หรือ Proton Authenticator เพื่อสร้างรหัสยืนยัน 6 หลัก",
     "statusActive": "เปิดใช้งานอยู่",
     "statusInactive": "ไม่ได้เปิดใช้งาน",
     "disconnectBtn": "ยกเลิกการเชื่อมต่อ",
@@ -1895,7 +1895,7 @@ export default {
     "noPasskeys": "ยังไม่มีพาสคีย์ที่ลงทะเบียนไว้",
     "activeSession": "เซสชันที่ใช้งานอยู่",
     "sessionTokenLabel": "โทเค็นเซสชัน",
-    "sessionSettingsTitle": "การตั้งค่าเซสชัน",
+    "sessionSettingsTitle": "เซสชัน",
     "sessionSettingsDesc": "หากสิทธิ์การใช้งานของคุณเพิ่งถูกอัปเดต หรือไม่สามารถเข้าถึงข้อมูลบางอย่างที่ควรเข้าถึงได้ ให้ลองรีเฟรชเซสชันปัจจุบันเพื่อนำการตั้งค่าใหม่มาใช้ทันทีโดยไม่ต้องออกจากระบบ",
     "lastRefreshLabel": "รีเฟรชล่าสุดเมื่อ",
     "neverThisSession": "ไม่เคยในเซสชันนี้",
@@ -1908,7 +1908,22 @@ export default {
     "linkNewDeviceTitle": "เชื่อมต่ออุปกรณ์ใหม่",
     "linkNewDeviceDesc": "กรอกรหัส 10 หลักที่แสดงบนอุปกรณ์ที่คุณต้องการอนุมัติสิทธิ์การใช้งาน",
     "authorizeBtn": "อนุมัติสิทธิ์",
-    "noDevices": "ไม่พบอุปกรณ์ที่ลงทะเบียนไว้"
+    "noDevices": "ไม่พบอุปกรณ์ที่ลงทะเบียนไว้",
+    "subTabs": {
+      "password": "รหัสผ่านและเซสชัน",
+      "mfa": "การยืนยันตัวตนสองขั้นตอน",
+      "devices": "อุปกรณ์ที่เชื่อมต่อ"
+    },
+    "mfaStatusTitle": "การยืนยันตัวตนสองขั้นตอน",
+    "mfaEnabledDesc": "การปกป้อง 2FA กำลังทำงานอยู่ในบัญชีของคุณ",
+    "mfaDisabledDesc": "การปกป้อง 2FA ถูกปิดอยู่ ตั้งค่าวิธีการยืนยันตัวตนด้านล่าง",
+    "disableAllMfaTitle": "ปิดการยืนยันตัวตนสองขั้นตอน",
+    "disableAllMfaDesc": "คุณแน่ใจหรือไม่ว่าต้องการปิด 2FA การดำเนินการนี้จะปิดการใช้งานแอปยืนยันตัวตน OTP ทางอีเมล และลบ Passkey ทั้งหมด",
+    "turnOff2faBtn": "ปิด 2FA",
+    "allMfaDisabledSuccess": "ปิดการยืนยันตัวตนสองขั้นตอนเรียบร้อยแล้ว",
+    "registerBtn": "ลงทะเบียน",
+    "saveCodesFirstPrompt": "กรุณาคัดลอกหรือดาวน์โหลดรหัสของคุณก่อน",
+    "regenerateCodesTitle": "สร้างรหัสสำรองใหม่"
   },
   "sidebar": {
     "positionMustBeFilled": "ตำแหน่ง {{required}} จะต้องตั้งค่าให้เสร็จสิ้นก่อนที่จะเลือกตำแหน่ง {{target}} ได้",

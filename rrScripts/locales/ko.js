@@ -1799,7 +1799,7 @@ export default {
     "accountNameDesc": "Pegasus에서 이 메일 계정의 표시 이름입니다."
   },
   "securitySettings": {
-    "changePasswordTitle": "비밀번호 변경",
+    "changePasswordTitle": "계정 비밀번호 변경",
     "changePasswordDesc": "계정 비밀번호를 업데이트합니다.",
     "currentPasswordLabel": "현재 비밀번호",
     "newPasswordLabel": "새 비밀번호",
@@ -1819,7 +1819,7 @@ export default {
     "unknownUserAgent": "알 수 없는 사용자 에이전트",
     "lastActiveLabel": "최근 활성",
     "totpSetupTitle": "인증 앱 설정",
-    "totpSetupDesc": "아래 QR 코드를 스캔하거나 시크릿 키를 인증 앱에 수동으로 입력하세요.",
+    "totpSetupDesc": "아래 QR 코드를 스캔하거나 인증 앱에 비밀 키를 수동으로 입력하세요.",
     "manualSecretKey": "수동 입력용 키",
     "verificationCodeLabel": "인증 코드",
     "enabling": "활성화 중...",
@@ -1875,7 +1875,7 @@ export default {
     "regenerateBtn": "재생성",
     "verificationMethods": "인증 방법",
     "totpTitle": "인증 앱",
-    "totpDesc": "Google Authenticator 또는 1Password와 같은 애플리케이션을 사용하여 6자리 인증 코드를 생성합니다.",
+    "totpDesc": "Ente Auth 또는 Proton Authenticator와 같은 앱을 사용하여 6자리 인증 코드를 생성합니다.",
     "statusActive": "활성",
     "statusInactive": "비활성",
     "disconnectBtn": "해제",
@@ -1895,7 +1895,7 @@ export default {
     "noPasskeys": "등록된 패스키가 아직 없습니다.",
     "activeSession": "활성 세션",
     "sessionTokenLabel": "세션 토큰",
-    "sessionSettingsTitle": "세션 설정",
+    "sessionSettingsTitle": "세션",
     "sessionSettingsDesc": "최근에 권한이 업데이트되었거나 접근해야 할 항목이 정상적으로 보이지 않는 경우, 로그아웃하지 않고 활성 세션을 수동으로 갱신하여 변경 사항을 즉시 적용해 보세요.",
     "lastRefreshLabel": "최근 갱신",
     "neverThisSession": "이번 세션에서 갱신 안 됨",
@@ -1908,7 +1908,22 @@ export default {
     "linkNewDeviceTitle": "새 기기 연결",
     "linkNewDeviceDesc": "승인하려는 기기에 표시된 10자리 코드를 입력하세요",
     "authorizeBtn": "승인",
-    "noDevices": "등록된 기기가 없습니다."
+    "noDevices": "등록된 기기가 없습니다.",
+    "subTabs": {
+      "password": "비밀번호 및 세션",
+      "mfa": "2단계 인증",
+      "devices": "연결된 기기"
+    },
+    "mfaStatusTitle": "2단계 인증",
+    "mfaEnabledDesc": "2단계 인증 보호가 현재 계정에 활성화되어 있습니다.",
+    "mfaDisabledDesc": "2단계 인증 보호가 비활성화되어 있습니다. 아래에서 인증 방법을 설정하세요.",
+    "disableAllMfaTitle": "2단계 인증 끄기",
+    "disableAllMfaDesc": "2단계 인증을 끄시겠습니까? 이 작업은 인증 앱, 이메일 OTP를 비활성화하고 등록된 모든 패스키를 제거합니다.",
+    "turnOff2faBtn": "2FA 끄기",
+    "allMfaDisabledSuccess": "2단계 인증이 성공적으로 꺼졌습니다.",
+    "registerBtn": "등록",
+    "saveCodesFirstPrompt": "먼저 코드를 복사하거나 다운로드하세요",
+    "regenerateCodesTitle": "백업 코드 재생성"
   },
   "sidebar": {
     "positionMustBeFilled": "{{target}}번 위치를 선택하기 전에 {{required}}번 위치를 먼저 설정해야 합니다.",

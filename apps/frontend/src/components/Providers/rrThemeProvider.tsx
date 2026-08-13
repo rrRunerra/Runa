@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { rrApps } from "../../../config/rrApps";
+import { rrApps } from "@/config/rrApps";
 
 type ThemeContextType = {
   baseTheme: string;

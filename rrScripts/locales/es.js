@@ -1799,7 +1799,7 @@ export default {
     "accountNameDesc": "Etiqueta para esta cuenta de correo en Pegasus."
   },
   "securitySettings": {
-    "changePasswordTitle": "Cambiar contraseña",
+    "changePasswordTitle": "Cambiar contraseña de la cuenta",
     "changePasswordDesc": "Actualiza la contraseña de tu cuenta.",
     "currentPasswordLabel": "Contraseña actual",
     "newPasswordLabel": "Nueva contraseña",
@@ -1819,7 +1819,7 @@ export default {
     "unknownUserAgent": "User Agent desconocido",
     "lastActiveLabel": "Última actividad",
     "totpSetupTitle": "Configurar aplicación de autenticación",
-    "totpSetupDesc": "Escanea el código QR a continuación o introduce la clave secreta manualmente en tu aplicación TOTP.",
+    "totpSetupDesc": "Escanee el código QR a continuación o ingrese la clave secreta manualmente en su aplicación de autenticación.",
     "manualSecretKey": "Clave secreta manual",
     "verificationCodeLabel": "Código de verificación",
     "enabling": "Activando...",
@@ -1875,7 +1875,7 @@ export default {
     "regenerateBtn": "Regenerar",
     "verificationMethods": "Métodos de verificación",
     "totpTitle": "Aplicación de autenticación",
-    "totpDesc": "Usa aplicaciones como Google Authenticator o 1Password para generar códigos de verificación de 6 dígitos.",
+    "totpDesc": "Use aplicaciones como Ente Auth o Proton Authenticator para generar códigos de verificación de 6 dígitos.",
     "statusActive": "Activo",
     "statusInactive": "Inactivo",
     "disconnectBtn": "Desconectar",
@@ -1895,7 +1895,7 @@ export default {
     "noPasskeys": "Aún no hay llaves de paso registradas.",
     "activeSession": "Sesión activa",
     "sessionTokenLabel": "Token de sesión",
-    "sessionSettingsTitle": "Configuración de sesión",
+    "sessionSettingsTitle": "Sesión",
     "sessionSettingsDesc": "Si tus permisos se actualizaron recientemente o no tienes acceso a recursos que deberías tener, intenta actualizar manualmente tu sesión activa para aplicar los cambios de inmediato sin tener que cerrar sesión.",
     "lastRefreshLabel": "Última actualización",
     "neverThisSession": "Nunca en esta sesión",
@@ -1908,7 +1908,22 @@ export default {
     "linkNewDeviceTitle": "Vincular un nuevo dispositivo",
     "linkNewDeviceDesc": "Introduce el código de 10 dígitos que se muestra en el dispositivo que deseas autorizar",
     "authorizeBtn": "Autorizar",
-    "noDevices": "No se encontraron dispositivos registrados."
+    "noDevices": "No se encontraron dispositivos registrados.",
+    "subTabs": {
+      "password": "Contraseña y sesión",
+      "mfa": "Autenticación de dos factores",
+      "devices": "Dispositivos conectados"
+    },
+    "mfaStatusTitle": "Autenticación de dos factores",
+    "mfaEnabledDesc": "La protección 2FA está actualmente activa en su cuenta.",
+    "mfaDisabledDesc": "La protección 2FA está desactivada. Configure un método a continuación.",
+    "disableAllMfaTitle": "Desactivar autenticación de dos factores",
+    "disableAllMfaDesc": "¿Está seguro de que desea desactivar la 2FA? Esto desactivará su aplicación de autenticación, el OTP por correo y eliminará todas las Passkeys.",
+    "turnOff2faBtn": "Desactivar 2FA",
+    "allMfaDisabledSuccess": "Autenticación de dos factores desactivada con éxito.",
+    "registerBtn": "Registrar",
+    "saveCodesFirstPrompt": "Por favor copie o descargue sus códigos primero",
+    "regenerateCodesTitle": "Regenerar códigos de respaldo"
   },
   "sidebar": {
     "positionMustBeFilled": "La posición {{required}} debe completarse antes de seleccionar la posición {{target}}.",

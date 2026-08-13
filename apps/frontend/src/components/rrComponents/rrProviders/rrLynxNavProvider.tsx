@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { getLynxSidebarConfig } from "../../../../config/lynxSidebarConfig";
+import { getLynxSidebarConfig } from "@/config/sidebarConfigs/lynxSidebarConfig";
 import { useSession } from "next-auth/react";
 import { filterSidebarConfig } from "@/lib/navigation";
 import RrSidebar from "../rrSidebar";

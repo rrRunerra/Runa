@@ -3,7 +3,7 @@
 import React, { useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useTranslation } from "react-i18next";
-import { getLacertaSidebarConfig } from "../../../../config/lacertaSidebarConfig";
+import { getLacertaSidebarConfig } from "@/config/sidebarConfigs/lacertaSidebarConfig";
 import RrSidebar from "../rrSidebar";
 import { filterSidebarConfig } from "@/lib/navigation";
 

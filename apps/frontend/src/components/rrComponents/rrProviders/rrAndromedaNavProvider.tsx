@@ -3,7 +3,7 @@
 import React, { useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useTranslation } from "react-i18next";
-import { getAndromedaSidebarConfig } from "../../../../config/andromedaSidebarConfig";
+import { getAndromedaSidebarConfig } from "@/config/sidebarConfigs/andromedaSidebarConfig";
 import RrSidebar from "../rrSidebar";
 import { filterSidebarConfig } from "@/lib/navigation";
 

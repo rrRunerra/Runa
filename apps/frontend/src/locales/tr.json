@@ -1799,7 +1799,7 @@
     "accountNameDesc": "Pegasus'ta bu e-posta hesabı için görünen etiket."
   },
   "securitySettings": {
-    "changePasswordTitle": "Şifre Değiştir",
+    "changePasswordTitle": "Hesap Parolasını Değiştir",
     "changePasswordDesc": "Hesap şifrenizi güncelleyin.",
     "currentPasswordLabel": "Mevcut Şifre",
     "newPasswordLabel": "Yeni Şifre",
@@ -1819,7 +1819,7 @@
     "unknownUserAgent": "Bilinmeyen Tarayıcı/Cihaz",
     "lastActiveLabel": "Son Görülme",
     "totpSetupTitle": "Kimlik Doğrulama Uygulaması Kurulumu",
-    "totpSetupDesc": "Aşağıdaki QR kodunu tarayın veya gizli anahtarı TOTP uygulamanıza manuel olarak girin.",
+    "totpSetupDesc": "Aşağıdaki QR kodunu tarayın veya gizli anahtarı doğrulayıcı uygulamanıza manuel olarak girin.",
     "manualSecretKey": "Manuel Gizli Anahtar",
     "verificationCodeLabel": "Doğrulama Kodu",
     "enabling": "Etkinleştiriliyor...",
@@ -1875,7 +1875,7 @@
     "regenerateBtn": "Yeniden Oluştur",
     "verificationMethods": "Doğrulama Yöntemleri",
     "totpTitle": "Kimlik Doğrulama Uygulaması",
-    "totpDesc": "6 haneli doğrulama kodları oluşturmak için Google Authenticator veya 1Password gibi uygulamaları kullanın.",
+    "totpDesc": "6 haneli doğrulama kodları oluşturmak için Ente Auth veya Proton Authenticator gibi uygulamaları kullanın.",
     "statusActive": "Aktif",
     "statusInactive": "Pasif",
     "disconnectBtn": "Bağlantıyı Kes",
@@ -1895,7 +1895,7 @@
     "noPasskeys": "Henüz kayıtlı geçiş anahtarı yok.",
     "activeSession": "Aktif Oturum",
     "sessionTokenLabel": "Oturum Belirteci",
-    "sessionSettingsTitle": "Oturum Ayarları",
+    "sessionSettingsTitle": "Oturum",
     "sessionSettingsDesc": "İzinleriniz yakın zamanda güncellendiyse veya erişmeniz gereken alanlara erişemiyorsanız, çıkış yapmadan değişiklikleri anında uygulamak için aktif oturumunuzu manuel olarak yenilemeyi deneyin.",
     "lastRefreshLabel": "Son Yenileme",
     "neverThisSession": "Bu oturumda hiç yenilenmedi",
@@ -1908,7 +1908,22 @@
     "linkNewDeviceTitle": "Yeni Cihaz Bağla",
     "linkNewDeviceDesc": "Yetkilendirmek istediğiniz cihazda gösterilen 10 haneli kodu girin",
     "authorizeBtn": "Yetkilendir",
-    "noDevices": "Kayıtlı cihaz bulunamadı."
+    "noDevices": "Kayıtlı cihaz bulunamadı.",
+    "subTabs": {
+      "password": "Parola ve Oturum",
+      "mfa": "İki Faktörlü Doğrulama",
+      "devices": "Bağlı Cihazlar"
+    },
+    "mfaStatusTitle": "İki Faktörlü Doğrulama",
+    "mfaEnabledDesc": "2FA koruması şu anda hesabınızda etkin.",
+    "mfaDisabledDesc": "2FA koruması devre dışı. Aşağıdan bir doğrulama yöntemi ayarlayın.",
+    "disableAllMfaTitle": "İki Faktörlü Doğrulayıcıyı Kapat",
+    "disableAllMfaDesc": "2FA'yı kapatmak istediğinizden emin misiniz? Bu işlem Doğrulayıcı Uygulamayı, E-posta OTP'sini devre dışı bırakacak ve tüm Passkey'leri kaldıracaktır.",
+    "turnOff2faBtn": "2FA'yı Kapat",
+    "allMfaDisabledSuccess": "İki Faktörlü Doğrulama başarıyla kapatıldı.",
+    "registerBtn": "Kaydet",
+    "saveCodesFirstPrompt": "Lütfen önce kodlarınızı kopyalayın veya indirin",
+    "regenerateCodesTitle": "Yedek Kodları Yeniden Oluştur"
   },
   "sidebar": {
     "positionMustBeFilled": "Pozisyon {{target}} seçilmeden önce Pozisyon {{required}} doldurulmalıdır.",

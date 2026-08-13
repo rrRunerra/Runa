@@ -1800,7 +1800,7 @@
     "accountNameDesc": "Display label for this mail account in Pegasus."
   },
   "securitySettings": {
-    "changePasswordTitle": "Change Password",
+    "changePasswordTitle": "Change Account Password",
     "changePasswordDesc": "Update your account password.",
     "currentPasswordLabel": "Current Password",
     "newPasswordLabel": "New Password",
@@ -1820,7 +1820,7 @@
     "unknownUserAgent": "Unknown User Agent",
     "lastActiveLabel": "Last Active",
     "totpSetupTitle": "Setup Authenticator App",
-    "totpSetupDesc": "Scan the QR code below or enter the secret key manually into your TOTP application.",
+    "totpSetupDesc": "Scan the QR code below or enter the secret key manually into your authenticator app.",
     "manualSecretKey": "Manual Secret Key",
     "verificationCodeLabel": "Verification Code",
     "enabling": "Enabling...",
@@ -1876,7 +1876,7 @@
     "regenerateBtn": "Regenerate",
     "verificationMethods": "Verification Methods",
     "totpTitle": "Authenticator App",
-    "totpDesc": "Use application tools like Google Authenticator or 1Password to generate 6-digit verification codes.",
+    "totpDesc": "Use application tools like Ente Auth or Proton Authenticator to generate 6-digit verification codes.",
     "statusActive": "Active",
     "statusInactive": "Inactive",
     "disconnectBtn": "Disconnect",
@@ -1896,7 +1896,7 @@
     "noPasskeys": "No passkeys registered yet.",
     "activeSession": "Active Session",
     "sessionTokenLabel": "Session Token",
-    "sessionSettingsTitle": "Session Settings",
+    "sessionSettingsTitle": "Session",
     "sessionSettingsDesc": "If your permissions got updated recently or you don't have access to stuff you should have, try refreshing your active session manually to apply changes immediately without logging out.",
     "lastRefreshLabel": "Last Refresh",
     "neverThisSession": "Never this session",
@@ -1909,7 +1909,22 @@
     "linkNewDeviceTitle": "Link a New Device",
     "linkNewDeviceDesc": "Enter the 10-digit code shown on the device you want to authorize",
     "authorizeBtn": "Authorize",
-    "noDevices": "No registered devices found."
+    "noDevices": "No registered devices found.",
+    "subTabs": {
+      "password": "Password & Session",
+      "mfa": "Two-Factor Auth",
+      "devices": "Connected Devices"
+    },
+    "mfaStatusTitle": "Two-Factor Authentication",
+    "mfaEnabledDesc": "2FA protection is currently active on your account.",
+    "mfaDisabledDesc": "2FA protection is disabled. Set up an authentication method below.",
+    "disableAllMfaTitle": "Turn Off Two-Factor Authentication",
+    "disableAllMfaDesc": "Are you sure you want to turn off 2FA? This will disable your Authenticator App, Email OTP, and remove all registered Passkeys.",
+    "turnOff2faBtn": "Turn Off 2FA",
+    "allMfaDisabledSuccess": "Two-Factor Authentication turned off successfully.",
+    "registerBtn": "Register",
+    "saveCodesFirstPrompt": "Please copy or download your codes first",
+    "regenerateCodesTitle": "Regenerate Backup Codes"
   },
   "sidebar": {
     "positionMustBeFilled": "Position {{required}} must be filled before selecting Position {{target}}.",

@@ -1799,7 +1799,7 @@ export default {
     "accountNameDesc": "Zobrazovaný název tohoto poštovního účtu v Pegasus."
   },
   "securitySettings": {
-    "changePasswordTitle": "Změnit heslo",
+    "changePasswordTitle": "Změnit heslo účtu",
     "changePasswordDesc": "Aktualizujte heslo svého účtu.",
     "currentPasswordLabel": "Současné heslo",
     "newPasswordLabel": "Nové heslo",
@@ -1819,7 +1819,7 @@ export default {
     "unknownUserAgent": "Neznámý User Agent",
     "lastActiveLabel": "Naposledy aktivní",
     "totpSetupTitle": "Nastavení autentizační aplikace",
-    "totpSetupDesc": "Naskenujte QR kód níže nebo zadejte tajný klíč ručně do své TOTP aplikace.",
+    "totpSetupDesc": "Naskenujte níže uvedený QR kód nebo zadejte tajný klíč ručně do své autentizační aplikace.",
     "manualSecretKey": "Ruční tajný klíč",
     "verificationCodeLabel": "Ověřovací kód",
     "enabling": "Aktivace...",
@@ -1875,7 +1875,7 @@ export default {
     "regenerateBtn": "Regenerovat",
     "verificationMethods": "Metody ověřování",
     "totpTitle": "Autentizační aplikace",
-    "totpDesc": "Použijte aplikace jako Google Authenticator nebo 1Password ke generování 6místných ověřovacích kódů.",
+    "totpDesc": "Použijte aplikace jako Ente Auth nebo Proton Authenticator k generování 6místných ověřovacích kódů.",
     "statusActive": "Aktivní",
     "statusInactive": "Neaktivní",
     "disconnectBtn": "Odpojit",
@@ -1895,7 +1895,7 @@ export default {
     "noPasskeys": "Zatím nejsou registrovány žádné přístupové klíče.",
     "activeSession": "Aktivní relace",
     "sessionTokenLabel": "Relační token",
-    "sessionSettingsTitle": "Nastavení relace",
+    "sessionSettingsTitle": "Relace",
     "sessionSettingsDesc": "Pokud se vaše oprávnění nedávno aktualizovala nebo nemáte přístup k věcem, ke kterým byste měli mít přístup, zkuste ručně obnovit aktivní relaci, aby se změny projevily okamžitě bez odhlášení.",
     "lastRefreshLabel": "Poslední obnovení",
     "neverThisSession": "Nikdy v této relaci",
@@ -1908,7 +1908,22 @@ export default {
     "linkNewDeviceTitle": "Propojit nové zařízení",
     "linkNewDeviceDesc": "Zadejte 10místný kód zobrazený na zařízení, které chcete autorizovat",
     "authorizeBtn": "Autorizovat",
-    "noDevices": "Nenalezena žádná registrovaná zařízení."
+    "noDevices": "Nenalezena žádná registrovaná zařízení.",
+    "subTabs": {
+      "password": "Heslo a relace",
+      "mfa": "Dvoufázové ověření",
+      "devices": "Připojená zařízení"
+    },
+    "mfaStatusTitle": "Dvoufázové ověření",
+    "mfaEnabledDesc": "Ochrana 2FA je v současnosti aktivní na vašem účtu.",
+    "mfaDisabledDesc": "Ochrana 2FA je zakázána. Nastavte si metodu ověření níže.",
+    "disableAllMfaTitle": "Vypnout dvoufázové ověření",
+    "disableAllMfaDesc": "Opravdu chcete vypnout 2FA? Tím se zakáže vaše autentizační aplikace, e-mailový OTP a odeberou se všechny registrované klíče Passkey.",
+    "turnOff2faBtn": "Vypnout 2FA",
+    "allMfaDisabledSuccess": "Dvoufázové ověření bylo úspěšně vypnuto.",
+    "registerBtn": "Registrovat",
+    "saveCodesFirstPrompt": "Nejprve si zkopírujte nebo stáhněte kódy",
+    "regenerateCodesTitle": "Obnovit záložní kódy"
   },
   "sidebar": {
     "positionMustBeFilled": "Pozice {{required}} musí být vyplněna před výběrem pozice {{target}}.",

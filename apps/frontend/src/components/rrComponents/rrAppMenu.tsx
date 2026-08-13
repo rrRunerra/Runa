@@ -26,7 +26,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { rrApp, rrApps } from "../../../config/rrApps";
+import { rrApp, rrApps } from "@/config/rrApps";
 import { SidebarMenuButton, useSidebar } from "../ui/sidebar";
 import Image from "next/image";
 import { getSafeImageUrl } from "@/lib/inputValidation";

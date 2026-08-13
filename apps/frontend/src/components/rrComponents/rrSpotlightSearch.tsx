@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useTheme } from "next-themes";
 import { useBaseTheme } from "../Providers/rrThemeProvider";
-import { rrApp, rrApps } from "../../../config/rrApps";
+import { rrApp, rrApps } from "@/config/rrApps";
 import { hasPermission } from "@runa/permissions";
 import { useSidebar } from "@/components/ui/sidebar";
 import {

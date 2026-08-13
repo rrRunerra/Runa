@@ -1799,7 +1799,7 @@ export default {
     "accountNameDesc": "Visningsnavn for denne e-postkontoen i Pegasus."
   },
   "securitySettings": {
-    "changePasswordTitle": "Endre passord",
+    "changePasswordTitle": "Endre kontopassord",
     "changePasswordDesc": "Oppdater kontopassordet ditt.",
     "currentPasswordLabel": "Nåværende passord",
     "newPasswordLabel": "Nytt passord",
@@ -1819,7 +1819,7 @@ export default {
     "unknownUserAgent": "Ukjent nettleser/enhet",
     "lastActiveLabel": "Sist aktiv",
     "totpSetupTitle": "Konfigurer autentiseringsapp",
-    "totpSetupDesc": "Skann QR-koden nedenfor, eller skriv inn den hemmelige nøkkelen manuelt i TOTP-appen din.",
+    "totpSetupDesc": "Skann QR-koden nedenfor eller tast inn den hemmelige nøkkelen manuelt i autentiseringsappen din.",
     "manualSecretKey": "Manuell hemmelig nøkkel",
     "verificationCodeLabel": "Verifiseringskode",
     "enabling": "Aktiverer...",
@@ -1875,7 +1875,7 @@ export default {
     "regenerateBtn": "Generer på nytt",
     "verificationMethods": "Verifiseringsmetoder",
     "totpTitle": "Autentiseringsapp",
-    "totpDesc": "Bruk apper som Google Authenticator eller 1Password til å generere 6-sifrede verifiseringskoder.",
+    "totpDesc": "Bruk apper som Ente Auth eller Proton Authenticator til å generere 6-sifrede bekreftelseskoder.",
     "statusActive": "Aktiv",
     "statusInactive": "Inaktiv",
     "disconnectBtn": "Koble fra",
@@ -1895,7 +1895,7 @@ export default {
     "noPasskeys": "Ingen passnøkler registrert ennå.",
     "activeSession": "Aktiv sesjon",
     "sessionTokenLabel": "Sesjonstoken",
-    "sessionSettingsTitle": "Sesjonsinnstillinger",
+    "sessionSettingsTitle": "Økt",
     "sessionSettingsDesc": "Hvis rettighetene dine har blitt oppdatert nylig, eller du ikke har tilgang til ressurser du burde ha tilgang til, kan du prøve å oppdatere den aktive sesjonen manuelt for å ta i bruk endringene umiddelbart uten å logge ut.",
     "lastRefreshLabel": "Siste oppdatering",
     "neverThisSession": "Aldri i denne sesjonen",
@@ -1908,7 +1908,22 @@ export default {
     "linkNewDeviceTitle": "Koble til en ny enhet",
     "linkNewDeviceDesc": "Skriv inn den 10-sifrede koden som vises på enheten du vil autorisere",
     "authorizeBtn": "Autoriser",
-    "noDevices": "Ingen registrerte enheter funnet."
+    "noDevices": "Ingen registrerte enheter funnet.",
+    "subTabs": {
+      "password": "Passord og økt",
+      "mfa": "To-faktor-autentisering",
+      "devices": "Tilkoblede enheter"
+    },
+    "mfaStatusTitle": "To-faktor-autentisering",
+    "mfaEnabledDesc": "2FA-beskyttelse er for øyeblikket aktiv på kontoen din.",
+    "mfaDisabledDesc": "2FA-beskyttelse er deaktivert. Konfigurer en metode nedenfor.",
+    "disableAllMfaTitle": "Slå av to-faktor-autentisering",
+    "disableAllMfaDesc": "Er du sikker på at du vil slå av 2FA? Dette vil deaktivere autentiseringsappen, e-post OTP og fjerne alle registrerte passnøkler.",
+    "turnOff2faBtn": "Slå av 2FA",
+    "allMfaDisabledSuccess": "To-faktor-autentisering er slått av.",
+    "registerBtn": "Registrer",
+    "saveCodesFirstPrompt": "Kopier eller last ned kodene dine først",
+    "regenerateCodesTitle": "Generer sikkerhetskoder på nytt"
   },
   "sidebar": {
     "positionMustBeFilled": "Posisjon {{required}} må fylles ut før du kan velge posisjon {{target}}.",

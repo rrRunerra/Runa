@@ -550,9 +550,19 @@ export class AuthService {
         });
 
       let matchedIndex = -1;
+      const cleanCode = code.trim();
+      const codeUpper = cleanCode.toUpperCase();
+      const codeNoDash = cleanCode.replaceAll('-', '');
+      const codeUpperNoDash = codeUpper.replaceAll('-', '');
+
       for (let i = 0; i < user.backupCodes.length; i++) {
-        const matches = await bcrypt.compare(code, user.backupCodes[i]);
-        if (matches) {
+        const storedHash = user.backupCodes[i];
+        if (
+          (await bcrypt.compare(cleanCode, storedHash)) ||
+          (await bcrypt.compare(codeUpper, storedHash)) ||
+          (await bcrypt.compare(codeNoDash, storedHash)) ||
+          (await bcrypt.compare(codeUpperNoDash, storedHash))
+        ) {
           matchedIndex = i;
           break;
         }

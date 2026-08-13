@@ -64,7 +64,7 @@ export function ImageCropperDialog({
 
   const imageRef = useRef<HTMLImageElement>(null);
   const dragStartRef = useRef({ x: 0, y: 0 });
-  
+
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const activeNodeRef = useRef<HTMLDivElement | null>(null);
   const onWheelEventRef = useRef<((e: WheelEvent) => void) | null>(null);
@@ -88,7 +88,10 @@ export function ImageCropperDialog({
         resizeObserverRef.current.disconnect();
       }
       if (activeNodeRef.current && onWheelEventRef.current) {
-        activeNodeRef.current.removeEventListener("wheel", onWheelEventRef.current);
+        activeNodeRef.current.removeEventListener(
+          "wheel",
+          onWheelEventRef.current,
+        );
       }
     };
   }, []);
@@ -97,7 +100,10 @@ export function ImageCropperDialog({
   const parentRef = useCallback((node: HTMLDivElement | null) => {
     // Clean up previous listeners
     if (activeNodeRef.current && onWheelEventRef.current) {
-      activeNodeRef.current.removeEventListener("wheel", onWheelEventRef.current);
+      activeNodeRef.current.removeEventListener(
+        "wheel",
+        onWheelEventRef.current,
+      );
     }
     if (resizeObserverRef.current) {
       resizeObserverRef.current.disconnect();
@@ -123,7 +129,7 @@ export function ImageCropperDialog({
         const delta = e.deltaY > 0 ? -zoomStep : zoomStep;
         setZoom((prev) => Math.min(3, Math.max(1, prev + delta)));
       };
-      
+
       node.addEventListener("wheel", onWheelEvent, { passive: false });
       onWheelEventRef.current = onWheelEvent;
 
@@ -148,11 +154,15 @@ export function ImageCropperDialog({
 
   // Dynamic Crop Guide Frame size calculation based on parent container size (constrained by both width and height)
   const padding = 32; // padding around crop guide to prevent edge-clashing
-  const cropWidth = parentSize.width && parentSize.height
-    ? aspectRatio === 1
-      ? Math.min(parentSize.width - padding, parentSize.height - padding, 340)
-      : Math.min(parentSize.width - padding, (parentSize.height - padding) * aspectRatio)
-    : 0;
+  const cropWidth =
+    parentSize.width && parentSize.height
+      ? aspectRatio === 1
+        ? Math.min(parentSize.width - padding, parentSize.height - padding, 340)
+        : Math.min(
+            parentSize.width - padding,
+            (parentSize.height - padding) * aspectRatio,
+          )
+      : 0;
 
   const cropHeight = cropWidth / aspectRatio;
 
@@ -254,7 +264,8 @@ export function ImageCropperDialog({
       const canvas = document.createElement("canvas");
 
       // Define standard target outputs for saving high-res results
-      const targetWidth = aspectRatio === 1 ? 512 : aspectRatio === 5 ? 480 : 1200;
+      const targetWidth =
+        aspectRatio === 1 ? 512 : aspectRatio === 5 ? 480 : 1200;
       const targetHeight = targetWidth / aspectRatio;
 
       canvas.width = targetWidth;
@@ -267,7 +278,10 @@ export function ImageCropperDialog({
       const R = targetWidth / cropWidth;
 
       // Translate canvas origin to center + translation offset scaled up
-      ctx.translate(targetWidth / 2 + offset.x * R, targetHeight / 2 + offset.y * R);
+      ctx.translate(
+        targetWidth / 2 + offset.x * R,
+        targetHeight / 2 + offset.y * R,
+      );
 
       // Rotate context
       ctx.rotate((rotation * Math.PI) / 180);
@@ -279,11 +293,19 @@ export function ImageCropperDialog({
       const drawWidth = displayWidth * R;
       const drawHeight = displayHeight * R;
 
-      ctx.drawImage(img, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+      ctx.drawImage(
+        img,
+        -drawWidth / 2,
+        -drawHeight / 2,
+        drawWidth,
+        drawHeight,
+      );
 
       canvas.toBlob((blob) => {
         if (blob) {
-          const file = new File([blob], "cropped-image.png", { type: "image/png" });
+          const file = new File([blob], "cropped-image.png", {
+            type: "image/png",
+          });
           onCrop(file);
           onOpenChange(false);
         } else {
@@ -292,7 +314,9 @@ export function ImageCropperDialog({
       }, "image/png");
     } catch (err) {
       console.error("Error cropping image:", err);
-      toast.error("Failed to crop image. If using an existing image, it may be blocked by security (CORS) limits.");
+      toast.error(
+        "Failed to crop image. If using an existing image, it may be blocked by security (CORS) limits.",
+      );
     }
   };
 
@@ -316,7 +340,7 @@ export function ImageCropperDialog({
         {/* Viewport Parent Container (Removed flexbox centering to avoid offset rendering bugs) */}
         <div
           ref={parentRef}
-          className="relative w-full h-[320px] sm:h-[400px] overflow-hidden bg-zinc-950 rounded-xl border border-zinc-800/80 cursor-move select-none touch-none"
+          className="relative w-full h-80 sm:h-100 overflow-hidden bg-zinc-950 rounded-xl border border-zinc-800/80 cursor-move select-none touch-none"
           onMouseDown={(e) => {
             e.preventDefault();
             handleStart(e.clientX, e.clientY);
@@ -403,7 +427,15 @@ export function ImageCropperDialog({
               flipH ? "bg-primary/10 border-primary/40 text-primary" : ""
             }`}
           >
-            <svg className="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              className="size-3"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <path d="M12 2v20M2 12h8l-4-4v8zM22 12h-8l-4 4 4 4" />
             </svg>
             Flip H
@@ -416,7 +448,15 @@ export function ImageCropperDialog({
               flipV ? "bg-primary/10 border-primary/40 text-primary" : ""
             }`}
           >
-            <svg className="size-3 rotate-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              className="size-3 rotate-90"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <path d="M12 2v20M2 12h8l-4-4v8zM22 12h-8l-4 4 4 4" />
             </svg>
             Flip V

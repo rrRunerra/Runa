@@ -1799,7 +1799,7 @@
     "accountNameDesc": "此邮箱账号在 Pegasus 中显示的名称。"
   },
   "securitySettings": {
-    "changePasswordTitle": "修改密码",
+    "changePasswordTitle": "修改账户密码",
     "changePasswordDesc": "更新您的账户密码。",
     "currentPasswordLabel": "当前密码",
     "newPasswordLabel": "新密码",
@@ -1819,7 +1819,7 @@
     "unknownUserAgent": "未知设备/浏览器",
     "lastActiveLabel": "最后活跃时间",
     "totpSetupTitle": "设置身份验证器应用",
-    "totpSetupDesc": "扫描下方 QR 二维码，或者将密钥手动输入到您的 TOTP 验证应用中。",
+    "totpSetupDesc": "扫描下方二维码或将密钥手动输入到您的身份验证器应用中。",
     "manualSecretKey": "手动输入密钥",
     "verificationCodeLabel": "验证码",
     "enabling": "正在启用...",
@@ -1875,7 +1875,7 @@
     "regenerateBtn": "重新生成",
     "verificationMethods": "验证方式",
     "totpTitle": "身份验证器应用",
-    "totpDesc": "使用 Google Authenticator 或 1Password 等应用生成 6 位数验证码。",
+    "totpDesc": "使用 Ente Auth 或 Proton Authenticator 等应用生成 6 位验证码。",
     "statusActive": "已启用",
     "statusInactive": "未启用",
     "disconnectBtn": "断开连接",
@@ -1895,7 +1895,7 @@
     "noPasskeys": "尚未注册任何通行密钥。",
     "activeSession": "当前会话",
     "sessionTokenLabel": "会话令牌",
-    "sessionSettingsTitle": "会话设置",
+    "sessionSettingsTitle": "会话",
     "sessionSettingsDesc": "如果您的权限近期有更新，或者遇到了本应有权访问但无法访问的情况，请尝试手动刷新当前会话，无需注销即可立即应用更改。",
     "lastRefreshLabel": "最近刷新时间",
     "neverThisSession": "当前会话未刷新",
@@ -1908,7 +1908,22 @@
     "linkNewDeviceTitle": "连接新设备",
     "linkNewDeviceDesc": "输入您要授权的设备上显示的 10 位数代码",
     "authorizeBtn": "授权设备",
-    "noDevices": "未找到已注册的设备。"
+    "noDevices": "未找到已注册的设备。",
+    "subTabs": {
+      "password": "密码与会话",
+      "mfa": "双重身份验证",
+      "devices": "已连接设备"
+    },
+    "mfaStatusTitle": "双重身份验证",
+    "mfaEnabledDesc": "双重验证保护目前在您的账户上处于开启状态。",
+    "mfaDisabledDesc": "双重验证保护处于关闭状态。请在下方设置验证方式。",
+    "disableAllMfaTitle": "关闭双重身份验证",
+    "disableAllMfaDesc": "您确定要关闭 2FA 吗？这将禁用您的身份验证器应用、邮箱 OTP 并移除所有已注册的 Passkey。",
+    "turnOff2faBtn": "关闭 2FA",
+    "allMfaDisabledSuccess": "已成功关闭双重身份验证。",
+    "registerBtn": "注册",
+    "saveCodesFirstPrompt": "请先复制或下载您的代码",
+    "regenerateCodesTitle": "重新生成备份代码"
   },
   "sidebar": {
     "positionMustBeFilled": "在选择位置 {{target}} 之前，必须先设置好位置 {{required}}。",

@@ -3,7 +3,7 @@
 import React, { useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useTranslation } from "react-i18next";
-import { getMonocerosSidebarConfig } from "../../../../config/monocerosSidebarConfig";
+import { getMonocerosSidebarConfig } from "@/config/sidebarConfigs/monocerosSidebarConfig";
 import RrSidebar from "../rrSidebar";
 import { filterSidebarConfig } from "@/lib/navigation";
 
