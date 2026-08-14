@@ -15,7 +15,7 @@ export const settingsNavConfig: SettingCategory[] = [
   { id: "apiKeys", name: "API Keys Settings", label: "API Keys", badge: "Developer credentials", icon: KeyRound, app: "Polaris" },
   { id: "connections", name: "Connections Settings", label: "Connections", badge: "External social linkings", icon: Link2, app: "Polaris" },
   { id: "privacy", name: "Privacy Settings", label: "Privacy", badge: "Personal data", icon: Lock, app: "Polaris" },
-  { id: "sidebar", name: "Sidebar Shortcuts", label: "Sidebar Shortcuts", badge: "Mobile sidebar configurations", icon: Smartphone, app: "Polaris" },
+  { id: "dock", name: "Dock Settings", label: "Dock", badge: "Mobile dock configurations", icon: Smartphone, app: "Polaris" },
   { id: "mailAccounts", name: "Mail Accounts Settings", label: "Mail Accounts", badge: "Pegasus inbox linkings", icon: Mail, app: "Pegasus" },
   { id: "lists", name: "Lists Settings", label: "Lists", badge: "Import and export media lists", icon: List, app: "Aquila" },
   { id: "arrServices", name: "Arr Services Settings", label: "Arr Services", badge: "Sonarr & Radarr output filters", icon: Radio, app: "Aquila" },

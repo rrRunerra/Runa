@@ -6,7 +6,6 @@ export default class GoogleConnection extends BaseConnection {
   public readonly providerKey = ConnectionProvider.GOOGLE;
   public readonly requiredEnvKeys = ["GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"];
   public readonly capabilities = [
-    ConnectionCapability.AUTH,
     ConnectionCapability.SHOWCASE,
     ConnectionCapability.CALENDAR,
   ];

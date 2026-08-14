@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
-import { Plus, ArrowLeft, ArrowRight, Check, Loader2 } from "lucide-react";
+import { Plus, ArrowLeft, ArrowRight, Check, Loader2, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,14 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 // Sub-components
@@ -42,6 +35,8 @@ import { RrMailLinkWizardStep3 } from "./rrMailSettingsTabComponents/rrMailLinkW
 export interface RrMailSettingsTabProps {
   /** Callback to close parent settings modal */
   onOpenChange: (open: boolean) => void;
+  /** Callback to register custom action buttons in the parent modal footer */
+  setFooterContent?: (content: React.ReactNode | null) => void;
 }
 
 /**
@@ -49,6 +44,7 @@ export interface RrMailSettingsTabProps {
  */
 export function RrMailSettingsTab({
   onOpenChange,
+  setFooterContent,
 }: RrMailSettingsTabProps): React.JSX.Element {
   const { data: session } = useSession();
   const { t } = useTranslation();
@@ -409,50 +405,83 @@ export function RrMailSettingsTab({
     setIsDialogOpen(true);
   };
 
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between gap-0 pb-4 border-b border-border/40 text-left">
-        <div className="flex flex-col gap-0.5">
-          <CardTitle>{t("mailSettings.title")}</CardTitle>
-          <CardDescription>{t("mailSettings.description")}</CardDescription>
-        </div>
+  // Register footer buttons inside settings modal
+  useEffect(() => {
+    if (!setFooterContent) return;
+
+    setFooterContent(
+      <div className="flex items-center justify-end w-full gap-3">
         <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onOpenChange(false)}
+          className="text-xs h-9 px-4 rounded-xl cursor-pointer"
+        >
+          {t("close", "Close")}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
           onClick={() => {
             resetForm();
             setIsDialogOpen(true);
           }}
-          className="h-8 rounded-lg cursor-pointer font-semibold text-xs gap-1"
+          className="gap-1.5 text-xs font-semibold h-9 px-5 rounded-xl cursor-pointer bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
         >
           <Plus className="size-3.5" />
-          {t("mailSettings.linkBtn")}
+          <span>{t("mailSettings.linkBtn")}</span>
         </Button>
-      </CardHeader>
+      </div>,
+    );
 
-      <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6">
-        {emailAccounts.map((account) => (
-          <RrMailAccountCard
-            key={account.id}
-            account={account}
-            onEdit={() => openEditEmailAccount(account)}
-            onDelete={() => handleDeleteEmailAccount(account.id)}
-          />
-        ))}
-        {emailAccounts.length === 0 && (
-          <div className="col-span-full p-8 text-center rounded-xl border border-dashed border-border text-xs text-muted-foreground">
-            {t("mailSettings.noAccounts")}
-          </div>
-        )}
-      </CardContent>
+    return () => setFooterContent(null);
+  }, [setFooterContent, onOpenChange, t]);
 
-      <CardFooter className="flex justify-end pt-4 border-t border-border mt-6">
-        <Button
-          variant="outline"
-          onClick={() => onOpenChange(false)}
-          className="text-xs sm:text-sm h-9 px-5 rounded-xl cursor-pointer"
-        >
-          {t("mailSettings.closeSettingsBtn")}
-        </Button>
-      </CardFooter>
+  return (
+    <div className="flex-1 flex flex-col min-h-0 h-full text-left">
+      {/* Main Card Container */}
+      <Card className="flex-1 flex flex-col min-h-0 h-full border border-border bg-card shadow-sm rounded-2xl overflow-hidden">
+        <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 scrollbar-thin">
+          {emailAccounts.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              {emailAccounts.map((account) => (
+                <RrMailAccountCard
+                  key={account.id}
+                  account={account}
+                  onEdit={() => openEditEmailAccount(account)}
+                  onDelete={() => handleDeleteEmailAccount(account.id)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="h-full min-h-60 flex flex-col items-center justify-center p-8 text-center rounded-2xl border border-dashed border-border/70 bg-muted/10">
+              <div className="size-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mb-3">
+                <Mail className="size-6" />
+              </div>
+              <h3 className="text-sm font-bold text-foreground mb-1">
+                {t("mailSettings.noAccountsTitle", {
+                  defaultValue: "No linked mail accounts",
+                })}
+              </h3>
+              <p className="text-xs text-muted-foreground max-w-sm mb-4">
+                {t("mailSettings.noAccounts")}
+              </p>
+              <Button
+                onClick={() => {
+                  resetForm();
+                  setIsDialogOpen(true);
+                }}
+                size="sm"
+                className="gap-2 rounded-xl text-xs font-semibold h-9 px-4 cursor-pointer"
+              >
+                <Plus className="size-3.5" />
+                {t("mailSettings.linkBtn")}
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Modern 3-Step Setup Wizard Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -472,9 +501,6 @@ export function RrMailSettingsTab({
                 <span>3</span>
               </div>
             </div>
-            <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-              {t("mailSettings.dialogDesc")}
-            </DialogDescription>
 
             {/* Step Progress Indicators */}
             <div className="grid grid-cols-3 gap-2 pt-3">
@@ -643,6 +669,6 @@ export function RrMailSettingsTab({
           </div>
         </DialogContent>
       </Dialog>
-    </Card>
+    </div>
   );
 }

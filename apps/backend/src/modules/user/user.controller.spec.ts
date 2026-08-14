@@ -132,11 +132,13 @@ describe('UserController', () => {
   describe('getPrivacy', () => {
     it('should call getPrivacySettings with the authenticated user username', async () => {
       const req = mockReq({ username: 'testuser' });
-      mockUserService.getPrivacySettings.mockResolvedValue({ profile: false });
+      mockUserService.getPrivacySettings.mockResolvedValue({
+        profile: 'public',
+      });
 
       const result = await controller.getPrivacy(req);
       expect(service.getPrivacySettings).toHaveBeenCalledWith('testuser');
-      expect(result).toEqual({ profile: false });
+      expect(result).toEqual({ profile: 'public' });
     });
   });
 

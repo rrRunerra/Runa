@@ -1,48 +1,68 @@
+"use client";
+
 import type React from "react";
-import { Link2, Trash2, Eye, EyeOff, Download, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Link2,
+  Trash2,
+  Eye,
+  EyeOff,
+  Download,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { useTranslation } from "react-i18next";
-import { ConnectionMetadata, ConnectionCapability } from "@runa/connections/metadata";
+import {
+  ConnectionMetadata,
+  ConnectionCapability,
+} from "@runa/connections/metadata";
+import type { Connection, ImportStatus } from "../rrConnectionsTab";
 
+/**
+ * Human-readable mapping of connection capability tags.
+ */
 const CAPABILITY_LABELS: Record<string, string> = {
   [ConnectionCapability.ANIME]: "Anime Tracking",
   [ConnectionCapability.MANGA]: "Manga Tracking",
   [ConnectionCapability.MOVIES]: "Movie Tracking",
   [ConnectionCapability.TV_SHOWS]: "TV Show Tracking",
   [ConnectionCapability.AUTH]: "OAuth Login",
+  [ConnectionCapability.SHOWCASE]: "Profile Showcase",
+  [ConnectionCapability.CALENDAR]: "Calendar Sync",
 };
 
-interface RrConnectionCardProps {
+/**
+ * Props for RrConnectionCard.
+ */
+export interface RrConnectionCardProps {
+  /** Metadata of the connection provider */
   provider: ConnectionMetadata;
-  conn?: {
-    id: string;
-    provider: string;
-    linkedUsername: string;
-    connectionId: string | null;
-    createdAt: string;
-    expiresAt: string | null;
-    private: boolean;
-    metadata?: any;
-  };
+  /** Active connection model if linked, or undefined */
+  conn?: Connection;
+  /** Whether an asynchronous connection action is currently pending for this card */
   loading: boolean;
-  importStatus?: {
-    status: "idle" | "processing" | "completed" | "failed";
-    progress?: number;
-    total?: number;
-    currentActivity?: string;
-    failedItems?: any[];
-    error?: string;
-  };
+  /** Live polling list import status */
+  importStatus?: ImportStatus;
+  /** Whether the JSON metadata preview is currently open */
   expandedMetadata: boolean;
+  /** Callback to toggle the JSON metadata view */
   toggleMetadata: () => void;
+  /** Callback to toggle visibility between public and private */
   handleTogglePrivate: () => void;
+  /** Callback to open the list import modal */
   openImportDialog: () => void;
+  /** Callback to initiate disconnection */
   handleDisconnect: () => void;
+  /** Callback to initiate OAuth connection */
   handleConnect: () => void;
 }
 
+/**
+ * Card displaying individual third-party provider status, linked account info,
+ * capabilities, privacy toggle, list import triggers, and disconnect actions.
+ */
 export function RrConnectionCard({
   provider,
   conn,
@@ -63,7 +83,7 @@ export function RrConnectionCard({
       ConnectionCapability.MANGA,
       ConnectionCapability.MOVIES,
       ConnectionCapability.TV_SHOWS,
-    ].includes(c)
+    ].includes(c),
   );
 
   return (
@@ -100,11 +120,11 @@ export function RrConnectionCard({
                   : t("connections.statusDisconnected")}
               </Badge>
             </div>
-            <span className="text-[11px] text-muted-foreground truncate">
-              {isConnected
-                ? `@${conn.linkedUsername}`
-                : provider.description}
-            </span>
+            {isConnected && (
+              <span className="text-[11px] text-muted-foreground truncate">
+                @{conn.linkedUsername}
+              </span>
+            )}
           </div>
         </div>
 
@@ -117,7 +137,7 @@ export function RrConnectionCard({
                   size="sm"
                   onClick={openImportDialog}
                   disabled={importStatus?.status === "processing"}
-                  className="h-8 px-2.5 rounded-lg text-xs font-semibold gap-1.5"
+                  className="h-8 px-2.5 rounded-lg text-xs font-semibold gap-1.5 cursor-pointer"
                 >
                   {importStatus?.status === "processing" ? (
                     <Spinner className="size-3" />
@@ -137,7 +157,7 @@ export function RrConnectionCard({
                 size="icon-sm"
                 onClick={handleTogglePrivate}
                 disabled={loading}
-                className="size-8 rounded-lg text-muted-foreground hover:text-foreground"
+                className="size-8 rounded-lg text-muted-foreground hover:text-foreground cursor-pointer"
                 title={
                   conn.private
                     ? t("connections.makePublic")

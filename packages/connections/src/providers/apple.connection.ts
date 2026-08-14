@@ -6,7 +6,6 @@ export default class AppleConnection extends BaseConnection {
   public readonly providerKey = ConnectionProvider.APPLE;
   public readonly requiredEnvKeys = ["APPLE_CLIENT_ID", "APPLE_CLIENT_SECRET"];
   public readonly capabilities = [
-    ConnectionCapability.AUTH,
     ConnectionCapability.SHOWCASE,
     ConnectionCapability.CALENDAR,
   ];

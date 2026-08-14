@@ -10,7 +10,11 @@ import {
 
 import { PrismaService } from '../../providers/database/prisma.service';
 
-import type { PrivacySettings, RegisterDeviceData } from './user.types';
+import {
+  type PrivacySettings,
+  type RegisterDeviceData,
+  isPrivateLevel,
+} from './user.types';
 import type {
   DeviceEntity,
   PasskeyEntity,
@@ -108,7 +112,7 @@ export class UserRepository {
         ? [
             this.prisma.client.aquilaAnimeUserListV2.updateMany({
               where: { username },
-              data: { private: dto.animeList },
+              data: { private: isPrivateLevel(dto.animeList) },
             }),
           ]
         : []),
@@ -116,7 +120,7 @@ export class UserRepository {
         ? [
             this.prisma.client.aquilaMangaUserListV2.updateMany({
               where: { username },
-              data: { private: dto.mangaList },
+              data: { private: isPrivateLevel(dto.mangaList) },
             }),
           ]
         : []),
@@ -124,7 +128,7 @@ export class UserRepository {
         ? [
             this.prisma.client.aquilaTvUserListV2.updateMany({
               where: { username },
-              data: { private: dto.tvList },
+              data: { private: isPrivateLevel(dto.tvList) },
             }),
           ]
         : []),
@@ -132,7 +136,7 @@ export class UserRepository {
         ? [
             this.prisma.client.aquilaMovieUserListV2.updateMany({
               where: { username },
-              data: { private: dto.movieList },
+              data: { private: isPrivateLevel(dto.movieList) },
             }),
           ]
         : []),
@@ -140,7 +144,7 @@ export class UserRepository {
         ? [
             this.prisma.client.aquilaGameUserListV2.updateMany({
               where: { username },
-              data: { private: dto.gameList },
+              data: { private: isPrivateLevel(dto.gameList) },
             }),
           ]
         : []),
@@ -148,7 +152,7 @@ export class UserRepository {
         ? [
             this.prisma.client.aquilaBookUserListV2.updateMany({
               where: { username },
-              data: { private: dto.bookList },
+              data: { private: isPrivateLevel(dto.bookList) },
             }),
           ]
         : []),
@@ -156,7 +160,7 @@ export class UserRepository {
         ? [
             this.prisma.client.connections.updateMany({
               where: { username },
-              data: { private: dto.connections },
+              data: { private: isPrivateLevel(dto.connections) },
             }),
           ]
         : []),

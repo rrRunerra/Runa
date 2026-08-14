@@ -1,14 +1,18 @@
+"use client";
+
 import * as React from "react";
 import { useTranslation } from "react-i18next";
-import { AlertTriangle, Info, HelpCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { AlertTriangle, HelpCircle } from "lucide-react";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 
@@ -16,21 +20,21 @@ import { cn } from "@/lib/utils";
  * Props for the generic RrConfirmDialog component.
  */
 export interface RrConfirmDialogProps {
-  /** Controls whether the confirmation dialog is visible */
+  /** Controls whether the confirmation alert dialog is visible */
   open: boolean;
-  /** Callback fired when open state changes */
+  /** Callback fired when the open state changes */
   onOpenChange: (open: boolean) => void;
   /** Title of the confirmation dialog */
   title: React.ReactNode;
   /** Optional detailed description explaining the consequences of the action */
   description?: React.ReactNode;
-  /** Label for the confirmation button (defaults to "Confirm") */
+  /** Label for the confirmation action button (defaults to localized "Confirm") */
   confirmText?: string;
-  /** Label for the cancel button (defaults to "Cancel") */
+  /** Label for the cancel button (defaults to localized "Cancel") */
   cancelText?: string;
-  /** Async or sync callback fired when user confirms the action */
+  /** Async or sync callback fired when the user confirms the action */
   onConfirm: () => Promise<void> | void;
-  /** Whether the confirm action is currently executing */
+  /** Whether the confirmation action is currently executing */
   isSubmitting?: boolean;
   /** Visual variant of the confirm button ("default" | "destructive" | "warning") */
   variant?: "default" | "destructive" | "warning";
@@ -41,8 +45,10 @@ export interface RrConfirmDialogProps {
 }
 
 /**
- * A reusable, pessimistic confirmation dialog component used across Runa.
- * Supports loading states, custom variants, icons, and inline descriptions.
+ * A reusable, pessimistic confirmation alert dialog component used across Runa.
+ * Built on top of Radix UI and shadcn AlertDialog primitives.
+ *
+ * Supports loading states, customizable variants, icons, and inline children descriptions.
  *
  * @example
  * ```tsx
@@ -71,7 +77,14 @@ export function RrConfirmDialog({
 }: RrConfirmDialogProps): React.JSX.Element {
   const { t } = useTranslation();
 
-  const handleConfirm = async (): Promise<void> => {
+  /**
+   * Handles user action confirmation.
+   * Prevents default Radix auto-close behavior so async workflows can complete.
+   */
+  const handleConfirm = async (
+    e: React.MouseEvent<HTMLButtonElement>,
+  ): Promise<void> => {
+    e.preventDefault();
     try {
       await onConfirm();
     } catch {
@@ -79,7 +92,9 @@ export function RrConfirmDialog({
     }
   };
 
-  // Determine icon based on variant if not explicitly provided
+  /**
+   * Determines the icon to display in the header based on the variant if not explicitly provided.
+   */
   const renderIcon = (): React.ReactNode => {
     if (icon) return icon;
     if (variant === "destructive" || variant === "warning") {
@@ -88,6 +103,9 @@ export function RrConfirmDialog({
     return <HelpCircle className="size-5" />;
   };
 
+  /**
+   * Resolves visual styles (colors, background badges, button styling) based on the variant.
+   */
   const getVariantStyles = (): {
     iconBg: string;
     iconColor: string;
@@ -121,51 +139,50 @@ export function RrConfirmDialog({
   const styles = getVariantStyles();
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-card border border-border shadow-2xl p-6 rounded-2xl text-left">
-        <DialogHeader className="pb-2">
-          <div
-            className={cn(
-              "size-10 rounded-xl border flex items-center justify-center mb-2 shrink-0 transition-colors",
-              styles.iconBg,
-              styles.iconColor,
-            )}
-          >
-            {renderIcon()}
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent className="w-[calc(100vw-2rem)] max-w-sm sm:max-w-sm bg-card border border-border shadow-2xl p-6 rounded-2xl text-left overflow-hidden">
+        <AlertDialogHeader className="flex flex-col gap-2 text-left sm:text-left items-start sm:items-start w-full min-w-0 pb-2">
+          <div className="flex items-center gap-3 w-full min-w-0">
+            <div
+              className={cn(
+                "size-9 rounded-xl border flex items-center justify-center shrink-0 transition-colors",
+                styles.iconBg,
+                styles.iconColor,
+              )}
+            >
+              {renderIcon()}
+            </div>
+            <AlertDialogTitle
+              className={cn(
+                "text-base font-bold text-left flex-1 min-w-0 wrap-break-word [text-wrap:normal]",
+                variant === "destructive"
+                  ? "text-destructive"
+                  : "text-foreground",
+              )}
+            >
+              {title}
+            </AlertDialogTitle>
           </div>
-          <DialogTitle
-            className={cn(
-              "text-md font-bold text-left",
-              variant === "destructive"
-                ? "text-destructive"
-                : "text-foreground",
-            )}
-          >
-            {title}
-          </DialogTitle>
           {description && (
-            <DialogDescription className="text-xs text-muted-foreground mt-1 text-left leading-relaxed">
+            <AlertDialogDescription className="text-xs text-muted-foreground text-left leading-relaxed w-full min-w-0 wrap-break-word [text-wrap:normal] md:[text-wrap:normal]">
               {description}
-            </DialogDescription>
+            </AlertDialogDescription>
           )}
-        </DialogHeader>
+        </AlertDialogHeader>
 
-        {children && <div className="py-2">{children}</div>}
+        {children && <div className="py-2 w-full min-w-0">{children}</div>}
 
-        <div className="flex justify-end gap-3 pt-4 border-t border-border/40 mt-2">
-          <Button
-            type="button"
-            variant="ghost"
+        <AlertDialogFooter className="flex flex-row justify-end gap-3 pt-4 border-t border-border/40 mt-2 w-full">
+          <AlertDialogCancel
+            disabled={isSubmitting}
             onClick={() => onOpenChange(false)}
             className="text-muted-foreground hover:text-foreground rounded-xl text-xs h-9 cursor-pointer"
-            disabled={isSubmitting}
           >
             {cancelText || t("cancel")}
-          </Button>
-          <Button
-            type="button"
-            onClick={handleConfirm}
+          </AlertDialogCancel>
+          <AlertDialogAction
             disabled={isSubmitting}
+            onClick={handleConfirm}
             className={cn(
               "rounded-xl px-5 text-xs h-9 cursor-pointer transition-all",
               styles.buttonClass,
@@ -174,14 +191,14 @@ export function RrConfirmDialog({
             {isSubmitting ? (
               <div className="flex items-center gap-2">
                 <Spinner className="size-3.5" />
-                <span>{t("processing", "Processing...")}</span>
+                <span>{t("processing")}</span>
               </div>
             ) : (
-              confirmText || t("confirm", "Confirm")
+              confirmText || t("confirm")
             )}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

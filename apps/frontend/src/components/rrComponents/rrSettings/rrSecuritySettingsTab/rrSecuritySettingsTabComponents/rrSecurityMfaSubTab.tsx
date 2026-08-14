@@ -53,7 +53,7 @@ export interface RrSecurityMfaSubTabProps {
   onConfirmRegenerateBackupCodes: () => Promise<void>;
   onInitiateDisableMfa: (
     method: "totp" | "email" | "passkey" | "all",
-    passkeyId?: string
+    passkeyId?: string,
   ) => void;
   onConfirmDisableMfa: () => Promise<void>;
   isConfirmDisableOpen: boolean;
@@ -120,7 +120,7 @@ export function RrSecurityMfaSubTab({
           "p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border transition-colors",
           isMfaActive
             ? "bg-success/5 border-success/30"
-            : "bg-warning/5 border-warning/30"
+            : "bg-warning/5 border-warning/30",
         )}
       >
         <div className="flex items-center gap-3">
@@ -129,7 +129,7 @@ export function RrSecurityMfaSubTab({
               "size-10 rounded-xl flex items-center justify-center shrink-0 border shadow-xs",
               isMfaActive
                 ? "bg-success/15 border-success/30 text-success"
-                : "bg-warning/15 border-warning/30 text-warning"
+                : "bg-warning/15 border-warning/30 text-warning",
             )}
           >
             {isMfaActive ? (
@@ -141,7 +141,10 @@ export function RrSecurityMfaSubTab({
           <div className="flex flex-col gap-0.5">
             <div className="flex items-center gap-2">
               <span className="text-sm font-bold text-foreground">
-                {t("securitySettings.twoFactorAuthTitle", "Two-Factor Authentication")}
+                {t(
+                  "securitySettings.twoFactorAuthTitle",
+                  "Two-Factor Authentication",
+                )}
               </span>
               <UiBadge
                 variant="outline"
@@ -149,7 +152,7 @@ export function RrSecurityMfaSubTab({
                   "text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border",
                   isMfaActive
                     ? "bg-success/15 text-success border-success/30"
-                    : "bg-warning/15 text-warning border-warning/30"
+                    : "bg-warning/15 text-warning border-warning/30",
                 )}
               >
                 {isMfaActive
@@ -161,11 +164,11 @@ export function RrSecurityMfaSubTab({
               {isMfaActive
                 ? t(
                     "securitySettings.mfaEnabledSummary",
-                    "Two-Factor Authentication is currently active for your account."
+                    "Two-Factor Authentication is currently active for your account.",
                   )
                 : t(
                     "securitySettings.mfaDisabledSummary",
-                    "Enhance your account security by enabling Two-Factor Authentication."
+                    "Enhance your account security by enabling Two-Factor Authentication.",
                   )}
             </p>
           </div>
@@ -181,8 +184,14 @@ export function RrSecurityMfaSubTab({
               className="text-xs h-8 px-3 rounded-xl font-semibold cursor-pointer shrink-0"
             >
               {hasBackupCodes
-                ? t("securitySettings.regenerateCodesBtn", "Regenerate Backup Codes")
-                : t("securitySettings.generateCodesBtn", "Generate Backup Codes")}
+                ? t(
+                    "securitySettings.regenerateCodesBtn",
+                    "Regenerate Backup Codes",
+                  )
+                : t(
+                    "securitySettings.generateCodesBtn",
+                    "Generate Backup Codes",
+                  )}
             </Button>
             <Button
               variant="outline"
@@ -202,10 +211,13 @@ export function RrSecurityMfaSubTab({
         {/* TOTP Method Card */}
         <RrMfaMethodCard
           icon={Smartphone}
-          title={t("securitySettings.authenticatorAppTitle", "Authenticator App")}
+          title={t(
+            "securitySettings.authenticatorAppTitle",
+            "Authenticator App",
+          )}
           description={t(
             "securitySettings.authenticatorAppDesc",
-            "Use an authenticator app (Google Authenticator, Bitwarden, Authy) to generate one-time security codes."
+            "Use an authenticator app (Google Authenticator, Bitwarden, Authy) to generate one-time security codes.",
           )}
           isEnabled={totpEnabled}
           badgeText={
@@ -225,7 +237,7 @@ export function RrSecurityMfaSubTab({
           title={t("securitySettings.emailAuthTitle", "Email Verification")}
           description={t(
             "securitySettings.emailAuthDesc",
-            "Receive one-time passcodes sent to your registered email address when signing in."
+            "Receive one-time code sent to your email address.",
           )}
           isEnabled={emailMfaEnabled}
           badgeText={
@@ -249,12 +261,12 @@ export function RrSecurityMfaSubTab({
             </div>
             <div className="flex flex-col gap-0.5">
               <span className="text-sm font-bold text-foreground">
-                {t("securitySettings.passkeysTitle", "Passkeys (WebAuthn)")}
+                {t("securitySettings.passkeysTitle", "Passkeys")}
               </span>
               <p className="text-xs text-muted-foreground">
                 {t(
                   "securitySettings.passkeysDesc",
-                  "Use biometrics, TouchID, FaceID, or hardware security keys to sign in instantly."
+                  "Use biometrics or hardware security keys to sign in instantly.",
                 )}
               </p>
             </div>
@@ -276,7 +288,10 @@ export function RrSecurityMfaSubTab({
         <div className="flex flex-col gap-2">
           {passkeys.length === 0 ? (
             <div className="p-4 text-center text-xs text-muted-foreground border border-dashed border-border rounded-xl">
-              {t("securitySettings.noPasskeysRegistered", "No passkeys registered yet.")}
+              {t(
+                "securitySettings.noPasskeysRegistered",
+                "No passkeys registered yet.",
+              )}
             </div>
           ) : (
             passkeys.map((pk) => (
@@ -358,16 +373,19 @@ export function RrSecurityMfaSubTab({
       <RrConfirmDialog
         open={isConfirmDisableOpen}
         onOpenChange={setIsConfirmDisableOpen}
-        title={t("securitySettings.disableMfaConfirmTitle", "Disable Authentication Method")}
+        title={t(
+          "securitySettings.disableMfaConfirmTitle",
+          "Disable Authentication Method",
+        )}
         description={
           disableMethod === "all"
             ? t(
                 "securitySettings.disableAllMfaConfirmDesc",
-                "Are you sure you want to disable all Two-Factor Authentication methods for your account?"
+                "Are you sure you want to disable all Two-Factor Authentication methods for your account?",
               )
             : t(
                 "securitySettings.disableMethodConfirmDesc",
-                "Are you sure you want to disable this authentication method?"
+                "Are you sure you want to disable this authentication method?",
               )
         }
         confirmText={t("securitySettings.disableBtn", "Disable")}
@@ -382,11 +400,11 @@ export function RrSecurityMfaSubTab({
         onOpenChange={setIsConfirmRegenerateOpen}
         title={t(
           "securitySettings.regenerateCodesConfirmTitle",
-          "Regenerate Backup Codes"
+          "Regenerate Backup Codes",
         )}
         description={t(
           "securitySettings.regenerateCodesConfirmDesc",
-          "Generating new backup codes will immediately invalidate all existing recovery codes. Are you sure?"
+          "Generating new backup codes will immediately invalidate all existing recovery codes. Are you sure?",
         )}
         confirmText={t("securitySettings.regenerateBtn", "Regenerate")}
         variant="warning"

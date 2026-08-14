@@ -47,14 +47,6 @@ export const getLacertaSidebarConfig = (
         subtitle: t("lacerta.sidebarRecycleBin"),
         position: 4,
       },
-      {
-        label: t("lacerta.sidebarLacertaDrop"),
-        href: "/lacerta/drop",
-        preventRedirect: false,
-        icon: <Radio className="h-4 w-4" />,
-        subtitle: t("lacerta.sidebarDirectSharing"),
-        position: 5,
-      },
     ],
   },
   {

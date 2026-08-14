@@ -6,7 +6,6 @@ export default class XiaomiConnection extends BaseConnection {
   public readonly providerKey = ConnectionProvider.XIAOMI;
   public readonly requiredEnvKeys = ["XIAOMI_CLIENT_ID", "XIAOMI_CLIENT_SECRET"];
   public readonly capabilities = [
-    ConnectionCapability.AUTH,
     ConnectionCapability.SHOWCASE,
     ConnectionCapability.CALENDAR,
   ];

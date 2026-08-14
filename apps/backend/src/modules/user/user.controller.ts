@@ -18,7 +18,7 @@ import { Public } from '../../common/decorators/public.decorator';
 import { rrNotFoundException } from 'src/providers/error';
 import type { ExtendedRequest } from '../../common/guards/auth/auth.types';
 
-import { UserService, parsePrivacy } from './user.service';
+import { UserService, parsePrivacy, isPrivateLevel } from './user.service';
 import {
   CreateUserDto,
   UpdateUserDto,
@@ -333,7 +333,7 @@ export class UserController {
         string,
         string | number | boolean | null
       > | null,
-      private: privacy.profile,
+      private: isPrivateLevel(privacy.profile),
       connections: safeConnections,
     };
   }

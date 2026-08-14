@@ -7,8 +7,7 @@ import {
   InternalServerErrorException,
   Inject,
   forwardRef,
-} from '@nestjs/common';
-import { parsePrivacy } from '../user/user.service';
+} from "@nestjs/common";
 import { $Enums } from '@runa/database';
 import { MovieUpdateData, TvUpdateData } from '@runa/connections';
 import { PrismaService } from '../../providers/database/prisma.service';
@@ -33,6 +32,9 @@ import {
   SaveGameEntryDto,
   SaveBookEntryDto,
 } from './list.dto';
+import { from } from 'rxjs';
+import { parsePrivacy } from '../user/user.service';
+import { isPrivateLevel } from '../user/user.types';
 
 function toPrismaStatus(status: any): any {
   if (!status) return 'PLANNING';
@@ -416,7 +418,7 @@ export class ListService {
 
     const isOwner = requester?.toLowerCase() === username.toLowerCase();
     const privacy = parsePrivacy(owner.privacy);
-    if ((privacy.profile || privacy.animeList) && !isOwner) {
+    if ((isPrivateLevel(privacy.profile) || isPrivateLevel(privacy.animeList)) && !isOwner) {
       throw new ForbiddenException('This list is private');
     }
 
@@ -543,7 +545,7 @@ export class ListService {
         select: { privacy: true },
       });
       const privacy = parsePrivacy(user?.privacy);
-      const isPrivate = !!(privacy.profile || privacy.animeList);
+      const isPrivate = isPrivateLevel(privacy.profile) || isPrivateLevel(privacy.animeList);
 
       const animeId = Number(body.animeId);
 
@@ -772,7 +774,7 @@ export class ListService {
 
     const isOwner = requester?.toLowerCase() === username.toLowerCase();
     const privacy = parsePrivacy(owner.privacy);
-    if ((privacy.profile || privacy.mangaList) && !isOwner) {
+    if ((isPrivateLevel(privacy.profile) || isPrivateLevel(privacy.mangaList)) && !isOwner) {
       throw new ForbiddenException('This list is private');
     }
 
@@ -900,7 +902,7 @@ export class ListService {
         select: { privacy: true },
       });
       const privacy = parsePrivacy(user?.privacy);
-      const isPrivate = !!(privacy.profile || privacy.mangaList);
+      const isPrivate = isPrivateLevel(privacy.profile) || isPrivateLevel(privacy.mangaList);
 
       const mangaId = Number(body.mangaId);
 
@@ -1165,7 +1167,7 @@ export class ListService {
 
     const isOwner = requester?.toLowerCase() === username.toLowerCase();
     const privacy = parsePrivacy(owner.privacy);
-    if ((privacy.profile || privacy.movieList) && !isOwner) {
+    if ((isPrivateLevel(privacy.profile) || isPrivateLevel(privacy.movieList)) && !isOwner) {
       throw new ForbiddenException('This list is private');
     }
 
@@ -1286,7 +1288,7 @@ export class ListService {
         select: { privacy: true },
       });
       const privacy = parsePrivacy(user?.privacy);
-      const isPrivate = !!(privacy.profile || privacy.movieList);
+      const isPrivate = isPrivateLevel(privacy.profile) || isPrivateLevel(privacy.movieList);
 
       const movieId = Number(body.movieId);
 
@@ -1490,7 +1492,7 @@ export class ListService {
 
     const isOwner = requester?.toLowerCase() === username.toLowerCase();
     const privacy = parsePrivacy(owner.privacy);
-    if ((privacy.profile || privacy.tvList) && !isOwner) {
+    if ((isPrivateLevel(privacy.profile) || isPrivateLevel(privacy.tvList)) && !isOwner) {
       throw new ForbiddenException('This list is private');
     }
 
@@ -1641,7 +1643,7 @@ export class ListService {
         select: { privacy: true },
       });
       const privacy = parsePrivacy(user?.privacy);
-      const isPrivate = !!(privacy.profile || privacy.tvList);
+      const isPrivate = isPrivateLevel(privacy.profile) || isPrivateLevel(privacy.tvList);
 
       const tvId = Number(body.tvId);
 
@@ -1901,7 +1903,7 @@ export class ListService {
 
     const isOwner = requester?.toLowerCase() === username.toLowerCase();
     const privacy = parsePrivacy(owner.privacy);
-    if ((privacy.profile || (privacy as any).gameList) && !isOwner) {
+    if ((isPrivateLevel(privacy.profile) || isPrivateLevel(privacy.gameList)) && !isOwner) {
       throw new ForbiddenException('This list is private');
     }
 
@@ -2024,7 +2026,7 @@ export class ListService {
         select: { privacy: true },
       });
       const privacy = parsePrivacy(user?.privacy);
-      const isPrivate = !!(privacy.profile || (privacy as any).gameList);
+      const isPrivate = isPrivateLevel(privacy.profile) || isPrivateLevel(privacy.gameList);
 
       const gameId = Number(body.gameId);
 
@@ -2201,7 +2203,7 @@ export class ListService {
 
     const isOwner = requester?.toLowerCase() === username.toLowerCase();
     const privacy = parsePrivacy(owner.privacy);
-    if ((privacy.profile || (privacy as any).bookList) && !isOwner) {
+    if ((isPrivateLevel(privacy.profile) || isPrivateLevel(privacy.bookList)) && !isOwner) {
       throw new ForbiddenException('This list is private');
     }
 
@@ -2321,7 +2323,7 @@ export class ListService {
         select: { privacy: true },
       });
       const privacy = parsePrivacy(user?.privacy);
-      const isPrivate = !!(privacy.profile || (privacy as any).bookList);
+      const isPrivate = isPrivateLevel(privacy.profile) || isPrivateLevel(privacy.bookList);
 
       const bookId = Number(body.bookId);
 
@@ -3189,7 +3191,7 @@ export class ListService {
 
     const isOwner = requester?.toLowerCase() === username.toLowerCase();
     const privacy = parsePrivacy(owner.privacy);
-    if ((privacy.profile || (privacy as any)[privacyKey]) && !isOwner) {
+    if ((isPrivateLevel(privacy.profile) || isPrivateLevel((privacy as any)[privacyKey])) && !isOwner) {
       throw new ForbiddenException('This list is private');
     }
 

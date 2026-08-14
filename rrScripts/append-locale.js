@@ -70,14 +70,9 @@ async function run() {
 
   const otherLangs = Object.keys(allLocales).filter(lang => lang !== 'en');
 
-  // Check for --batch argument or automatically apply pending keys if any
-  // format
-    //   "aquila.noCharacters": {
-    //   "cs": "Žádné informace o postavách", "de": "Keine Charakterinformationen verfügbar", "en": "No character information available", "es": "No hay información de personajes disponible", "fi": "Ei hahmo-tietoja saatavilla", "ja": "キャラクター情報はありません", "ko": "캐릭터 정보가 없습니다", "ms": "Tiada maklumat watak tersedia", "no": "Ingen karakterinformasjon tilgjengelig", "pl": "Brak dostępnych informacji o postaciach", "ru": "Информация о персонажах отсутствует", "th": "ไม่มีข้อมูลตัวละคร", "tr": "Karakter bilgisi bulunmuyor", "vi": "Không có thông tin nhân vật", "zh-CN": "暂无角色信息", "zh-TW": "暫無角色資訊"
-    // }
   const batchData = {
-
-  };
+ 
+};
 
   const isBatchRun = process.argv.includes('--batch');
   if (isBatchRun) {

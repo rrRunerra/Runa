@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@runa/database';
 import { CacheService } from '../../providers/cache/cache.service';
-import { parsePrivacy } from '../user/user.service';
+import { parsePrivacy, isPrivateLevel } from '../user/user.service';
 import { StatsRepository } from './stats.repository';
 import type {
   AnimeListEntry,
@@ -189,13 +189,13 @@ export class StatsService {
     const privacy = parsePrivacy(owner.privacy);
 
     // If the profile itself is private and viewer is not the owner, hide everything
-    if (privacy.profile && !isOwner(req, owner.id)) {
+    if (isPrivateLevel(privacy.profile) && !isOwner(req, owner.id)) {
       throw new NotFoundException(`User "${username}" not found`);
     }
 
     // Check the specific media type's privacy
-    const mediaPrivacyKey = `${mediaType}List` as keyof typeof privacy;
-    const isMediaPrivate = privacy[mediaPrivacyKey] === true;
+    const mediaPrivacyKey = `${mediaType}List`;
+    const isMediaPrivate = isPrivateLevel(privacy[mediaPrivacyKey]);
 
     if (isMediaPrivate && !isOwner(req, owner.id)) {
       throw new NotFoundException(`User "${username}" not found`);

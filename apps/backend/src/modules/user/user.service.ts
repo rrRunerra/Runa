@@ -22,7 +22,13 @@ import { MailService } from '../../providers/mail/mail.service';
 import { FilesService } from '../files/files.service';
 
 import { UserRepository } from './user.repository';
-import type { PrivacySettings, RegisterDeviceData } from './user.types';
+import {
+  type PrivacySettings,
+  type PrivacyLevel,
+  type RegisterDeviceData,
+  normalizePrivacyLevel,
+  isPrivateLevel,
+} from './user.types';
 import type {
   TotpSetupEntity,
   PasskeyEntity,
@@ -156,29 +162,35 @@ const RESERVED_KEYWORDS = new Set([
   'is',
 ]);
 
+export { normalizePrivacyLevel, isPrivateLevel };
+
+export const DEFAULT_PRIVACY_SETTINGS: PrivacySettings = {
+  profile: 'public',
+  friends: 'public',
+  animeList: 'public',
+  mangaList: 'public',
+  tvList: 'public',
+  movieList: 'public',
+  gameList: 'public',
+  bookList: 'public',
+  connections: 'public',
+};
+
 export function parsePrivacy(privacy: unknown): PrivacySettings {
+  const result: PrivacySettings = { ...DEFAULT_PRIVACY_SETTINGS };
+
   if (privacy && typeof privacy === 'object') {
-    const p = privacy as Record<string, unknown>;
-    return {
-      profile: p.profile === true,
-      animeList: p.animeList === true,
-      mangaList: p.mangaList === true,
-      tvList: p.tvList === true,
-      movieList: p.movieList === true,
-      connections: p.connections === true,
-      friends: p.friends === true,
-    };
+    const raw = privacy as Record<string, unknown>;
+    for (const [key, value] of Object.entries(raw)) {
+      if (value !== undefined && value !== null) {
+        result[key] = normalizePrivacyLevel(value);
+      }
+    }
   }
-  return {
-    profile: false,
-    animeList: false,
-    mangaList: false,
-    tvList: false,
-    movieList: false,
-    connections: false,
-    friends: false,
-  };
+
+  return result;
 }
+
 
 // ---------------------------------------------------------------------------
 // Cache TTL constants (seconds)
@@ -438,14 +450,15 @@ export class UserService {
 
     const currentPrivacy = parsePrivacy(user.privacy);
     const updatedPrivacy: PrivacySettings = {
-      profile: dto.profile ?? currentPrivacy.profile,
-      animeList: dto.animeList ?? currentPrivacy.animeList,
-      mangaList: dto.mangaList ?? currentPrivacy.mangaList,
-      tvList: dto.tvList ?? currentPrivacy.tvList,
-      movieList: dto.movieList ?? currentPrivacy.movieList,
-      connections: dto.connections ?? currentPrivacy.connections,
-      friends: dto.friends ?? currentPrivacy.friends,
+      ...currentPrivacy,
     };
+
+    // Dynamically apply and normalize all privacy settings from incoming DTO
+    for (const [key, val] of Object.entries(dto)) {
+      if (val !== undefined) {
+        updatedPrivacy[key] = normalizePrivacyLevel(val);
+      }
+    }
 
     await this.userRepository.updatePrivacySettings(
       userId,
@@ -454,9 +467,10 @@ export class UserService {
       dto,
     );
 
-    await this.cacheService.del(`user:privacy:${user.username}`);
+    await this.cacheService.del(`user:privacy:${user.username.toLowerCase()}`);
     return { success: true };
   }
+
 
   // ---------------------------------------------------------------------------
   // MFA — TOTP

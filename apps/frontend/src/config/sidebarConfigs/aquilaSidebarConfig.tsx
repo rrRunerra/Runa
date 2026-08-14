@@ -160,14 +160,6 @@ export const getAquilaSidebarConfig = (
         subtitle: t("sidebarBrowse"),
         children: [
           {
-            dataKey: "Search",
-            label: t("sidebarSearch"),
-            href: "/aquila/browse",
-            preventRedirect: false,
-            subtitle: t("sidebarSearch"),
-            icon: <Search className="h-3.5 w-3.5" />,
-          },
-          {
             dataKey: "Rankings",
             label: t("sidebarRankings"),
             href: "/aquila/rankings",

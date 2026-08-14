@@ -18,7 +18,6 @@ import {
   Check,
   Eye,
   EyeOff,
-  AlertTriangle,
   Clock,
 } from "lucide-react";
 
@@ -32,7 +31,6 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Card,
   CardHeader,
@@ -49,16 +47,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
   Empty,
   EmptyHeader,
   EmptyMedia,
@@ -66,34 +54,74 @@ import {
   EmptyDescription,
 } from "@/components/ui/empty";
 import { Field, FieldLabel } from "@/components/ui/field";
+import { RrConfirmDialog } from "@/components/rrComponents/rrConfirmDialog";
+import { rrApps, type rrApp } from "@/config/rrApps";
 
-import { rrApps } from "@/config/rrApps";
-
-interface ApiKeyEntry {
+/**
+ * Representation of a stored personal API key entry returned by the backend.
+ */
+export interface ApiKeyEntry {
+  /** Unique identifier of the API key */
   id: string;
+  /** Human-readable label given to the key */
   name: string;
+  /** Associated constellation application */
   app: string;
+  /** Obfuscated/truncated key string (e.g., 'polaris_7072275d...') */
   truncatedKey: string;
+  /** ISO timestamp when the key was generated */
   createdAt: string;
+  /** ISO timestamp when the key was last utilized, or null if unused */
   lastUsedAt: string | null;
+  /** ISO timestamp when the key expires, or null for indefinite */
   expiresAt: string | null;
 }
 
-interface RevealedKey {
+/**
+ * Newly created or regenerated API key containing the plaintext secret (only revealed once).
+ */
+export interface RevealedKey {
+  /** Unique identifier of the API key */
   id: string;
+  /** Human-readable label given to the key */
   name: string;
+  /** Full raw plaintext key token */
   key: string;
+  /** Associated constellation application */
   app?: string;
+  /** Whether the key was regenerated rather than newly created */
   isRegenerate?: boolean;
 }
 
+/**
+ * Props for the RrApiKeysTab component.
+ */
 export interface RrApiKeysTabProps {
-  /** Callback to close parent settings modal */
+  /** Callback fired when the parent settings modal requests an open state change */
   onOpenChange: (open: boolean) => void;
 }
 
 /**
- * Component managing API Keys creation, expiration, regeneration, and revocation.
+ * Expiration duration lookup table in days for standard options.
+ */
+const EXPIRATION_DAYS_MAP: Record<string, number> = {
+  "1d": 1,
+  "7d": 7,
+  "30d": 30,
+  "90d": 90,
+  "180d": 180,
+  "365d": 365,
+};
+
+/**
+ * API Keys Management Tab in Runa Settings.
+ *
+ * Allows users to:
+ * - View existing personal API keys with their expiration status and last used timestamp.
+ * - Create new scoped API keys with customizable expiration and app associations.
+ * - Securely view and copy newly generated or regenerated API keys.
+ * - Regenerate existing keys (invalidating old tokens).
+ * - Permanently revoke/delete API keys.
  */
 export const RrApiKeysTab = ({
   onOpenChange: _onOpenChange,
@@ -101,24 +129,30 @@ export const RrApiKeysTab = ({
   const { data: session } = useSession();
   const { t } = useTranslation();
 
+  // Creation & dialog states
   const [newKeyName, setNewKeyName] = useState<string>("");
   const [isCreating, setIsCreating] = useState<boolean>(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [confirmRegenerateId, setConfirmRegenerateId] = useState<string | null>(
-    null,
-  );
-  const [revealedKey, setRevealedKey] = useState<RevealedKey | null>(null);
-  const [keyCopied, setKeyCopied] = useState<boolean>(false);
-  const [keyVisible, setKeyVisible] = useState<boolean>(false);
-
-  // Expiration settings modal states
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState<boolean>(false);
   const [expiresOption, setExpiresOption] = useState<string>("never");
   const [customExpiresDays, setCustomExpiresDays] = useState<string>("30");
   const [appOption, setAppOption] = useState<string>("Polaris");
 
+  // Key revelation modal states
+  const [revealedKey, setRevealedKey] = useState<RevealedKey | null>(null);
+  const [keyCopied, setKeyCopied] = useState<boolean>(false);
+  const [keyVisible, setKeyVisible] = useState<boolean>(false);
+
+  // In-flight operation states
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
+
+  // Confirmation dialog targets
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmRegenerateId, setConfirmRegenerateId] = useState<string | null>(
+    null,
+  );
+
+  // SWR query for fetching API keys
   const {
     data: keys,
     isLoading: loading,
@@ -133,6 +167,19 @@ export const RrApiKeysTab = ({
     fetcher,
   );
 
+  /**
+   * Resets create modal fields back to defaults.
+   */
+  const resetCreateForm = useCallback((): void => {
+    setNewKeyName("");
+    setExpiresOption("never");
+    setCustomExpiresDays("30");
+    setAppOption("Polaris");
+  }, []);
+
+  /**
+   * Generates a new API Key with selected parameters.
+   */
   const handleCreate = useCallback(async (): Promise<void> => {
     if (!newKeyName.trim() || !session?.accessToken || isCreating) return;
 
@@ -143,21 +190,13 @@ export const RrApiKeysTab = ({
       if (expiresOption === "custom") {
         const parsed = parseInt(customExpiresDays, 10);
         if (isNaN(parsed) || parsed <= 0) {
-          toast.error("Please enter a valid number of days.");
+          toast.error(t("apiKeys.customDaysPlaceholder"));
           setIsCreating(false);
           return;
         }
         expiresInDays = parsed;
       } else {
-        const map: Record<string, number> = {
-          "1d": 1,
-          "7d": 7,
-          "30d": 30,
-          "90d": 90,
-          "180d": 180,
-          "365d": 365,
-        };
-        expiresInDays = map[expiresOption] || null;
+        expiresInDays = EXPIRATION_DAYS_MAP[expiresOption] || null;
       }
     }
 
@@ -171,22 +210,21 @@ export const RrApiKeysTab = ({
             Authorization: `Bearer ${session.accessToken}`,
           },
           body: JSON.stringify({
-            name: newKeyName.trim(),
+            name: newKeyName.trim().slice(0, 32),
             expiresInDays,
             app: appOption,
           }),
         },
       );
+
       if (!res.ok) {
         const errJson = await res.json().catch(() => null);
         throw new Error(errJson?.message || t("apiKeys.toastFailedCreate"));
       }
+
       const created = (await res.json()) as RevealedKey;
 
-      setNewKeyName("");
-      setExpiresOption("never");
-      setCustomExpiresDays("30");
-      setAppOption("Polaris");
+      resetCreateForm();
       setIsCreateDialogOpen(false);
       setRevealedKey({
         id: created.id,
@@ -211,10 +249,14 @@ export const RrApiKeysTab = ({
     expiresOption,
     customExpiresDays,
     appOption,
+    resetCreateForm,
     refetch,
     t,
   ]);
 
+  /**
+   * Permanently revokes/deletes an API Key.
+   */
   const handleDelete = useCallback(
     async (id: string): Promise<void> => {
       if (!session?.accessToken) return;
@@ -231,6 +273,7 @@ export const RrApiKeysTab = ({
             },
           },
         );
+
         if (!res.ok) {
           const errJson = await res.json().catch(() => null);
           throw new Error(errJson?.message || t("apiKeys.toastFailedDelete"));
@@ -249,6 +292,9 @@ export const RrApiKeysTab = ({
     [session, refetch, t],
   );
 
+  /**
+   * Regenerates an existing API Key, invalidating the previous token.
+   */
   const handleRegenerate = useCallback(
     async (id: string, name: string): Promise<void> => {
       if (!session?.accessToken) return;
@@ -265,12 +311,14 @@ export const RrApiKeysTab = ({
             },
           },
         );
+
         if (!res.ok) {
           const errJson = await res.json().catch(() => null);
           throw new Error(
             errJson?.message || t("apiKeys.toastFailedRegenerate"),
           );
         }
+
         const regenerated = (await res.json()) as RevealedKey;
 
         setRevealedKey({
@@ -296,6 +344,9 @@ export const RrApiKeysTab = ({
     [session, refetch, t],
   );
 
+  /**
+   * Copies the revealed key secret to the clipboard.
+   */
   const handleCopyKey = useCallback(async (): Promise<void> => {
     if (!revealedKey?.key) return;
     await navigator.clipboard.writeText(revealedKey.key);
@@ -303,33 +354,34 @@ export const RrApiKeysTab = ({
     setTimeout(() => setKeyCopied(false), 2500);
   }, [revealedKey]);
 
-  const formatLastUsed = (lastUsedAt: string | null): string => {
-    if (!lastUsedAt) return t("apiKeys.never");
-    return formatDistanceToNow(new Date(lastUsedAt), { addSuffix: true });
-  };
+  /**
+   * Formats the last used timestamp into a human-readable relative string.
+   */
+  const formatLastUsed = useCallback(
+    (lastUsedAt: string | null): string => {
+      if (!lastUsedAt) return t("apiKeys.never");
+      return formatDistanceToNow(new Date(lastUsedAt), { addSuffix: true });
+    },
+    [t],
+  );
 
   const confirmDeleteKey = keys?.find((k) => k.id === confirmDeleteId);
   const confirmRegenerateKey = keys?.find((k) => k.id === confirmRegenerateId);
 
   return (
     <>
-      <div className="flex flex-col p-2 text-left">
-        <Card className="flex flex-col h-132.5">
+      <div className="flex-1 flex flex-col min-h-0 h-full text-left">
+        <Card className="flex-1 flex flex-col min-h-0 h-full">
           <CardHeader className="flex flex-row items-center justify-between pb-3 shrink-0">
             <div className="flex flex-col gap-1 min-w-0">
               <CardTitle className="flex items-center gap-2">
                 <KeyRound className="size-4 text-primary" />
                 {t("apiKeys.title")}
               </CardTitle>
-              <CardDescription className="truncate max-w-70 xs:max-w-[400px] sm:max-w-none">
-                {t("apiKeys.description")}
-              </CardDescription>
             </div>
             <Button
               onClick={() => {
-                setNewKeyName("");
-                setExpiresOption("never");
-                setCustomExpiresDays("30");
+                resetCreateForm();
                 setIsCreateDialogOpen(true);
               }}
               size="sm"
@@ -383,7 +435,7 @@ export const RrApiKeysTab = ({
 
                         <div className="flex flex-col gap-1 min-w-0">
                           <div className="flex items-center gap-2 min-w-0">
-                            <p className="text-sm font-semibold text-foreground truncate">
+                            <p className="text-sm font-semibold text-foreground truncate max-w-xs sm:max-w-sm md:max-w-md">
                               {apiKey.name}
                             </p>
                             <Badge
@@ -493,42 +545,44 @@ export const RrApiKeysTab = ({
         </Card>
       </div>
 
+      {/* Create Key Modal Dialog */}
       <Dialog
         open={isCreateDialogOpen}
         onOpenChange={(open) => {
           setIsCreateDialogOpen(open);
           if (!open) {
-            setNewKeyName("");
-            setExpiresOption("never");
-            setCustomExpiresDays("30");
-            setAppOption("Polaris");
+            resetCreateForm();
           }
         }}
       >
-        <DialogContent className="max-w-md text-left">
-          <DialogHeader>
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md text-left overflow-hidden">
+          <DialogHeader className="w-full min-w-0">
             <DialogTitle>{t("apiKeys.createTitle")}</DialogTitle>
-            <DialogDescription>{t("apiKeys.createDesc")}</DialogDescription>
           </DialogHeader>
 
-          <div className="flex flex-col gap-4 py-2">
-            <Field>
-              <FieldLabel htmlFor="new-api-key-name">
-                {t("apiKeys.keyNameLabel")}
-              </FieldLabel>
+          <div className="flex flex-col gap-4 py-2 w-full min-w-0">
+            <Field className="w-full min-w-0">
+              <div className="flex items-center justify-between">
+                <FieldLabel htmlFor="new-api-key-name">
+                  {t("apiKeys.keyNameLabel")}
+                </FieldLabel>
+                <span className="text-[10px] text-muted-foreground font-mono">
+                  {newKeyName.length}/32
+                </span>
+              </div>
               <Input
                 id="new-api-key-name"
                 placeholder={t("apiKeys.keyNamePlaceholder")}
                 value={newKeyName}
-                onChange={(e) => setNewKeyName(e.target.value)}
+                onChange={(e) => setNewKeyName(e.target.value.slice(0, 32))}
                 onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-                maxLength={64}
+                maxLength={32}
                 disabled={isCreating}
-                className="h-9 text-sm"
+                className="h-9 text-sm w-full"
               />
             </Field>
 
-            <Field>
+            <Field className="w-full min-w-0">
               <FieldLabel htmlFor="api-key-app">
                 {t("apiKeys.associatedApp")}
               </FieldLabel>
@@ -539,7 +593,7 @@ export const RrApiKeysTab = ({
                 disabled={isCreating}
                 className="w-full"
               >
-                {rrApps.map((app: any) => (
+                {rrApps.map((app: rrApp) => (
                   <NativeSelectOption key={app.name} value={app.name}>
                     {app.name}
                   </NativeSelectOption>
@@ -547,11 +601,11 @@ export const RrApiKeysTab = ({
               </NativeSelect>
             </Field>
 
-            <Field>
+            <Field className="w-full min-w-0">
               <FieldLabel htmlFor="api-key-expiration">
                 {t("apiKeys.expiration")}
               </FieldLabel>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 w-full min-w-0">
                 <NativeSelect
                   id="api-key-expiration"
                   value={expiresOption}
@@ -605,7 +659,7 @@ export const RrApiKeysTab = ({
             </Field>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="w-full flex justify-end gap-2">
             <Button
               variant="outline"
               onClick={() => setIsCreateDialogOpen(false)}
@@ -625,6 +679,7 @@ export const RrApiKeysTab = ({
         </DialogContent>
       </Dialog>
 
+      {/* Plaintext Key Revelation Modal Dialog */}
       <Dialog
         open={!!revealedKey}
         onOpenChange={(open) => {
@@ -635,34 +690,38 @@ export const RrApiKeysTab = ({
           }
         }}
       >
-        <DialogContent className="max-w-lg text-left">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <KeyRound className="size-4 text-primary" />
-              {revealedKey?.isRegenerate
-                ? t("apiKeys.keyRegenerated")
-                : t("apiKeys.keyCreated")}
-              {" — "}
-              {revealedKey?.name} ({revealedKey?.app})
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-lg text-left overflow-hidden">
+          <DialogHeader className="w-full min-w-0">
+            <DialogTitle className="flex items-start gap-2.5 text-base font-bold text-left w-full min-w-0">
+              <KeyRound className="size-4 text-primary shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0 wrap-break-word leading-snug">
+                <span>
+                  {revealedKey?.isRegenerate
+                    ? t("apiKeys.keyRegenerated")
+                    : t("apiKeys.keyCreated")}
+                  {" — "}
+                </span>
+                <span className="text-foreground">{revealedKey?.name}</span>
+                {revealedKey?.app && (
+                  <span className="text-muted-foreground font-normal">
+                    {" "}
+                    ({revealedKey.app})
+                  </span>
+                )}
+              </div>
             </DialogTitle>
-            <DialogDescription>{t("apiKeys.revealDesc")}</DialogDescription>
           </DialogHeader>
 
-          <div className="flex flex-col gap-4">
-            <Alert>
-              <AlertTriangle />
-              <AlertDescription>{t("apiKeys.revealWarning")}</AlertDescription>
-            </Alert>
-
-            <Field>
+          <div className="flex flex-col gap-4 py-2 w-full min-w-0">
+            <Field className="w-full min-w-0">
               <FieldLabel>{t("apiKeys.revealLabel")}</FieldLabel>
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1">
+              <div className="flex items-center gap-2 w-full min-w-0">
+                <div className="relative flex-1 min-w-0">
                   <Input
                     readOnly
                     type={keyVisible ? "text" : "password"}
                     value={revealedKey?.key ?? ""}
-                    className="font-mono text-xs pr-9"
+                    className="font-mono text-xs pr-9 w-full min-w-0"
                     onClick={(e) => (e.target as HTMLInputElement).select()}
                   />
                   <button
@@ -703,7 +762,7 @@ export const RrApiKeysTab = ({
             </Field>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="w-full flex justify-end">
             <Button
               variant="outline"
               onClick={() => {
@@ -719,69 +778,62 @@ export const RrApiKeysTab = ({
         </DialogContent>
       </Dialog>
 
-      <AlertDialog
+      {/* Revoke API Key Confirmation Dialog */}
+      <RrConfirmDialog
         open={!!confirmDeleteId}
-        onOpenChange={(open) => !open && setConfirmDeleteId(null)}
-      >
-        <AlertDialogContent className="">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("apiKeys.deleteTitle")}</AlertDialogTitle>
-            <AlertDialogDescription className="text-left text-wrap w-full">
+        onOpenChange={(open: boolean) => {
+          if (!open) setConfirmDeleteId(null);
+        }}
+        title={t("apiKeys.deleteTitle")}
+        description={
+          confirmDeleteKey ? (
+            <span className="wrap-break-word">
               {t("apiKeys.deleteConfirmDesc1")}{" "}
-              <strong className="text-primary">
-                &ldquo;{confirmDeleteKey?.name}&rdquo;
+              <strong className="text-primary font-semibold break-all">
+                &ldquo;{confirmDeleteKey.name}&rdquo;
               </strong>
               {t("apiKeys.deleteConfirmDesc2")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="w-full">
-            <AlertDialogCancel className="cursor-pointer">
-              {t("cancel")}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => confirmDeleteId && handleDelete(confirmDeleteId)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 cursor-pointer"
-            >
-              {t("apiKeys.deleteConfirmBtn")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </span>
+          ) : null
+        }
+        confirmText={t("apiKeys.deleteConfirmBtn")}
+        variant="destructive"
+        isSubmitting={deletingId !== null}
+        onConfirm={() => {
+          if (confirmDeleteId) return handleDelete(confirmDeleteId);
+        }}
+      />
 
-      <AlertDialog
+      {/* Regenerate API Key Confirmation Dialog */}
+      <RrConfirmDialog
         open={!!confirmRegenerateId}
-        onOpenChange={(open) => !open && setConfirmRegenerateId(null)}
-      >
-        <AlertDialogContent className="text-left">
-          <AlertDialogHeader>
-            <AlertDialogTitle>{t("apiKeys.regenerateTitle")}</AlertDialogTitle>
-            <AlertDialogDescription className="text-left text-wrap w-full">
+        onOpenChange={(open: boolean) => {
+          if (!open) setConfirmRegenerateId(null);
+        }}
+        title={t("apiKeys.regenerateTitle")}
+        description={
+          confirmRegenerateKey ? (
+            <span className="wrap-break-word">
               {t("apiKeys.regenerateConfirmDesc1")}{" "}
-              <strong className="text-primary">
-                &ldquo;{confirmRegenerateKey?.name}&rdquo;
+              <strong className="text-primary font-semibold break-all">
+                &ldquo;{confirmRegenerateKey.name}&rdquo;
               </strong>{" "}
               {t("apiKeys.regenerateConfirmDesc2")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="w-full">
-            <AlertDialogCancel className="cursor-pointer">
-              {t("cancel")}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() =>
-                confirmRegenerateId &&
-                handleRegenerate(
-                  confirmRegenerateId,
-                  confirmRegenerateKey?.name ?? "",
-                )
-              }
-              className="cursor-pointer"
-            >
-              {t("apiKeys.regenerateConfirmBtn")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </span>
+          ) : null
+        }
+        confirmText={t("apiKeys.regenerateConfirmBtn")}
+        variant="default"
+        isSubmitting={regeneratingId !== null}
+        onConfirm={() => {
+          if (confirmRegenerateId && confirmRegenerateKey) {
+            return handleRegenerate(
+              confirmRegenerateId,
+              confirmRegenerateKey.name,
+            );
+          }
+        }}
+      />
     </>
   );
 };

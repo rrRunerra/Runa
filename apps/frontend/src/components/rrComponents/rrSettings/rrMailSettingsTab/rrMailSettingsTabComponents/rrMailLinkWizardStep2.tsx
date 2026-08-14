@@ -119,10 +119,14 @@ export function RrMailLinkWizardStep2({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
         {/* IMAP Box */}
         <div className="p-3.5 rounded-xl border border-border/60 bg-muted/20 flex flex-col gap-3">
-          <span className="text-xs font-bold text-foreground">IMAP Settings (Incoming)</span>
+          <span className="text-xs font-bold text-foreground">
+            {t("mailSettings.wizard.incomingImap", "IMAP Settings (Incoming)")}
+          </span>
           <div className="grid grid-cols-3 gap-2">
             <div className="col-span-2 flex flex-col gap-1">
-              <Label className="text-[11px] text-muted-foreground">Host</Label>
+              <Label className="text-[11px] text-muted-foreground">
+                {t("mailSettings.wizard.host", "Host")}
+              </Label>
               <Input
                 value={imapHost}
                 onChange={(e) => onChangeImapHost(e.target.value)}
@@ -131,7 +135,9 @@ export function RrMailLinkWizardStep2({
               />
             </div>
             <div className="flex flex-col gap-1">
-              <Label className="text-[11px] text-muted-foreground">Port</Label>
+              <Label className="text-[11px] text-muted-foreground">
+                {t("mailSettings.wizard.port", "Port")}
+              </Label>
               <Input
                 value={imapPort}
                 onChange={(e) => onChangeImapPort(e.target.value)}
@@ -141,17 +147,23 @@ export function RrMailLinkWizardStep2({
             </div>
           </div>
           <div className="flex items-center justify-between pt-1">
-            <span className="text-xs text-muted-foreground">SSL / TLS</span>
+            <span className="text-xs text-muted-foreground">
+              {t("mailSettings.wizard.sslTls", "SSL / TLS")}
+            </span>
             <Switch checked={imapSecure} onCheckedChange={onChangeImapSecure} />
           </div>
         </div>
 
         {/* SMTP Box */}
         <div className="p-3.5 rounded-xl border border-border/60 bg-muted/20 flex flex-col gap-3">
-          <span className="text-xs font-bold text-foreground">SMTP Settings (Outgoing)</span>
+          <span className="text-xs font-bold text-foreground">
+            {t("mailSettings.wizard.outgoingSmtp", "SMTP Settings (Outgoing)")}
+          </span>
           <div className="grid grid-cols-3 gap-2">
             <div className="col-span-2 flex flex-col gap-1">
-              <Label className="text-[11px] text-muted-foreground">Host</Label>
+              <Label className="text-[11px] text-muted-foreground">
+                {t("mailSettings.wizard.host", "Host")}
+              </Label>
               <Input
                 value={smtpHost}
                 onChange={(e) => onChangeSmtpHost(e.target.value)}
@@ -160,7 +172,9 @@ export function RrMailLinkWizardStep2({
               />
             </div>
             <div className="flex flex-col gap-1">
-              <Label className="text-[11px] text-muted-foreground">Port</Label>
+              <Label className="text-[11px] text-muted-foreground">
+                {t("mailSettings.wizard.port", "Port")}
+              </Label>
               <Input
                 value={smtpPort}
                 onChange={(e) => onChangeSmtpPort(e.target.value)}
@@ -170,7 +184,9 @@ export function RrMailLinkWizardStep2({
             </div>
           </div>
           <div className="flex items-center justify-between pt-1">
-            <span className="text-xs text-muted-foreground">SSL / TLS</span>
+            <span className="text-xs text-muted-foreground">
+              {t("mailSettings.wizard.sslTls", "SSL / TLS")}
+            </span>
             <Switch checked={smtpSecure} onCheckedChange={onChangeSmtpSecure} />
           </div>
         </div>

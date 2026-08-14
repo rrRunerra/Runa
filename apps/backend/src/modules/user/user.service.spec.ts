@@ -50,10 +50,12 @@ describe('UserService', () => {
       delete: jest.fn(),
       findMany: jest.fn(),
     },
-    aquilaAnimeUserList: { updateMany: jest.fn() },
-    aquilaMangaUserList: { updateMany: jest.fn() },
-    aquilaTvUserList: { updateMany: jest.fn() },
-    aquilaMovieUserList: { updateMany: jest.fn() },
+    aquilaAnimeUserListV2: { updateMany: jest.fn() },
+    aquilaMangaUserListV2: { updateMany: jest.fn() },
+    aquilaTvUserListV2: { updateMany: jest.fn() },
+    aquilaMovieUserListV2: { updateMany: jest.fn() },
+    aquilaGameUserListV2: { updateMany: jest.fn() },
+    aquilaBookUserListV2: { updateMany: jest.fn() },
     connections: { updateMany: jest.fn() },
     apiKey: {
       create: jest.fn(),
@@ -258,11 +260,12 @@ describe('UserService', () => {
 
     it('should get parsed privacy settings', async () => {
       mockPrismaClient.user.findUnique.mockResolvedValue({
-        privacy: { animeList: true },
+        privacy: { animeList: 'private', friends: 'friends' },
       });
       const result = await service.getPrivacySettings('testuser');
-      expect(result.animeList).toBe(true);
-      expect(result.profile).toBe(false);
+      expect(result.animeList).toBe('private');
+      expect(result.friends).toBe('friends');
+      expect(result.profile).toBe('public');
     });
 
     it('should update privacy settings and run transactional updates on list tables', async () => {
@@ -274,8 +277,8 @@ describe('UserService', () => {
       mockPrismaClient.$transaction.mockResolvedValue([]);
 
       await service.updatePrivacySettings('user-1', {
-        animeList: true,
-        profile: false,
+        animeList: 'private',
+        profile: 'public',
       });
 
       expect(mockPrismaClient.$transaction).toHaveBeenCalled();
@@ -298,10 +301,8 @@ describe('UserService', () => {
         'totpsecret',
         600,
       );
-      expect(result).toEqual({
-        secret: 'totpsecret',
-        otpauthUrl: 'otpauth://totp/Runa',
-      });
+      expect(result.secret).toBe('totpsecret');
+      expect(result.otpauthUrl).toContain('otpauth://totp/Runa');
     });
 
     it('should enable TOTP and generate backup codes if no MFA was active', async () => {

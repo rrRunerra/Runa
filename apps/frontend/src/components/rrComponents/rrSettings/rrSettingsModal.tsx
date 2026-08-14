@@ -41,7 +41,7 @@ import { RrAccountSettingsTab } from "./rrAccountSettingsTab/rrAccountSettingsTa
 import { RrSecuritySettingsTab } from "./rrSecuritySettingsTab/rrSecuritySettingsTab";
 import { RrPrivacySettingsTab } from "./rrPrivacySettingsTab/rrPrivacySettingsTab";
 import { RrConnectionsTab } from "./rrConnectionsTab/rrConnectionsTab";
-import { RrSidebarSettingsTab } from "./rrSidebarSettingsTab/rrSidebarSettingsTab";
+import { RrDockSettingsTab } from "./rrDockSettingsTab/rrDockSettingsTab";
 import { RrMailSettingsTab } from "./rrMailSettingsTab/rrMailSettingsTab";
 import { RrApiKeysTab } from "./rrApiKeysTab/rrApiKeysTab";
 import { RrListsTab } from "./rrListsTab/rrListsTab";
@@ -52,6 +52,7 @@ type rrCategory =
   | "account"
   | "connections"
   | "privacy"
+  | "dock"
   | "sidebar"
   | "security"
   | "mailAccounts"
@@ -98,8 +99,9 @@ export function SettingsDialog({
         case "security":
           setActiveCategory("security");
           break;
+        case "dock":
         case "sidebar":
-          setActiveCategory("sidebar");
+          setActiveCategory("dock");
           break;
         case "mailAccounts":
           setActiveCategory("mailAccounts");
@@ -287,16 +289,28 @@ export function SettingsDialog({
                       />
                     )}
                     {activeCategory === "privacy" && (
-                      <RrPrivacySettingsTab onOpenChange={onOpenChange} />
+                      <RrPrivacySettingsTab
+                        onOpenChange={onOpenChange}
+                        setFooterContent={setFooterContent}
+                      />
                     )}
                     {activeCategory === "connections" && (
-                      <RrConnectionsTab onOpenChange={onOpenChange} />
+                      <RrConnectionsTab
+                        onOpenChange={onOpenChange}
+                        setFooterContent={setFooterContent}
+                      />
                     )}
-                    {activeCategory === "sidebar" && (
-                      <RrSidebarSettingsTab onOpenChange={onOpenChange} />
+                    {(activeCategory === "dock" || (activeCategory as any) === "sidebar") && (
+                      <RrDockSettingsTab
+                        onOpenChange={onOpenChange}
+                        setFooterContent={setFooterContent}
+                      />
                     )}
                     {activeCategory === "mailAccounts" && (
-                      <RrMailSettingsTab onOpenChange={onOpenChange} />
+                      <RrMailSettingsTab
+                        onOpenChange={onOpenChange}
+                        setFooterContent={setFooterContent}
+                      />
                     )}
                     {activeCategory === "apiKeys" && (
                       <RrApiKeysTab onOpenChange={onOpenChange} />
@@ -305,6 +319,7 @@ export function SettingsDialog({
                       <RrListsTab
                         onOpenChange={onOpenChange}
                         setActiveCategory={setActiveCategory}
+                        setFooterContent={setFooterContent}
                       />
                     )}
                     {activeCategory === "arrServices" && (

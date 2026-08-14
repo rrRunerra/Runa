@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
@@ -10,28 +10,38 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useTranslation } from "react-i18next";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { RrConfirmDialog } from "@/components/rrComponents/rrConfirmDialog";
-import { RR_SETTINGS_API_ENDPOINTS, RR_SETTINGS_LIMITS } from "@/lib/constants";
+import { RrPillNav, type RrPillNavItem } from "@/components/rrComponents/rrPillNav";
+import { cn } from "@/lib/utils";
+import {
+  RR_SETTINGS_API_ENDPOINTS,
+  RR_SETTINGS_LIMITS,
+  RR_SETTINGS_STORAGE_KEYS,
+} from "@/lib/constants";
+import { rrApps, type rrApp } from "@/config/rrApps";
+import {
+  PROVIDERS_METADATA,
+  ConnectionCapability,
+  type ConnectionMetadata,
+} from "@runa/connections/metadata";
 
 // Sub-components
 import { RrConnectionCard } from "./rrConnectionsTabComponents/rrConnectionCard";
+import {
+  RrImportMediaDialog,
+  IMPORTABLE_CAPABILITIES,
+} from "./rrConnectionsTabComponents/rrImportMediaDialog";
+import {
+  RrFailedImportsDialog,
+  type FailedImportItem,
+} from "./rrConnectionsTabComponents/rrFailedImportsDialog";
 
-type Connection = {
+/**
+ * Model representation of an established connection returned from the backend.
+ */
+export interface Connection {
   id: string;
   provider: string;
   linkedUsername: string;
@@ -39,67 +49,95 @@ type Connection = {
   createdAt: string;
   expiresAt: string | null;
   private: boolean;
-  metadata?: any;
-};
+  metadata?: Record<string, unknown>;
+}
 
-import { rrApps } from "@/config/rrApps";
-import {
-  PROVIDERS_METADATA,
-  ConnectionCapability,
-} from "@runa/connections/metadata";
-
-const PROVIDERS = PROVIDERS_METADATA;
-
-const IMPORTABLE_CAPABILITIES: Record<string, { label: string; key: string }> =
-  {
-    [ConnectionCapability.ANIME]: { label: "Anime List", key: "anime" },
-    [ConnectionCapability.MANGA]: { label: "Manga List", key: "manga" },
-    [ConnectionCapability.MOVIES]: { label: "Movies List", key: "movie" },
-    [ConnectionCapability.TV_SHOWS]: { label: "TV Shows List", key: "tv" },
-  };
-
-type ImportStatus = {
+/**
+ * Polling import status payload from backend.
+ */
+export interface ImportStatus {
   status: "idle" | "processing" | "completed" | "failed";
   progress?: number;
   total?: number;
   currentActivity?: string;
-  failedItems?: any[];
+  failedItems?: FailedImportItem[];
   error?: string;
-};
-
-export interface RrConnectionsTabProps {
-  /** Callback to close parent settings modal */
-  onOpenChange: (open: boolean) => void;
 }
 
 /**
+ * Props for RrConnectionsTab.
+ */
+export interface RrConnectionsTabProps {
+  /** Callback to close the parent settings modal */
+  onOpenChange: (open: boolean) => void;
+  /** Optional callback to render controls inside the parent modal footer */
+  setFooterContent?: (content: React.ReactNode | null) => void;
+}
+
+const PROVIDERS = PROVIDERS_METADATA;
+
+/**
  * Main component managing third-party OAuth and list service connections.
- * Handles connecting, disconnecting, privacy toggling, and data import polling.
+ * Grouped into app sub-tabs (Aquila, Lynx, Polaris) with full vertical layout.
  */
 export function RrConnectionsTab({
   onOpenChange,
+  setFooterContent,
 }: RrConnectionsTabProps): React.JSX.Element {
   const { data: session } = useSession();
   const { t } = useTranslation();
+
   const [isActionLoading, setIsActionLoading] = useState<string | null>(null);
-  const [expandedMetadata, setExpandedMetadata] = useState<
-    Record<string, boolean>
-  >({});
-  const [importStatus, setImportStatus] = useState<
-    Record<string, ImportStatus>
-  >({});
+  const [expandedMetadata, setExpandedMetadata] = useState<Record<string, boolean>>({});
+  const [importStatus, setImportStatus] = useState<Record<string, ImportStatus>>({});
   const [showImportDialog, setShowImportDialog] = useState<string | null>(null);
   const [selectedMediaTypes, setSelectedMediaTypes] = useState<string[]>([]);
   const [failedImports, setFailedImports] = useState<{
     providerId: string;
-    items: any[];
+    items: FailedImportItem[];
   } | null>(null);
 
   // Disconnect Confirmation Dialog state
-  const [disconnectProviderId, setDisconnectProviderId] = useState<
-    string | null
-  >(null);
+  const [disconnectProviderId, setDisconnectProviderId] = useState<string | null>(null);
   const [isDisconnecting, setIsDisconnecting] = useState<boolean>(false);
+
+  // Refresh cooldown & timer state
+  const [refreshCountdown, setRefreshCountdown] = useState<number>(0);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [lastRefreshTime, setLastRefreshTime] = useState<number | null>(null);
+
+  useEffect(() => {
+    const lastRefresh = localStorage.getItem(
+      RR_SETTINGS_STORAGE_KEYS.LAST_CONNECTIONS_REFRESH,
+    );
+    if (lastRefresh) {
+      const parsedTime = parseInt(lastRefresh, 10);
+      setLastRefreshTime(parsedTime);
+      const elapsed = Date.now() - parsedTime;
+      const remaining = Math.max(
+        0,
+        RR_SETTINGS_LIMITS.CONNECTIONS_REFRESH_COOLDOWN_SECONDS -
+          Math.floor(elapsed / 1000),
+      );
+      if (remaining > 0) {
+        setRefreshCountdown(remaining);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (refreshCountdown <= 0) return;
+    const timer = setInterval(() => {
+      setRefreshCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [refreshCountdown]);
 
   const pollingTimersRef = useRef<Record<string, NodeJS.Timeout>>({});
   const initialCheckedRef = useRef<Record<string, boolean>>({});
@@ -124,6 +162,48 @@ export function RrConnectionsTab({
         ]
       : null,
     fetcher,
+  );
+
+  const connections: Connection[] = Array.isArray(connectionsData)
+    ? connectionsData
+    : [];
+
+  const getConnection = useCallback(
+    (providerId: string): Connection | undefined =>
+      connections.find(
+        (c) => c.provider.toLowerCase() === providerId.toLowerCase(),
+      ),
+    [connections],
+  );
+
+  // Group providers by primary app
+  const uniqueAppKeys = useMemo(
+    () => Array.from(new Set(PROVIDERS.map((p) => p.primaryApp))),
+    [],
+  );
+
+  const apps = useMemo(() => {
+    return uniqueAppKeys.map((key) => {
+      const configApp = rrApps.find(
+        (a: rrApp) => a.name.toLowerCase() === key.toLowerCase(),
+      );
+      const appName =
+        configApp?.name || key.charAt(0).toUpperCase() + key.slice(1);
+      const appProviders = PROVIDERS.filter((p) => p.primaryApp === key);
+      const connectedCount = appProviders.filter((p) => !!getConnection(p.id)).length;
+
+      return {
+        id: key.toLowerCase(),
+        name: appName,
+        providers: appProviders,
+        connectedCount,
+      };
+    });
+  }, [uniqueAppKeys, getConnection]);
+
+  // Active app sub-tab
+  const [activeAppId, setActiveAppId] = useState<string>(
+    apps[0]?.id ?? "aquila",
   );
 
   const pollImportStatus = useCallback(
@@ -181,7 +261,7 @@ export function RrConnectionsTab({
         console.error(err);
       }
     },
-    [session, clearPollTimer, setFailedImports, t],
+    [session, clearPollTimer, t],
   );
 
   const handleImport = async (
@@ -228,10 +308,6 @@ export function RrConnectionsTab({
     setShowImportDialog(providerId);
   };
 
-  const connections: Connection[] = Array.isArray(connectionsData)
-    ? connectionsData
-    : [];
-
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("success") === "true") {
@@ -276,9 +352,94 @@ export function RrConnectionsTab({
     };
   }, []);
 
-  const fetchConnections = useCallback((): void => {
-    refetchConnections();
-  }, [refetchConnections]);
+  const handleRefreshConnections = useCallback(async (): Promise<void> => {
+    if (isRefreshing || refreshCountdown > 0) return;
+    setIsRefreshing(true);
+    try {
+      await refetchConnections();
+      const now = Date.now();
+      localStorage.setItem(
+        RR_SETTINGS_STORAGE_KEYS.LAST_CONNECTIONS_REFRESH,
+        now.toString(),
+      );
+      setLastRefreshTime(now);
+      setRefreshCountdown(
+        RR_SETTINGS_LIMITS.CONNECTIONS_REFRESH_COOLDOWN_SECONDS,
+      );
+      toast.success(t("connections.refreshSuccess"));
+    } catch (err: unknown) {
+      console.error(err);
+      toast.error(t("connections.unknownError"));
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [isRefreshing, refreshCountdown, refetchConnections, t]);
+
+  // Listen for OAuth completion from popup/new tab
+  useEffect(() => {
+    const handleAuthSuccess = (): void => {
+      refetchConnections();
+      toast.success(t("connections.connectedSuccess"));
+      setIsActionLoading(null);
+    };
+
+    // 1. window.addEventListener("message")
+    const onMessage = (event: MessageEvent): void => {
+      if (event.data?.type === "RUNA_OAUTH_RESULT") {
+        if (event.data.success) {
+          handleAuthSuccess();
+        } else if (event.data.error || event.data.message) {
+          toast.error(event.data.message || event.data.error);
+          setIsActionLoading(null);
+        }
+      }
+    };
+    window.addEventListener("message", onMessage);
+
+    // 2. BroadcastChannel
+    let channel: BroadcastChannel | null = null;
+    try {
+      channel = new BroadcastChannel("runa_oauth_channel");
+      channel.onmessage = (event: MessageEvent): void => {
+        if (event.data?.type === "RUNA_OAUTH_RESULT") {
+          if (event.data.success) {
+            handleAuthSuccess();
+          } else if (event.data.error || event.data.message) {
+            toast.error(event.data.message || event.data.error);
+            setIsActionLoading(null);
+          }
+        }
+      };
+    } catch (err) {
+      console.error("BroadcastChannel error:", err);
+    }
+
+    // 3. Storage event
+    const onStorage = (event: StorageEvent): void => {
+      if (event.key === "runa_oauth_event" && event.newValue) {
+        try {
+          const parsed = JSON.parse(event.newValue);
+          if (parsed.success) {
+            handleAuthSuccess();
+          }
+        } catch {}
+      }
+    };
+    window.addEventListener("storage", onStorage);
+
+    // 4. Focus event
+    const onFocus = (): void => {
+      refetchConnections();
+    };
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      window.removeEventListener("message", onMessage);
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("focus", onFocus);
+      channel?.close();
+    };
+  }, [refetchConnections, t]);
 
   const handleConnect = (providerId: string): void => {
     if (!session?.accessToken) {
@@ -286,10 +447,13 @@ export function RrConnectionsTab({
       return;
     }
     setIsActionLoading(providerId);
-    const redirectUrl = encodeURIComponent(window.location.href);
-    window.location.href = `${process.env.NEXT_PUBLIC_API_URL}${RR_SETTINGS_API_ENDPOINTS.CONNECTIONS_CONNECT(
+    const callbackUrl = `${window.location.origin}/connections/callback`;
+    const redirectUrl = encodeURIComponent(callbackUrl);
+    const connectUrl = `${process.env.NEXT_PUBLIC_API_URL}${RR_SETTINGS_API_ENDPOINTS.CONNECTIONS_CONNECT(
       providerId,
     )}?token=${session.accessToken}&redirectUrl=${redirectUrl}`;
+    window.open(connectUrl, "_blank", "noopener,noreferrer");
+    setIsActionLoading(null);
   };
 
   const handleConfirmDisconnect = async (): Promise<void> => {
@@ -377,9 +541,85 @@ export function RrConnectionsTab({
     }));
   };
 
+  // Register parent modal footer content
+  useEffect(() => {
+    if (!setFooterContent) return;
+
+    setFooterContent(
+      <div className="flex items-center justify-between w-full">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleRefreshConnections}
+          disabled={isRefreshing || refreshCountdown > 0}
+          className="gap-2 text-xs rounded-xl cursor-pointer"
+        >
+          {isRefreshing ? (
+            <Spinner className="size-3.5" />
+          ) : (
+            <RefreshCw
+              className={cn("size-3.5", isRefreshing && "animate-spin")}
+            />
+          )}
+          <span>
+            {refreshCountdown > 0
+              ? `${t("connections.refreshBtn")} (${refreshCountdown}s)`
+              : t("connections.refreshBtn")}
+          </span>
+        </Button>
+
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onOpenChange(false)}
+          className="text-xs h-9 px-5 rounded-xl cursor-pointer"
+        >
+          {t("connections.closeSettingsBtn")}
+        </Button>
+      </div>,
+    );
+
+    return () => setFooterContent(null);
+  }, [
+    setFooterContent,
+    onOpenChange,
+    handleRefreshConnections,
+    isRefreshing,
+    refreshCountdown,
+    t,
+  ]);
+
+  const navItems: RrPillNavItem<string>[] = useMemo(() => {
+    return apps.map((app) => ({
+      id: app.id,
+      label: app.name,
+      badge:
+        app.connectedCount > 0 ? (
+          <Badge
+            variant="secondary"
+            className="ml-1 px-1.5 py-0 text-[10px] h-4 font-mono font-bold"
+          >
+            {app.connectedCount}
+          </Badge>
+        ) : undefined,
+    }));
+  }, [apps]);
+
+  const activeApp = useMemo(
+    () => apps.find((a) => a.id === activeAppId) ?? apps[0],
+    [apps, activeAppId],
+  );
+
+  const activeAppProviders: ConnectionMetadata[] = activeApp?.providers ?? [];
+  const selectedImportProvider = showImportDialog
+    ? PROVIDERS.find((p) => p.id === showImportDialog)
+    : undefined;
+
   if (connectionsLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 gap-3">
+      <div className="flex-1 flex flex-col items-center justify-center py-12 gap-3 min-h-0 h-full">
         <Spinner className="size-8 text-primary" />
         <p className="text-xs text-muted-foreground animate-pulse">
           {t("connections.fetchingStatus")}
@@ -388,259 +628,73 @@ export function RrConnectionsTab({
     );
   }
 
-  const getConnection = (providerId: string): Connection | undefined =>
-    connections.find(
-      (c) => c.provider.toLowerCase() === providerId.toLowerCase(),
-    );
-
-  const uniqueAppKeys = Array.from(new Set(PROVIDERS.map((p) => p.primaryApp)));
-
-  const apps = uniqueAppKeys.map((key) => {
-    const configApp = rrApps.find(
-      (a: any) => a.name.toLowerCase() === key.toLowerCase(),
-    );
-    const appName =
-      configApp?.name || key.charAt(0).toUpperCase() + key.slice(1);
-    return {
-      name: appName,
-      description: t("connections.integrationsFor", { app: appName }),
-      providers: PROVIDERS.filter((p) => p.primaryApp === key),
-    };
-  });
-
   return (
-    <div className="flex flex-col gap-6 p-1">
-      <div className="flex items-center justify-between">
-        <div className="text-left">
-          <h3 className="text-sm font-semibold text-foreground">
-            {t("connections.title")}
-          </h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {t("connections.description")}
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="icon-sm"
-          onClick={fetchConnections}
-          className="rounded-lg hover:bg-muted"
-        >
-          <RefreshCw className="size-3.5" />
-        </Button>
+    <div className="flex-1 flex flex-col gap-4 min-h-0 h-full text-left">
+      {/* App Sub-Navigation Pills (anchored to the right) */}
+      <div className="flex items-center justify-end w-full shrink-0">
+        <RrPillNav
+          items={navItems}
+          activeId={activeApp?.id ?? activeAppId}
+          onChange={(id) => setActiveAppId(id)}
+          layoutId="connectionsAppNav"
+        />
       </div>
 
-      <div className="flex flex-col gap-6 p-2">
-        {apps.map((app): React.JSX.Element => (
-          <Card key={app.name}>
-            <CardHeader className="border-b border-border/40 pb-3 text-left">
-              <CardTitle className="text-xs font-bold uppercase tracking-wider text-primary">
-                {app.name}
-              </CardTitle>
-              <CardDescription className="text-[11px] text-muted-foreground mt-0.5">
-                {app.description}
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent className="flex flex-col gap-4 pt-4">
-              {app.providers.map((provider): React.JSX.Element => {
-                const conn = getConnection(provider.id);
-                return (
-                  <RrConnectionCard
-                    key={provider.id}
-                    provider={provider}
-                    conn={conn}
-                    loading={isActionLoading === provider.id}
-                    importStatus={importStatus[provider.id.toLowerCase()]}
-                    expandedMetadata={!!expandedMetadata[provider.id]}
-                    toggleMetadata={() => toggleMetadata(provider.id)}
-                    handleTogglePrivate={() =>
-                      handleTogglePrivate(provider.id, conn?.private ?? false)
-                    }
-                    openImportDialog={() => openImportDialog(provider.id)}
-                    handleDisconnect={() =>
-                      setDisconnectProviderId(provider.id)
-                    }
-                    handleConnect={() => handleConnect(provider.id)}
-                  />
-                );
-              })}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Done Closing button */}
-      <div className="flex justify-end pt-4 border-t border-border mt-6">
-        <Button
-          variant="outline"
-          onClick={() => onOpenChange(false)}
-          className="text-xs sm:text-sm h-9 px-5 rounded-xl cursor-pointer"
-        >
-          {t("connections.closeSettingsBtn")}
-        </Button>
-      </div>
+      {/* Main Connections Card taking all remaining vertical space */}
+      <Card className="flex-1 flex flex-col min-h-0 h-full border border-border bg-card shadow-xs">
+        <CardContent className="p-4 flex-1 overflow-y-auto min-h-0 scrollbar-thin flex flex-col gap-3">
+          {activeAppProviders.map((provider) => {
+            const conn = getConnection(provider.id);
+            return (
+              <RrConnectionCard
+                key={provider.id}
+                provider={provider}
+                conn={conn}
+                loading={isActionLoading === provider.id}
+                importStatus={importStatus[provider.id.toLowerCase()]}
+                expandedMetadata={!!expandedMetadata[provider.id]}
+                toggleMetadata={() => toggleMetadata(provider.id)}
+                handleTogglePrivate={() =>
+                  handleTogglePrivate(provider.id, conn?.private ?? false)
+                }
+                openImportDialog={() => openImportDialog(provider.id)}
+                handleDisconnect={() => setDisconnectProviderId(provider.id)}
+                handleConnect={() => handleConnect(provider.id)}
+              />
+            );
+          })}
+        </CardContent>
+      </Card>
 
       {/* Import Media Dialog */}
-      <Dialog
-        open={!!showImportDialog}
-        onOpenChange={(open) => {
-          if (!open) setShowImportDialog(null);
+      <RrImportMediaDialog
+        providerId={showImportDialog}
+        provider={selectedImportProvider}
+        selectedMediaTypes={selectedMediaTypes}
+        onToggleMediaType={(key) => {
+          setSelectedMediaTypes((prev) =>
+            prev.includes(key)
+              ? prev.filter((k) => k !== key)
+              : [...prev, key],
+          );
         }}
-      >
-        <DialogContent className="max-w-md rounded-2xl border border-border bg-card p-6 shadow-xl text-left">
-          <DialogHeader>
-            <DialogTitle className="text-base font-semibold text-foreground">
-              {t("connections.selectImportTitle")}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-4 py-4">
-            <p className="text-xs text-muted-foreground">
-              {t("connections.selectImportDesc", {
-                provider: showImportDialog?.toUpperCase(),
-              })}
-            </p>
-            <div className="flex flex-col gap-3">
-              {PROVIDERS.find((p) => p.id === showImportDialog)
-                ?.capabilities.filter((cap) => cap in IMPORTABLE_CAPABILITIES)
-                .map((cap) => {
-                  const { key } = IMPORTABLE_CAPABILITIES[cap];
-                  const isChecked = selectedMediaTypes.includes(key);
-                  return (
-                    <div
-                      key={key}
-                      className="flex items-center gap-3 p-3 rounded-xl border border-border bg-secondary/15 hover:bg-secondary/25 transition-all"
-                    >
-                      <Checkbox
-                        id={`media-type-${key}`}
-                        checked={isChecked}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedMediaTypes((prev) => [...prev, key]);
-                          } else {
-                            setSelectedMediaTypes((prev) =>
-                              prev.filter((k) => k !== key),
-                            );
-                          }
-                        }}
-                      />
-                      <label
-                        htmlFor={`media-type-${key}`}
-                        className="text-xs font-semibold text-foreground select-none cursor-pointer flex-1"
-                      >
-                        {t(`mediaTypes.${key}`)}
-                      </label>
-                    </div>
-                  );
-                })}
-            </div>
-          </div>
-          <div className="flex items-center justify-end gap-2.5 pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowImportDialog(null)}
-              className="rounded-lg h-9 text-xs"
-            >
-              {t("cancel")}
-            </Button>
-            <Button
-              size="sm"
-              disabled={selectedMediaTypes.length === 0}
-              onClick={() => {
-                if (showImportDialog) {
-                  handleImport(showImportDialog, selectedMediaTypes);
-                  setShowImportDialog(null);
-                }
-              }}
-              className="rounded-lg h-9 text-xs font-semibold text-primary-foreground bg-primary hover:bg-primary/95"
-            >
-              {t("connections.startImportBtn")}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+        onStartImport={() => {
+          if (showImportDialog) {
+            handleImport(showImportDialog, selectedMediaTypes);
+            setShowImportDialog(null);
+          }
+        }}
+        onClose={() => setShowImportDialog(null)}
+      />
 
       {/* Failed Items Dialog */}
-      <Dialog
-        open={!!failedImports}
-        onOpenChange={(open) => {
-          if (!open) setFailedImports(null);
+      <RrFailedImportsDialog
+        failedImports={failedImports}
+        onClose={() => {
+          setFailedImports(null);
+          window.location.reload();
         }}
-      >
-        <DialogContent className="max-w-3xl sm:max-w-3xl rounded-2xl border border-border bg-card p-6 shadow-xl max-h-[80vh] flex flex-col text-left">
-          <DialogHeader>
-            <DialogTitle className="text-base font-semibold text-foreground flex items-center gap-2">
-              <span className="inline-block size-2.5 rounded-full bg-warning animate-pulse" />
-              {t("connections.failedItemsTitle", {
-                count: failedImports?.items.length,
-              })}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 overflow-y-auto py-4 flex flex-col gap-3 pr-1">
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              {t("connections.failedItemsDesc", {
-                provider: failedImports?.providerId.toUpperCase(),
-              })}
-            </p>
-            <div className="border border-border rounded-xl overflow-hidden bg-muted/10">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-secondary/25 border-b border-border text-muted-foreground font-semibold">
-                    <th className="p-3">{t("connections.tableTitle")}</th>
-                    <th className="p-3 w-20">{t("connections.tableType")}</th>
-                    <th className="p-3 w-24">{t("connections.tableId")}</th>
-                    <th className="p-3">{t("connections.tableReason")}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {failedImports?.items.map((item, idx) => (
-                    <tr
-                      key={idx}
-                      className="hover:bg-secondary/10 transition-colors"
-                    >
-                      <td
-                        className="p-3 font-medium text-foreground max-w-70 truncate"
-                        title={item.title}
-                      >
-                        {item.title}
-                      </td>
-                      <td className="p-3">
-                        <Badge
-                          variant="outline"
-                          className="capitalize text-[10px] px-1.5 py-0 font-medium"
-                        >
-                          {t(`mediaTypes.${item.mediaType}`)}
-                        </Badge>
-                      </td>
-                      <td className="p-3 font-mono text-[10px] text-muted-foreground">
-                        {item.providerId}
-                      </td>
-                      <td
-                        className="p-3 text-warning font-medium max-w-70 truncate"
-                        title={item.reason}
-                      >
-                        {item.reason}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <div className="flex items-center justify-end pt-3 border-t border-border">
-            <Button
-              size="sm"
-              onClick={() => {
-                setFailedImports(null);
-                window.location.reload();
-              }}
-              className="rounded-lg h-9 text-xs font-semibold px-4"
-            >
-              {t("connections.closeBtn")}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      />
 
       {/* Disconnect Provider Confirmation Dialog */}
       <RrConfirmDialog
@@ -648,7 +702,7 @@ export function RrConnectionsTab({
         onOpenChange={(open: boolean) => {
           if (!open) setDisconnectProviderId(null);
         }}
-        title={t("connections.disconnectConfirmTitle", "Disconnect Provider")}
+        title={t("connections.disconnectConfirmTitle")}
         description={
           disconnectProviderId
             ? t("connections.disconnectConfirm", {
@@ -656,7 +710,7 @@ export function RrConnectionsTab({
               })
             : ""
         }
-        confirmText={t("connections.disconnectBtn", "Disconnect")}
+        confirmText={t("connections.disconnectBtn")}
         variant="destructive"
         isSubmitting={isDisconnecting}
         onConfirm={handleConfirmDisconnect}

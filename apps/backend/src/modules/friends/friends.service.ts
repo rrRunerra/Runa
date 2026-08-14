@@ -2,7 +2,7 @@ import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { PrismaService } from '../../providers/database/prisma.service';
 import { NotificationService } from '../notification/notification.service';
 import { FriendsRepository } from './friends.repository';
-import { parsePrivacy } from '../user/user.service';
+import { parsePrivacy, isPrivateLevel } from '../user/user.service';
 import {
   rrNotFoundException,
   rrConflictException,
@@ -253,13 +253,13 @@ export class FriendsService {
     }
 
     const privacy = parsePrivacy(targetUser.privacy);
-    if (privacy.profile) {
+    if (isPrivateLevel(privacy.profile)) {
       throw new rrForbiddenException(`${this.moduleCode}UPIP001`, {
         message: 'User profile is private',
       });
     }
 
-    if (privacy.friends) {
+    if (isPrivateLevel(privacy.friends)) {
       throw new rrForbiddenException(`${this.moduleCode}FLIP001`, {
         message: 'Friends list is private',
       });

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { LayoutGrid } from "lucide-react";
+import { LayoutGrid, X } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -28,12 +28,26 @@ interface DockItemData {
   children?: SidebarItemChild[];
 }
 
-interface RrBottomDockProps {
+export interface RrBottomDockProps {
   pathname: string;
   navConfig?: SidebarConfig;
   setOpenMobile?: (open: boolean) => void;
   items?: DockItemData[];
   className?: string;
+  /** Whether the dock is being displayed inside a settings/customizer preview */
+  isPreview?: boolean;
+  /** Currently focused position slot (1-4) in preview mode */
+  focusedSlot?: string | null;
+  /** Callback when a position slot is focused */
+  onFocusSlot?: (pos: string) => void;
+  /** Callback when a position slot is cleared */
+  onClearSlot?: (pos: string) => void;
+  /** Lookup function for item metadata in preview mode */
+  findItemByKey?: (key: string | null | undefined) => SidebarItem | undefined;
+  /** Temporary position slots mapping in preview mode */
+  tempPositions?: Record<string, string | null>;
+  /** Optional translated label for empty slots */
+  emptySlotLabel?: string;
 }
 
 export default function RrBottomDock({
@@ -42,6 +56,13 @@ export default function RrBottomDock({
   setOpenMobile,
   items: customItems,
   className,
+  isPreview = false,
+  focusedSlot,
+  onFocusSlot,
+  onClearSlot,
+  findItemByKey,
+  tempPositions,
+  emptySlotLabel = "Empty",
 }: RrBottomDockProps): React.JSX.Element | null {
   // If custom items are provided, render them
   if (customItems) {
@@ -54,11 +75,108 @@ export default function RrBottomDock({
     );
   }
 
+  // In preview mode with tempPositions:
+  if (isPreview) {
+    const renderPreviewSlot = (pos: string) => {
+      const href = tempPositions ? tempPositions[pos] : undefined;
+      const item = findItemByKey ? findItemByKey(href) : undefined;
+      const isFocused = focusedSlot === pos;
+      const isAssigned = !!item;
+
+      return (
+        <div
+          key={pos}
+          className="relative group/slot flex flex-col items-center flex-1 min-w-0 max-w-18"
+        >
+          <button
+            type="button"
+            onClick={() => onFocusSlot?.(pos)}
+            className={cn(
+              "relative flex flex-col items-center justify-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1.5 sm:py-2 rounded-2xl transition-all duration-200 w-full min-h-12 sm:min-h-13 cursor-pointer outline-none select-none",
+              isFocused
+                ? "bg-primary/15 border border-primary text-foreground font-semibold shadow-[0_0_10px_rgba(139,92,246,0.3)] z-10"
+                : isAssigned
+                  ? "border border-transparent text-muted-foreground/80 hover:text-foreground hover:bg-muted/40"
+                  : "border border-dashed border-border/60 text-muted-foreground/40 hover:bg-muted/20 hover:border-border/80",
+            )}
+          >
+            {isAssigned ? (
+              <>
+                <span className="relative z-10 transition-transform duration-200 [&>svg]:size-5 sm:[&>svg]:size-5.5">
+                  {item.icon}
+                </span>
+                <span className="text-[10px] sm:text-[11px] leading-tight tracking-tight font-medium relative z-10 whitespace-nowrap truncate max-w-full px-0.5 text-center">
+                  {item.label}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="text-xs font-bold opacity-50">+{pos}</span>
+                <span className="text-[9px] tracking-tight opacity-40 font-medium">
+                  {emptySlotLabel}
+                </span>
+              </>
+            )}
+          </button>
+
+          {isAssigned && onClearSlot && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClearSlot(pos);
+              }}
+              className={cn(
+                "absolute -top-0.5 -right-0.5 size-4 bg-destructive hover:bg-destructive/90 text-destructive-foreground rounded-full flex items-center justify-center shadow-md transition-all duration-200 cursor-pointer z-20",
+                isFocused
+                  ? "opacity-100 scale-100"
+                  : "opacity-0 scale-75 group-hover/slot:opacity-100 group-hover/slot:scale-100",
+              )}
+              aria-label={`Clear position ${pos}`}
+            >
+              <X className="size-2.5 stroke-3" />
+            </button>
+          )}
+        </div>
+      );
+    };
+
+    return (
+      <div
+        onContextMenu={(e) => e.preventDefault()}
+        className={cn(
+          "relative flex items-center justify-between gap-1 sm:gap-2 px-3 sm:px-5 py-2 bg-background/85 backdrop-blur-2xl border border-border/80 shadow-2xl w-full max-w-md sm:max-w-lg select-none rounded-full pointer-events-auto",
+          className,
+        )}
+      >
+        {/* Left slots (1 and 2) */}
+        <div className="flex items-center gap-1 sm:gap-2 flex-1 justify-around min-w-0">
+          {renderPreviewSlot("1")}
+          {renderPreviewSlot("2")}
+        </div>
+
+        {/* Middle Switcher Button */}
+        <div
+          className="flex items-center justify-center size-11 sm:size-12 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 shrink-0 mx-1"
+          aria-label="Toggle Navigation Drawer"
+        >
+          <LayoutGrid className="size-5 sm:size-5.5" />
+        </div>
+
+        {/* Right slots (3 and 4) */}
+        <div className="flex items-center gap-1 sm:gap-2 flex-1 justify-around min-w-0">
+          {renderPreviewSlot("3")}
+          {renderPreviewSlot("4")}
+        </div>
+      </div>
+    );
+  }
+
   // Fallback to SidebarConfig if provided
   if (!navConfig) return null;
 
   const phoneSection = navConfig.find(
-    (s) => s.section?.toLowerCase() === "#$phone",
+    (s) => s.section?.toLowerCase().replace(/[^a-z]/g, "") === "phone",
   );
   if (!phoneSection || phoneSection.items.length === 0) return null;
 
@@ -78,30 +196,35 @@ export default function RrBottomDock({
 
   const mapItem = (item?: SidebarItem) => {
     if (!item)
-      return <div className="min-w-15 sm:min-w-17 min-h-12.5 sm:min-h-13.5" />;
+      return <div className="flex-1 min-w-0 max-w-18 min-h-12 sm:min-h-13" />;
     return (
-      <RrDockItem
-        key={item.href || item.label}
-        item={{
-          label: item.label,
-          icon: item.icon,
-          href: item.href,
-          isActive: checkActive(item),
-          component: item.component,
-          children: item.children,
-        }}
-        pathname={pathname}
-      />
+      <div className="flex-1 min-w-0 max-w-18 flex justify-center">
+        <RrDockItem
+          key={item.href || item.label}
+          item={{
+            label: item.label,
+            icon: item.icon,
+            href: item.href,
+            isActive: checkActive(item),
+            component: item.component,
+            children: item.children,
+          }}
+          pathname={pathname}
+        />
+      </div>
     );
   };
 
   return (
     <div
       onContextMenu={(e) => e.preventDefault()}
-      className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between gap-1 sm:gap-2 px-2.5 py-2 sm:px-4 sm:py-2.5 bg-background/85 backdrop-blur-2xl border border-border/80 shadow-2xl w-[calc(100%-1.5rem)] sm:w-[calc(100%-2rem)] max-w-md md:hidden select-none rounded-full"
+      className={cn(
+        "fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center justify-between gap-1 sm:gap-2 px-3 sm:px-5 py-2 bg-background/85 backdrop-blur-2xl border border-border/80 shadow-2xl w-[calc(100%-1.5rem)] sm:w-[calc(100%-2rem)] max-w-md sm:max-w-lg md:hidden select-none rounded-full",
+        className,
+      )}
     >
       {/* Left items */}
-      <div className="flex items-center gap-0.5 sm:gap-1 flex-1 justify-around">
+      <div className="flex items-center gap-1 sm:gap-2 flex-1 justify-around min-w-0">
         {mapItem(item1)}
         {mapItem(item2)}
       </div>
@@ -112,7 +235,7 @@ export default function RrBottomDock({
           onClick={() => setOpenMobile(true)}
           whileHover={{ scale: 1.08 }}
           whileTap={{ scale: 0.95 }}
-          className="flex items-center justify-center size-11.5 sm:size-12.5 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 cursor-pointer shrink-0 mx-1 sm:mx-1.5"
+          className="flex items-center justify-center size-11 sm:size-12 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 cursor-pointer shrink-0 mx-1"
           aria-label="Toggle Navigation Drawer"
         >
           <LayoutGrid className="size-5 sm:size-5.5" />
@@ -120,7 +243,7 @@ export default function RrBottomDock({
       )}
 
       {/* Right items */}
-      <div className="flex items-center gap-0.5 sm:gap-1 flex-1 justify-around">
+      <div className="flex items-center gap-1 sm:gap-2 flex-1 justify-around min-w-0">
         {mapItem(item3)}
         {mapItem(item4)}
       </div>
@@ -246,14 +369,14 @@ function RrDockItem({
       >
         {item.icon}
       </span>
-      <span className="text-[10px] sm:text-[11px] leading-tight tracking-tight font-medium relative z-10 whitespace-nowrap truncate max-w-14.5 sm:max-w-17.5 text-center">
+      <span className="text-[10px] sm:text-[11px] leading-tight tracking-tight font-medium relative z-10 whitespace-nowrap truncate max-w-full px-0.5 text-center">
         {item.label}
       </span>
     </>
   );
 
   const buttonClass = cn(
-    "relative flex flex-col items-center justify-center gap-1 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full transition-colors duration-200 min-w-15 sm:min-w-17 min-h-12.5 sm:min-h-13.5 cursor-pointer pointer-events-auto",
+    "relative flex flex-col items-center justify-center gap-0.5 sm:gap-1 px-1.5 sm:px-2.5 py-1.5 sm:py-2 rounded-full transition-colors duration-200 w-full min-h-12 sm:min-h-13 cursor-pointer pointer-events-auto",
     item.isActive
       ? "text-primary font-bold"
       : "text-muted-foreground/70 hover:text-foreground",

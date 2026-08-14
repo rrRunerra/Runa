@@ -22,7 +22,7 @@ export interface ConnectionSearchResult {
 export interface ConnectionMetadata {
   id: string;
   name: string;
-  description: string;
+  description?: string;
   url: string;
   icon: string;
   accentColor: string;
@@ -36,7 +36,7 @@ export const PROVIDERS_METADATA: ConnectionMetadata[] = [
   {
     id: "anilist",
     name: "AniList",
-    description: "Sync your watch list progress automatically.",
+    description: "",
     url: "https://anilist.co",
     icon: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/61/AniList_logo.svg/960px-AniList_logo.svg.png",
     accentColor: "bg-[#3db4f2]/10 border-[#3db4f2]/20 text-[#3db4f2] hover:bg-[#3db4f2]/20",
@@ -78,7 +78,7 @@ export const PROVIDERS_METADATA: ConnectionMetadata[] = [
   {
     id: "mal",
     name: "MyAnimeList",
-    description: "Keep your traditional anime lists synchronized.",
+    description: "",
     url: "https://myanimelist.net",
     icon: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/MyAnimeList_favicon.svg/3840px-MyAnimeList_favicon.svg.png?utm_source=commons.wikimedia.org&utm_campaign=index&utm_content=thumbnail",
     accentColor: "bg-[#2e51a2]/10 border-[#2e51a2]/20 text-[#2e51a2] hover:bg-[#2e51a2]/20",
@@ -186,7 +186,7 @@ export const PROVIDERS_METADATA: ConnectionMetadata[] = [
   {
     id: "simkl",
     name: "Simkl",
-    description: "Sync your anime, movies, and TV shows in one place.",
+    description: "",
     url: "https://simkl.com",
     icon: "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/simkl.png",
     accentColor: "bg-[#e50914]/10 border-[#e50914]/20 text-[#e50914] hover:bg-[#e50914]/20",
@@ -235,7 +235,7 @@ export const PROVIDERS_METADATA: ConnectionMetadata[] = [
   {
     id: "trakt",
     name: "Trakt",
-    description: "Sync your movies, TV shows, and anime watch progress in one place.",
+    description: "",
     url: "https://trakt.tv",
     icon: "https://cdn.jsdelivr.net/gh/walkxcode/dashboard-icons/png/trakt.png",
     accentColor: "bg-[#ed1c24]/10 border-[#ed1c24]/20 text-[#ed1c24] hover:bg-[#ed1c24]/20",
@@ -279,7 +279,7 @@ export const PROVIDERS_METADATA: ConnectionMetadata[] = [
   {
     id: "discord",
     name: "Discord",
-    description: "Connect with your Discord account.",
+    description: "",
     url: "https://discord.com",
     icon: "https://assets-global.website-files.com/6257adef93867e50d84d30e2/636e0a6a49cf127bf92de1e2_icon_clyde_blurple_RGB.png",
     accentColor: "bg-[#5865f2]/10 border-[#5865f2]/20 text-[#5865f2] hover:bg-[#5865f2]/20",
@@ -290,34 +290,34 @@ export const PROVIDERS_METADATA: ConnectionMetadata[] = [
   {
     id: "google",
     name: "Google",
-    description: "Connect your Google Account to sync profile, login, and calendar schedules.",
+    description: "",
     url: "https://calendar.google.com",
-    icon: "https://upload.wikimedia.org/wikipedia/commons/a/a5/Google_Calendar_icon_%282020%29.svg",
+    icon: "https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg",
     accentColor: "bg-[#4285f4]/10 border-[#4285f4]/20 text-[#4285f4] hover:bg-[#4285f4]/20",
     glowColor: "shadow-[#4285f4]/10",
-    capabilities: [ConnectionCapability.AUTH, ConnectionCapability.SHOWCASE, ConnectionCapability.CALENDAR],
+    capabilities: [ConnectionCapability.SHOWCASE, ConnectionCapability.CALENDAR],
     primaryApp: "polaris",
   },
   {
     id: "apple",
     name: "Apple",
-    description: "Connect your Apple ID to sync profile, login, and iCloud calendar schedules.",
+    description: "",
     url: "https://www.icloud.com/calendar",
     icon: "https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg",
     accentColor: "bg-[#0070c9]/10 border-[#0070c9]/20 text-[#0070c9] hover:bg-[#0070c9]/20",
     glowColor: "shadow-[#0070c9]/10",
-    capabilities: [ConnectionCapability.AUTH, ConnectionCapability.SHOWCASE, ConnectionCapability.CALENDAR],
+    capabilities: [ConnectionCapability.SHOWCASE, ConnectionCapability.CALENDAR],
     primaryApp: "polaris",
   },
   {
     id: "xiaomi",
     name: "Xiaomi",
-    description: "Connect your Xiaomi Mi Account to sync profile, login, and calendar schedules.",
+    description: "",
     url: "https://i.mi.com",
     icon: "https://upload.wikimedia.org/wikipedia/commons/a/ae/Xiaomi_logo_%282021-%29.svg",
     accentColor: "bg-[#ff6900]/10 border-[#ff6900]/20 text-[#ff6900] hover:bg-[#ff6900]/20",
     glowColor: "shadow-[#ff6900]/10",
-    capabilities: [ConnectionCapability.AUTH, ConnectionCapability.SHOWCASE, ConnectionCapability.CALENDAR],
+    capabilities: [ConnectionCapability.SHOWCASE, ConnectionCapability.CALENDAR],
     primaryApp: "polaris",
   },
 ];

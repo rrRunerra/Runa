@@ -12,7 +12,10 @@ import {
   Matches,
   IsInt,
   Min,
+  IsIn,
 } from 'class-validator';
+import { PRIVACY_LEVELS, type PrivacyLevel } from './user.types';
+
 
 // --- User Creation ---
 
@@ -121,41 +124,70 @@ export class UpdateUserDto {
 // --- Privacy Settings ---
 
 export class PrivacySettingsDto {
-  @IsBoolean({ message: 'PySgDto-PMBAB001: Profile must be a boolean' })
+  @IsIn([...PRIVACY_LEVELS, true, false], {
+    message:
+      'PySgDto-PMBAV001: Profile must be a valid privacy level (public, friends, private) or boolean',
+  })
   @IsOptional()
-  profile?: boolean;
+  profile?: PrivacyLevel | boolean;
 
-  @IsBoolean({ message: 'PySgDto-ALMBAB001: Anime list must be a boolean' })
+  @IsIn([...PRIVACY_LEVELS, true, false], {
+    message:
+      'PySgDto-ALMBAV001: Anime list must be a valid privacy level (public, friends, private) or boolean',
+  })
   @IsOptional()
-  animeList?: boolean;
+  animeList?: PrivacyLevel | boolean;
 
-  @IsBoolean({ message: 'PySgDto-MLMBAB001: Manga list must be a boolean' })
+  @IsIn([...PRIVACY_LEVELS, true, false], {
+    message:
+      'PySgDto-MLMBAV001: Manga list must be a valid privacy level (public, friends, private) or boolean',
+  })
   @IsOptional()
-  mangaList?: boolean;
+  mangaList?: PrivacyLevel | boolean;
 
-  @IsBoolean({ message: 'PySgDto-TLMBAB001: TV list must be a boolean' })
+  @IsIn([...PRIVACY_LEVELS, true, false], {
+    message:
+      'PySgDto-TLMBAV001: TV list must be a valid privacy level (public, friends, private) or boolean',
+  })
   @IsOptional()
-  tvList?: boolean;
+  tvList?: PrivacyLevel | boolean;
 
-  @IsBoolean({ message: 'PySgDto-MLMBAB002: Movie list must be a boolean' })
+  @IsIn([...PRIVACY_LEVELS, true, false], {
+    message:
+      'PySgDto-MLMBAV002: Movie list must be a valid privacy level (public, friends, private) or boolean',
+  })
   @IsOptional()
-  movieList?: boolean;
+  movieList?: PrivacyLevel | boolean;
 
-  @IsBoolean({ message: 'PySgDto-GLMBAB001: Game list must be a boolean' })
+  @IsIn([...PRIVACY_LEVELS, true, false], {
+    message:
+      'PySgDto-GLMBAV001: Game list must be a valid privacy level (public, friends, private) or boolean',
+  })
   @IsOptional()
-  gameList?: boolean;
+  gameList?: PrivacyLevel | boolean;
 
-  @IsBoolean({ message: 'PySgDto-BLMBAB001: Book list must be a boolean' })
+  @IsIn([...PRIVACY_LEVELS, true, false], {
+    message:
+      'PySgDto-BLMBAV001: Book list must be a valid privacy level (public, friends, private) or boolean',
+  })
   @IsOptional()
-  bookList?: boolean;
+  bookList?: PrivacyLevel | boolean;
 
-  @IsBoolean({ message: 'PySgDto-CMBAB001: Connections must be a boolean' })
+  @IsIn([...PRIVACY_LEVELS, true, false], {
+    message:
+      'PySgDto-CMBAV001: Connections must be a valid privacy level (public, friends, private) or boolean',
+  })
   @IsOptional()
-  connections?: boolean;
+  connections?: PrivacyLevel | boolean;
 
-  @IsBoolean({ message: 'PySgDto-FMBAB001: Friends list must be a boolean' })
+  @IsIn([...PRIVACY_LEVELS, true, false], {
+    message:
+      'PySgDto-FMBAV001: Friends list must be a valid privacy level (public, friends, private) or boolean',
+  })
   @IsOptional()
-  friends?: boolean;
+  friends?: PrivacyLevel | boolean;
+
+  [key: string]: PrivacyLevel | boolean | undefined;
 }
 
 // --- Profile Settings ---

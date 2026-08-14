@@ -11,24 +11,14 @@ import { useSession } from "next-auth/react";
 import Image from "next/image";
 import {
   Sparkles,
-  Undo2,
-  Trash2,
-  Copy,
-  Upload,
-  ArrowUp,
-  ArrowDown,
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  RefreshCw,
-  Move,
-  Compass,
-  Plus,
   Minus,
-  Pencil,
-  HelpCircle as HelpIcon,
-  Lock,
-  Unlock,
+  Plus,
+  Compass,
+  Sliders,
+  Bookmark as BookmarkIcon,
+  Code2,
+  FileJson,
+  HelpCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import useSWR from "swr";
@@ -43,62 +33,24 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Slider } from "@/components/ui/slider";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
 import { useBookmarks } from "@/hooks/useBookmarks";
-import { REFERENCE_CONSTELLATIONS } from "@/lib/constellations";
-import { StarMap } from "../stars/StarMap";
 
-interface ConstellationBuilderModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  initialRedirect?: string;
-  initialName?: string;
-  initialIcon?: string;
-  mode?: "bookmark" | "device";
-}
-
-interface StarPoint {
-  ra: number;
-  dec: number;
-  x: number;
-  y: number;
-}
-
-interface StarBookmarkData {
-  ra: number;
-  dec: number;
-  magnitude: number;
-  name: string;
-}
-
-interface Bookmark {
-  id: string;
-  name: string;
-  description?: string;
-  redirect?: string;
-  stars: StarBookmarkData[];
-  connections: number[][];
-  icon?: string;
-  connectionColor?: string;
-  starColor?: string;
-}
-
-interface ExportData {
-  name: string;
-  description: string;
-  redirect: string;
-  id: string;
-  stars: StarBookmarkData[];
-  connections: number[][];
-  icon?: string;
-  connectionColor?: string;
-  starColor?: string;
-}
+import {
+  StarPoint,
+  Bookmark,
+  ExportData,
+  ConstellationBuilderModalProps,
+  RrConstellationToolbar,
+  RrConstellationReferenceControls,
+  RrConstellationMetadataTab,
+  RrConstellationSavedTab,
+  RrConstellationExportTab,
+  RrConstellationImportTab,
+  RrConstellationGuideTab,
+  RrConstellationOffsetModal,
+} from "./rrConstellationBuilder";
 
 export function RrConstellationBuilderModal({
   open,
@@ -116,10 +68,6 @@ export function RrConstellationBuilderModal({
   const [canvasWidth, setCanvasWidth] = useState<number>(800);
   const [canvasHeight, setCanvasHeight] = useState<number>(600);
   const [showMapPicker, setShowMapPicker] = useState<boolean>(false);
-  const [showRefConstellations, setShowRefConstellations] =
-    useState<boolean>(true);
-  const [showCustomPreview, setShowCustomPreview] = useState<boolean>(true);
-  const [showBookmarks, setShowBookmarks] = useState<boolean>(true);
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [zoom, setZoom] = useState<number>(1);
   const [mobileTab, setMobileTab] = useState<"canvas" | "settings">("canvas");
@@ -144,11 +92,11 @@ export function RrConstellationBuilderModal({
           session.accessToken,
         ]
       : null,
-    fetcher
+    fetcher,
   );
 
   // Sync bookmarks using useBookmarks (only if NOT in device mode to save API load)
-  const { bookmarks: fetchedBookmarksRaw, mutate: refetchBookmarks } = useBookmarks({
+  const { bookmarks: fetchedBookmarksRaw } = useBookmarks({
     enabled: !!(session?.accessToken && open && mode !== "device"),
   });
   const fetchedBookmarks = fetchedBookmarksRaw as unknown as Bookmark[];
@@ -163,7 +111,6 @@ export function RrConstellationBuilderModal({
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-
 
   // ResizeObserver to handle canvas fitting screen
   useEffect(() => {
@@ -242,12 +189,21 @@ export function RrConstellationBuilderModal({
 
   // Load device constellation when profileData is retrieved
   useEffect(() => {
-    if (open && mode === "device" && profileData && !hasInitializedRef.current) {
+    if (
+      open &&
+      mode === "device" &&
+      profileData &&
+      !hasInitializedRef.current
+    ) {
       hasInitializedRef.current = true;
-      const constellationStr = profileData.profileSettings?.lacerta_drop_constellation;
+      const constellationStr =
+        profileData.profileSettings?.lacerta_drop_constellation;
       if (constellationStr) {
         try {
-          const constellation = typeof constellationStr === "string" ? JSON.parse(constellationStr) : constellationStr;
+          const constellation =
+            typeof constellationStr === "string"
+              ? JSON.parse(constellationStr)
+              : constellationStr;
           if (constellation) {
             setName(constellation.name || "My Constellation");
             setStarColor(constellation.starColor || "");
@@ -301,7 +257,7 @@ export function RrConstellationBuilderModal({
 
   // Finds if a star is within threshold distance of specified coordinates
   const findStarIndexNear = useCallback(
-    (x: number, y: number, threshold = 12) => {
+    (x: number, y: number, threshold = 14) => {
       return stars.findIndex((s) => {
         const pos = raDecToScreen(s.ra, s.dec);
         return Math.hypot(pos.x - x, pos.y - y) < threshold;
@@ -448,7 +404,6 @@ export function RrConstellationBuilderModal({
   const onTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
     if (!bgLocked && bgImage && e.touches[0]) {
       handleDragStart(e.touches[0].clientX, e.touches[0].clientY);
-      // Prevent scrolling viewport while dragging reference image
       e.preventDefault();
     }
   };
@@ -494,6 +449,14 @@ export function RrConstellationBuilderModal({
     if (dir === "down") setBgY((prev) => prev + amount);
     if (dir === "left") setBgX((prev) => prev - amount);
     if (dir === "right") setBgX((prev) => prev + amount);
+  };
+
+  const resetImagePosition = () => {
+    setBgX(0);
+    setBgY(0);
+    setBgRotation(0);
+    setBgScale(1);
+    toast.info("Reference image position reset");
   };
 
   // Undo last placed star
@@ -545,7 +508,6 @@ export function RrConstellationBuilderModal({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!open) return;
 
-      // If user is typing in input or textarea, don't trigger canvas shortcuts
       if (
         document.activeElement?.tagName === "INPUT" ||
         document.activeElement?.tagName === "TEXTAREA"
@@ -638,7 +600,7 @@ export function RrConstellationBuilderModal({
     const endDec = Math.floor(maxDec / decStep) * decStep;
 
     // Draw Grid Coordinates (Background)
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.04)";
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
     ctx.lineWidth = 0.5;
     ctx.setLineDash([4, 4]);
 
@@ -650,10 +612,9 @@ export function RrConstellationBuilderModal({
       ctx.lineTo(x, canvasHeight);
       ctx.stroke();
 
-      // Draw a small RA label at the bottom of the canvas
-      ctx.fillStyle = "rgba(255, 255, 255, 0.25)";
-      ctx.font = "8px var(--font-mono, monospace)";
-      ctx.fillText(`${r.toFixed(2)}h`, x + 2, canvasHeight - 6);
+      ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+      ctx.font = "9px var(--font-mono, monospace)";
+      ctx.fillText(`${r.toFixed(2)}h`, x + 3, canvasHeight - 6);
     }
 
     for (let d = startDec; d <= endDec; d += decStep) {
@@ -664,16 +625,15 @@ export function RrConstellationBuilderModal({
       ctx.lineTo(canvasWidth, y);
       ctx.stroke();
 
-      // Draw a small Dec label at the left of the canvas
-      ctx.fillStyle = "rgba(255, 255, 255, 0.25)";
-      ctx.font = "8px var(--font-mono, monospace)";
+      ctx.fillStyle = "rgba(255, 255, 255, 0.3)";
+      ctx.font = "9px var(--font-mono, monospace)";
       ctx.fillText(`${d.toFixed(1)}°`, 6, y - 2);
     }
 
     const offsetX = canvasWidth / 2;
     const offsetY = canvasHeight / 2;
 
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
     ctx.lineWidth = 1;
     ctx.setLineDash([]);
     ctx.beginPath();
@@ -684,9 +644,9 @@ export function RrConstellationBuilderModal({
     ctx.stroke();
 
     // Draw Connections with glowing style
-    ctx.strokeStyle = "rgba(99, 102, 241, 0.85)"; // Indigo-500
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = "rgba(99, 102, 241, 0.6)";
+    ctx.strokeStyle = connectionColor || "rgba(99, 102, 241, 0.9)";
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = connectionColor || "rgba(99, 102, 241, 0.6)";
     ctx.lineWidth = 2.5;
 
     connections.forEach(([start, end]) => {
@@ -715,81 +675,65 @@ export function RrConstellationBuilderModal({
       ctx.shadowBlur = isActive ? 16 : 8;
       ctx.shadowColor = isActive
         ? "rgba(245, 158, 11, 0.8)"
-        : "rgba(255, 255, 255, 0.5)";
+        : starColor || "rgba(255, 255, 255, 0.5)";
 
       // Halo Ring
       ctx.fillStyle = isActive
         ? "rgba(245, 158, 11, 0.25)"
         : "rgba(255, 255, 255, 0.15)";
       ctx.beginPath();
-      ctx.arc(pos.x, pos.y, isActive ? 10 : 8, 0, Math.PI * 2);
+      ctx.arc(pos.x, pos.y, isActive ? 11 : 8, 0, Math.PI * 2);
       ctx.fill();
 
       if (isActive) {
-        ctx.strokeStyle = "#f59e0b"; // Gold border for active
+        ctx.strokeStyle = "#f59e0b";
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.arc(pos.x, pos.y, 10, 0, Math.PI * 2);
+        ctx.arc(pos.x, pos.y, 11, 0, Math.PI * 2);
         ctx.stroke();
       }
 
       // Inner Solid Star
-      ctx.fillStyle = isActive ? "#f59e0b" : "#ffffff";
-      ctx.shadowBlur = 0; // reset shadow for solid core
+      ctx.fillStyle = isActive ? "#f59e0b" : starColor || "#ffffff";
+      ctx.shadowBlur = 0;
       ctx.beginPath();
       ctx.arc(pos.x, pos.y, isActive ? 4.5 : 3.5, 0, Math.PI * 2);
       ctx.fill();
 
       // Label index
-      ctx.fillStyle = isActive ? "#fbbf24" : "rgba(255, 255, 255, 0.75)";
+      ctx.fillStyle = isActive ? "#fbbf24" : "rgba(255, 255, 255, 0.85)";
       ctx.font = "bold 10px var(--font-mono, monospace)";
       ctx.fillText(`[${i}]`, pos.x + 10, pos.y + 4);
     });
 
     // Draw Hover Cursor HUD
     if (hoverPos) {
-      const hoveredIndex = findStarIndexNear(hoverPos.x, hoverPos.y);
+      const hoveredStarIndex = findStarIndexNear(hoverPos.x, hoverPos.y);
 
-      if (hoveredIndex !== -1) {
-        // Highlight hovered star
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.4)";
-        ctx.lineWidth = 1;
+      if (hoveredStarIndex !== -1) {
+        const star = stars[hoveredStarIndex];
+        const pos = raDecToScreen(star.ra, star.dec);
+
+        ctx.strokeStyle = "rgba(99, 102, 241, 0.8)";
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        const pos = raDecToScreen(
-          stars[hoveredIndex].ra,
-          stars[hoveredIndex].dec,
-        );
         ctx.arc(pos.x, pos.y, 14, 0, Math.PI * 2);
         ctx.stroke();
-      } else {
-        // Draw crosshairs at mouse
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
-        ctx.lineWidth = 0.5;
-        ctx.setLineDash([2, 4]);
+      }
 
-        ctx.beginPath();
-        ctx.moveTo(hoverPos.x, 0);
-        ctx.lineTo(hoverPos.x, canvasHeight);
-        ctx.moveTo(0, hoverPos.y);
-        ctx.lineTo(canvasWidth, hoverPos.y);
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        // Draw preview star
-        ctx.fillStyle = "rgba(99, 102, 241, 0.4)";
-        ctx.beginPath();
-        ctx.arc(hoverPos.x, hoverPos.y, 3.5, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Draw coordinates text near cursor
-        const { ra, dec } = screenToRaDec(hoverPos.x, hoverPos.y);
-        ctx.fillStyle = "rgba(165, 180, 252, 0.9)"; // Indigo-300
-        ctx.font = "9px var(--font-mono, monospace)";
-        ctx.fillText(
-          `RA: ${ra.toFixed(2)}h  Dec: ${dec.toFixed(2)}°`,
-          hoverPos.x + 12,
-          hoverPos.y - 8,
-        );
+      if (activeStarIndex !== null) {
+        const activeStar = stars[activeStarIndex];
+        if (activeStar) {
+          const activePos = raDecToScreen(activeStar.ra, activeStar.dec);
+          ctx.strokeStyle = "rgba(245, 158, 11, 0.4)";
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath();
+          ctx.moveTo(activePos.x, activePos.y);
+          ctx.lineTo(hoverPos.x, hoverPos.y);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
       }
     }
   }, [
@@ -798,6 +742,10 @@ export function RrConstellationBuilderModal({
     activeStarIndex,
     hoverPos,
     zoom,
+    scale,
+    connectionColor,
+    starColor,
+    screenToRaDec,
     raDecToScreen,
     findStarIndexNear,
     canvasWidth,
@@ -815,6 +763,15 @@ export function RrConstellationBuilderModal({
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleRemoveImage = () => {
+    setBgImage(null);
+    setBgX(0);
+    setBgY(0);
+    setBgRotation(0);
+    setBgScale(1);
+    toast.info("Reference image removed");
   };
 
   // Clear everything
@@ -885,7 +842,6 @@ export function RrConstellationBuilderModal({
       redirect,
       id: name.toLowerCase().replace(/\s+/g, "-"),
       stars: stars.map((s, i) => ({
-        // Shift values by sky position offsets
         ra: Number((s.ra + targetRa).toFixed(2)),
         dec: Number((s.dec + targetDec).toFixed(2)),
         magnitude: 3.0,
@@ -914,8 +870,6 @@ export function RrConstellationBuilderModal({
 
     try {
       let parsed: unknown;
-
-      // Clean trailing commas or semicolons commonly copied from file lists/code blocks
       let cleanText = trimmedText;
       if (cleanText.endsWith(",")) {
         cleanText = cleanText.slice(0, -1).trim();
@@ -924,11 +878,9 @@ export function RrConstellationBuilderModal({
         cleanText = cleanText.slice(0, -1).trim();
       }
 
-      // Try standard JSON.parse first
       try {
         parsed = JSON.parse(cleanText);
       } catch (e) {
-        // If it fails, evaluate it as a JS object
         if (!cleanText.startsWith("{") && !cleanText.startsWith("[")) {
           throw new Error(
             "Input must start with '{' or '[' to be parsed as a JS Object",
@@ -973,7 +925,6 @@ export function RrConstellationBuilderModal({
         typeof parsedObj.starColor === "string" ? parsedObj.starColor : "",
       );
 
-      // Calculate average RA/Dec to auto-center coordinates if target offsets are not stored in the file
       let avgRa = 0;
       let avgDec = 0;
       if (parsedObj.stars.length > 0) {
@@ -1003,7 +954,6 @@ export function RrConstellationBuilderModal({
       setTargetRa(impTargetRa);
       setTargetDec(impTargetDec);
 
-      // Reconstruct local coordinates
       const starsData = parsedObj.stars;
       const loadedStars = starsData.map((s: unknown) => {
         if (!s || typeof s !== "object") {
@@ -1034,7 +984,6 @@ export function RrConstellationBuilderModal({
     }
   };
 
-  // Copy JSON logic
   const handleCopy = () => {
     navigator.clipboard.writeText(exportDataStr());
     setCopied(true);
@@ -1078,41 +1027,50 @@ export function RrConstellationBuilderModal({
           lacerta_drop_constellation: JSON.stringify(data),
         };
 
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me/settings`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.accessToken}`,
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/users/me/settings`,
+          {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.accessToken}`,
+            },
+            body: JSON.stringify({ profileSettings: updatedSettings }),
           },
-          body: JSON.stringify({ profileSettings: updatedSettings }),
-        });
+        );
 
         if (!res.ok) {
           const errJson = await res.json().catch(() => null);
-          throw new Error(errJson?.message || "Failed to save device constellation.");
+          throw new Error(
+            errJson?.message || "Failed to save device constellation.",
+          );
         }
 
         toast.success(`Successfully saved your device constellation!`);
         window.dispatchEvent(new CustomEvent("runa-constellation-changed"));
         refetchProfile();
       } else {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/bookmarks`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.accessToken}`,
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL}/bookmarks`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.accessToken}`,
+            },
+            body: JSON.stringify(data),
           },
-          body: JSON.stringify(data),
-        });
+        );
         if (!res.ok) {
           const errJson = await res.json().catch(() => null);
-          throw new Error(errJson?.message || t("constellationBuilder.toastFailedSave"));
+          throw new Error(
+            errJson?.message || t("constellationBuilder.toastFailedSave"),
+          );
         }
-        const savedBookmark = await res.json() as Bookmark;
+        const savedBookmark = (await res.json()) as Bookmark;
         toast.success(t("constellationBuilder.toastSaved", { name }));
         window.dispatchEvent(new CustomEvent("runa-bookmarks-changed"));
 
-        // Update local bookmarks list
         setBookmarks((prev) => {
           const index = prev.findIndex((b) => b.name === name);
           if (index !== -1) {
@@ -1130,7 +1088,10 @@ export function RrConstellationBuilderModal({
     }
   };
 
-  const handleDeleteBookmark = async (id: string, bookmarkName: string): Promise<void> => {
+  const handleDeleteBookmark = async (
+    id: string,
+    bookmarkName: string,
+  ): Promise<void> => {
     if (!session?.accessToken) {
       toast.error(t("constellationBuilder.toastLoginRequired"));
       return;
@@ -1139,17 +1100,24 @@ export function RrConstellationBuilderModal({
     setDeleteId(id);
     setIsDeleting(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/bookmarks/${id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session.accessToken}`,
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/bookmarks/${id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+          },
         },
-      });
+      );
       if (!res.ok) {
         const errJson = await res.json().catch(() => null);
-        throw new Error(errJson?.message || t("constellationBuilder.toastFailedSave"));
+        throw new Error(
+          errJson?.message || t("constellationBuilder.toastFailedSave"),
+        );
       }
-      toast.success(t("constellationBuilder.toastDeleted", { name: bookmarkName }));
+      toast.success(
+        t("constellationBuilder.toastDeleted", { name: bookmarkName }),
+      );
       setBookmarks((prev) => prev.filter((b) => b.id !== id));
       window.dispatchEvent(new CustomEvent("runa-bookmarks-changed"));
     } catch (err: any) {
@@ -1162,11 +1130,12 @@ export function RrConstellationBuilderModal({
 
   const handleLoadBookmark = (b: Bookmark) => {
     setName(b.name);
-    setDescription(b.description || t("constellationBuilder.savedConstellation"));
+    setDescription(
+      b.description || t("constellationBuilder.savedConstellation"),
+    );
     setRedirect(b.redirect || "/custom-constellation");
     setIcon(b.icon || "");
 
-    // Calculate average RA/Dec to auto-center coordinates
     let avgRa = 0;
     let avgDec = 0;
     if (b.stars && Array.isArray(b.stars) && b.stars.length > 0) {
@@ -1193,9 +1162,7 @@ export function RrConstellationBuilderModal({
     setConnectionColor(b.connectionColor || "");
     setStarColor(b.starColor || "");
     setActiveTab("metadata");
-    toast.success(
-      t("constellationBuilder.toastLoaded", { name: b.name }),
-    );
+    toast.success(t("constellationBuilder.toastLoaded", { name: b.name }));
   };
 
   // Construct user's current constellation dynamically to preview on the starmap
@@ -1219,15 +1186,15 @@ export function RrConstellationBuilderModal({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[1320px] w-[95vw] h-[95vh] max-h-[960px] p-0 overflow-hidden bg-background border border-border shadow-2xl rounded-2xl flex flex-col font-sans text-foreground">
+        <DialogContent className="sm:max-w-340 w-[96vw] h-[95vh] max-h-245 p-0 overflow-hidden bg-background border border-border/80 shadow-2xl rounded-2xl flex flex-col font-sans text-foreground">
           {/* Header Section */}
-          <DialogHeader className="p-4 sm:p-5 border-b border-border flex flex-row items-center justify-between shrink-0">
+          <DialogHeader className="p-4 sm:p-5 border-b border-border/80 flex flex-row items-center justify-between shrink-0 bg-muted/10">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20 hidden sm:block shrink-0">
-                <Sparkles className="size-5 animate-pulse" />
+              <div className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20 hidden sm:block shrink-0 shadow-2xs">
+                <Sparkles className="size-5 text-primary" />
               </div>
               <div>
-                <DialogTitle className="text-base sm:text-lg font-bold tracking-wide">
+                <DialogTitle className="text-base sm:text-lg font-bold tracking-tight">
                   {t("constellationBuilder.workspace")}
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground mt-0.5">
@@ -1238,31 +1205,33 @@ export function RrConstellationBuilderModal({
           </DialogHeader>
 
           {/* Modal Workspace Body */}
-          <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_385px] overflow-hidden bg-background/50">
+          <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_395px] overflow-hidden bg-background/50">
             {/* Mobile View Toggle Tabs */}
-            <div className="lg:hidden flex border-b border-border bg-muted/40 p-1 shrink-0">
+            <div className="lg:hidden flex border-b border-border/80 bg-muted/30 p-1.5 shrink-0 gap-1">
               <button
                 type="button"
                 onClick={() => setMobileTab("canvas")}
                 className={cn(
-                  "flex-1 py-2 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer",
+                  "flex-1 py-2 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5",
                   mobileTab === "canvas"
-                    ? "bg-primary/10 text-primary border border-primary/20 shadow-xs"
-                    : "text-muted-foreground hover:text-foreground border border-transparent",
+                    ? "bg-primary text-primary-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
+                <Compass className="size-3.5" />
                 {t("constellationBuilder.canvasWorkspace")}
               </button>
               <button
                 type="button"
                 onClick={() => setMobileTab("settings")}
                 className={cn(
-                  "flex-1 py-2 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer",
+                  "flex-1 py-2 text-xs font-semibold rounded-lg transition-all duration-200 cursor-pointer flex items-center justify-center gap-1.5",
                   mobileTab === "settings"
-                    ? "bg-primary/10 text-primary border border-primary/20 shadow-xs"
-                    : "text-muted-foreground hover:text-foreground border border-transparent",
+                    ? "bg-primary text-primary-foreground shadow-xs"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
+                <Sliders className="size-3.5" />
                 {t("constellationBuilder.workspaceSettings")}
               </button>
             </div>
@@ -1270,14 +1239,14 @@ export function RrConstellationBuilderModal({
             {/* LEFT: Canvas & Viewport Editor */}
             <div
               className={cn(
-                "flex-1 flex flex-col p-4 sm:p-5 gap-4 overflow-hidden min-w-0 min-h-0 bg-background",
+                "flex-1 flex flex-col p-4 sm:p-5 gap-3.5 overflow-hidden min-w-0 min-h-0 bg-background/60",
                 mobileTab !== "canvas" && "hidden lg:flex",
               )}
             >
-              {/* Canvas Container Frame (Permanently dark sky map) */}
+              {/* Canvas Container Frame */}
               <div
                 ref={containerRef}
-                className="h-[320px] sm:h-[420px] lg:h-auto lg:flex-1 min-h-0 relative border border-border rounded-2xl overflow-hidden shadow-2xl bg-[#020205] select-none w-full"
+                className="h-80 sm:h-105 lg:h-auto lg:flex-1 min-h-0 relative border border-border/80 rounded-2xl overflow-hidden shadow-2xl bg-[#020205] select-none w-full group"
               >
                 {bgImage && (
                   <Image
@@ -1322,25 +1291,28 @@ export function RrConstellationBuilderModal({
 
                 {/* HUD Active Node Marker */}
                 {activeStarIndex !== null && (
-                  <div className="absolute bottom-3 left-3 z-20 px-2.5 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-500 font-mono text-[10px] flex items-center gap-1.5 shadow-sm">
+                  <div className="absolute bottom-3.5 left-3.5 z-20 px-2.5 py-1 rounded-lg bg-background/80 dark:bg-zinc-950/80 backdrop-blur-md border border-amber-500/30 text-amber-500 font-mono text-[11px] flex items-center gap-1.5 shadow-md">
                     <span className="size-1.5 rounded-full bg-amber-500 animate-ping" />
-                    {t("constellationBuilder.activeNode", { index: activeStarIndex })}
+                    {t("constellationBuilder.activeNode", {
+                      index: activeStarIndex,
+                    })}
                   </div>
                 )}
 
                 {/* Zoom Controls HUD */}
                 <div
-                  className="absolute bottom-3 right-3 z-20 flex items-center gap-1.5 bg-background/80 dark:bg-zinc-950/80 backdrop-blur-md border border-border px-2 py-1.5 rounded-xl shadow-lg"
+                  className="absolute bottom-3.5 right-3.5 z-20 flex items-center gap-1 bg-background/85 dark:bg-zinc-950/85 backdrop-blur-md border border-border/80 p-1 rounded-xl shadow-lg"
                   onClick={(e) => e.stopPropagation()}
                   onMouseDown={(e) => e.stopPropagation()}
                 >
                   <Button
                     type="button"
                     variant="ghost"
+                    size="icon"
                     onClick={() =>
                       setZoom((prev) => Math.max(0.5, prev - 0.25))
                     }
-                    className="size-7 p-0 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground active:scale-95 transition-all cursor-pointer"
+                    className="size-7 rounded-lg text-muted-foreground hover:text-foreground cursor-pointer transition-all active:scale-90"
                     title={t("constellationBuilder.zoomOut")}
                     aria-label={t("constellationBuilder.zoomOut")}
                   >
@@ -1349,7 +1321,7 @@ export function RrConstellationBuilderModal({
                   <button
                     type="button"
                     onClick={() => setZoom(1)}
-                    className="px-2 h-7 flex items-center justify-center rounded-lg bg-muted/50 border border-border text-[10px] font-mono font-bold text-foreground hover:bg-muted transition-all min-w-[54px] cursor-pointer"
+                    className="px-2 h-7 flex items-center justify-center rounded-lg bg-muted/60 border border-border/60 text-[10px] font-mono font-bold text-foreground hover:bg-muted transition-all min-w-12.5 cursor-pointer"
                     title={t("constellationBuilder.resetZoom")}
                     aria-label={t("constellationBuilder.resetZoom")}
                   >
@@ -1358,10 +1330,11 @@ export function RrConstellationBuilderModal({
                   <Button
                     type="button"
                     variant="ghost"
+                    size="icon"
                     onClick={() =>
                       setZoom((prev) => Math.min(8.0, prev + 0.25))
                     }
-                    className="size-7 p-0 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground active:scale-95 transition-all cursor-pointer"
+                    className="size-7 rounded-lg text-muted-foreground hover:text-foreground cursor-pointer transition-all active:scale-90"
                     title={t("constellationBuilder.zoomIn")}
                     aria-label={t("constellationBuilder.zoomIn")}
                   >
@@ -1370,268 +1343,43 @@ export function RrConstellationBuilderModal({
                 </div>
               </div>
 
-              {/* Quick Canvas Controls */}
-              <div className="flex flex-wrap gap-2.5 items-center justify-between shrink-0">
-                <div className="flex gap-2">
-                  <Button
-                    onClick={removeLastStar}
-                    disabled={stars.length === 0}
-                    variant="outline"
-                    size="sm"
-                    className="rounded-lg"
-                    aria-label="Undo last star placement"
-                  >
-                    <Undo2 className="size-3.5 mr-1" />
-                    {t("constellationBuilder.undoLast")}
-                  </Button>
-
-                  {activeStarIndex !== null && (
-                    <Button
-                      onClick={deleteActiveStar}
-                      variant="outline"
-                      size="sm"
-                      className="rounded-lg border-destructive/20 text-destructive hover:bg-destructive/10"
-                      aria-label="Delete active star"
-                    >
-                      <Trash2 className="size-3.5 mr-1" />
-                      {t("constellationBuilder.deleteActive")}
-                    </Button>
-                  )}
-
-                  {activeStarIndex !== null && (
-                    <Button
-                      onClick={() => setActiveStarIndex(null)}
-                      variant="ghost"
-                      size="sm"
-                      className="rounded-lg text-muted-foreground hover:text-foreground"
-                      aria-label="Deselect active star"
-                    >
-                      {t("constellationBuilder.deselect")}
-                    </Button>
-                  )}
-                </div>
-
-                <Button
-                  onClick={clearAll}
-                  disabled={stars.length === 0}
-                  variant="destructive"
-                  size="sm"
-                  className="rounded-lg"
-                  aria-label="Clear constellation workspace canvas"
-                >
-                  <RefreshCw className="size-3.5 mr-1" />
-                  {t("constellationBuilder.clearWorkspace")}
-                </Button>
-              </div>
+              {/* Quick Canvas Controls Toolbar */}
+              <RrConstellationToolbar
+                starsCount={stars.length}
+                connectionsCount={connections.length}
+                activeStarIndex={activeStarIndex}
+                onUndoLast={removeLastStar}
+                onDeleteActive={deleteActiveStar}
+                onDeselect={() => setActiveStarIndex(null)}
+                onClearWorkspace={clearAll}
+              />
 
               {/* Reference Image Controls Card */}
-              <div className="bg-card border border-border p-4 rounded-xl flex flex-col sm:flex-row gap-5 items-center shrink-0">
-                <div className="w-full sm:w-auto flex flex-col gap-1.5 shrink-0">
-                  <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                    <Upload className="size-3.5" />
-                    {t("constellationBuilder.overlayImage")}
-                  </Label>
-                  <div className="relative">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="hidden"
-                      id="modal-image-upload"
-                      aria-label="Upload reference overlay image"
-                    />
-                    <label
-                      htmlFor="modal-image-upload"
-                      className="inline-flex h-9 items-center px-4 rounded-lg border border-input bg-background hover:bg-muted text-xs font-medium text-foreground cursor-pointer transition-colors"
-                    >
-                      {t("constellationBuilder.chooseFile")}
-                    </label>
-                    {bgImage && (
-                      <span className="text-[10px] text-emerald-500 block mt-1 font-mono">
-                        {t("constellationBuilder.imageLoaded")}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {bgImage && (
-                  <div className="w-full sm:w-auto flex flex-col gap-1.5 shrink-0">
-                    <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                      {bgLocked ? (
-                        <Lock className="size-3.5 text-muted-foreground" />
-                      ) : (
-                        <Unlock className="size-3.5 text-primary" />
-                      )}
-                      {t("constellationBuilder.imageLock")}
-                    </Label>
-                    <Button
-                      type="button"
-                      variant={bgLocked ? "outline" : "default"}
-                      size="sm"
-                      onClick={() => setBgLocked(!bgLocked)}
-                      className={cn(
-                        "h-9 px-3 rounded-lg text-xs font-medium cursor-pointer transition-all flex items-center gap-1.5",
-                        !bgLocked &&
-                          "bg-primary text-primary-foreground hover:bg-primary/95 shadow-sm",
-                      )}
-                      aria-label={
-                        bgLocked
-                          ? "Unlock overlay image position to allow dragging"
-                          : "Lock overlay image position"
-                      }
-                    >
-                      {bgLocked ? t("constellationBuilder.unlockDrag") : t("constellationBuilder.lockPosition")}
-                    </Button>
-                  </div>
-                )}
-
-                {bgImage && (
-                  <div className="flex-1 w-full grid grid-cols-2 md:grid-cols-5 gap-4">
-                    {/* Opacity slider */}
-                    <div className="flex flex-col gap-1.5">
-                      <Label className="text-[10px] text-muted-foreground flex justify-between font-mono">
-                        <span>{t("constellationBuilder.opacity")}</span>
-                        <span>{Math.round(bgOpacity * 100)}%</span>
-                      </Label>
-                      <Slider
-                        min={0.05}
-                        max={1}
-                        step={0.05}
-                        value={[bgOpacity]}
-                        onValueChange={(val: number[]) => setBgOpacity(val[0])}
-                        className="my-1.5"
-                        aria-label="Overlay image opacity"
-                      />
-                    </div>
-
-                    {/* Scale slider */}
-                    <div className="flex flex-col gap-1.5">
-                      <Label className="text-[10px] text-muted-foreground flex justify-between font-mono">
-                        <span>{t("constellationBuilder.scale")}</span>
-                        <span>{bgScale.toFixed(2)}x</span>
-                      </Label>
-                      <Slider
-                        min={0.1}
-                        max={4}
-                        step={0.05}
-                        value={[bgScale]}
-                        onValueChange={(val: number[]) => setBgScale(val[0])}
-                        className="my-1.5"
-                        aria-label="Overlay image scale"
-                      />
-                    </div>
-
-                    {/* Translate Position Offset Controls */}
-                    <div className="flex flex-col gap-1.5">
-                      <Label className="text-[10px] text-muted-foreground flex justify-between font-mono">
-                        <span>{t("constellationBuilder.posX")}</span>
-                        <span>{bgX}px</span>
-                      </Label>
-                      <Slider
-                        min={-400}
-                        max={400}
-                        step={2}
-                        value={[bgX]}
-                        onValueChange={(val: number[]) => setBgX(val[0])}
-                        className="my-1.5"
-                        aria-label="Overlay image horizontal offset"
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5">
-                      <Label className="text-[10px] text-muted-foreground flex justify-between font-mono">
-                        <span>{t("constellationBuilder.posY")}</span>
-                        <span>{bgY}px</span>
-                      </Label>
-                      <Slider
-                        min={-300}
-                        max={300}
-                        step={2}
-                        value={[bgY]}
-                        onValueChange={(val: number[]) => setBgY(val[0])}
-                        className="my-1.5"
-                        aria-label="Overlay image vertical offset"
-                      />
-                    </div>
-
-                    {/* Rotation Control */}
-                    <div className="flex flex-col gap-1.5">
-                      <Label className="text-[10px] text-muted-foreground flex justify-between font-mono">
-                        <span>{t("constellationBuilder.rotation")}</span>
-                        <span>{bgRotation}°</span>
-                      </Label>
-                      <Slider
-                        min={0}
-                        max={360}
-                        step={1}
-                        value={[bgRotation]}
-                        onValueChange={(val: number[]) => setBgRotation(val[0])}
-                        className="my-1.5"
-                        aria-label="Overlay image rotation"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Nudge Buttons Layout */}
-                {bgImage && (
-                  <div className="flex flex-col gap-1 bg-muted/40 p-2 rounded-lg border border-border shrink-0">
-                    <span className="text-[9px] text-muted-foreground uppercase tracking-widest text-center block mb-1 font-mono">
-                      {t("constellationBuilder.nudge")}
-                    </span>
-                    <div className="grid grid-cols-3 gap-1 w-20">
-                      <div />
-                      <button
-                        type="button"
-                        onClick={() => nudgeImage("up")}
-                        className="size-5 bg-card border border-border rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent active:scale-95 transition-colors cursor-pointer"
-                        title={t("constellationBuilder.nudge")}
-                        aria-label="Nudge Image Up"
-                      >
-                        <ArrowUp className="size-3" />
-                      </button>
-                      <div />
-                      <button
-                        type="button"
-                        onClick={() => nudgeImage("left")}
-                        className="size-5 bg-card border border-border rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent active:scale-95 transition-colors cursor-pointer"
-                        title={t("constellationBuilder.nudge")}
-                        aria-label="Nudge Image Left"
-                      >
-                        <ArrowLeft className="size-3" />
-                      </button>
-                      <div className="size-5 flex items-center justify-center text-[8px] text-muted-foreground/60">
-                        <Move className="size-2" />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => nudgeImage("right")}
-                        className="size-5 bg-card border border-border rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent active:scale-95 transition-colors cursor-pointer"
-                        title={t("constellationBuilder.nudge")}
-                        aria-label="Nudge Image Right"
-                      >
-                        <ArrowRight className="size-3" />
-                      </button>
-                      <div />
-                      <button
-                        type="button"
-                        onClick={() => nudgeImage("down")}
-                        className="size-5 bg-card border border-border rounded flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent active:scale-95 transition-colors cursor-pointer"
-                        title={t("constellationBuilder.nudge")}
-                        aria-label="Nudge Image Down"
-                      >
-                        <ArrowDown className="size-3" />
-                      </button>
-                      <div />
-                    </div>
-                  </div>
-                )}
-              </div>
+              <RrConstellationReferenceControls
+                bgImage={bgImage}
+                bgLocked={bgLocked}
+                bgOpacity={bgOpacity}
+                bgScale={bgScale}
+                bgX={bgX}
+                bgY={bgY}
+                bgRotation={bgRotation}
+                onImageUpload={handleImageUpload}
+                onRemoveImage={handleRemoveImage}
+                onToggleLock={() => setBgLocked(!bgLocked)}
+                onOpacityChange={setBgOpacity}
+                onScaleChange={setBgScale}
+                onXChange={setBgX}
+                onYChange={setBgY}
+                onRotationChange={setBgRotation}
+                onNudge={nudgeImage}
+                onResetPosition={resetImagePosition}
+              />
             </div>
 
             {/* RIGHT: Properties, Import/Export, and Help Panel */}
             <div
               className={cn(
-                "w-full lg:w-[385px] border-t lg:border-t-0 lg:border-l border-border p-4 sm:p-5 flex flex-col gap-4 overflow-y-auto shrink-0 bg-muted/20",
+                "w-full lg:w-98.75 border-t lg:border-t-0 lg:border-l border-border/80 p-4 sm:p-5 flex flex-col gap-4 overflow-y-auto shrink-0 bg-muted/15",
                 mobileTab !== "settings" && "hidden lg:flex",
               )}
             >
@@ -1640,40 +1388,47 @@ export function RrConstellationBuilderModal({
                 onValueChange={setActiveTab}
                 className="w-full flex flex-col h-full gap-4"
               >
-                <TabsList className={cn(
-                  "grid w-full bg-muted border border-border p-[3px] rounded-xl shrink-0",
-                  mode === "device" ? "grid-cols-4" : "grid-cols-5"
-                )}>
+                <TabsList
+                  className={cn(
+                    "grid w-full bg-muted/60 border border-border/80 p-1 rounded-xl shrink-0 gap-1",
+                    mode === "device" ? "grid-cols-4" : "grid-cols-5",
+                  )}
+                >
                   <TabsTrigger
                     value="metadata"
-                    className="text-[10px] sm:text-[11px] cursor-pointer"
+                    className="text-[10px] sm:text-[11px] font-semibold rounded-lg cursor-pointer flex items-center gap-1 data-[state=active]:bg-background data-[state=active]:shadow-xs"
                   >
+                    <Sliders className="size-3 hidden sm:inline" />
                     {t("constellationBuilder.meta")}
                   </TabsTrigger>
                   {mode !== "device" && (
                     <TabsTrigger
                       value="saved"
-                      className="text-[10px] sm:text-[11px] cursor-pointer"
+                      className="text-[10px] sm:text-[11px] font-semibold rounded-lg cursor-pointer flex items-center gap-1 data-[state=active]:bg-background data-[state=active]:shadow-xs"
                     >
+                      <BookmarkIcon className="size-3 hidden sm:inline" />
                       {t("constellationBuilder.saved")}
                     </TabsTrigger>
                   )}
                   <TabsTrigger
                     value="export"
-                    className="text-[10px] sm:text-[11px] cursor-pointer"
+                    className="text-[10px] sm:text-[11px] font-semibold rounded-lg cursor-pointer flex items-center gap-1 data-[state=active]:bg-background data-[state=active]:shadow-xs"
                   >
+                    <Code2 className="size-3 hidden sm:inline" />
                     {t("constellationBuilder.export")}
                   </TabsTrigger>
                   <TabsTrigger
                     value="import"
-                    className="text-[10px] sm:text-[11px] cursor-pointer"
+                    className="text-[10px] sm:text-[11px] font-semibold rounded-lg cursor-pointer flex items-center gap-1 data-[state=active]:bg-background data-[state=active]:shadow-xs"
                   >
+                    <FileJson className="size-3 hidden sm:inline" />
                     {t("constellationBuilder.import")}
                   </TabsTrigger>
                   <TabsTrigger
                     value="guide"
-                    className="text-[10px] sm:text-[11px] cursor-pointer"
+                    className="text-[10px] sm:text-[11px] font-semibold rounded-lg cursor-pointer flex items-center gap-1 data-[state=active]:bg-background data-[state=active]:shadow-xs"
                   >
+                    <HelpCircle className="size-3 hidden sm:inline" />
                     {t("constellationBuilder.guide")}
                   </TabsTrigger>
                 </TabsList>
@@ -1681,496 +1436,98 @@ export function RrConstellationBuilderModal({
                 {/* Tab 1: Metadata */}
                 <TabsContent
                   value="metadata"
-                  className="mt-0 focus-visible:outline-hidden flex flex-col gap-4"
+                  className="mt-0 focus-visible:outline-hidden"
                 >
-                  <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-3.5">
-                    <h3 className="text-xs font-semibold text-foreground uppercase tracking-widest border-b border-border pb-2">
-                      {t("constellationBuilder.constellationMeta")}
-                    </h3>
-
-                    <FieldGroup>
-                      <Field>
-                        <FieldLabel htmlFor="const-name">{t("constellationBuilder.name")}</FieldLabel>
-                        <Input
-                          id="const-name"
-                          type="text"
-                          value={name}
-                          onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                            setName(e.target.value)
-                          }
-                          className="h-8 text-xs bg-background border-input focus-visible:ring-primary/20"
-                        />
-                      </Field>
-
-                      {mode !== "device" && (
-                        <>
-                          <Field>
-                            <FieldLabel htmlFor="const-desc">
-                              {t("constellationBuilder.description")}
-                            </FieldLabel>
-                            <Input
-                              id="const-desc"
-                              type="text"
-                              value={description}
-                              onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                                setDescription(e.target.value)
-                              }
-                              className="h-8 text-xs bg-background border-input focus-visible:ring-primary/20"
-                            />
-                          </Field>
-
-                          <Field>
-                            <FieldLabel htmlFor="const-redirect">
-                              {t("constellationBuilder.redirectPath")}
-                            </FieldLabel>
-                            <Input
-                              id="const-redirect"
-                              type="text"
-                              value={redirect}
-                              onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                                setRedirect(e.target.value)
-                              }
-                              className="h-8 text-xs bg-background border-input focus-visible:ring-primary/20"
-                            />
-                          </Field>
-
-                          <Field>
-                            <FieldLabel htmlFor="const-icon">
-                              {t("constellationBuilder.iconUrl")}
-                            </FieldLabel>
-                            <Input
-                              id="const-icon"
-                              type="text"
-                              placeholder="e.g. /favicons/my-app.ico"
-                              value={icon}
-                              onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                                setIcon(e.target.value)
-                              }
-                              className="h-8 text-xs bg-background border-input focus-visible:ring-primary/20"
-                            />
-                          </Field>
-                        </>
-                      )}
-
-                      <div className="grid grid-cols-2 gap-3">
-                        <Field>
-                          <FieldLabel htmlFor="const-conn-color">
-                            {t("constellationBuilder.lineColor")}
-                          </FieldLabel>
-                          <div className="flex gap-1.5 items-center">
-                            <Input
-                              id="const-conn-color"
-                              type="text"
-                              placeholder="e.g. #8b5cf6"
-                              value={connectionColor}
-                              onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                                setConnectionColor(e.target.value)
-                              }
-                              className="h-8 text-xs bg-background border-input focus-visible:ring-primary/20 font-mono w-full"
-                            />
-                            <input
-                              type="color"
-                              value={connectionColor || "#ffffff"}
-                              onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                                setConnectionColor(e.target.value)
-                              }
-                              className="size-6 rounded-md border border-input bg-transparent cursor-pointer shrink-0 p-0 overflow-hidden"
-                              title="Choose line color"
-                              aria-label="Choose line connection color visually"
-                            />
-                          </div>
-                        </Field>
-
-                        <Field>
-                          <FieldLabel htmlFor="const-star-color">
-                            {t("constellationBuilder.starColor")}
-                          </FieldLabel>
-                          <div className="flex gap-1.5 items-center">
-                            <Input
-                              id="const-star-color"
-                              type="text"
-                              placeholder="e.g. #f59e0b"
-                              value={starColor}
-                              onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                                setStarColor(e.target.value)
-                              }
-                              className="h-8 text-xs bg-background border-input focus-visible:ring-primary/20 font-mono w-full"
-                            />
-                            <input
-                              type="color"
-                              value={starColor || "#ffffff"}
-                              onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                                setStarColor(e.target.value)
-                              }
-                              className="size-6 rounded-md border border-input bg-transparent cursor-pointer shrink-0 p-0 overflow-hidden"
-                              title="Choose star color"
-                              aria-label="Choose star color visually"
-                            />
-                          </div>
-                        </Field>
-                      </div>
-                    </FieldGroup>
-
-                    {/* Offset Positions */}
-                    <div className="flex flex-col gap-1.5 pt-2 border-t border-border mt-1">
-                      <Label className="text-xs font-semibold text-foreground">
-                        {t("constellationBuilder.universeTargetPos")}
-                      </Label>
-                      <p className="text-[10px] text-muted-foreground leading-normal">
-                        {t("constellationBuilder.universeTargetPosDesc")}
-                      </p>
-
-                      <div className="grid grid-cols-2 gap-2 mt-1">
-                        <div className="flex flex-col gap-1">
-                          <Label
-                            htmlFor="offset-ra"
-                            className="text-[10px] text-muted-foreground font-mono"
-                          >
-                            {t("constellationBuilder.raOffset")}
-                          </Label>
-                          <Input
-                            id="offset-ra"
-                            type="number"
-                            step="0.01"
-                            value={targetRa}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                              setTargetRa(parseFloat(e.target.value) || 0)
-                            }
-                            className="h-8 text-xs bg-background border-input font-mono"
-                          />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <Label
-                            htmlFor="offset-dec"
-                            className="text-[10px] text-muted-foreground font-mono"
-                          >
-                            {t("constellationBuilder.decOffset")}
-                          </Label>
-                          <Input
-                            id="offset-dec"
-                            type="number"
-                            step="0.01"
-                            value={targetDec}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                              setTargetDec(parseFloat(e.target.value) || 0)
-                            }
-                            className="h-8 text-xs bg-background border-input font-mono"
-                          />
-                        </div>
-                      </div>
-
-                      <Button
-                        onClick={() => setShowMapPicker(true)}
-                        type="button"
-                        variant="outline"
-                        className="w-full mt-3 h-8 text-[11px] text-primary border-primary/20 hover:border-primary/40 hover:bg-primary/5 flex items-center justify-center gap-1.5"
-                        aria-label="Pick target offset visually from the StarMap"
-                      >
-                        <Compass className="size-3.5" />
-                        {t("constellationBuilder.pickOffsetVisually")}
-                      </Button>
-                      <Button
-                        onClick={handleSaveToBookmarks}
-                        type="button"
-                        disabled={stars.length === 0 || isSaving}
-                        className="w-full mt-2 h-8 text-[11px] bg-primary hover:bg-primary/95 text-primary-foreground rounded-lg flex items-center justify-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                        aria-label={
-                          isSaving
-                            ? "Saving constellation..."
-                            : mode === "device"
-                              ? "Save constellation for device"
-                              : editingBookmarkId
-                                ? "Update existing bookmark"
-                                : "Add current constellation to database bookmarks"
-                        }
-                      >
-                        {isSaving ? (
-                          <>
-                            <RefreshCw className="size-3.5 animate-spin" />
-                            {t("constellationBuilder.saving")}
-                          </>
-                        ) : (
-                          <>
-                            <Check className="size-3.5" />
-                            {mode === "device"
-                              ? t("constellationBuilder.saveForDevice")
-                              : editingBookmarkId
-                                ? t("constellationBuilder.updateBookmark")
-                                : t("constellationBuilder.saveToBookmarks")}
-                          </>
-                        )}
-                      </Button>
-
-                      {editingBookmarkId && (
-                        <Button
-                          onClick={() => {
-                            setEditingBookmarkId(null);
-                            toast.info(
-                              t("constellationBuilder.clearEditSession"),
-                            );
-                          }}
-                          type="button"
-                          variant="ghost"
-                          className="w-full mt-1.5 h-8 text-[11px] text-muted-foreground hover:text-foreground"
-                          aria-label="Cancel editing this bookmark, shift to creating a new bookmark instead"
-                        >
-                          {t("constellationBuilder.cancelEdit")}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
+                  <RrConstellationMetadataTab
+                    name={name}
+                    setName={setName}
+                    description={description}
+                    setDescription={setDescription}
+                    redirect={redirect}
+                    setRedirect={setRedirect}
+                    icon={icon}
+                    setIcon={setIcon}
+                    connectionColor={connectionColor}
+                    setConnectionColor={setConnectionColor}
+                    starColor={starColor}
+                    setStarColor={setStarColor}
+                    targetRa={targetRa}
+                    setTargetRa={setTargetRa}
+                    targetDec={targetDec}
+                    setTargetDec={setTargetDec}
+                    mode={mode}
+                    isSaving={isSaving}
+                    starsCount={stars.length}
+                    editingBookmarkId={editingBookmarkId}
+                    onOpenMapPicker={() => setShowMapPicker(true)}
+                    onSaveToBookmarks={handleSaveToBookmarks}
+                    onCancelEdit={() => {
+                      setEditingBookmarkId(null);
+                      toast.info(t("constellationBuilder.clearEditSession"));
+                    }}
+                  />
                 </TabsContent>
 
                 {/* Tab 2: Saved Bookmarks */}
                 {mode !== "device" && (
                   <TabsContent
                     value="saved"
-                    className="mt-0 focus-visible:outline-hidden flex flex-col gap-4"
+                    className="mt-0 focus-visible:outline-hidden"
                   >
-                    <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-2.5">
-                      <div className="flex items-center justify-between border-b border-border pb-2">
-                        <h3 className="text-xs font-semibold text-foreground uppercase tracking-widest">
-                          {t("constellationBuilder.savedConstellations")}
-                        </h3>
-                      </div>
-
-                      {!session?.accessToken ? (
-                        <p className="text-xs text-muted-foreground text-center py-8">
-                          {t("constellationBuilder.pleaseSignIn")}
-                        </p>
-                      ) : bookmarks.length === 0 ? (
-                        <p className="text-xs text-muted-foreground text-center py-8">
-                          {t("constellationBuilder.noBookmarksSaved")}
-                        </p>
-                      ) : (
-                        <div className="flex flex-col gap-2 max-h-[440px] overflow-y-auto pr-1">
-                          {bookmarks.map((b) => (
-                            <div
-                               key={b.id}
-                               className="bg-background border border-border hover:border-muted-foreground/35 p-3 rounded-lg flex items-center justify-between gap-3 transition-colors group"
-                            >
-                              <div className="flex-1 min-w-0">
-                                <h4 className="text-xs font-bold text-foreground truncate">
-                                  {b.name}
-                                </h4>
-                                <p className="text-[10px] text-muted-foreground truncate mt-0.5">
-                                  {b.description || t("constellationBuilder.savedConstellation")}
-                                </p>
-                                <div className="flex gap-2 mt-1">
-                                  <span className="text-[9px] font-mono text-muted-foreground">
-                                    {Array.isArray(b.stars) ? b.stars.length : 0}{" "}
-                                    {t("constellationBuilder.stars")}
-                                  </span>
-                                  <span className="text-[9px] font-mono text-muted-foreground">
-                                    {Array.isArray(b.connections)
-                                      ? b.connections.length
-                                      : 0}{" "}
-                                    {t("constellationBuilder.connections")}
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1 shrink-0">
-                                <Button
-                                  onClick={() => handleLoadBookmark(b)}
-                                  size="xs"
-                                  variant="outline"
-                                  className="h-7 px-2 rounded-md text-[10px] border-border text-primary hover:bg-muted cursor-pointer flex items-center gap-1"
-                                  title={`Edit constellation ${b.name}`}
-                                  aria-label={`Edit constellation ${b.name}`}
-                                >
-                                  <Pencil className="size-3" />
-                                  {t("constellationBuilder.edit")}
-                                </Button>
-                                <Button
-                                  onClick={() =>
-                                    handleDeleteBookmark(b.id, b.name)
-                                  }
-                                  size="xs"
-                                  variant="outline"
-                                  disabled={isDeleting && deleteId === b.id}
-                                  className="h-7 px-2 rounded-md text-[10px] border-destructive/20 text-destructive hover:bg-destructive/10 cursor-pointer disabled:opacity-50"
-                                  title={`Delete constellation ${b.name}`}
-                                  aria-label={`Delete constellation ${b.name}`}
-                                >
-                                  {isDeleting && deleteId === b.id ? (
-                                    <RefreshCw className="size-3 animate-spin" />
-                                  ) : (
-                                    <Trash2 className="size-3" />
-                                  )}
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                    <RrConstellationSavedTab
+                      isAuthenticated={!!session?.accessToken}
+                      bookmarks={bookmarks}
+                      isDeleting={isDeleting}
+                      deleteId={deleteId}
+                      onLoadBookmark={handleLoadBookmark}
+                      onDeleteBookmark={handleDeleteBookmark}
+                    />
                   </TabsContent>
                 )}
 
                 {/* Tab 3: Export */}
                 <TabsContent
                   value="export"
-                  className="mt-0 focus-visible:outline-hidden flex flex-col h-[480px]"
+                  className="mt-0 focus-visible:outline-hidden"
                 >
-                  <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-2.5 h-full">
-                    <div className="flex items-center justify-between border-b border-border pb-2 shrink-0">
-                      <h3 className="text-xs font-semibold text-foreground uppercase tracking-widest">
-                        {t("constellationBuilder.exportConfig")}
-                      </h3>
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-0.5 bg-muted p-[2px] rounded-lg border border-border">
-                          <button
-                            onClick={() => setExportFormat("json")}
-                            className={cn(
-                              "px-2 py-0.5 text-[9px] font-medium rounded transition-all cursor-pointer",
-                              exportFormat === "json"
-                                ? "bg-primary text-primary-foreground shadow-xs"
-                                : "text-muted-foreground hover:text-foreground",
-                            )}
-                            aria-label="Format export as JSON"
-                          >
-                            JSON
-                          </button>
-                          <button
-                            onClick={() => setExportFormat("javascript")}
-                            className={cn(
-                              "px-2 py-0.5 text-[9px] font-medium rounded transition-all cursor-pointer",
-                              exportFormat === "javascript"
-                                ? "bg-primary text-primary-foreground shadow-xs"
-                                : "text-muted-foreground hover:text-foreground",
-                            )}
-                            aria-label="Format export as JavaScript Object"
-                          >
-                            {t("constellationBuilder.jsObject")}
-                          </button>
-                        </div>
-                        <Button
-                          onClick={handleCopy}
-                          size="xs"
-                          variant="secondary"
-                          className="h-6 gap-1 rounded bg-muted hover:bg-muted/80 border-0"
-                          aria-label="Copy configuration text to clipboard"
-                        >
-                          {copied ? (
-                            <>
-                              <Check className="size-3 text-emerald-500" />
-                              {t("constellationBuilder.copied")}
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="size-3" />
-                              {t("constellationBuilder.copy")}
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="relative flex-1 overflow-hidden rounded-lg border border-border bg-muted/30 p-3 h-full">
-                      <textarea
-                        readOnly
-                        value={exportDataStr()}
-                        className="w-full h-full bg-transparent font-mono text-[10px] text-primary resize-none outline-hidden overflow-y-auto pr-2"
-                        aria-label="Serialized constellation export text"
-                      />
-                    </div>
-                  </div>
+                  <RrConstellationExportTab
+                    exportFormat={exportFormat}
+                    setExportFormat={setExportFormat}
+                    exportDataStr={exportDataStr()}
+                    copied={copied}
+                    onCopy={handleCopy}
+                  />
                 </TabsContent>
 
                 {/* Tab 4: Import */}
                 <TabsContent
                   value="import"
-                  className="mt-0 focus-visible:outline-hidden flex flex-col gap-4"
+                  className="mt-0 focus-visible:outline-hidden"
                 >
-                  <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-2.5">
-                    <div className="flex items-center justify-between border-b border-border pb-2">
-                      <h3 className="text-xs font-semibold text-foreground uppercase tracking-widest">
-                        {t("constellationBuilder.importConfig")}
-                      </h3>
-                      <Button
-                        onClick={handleImport}
-                        size="xs"
-                        className="h-6 bg-primary hover:bg-primary/95 text-primary-foreground rounded cursor-pointer"
-                        aria-label="Trigger import from text workspace"
-                      >
-                        {t("constellationBuilder.import")}
-                      </Button>
-                    </div>
-                    <div className="rounded-lg border border-border bg-muted/30 p-3 h-96">
-                      <textarea
-                        placeholder={t("constellationBuilder.importPlaceholder")}
-                        value={importText}
-                        onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
-                          setImportText(e.target.value)
-                        }
-                        className="w-full h-full bg-transparent font-mono text-[10px] text-foreground placeholder-muted-foreground/60 resize-none outline-hidden overflow-y-auto"
-                        aria-label="Input field for pasting constellation configurations to import"
-                      />
-                    </div>
-                  </div>
+                  <RrConstellationImportTab
+                    importText={importText}
+                    setImportText={setImportText}
+                    onImport={handleImport}
+                  />
                 </TabsContent>
 
                 {/* Tab 5: Guide */}
                 <TabsContent
                   value="guide"
-                  className="mt-0 focus-visible:outline-hidden flex flex-col gap-4"
+                  className="mt-0 focus-visible:outline-hidden"
                 >
-                  <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-2.5">
-                    <div className="flex items-center gap-1.5 text-foreground font-semibold mb-1 border-b border-border pb-2">
-                      <HelpIcon className="size-3.5 text-primary" />
-                      <span className="text-xs font-semibold uppercase tracking-widest">
-                        {t("constellationBuilder.workspaceGuide")}
-                      </span>
-                    </div>
-                    <ul className="space-y-2.5 text-muted-foreground text-[11px] list-disc list-inside">
-                      <li>
-                        <strong className="text-foreground">
-                          {t("constellationBuilder.guideClickCanvas")}
-                        </strong>{" "}
-                        {t("constellationBuilder.guideClickCanvasDesc")}
-                      </li>
-                      <li>
-                        <strong className="text-foreground">
-                          {t("constellationBuilder.guideClickStar")}
-                        </strong>{" "}
-                        {t("constellationBuilder.guideClickStarDesc")}
-                      </li>
-                      <li>
-                        <strong className="text-foreground">
-                          {t("constellationBuilder.guideShiftClickStar")}
-                        </strong>{" "}
-                        {t("constellationBuilder.guideShiftClickStarDesc")}
-                      </li>
-                      <li>
-                        <strong className="text-foreground">
-                          {t("constellationBuilder.guideDeselectStar")}
-                        </strong>{" "}
-                        {t("constellationBuilder.guideDeselectStarDesc")}
-                      </li>
-                      <li>
-                        <strong className="text-foreground">
-                          {t("constellationBuilder.guideDeleteStar")}
-                        </strong>{" "}
-                        {t("constellationBuilder.guideDeleteStarDesc")}
-                      </li>
-                      <li>
-                        <strong className="text-foreground">
-                          {t("constellationBuilder.guideUndoStar")}
-                        </strong>{" "}
-                        {t("constellationBuilder.guideUndoStarDesc")}
-                      </li>
-                    </ul>
-                  </div>
+                  <RrConstellationGuideTab />
                 </TabsContent>
               </Tabs>
             </div>
           </div>
 
           {/* Footer Area */}
-          <div className="px-5 sm:px-6 py-3 border-t border-border flex justify-end gap-3 bg-muted/10 shrink-0">
+          <div className="px-5 sm:px-6 py-3 border-t border-border/80 flex justify-end gap-3 bg-muted/20 shrink-0">
             <Button
               variant="ghost"
               onClick={() => onOpenChange(false)}
-              className="text-xs sm:text-sm text-muted-foreground hover:text-foreground rounded-xl h-9 cursor-pointer"
+              className="text-xs sm:text-sm text-muted-foreground hover:text-foreground rounded-xl h-9 cursor-pointer transition-colors"
               aria-label="Close builder workspace"
             >
               {t("constellationBuilder.closeWorkspace")}
@@ -2180,151 +1537,16 @@ export function RrConstellationBuilderModal({
       </Dialog>
 
       {/* Map Offset Calibrator Dialog */}
-      <Dialog open={showMapPicker} onOpenChange={setShowMapPicker}>
-        <DialogContent className="sm:max-w-[1040px] w-[95vw] h-[90vh] max-h-[820px] p-0 overflow-hidden bg-background border border-border shadow-2xl rounded-2xl flex flex-col font-sans text-foreground z-60">
-          <DialogHeader className="p-4 sm:p-5 border-b border-border flex flex-row items-center justify-between shrink-0">
-            <div>
-              <DialogTitle className="text-sm sm:text-base font-bold tracking-wide">
-                {t("constellationBuilder.selectSkyTargetOffset")}
-              </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                {t("constellationBuilder.selectSkyTargetOffsetDesc")}
-              </DialogDescription>
-            </div>
-          </DialogHeader>
-          <div className="flex-1 relative w-full h-full bg-[#020205] overflow-hidden">
-            <StarMap
-              width={1000}
-              height={580}
-              numOfStars={15000}
-              constellations={[
-                ...(showRefConstellations ? REFERENCE_CONSTELLATIONS : []),
-                ...(showBookmarks
-                  ? bookmarks.map((b) => ({
-                      name: b.name,
-                      description: b.description || "",
-                      redirect: b.redirect || "",
-                      id: b.id,
-                      stars: b.stars.map((s) => ({
-                        ra: s.ra,
-                        dec: s.dec,
-                        magnitude: s.magnitude,
-                        name: s.name,
-                      })),
-                      connections: b.connections,
-                      icon: b.icon || undefined,
-                    }))
-                  : []),
-                ...(showCustomPreview ? [currentConstellation] : []),
-              ]}
-              onMapClick={(ra, dec) => {
-                setTargetRa(Number(ra.toFixed(2)));
-                setTargetDec(Number(dec.toFixed(2)));
-                toast.success(
-                  t("constellationBuilder.toastCalibrated", { ra: ra.toFixed(2), dec: dec.toFixed(2) }),
-                );
-              }}
-            >
-              {/* Target Offset Beacon/Marker in World Space */}
-              <div
-                className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none z-30"
-                style={{
-                  left: targetRa * 15 * 30,
-                  top: -targetDec * 30,
-                }}
-              >
-                <div className="relative flex items-center justify-center">
-                  {/* Glowing rings */}
-                  <span className="absolute size-10 rounded-full border border-primary/40 bg-primary/5 animate-ping opacity-75" />
-                  <span className="absolute size-6 rounded-full border border-primary/60 bg-primary/15 animate-pulse" />
-                  <span className="size-2.5 rounded-full bg-primary shadow-[0_0_10px_#818cf8]" />
-
-                  {/* Crosshair lines */}
-                  <div className="absolute w-14 h-px bg-primary/30" />
-                  <div className="absolute h-14 w-px bg-primary/30" />
-
-                  {/* Text Label */}
-                  <div className="absolute top-5 left-5 bg-background border border-border px-2 py-0.5 rounded-md text-[9px] font-mono text-foreground shadow-md whitespace-nowrap flex items-center gap-1">
-                    <span className="size-1 rounded-full bg-primary animate-pulse" />
-                    {t("constellationBuilder.centerPoint")}
-                  </div>
-                </div>
-              </div>
-            </StarMap>
-
-            {/* Floating HUD info panel */}
-            <div className="absolute top-4 left-4 z-30 p-3.5 rounded-xl bg-background/85 dark:bg-zinc-950/85 backdrop-blur-md border border-border shadow-xl flex flex-col gap-1.5 max-w-[280px]">
-              <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-semibold font-mono">
-                {t("constellationBuilder.offsetCalibration")}
-              </span>
-              <div className="flex flex-col gap-1">
-                <div className="flex justify-between text-xs font-mono">
-                  <span className="text-muted-foreground">{t("constellationBuilder.raOffset")}</span>
-                  <span className="text-primary font-bold">
-                    {targetRa.toFixed(2)}h
-                  </span>
-                </div>
-                <div className="flex justify-between text-xs font-mono">
-                  <span className="text-muted-foreground">{t("constellationBuilder.decOffset")}</span>
-                  <span className="text-primary font-bold">
-                    {targetDec.toFixed(2)}°
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-border">
-                <label className="flex items-center gap-2 text-[10px] text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={showCustomPreview}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                      setShowCustomPreview(e.target.checked)
-                    }
-                    className="rounded border-input bg-background text-indigo-500 size-3 focus:ring-0 cursor-pointer"
-                  />
-                  {t("constellationBuilder.showCustomPreview")}
-                </label>
-                <label className="flex items-center gap-2 text-[10px] text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={showBookmarks}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                      setShowBookmarks(e.target.checked)
-                    }
-                    className="rounded border-input bg-background text-indigo-500 size-3 focus:ring-0 cursor-pointer"
-                  />
-                  {t("constellationBuilder.showSavedBookmarks")}
-                </label>
-                <label className="flex items-center gap-2 text-[10px] text-muted-foreground cursor-pointer hover:text-foreground transition-colors">
-                  <input
-                    type="checkbox"
-                    checked={showRefConstellations}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                      setShowRefConstellations(e.target.checked)
-                    }
-                    className="rounded border-input bg-background text-indigo-500 size-3 focus:ring-0 cursor-pointer"
-                  />
-                  {t("constellationBuilder.showRefConstellations")}
-                </label>
-              </div>
-
-              <p className="text-[10px] text-muted-foreground leading-normal border-t border-border pt-2 mt-1 font-sans">
-                {t("constellationBuilder.offsetCalibrationDesc")}
-              </p>
-            </div>
-          </div>
-
-          <div className="px-5 sm:px-6 py-3 border-t border-border flex justify-end gap-3 bg-muted/10 shrink-0">
-            <Button
-              onClick={() => setShowMapPicker(false)}
-              className="text-xs sm:text-sm font-semibold h-9 px-4 bg-primary hover:bg-primary/95 text-primary-foreground rounded-xl shadow-xs cursor-pointer"
-              aria-label="Finish calibrating map offset coordinates"
-            >
-              {t("constellationBuilder.doneCalibrating")}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <RrConstellationOffsetModal
+        open={showMapPicker}
+        onOpenChange={setShowMapPicker}
+        targetRa={targetRa}
+        setTargetRa={setTargetRa}
+        targetDec={targetDec}
+        setTargetDec={setTargetDec}
+        bookmarks={bookmarks}
+        currentConstellation={currentConstellation}
+      />
     </>
   );
 }

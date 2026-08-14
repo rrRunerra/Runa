@@ -105,7 +105,9 @@ export function RrMailLinkWizardStep3({
         <div className="flex items-center justify-between">
           <Label htmlFor="signature-input">{t("mailSettings.wizard.signatureLabel")}</Label>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">HTML Signature</span>
+            <span className="text-xs text-muted-foreground">
+              {t("mailSettings.wizard.htmlSignatureLabel", "HTML Signature")}
+            </span>
             <Switch checked={useHtmlSig} onCheckedChange={onChangeUseHtmlSig} />
           </div>
         </div>

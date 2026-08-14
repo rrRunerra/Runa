@@ -1,54 +1,34 @@
 "use client";
 
 import type React from "react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import {
-  Download,
-  Upload,
-  Info,
-  FileJson,
-  FileCode,
-  AlertCircle,
-  ExternalLink,
-} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-} from "@/components/ui/card";
-import { Spinner } from "@/components/ui/spinner";
-import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
+import {
+  MEDIA_TYPES,
+  type ExportFormat,
+  RrListsExportCard,
+  RrListsImportCard,
+} from "./rrListsTabComponents";
 
 export interface RrListsTabProps {
   /** Callback to close parent settings modal */
   onOpenChange: (open: boolean) => void;
   /** Callback to switch active category tab in settings dialog */
   setActiveCategory?: (category: any) => void;
+  /** Optional callback to render custom footer controls into parent settings dialog */
+  setFooterContent?: (node: React.ReactNode | null) => void;
 }
-
-const MEDIA_TYPES = [
-  { id: "anime", key: "anime" },
-  { id: "manga", key: "manga" },
-  { id: "tv", key: "tv" },
-  { id: "movie", key: "movie" },
-  { id: "game", key: "game" },
-  { id: "book", key: "book" },
-];
 
 /**
  * Component managing import and export of user media lists across formats (JSON, MAL XML, AniList, Simkl, Trakt).
  */
 export function RrListsTab({
-  onOpenChange: _onOpenChange,
-  setActiveCategory,
+  onOpenChange,
+  setActiveCategory: _setActiveCategory,
+  setFooterContent,
 }: RrListsTabProps): React.JSX.Element {
   const { data: session } = useSession();
   const { t } = useTranslation();
@@ -62,9 +42,7 @@ export function RrListsTab({
     "game",
     "book",
   ]);
-  const [exportFormat, setExportFormat] = useState<
-    "json" | "mal-xml" | "anilist-xml" | "simkl-xml" | "trakt-json"
-  >("json");
+  const [exportFormat, setExportFormat] = useState<ExportFormat>("json");
   const [isExporting, setIsExporting] = useState<boolean>(false);
 
   // Import States
@@ -73,25 +51,36 @@ export function RrListsTab({
   const [dragActive, setDragActive] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Synchronize footer actions with parent settings modal
+  useEffect(() => {
+    if (!setFooterContent) return;
+    setFooterContent(
+      <div className="flex items-center justify-end w-full">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onOpenChange(false)}
+          className="h-9 px-4 rounded-xl text-xs font-semibold cursor-pointer"
+        >
+          {t("settingsModal.close", { defaultValue: "Close" })}
+        </Button>
+      </div>,
+    );
+    return () => setFooterContent(null);
+  }, [setFooterContent, onOpenChange, t]);
+
   // Export handlers
   const handleToggleType = (typeId: string) => {
-    const isXml = ["mal-xml", "anilist-xml", "simkl-xml"].includes(
-      exportFormat,
-    );
+    const isXml = ["mal-xml", "anilist-xml", "simkl-xml"].includes(exportFormat);
     if (isXml && typeId !== "anime" && typeId !== "manga") {
       return;
     }
-    if (
-      exportFormat === "trakt-json" &&
-      typeId !== "tv" &&
-      typeId !== "movie"
-    ) {
+    if (exportFormat === "trakt-json" && typeId !== "tv" && typeId !== "movie") {
       return;
     }
     setSelectedTypes((prev) =>
-      prev.includes(typeId)
-        ? prev.filter((id) => id !== typeId)
-        : [...prev, typeId],
+      prev.includes(typeId) ? prev.filter((id) => id !== typeId) : [...prev, typeId],
     );
   };
 
@@ -109,18 +98,12 @@ export function RrListsTab({
     setSelectedTypes([]);
   };
 
-  const handleFormatChange = (
-    format: "json" | "mal-xml" | "anilist-xml" | "simkl-xml" | "trakt-json",
-  ) => {
+  const handleFormatChange = (format: ExportFormat) => {
     setExportFormat(format);
     if (["mal-xml", "anilist-xml", "simkl-xml"].includes(format)) {
-      setSelectedTypes((prev) =>
-        prev.filter((id) => id === "anime" || id === "manga"),
-      );
+      setSelectedTypes((prev) => prev.filter((id) => id === "anime" || id === "manga"));
     } else if (format === "trakt-json") {
-      setSelectedTypes((prev) =>
-        prev.filter((id) => id === "tv" || id === "movie"),
-      );
+      setSelectedTypes((prev) => prev.filter((id) => id === "tv" || id === "movie"));
     }
   };
 
@@ -142,11 +125,11 @@ export function RrListsTab({
 
   const handleExport = async () => {
     if (!session?.accessToken) {
-      toast.error("You must be logged in to export lists.");
+      toast.error(t("lists.mustBeLoggedInExport", { defaultValue: "You must be logged in to export lists." }));
       return;
     }
     if (selectedTypes.length === 0) {
-      toast.error("Please select at least one media type to export.");
+      toast.error(t("lists.selectAtLeastOneExport", { defaultValue: "Please select at least one media type to export." }));
       return;
     }
 
@@ -180,7 +163,7 @@ export function RrListsTab({
           "application/json",
         );
         toast.success(
-          `${exportFormat === "trakt-json" ? "Trakt JSON" : "JSON"} lists exported successfully!`,
+          `${exportFormat === "trakt-json" ? "Trakt JSON" : "JSON"} ${t("lists.exportSuccess", { defaultValue: "lists exported successfully!" })}`,
         );
       } else {
         const providerName =
@@ -226,12 +209,12 @@ export function RrListsTab({
           );
         }
         toast.success(
-          `${providerName === "mal" ? "MAL XML" : providerName.charAt(0).toUpperCase() + providerName.slice(1) + " XML"} exported successfully!`,
+          `${providerName === "mal" ? "MAL XML" : providerName.charAt(0).toUpperCase() + providerName.slice(1) + " XML"} ${t("lists.exportSuccess", { defaultValue: "exported successfully!" })}`,
         );
       }
     } catch (error: any) {
       console.error(error);
-      toast.error(error.message || "Failed to export lists.");
+      toast.error(error.message || t("lists.failedExport", { defaultValue: "Failed to export lists." }));
     } finally {
       setIsExporting(false);
     }
@@ -329,340 +312,31 @@ export function RrListsTab({
   };
 
   return (
-    <div className="flex flex-col gap-6 p-2 h-full">
-      <div className="flex gap-3 bg-muted/40 border border-border/60 p-4 rounded-xl items-start">
-        <Info className="size-5 text-primary shrink-0 mt-0.5" />
-        <div className="flex-1 flex flex-col gap-1 text-left">
-          <span className="text-sm font-semibold text-foreground">
-            {t("lists.syncExternalAccounts")}
-          </span>
-          <p className="text-xs text-muted-foreground leading-relaxed">
-            {t("lists.syncExternalDesc1")}{" "}
-            <button
-              onClick={() => setActiveCategory?.("connections")}
-              className="text-primary hover:underline font-medium inline-flex items-center gap-0.5 cursor-pointer"
-            >
-              {t("lists.connectionsTab")} <ExternalLink className="size-3" />
-            </button>{" "}
-            {t("lists.syncExternalDesc2")}
-          </p>
-        </div>
-      </div>
+    <div className="flex-1 flex flex-col min-h-0 h-full text-left overflow-y-auto pr-1 scrollbar-thin">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+        <RrListsExportCard
+          exportFormat={exportFormat}
+          selectedTypes={selectedTypes}
+          isExporting={isExporting}
+          onFormatChange={handleFormatChange}
+          onToggleType={handleToggleType}
+          onSelectAll={handleSelectAll}
+          onSelectNone={handleSelectNone}
+          onExport={handleExport}
+        />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-        {/* Export Card */}
-        <Card className="bg-card/50 backdrop-blur-sm border-border/80">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Download className="size-5 text-primary" />
-              {t("lists.exportLists")}
-            </CardTitle>
-            <CardDescription className="text-xs">
-              {t("lists.saveMediaListsDesc")}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-5 text-left">
-            <div className="flex flex-col gap-2">
-              <Label className="text-xs font-semibold text-muted-foreground uppercase">
-                {t("lists.exportFormat")}
-              </Label>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant={exportFormat === "json" ? "default" : "outline"}
-                  onClick={() => handleFormatChange("json")}
-                  className="text-xs font-medium h-8.5"
-                  size="sm"
-                >
-                  <FileJson className="size-3.5 mr-1.5 shrink-0" />
-                  rrList (JSON)
-                </Button>
-                <Button
-                  variant={exportFormat === "mal-xml" ? "default" : "outline"}
-                  onClick={() => handleFormatChange("mal-xml")}
-                  className="text-xs font-medium h-8.5"
-                  size="sm"
-                >
-                  <FileCode className="size-3.5 mr-1.5 shrink-0" />
-                  MyAnimeList (XML)
-                </Button>
-                <Button
-                  variant={
-                    exportFormat === "anilist-xml" ? "default" : "outline"
-                  }
-                  onClick={() => handleFormatChange("anilist-xml")}
-                  className="text-xs font-medium h-8.5"
-                  size="sm"
-                >
-                  <FileCode className="size-3.5 mr-1.5 shrink-0" />
-                  AniList (XML)
-                </Button>
-                <Button
-                  variant={exportFormat === "simkl-xml" ? "default" : "outline"}
-                  onClick={() => handleFormatChange("simkl-xml")}
-                  className="text-xs font-medium h-8.5"
-                  size="sm"
-                >
-                  <FileCode className="size-3.5 mr-1.5 shrink-0" />
-                  Simkl (XML)
-                </Button>
-                <Button
-                  variant={
-                    exportFormat === "trakt-json" ? "default" : "outline"
-                  }
-                  onClick={() => handleFormatChange("trakt-json")}
-                  className="text-xs font-medium h-8.5 col-span-2"
-                  size="sm"
-                >
-                  <FileJson className="size-3.5 mr-1.5 shrink-0" />
-                  Trakt (JSON)
-                </Button>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-3">
-              <div className="flex justify-between items-center">
-                <Label className="text-xs font-semibold text-muted-foreground uppercase">
-                  {t("lists.selectLists")}
-                </Label>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleSelectAll}
-                    className="text-[10px] text-primary hover:underline cursor-pointer"
-                  >
-                    {t("lists.selectAll")}
-                  </button>
-                  <span className="text-[10px] text-muted-foreground">|</span>
-                  <button
-                    onClick={handleSelectNone}
-                    className="text-[10px] text-primary hover:underline cursor-pointer"
-                  >
-                    {t("lists.selectNone")}
-                  </button>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 p-3 bg-muted/30 border border-border/40 rounded-xl">
-                {MEDIA_TYPES.map((type) => {
-                  const isDisabled = [
-                    "mal-xml",
-                    "anilist-xml",
-                    "simkl-xml",
-                  ].includes(exportFormat)
-                    ? type.id !== "anime" && type.id !== "manga"
-                    : exportFormat === "trakt-json"
-                      ? type.id !== "tv" && type.id !== "movie"
-                      : false;
-
-                  return (
-                    <div
-                      key={type.id}
-                      className={cn(
-                        "flex items-center gap-2",
-                        isDisabled && "opacity-40 cursor-not-allowed",
-                      )}
-                    >
-                      <Checkbox
-                        id={`export-chk-${type.id}`}
-                        checked={selectedTypes.includes(type.id)}
-                        onCheckedChange={() => handleToggleType(type.id)}
-                        disabled={isDisabled}
-                      />
-                      <Label
-                        htmlFor={`export-chk-${type.id}`}
-                        className={cn(
-                          "text-xs font-medium cursor-pointer select-none",
-                          isDisabled && "cursor-not-allowed",
-                        )}
-                      >
-                        {t(`mediaTypes.${type.key}`)}
-                      </Label>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {exportFormat !== "json" && (
-                <div className="flex flex-col gap-1.5 items-start text-[11px] text-amber-500 font-medium leading-normal bg-amber-500/10 p-2.5 rounded-lg border border-amber-500/20">
-                  <div className="flex gap-1.5 items-start">
-                    <AlertCircle className="size-3.5 shrink-0 mt-0.5" />
-                    <span>
-                      {exportFormat === "trakt-json"
-                        ? t("lists.traktOnlyDesc")
-                        : t("lists.xmlOnlyDesc", {
-                            platform:
-                              exportFormat === "mal-xml"
-                                ? "MyAnimeList"
-                                : exportFormat === "anilist-xml"
-                                  ? "AniList"
-                                  : "Simkl",
-                          })}
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-muted-foreground">
-                    {t("lists.importAfterDownload")}{" "}
-                    {exportFormat === "mal-xml" && (
-                      <a
-                        href="https://myanimelist.net/import.php"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline font-semibold inline-flex items-center gap-0.5"
-                      >
-                        {t("lists.importPage", { platform: "MyAnimeList" })}{" "}
-                        <ExternalLink className="size-3" />
-                      </a>
-                    )}
-                    {exportFormat === "anilist-xml" && (
-                      <a
-                        href="https://anilist.co/settings/import"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline font-semibold inline-flex items-center gap-0.5"
-                      >
-                        {t("lists.importPage", { platform: "AniList" })}{" "}
-                        <ExternalLink className="size-3" />
-                      </a>
-                    )}
-                    {exportFormat === "simkl-xml" && (
-                      <a
-                        href="https://simkl.com/apps/import/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline font-semibold inline-flex items-center gap-0.5"
-                      >
-                        {t("lists.importPage", { platform: "Simkl" })}{" "}
-                        <ExternalLink className="size-3" />
-                      </a>
-                    )}
-                    {exportFormat === "trakt-json" && (
-                      <a
-                        href="https://trakt.tv/import"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline font-semibold inline-flex items-center gap-0.5"
-                      >
-                        {t("lists.importPage", { platform: "Trakt" })}{" "}
-                        <ExternalLink className="size-3" />
-                      </a>
-                    )}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <Button
-              onClick={handleExport}
-              disabled={isExporting || selectedTypes.length === 0}
-              className="w-full mt-2 text-xs"
-              size="sm"
-            >
-              {isExporting ? (
-                <>
-                  <Spinner className="mr-1.5 size-4" />
-                  {t("lists.exporting")}
-                </>
-              ) : (
-                <>
-                  <Download className="mr-1.5 size-4" />
-                  {t("lists.exportSelected")}
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Import Card */}
-        <Card className="bg-card/50 backdrop-blur-sm border-border/80">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Upload className="size-5 text-primary" />
-              {t("lists.importLists")}
-            </CardTitle>
-            <CardDescription className="text-xs">
-              {t("lists.loadBackupDesc")}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4 text-left">
-            <div
-              className={cn(
-                "border-2 border-dashed rounded-xl p-6 flex flex-col items-center justify-center gap-2 transition-all cursor-pointer",
-                dragActive
-                  ? "border-primary bg-primary/5 shadow-md shadow-primary/5"
-                  : "border-border hover:border-primary/50 hover:bg-muted/15",
-                importFile && "border-solid border-primary/45 bg-muted/10",
-              )}
-              onDragEnter={handleDrag}
-              onDragOver={handleDrag}
-              onDragLeave={handleDrag}
-              onDrop={handleDrop}
-              onClick={triggerFileSelect}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                accept=".json"
-                onChange={handleFileSelect}
-              />
-              <Upload
-                className={cn(
-                  "size-8 text-muted-foreground transition-colors",
-                  (dragActive || importFile) && "text-primary",
-                )}
-              />
-              {importFile ? (
-                <div className="flex flex-col items-center gap-1 text-center">
-                  <span className="text-xs font-semibold text-foreground max-w-50 truncate">
-                    {importFile.name}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground">
-                    {(importFile.size / 1024).toFixed(1)} KB
-                  </span>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center gap-1 text-center">
-                  <span className="text-xs font-semibold text-foreground">
-                    {t("lists.dragDropHere")}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground">
-                    {t("lists.clickToBrowse")}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-2">
-              {importFile && (
-                <Button
-                  variant="outline"
-                  onClick={() => setImportFile(null)}
-                  className="flex-1 text-xs"
-                  size="sm"
-                  disabled={isImporting}
-                >
-                  {t("lists.clearFile")}
-                </Button>
-              )}
-              <Button
-                onClick={handleImport}
-                disabled={isImporting || !importFile}
-                className={cn("flex-1 text-xs", !importFile && "w-full")}
-                size="sm"
-              >
-                {isImporting ? (
-                  <>
-                    <Spinner className="mr-1.5 size-4" />
-                    {t("lists.importing")}
-                  </>
-                ) : (
-                  <>
-                    <Upload className="mr-1.5 size-4" />
-                    {t("lists.startImport")}
-                  </>
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <RrListsImportCard
+          importFile={importFile}
+          isImporting={isImporting}
+          dragActive={dragActive}
+          fileInputRef={fileInputRef}
+          onDrag={handleDrag}
+          onDrop={handleDrop}
+          onFileSelect={handleFileSelect}
+          onTriggerFileSelect={triggerFileSelect}
+          onClearFile={() => setImportFile(null)}
+          onImport={handleImport}
+        />
       </div>
     </div>
   );

@@ -1,77 +1,109 @@
 "use client";
 
 import type React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import { toast } from "sonner";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
+import { motion, AnimatePresence } from "framer-motion";
+import { Save } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { Card, CardContent } from "@/components/ui/card";
+import { RrPillNav, type RrPillNavItem } from "@/components/rrComponents/rrPillNav";
+
+// Sub-components & Types
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
+  type PrivacyLevel,
+  type PrivacyAppId,
+  RrAquilaPrivacySubTab,
+  RrPolarisPrivacySubTab,
+  RrLynxPrivacySubTab,
+} from "./rrPrivacySettingsTabComponents";
 
 export interface RrPrivacySettingsTabProps {
-  /** Callback to close parent settings modal */
+  /** Callback to close the parent settings modal */
   onOpenChange: (open: boolean) => void;
+  /** Callback to register custom action buttons in the parent modal footer */
+  setFooterContent?: (content: React.ReactNode | null) => void;
 }
 
 /**
- * Component managing user profile, list, connection, and friend privacy settings.
+ * Normalizes boolean or string values from backend to PrivacyLevel.
  */
-export const RrPrivacySettingsTab = ({
+function normalizePrivacyLevel(val: unknown): PrivacyLevel {
+  if (val === "private" || val === "only_me" || val === true) return "private";
+  if (val === "friends") return "friends";
+  return "public";
+}
+
+/**
+ * Main Privacy Settings Tab Component.
+ * Orchestrates sub-tabs by application (Aquila, Polaris, Lynx) with 3 privacy visibility tiers.
+ */
+export function RrPrivacySettingsTab({
   onOpenChange,
-}: RrPrivacySettingsTabProps): React.JSX.Element => {
+  setFooterContent,
+}: RrPrivacySettingsTabProps): React.JSX.Element {
   const { data: session } = useSession();
   const { t } = useTranslation();
 
-  // Privacy states
-  const [profilePrivate, setProfilePrivate] = useState<boolean>(false);
-  const [animeListPrivate, setAnimeListPrivate] = useState<boolean>(false);
-  const [mangaListPrivate, setMangaListPrivate] = useState<boolean>(false);
-  const [tvListPrivate, setTvListPrivate] = useState<boolean>(false);
-  const [movieListPrivate, setMovieListPrivate] = useState<boolean>(false);
-  const [connectionsPrivate, setConnectionsPrivate] = useState<boolean>(false);
-  const [friendsPrivate, setFriendsPrivate] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(true);
+  // Active sub-tab state
+  const [activeApp, setActiveApp] = useState<PrivacyAppId>("aquila");
+
+  // Privacy dictionary state
+  const [privacyState, setPrivacyState] = useState<Record<string, PrivacyLevel>>({
+    profile: "public",
+    friends: "public",
+    animeList: "public",
+    mangaList: "public",
+    movieList: "public",
+    tvList: "public",
+    gameList: "public",
+    bookList: "public",
+    connections: "public",
+  });
+
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
+  // Fetch current user privacy settings
   const {
     data: privacyData,
     isLoading: privacyLoading,
     mutate: refetchPrivacy,
-  } = useSWR<any>(
+  } = useSWR<Record<string, unknown>>(
     session?.accessToken
       ? [`${process.env.NEXT_PUBLIC_API_URL}/users/me/privacy`, session.accessToken]
       : null,
-    fetcher
+    fetcher,
   );
 
+  // Sync state from server response
   useEffect(() => {
-    if (privacyData) {
-      setProfilePrivate(privacyData.profile || false);
-      setAnimeListPrivate(privacyData.animeList || false);
-      setMangaListPrivate(privacyData.mangaList || false);
-      setTvListPrivate(privacyData.tvList || false);
-      setMovieListPrivate(privacyData.movieList || false);
-      setConnectionsPrivate(privacyData.connections || false);
-      setFriendsPrivate(privacyData.friends || false);
+    if (privacyData && typeof privacyData === "object") {
+      const nextState: Record<string, PrivacyLevel> = {};
+      for (const [key, value] of Object.entries(privacyData)) {
+        nextState[key] = normalizePrivacyLevel(value);
+      }
+      setPrivacyState((prev) => ({
+        ...prev,
+        ...nextState,
+      }));
     }
   }, [privacyData]);
 
-  useEffect(() => {
-    setLoading(privacyLoading);
-  }, [privacyLoading]);
+  // Handle individual setting toggle
+  const handleLevelChange = useCallback((id: string, level: PrivacyLevel): void => {
+    setPrivacyState((prev) => ({
+      ...prev,
+      [id]: level,
+    }));
+  }, []);
 
-  const handleSaveSettings = async (): Promise<void> => {
+  // Save changes to backend
+  const handleSaveSettings = useCallback(async (): Promise<void> => {
     if (!session?.accessToken) {
       toast.error(t("privacy.mustBeLoggedIn"));
       return;
@@ -79,221 +111,141 @@ export const RrPrivacySettingsTab = ({
 
     setIsSubmitting(true);
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/users/me/privacy`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.accessToken}`,
-          },
-          body: JSON.stringify({
-            profile: profilePrivate,
-            animeList: animeListPrivate,
-            mangaList: mangaListPrivate,
-            tvList: tvListPrivate,
-            movieList: movieListPrivate,
-            connections: connectionsPrivate,
-            friends: friendsPrivate,
-          }),
-        }
-      );
+      const payload: Record<string, unknown> = {
+        ...privacyState,
+      };
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me/privacy`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.accessToken}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
       if (!res.ok) {
         const errJson = await res.json().catch(() => null);
         throw new Error(errJson?.message || t("privacy.failedSaveSettings"));
       }
+
       const updated = await res.json();
       refetchPrivacy(updated);
-
       toast.success(t("privacy.settingsSaved"));
       onOpenChange(false);
-    } catch (err: any) {
-      toast.error(err.message || t("privacy.failedSaveSettings"));
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : t("privacy.failedSaveSettings");
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [session, privacyState, refetchPrivacy, onOpenChange, t]);
 
-  if (loading) {
+  // Register footer buttons inside settings modal
+  useEffect(() => {
+    if (!setFooterContent) return;
+
+    setFooterContent(
+      <div className="flex items-center justify-end w-full gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onOpenChange(false)}
+          disabled={isSubmitting}
+          className="text-xs h-9 px-4 rounded-xl cursor-pointer"
+        >
+          {t("cancel")}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          onClick={handleSaveSettings}
+          disabled={isSubmitting}
+          className="gap-2 text-xs font-semibold h-9 px-5 rounded-xl cursor-pointer bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
+        >
+          {isSubmitting ? (
+            <Spinner className="size-3.5" />
+          ) : (
+            <Save className="size-3.5" />
+          )}
+          <span>{isSubmitting ? t("saving") : t("saveChanges")}</span>
+        </Button>
+      </div>,
+    );
+
+    return () => setFooterContent(null);
+  }, [setFooterContent, onOpenChange, handleSaveSettings, isSubmitting, t]);
+
+  // App tabs configuration for RrPillNav
+  const appTabs: RrPillNavItem<PrivacyAppId>[] = useMemo(
+    () => [
+      { id: "aquila", label: "Aquila" },
+      { id: "polaris", label: "Polaris" },
+      { id: "lynx", label: "Lynx" },
+    ],
+    [],
+  );
+
+  if (privacyLoading) {
     return (
-      <div className="items-center justify-center py-12 flex flex-col gap-4">
-        <div className="size-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-        <p className="text-xs text-muted-foreground">
-          {t("privacy.loadingSettings")}
-        </p>
+      <div className="items-center justify-center py-16 flex flex-col gap-3 h-full">
+        <Spinner className="size-6 text-primary" />
+        <p className="text-xs text-muted-foreground">{t("privacy.loadingSettings")}</p>
       </div>
     );
   }
 
   return (
-    <div className="p-2">
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("privacy.preferences")}</CardTitle>
-          <CardDescription>
-            {t("privacy.preferencesDesc")}
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-0 divide-y divide-border/40">
-          <div className="flex items-center justify-between py-4">
-            <div className="flex flex-col gap-0.5 pr-8 text-left">
-              <Label
-                className="text-sm font-medium text-foreground cursor-pointer"
-                htmlFor="profile-private"
-              >
-                {t("privacy.privateProfile")}
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                {t("privacy.privateProfileDesc")}
-              </p>
-            </div>
-            <Switch
-              id="profile-private"
-              checked={profilePrivate}
-              onCheckedChange={setProfilePrivate}
-              disabled={isSubmitting}
-            />
-          </div>
+    <div className="flex-1 flex flex-col gap-4 min-h-0 h-full text-left">
+      {/* App Sub-Navigation Pills (anchored to top right) */}
+      <div className="flex items-center justify-end w-full shrink-0">
+        <RrPillNav
+          items={appTabs}
+          activeId={activeApp}
+          onChange={(id) => setActiveApp(id as PrivacyAppId)}
+          layoutId="privacyAppSubTabs"
+        />
+      </div>
 
-          <div className="flex items-center justify-between py-4">
-            <div className="flex flex-col gap-0.5 pr-8 text-left">
-              <Label
-                className="text-sm font-medium text-foreground cursor-pointer"
-                htmlFor="anime-private"
-              >
-                {t("privacy.privateAnimeList")}
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                {t("privacy.privateAnimeListDesc")}
-              </p>
-            </div>
-            <Switch
-              id="anime-private"
-              checked={animeListPrivate}
-              onCheckedChange={setAnimeListPrivate}
-              disabled={isSubmitting || profilePrivate}
-            />
-          </div>
-
-          <div className="flex items-center justify-between py-4">
-            <div className="flex flex-col gap-0.5 pr-8 text-left">
-              <Label
-                className="text-sm font-medium text-foreground cursor-pointer"
-                htmlFor="manga-private"
-              >
-                {t("privacy.privateMangaList")}
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                {t("privacy.privateMangaListDesc")}
-              </p>
-            </div>
-            <Switch
-              id="manga-private"
-              checked={mangaListPrivate}
-              onCheckedChange={setMangaListPrivate}
-              disabled={isSubmitting || profilePrivate}
-            />
-          </div>
-
-          <div className="flex items-center justify-between py-4">
-            <div className="flex flex-col gap-0.5 pr-8 text-left">
-              <Label
-                className="text-sm font-medium text-foreground cursor-pointer"
-                htmlFor="tv-private"
-              >
-                {t("privacy.privateTvList")}
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                {t("privacy.privateTvListDesc")}
-              </p>
-            </div>
-            <Switch
-              id="tv-private"
-              checked={tvListPrivate}
-              onCheckedChange={setTvListPrivate}
-              disabled={isSubmitting || profilePrivate}
-            />
-          </div>
-
-          <div className="flex items-center justify-between py-4">
-            <div className="flex flex-col gap-0.5 pr-8 text-left">
-              <Label
-                className="text-sm font-medium text-foreground cursor-pointer"
-                htmlFor="movie-private"
-              >
-                {t("privacy.privateMovieList")}
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                {t("privacy.privateMovieListDesc")}
-              </p>
-            </div>
-            <Switch
-              id="movie-private"
-              checked={movieListPrivate}
-              onCheckedChange={setMovieListPrivate}
-              disabled={isSubmitting || profilePrivate}
-            />
-          </div>
-
-          <div className="flex items-center justify-between py-4">
-            <div className="flex flex-col gap-0.5 pr-8 text-left">
-              <Label
-                className="text-sm font-medium text-foreground cursor-pointer"
-                htmlFor="connections-private"
-              >
-                {t("privacy.privateConnections")}
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                {t("privacy.privateConnectionsDesc")}
-              </p>
-            </div>
-            <Switch
-              id="connections-private"
-              checked={connectionsPrivate}
-              onCheckedChange={setConnectionsPrivate}
-              disabled={isSubmitting || profilePrivate}
-            />
-          </div>
-
-          <div className="flex items-center justify-between py-4">
-            <div className="flex flex-col gap-0.5 pr-8 text-left">
-              <Label
-                className="text-sm font-medium text-foreground cursor-pointer"
-                htmlFor="friends-private"
-              >
-                {t("privacy.privateFriends", t("polaris.user.friendPrivacyOption"))}
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                {t("privacy.privateFriendsDesc", "Hide your friends list from your public profile.")}
-              </p>
-            </div>
-            <Switch
-              id="friends-private"
-              checked={friendsPrivate}
-              onCheckedChange={setFriendsPrivate}
-              disabled={isSubmitting || profilePrivate}
-            />
-          </div>
+      {/* Main Card Container filling remaining space */}
+      <Card className="flex-1 flex flex-col min-h-0 h-full border border-border bg-card shadow-sm rounded-2xl overflow-hidden">
+        <CardContent className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-3 scrollbar-thin">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeApp}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18 }}
+            >
+              {activeApp === "aquila" && (
+                <RrAquilaPrivacySubTab
+                  privacyState={privacyState}
+                  onLevelChange={handleLevelChange}
+                  disabled={isSubmitting}
+                />
+              )}
+              {activeApp === "polaris" && (
+                <RrPolarisPrivacySubTab
+                  privacyState={privacyState}
+                  onLevelChange={handleLevelChange}
+                  disabled={isSubmitting}
+                />
+              )}
+              {activeApp === "lynx" && (
+                <RrLynxPrivacySubTab
+                  privacyState={privacyState}
+                  onLevelChange={handleLevelChange}
+                  disabled={isSubmitting}
+                />
+              )}
+            </motion.div>
+          </AnimatePresence>
         </CardContent>
-
-        <CardFooter className="flex justify-end gap-3 pt-3 border-t border-border mt-6">
-          <Button
-            variant="ghost"
-            onClick={() => onOpenChange(false)}
-            className="text-xs sm:text-sm text-muted-foreground hover:text-foreground rounded-xl h-9 cursor-pointer"
-            disabled={isSubmitting}
-          >
-            {t("cancel")}
-          </Button>
-          <Button
-            onClick={handleSaveSettings}
-            disabled={isSubmitting}
-            className="bg-primary hover:bg-primary/95 text-primary-foreground font-semibold rounded-xl px-5 shadow-lg text-xs sm:text-sm h-9 cursor-pointer"
-          >
-            {isSubmitting ? t("saving") : t("saveChanges")}
-          </Button>
-        </CardFooter>
       </Card>
     </div>
   );
-};
+}
+
+export default RrPrivacySettingsTab;
