@@ -210,8 +210,15 @@ steps:
       - apk add --no-cache libc6-compat
       - corepack enable
       - pnpm install --frozen-lockfile
-      - pnpm turbo run db:generate
       - pnpm turbo run build --filter="./packages/*"
+
+  - name: Database
+    image: node:22-alpine
+    commands:
+      - apk add --no-cache libc6-compat
+      - corepack enable
+      - pnpm --filter @runa/database db:push
+      - pnpm --filter @runa/database db:generate
 
   - name: Backend
     image: docker:latest
