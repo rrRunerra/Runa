@@ -3,11 +3,8 @@ type: docker
 name: default
 
 steps:
-  - name: deploy
+  - name: Environment
     image: docker:latest
-    volumes:
-      - name: docker_sock
-        path: /var/run/docker.sock
     environment:
       INTERNAL_API_KEY:
         from_secret: INTERNAL_API_KEY
@@ -206,8 +203,39 @@ steps:
       - printf "APPLE_CLIENT_SECRET=%s\n" "$APPLE_CLIENT_SECRET" >> .env
       - printf "XIAOMI_CLIENT_ID=%s\n" "$XIAOMI_CLIENT_ID" >> .env
       - printf "XIAOMI_CLIENT_SECRET=%s\n" "$XIAOMI_CLIENT_SECRET" >> .env
-      - docker compose build
-      - docker compose build
+
+  - name: Packages
+    image: node:22-alpine
+    commands:
+      - apk add --no-cache libc6-compat
+      - corepack enable
+      - pnpm install --frozen-lockfile
+      - pnpm turbo run db:generate
+      - pnpm turbo run build --filter="./packages/*"
+
+  - name: Backend
+    image: docker:latest
+    volumes:
+      - name: docker_sock
+        path: /var/run/docker.sock
+    commands:
+      - docker compose build runa-backend
+
+  - name: Lynx
+    image: docker:latest
+    volumes:
+      - name: docker_sock
+        path: /var/run/docker.sock
+    commands:
+      - docker compose build runa-lynx
+
+  - name: Frontend
+    image: docker:latest
+    volumes:
+      - name: docker_sock
+        path: /var/run/docker.sock
+    commands:
+      - docker compose build runa-frontend
       - docker compose up -d
       - sleep 5
       - docker compose ps
