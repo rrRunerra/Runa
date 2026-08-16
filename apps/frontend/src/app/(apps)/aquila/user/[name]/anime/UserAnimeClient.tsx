@@ -48,6 +48,7 @@ const SORT_OPTIONS = [
   { label: "Title", value: "title" },
   { label: "Score", value: "score" },
   { label: "Progress", value: "progress" },
+  { label: "Episode Count", value: "episode_count" },
   { label: "Last Updated", value: "last_updated" },
   { label: "Last Added", value: "last_added" },
 ];
@@ -105,7 +106,7 @@ export default function UserAnimePage({ initialData }: { initialData?: any }) {
     year: "",
     mediaStatus: "",
   });
-  const [sort, setSort] = useState<UserListSortType>("last_updated");
+  const [sort, setSort] = useState<UserListSortType[]>(["last_updated"]);
 
   const { data: userData } = useSWR<{
     username: string;
@@ -165,11 +166,17 @@ export default function UserAnimePage({ initialData }: { initialData?: any }) {
       limit: "30",
       status: activeList,
       search: debouncedSearch,
-      format: filters.format || "",
+      format: Array.isArray(filters.format)
+        ? filters.format.join(",")
+        : filters.format || "",
       genres: Array.isArray(filters.genres) ? filters.genres.join(",") : "",
-      year: filters.year || "",
-      mediaStatus: filters.mediaStatus || "",
-      sort: sort,
+      year: Array.isArray(filters.year)
+        ? filters.year.join(",")
+        : filters.year || "",
+      mediaStatus: Array.isArray(filters.mediaStatus)
+        ? filters.mediaStatus.join(",")
+        : filters.mediaStatus || "",
+      sort: Array.isArray(sort) ? sort.join(",") : sort,
     });
 
     if (cursorToFetch) {
@@ -237,11 +244,17 @@ export default function UserAnimePage({ initialData }: { initialData?: any }) {
     username,
     debouncedSearch,
     activeList,
-    filters.format,
+    Array.isArray(filters.format)
+      ? filters.format.join(",")
+      : filters.format || "",
     Array.isArray(filters.genres) ? filters.genres.join(",") : "",
-    filters.year,
-    filters.mediaStatus,
-    sort,
+    Array.isArray(filters.year)
+      ? filters.year.join(",")
+      : filters.year || "",
+    Array.isArray(filters.mediaStatus)
+      ? filters.mediaStatus.join(",")
+      : filters.mediaStatus || "",
+    Array.isArray(sort) ? sort.join(",") : sort,
   ]);
 
   useEffect(() => {

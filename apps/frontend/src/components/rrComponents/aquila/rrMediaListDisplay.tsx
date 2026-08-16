@@ -8,8 +8,10 @@ export type UserListDisplayType = "grid" | "list" | "compact";
 export interface RrMediaEntry {
   id: string;
   title: string;
-  score?: number;
-  progress?: number;
+  score?: number | null;
+  progress?: number | null;
+  episodes?: number | null;
+  seasons?: number | null;
   image: string;
   type: string;
   format?: string;
@@ -19,11 +21,12 @@ export interface RrMediaEntry {
 }
 
 export interface RrMediaListFiltersState {
-  format?: string;
-  status?: string;
+  format?: string | string[];
+  status?: string | string[];
+  mediaStatus?: string | string[];
   genres?: string[];
   country?: string;
-  year?: number;
+  year?: number | string | (number | string)[];
 }
 
 export interface RrMediaListDisplayProps {
@@ -31,7 +34,16 @@ export interface RrMediaListDisplayProps {
   data: RrMediaEntry[];
   displayType: UserListDisplayType;
   filters: RrMediaListFiltersState;
-  sort: "title" | "score" | "progress" | "last_updated" | "last_added";
+  sort:
+    | "title"
+    | "score"
+    | "progress"
+    | "episode_count"
+    | "season_count"
+    | "last_updated"
+    | "last_added"
+    | string
+    | string[];
   baseUrl: string;
   isOwner?: boolean;
   onRefresh?: () => void;
@@ -57,35 +69,72 @@ export function RrMediaListDisplay({
   // Memoize filtering to prevent expensive recalculations
   const filteredData = useMemo(() => {
     return data.filter((entry) => {
-      if (filters.format && entry.format !== filters.format) return false;
-      if (filters.status && entry.status !== filters.status) return false;
+      if (filters.format) {
+        const formats = Array.isArray(filters.format)
+          ? filters.format
+          : filters.format.split(",").map((f) => f.trim()).filter(Boolean);
+        if (formats.length > 0 && (!entry.format || !formats.includes(entry.format))) {
+          return false;
+        }
+      }
+      if (filters.status) {
+        const statuses = Array.isArray(filters.status)
+          ? filters.status
+          : filters.status.split(",").map((s) => s.trim()).filter(Boolean);
+        if (statuses.length > 0 && (!entry.status || !statuses.includes(entry.status))) {
+          return false;
+        }
+      }
       return true;
     });
   }, [data, filters]);
 
-  // Memoize sorting
+  // Memoize multi-criteria sorting
   const sortedData = useMemo(() => {
     const copy = [...filteredData];
+    const sortList: string[] = Array.isArray(sort)
+      ? sort
+      : typeof sort === "string"
+        ? sort.split(",").map((s) => s.trim()).filter(Boolean)
+        : ["last_updated"];
+
+    if (sortList.length === 0) return copy;
+
     copy.sort((a, b) => {
-      switch (sort) {
-        case "title":
-          return a.title.localeCompare(b.title);
-        case "score":
-          return (b.score || 0) - (a.score || 0);
-        case "progress":
-          return (b.progress || 0) - (a.progress || 0);
-        case "last_updated":
-          return (
-            new Date(b.last_updated).getTime() -
-            new Date(a.last_updated).getTime()
-          );
-        case "last_added":
-          return (
-            new Date(b.last_added).getTime() - new Date(a.last_added).getTime()
-          );
-        default:
-          return 0;
+      for (const s of sortList) {
+        let diff = 0;
+        switch (s) {
+          case "title":
+            diff = a.title.localeCompare(b.title);
+            break;
+          case "score":
+            diff = (b.score || 0) - (a.score || 0);
+            break;
+          case "progress":
+            diff = (b.progress || 0) - (a.progress || 0);
+            break;
+          case "episode_count":
+            diff = (b.episodes || 0) - (a.episodes || 0);
+            break;
+          case "season_count":
+            diff = (b.seasons || 0) - (a.seasons || 0);
+            break;
+          case "last_updated":
+            diff =
+              new Date(b.last_updated).getTime() -
+              new Date(a.last_updated).getTime();
+            break;
+          case "last_added":
+            diff =
+              new Date(b.last_added).getTime() -
+              new Date(a.last_added).getTime();
+            break;
+          default:
+            diff = 0;
+        }
+        if (diff !== 0) return diff;
       }
+      return 0;
     });
     return copy;
   }, [filteredData, sort]);

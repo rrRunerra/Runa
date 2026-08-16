@@ -52,6 +52,18 @@ export class ListQueryDto {
   @IsOptional()
   @IsString()
   mediaStatus?: string;
+
+  @IsOptional()
+  @IsString()
+  countryOfOrigin?: string;
+
+  @IsOptional()
+  @IsString()
+  isAdult?: string;
+
+  @IsOptional()
+  @IsString()
+  studio?: string;
 }
 
 export class UsernameParamDto {

@@ -184,96 +184,260 @@ export class ListService {
     return counts;
   }
 
-  private getAnimeOrderBy(sort: string | undefined): any {
+  private getSingleAnimeOrderBy(sort: string): any {
     switch (sort) {
       case 'title':
         return { anime: { titlePrimary: 'asc' } };
       case 'score':
-        return { score: 'desc' };
+        return { score: { sort: 'desc', nulls: 'last' } };
       case 'progress':
         return { progress: 'desc' };
+      case 'episode_count':
+      case 'episodes':
+        return { anime: { episodeCount: { sort: 'desc', nulls: 'last' } } };
       case 'last_added':
         return { createdAt: 'desc' };
       case 'last_updated':
-      default:
         return { updatedAt: 'desc' };
+      default:
+        return null;
     }
   }
 
-  private getMangaOrderBy(sort: string | undefined): any {
+  private getAnimeOrderBy(sort: string | string[] | undefined): any[] {
+    const rawKeys = typeof sort === 'string' ? sort.split(',') : Array.isArray(sort) ? sort : [];
+    const keys = rawKeys.map((k) => k.trim()).filter(Boolean);
+    const orderBys = keys.map((k) => this.getSingleAnimeOrderBy(k)).filter(Boolean);
+    return orderBys.length > 0 ? orderBys : [{ updatedAt: 'desc' }];
+  }
+
+  private getSingleMangaOrderBy(sort: string): any {
     switch (sort) {
       case 'title':
         return { manga: { titlePrimary: 'asc' } };
       case 'score':
-        return { score: 'desc' };
+        return { score: { sort: 'desc', nulls: 'last' } };
       case 'progress':
         return { chaptersProgress: 'desc' };
+      case 'episode_count':
+      case 'episodes':
+      case 'chapter_count':
+      case 'chapters':
+        return { manga: { chapterCount: { sort: 'desc', nulls: 'last' } } };
+      case 'volume_count':
+      case 'volumes':
+        return { manga: { volumeCount: { sort: 'desc', nulls: 'last' } } };
       case 'last_added':
         return { createdAt: 'desc' };
       case 'last_updated':
-      default:
         return { updatedAt: 'desc' };
+      default:
+        return null;
     }
   }
 
-  private getMovieOrderBy(sort: string | undefined): any {
+  private getMangaOrderBy(sort: string | string[] | undefined): any[] {
+    const rawKeys = typeof sort === 'string' ? sort.split(',') : Array.isArray(sort) ? sort : [];
+    const keys = rawKeys.map((k) => k.trim()).filter(Boolean);
+    const orderBys = keys.map((k) => this.getSingleMangaOrderBy(k)).filter(Boolean);
+    return orderBys.length > 0 ? orderBys : [{ updatedAt: 'desc' }];
+  }
+
+  private getSingleMovieOrderBy(sort: string): any {
     switch (sort) {
       case 'title':
         return { movie: { titlePrimary: 'asc' } };
       case 'score':
-        return { score: 'desc' };
+        return { score: { sort: 'desc', nulls: 'last' } };
       case 'last_added':
         return { createdAt: 'desc' };
       case 'last_updated':
-      default:
         return { updatedAt: 'desc' };
+      default:
+        return null;
     }
   }
 
-  private getTvOrderBy(sort: string | undefined): any {
+  private getMovieOrderBy(sort: string | string[] | undefined): any[] {
+    const rawKeys = typeof sort === 'string' ? sort.split(',') : Array.isArray(sort) ? sort : [];
+    const keys = rawKeys.map((k) => k.trim()).filter(Boolean);
+    const orderBys = keys.map((k) => this.getSingleMovieOrderBy(k)).filter(Boolean);
+    return orderBys.length > 0 ? orderBys : [{ updatedAt: 'desc' }];
+  }
+
+  private getSingleTvOrderBy(sort: string): any {
     switch (sort) {
       case 'title':
         return { tv: { titlePrimary: 'asc' } };
       case 'score':
-        return { score: 'desc' };
+        return { score: { sort: 'desc', nulls: 'last' } };
+      case 'progress':
+        return { progress: 'desc' };
+      case 'episode_count':
+      case 'episodes':
+        return { tv: { episodeCount: { sort: 'desc', nulls: 'last' } } };
+      case 'season_count':
+      case 'seasons':
+        return { tv: { seasonCount: { sort: 'desc', nulls: 'last' } } };
       case 'last_added':
         return { createdAt: 'desc' };
       case 'last_updated':
-      default:
         return { updatedAt: 'desc' };
+      default:
+        return null;
     }
   }
 
-  private getGameOrderBy(sort: string | undefined): any {
+  private getTvOrderBy(sort: string | string[] | undefined): any[] {
+    const rawKeys = typeof sort === 'string' ? sort.split(',') : Array.isArray(sort) ? sort : [];
+    const keys = rawKeys.map((k) => k.trim()).filter(Boolean);
+    const orderBys = keys.map((k) => this.getSingleTvOrderBy(k)).filter(Boolean);
+    return orderBys.length > 0 ? orderBys : [{ updatedAt: 'desc' }];
+  }
+
+  private getSingleGameOrderBy(sort: string): any {
     switch (sort) {
       case 'title':
         return { game: { titlePrimary: 'asc' } };
       case 'score':
-        return { score: 'desc' };
+        return { score: { sort: 'desc', nulls: 'last' } };
       case 'progress':
         return { progress: 'desc' };
       case 'last_added':
         return { createdAt: 'desc' };
       case 'last_updated':
-      default:
         return { updatedAt: 'desc' };
+      default:
+        return null;
     }
   }
 
-  private getBookOrderBy(sort: string | undefined): any {
+  private getGameOrderBy(sort: string | string[] | undefined): any[] {
+    const rawKeys = typeof sort === 'string' ? sort.split(',') : Array.isArray(sort) ? sort : [];
+    const keys = rawKeys.map((k) => k.trim()).filter(Boolean);
+    const orderBys = keys.map((k) => this.getSingleGameOrderBy(k)).filter(Boolean);
+    return orderBys.length > 0 ? orderBys : [{ updatedAt: 'desc' }];
+  }
+
+  private getSingleBookOrderBy(sort: string): any {
     switch (sort) {
       case 'title':
         return { book: { titlePrimary: 'asc' } };
       case 'score':
-        return { score: 'desc' };
+        return { score: { sort: 'desc', nulls: 'last' } };
       case 'progress':
         return { progressChapters: 'desc' };
+      case 'episode_count':
+      case 'episodes':
+      case 'chapter_count':
+      case 'chapters':
+        return { book: { chapterCount: { sort: 'desc', nulls: 'last' } } };
       case 'last_added':
         return { createdAt: 'desc' };
       case 'last_updated':
-      default:
         return { updatedAt: 'desc' };
+      default:
+        return null;
     }
+  }
+
+  private getBookOrderBy(sort: string | string[] | undefined): any[] {
+    const rawKeys = typeof sort === 'string' ? sort.split(',') : Array.isArray(sort) ? sort : [];
+    const keys = rawKeys.map((k) => k.trim()).filter(Boolean);
+    const orderBys = keys.map((k) => this.getSingleBookOrderBy(k)).filter(Boolean);
+    return orderBys.length > 0 ? orderBys : [{ updatedAt: 'desc' }];
+  }
+
+  private buildMediaFilter(
+    yearField: string,
+    hasFormat: boolean,
+    search?: string,
+    format?: string,
+    genres?: string,
+    year?: string,
+    mediaStatus?: string,
+    countryOfOrigin?: string,
+    isAdult?: string,
+    studio?: string,
+  ): any {
+    const filter: any = {};
+    let hasFilter = false;
+
+    if (search) {
+      hasFilter = true;
+      filter.OR = [
+        { titlePrimary: { contains: search, mode: 'insensitive' } },
+        { titleSecondary: { contains: search, mode: 'insensitive' } },
+        { titleNative: { contains: search, mode: 'insensitive' } },
+      ];
+    }
+
+    if (hasFormat && format) {
+      const formatList = format.split(',').map((f) => f.trim()).filter(Boolean);
+      if (formatList.length > 0) {
+        hasFilter = true;
+        filter.format = formatList.length > 1 ? { in: formatList } : formatList[0];
+      }
+    }
+
+    if (genres) {
+      const genreList = genres.split(',').map((g) => g.trim()).filter(Boolean);
+      if (genreList.length > 0) {
+        hasFilter = true;
+        filter.genres = { hasEvery: genreList };
+      }
+    }
+
+    if (year) {
+      const yearList = year
+        .split(',')
+        .map((y) => Number(y.trim()))
+        .filter((n) => !Number.isNaN(n));
+      if (yearList.length > 0) {
+        hasFilter = true;
+        filter[yearField] = yearList.length > 1 ? { in: yearList } : yearList[0];
+      }
+    }
+
+    if (mediaStatus) {
+      const statusList = mediaStatus.split(',').map((s) => s.trim()).filter(Boolean);
+      if (statusList.length > 0) {
+        hasFilter = true;
+        filter.status = statusList.length > 1 ? { in: statusList } : statusList[0];
+      }
+    }
+
+    if (countryOfOrigin) {
+      const countryList = countryOfOrigin.split(',').map((c) => c.trim()).filter(Boolean);
+      if (countryList.length > 0) {
+        hasFilter = true;
+        filter.countryOfOrigin = countryList.length > 1 ? { in: countryList } : countryList[0];
+      }
+    }
+
+    if (isAdult === 'true' || isAdult === '1' || isAdult === 'adult') {
+      hasFilter = true;
+      filter.isAdult = true;
+    } else if (isAdult === 'false' || isAdult === '0' || isAdult === 'non_adult') {
+      hasFilter = true;
+      filter.isAdult = false;
+    }
+
+    if (studio) {
+      const studioList = studio.split(',').map((s) => s.trim()).filter(Boolean);
+      if (studioList.length > 0) {
+        hasFilter = true;
+        filter.studios = {
+          some: {
+            studio: {
+              name: { in: studioList, mode: 'insensitive' },
+            },
+          },
+        };
+      }
+    }
+
+    return hasFilter ? filter : null;
   }
 
   private async fetchOrderedMediaList(
@@ -437,23 +601,16 @@ export class ListService {
       ...(statusEnum ? { status: statusEnum } : {}),
     };
 
-    if (format || search || genres || year || mediaStatus) {
-      whereClause.anime = {};
-      if (format) whereClause.anime.format = format;
-      if (search) {
-        whereClause.anime.OR = [
-          { titlePrimary: { contains: search, mode: 'insensitive' } },
-          { titleSecondary: { contains: search, mode: 'insensitive' } },
-          { titleNative: { contains: search, mode: 'insensitive' } },
-        ];
-      }
-      if (genres) {
-        const genreList = genres.split(',').map((g) => g.trim());
-        whereClause.anime.genres = { hasEvery: genreList };
-      }
-      if (year) whereClause.anime.startDateYear = Number(year);
-      if (mediaStatus) whereClause.anime.status = mediaStatus;
-    }
+    const animeFilter = this.buildMediaFilter(
+      'startDateYear',
+      true,
+      search,
+      format,
+      genres,
+      year,
+      mediaStatus,
+    );
+    if (animeFilter) whereClause.anime = animeFilter;
 
     const [paginated, counts] = await Promise.all([
       this.fetchOrderedMediaList(
@@ -793,23 +950,16 @@ export class ListService {
       ...(statusEnum ? { status: statusEnum } : {}),
     };
 
-    if (format || search || genres || year || mediaStatus) {
-      whereClause.manga = {};
-      if (format) whereClause.manga.format = format;
-      if (search) {
-        whereClause.manga.OR = [
-          { titlePrimary: { contains: search, mode: 'insensitive' } },
-          { titleSecondary: { contains: search, mode: 'insensitive' } },
-          { titleNative: { contains: search, mode: 'insensitive' } },
-        ];
-      }
-      if (genres) {
-        const genreList = genres.split(',').map((g) => g.trim());
-        whereClause.manga.genres = { hasEvery: genreList };
-      }
-      if (year) whereClause.manga.startDateYear = Number(year);
-      if (mediaStatus) whereClause.manga.status = mediaStatus;
-    }
+    const mangaFilter = this.buildMediaFilter(
+      'startDateYear',
+      true,
+      search,
+      format,
+      genres,
+      year,
+      mediaStatus,
+    );
+    if (mangaFilter) whereClause.manga = mangaFilter;
 
     const [paginated, counts] = await Promise.all([
       this.fetchOrderedMediaList(
@@ -1185,22 +1335,16 @@ export class ListService {
       ...(statusEnum ? { status: statusEnum } : {}),
     };
 
-    if (search || genres || year || mediaStatus) {
-      whereClause.movie = {};
-      if (search) {
-        whereClause.movie.OR = [
-          { titlePrimary: { contains: search, mode: 'insensitive' } },
-          { titleSecondary: { contains: search, mode: 'insensitive' } },
-          { titleNative: { contains: search, mode: 'insensitive' } },
-        ];
-      }
-      if (genres) {
-        const genreList = genres.split(',').map((g) => g.trim());
-        whereClause.movie.genres = { hasEvery: genreList };
-      }
-      if (year) whereClause.movie.releaseDateYear = Number(year);
-      if (mediaStatus) whereClause.movie.status = mediaStatus;
-    }
+    const movieFilter = this.buildMediaFilter(
+      'releaseDateYear',
+      false,
+      search,
+      undefined,
+      genres,
+      year,
+      mediaStatus,
+    );
+    if (movieFilter) whereClause.movie = movieFilter;
 
     const [paginated, counts] = await Promise.all([
       this.fetchOrderedMediaList(
@@ -1510,22 +1654,16 @@ export class ListService {
       ...(statusEnum ? { status: statusEnum } : {}),
     };
 
-    if (search || genres || year || mediaStatus) {
-      whereClause.tv = {};
-      if (search) {
-        whereClause.tv.OR = [
-          { titlePrimary: { contains: search, mode: 'insensitive' } },
-          { titleSecondary: { contains: search, mode: 'insensitive' } },
-          { titleNative: { contains: search, mode: 'insensitive' } },
-        ];
-      }
-      if (genres) {
-        const genreList = genres.split(',').map((g) => g.trim());
-        whereClause.tv.genres = { hasEvery: genreList };
-      }
-      if (year) whereClause.tv.firstAiredYear = Number(year);
-      if (mediaStatus) whereClause.tv.status = mediaStatus;
-    }
+    const tvFilter = this.buildMediaFilter(
+      'firstAiredYear',
+      false,
+      search,
+      undefined,
+      genres,
+      year,
+      mediaStatus,
+    );
+    if (tvFilter) whereClause.tv = tvFilter;
 
     const [paginated, counts] = await Promise.all([
       this.fetchOrderedMediaList(
@@ -1556,6 +1694,7 @@ export class ListService {
               titleNative: true,
               coverImage: true,
               episodeCount: true,
+              seasonCount: true,
               status: true,
             },
           },
@@ -1596,6 +1735,7 @@ export class ListService {
         score: item.score,
         progress,
         episodes: item.tv.episodeCount,
+        seasons: item.tv.seasonCount,
         image: item.tv.coverImage ?? '',
         format: 'TV',
         status: item.status,
@@ -1921,22 +2061,16 @@ export class ListService {
       ...(statusEnum ? { status: statusEnum } : {}),
     };
 
-    if (search || genres || year || mediaStatus) {
-      whereClause.game = {};
-      if (search) {
-        whereClause.game.OR = [
-          { titlePrimary: { contains: search, mode: 'insensitive' } },
-          { titleSecondary: { contains: search, mode: 'insensitive' } },
-          { titleNative: { contains: search, mode: 'insensitive' } },
-        ];
-      }
-      if (genres) {
-        const genreList = genres.split(',').map((g) => g.trim());
-        whereClause.game.genres = { hasEvery: genreList };
-      }
-      if (year) whereClause.game.releaseDateYear = Number(year);
-      if (mediaStatus) whereClause.game.status = mediaStatus;
-    }
+    const gameFilter = this.buildMediaFilter(
+      'releaseDateYear',
+      false,
+      search,
+      undefined,
+      genres,
+      year,
+      mediaStatus,
+    );
+    if (gameFilter) whereClause.game = gameFilter;
 
     const [paginated, counts] = await Promise.all([
       this.fetchOrderedMediaList(
@@ -2212,6 +2346,7 @@ export class ListService {
       $Enums.BookListStatus,
     );
     const search = query?.search?.trim();
+    const format = query?.format?.trim();
     const genres = query?.genres?.trim();
     const year = query?.year?.trim();
     const mediaStatus = query?.mediaStatus?.trim();
@@ -2221,21 +2356,16 @@ export class ListService {
       ...(statusEnum ? { status: statusEnum } : {}),
     };
 
-    if (search || genres || year || mediaStatus) {
-      whereClause.book = {};
-      if (search) {
-        whereClause.book.OR = [
-          { titlePrimary: { contains: search, mode: 'insensitive' } },
-          { titleSecondary: { contains: search, mode: 'insensitive' } },
-        ];
-      }
-      if (genres) {
-        const genreList = genres.split(',').map((g) => g.trim());
-        whereClause.book.genres = { hasEvery: genreList };
-      }
-      if (year) whereClause.book.releaseDateYear = Number(year);
-      if (mediaStatus) whereClause.book.status = mediaStatus;
-    }
+    const bookFilter = this.buildMediaFilter(
+      'releaseDateYear',
+      true,
+      search,
+      format,
+      genres,
+      year,
+      mediaStatus,
+    );
+    if (bookFilter) whereClause.book = bookFilter;
 
     const [paginated, counts] = await Promise.all([
       this.fetchOrderedMediaList(

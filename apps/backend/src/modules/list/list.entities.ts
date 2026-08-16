@@ -4,6 +4,7 @@ export default class ListEntity {
   score?: number | null;
   progress?: number | null;
   episodes?: number | null;
+  seasons?: number | null;
   image: string;
   format: string;
   status: string;

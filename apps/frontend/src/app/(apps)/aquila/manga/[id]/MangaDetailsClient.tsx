@@ -195,32 +195,39 @@ export default function MangaDetailsPage(): React.JSX.Element {
 
   const characters = useMemo(() => {
     if (!manga?.characters) return [];
-    return manga.characters
-      .filter((mc) => mc.character)
-      .map((mc) => {
-        const char = mc.character;
-        return {
-          id: mc.id || char.id,
-          characterId: char.id,
-          name:
-            char.namePrimary || char.nameNative || t("aquila.unknownCharacter"),
-          native: char.nameNative ?? "",
-          image: char.image ?? "",
-          role: mc.role ?? "",
-          description: char.description ?? "",
-          gender: char.gender ?? "",
-          age: char.age ?? "",
-          bloodType: char.bloodType ?? "",
-          dateOfBirth: {
-            year: char.dateOfBirthYear,
-            month: char.dateOfBirthMonth,
-            day: char.dateOfBirthDay,
-          },
-          nameAlternative: char.nameAlternative ?? [],
-          nameAlternativeSpoiler: char.nameAlternativeSpoiler ?? [],
-          voiceActor: null,
-        };
+    const seenCharIds = new Set<number>();
+    const result: any[] = [];
+
+    for (const mc of manga.characters) {
+      if (!mc.character) continue;
+      const char = mc.character;
+      if (seenCharIds.has(char.id)) continue;
+      seenCharIds.add(char.id);
+
+      result.push({
+        id: mc.id || char.id,
+        characterId: char.id,
+        name:
+          char.namePrimary || char.nameNative || t("aquila.unknownCharacter"),
+        native: char.nameNative ?? "",
+        image: char.image ?? "",
+        role: mc.role ?? "",
+        description: char.description ?? "",
+        gender: char.gender ?? "",
+        age: char.age ?? "",
+        bloodType: char.bloodType ?? "",
+        dateOfBirth: {
+          year: char.dateOfBirthYear,
+          month: char.dateOfBirthMonth,
+          day: char.dateOfBirthDay,
+        },
+        nameAlternative: char.nameAlternative ?? [],
+        nameAlternativeSpoiler: char.nameAlternativeSpoiler ?? [],
+        voiceActor: null,
       });
+    }
+
+    return result;
   }, [manga, t]);
 
   // ─── Relations (v2 shape) ────────────────────────────────────────────────

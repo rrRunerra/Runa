@@ -76,6 +76,36 @@ export class MangaRepository {
 
     if (!record) return null;
 
+    // Deduplicate characters by characterId + actorId
+    const seenCharKeys = new Set<string>();
+    const uniqueCharacters: typeof record.characters = [];
+    const duplicateCharIds: number[] = [];
+
+    for (const c of record.characters) {
+      const key = `${c.characterId}_${c.actorId ?? 'none'}`;
+      if (seenCharKeys.has(key)) {
+        duplicateCharIds.push(c.id);
+      } else {
+        seenCharKeys.add(key);
+        uniqueCharacters.push(c);
+      }
+    }
+
+    if (duplicateCharIds.length > 0) {
+      this.logger.debug(
+        `Cleaning up ${duplicateCharIds.length} duplicate character records for manga ${numericId}`,
+      );
+      void this.prisma.client.aquilaMediaCharacterV2
+        .deleteMany({
+          where: { id: { in: duplicateCharIds } },
+        })
+        .catch((err: any) =>
+          this.logger.warn(
+            `Failed to cleanup duplicate characters for manga ${numericId}: ${err.message}`,
+          ),
+        );
+    }
+
     let relations: any[] = [];
     try {
       const relationsRaw = await this.prisma.client.aquilaMediaRelationV2.findMany({
@@ -131,6 +161,7 @@ export class MangaRepository {
 
     return {
       ...record,
+      characters: uniqueCharacters,
       relations,
     } as unknown as MangaEntity;
   }
@@ -372,6 +403,16 @@ export class MangaRepository {
 
     // 3. Process Characters using local IDs (isolated in try-catch)
     if (payload.characters && Array.isArray(payload.characters)) {
+      try {
+        await this.prisma.client.aquilaMediaCharacterV2.deleteMany({
+          where: { mediaType: MediaType.MANGA, mediaId: mangaLocalId },
+        });
+      } catch (err: any) {
+        this.logger.warn(
+          `Failed to clear old media characters for manga ${mangaLocalId}: ${err.message}`,
+        );
+      }
+
       for (let orderIndex = 0; orderIndex < payload.characters.length; orderIndex++) {
         const ch = payload.characters[orderIndex];
         if (!ch.namePrimary) continue;
@@ -417,21 +458,8 @@ export class MangaRepository {
           ) as CharacterRole;
 
           try {
-            await this.prisma.client.aquilaMediaCharacterV2.upsert({
-              where: {
-                mediaType_mediaId_characterId_actorId: {
-                  mediaType: MediaType.MANGA,
-                  mediaId: mangaLocalId,
-                  characterId: charRecord.id,
-                  actorId: 0,
-                },
-              },
-              update: {
-                role: charRole,
-                order: orderIndex + 1,
-                mangaId: mangaLocalId,
-              },
-              create: {
+            await this.prisma.client.aquilaMediaCharacterV2.create({
+              data: {
                 mediaType: MediaType.MANGA,
                 mediaId: mangaLocalId,
                 mangaId: mangaLocalId,
@@ -443,7 +471,7 @@ export class MangaRepository {
             });
           } catch (err: any) {
             this.logger.warn(
-              `MediaCharacterV2 upsert non-blocking notice for "${ch.namePrimary}": ${err.message}`,
+              `MediaCharacterV2 create non-blocking notice for "${ch.namePrimary}": ${err.message}`,
             );
           }
         } catch (err: any) {

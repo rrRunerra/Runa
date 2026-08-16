@@ -26,6 +26,14 @@ export class DiscoverService {
     const year = query.year ?? '';
     const format = query.format ?? '';
     const status = query.status ?? '';
+    const genres = query.genres ?? '';
+    const countryOfOrigin = query.countryOfOrigin ?? '';
+    const isAdult = query.isAdult ?? '';
+    const studio = query.studio ?? '';
+    const minEpisodes = query.minEpisodes ?? '';
+    const maxEpisodes = query.maxEpisodes ?? '';
+    const minSeasons = query.minSeasons ?? '';
+    const maxSeasons = query.maxSeasons ?? '';
     const search = query.search ?? '';
     const sort = query.sort ?? '';
     const addedWithin = query.addedWithin ?? '';
@@ -37,6 +45,14 @@ export class DiscoverService {
       year,
       format,
       status,
+      genres,
+      countryOfOrigin,
+      isAdult,
+      studio,
+      minEpisodes,
+      maxEpisodes,
+      minSeasons,
+      maxSeasons,
       search,
       sort,
       addedWithin,
@@ -79,9 +95,12 @@ export class DiscoverService {
       return cached;
     }
 
-    const [years, statuses] = await Promise.all([
+    const [years, statuses, genres, countries, studios] = await Promise.all([
       this.discoverRepository.getYears(mappedType),
       this.discoverRepository.getStatuses(mappedType),
+      this.discoverRepository.getGenres(mappedType),
+      this.discoverRepository.getCountries(mappedType),
+      this.discoverRepository.getStudios(mappedType),
     ]);
 
     let formats: string[] = [];
@@ -95,6 +114,9 @@ export class DiscoverService {
       years,
       formats,
       statuses,
+      genres,
+      countries,
+      studios,
     };
 
     await this.cacheService.set(cacheKey, response, 3600);

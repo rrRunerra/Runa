@@ -77,6 +77,36 @@ export class AnimeRepository {
 
     if (!record) return null;
 
+    // Deduplicate characters by characterId + actorId
+    const seenCharKeys = new Set<string>();
+    const uniqueCharacters: typeof record.characters = [];
+    const duplicateCharIds: number[] = [];
+
+    for (const c of record.characters) {
+      const key = `${c.characterId}_${c.actorId ?? 'none'}`;
+      if (seenCharKeys.has(key)) {
+        duplicateCharIds.push(c.id);
+      } else {
+        seenCharKeys.add(key);
+        uniqueCharacters.push(c);
+      }
+    }
+
+    if (duplicateCharIds.length > 0) {
+      this.logger.debug(
+        `Cleaning up ${duplicateCharIds.length} duplicate character records for anime ${numericId}`,
+      );
+      void this.prisma.client.aquilaMediaCharacterV2
+        .deleteMany({
+          where: { id: { in: duplicateCharIds } },
+        })
+        .catch((err: any) =>
+          this.logger.warn(
+            `Failed to cleanup duplicate characters for anime ${numericId}: ${err.message}`,
+          ),
+        );
+    }
+
     let relations: any[] = [];
     try {
       const relationsRaw = await this.prisma.client.aquilaMediaRelationV2.findMany({
@@ -132,6 +162,7 @@ export class AnimeRepository {
 
     return {
       ...record,
+      characters: uniqueCharacters,
       relations,
     } as unknown as AnimeEntity;
   }
@@ -402,6 +433,16 @@ export class AnimeRepository {
 
     // 3. Process Characters and Voice Actors using local IDs (isolated in try-catch)
     if (payload.characters && Array.isArray(payload.characters)) {
+      try {
+        await this.prisma.client.aquilaMediaCharacterV2.deleteMany({
+          where: { mediaType: MediaType.ANIME, mediaId: animeLocalId },
+        });
+      } catch (err: any) {
+        this.logger.warn(
+          `Failed to clear old media characters for anime ${animeLocalId}: ${err.message}`,
+        );
+      }
+
       for (let orderIndex = 0; orderIndex < payload.characters.length; orderIndex++) {
         const ch = payload.characters[orderIndex];
         if (!ch.namePrimary) continue;
@@ -480,21 +521,8 @@ export class AnimeRepository {
             ) as CharacterRole;
 
             try {
-              await this.prisma.client.aquilaMediaCharacterV2.upsert({
-                where: {
-                  mediaType_mediaId_characterId_actorId: {
-                    mediaType: MediaType.ANIME,
-                    mediaId: animeLocalId,
-                    characterId: charRecord.id,
-                    actorId: actorRecordId ?? 0,
-                  },
-                },
-                update: {
-                  role: charRole,
-                  order: orderIndex + 1,
-                  animeId: animeLocalId,
-                },
-                create: {
+              await this.prisma.client.aquilaMediaCharacterV2.create({
+                data: {
                   mediaType: MediaType.ANIME,
                   mediaId: animeLocalId,
                   animeId: animeLocalId,
@@ -506,7 +534,7 @@ export class AnimeRepository {
               });
             } catch (err: any) {
               this.logger.warn(
-                `MediaCharacterV2 upsert non-blocking notice for "${ch.namePrimary}": ${err.message}`,
+                `MediaCharacterV2 create non-blocking notice for "${ch.namePrimary}": ${err.message}`,
               );
             }
           }

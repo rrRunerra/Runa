@@ -324,7 +324,11 @@ export default function BrowsePage(): React.JSX.Element {
     { id: "tv", label: t("aquila.tv", "TV Show"), icon: Tv },
     { id: "games", label: t("aquila.games", "Games"), icon: Gamepad2 },
     { id: "books", label: t("aquila.books", "Books"), icon: Book },
-    { id: "characters", label: t("aquila.charactersLabel", "Characters"), icon: User },
+    {
+      id: "characters",
+      label: t("aquila.charactersLabel", "Characters"),
+      icon: User,
+    },
     { id: "actors", label: t("aquila.actorsLabel", "Actors"), icon: UserCheck },
   ];
 
@@ -340,24 +344,6 @@ export default function BrowsePage(): React.JSX.Element {
           transition={{ duration: 0.35, ease: "easeOut" }}
           className="flex flex-col md:flex-row md:items-center justify-between gap-4"
         >
-          <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
-                {t("aquila.browse", "Browse")}
-              </h1>
-              <span className="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-primary/10 text-primary border border-primary/20 shadow-xs flex items-center gap-1">
-                <Sparkles className="size-3" />
-                {currentCategory.label}
-              </span>
-            </div>
-            <p className="text-muted-foreground mt-1 text-sm font-medium">
-              {t(
-                "aquila.browseSubtitle",
-                "Search for your favorite anime, manga, and more.",
-              )}
-            </p>
-          </div>
-
           {/* Animated Glassmorphic Category Selector Pills */}
           <RrPillNav
             items={categories}

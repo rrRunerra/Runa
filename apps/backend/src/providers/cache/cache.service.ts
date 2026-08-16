@@ -102,11 +102,19 @@ export class CacheService implements OnModuleDestroy {
       year: number | string,
       format: string,
       status: string,
+      genres: string,
+      countryOfOrigin: string,
+      isAdult: string,
+      studio: string,
+      minEpisodes: number | string,
+      maxEpisodes: number | string,
+      minSeasons: number | string,
+      maxSeasons: number | string,
       search: string,
       sort: string,
       addedWithin: string,
     ) =>
-      `discover:${mediaType.toLowerCase()}:${page}:${limit}:${year}:${format}:${status}:${search}:${sort}:${addedWithin}`,
+      `discover:${mediaType.toLowerCase()}:${page}:${limit}:${year}:${format}:${status}:${genres}:${countryOfOrigin}:${isAdult}:${studio}:${minEpisodes}:${maxEpisodes}:${minSeasons}:${maxSeasons}:${search}:${sort}:${addedWithin}`,
 
     // Recommendations
     recommendations: (

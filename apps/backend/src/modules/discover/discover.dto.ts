@@ -20,6 +20,34 @@ export class DiscoverQueryDto {
   status?: string;
 
   @IsOptional()
+  @IsString({ message: 'DqDto-GMBAS001: Genres must be a string' })
+  genres?: string;
+
+  @IsOptional()
+  @IsString({ message: 'DqDto-CMBAS001: Country must be a string' })
+  countryOfOrigin?: string;
+
+  @IsOptional()
+  @IsString({ message: 'DqDto-AMBAS001: isAdult must be a string' })
+  isAdult?: string;
+
+  @IsOptional()
+  @IsString({ message: 'DqDto-STMBAS001: Studio must be a string' })
+  studio?: string;
+
+  @IsOptional()
+  minEpisodes?: string | number;
+
+  @IsOptional()
+  maxEpisodes?: string | number;
+
+  @IsOptional()
+  minSeasons?: string | number;
+
+  @IsOptional()
+  maxSeasons?: string | number;
+
+  @IsOptional()
   @IsString({ message: 'DqDto-SMBAS002: Search must be a string' })
   search?: string;
 

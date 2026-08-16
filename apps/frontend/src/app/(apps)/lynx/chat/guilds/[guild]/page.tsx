@@ -97,7 +97,7 @@ export default async function ChannelsPage({
                           )}
                         </div>
                         <h3
-                          className="text-base font-bold text-foreground group-hover:text-primary transition-colors truncate max-w-[170px]"
+                          className="text-base font-bold text-foreground group-hover:text-primary transition-colors truncate max-w-42.5"
                           title={channel.name}
                         >
                           {channel.name}

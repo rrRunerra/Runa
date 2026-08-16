@@ -24,6 +24,9 @@ export interface DiscoverMetaResponse {
   years: number[];
   formats: string[];
   statuses: string[];
+  genres?: string[];
+  countries?: string[];
+  studios?: string[];
 }
 
 export interface CalendarItemEntity {
