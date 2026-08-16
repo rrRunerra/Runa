@@ -32,6 +32,7 @@ import { ReviewsModule } from './modules/reviews/reviews.module';
 import { RecommendationsModule } from './modules/recommendations/recommendations.module';
 import { CalendarModule } from './modules/calendar/calendar.module';
 import { RankingsModule } from './modules/rankings/rankings.module';
+import { StudioModule } from './modules/studio/studio.module';
 
 @Module({
   providers: [
@@ -74,6 +75,7 @@ import { RankingsModule } from './modules/rankings/rankings.module';
     RecommendationsModule,
     CalendarModule,
     RankingsModule,
+    StudioModule,
     ThrottlerModule.forRoot({
       throttlers: [
         {

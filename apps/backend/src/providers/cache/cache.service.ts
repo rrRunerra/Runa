@@ -74,6 +74,11 @@ export class CacheService implements OnModuleDestroy {
       `actor-search:${name.replace(/\+/g, ' ').trim().toLowerCase().replaceAll(' ', '')}`,
     actorDetail: (id: number) => `actor:${id}`,
 
+    // Studio
+    studioSearch: (name: string) =>
+      `studio-search:${name.replace(/\+/g, ' ').trim().toLowerCase().replaceAll(' ', '')}`,
+    studioDetail: (id: number) => `studio:${id}`,
+
     // Email
     emailRefreshCooldown: (id: string) =>
       `cooldown:refresh:email-account:${id}`,

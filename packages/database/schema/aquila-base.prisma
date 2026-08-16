@@ -235,6 +235,8 @@ enum FavoriteType {
     CHARACTER
     ACTOR
     STAFF
+    STUDIO
+    MUSIC
 }
 
 enum StaffRole {

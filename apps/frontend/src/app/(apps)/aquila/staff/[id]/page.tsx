@@ -18,6 +18,7 @@ import {
   Gamepad2,
   Briefcase,
   Mic,
+  Info,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -184,7 +185,7 @@ export default function StaffPage() {
   const hasNoRoles = !hasStaffRoles && !hasVoiceRoles;
 
   return (
-    <div className="flex-1 min-h-screen bg-background pb-12 relative overflow-hidden">
+    <div className="flex-1 min-h-screen bg-background pb-12 relative overflow-x-hidden">
       {/* Decorative Blur Orbs */}
       <div className="absolute top-0 right-0 w-96 h-96 bg-primary/2 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-10 left-10 w-96 h-96 bg-primary/2 rounded-full blur-3xl pointer-events-none" />
@@ -325,6 +326,20 @@ export default function StaffPage() {
                   </Button>
                 )}
               </div>
+            </div>
+
+            {/* Catalog Incomplete Disclaimer */}
+            <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-card/30 border border-border/30 backdrop-blur-md text-xs text-muted-foreground shadow-xs">
+              <Info className="size-4 text-primary shrink-0" />
+              <p className="flex-1 leading-relaxed">
+                {t("aquila.dataDisclaimer")}
+              </p>
+              <Link
+                href="/aquila/browse"
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:underline px-2.5 py-1 rounded-lg bg-primary/10 border border-primary/20 shrink-0 transition-colors"
+              >
+                {t("aquila.browse")}
+              </Link>
             </div>
 
             {/* Roles Section */}

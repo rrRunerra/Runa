@@ -72,7 +72,7 @@ async function run() {
 
   const batchData = {
  
-};
+  };
 
   const isBatchRun = process.argv.includes('--batch');
   if (isBatchRun) {

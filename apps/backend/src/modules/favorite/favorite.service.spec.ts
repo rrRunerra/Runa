@@ -13,7 +13,10 @@ jest.mock('@runa/database', () => ({
     BOOK: 'BOOK',
     USER: 'USER',
     CHARACTER: 'CHARACTER',
+    ACTOR: 'ACTOR',
     STAFF: 'STAFF',
+    STUDIO: 'STUDIO',
+    MUSIC: 'MUSIC',
   },
   prisma: {
     $extends: jest.fn().mockReturnValue({}),

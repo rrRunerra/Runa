@@ -33,6 +33,8 @@ import {
   Book,
   User,
   UserCheck,
+  Building2,
+  Music,
   Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -62,7 +64,11 @@ export default function BrowsePage(): React.JSX.Element {
             ? "character"
             : type === "actors"
               ? "actor"
-              : type;
+              : type === "studios"
+                ? "studio"
+                : type === "music"
+                  ? "music"
+                  : type;
 
   const {
     data: rawData,
@@ -211,7 +217,7 @@ export default function BrowsePage(): React.JSX.Element {
 
   const handleQueryChange = (val: string): void => {
     const match = val.match(
-      /^@(anime|manga|movies|movie|tv show|tv|games|game|books|book|characters|character|actors|actor)\s+(.*)$/i,
+      /^@(anime|manga|movies|movie|tv show|tv|games|game|books|book|characters|character|actors|actor|studios|studio|music)\s+(.*)$/i,
     );
 
     if (match) {
@@ -225,6 +231,7 @@ export default function BrowsePage(): React.JSX.Element {
       if (rawType === "book") targetType = "books";
       if (rawType === "character") targetType = "characters";
       if (rawType === "actor") targetType = "actors";
+      if (rawType === "studio") targetType = "studios";
 
       setType(targetType);
       setQuery(remaining);
@@ -330,6 +337,8 @@ export default function BrowsePage(): React.JSX.Element {
       icon: User,
     },
     { id: "actors", label: t("aquila.actorsLabel", "Actors"), icon: UserCheck },
+    { id: "studios", label: t("aquila.studios", "Studios"), icon: Building2 },
+    { id: "music", label: t("aquila.music", "Music"), icon: Music },
   ];
 
   const currentCategory =
@@ -342,7 +351,7 @@ export default function BrowsePage(): React.JSX.Element {
           initial={{ opacity: 0, y: -12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: "easeOut" }}
-          className="flex flex-col md:flex-row md:items-center justify-between gap-4"
+          className="flex items-center justify-center w-full"
         >
           {/* Animated Glassmorphic Category Selector Pills */}
           <RrPillNav
@@ -350,6 +359,7 @@ export default function BrowsePage(): React.JSX.Element {
             activeId={type}
             onChange={handleTypeChange}
             layoutId="browseCategoryHighlight"
+            className="mx-auto"
           />
         </motion.div>
 
@@ -363,12 +373,16 @@ export default function BrowsePage(): React.JSX.Element {
               placeholder={
                 ["characters", "actors"].includes(type)
                   ? t("aquila.searchNamesPlaceholder")
-                  : t("aquila.searchPlaceholder")
+                  : type === "studios"
+                    ? t("aquila.searchStudiosPlaceholder")
+                    : t("aquila.searchPlaceholder")
               }
               shortPlaceholder={
                 ["characters", "actors"].includes(type)
                   ? t("aquila.shortSearchNamesPlaceholder")
-                  : t("aquila.shortSearchPlaceholder")
+                  : type === "studios"
+                    ? t("aquila.searchStudiosPlaceholder")
+                    : t("aquila.shortSearchPlaceholder")
               }
             />
           </div>

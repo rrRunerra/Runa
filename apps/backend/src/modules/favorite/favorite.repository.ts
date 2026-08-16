@@ -113,6 +113,7 @@ export class FavoriteRepository {
             image: true,
           },
         });
+      case FavoriteType.ACTOR:
       case FavoriteType.STAFF:
         return this.prisma.client.aquilaActorV2.findUnique({
           where: { id: num },
@@ -122,6 +123,15 @@ export class FavoriteRepository {
             image: true,
           },
         });
+      case FavoriteType.STUDIO:
+        return this.prisma.client.aquilaStudioV2.findUnique({
+          where: { id: num },
+          select: {
+            name: true,
+          },
+        });
+      case FavoriteType.MUSIC:
+        return null;
       default:
         return null;
     }

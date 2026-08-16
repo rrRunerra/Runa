@@ -217,6 +217,7 @@ export class FavoriteService {
           image: (details.avatarUrl as string | null) ?? '',
         };
       case FavoriteType.CHARACTER:
+      case FavoriteType.ACTOR:
       case FavoriteType.STAFF:
         return {
           title:
@@ -225,6 +226,16 @@ export class FavoriteService {
             (details.name as string | null) ??
             '',
           image: (details.image as string | null) ?? '',
+        };
+      case FavoriteType.STUDIO:
+        return {
+          title: (details.name as string | null) ?? '',
+          image: '',
+        };
+      case FavoriteType.MUSIC:
+        return {
+          title: (details.title as string | null) ?? '',
+          image: '',
         };
       default:
         return { title: '', image: '' };
