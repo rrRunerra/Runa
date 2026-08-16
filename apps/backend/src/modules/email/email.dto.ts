@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsBoolean,
   IsInt,
+  IsArray,
 } from 'class-validator';
 
 export class EmailAccountDto {
@@ -74,6 +75,40 @@ export class EmailAccountDto {
   @IsString({ message: 'ElAtDto-PWMBAS001: Password must be a string' })
   @IsOptional()
   password?: string;
+
+  @IsBoolean({ message: 'ElAtDto-SYMBAB001: Sync enabled must be a boolean' })
+  @IsOptional()
+  syncEnabled?: boolean;
+
+  @IsBoolean({
+    message: 'ElAtDto-STREMBAB001: Sync time range enabled must be a boolean',
+  })
+  @IsOptional()
+  syncTimeRangeEnabled?: boolean;
+
+  @IsString({
+    message: 'ElAtDto-STSTMBAS001: Sync start time must be a string',
+  })
+  @IsOptional()
+  syncStartTime?: string | null;
+
+  @IsString({ message: 'ElAtDto-STEMBAS001: Sync end time must be a string' })
+  @IsOptional()
+  syncEndTime?: string | null;
+
+  @IsArray({ message: 'ElAtDto-SYDMBAA001: Sync days must be an array' })
+  @IsOptional()
+  syncDays?: number[];
+
+  @IsString({ message: 'ElAtDto-SYTZMBAS001: Sync timezone must be a string' })
+  @IsOptional()
+  syncTimezone?: string;
+
+  @IsInt({
+    message: 'ElAtDto-SYIMBAI001: Sync interval minutes must be an integer',
+  })
+  @IsOptional()
+  syncIntervalMinutes?: number;
 }
 
 export class SaveDraftDto {

@@ -7,7 +7,7 @@ import { getServerTranslation } from "@/lib/serverTranslation";
 
 export default async function VerboseLogsPage(): Promise<React.JSX.Element> {
   const session = await auth();
-  if (!session || !hasPermission(session.user.permissions, LynxFlags.VIEW_LOGS)) {
+  if (!session?.user || !hasPermission(session.user?.permissions, LynxFlags.VIEW_LOGS)) {
     return <AccessDenied />;
   }
 

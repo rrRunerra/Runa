@@ -211,7 +211,7 @@ export const RrAccountSettingsTab = ({
         };
 
         const emailChanged = session?.user?.email
-          ? email.toLowerCase() !== session.user.email.toLowerCase()
+          ? email.toLowerCase() !== session.user?.email.toLowerCase()
           : true;
         if (emailChanged) {
           updatePayload.email = email.toLowerCase();

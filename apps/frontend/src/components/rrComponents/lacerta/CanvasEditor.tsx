@@ -449,7 +449,8 @@ export default function CanvasEditor({
 
       setCollaboratorLaserTrails((prev) => {
         let changed = false;
-        const next: Record<string, { x: number; y: number; time: number }[]> = {};
+        const next: Record<string, { x: number; y: number; time: number }[]> =
+          {};
         for (const [key, trail] of Object.entries(prev)) {
           const filtered = trail.filter((p) => now - p.time < LASER_MAX_AGE);
           if (filtered.length > 0) {
@@ -931,7 +932,10 @@ export default function CanvasEditor({
       );
 
       if (!res.ok) {
-        let errMsg = t("lacerta.canvasEditor.saveFailed", "Failed to save canvas.");
+        let errMsg = t(
+          "lacerta.canvasEditor.saveFailed",
+          "Failed to save canvas.",
+        );
         try {
           const errData = await res.json();
           if (errData && errData.message) {
@@ -1872,10 +1876,19 @@ export default function CanvasEditor({
       newNode.emoji = "🎯";
     } else if (type === "callout") {
       newNode.calloutType = "info";
-      newNode.text = "<p>" + t("lacerta.canvasEditor.defaultCalloutText", "Callout alert...") + "</p>";
+      newNode.text =
+        "<p>" +
+        t("lacerta.canvasEditor.defaultCalloutText", "Callout alert...") +
+        "</p>";
     } else if (type === "annotation") {
       newNode.annotationPointer = { x: -60, y: -60 };
-      newNode.text = "<p>" + t("lacerta.canvasEditor.defaultAnnotationText", "Pointer annotation...") + "</p>";
+      newNode.text =
+        "<p>" +
+        t(
+          "lacerta.canvasEditor.defaultAnnotationText",
+          "Pointer annotation...",
+        ) +
+        "</p>";
       newNode.color = "blue";
     } else if (type === "group") {
       newNode.text = t("lacerta.canvasEditor.defaultGroupText", "Group");
@@ -2438,7 +2451,7 @@ export default function CanvasEditor({
                   <Sparkles className="h-3.5 w-3.5 text-primary-foreground" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-sm font-semibold text-foreground truncate max-w-[200px]">
+                  <span className="text-sm font-semibold text-foreground truncate max-w-50">
                     {file.name}
                   </span>
                   <span className="text-[10px] text-muted-foreground">
@@ -2583,7 +2596,7 @@ export default function CanvasEditor({
                       style={{ backgroundColor: c }}
                     />
                   ))}
-                  <div className="relative w-3.5 h-3.5 rounded-full overflow-hidden border border-border bg-gradient-to-tr from-rose-500 via-green-500 to-blue-500 cursor-pointer shrink-0">
+                  <div className="relative w-3.5 h-3.5 rounded-full overflow-hidden border border-border bg-linear-to-tr from-rose-500 via-green-500 to-blue-500 cursor-pointer shrink-0">
                     <input
                       type="color"
                       value={
@@ -2692,8 +2705,8 @@ export default function CanvasEditor({
                     <div className="px-1.5 py-1">
                       {session?.user?.username ? (
                         <CollaboratorProfileTrigger
-                          userId={session.user.id}
-                          username={session.user.username}
+                          userId={session.user?.id || ""}
+                          username={session.user?.username || ""}
                           accessToken={accessToken}
                           isMe={true}
                         />
@@ -3669,8 +3682,8 @@ export default function CanvasEditor({
             onSave={(nodeId, updatedSceneData) => {
               setNodes((prev) =>
                 prev.map((n) =>
-                  n.id === nodeId ? { ...n, scene3dData: updatedSceneData } : n
-                )
+                  n.id === nodeId ? { ...n, scene3dData: updatedSceneData } : n,
+                ),
               );
               setIsDirty(true);
             }}
@@ -3706,7 +3719,7 @@ export default function CanvasEditor({
                 {t("lacerta.canvasEditor.changeColor", "Change Color")}
               </ContextMenuSubTrigger>
               <ContextMenuPortal>
-                <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-[120px]">
+                <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-30">
                   {COLOR_PRESETS.map((p) => (
                     <ContextMenuItem
                       key={p.name}
@@ -3777,7 +3790,7 @@ export default function CanvasEditor({
                   {t("lacerta.canvasEditor.changeSticker", "Change Sticker")}
                 </ContextMenuSubTrigger>
                 <ContextMenuPortal>
-                  <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-[120px]">
+                  <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-30">
                     {["🎯", "👍", "🔥", "❤️", "🚀", "💡", "⚠️", "🎉"].map(
                       (emoji) => (
                         <ContextMenuItem
@@ -3835,7 +3848,7 @@ export default function CanvasEditor({
                   {t("lacerta.canvasEditor.calloutStyle", "Callout Style")}
                 </ContextMenuSubTrigger>
                 <ContextMenuPortal>
-                  <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-[120px]">
+                  <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-30">
                     {[
                       {
                         type: "info",
@@ -3893,7 +3906,7 @@ export default function CanvasEditor({
                 {t("lacerta.canvasEditor.arrange", "Arrange")}
               </ContextMenuSubTrigger>
               <ContextMenuPortal>
-                <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-[160px]">
+                <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-40">
                   <ContextMenuItem
                     onClick={() => bringToFront(rightClickedNodeId!)}
                     className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
@@ -3976,7 +3989,7 @@ export default function CanvasEditor({
                 )}
               </ContextMenuSubTrigger>
               <ContextMenuPortal>
-                <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-[120px]">
+                <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-30">
                   {(
                     [
                       { name: "slate", color: "var(--muted-foreground)" },
@@ -4066,7 +4079,7 @@ export default function CanvasEditor({
                 {t("lacerta.canvasEditor.lineShape", "Line Shape")}
               </ContextMenuSubTrigger>
               <ContextMenuPortal>
-                <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-[120px]">
+                <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-30">
                   <ContextMenuItem
                     onClick={() => {
                       setEdges((prev) =>
@@ -4107,7 +4120,7 @@ export default function CanvasEditor({
                 {t("lacerta.canvasEditor.lineStyle", "Line Style")}
               </ContextMenuSubTrigger>
               <ContextMenuPortal>
-                <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-[120px]">
+                <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-30">
                   {(
                     [
                       {
@@ -4162,7 +4175,7 @@ export default function CanvasEditor({
                 {t("lacerta.canvasEditor.arrowType", "Arrow Type")}
               </ContextMenuSubTrigger>
               <ContextMenuPortal>
-                <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-[140px]">
+                <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-35">
                   {(
                     [
                       {
@@ -4244,7 +4257,7 @@ export default function CanvasEditor({
                 {t("lacerta.canvasEditor.insert", "Insert")}
               </ContextMenuSubTrigger>
               <ContextMenuPortal>
-                <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-[190px] max-h-[420px] overflow-y-auto no-scrollbar">
+                <ContextMenuSubContent className="bg-popover border border-border text-popover-foreground shadow-lg min-w-47.5 max-h-105 overflow-y-auto no-scrollbar">
                   {/* Category: Text & Notes */}
                   <ContextMenuLabel className="text-[9px] font-bold text-muted-foreground px-3 py-1 uppercase tracking-wider">
                     {t("lacerta.canvasEditor.textNotes", "Text & Notes")}
@@ -4473,7 +4486,10 @@ export default function CanvasEditor({
                     className="focus:bg-accent focus:text-accent-foreground cursor-pointer px-3 py-1.5 text-xs font-semibold"
                   >
                     <Boxes className="h-3.5 w-3.5 mr-2 text-indigo-400" />
-                    {t("lacerta.canvasEditor.object3dCard", "3D Scene / Objects")}
+                    {t(
+                      "lacerta.canvasEditor.object3dCard",
+                      "3D Scene / Objects",
+                    )}
                   </ContextMenuItem>
                   <ContextMenuItem
                     onClick={() =>

@@ -576,7 +576,7 @@ export function RrNotificationsModal({
     try {
       const masterCryptoKey = await deriveMasterKey(
         password,
-        session.user.username,
+        session.user?.username || "",
       );
       const exportedMasterBuffer = await window.crypto.subtle.exportKey(
         "raw",

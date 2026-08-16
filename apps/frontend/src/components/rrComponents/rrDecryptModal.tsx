@@ -35,7 +35,7 @@ export function RrDecryptModal() {
     if (loading) return;
     setShowUnlockDialog(open);
     if (!open && !isEncryptionUnlocked && session?.user?.username) {
-      localStorage.setItem(`runa-encryption-dismissed-${session.user.username}`, "true");
+      localStorage.setItem(`runa-encryption-dismissed-${session.user?.username}`, "true");
     }
   };
 

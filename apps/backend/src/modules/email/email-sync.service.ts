@@ -27,18 +27,32 @@ export class EmailSyncService {
     if (process.env.NODE_ENV === 'development') {
       return;
     }
-    this.logger.log('Checking background email sync scheduler...');
+    this.logger.debug('Checking background email sync scheduler...');
 
     try {
       const accounts = await this.prisma.client.userEmailAccount.findMany();
       const now = Date.now();
 
       for (const account of accounts) {
+        if (account.syncEnabled === false) {
+          continue;
+        }
+
+        const isWithinWindow = this.isWithinSyncWindow(account, new Date(now));
+        if (!isWithinWindow) {
+          this.logger.debug(
+            `Skipping email sync for account ${account.emailAddress} (outside active sync window: ${account.syncStartTime}-${account.syncEndTime} ${account.syncTimezone})`,
+          );
+          continue;
+        }
+
+        const baseIntervalMin = Math.max(1, account.syncIntervalMinutes || 5);
         let state = this.syncStates.get(account.id);
 
         if (!state) {
-          // Dynamic jittered random interval: 5 to 10 minutes in ms
-          const randomMin = 5 + Math.random() * 5;
+          // Dynamic jittered random interval around configured interval: base to base * 1.5 min
+          const randomMin =
+            baseIntervalMin + Math.random() * (baseIntervalMin * 0.5);
           const intervalMs = Math.floor(randomMin * 60 * 1000);
 
           state = {
@@ -64,7 +78,8 @@ export class EmailSyncService {
           });
 
           // Jitter the next sync schedule interval
-          const nextRandomMin = 5 + Math.random() * 5;
+          const nextRandomMin =
+            baseIntervalMin + Math.random() * (baseIntervalMin * 0.5);
           state.lastSyncAt = now;
           state.intervalMs = Math.floor(nextRandomMin * 60 * 1000);
         }
@@ -74,6 +89,97 @@ export class EmailSyncService {
         'Failed to query email accounts for sync scheduler:',
         err,
       );
+    }
+  }
+
+  isWithinSyncWindow(
+    account: {
+      syncEnabled?: boolean;
+      syncTimeRangeEnabled?: boolean;
+      syncStartTime?: string | null;
+      syncEndTime?: string | null;
+      syncDays?: number[] | null;
+      syncTimezone?: string | null;
+    },
+    now: Date = new Date(),
+  ): boolean {
+    if (account.syncEnabled === false) {
+      return false;
+    }
+
+    if (!account.syncTimeRangeEnabled) {
+      return true;
+    }
+
+    const timezone = account.syncTimezone || 'UTC';
+
+    try {
+      const partsFormatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: timezone,
+        hour12: false,
+        hour: 'numeric',
+        minute: 'numeric',
+        weekday: 'short',
+      });
+
+      const parts = partsFormatter.formatToParts(now);
+      const hourStr = parts.find((p) => p.type === 'hour')?.value || '0';
+      const minuteStr = parts.find((p) => p.type === 'minute')?.value || '0';
+      const weekdayShort = parts.find((p) => p.type === 'weekday')?.value;
+
+      const hour = parseInt(hourStr, 10);
+      const minute = parseInt(minuteStr, 10);
+      const currentMinutes = hour * 60 + minute;
+
+      // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+      const dayMap: Record<string, number> = {
+        Sun: 0,
+        Mon: 1,
+        Tue: 2,
+        Wed: 3,
+        Thu: 4,
+        Fri: 5,
+        Sat: 6,
+      };
+      const currentDay = weekdayShort ? dayMap[weekdayShort] : now.getUTCDay();
+
+      if (
+        account.syncDays &&
+        Array.isArray(account.syncDays) &&
+        account.syncDays.length > 0
+      ) {
+        if (!account.syncDays.includes(currentDay)) {
+          return false;
+        }
+      }
+
+      if (account.syncStartTime && account.syncEndTime) {
+        const [startH, startM] = account.syncStartTime
+          .split(':')
+          .map((v) => parseInt(v, 10) || 0);
+        const [endH, endM] = account.syncEndTime
+          .split(':')
+          .map((v) => parseInt(v, 10) || 0);
+
+        const startMinutes = startH * 60 + startM;
+        const endMinutes = endH * 60 + endM;
+
+        if (startMinutes <= endMinutes) {
+          // Normal daytime range e.g. 08:00 to 22:00
+          return currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+        } else {
+          // Overnight range e.g. 22:00 to 06:00
+          return currentMinutes >= startMinutes || currentMinutes <= endMinutes;
+        }
+      }
+
+      return true;
+    } catch (err) {
+      this.logger.warn(
+        `Timezone calculation error for timezone "${timezone}":`,
+        err,
+      );
+      return true;
     }
   }
 

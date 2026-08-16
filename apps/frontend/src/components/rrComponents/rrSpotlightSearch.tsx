@@ -57,11 +57,7 @@ interface SpotlightSearchItem {
   id: string;
   label: string;
   category:
-    | "Applications"
-    | "Navigation"
-    | "Actions"
-    | "Clipboard"
-    | "Calculator";
+    "Applications" | "Navigation" | "Actions" | "Clipboard" | "Calculator";
   icon: React.ReactNode;
   action: () => void;
   shortcut?: string;
@@ -544,7 +540,13 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
         icon: (
           <div className="flex size-6 items-center justify-center rounded-md border border-border/55 bg-background text-foreground shadow-xs group-data-selected/command-item:border-primary/40 group-data-selected/command-item:scale-105 transition-all overflow-hidden">
             {app.iconLeftRing ? (
-              <Image src={app.iconLeftRing} alt={app.name} width={20} height={20} className="size-full object-contain" />
+              <Image
+                src={app.iconLeftRing}
+                alt={app.name}
+                width={20}
+                height={20}
+                className="size-full object-contain"
+              />
             ) : (
               <span className="text-[10px] font-bold">{app.name[0]}</span>
             )}
@@ -921,7 +923,7 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
               className="border-none bg-transparent text-transparent caret-transparent focus:ring-0 focus:outline-hidden py-4 px-3 w-full text-base placeholder:text-muted-foreground/60 font-sans"
             />
             {/* Mirror display overlay for styled math results & parameter badges */}
-            <div className="absolute left-[32px] inset-y-0 flex items-center pointer-events-none select-none text-base font-normal font-sans">
+            <div className="absolute left-8 inset-y-0 flex items-center pointer-events-none select-none text-base font-normal font-sans">
               {!parsedAction ? (
                 <>
                   <style>{`
@@ -935,7 +937,7 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
                   </span>
                   {/* Custom Blinking Caret */}
                   <span
-                    className="w-[1.5px] h-[18px] bg-foreground ml-px"
+                    className="w-[1.5px] h-4.5 bg-foreground ml-px"
                     style={{
                       animation: "spotlightCaretBlink 1s step-end infinite",
                     }}
@@ -995,7 +997,7 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
                           </span>
                           {/* Blinking Caret (before the placeholder) */}
                           <span
-                            className="w-[1.5px] h-[18px] bg-foreground ml-px"
+                            className="w-[1.5px] h-4.5 bg-foreground ml-px"
                             style={{
                               animation:
                                 "spotlightCaretBlink 1s step-end infinite",
@@ -1057,7 +1059,7 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
                               </span>
                               {/* Blinking Caret (completed) */}
                               <span
-                                className="w-[1.5px] h-[18px] bg-foreground ml-px"
+                                className="w-[1.5px] h-4.5 bg-foreground ml-px"
                                 style={{
                                   animation:
                                     "spotlightCaretBlink 1s step-end infinite",
@@ -1073,7 +1075,7 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
                               </span>
                               {/* Blinking Caret (before placeholder) */}
                               <span
-                                className="w-[1.5px] h-[18px] bg-foreground ml-px"
+                                className="w-[1.5px] h-4.5 bg-foreground ml-px"
                                 style={{
                                   animation:
                                     "spotlightCaretBlink 1s step-end infinite",
@@ -1115,7 +1117,7 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
           </div>
         </div>
 
-        <CommandList className="max-h-[480px] overflow-y-auto p-3 no-scrollbar bg-popover">
+        <CommandList className="max-h-120 overflow-y-auto p-3 no-scrollbar bg-popover">
           {!hasValidType && (
             <CommandEmpty className="py-8 text-center text-sm text-muted-foreground">
               {t("spotlight.noMatches", { search })}
@@ -1352,9 +1354,9 @@ export default function RrSpotlightSearch(): React.JSX.Element | null {
       </CommandDialog>
       {activeRoulette && session?.user && (
         <RrMediaRoulette
-          username={session.user.username || ""}
+          username={session?.user?.username || ""}
           mediaType={activeRoulette}
-          baseUrl={`/aquila/user/${session.user.username || ""}/${activeRoulette === "tv" ? "tv" : activeRoulette === "movie" ? "movies" : activeRoulette === "game" ? "games" : activeRoulette === "book" ? "books" : activeRoulette}`}
+          baseUrl={`/aquila/user/${session?.user?.username || ""}/${activeRoulette === "tv" ? "tv" : activeRoulette === "movie" ? "movies" : activeRoulette === "game" ? "games" : activeRoulette === "book" ? "books" : activeRoulette}`}
           open={activeRoulette !== null}
           onOpenChange={(open) => {
             if (!open) setActiveRoulette(null);

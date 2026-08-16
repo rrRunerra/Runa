@@ -40,7 +40,7 @@ export default async function DmChatPage({
   let error: string | null = null;
 
   const session = await auth();
-  if (!session || !hasPermission(session.user.permissions, LynxFlags.DM_CHAT)) {
+  if (!session?.user || !hasPermission(session.user?.permissions, LynxFlags.DM_CHAT)) {
     return <AccessDenied />;
   }
 

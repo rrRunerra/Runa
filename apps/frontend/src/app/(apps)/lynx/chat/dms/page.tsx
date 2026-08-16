@@ -28,7 +28,7 @@ export default async function DmListPage(): Promise<React.JSX.Element> {
   const dms = await getActiveDms();
 
   const session = await auth();
-  if (!session || !hasPermission(session.user.permissions, LynxFlags.DM_CHAT)) {
+  if (!session?.user || !hasPermission(session.user?.permissions, LynxFlags.DM_CHAT)) {
     return <AccessDenied />;
   }
 

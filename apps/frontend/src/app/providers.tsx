@@ -13,6 +13,7 @@ import { RrWebSocketProvider } from "@/components/Providers/rrWebSocketProvider"
 import { RrThemeProvider } from "@/components/Providers/rrThemeProvider";
 import { RrSpotlightProvider } from "@/components/Providers/rrSpotlightProvider";
 import { RrNotificationAndBookmarksProvider } from "@/components/Providers/rrNotificationAndBookmarksProvider";
+import { RrSessionWatcher } from "@/components/Providers/rrSessionWatcher";
 
 // Silence false positive React 19 / next-themes script tag warning in development
 if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
@@ -31,6 +32,7 @@ if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider>
+      <RrSessionWatcher />
       <RrCryptoProvider>
         <RrWebSocketProvider>
           <RrNotificationAndBookmarksProvider>

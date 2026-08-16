@@ -33,8 +33,8 @@ export default async function MemberGridPage({
   const { guild } = await params;
   const session = await auth();
   if (
-    !session ||
-    !hasPermission(session.user.permissions, LynxFlags.GUILD_CHAT)
+    !session?.user ||
+    !hasPermission(session.user?.permissions, LynxFlags.GUILD_CHAT)
   ) {
     return <AccessDenied />;
   }

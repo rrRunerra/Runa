@@ -49,7 +49,7 @@ export default async function Page({
   let data: any[] = []; // eslint-disable-line @typescript-eslint/no-explicit-any
   let error: string | null = null;
   const session = await auth();
-  if (!session || !hasPermission(session.user.permissions, LynxFlags.GUILD_CHAT)) {
+  if (!session?.user || !hasPermission(session.user?.permissions, LynxFlags.GUILD_CHAT)) {
     return <AccessDenied />;
   }
 

@@ -145,6 +145,13 @@ export class EmailService {
         smtpHost: account.smtpHost,
         smtpPort: account.smtpPort,
         smtpSecure: account.smtpSecure,
+        syncEnabled: account.syncEnabled,
+        syncTimeRangeEnabled: account.syncTimeRangeEnabled,
+        syncStartTime: account.syncStartTime,
+        syncEndTime: account.syncEndTime,
+        syncDays: account.syncDays,
+        syncTimezone: account.syncTimezone,
+        syncIntervalMinutes: account.syncIntervalMinutes,
         unreadCount: (account as any).emailMessages?.length || 0,
       };
     });
@@ -179,6 +186,13 @@ export class EmailService {
             ? parseInt(data.smtpPort, 10)
             : data.smtpPort,
         smtpSecure: data.smtpSecure === true,
+        syncEnabled: data.syncEnabled !== false,
+        syncTimeRangeEnabled: data.syncTimeRangeEnabled === true,
+        syncStartTime: data.syncStartTime || '08:00',
+        syncEndTime: data.syncEndTime || '22:00',
+        syncDays: data.syncDays || [0, 1, 2, 3, 4, 5, 6],
+        syncTimezone: data.syncTimezone || 'UTC',
+        syncIntervalMinutes: data.syncIntervalMinutes || 5,
         encryptedPassword,
         encryptionIv: iv,
       },
@@ -223,6 +237,27 @@ export class EmailService {
           ? parseInt(data.smtpPort, 10)
           : data.smtpPort,
       smtpSecure: data.smtpSecure === true,
+      ...(data.syncEnabled !== undefined && {
+        syncEnabled: data.syncEnabled,
+      }),
+      ...(data.syncTimeRangeEnabled !== undefined && {
+        syncTimeRangeEnabled: data.syncTimeRangeEnabled,
+      }),
+      ...(data.syncStartTime !== undefined && {
+        syncStartTime: data.syncStartTime,
+      }),
+      ...(data.syncEndTime !== undefined && {
+        syncEndTime: data.syncEndTime,
+      }),
+      ...(data.syncDays !== undefined && {
+        syncDays: data.syncDays,
+      }),
+      ...(data.syncTimezone !== undefined && {
+        syncTimezone: data.syncTimezone,
+      }),
+      ...(data.syncIntervalMinutes !== undefined && {
+        syncIntervalMinutes: data.syncIntervalMinutes,
+      }),
     };
 
     if (data.password) {

@@ -156,7 +156,7 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
 
   return (
     <>
-      {session ? (
+      {session && session.user ? (
         <SidebarMenuItem>
           {/* Closed menu */}
           <DropdownMenu>
@@ -186,7 +186,7 @@ export default function RrUserMenu({ session }: { session: Session | null }) {
             >
               {/* User banner card */}
               <DropdownMenuLabel className="p-0 font-normal">
-                <Link href={`/polaris/user/${session.user.username}`}>
+                <Link href={`/polaris/user/${session.user?.username || ""}`}>
                   <RrSidebarUserCard
                     sidebarCardBackgroundUrl={session.user?.sidebarCardBackgroundUrl}
                     avatarUrl={session.user?.avatarUrl}

@@ -151,4 +151,97 @@ describe('EmailSyncService', () => {
       );
     });
   });
+
+  describe('isWithinSyncWindow', () => {
+    it('should return false if syncEnabled is false', () => {
+      const result = service.isWithinSyncWindow({ syncEnabled: false });
+      expect(result).toBe(false);
+    });
+
+    it('should return true if syncTimeRangeEnabled is false (24/7 sync)', () => {
+      const result = service.isWithinSyncWindow({
+        syncEnabled: true,
+        syncTimeRangeEnabled: false,
+      });
+      expect(result).toBe(true);
+    });
+
+    it('should respect daytime active hours in specified timezone', () => {
+      // 2026-08-16T12:00:00Z is 14:00 in Europe/Berlin (UTC+2 DST)
+      const now = new Date('2026-08-16T12:00:00Z');
+
+      const insideWindow = service.isWithinSyncWindow(
+        {
+          syncEnabled: true,
+          syncTimeRangeEnabled: true,
+          syncStartTime: '08:00',
+          syncEndTime: '18:00',
+          syncTimezone: 'Europe/Berlin',
+        },
+        now,
+      );
+      expect(insideWindow).toBe(true);
+
+      const outsideWindow = service.isWithinSyncWindow(
+        {
+          syncEnabled: true,
+          syncTimeRangeEnabled: true,
+          syncStartTime: '15:00',
+          syncEndTime: '20:00',
+          syncTimezone: 'Europe/Berlin',
+        },
+        now,
+      );
+      expect(outsideWindow).toBe(false);
+    });
+
+    it('should handle overnight active hours across midnight', () => {
+      // 2026-08-16T22:30:00Z (22:30 UTC)
+      const nowNight = new Date('2026-08-16T22:30:00Z');
+      // 2026-08-16T12:00:00Z (12:00 UTC)
+      const nowDay = new Date('2026-08-16T12:00:00Z');
+
+      const config = {
+        syncEnabled: true,
+        syncTimeRangeEnabled: true,
+        syncStartTime: '22:00',
+        syncEndTime: '06:00',
+        syncTimezone: 'UTC',
+      };
+
+      expect(service.isWithinSyncWindow(config, nowNight)).toBe(true);
+      expect(service.isWithinSyncWindow(config, nowDay)).toBe(false);
+    });
+
+    it('should filter by active days of week', () => {
+      // 2026-08-16 is a Sunday (day 0)
+      const sunday = new Date('2026-08-16T12:00:00Z');
+
+      const weekdaysOnly = service.isWithinSyncWindow(
+        {
+          syncEnabled: true,
+          syncTimeRangeEnabled: true,
+          syncStartTime: '08:00',
+          syncEndTime: '22:00',
+          syncDays: [1, 2, 3, 4, 5], // Mon-Fri
+          syncTimezone: 'UTC',
+        },
+        sunday,
+      );
+      expect(weekdaysOnly).toBe(false);
+
+      const allDays = service.isWithinSyncWindow(
+        {
+          syncEnabled: true,
+          syncTimeRangeEnabled: true,
+          syncStartTime: '08:00',
+          syncEndTime: '22:00',
+          syncDays: [0, 1, 2, 3, 4, 5, 6],
+          syncTimezone: 'UTC',
+        },
+        sunday,
+      );
+      expect(allDays).toBe(true);
+    });
+  });
 });

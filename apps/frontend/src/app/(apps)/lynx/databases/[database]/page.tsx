@@ -13,7 +13,7 @@ export default async function DatabasePage({
   const { database } = await params;
 
   const session = await auth();
-  if (!session || !hasPermission(session.user.permissions, LynxFlags.MANAGE_DATABASE)) {
+  if (!session?.user || !hasPermission(session.user?.permissions, LynxFlags.MANAGE_DATABASE)) {
     return <AccessDenied />;
   }
 

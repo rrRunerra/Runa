@@ -82,6 +82,24 @@ export function RrMailSettingsTab({
   const [smtpPort, setSmtpPort] = useState<string>("465");
   const [smtpSecure, setSmtpSecure] = useState<boolean>(true);
 
+  // Background Sync Schedule states
+  const getDetectedTimezone = () => {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    } catch {
+      return "UTC";
+    }
+  };
+
+  const [syncEnabled, setSyncEnabled] = useState<boolean>(true);
+  const [syncTimeRangeEnabled, setSyncTimeRangeEnabled] =
+    useState<boolean>(false);
+  const [syncStartTime, setSyncStartTime] = useState<string>("08:00");
+  const [syncEndTime, setSyncEndTime] = useState<string>("22:00");
+  const [syncDays, setSyncDays] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
+  const [syncTimezone, setSyncTimezone] = useState<string>(getDetectedTimezone());
+  const [syncIntervalMinutes, setSyncIntervalMinutes] = useState<number>(5);
+
   // Connection Test & Autodetect states
   const [isAutodetecting, setIsAutodetecting] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
@@ -167,6 +185,13 @@ export function RrMailSettingsTab({
     setSmtpHost("");
     setSmtpPort("");
     setSmtpSecure(true);
+    setSyncEnabled(true);
+    setSyncTimeRangeEnabled(false);
+    setSyncStartTime("08:00");
+    setSyncEndTime("22:00");
+    setSyncDays([0, 1, 2, 3, 4, 5, 6]);
+    setSyncTimezone(getDetectedTimezone());
+    setSyncIntervalMinutes(5);
     setTestState({ tested: false, loading: false });
   };
 
@@ -272,6 +297,13 @@ export function RrMailSettingsTab({
   };
 
   const handleNextStep = async (): Promise<void> => {
+    if (editingAccount) {
+      if (currentStep < 3) {
+        setCurrentStep((currentStep + 1) as 2 | 3);
+      }
+      return;
+    }
+
     if (currentStep === 1) {
       if (!accountName.trim()) {
         toast.error(t("mailSettings.wizard.enterAccountNameError"));
@@ -326,13 +358,20 @@ export function RrMailSettingsTab({
       organization: organization.trim() || null,
       signatureText: signature || null,
       useHtmlSignature: useHtmlSig,
-      password: password,
+      ...(password ? { password } : {}),
       imapHost: imapHost.trim(),
       imapPort: parseInt(imapPort, 10) || 993,
       imapSecure,
       smtpHost: smtpHost.trim(),
       smtpPort: parseInt(smtpPort, 10) || 465,
       smtpSecure,
+      syncEnabled,
+      syncTimeRangeEnabled,
+      syncStartTime: syncStartTime || "08:00",
+      syncEndTime: syncEndTime || "22:00",
+      syncDays: syncDays || [0, 1, 2, 3, 4, 5, 6],
+      syncTimezone: syncTimezone || getDetectedTimezone(),
+      syncIntervalMinutes: syncIntervalMinutes || 5,
     };
 
     setIsSaving(true);
@@ -401,6 +440,17 @@ export function RrMailSettingsTab({
     setSmtpHost(account.smtpHost || "");
     setSmtpPort(account.smtpPort ? String(account.smtpPort) : "");
     setSmtpSecure(account.smtpSecure !== false);
+    setSyncEnabled(account.syncEnabled !== false);
+    setSyncTimeRangeEnabled(Boolean(account.syncTimeRangeEnabled));
+    setSyncStartTime(account.syncStartTime || "08:00");
+    setSyncEndTime(account.syncEndTime || "22:00");
+    setSyncDays(
+      Array.isArray(account.syncDays) && account.syncDays.length > 0
+        ? account.syncDays
+        : [0, 1, 2, 3, 4, 5, 6],
+    );
+    setSyncTimezone(account.syncTimezone || getDetectedTimezone());
+    setSyncIntervalMinutes(account.syncIntervalMinutes || 5);
     setTestState({ tested: false, loading: false });
     setIsDialogOpen(true);
   };
@@ -502,7 +552,7 @@ export function RrMailSettingsTab({
               </div>
             </div>
 
-            {/* Step Progress Indicators */}
+            {/* Step / Tab Indicators */}
             <div className="grid grid-cols-3 gap-2 pt-3">
               {[
                 { step: 1, label: t("mailSettings.wizard.step1Header") },
@@ -511,21 +561,23 @@ export function RrMailSettingsTab({
               ].map((s) => {
                 const isActive = currentStep === s.step;
                 const isDone = currentStep > s.step;
+                const isClickable = Boolean(editingAccount) || isDone || s.step < currentStep;
                 return (
                   <button
                     key={s.step}
                     type="button"
                     onClick={() => {
-                      if (isDone || s.step < currentStep) {
+                      if (isClickable) {
                         setCurrentStep(s.step as 1 | 2 | 3);
                       }
                     }}
                     className={cn(
-                      "flex items-center gap-2 p-2 rounded-xl border text-left transition-all cursor-pointer",
+                      "flex items-center gap-2 p-2 rounded-xl border text-left transition-all",
+                      isClickable ? "cursor-pointer" : "cursor-not-allowed",
                       isActive
                         ? "border-primary bg-primary/10 text-primary font-semibold shadow-xs"
-                        : isDone
-                          ? "border-border bg-muted/40 text-foreground"
+                        : isDone || editingAccount
+                          ? "border-border bg-muted/40 text-foreground hover:bg-muted/70"
                           : "border-border/40 bg-card text-muted-foreground/60 opacity-70",
                     )}
                   >
@@ -534,12 +586,12 @@ export function RrMailSettingsTab({
                         "size-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0",
                         isActive
                           ? "bg-primary text-primary-foreground"
-                          : isDone
+                          : isDone && !editingAccount
                             ? "bg-emerald-500 text-white"
                             : "bg-muted text-muted-foreground",
                       )}
                     >
-                      {isDone ? <Check className="size-3" /> : s.step}
+                      {isDone && !editingAccount ? <Check className="size-3" /> : s.step}
                     </div>
                     <span className="text-[11px] truncate hidden sm:inline">
                       {s.label}
@@ -605,6 +657,20 @@ export function RrMailSettingsTab({
                 onChangeSignature={setSignature}
                 useHtmlSig={useHtmlSig}
                 onChangeUseHtmlSig={setUseHtmlSig}
+                syncEnabled={syncEnabled}
+                onChangeSyncEnabled={setSyncEnabled}
+                syncTimeRangeEnabled={syncTimeRangeEnabled}
+                onChangeSyncTimeRangeEnabled={setSyncTimeRangeEnabled}
+                syncStartTime={syncStartTime}
+                onChangeSyncStartTime={setSyncStartTime}
+                syncEndTime={syncEndTime}
+                onChangeSyncEndTime={setSyncEndTime}
+                syncDays={syncDays}
+                onChangeSyncDays={setSyncDays}
+                syncTimezone={syncTimezone}
+                onChangeSyncTimezone={setSyncTimezone}
+                syncIntervalMinutes={syncIntervalMinutes}
+                onChangeSyncIntervalMinutes={setSyncIntervalMinutes}
               />
             )}
           </div>
@@ -634,7 +700,38 @@ export function RrMailSettingsTab({
             </Button>
 
             <div className="flex items-center gap-2">
-              {currentStep < 3 ? (
+              {editingAccount ? (
+                <>
+                  {currentStep < 3 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setCurrentStep((currentStep + 1) as 2 | 3)}
+                      className="text-xs h-9 px-3 rounded-xl cursor-pointer gap-1"
+                    >
+                      {t("next")}
+                      <ArrowRight className="size-3.5" />
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    onClick={handleSaveEmailAccount}
+                    disabled={
+                      isSaving ||
+                      !accountName ||
+                      (!emailAddress.trim() && !loginEmail.trim())
+                    }
+                    className="bg-primary hover:bg-primary/95 text-primary-foreground font-bold rounded-xl px-5 text-xs h-9 cursor-pointer gap-1.5"
+                  >
+                    {isSaving ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <Check className="size-3.5" />
+                    )}
+                    {t("mailSettings.updateAccountBtn", "Update Account")}
+                  </Button>
+                </>
+              ) : currentStep < 3 ? (
                 <Button
                   type="button"
                   onClick={handleNextStep}
@@ -660,9 +757,7 @@ export function RrMailSettingsTab({
                   ) : (
                     <Check className="size-3.5" />
                   )}
-                  {editingAccount
-                    ? t("mailSettings.updateAccountBtn")
-                    : t("mailSettings.linkAccountBtn")}
+                  {t("mailSettings.linkAccountBtn")}
                 </Button>
               )}
             </div>

@@ -88,7 +88,7 @@ export function RrConstellationBuilderModal({
   const { data: profileData, mutate: refetchProfile } = useSWR<any>(
     session?.user?.username && session?.accessToken && mode === "device" && open
       ? [
-          `${process.env.NEXT_PUBLIC_API_URL}/users/${session.user.username}`,
+          `${process.env.NEXT_PUBLIC_API_URL}/users/${session.user?.username}`,
           session.accessToken,
         ]
       : null,
